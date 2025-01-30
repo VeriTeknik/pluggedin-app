@@ -8,6 +8,13 @@
       "when": 1737469353840,
       "tag": "0000_flowery_mercury",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1738245932268,
+      "tag": "0001_ancient_photon",
+      "breakpoints": true
     }
   ]
 }

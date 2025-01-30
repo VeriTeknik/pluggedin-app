@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack --port=12005",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "dotenv -e .env.local -- drizzle-kit migrate"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
@@ -52,6 +54,7 @@
     "@types/react-dom": "^19",
     "@typescript-eslint/eslint-plugin": "^8.18.1",
     "@typescript-eslint/parser": "^8.18.1",
+    "dotenv-cli": "^8.0.0",
     "drizzle-kit": "^0.30.1",
     "eslint": "^9",
     "eslint-config-next": "15.1.1",
