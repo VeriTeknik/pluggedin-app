@@ -60,8 +60,8 @@ export default function CustomMCPServersPage() {
     defaultValues: {
       name: '',
       description: '',
-      command: '',
-      args: '',
+      code: '',
+      additionalArgs: '',
       env: '',
     },
   });
@@ -86,13 +86,13 @@ export default function CustomMCPServersPage() {
       cell: (info) => info.getValue(),
       header: 'Description',
     }),
-    columnHelper.accessor('command', {
+    columnHelper.accessor('code', {
       cell: (info) => info.getValue(),
-      header: 'Command',
+      header: 'Code',
     }),
-    columnHelper.accessor('args', {
+    columnHelper.accessor('additionalArgs', {
       cell: (info) => info.getValue().join(' '),
-      header: 'Arguments',
+      header: 'Additional Args',
     }),
     columnHelper.accessor('created_at', {
       cell: (info) => new Date(info.getValue()).toLocaleString(),
@@ -158,7 +158,7 @@ export default function CustomMCPServersPage() {
 
     setIsSubmitting(true);
     try {
-      const args = values.args.split(' ').filter(Boolean);
+      const additionalArgs = values.additionalArgs.split(' ').filter(Boolean);
       const env = {};
       try {
         Object.assign(env, JSON.parse(values.env));
@@ -169,8 +169,8 @@ export default function CustomMCPServersPage() {
       await createCustomMcpServer(profileUuid, {
         name: values.name,
         description: values.description,
-        command: values.command,
-        args,
+        code: values.code,
+        additionalArgs,
         env,
       } as CreateCustomMcpServerData);
 
@@ -200,8 +200,8 @@ export default function CustomMCPServersPage() {
             <DialogHeader>
               <DialogTitle>Add Custom MCP Server</DialogTitle>
               <DialogDescription>
-                Create a new custom MCP server configuration. Command and
-                arguments will be used to start the server.
+                Create a new custom MCP server configuration. Code and
+                additional arguments will be used to start the server.
               </DialogDescription>
             </DialogHeader>
 
@@ -239,10 +239,10 @@ export default function CustomMCPServersPage() {
 
                 <FormField
                   control={form.control}
-                  name='command'
+                  name='code'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Command</FormLabel>
+                      <FormLabel>Code</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -253,10 +253,12 @@ export default function CustomMCPServersPage() {
 
                 <FormField
                   control={form.control}
-                  name='args'
+                  name='additionalArgs'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Arguments (space-separated)</FormLabel>
+                      <FormLabel>
+                        Additional Arguments (space-separated)
+                      </FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>

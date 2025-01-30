@@ -3,7 +3,7 @@
 import { and, eq, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { mcpServersTable, McpServerStatus } from '@/db/schema';
+import { customMcpServersTable, McpServerStatus } from '@/db/schema';
 import { CustomMcpServer } from '@/types/custom-mcp-server';
 import {
   CreateCustomMcpServerData,
@@ -13,13 +13,13 @@ import {
 export async function getCustomMcpServers(profileUuid: string) {
   const servers = await db
     .select()
-    .from(mcpServersTable)
+    .from(customMcpServersTable)
     .where(
       and(
-        eq(mcpServersTable.profile_uuid, profileUuid),
+        eq(customMcpServersTable.profile_uuid, profileUuid),
         or(
-          eq(mcpServersTable.status, McpServerStatus.ACTIVE),
-          eq(mcpServersTable.status, McpServerStatus.INACTIVE)
+          eq(customMcpServersTable.status, McpServerStatus.ACTIVE),
+          eq(customMcpServersTable.status, McpServerStatus.INACTIVE)
         )
       )
     );
@@ -33,11 +33,11 @@ export async function getCustomMcpServerByUuid(
 ): Promise<CustomMcpServer | null> {
   const server = await db
     .select()
-    .from(mcpServersTable)
+    .from(customMcpServersTable)
     .where(
       and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
+        eq(customMcpServersTable.uuid, uuid),
+        eq(customMcpServersTable.profile_uuid, profileUuid)
       )
     )
     .limit(1);
@@ -54,11 +54,11 @@ export async function deleteCustomMcpServerByUuid(
   uuid: string
 ): Promise<void> {
   await db
-    .delete(mcpServersTable)
+    .delete(customMcpServersTable)
     .where(
       and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
+        eq(customMcpServersTable.uuid, uuid),
+        eq(customMcpServersTable.profile_uuid, profileUuid)
       )
     );
 }
@@ -69,12 +69,12 @@ export async function toggleCustomMcpServerStatus(
   newStatus: McpServerStatus
 ): Promise<void> {
   await db
-    .update(mcpServersTable)
+    .update(customMcpServersTable)
     .set({ status: newStatus })
     .where(
       and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
+        eq(customMcpServersTable.uuid, uuid),
+        eq(customMcpServersTable.profile_uuid, profileUuid)
       )
     );
 }
@@ -84,13 +84,13 @@ export async function createCustomMcpServer(
   data: CreateCustomMcpServerData
 ): Promise<CustomMcpServer> {
   const [server] = await db
-    .insert(mcpServersTable)
+    .insert(customMcpServersTable)
     .values({
       profile_uuid: profileUuid,
       name: data.name,
       description: data.description || '',
-      command: data.command,
-      args: data.args || [],
+      code: data.code,
+      additionalArgs: data.additionalArgs || [],
       env: data.env || {},
       status: McpServerStatus.ACTIVE,
     })
@@ -105,14 +105,14 @@ export async function updateCustomMcpServer(
   data: UpdateCustomMcpServerData
 ): Promise<void> {
   await db
-    .update(mcpServersTable)
+    .update(customMcpServersTable)
     .set({
       ...data,
     })
     .where(
       and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
+        eq(customMcpServersTable.uuid, uuid),
+        eq(customMcpServersTable.profile_uuid, profileUuid)
       )
     );
 }
