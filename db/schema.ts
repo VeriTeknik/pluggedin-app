@@ -99,13 +99,24 @@ export const mcpServersTable = pgTable(
   ]
 );
 
+export const codesTable = pgTable('codes', {
+  uuid: uuid('uuid').primaryKey().defaultRandom(),
+  fileName: text('file_name').notNull(),
+  code: text('code').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const customMcpServersTable = pgTable(
   'custom_mcp_servers',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     description: text('description'),
-    code: text('code').notNull(),
+    code_uuid: uuid('code_uuid')
+      .notNull()
+      .references(() => codesTable.uuid),
     additionalArgs: text('additional_args')
       .array()
       .notNull()

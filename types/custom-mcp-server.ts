@@ -5,7 +5,9 @@ export interface CustomMcpServer {
   name: string;
   created_at: Date;
   description: string | null;
-  code: string;
+  code_uuid: string;
+  codeFileName: string | null;
+  code: string | null;
   additionalArgs: string[];
   env: {
     [key: string]: string;
@@ -17,7 +19,7 @@ export interface CustomMcpServer {
 export type CreateCustomMcpServerData = {
   name: string;
   description?: string;
-  code: string;
+  code_uuid: string;
   additionalArgs?: string[];
   env?: { [key: string]: string };
 };

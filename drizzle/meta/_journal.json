@@ -15,6 +15,13 @@
       "when": 1738245932268,
       "tag": "0001_ancient_photon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1738250920936,
+      "tag": "0002_eminent_old_lace",
+      "breakpoints": true
     }
   ]
 }
