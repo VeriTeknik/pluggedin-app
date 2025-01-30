@@ -1,6 +1,6 @@
 'use client';
 
-import { Key, Server, Settings } from 'lucide-react';
+import { Key, Server, Settings, Wrench } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import * as React from 'react';
@@ -50,6 +50,14 @@ export default function SidebarLayout({
                   <Link href='/mcp-servers'>
                     <Server className='mr-2 h-4 w-4' />
                     <span>MCP Servers</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link href='/custom-mcp-servers'>
+                    <Wrench className='mr-2 h-4 w-4' />
+                    <span>Custom MCP Servers</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
