@@ -94,6 +94,10 @@ export default function CustomMCPServersPage() {
       cell: (info) => info.getValue().join(' '),
       header: 'Arguments',
     }),
+    columnHelper.accessor('created_at', {
+      cell: (info) => new Date(info.getValue()).toLocaleString(),
+      header: 'Created At',
+    }),
     columnHelper.accessor('status', {
       cell: (info) => (
         <Switch
@@ -111,17 +115,25 @@ export default function CustomMCPServersPage() {
       ),
       header: 'Status',
     }),
-    columnHelper.accessor('uuid', {
+    columnHelper.display({
+      id: 'actions',
       cell: (info) => (
         <Button
-          variant='ghost'
-          size='icon'
+          variant='destructive'
+          size='sm'
           onClick={async () => {
             if (!profileUuid) return;
-            await deleteCustomMcpServerByUuid(profileUuid, info.getValue());
-            mutate();
+            if (
+              confirm('Are you sure you want to delete this custom MCP server?')
+            ) {
+              await deleteCustomMcpServerByUuid(
+                profileUuid,
+                info.row.original.uuid
+              );
+              mutate();
+            }
           }}>
-          <Trash2 className='h-4 w-4' />
+          <Trash2 size={16} />
         </Button>
       ),
       header: 'Actions',
@@ -171,33 +183,32 @@ export default function CustomMCPServersPage() {
   };
 
   return (
-    <div className='space-y-4 p-8'>
-      <div className='flex items-center justify-between'>
+    <div>
+      <div className='flex justify-between items-center mb-4'>
         <div>
-          <h2 className='text-3xl font-bold tracking-tight'>
-            Custom MCP Servers
-          </h2>
+          <h1 className='text-2xl font-bold'>Custom MCP Servers</h1>
           <p className='text-muted-foreground'>
-            Manage your custom MCP server configurations
+            Manage your custom MCP server (python code based) configurations
           </p>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button>Add Server</Button>
+            <Button>Add Custom MCP Server</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className='sm:max-w-[425px]'>
             <DialogHeader>
               <DialogTitle>Add Custom MCP Server</DialogTitle>
               <DialogDescription>
-                Create a new custom MCP server configuration
+                Create a new custom MCP server configuration. Command and
+                arguments will be used to start the server.
               </DialogDescription>
             </DialogHeader>
 
             <Form {...form}>
               <form
                 onSubmit={form.handleSubmit(onSubmit)}
-                className='space-y-4'>
+                className='space-y-4 pt-4'>
                 <FormField
                   control={form.control}
                   name='name'
@@ -277,29 +288,32 @@ export default function CustomMCPServersPage() {
         </Dialog>
       </div>
 
-      <div>
+      <div className='mb-4'>
         <Input
-          placeholder='Search servers...'
-          value={globalFilter}
-          onChange={(e) => setGlobalFilter(e.target.value)}
+          placeholder='Search all columns...'
+          value={globalFilter ?? ''}
+          onChange={(e) => setGlobalFilter(String(e.target.value))}
           className='max-w-sm'
         />
       </div>
-
-      <div className='rounded-md border'>
-        <table className='w-full'>
+      <div className='overflow-x-auto'>
+        <table className='min-w-full bg-white border border-gray-300'>
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    onClick={header.column.getToggleSortingHandler()}
-                    className='border-b px-4 py-2 text-left'>
+                    className='py-2 px-4 border-b text-left font-semibold bg-gray-100'
+                    onClick={header.column.getToggleSortingHandler()}>
                     {flexRender(
                       header.column.columnDef.header,
                       header.getContext()
                     )}
+                    {{
+                      asc: ' 🔼',
+                      desc: ' 🔽',
+                    }[header.column.getIsSorted() as string] ?? null}
                   </th>
                 ))}
               </tr>
@@ -307,9 +321,9 @@ export default function CustomMCPServersPage() {
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id}>
+              <tr key={row.id} className='hover:bg-gray-50'>
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className='border-b px-4 py-2'>
+                  <td key={cell.id} className='py-2 px-4 border-b'>
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
