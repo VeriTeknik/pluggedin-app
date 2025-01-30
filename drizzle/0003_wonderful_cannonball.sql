@@ -1,0 +1,1 @@
+ALTER TABLE "codes" ADD COLUMN "file_name" text NOT NULL;

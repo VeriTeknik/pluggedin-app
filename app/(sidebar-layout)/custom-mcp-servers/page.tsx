@@ -169,7 +169,7 @@ export default function CustomMCPServersPage() {
       await createCustomMcpServer(profileUuid, {
         name: values.name,
         description: values.description,
-        code: values.code,
+        code_uuid: values.code,
         additionalArgs,
         env,
       } as CreateCustomMcpServerData);
@@ -242,7 +242,7 @@ export default function CustomMCPServersPage() {
                   name='code'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Code</FormLabel>
+                      <FormLabel>Code Uuid</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
