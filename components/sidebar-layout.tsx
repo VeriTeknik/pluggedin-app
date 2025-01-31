@@ -109,7 +109,7 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/editor'>
                         <Code2 className='mr-2 h-4 w-4' />
-                        <span>Code Editor</span>
+                        <span>Python Code Editor</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
