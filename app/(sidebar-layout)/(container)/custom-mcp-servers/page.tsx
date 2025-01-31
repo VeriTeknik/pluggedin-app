@@ -9,7 +9,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Trash2 } from 'lucide-react';
+import { Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -22,6 +22,14 @@ import {
   toggleCustomMcpServerStatus,
 } from '@/app/actions/custom-mcp-servers';
 import { Button } from '@/components/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import {
   Dialog,
   DialogContent,
@@ -39,10 +47,17 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { McpServerStatus } from '@/db/schema';
+import { useCodes } from '@/hooks/use-codes';
 import { useProfiles } from '@/hooks/use-profiles';
+import { cn } from '@/lib/utils';
 import { CustomMcpServer } from '@/types/custom-mcp-server';
 import { CreateCustomMcpServerData } from '@/types/custom-mcp-server';
 
@@ -54,6 +69,7 @@ export default function CustomMCPServersPage() {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [open, setOpen] = useState(false);
+  const [openCombobox, setOpenCombobox] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
@@ -70,6 +86,8 @@ export default function CustomMCPServersPage() {
     profileUuid ? `${profileUuid}/custom-mcp-servers` : null,
     () => getCustomMcpServers(profileUuid || '')
   );
+
+  const { codes } = useCodes();
 
   const columns = [
     columnHelper.accessor('name', {
@@ -241,11 +259,62 @@ export default function CustomMCPServersPage() {
                   control={form.control}
                   name='code'
                   render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Code Uuid</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
+                    <FormItem className='flex flex-col'>
+                      <FormLabel>Code</FormLabel>
+                      <Popover
+                        open={openCombobox}
+                        onOpenChange={setOpenCombobox}>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant='outline'
+                              role='combobox'
+                              aria-expanded={openCombobox}
+                              className={cn(
+                                'w-full justify-between',
+                                !field.value && 'text-muted-foreground'
+                              )}>
+                              {field.value
+                                ? codes?.find(
+                                    (code) => code.uuid === field.value
+                                  )?.fileName
+                                : 'Select code...'}
+                              <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className='w-full p-0'>
+                          <Command>
+                            <CommandList>
+                              <CommandInput placeholder='Search code...' />
+                              <CommandEmpty>No code found.</CommandEmpty>
+                              <CommandGroup>
+                                {codes?.map((code) => {
+                                  return (
+                                    <CommandItem
+                                      key={code.uuid}
+                                      value={code.uuid}
+                                      onSelect={() => {
+                                        field.onChange(code.uuid);
+                                        setOpenCombobox(false);
+                                      }}>
+                                      <Check
+                                        className={cn(
+                                          'mr-2 h-4 w-4',
+                                          field.value === code.uuid
+                                            ? 'opacity-100'
+                                            : 'opacity-0'
+                                        )}
+                                      />
+                                      {code?.fileName}
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}
