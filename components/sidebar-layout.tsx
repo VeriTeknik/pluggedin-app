@@ -39,6 +39,7 @@ import {
   SidebarProvider,
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
+import { useToast } from '@/hooks/use-toast';
 
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
@@ -56,6 +57,7 @@ export default function SidebarLayout({
     null
   );
   const [fileName, setFileName] = React.useState('');
+  const { toast } = useToast();
 
   const handleCreateCode = async () => {
     if (fileName.trim()) {
@@ -236,9 +238,18 @@ export default function SidebarLayout({
                 variant='destructive'
                 onClick={async () => {
                   if (selectedCodeUuid) {
-                    await deleteCode(selectedCodeUuid);
-                    setDeleteDialogOpen(false);
-                    setSelectedCodeUuid(null);
+                    try {
+                      await deleteCode(selectedCodeUuid);
+                      setDeleteDialogOpen(false);
+                      setSelectedCodeUuid(null);
+                    } catch (error) {
+                      toast({
+                        variant: 'destructive',
+                        title: 'Failed to delete code',
+                        description:
+                          'Make sure the code is not used in any Custom MCP Servers and try again.',
+                      });
+                    }
                   }
                 }}>
                 Delete
