@@ -242,7 +242,8 @@ export default function SidebarLayout({
                       await deleteCode(selectedCodeUuid);
                       setDeleteDialogOpen(false);
                       setSelectedCodeUuid(null);
-                    } catch (error) {
+                    } catch (_error) {
+                      console.error(_error);
                       toast({
                         variant: 'destructive',
                         title: 'Failed to delete code',
