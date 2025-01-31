@@ -1,12 +1,15 @@
 'use server';
 
-import { eq } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { codesTable } from '@/db/schema';
 
 export async function getCodes() {
-  return await db.select().from(codesTable);
+  return await db
+    .select()
+    .from(codesTable)
+    .orderBy(desc(codesTable.created_at));
 }
 
 export async function getCode(uuid: string) {

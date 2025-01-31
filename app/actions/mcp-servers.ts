@@ -1,6 +1,6 @@
 'use server';
 
-import { and, eq, or } from 'drizzle-orm';
+import { and, desc, eq, or } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { mcpServersTable, McpServerStatus } from '@/db/schema';
@@ -18,7 +18,8 @@ export async function getMcpServers(profileUuid: string) {
           eq(mcpServersTable.status, McpServerStatus.INACTIVE)
         )
       )
-    );
+    )
+    .orderBy(desc(mcpServersTable.created_at));
 
   return servers as McpServer[];
 }

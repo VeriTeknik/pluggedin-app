@@ -1,6 +1,14 @@
 'use client';
 
-import { Code2, Key, Plus, Server, Settings, Wrench } from 'lucide-react';
+import {
+  Code2,
+  Key,
+  Plus,
+  Server,
+  Settings,
+  Trash2,
+  Wrench,
+} from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -41,8 +49,12 @@ export default function SidebarLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { codes, createCode } = useCodes();
+  const { codes, createCode, deleteCode } = useCodes();
   const [open, setOpen] = React.useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
+  const [selectedCodeUuid, setSelectedCodeUuid] = React.useState<string | null>(
+    null
+  );
   const [fileName, setFileName] = React.useState('');
 
   const handleCreateCode = async () => {
@@ -174,12 +186,25 @@ export default function SidebarLayout({
                     </SidebarMenuItem>
                     {codes.map((code) => (
                       <SidebarMenuItem key={code.uuid}>
-                        <SidebarMenuButton asChild>
-                          <Link href={`/editor/${code.uuid}`}>
-                            <Code2 className='mr-2 h-4 w-4' />
-                            <span>{code.fileName}</span>
-                          </Link>
-                        </SidebarMenuButton>
+                        <div className='flex items-center w-full'>
+                          <SidebarMenuButton asChild className='flex-grow'>
+                            <Link href={`/editor/${code.uuid}`}>
+                              <Code2 className='mr-2 h-4 w-4' />
+                              <span>{code.fileName}</span>
+                            </Link>
+                          </SidebarMenuButton>
+                          <Button
+                            variant='ghost'
+                            size='icon'
+                            className='h-8 w-8'
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setSelectedCodeUuid(code.uuid);
+                              setDeleteDialogOpen(true);
+                            }}>
+                            <Trash2 className='h-4 w-4 text-muted-foreground hover:text-destructive' />
+                          </Button>
+                        </div>
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>
@@ -188,6 +213,37 @@ export default function SidebarLayout({
             </SidebarContent>
           </Sidebar>
         )}
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Code File</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this code file? This action
+                cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant='outline'
+                onClick={() => setDeleteDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant='destructive'
+                onClick={async () => {
+                  if (selectedCodeUuid) {
+                    await deleteCode(selectedCodeUuid);
+                    setDeleteDialogOpen(false);
+                    setSelectedCodeUuid(null);
+                  }
+                }}>
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Main Content Area */}
         <SidebarInset className='flex-grow'>
