@@ -277,7 +277,7 @@ export default function MCPServersPage() {
                       <FormControl>
                         <Textarea
                           {...field}
-                          placeholder='KEY=value                                                     ANOTHER_KEY=another_value'
+                          placeholder='KEY=value                                                                                ANOTHER_KEY=another_value'
                           className='font-mono text-sm'
                         />
                       </FormControl>

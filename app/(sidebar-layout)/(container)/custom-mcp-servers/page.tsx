@@ -176,12 +176,15 @@ export default function CustomMCPServersPage() {
 
     setIsSubmitting(true);
     try {
-      const additionalArgs = values.additionalArgs.split(' ').filter(Boolean);
-      const env = {};
+      const additionalArgs = values.additionalArgs.split(',').filter(Boolean);
+      const env: Record<string, string> = {};
       try {
-        Object.assign(env, JSON.parse(values.env));
+        values.env.split('\n').forEach((line: string) => {
+          const [key, value] = line.split('=');
+          env[key] = value;
+        });
       } catch (e) {
-        console.error('Failed to parse env JSON:', e);
+        console.error('Failed to parse env:', e);
       }
 
       await createCustomMcpServer(profileUuid, {
@@ -326,10 +329,10 @@ export default function CustomMCPServersPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Additional Arguments (space-separated)
+                        Additional Arguments (comma-separated)
                       </FormLabel>
                       <FormControl>
-                        <Input {...field} />
+                        <Input placeholder='e.g. -y, --arg2' {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -341,9 +344,14 @@ export default function CustomMCPServersPage() {
                   name='env'
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Environment Variables (JSON)</FormLabel>
+                      <FormLabel>
+                        Environment Variables (KEY=value, one per line)
+                      </FormLabel>
                       <FormControl>
-                        <Textarea {...field} />
+                        <Textarea
+                          {...field}
+                          placeholder='KEY=value                                                                                ANOTHER_KEY=another_value'
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
