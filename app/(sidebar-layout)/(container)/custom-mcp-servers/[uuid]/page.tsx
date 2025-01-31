@@ -64,6 +64,8 @@ export default function CustomMcpServerDetailPage({
 
   const form = useForm({
     defaultValues: {
+      name: '',
+      description: '',
       additionalArgs: '',
       env: '',
       code_uuid: '',
@@ -86,6 +88,8 @@ export default function CustomMcpServerDetailPage({
   useEffect(() => {
     if (customMcpServer) {
       form.reset({
+        name: customMcpServer.name,
+        description: customMcpServer.description || '',
         additionalArgs: customMcpServer.additionalArgs.join(', '),
         env: Object.entries(customMcpServer.env)
           .map(([key, value]) => `${key}=${value}`)
@@ -96,6 +100,8 @@ export default function CustomMcpServerDetailPage({
   }, [customMcpServer, form]);
 
   const onSubmit = async (data: {
+    name: string;
+    description: string;
     additionalArgs: string;
     env: string;
     code_uuid: string;
@@ -176,6 +182,32 @@ export default function CustomMcpServerDetailPage({
                 <form
                   onSubmit={form.handleSubmit(onSubmit)}
                   className='space-y-4 pt-4'>
+                  <FormField
+                    control={form.control}
+                    name='name'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name='description'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name='code_uuid'
