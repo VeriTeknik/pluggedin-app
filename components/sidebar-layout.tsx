@@ -103,12 +103,12 @@ export default function SidebarLayout({
         {/* Secondary Sidebar */}
         {pathname?.startsWith('/editor') && (
           <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
-            <SidebarHeader className='h-16 flex items-center px-4'>
-              <h2 className='text-lg font-semibold'>Details</h2>
+            <SidebarHeader className='h-16 flex items-center px-4 mt-4'>
+              <h2 className='text-lg font-semibold'>MCP Code</h2>
             </SidebarHeader>
             <SidebarContent>
               <SidebarGroup>
-                <SidebarGroupLabel>Server Info</SidebarGroupLabel>
+                <SidebarGroupLabel>Files</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
