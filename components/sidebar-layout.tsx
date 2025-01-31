@@ -1,8 +1,9 @@
 'use client';
 
-import { Key, Server, Settings, Wrench } from 'lucide-react';
+import { Code2, Key, Server, Settings, Wrench } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import * as React from 'react';
 
 import {
@@ -27,6 +28,8 @@ export default function SidebarLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
   return (
     <SidebarProvider>
       <div className='flex flex-1 h-screen'>
@@ -69,6 +72,14 @@ export default function SidebarLayout({
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
+                      <Link href='/editor'>
+                        <Code2 className='mr-2 h-4 w-4' />
+                        <span>Code Editor</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
                       <Link href='/api-keys'>
                         <Key className='mr-2 h-4 w-4' />
                         <span>API Keys</span>
@@ -90,41 +101,43 @@ export default function SidebarLayout({
         </Sidebar>
 
         {/* Secondary Sidebar */}
-        <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
-          <SidebarHeader className='h-16 flex items-center px-4'>
-            <h2 className='text-lg font-semibold'>Details</h2>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupLabel>Server Info</SidebarGroupLabel>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/mcp-servers'>
-                        <span>Overview</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/mcp-servers/status'>
-                        <span>Status</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/mcp-servers/logs'>
-                        <span>Logs</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-        </Sidebar>
+        {pathname?.startsWith('/editor') && (
+          <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
+            <SidebarHeader className='h-16 flex items-center px-4'>
+              <h2 className='text-lg font-semibold'>Details</h2>
+            </SidebarHeader>
+            <SidebarContent>
+              <SidebarGroup>
+                <SidebarGroupLabel>Server Info</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild>
+                        <Link href='/mcp-servers'>
+                          <span>Overview</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild>
+                        <Link href='/mcp-servers/status'>
+                          <span>Status</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild>
+                        <Link href='/mcp-servers/logs'>
+                          <span>Logs</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </SidebarContent>
+          </Sidebar>
+        )}
 
         {/* Main Content Area */}
         <SidebarInset className='flex-grow'>
