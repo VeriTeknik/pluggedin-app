@@ -5,7 +5,7 @@ export interface CustomMcpServer {
   name: string;
   created_at: Date;
   description: string | null;
-  code_uuid: string;
+  code_uuid: string | null;
   codeFileName: string | null;
   code: string | null;
   additionalArgs: string[];
@@ -24,4 +24,10 @@ export type CreateCustomMcpServerData = {
   env?: { [key: string]: string };
 };
 
-export type UpdateCustomMcpServerData = Partial<CreateCustomMcpServerData>;
+export type UpdateCustomMcpServerData = {
+  name?: string;
+  description?: string;
+  code_uuid?: string;
+  additionalArgs?: string[];
+  env?: { [key: string]: string };
+};
