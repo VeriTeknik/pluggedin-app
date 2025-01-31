@@ -186,25 +186,27 @@ export default function SidebarLayout({
                     </SidebarMenuItem>
                     {codes.map((code) => (
                       <SidebarMenuItem key={code.uuid}>
-                        <div className='flex items-center w-full'>
-                          <SidebarMenuButton asChild className='flex-grow'>
-                            <Link href={`/editor/${code.uuid}`}>
+                        <SidebarMenuButton asChild className='w-full'>
+                          <Link
+                            href={`/editor/${code.uuid}`}
+                            className='flex items-center w-full group'>
+                            <div className='flex-grow flex items-center'>
                               <Code2 className='mr-2 h-4 w-4' />
                               <span>{code.fileName}</span>
-                            </Link>
-                          </SidebarMenuButton>
-                          <Button
-                            variant='ghost'
-                            size='icon'
-                            className='h-8 w-8'
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setSelectedCodeUuid(code.uuid);
-                              setDeleteDialogOpen(true);
-                            }}>
-                            <Trash2 className='h-4 w-4 text-muted-foreground hover:text-destructive' />
-                          </Button>
-                        </div>
+                            </div>
+                            <Button
+                              variant='ghost'
+                              size='icon'
+                              className='h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity'
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setSelectedCodeUuid(code.uuid);
+                                setDeleteDialogOpen(true);
+                              }}>
+                              <Trash2 className='h-4 w-4 text-muted-foreground hover:text-destructive' />
+                            </Button>
+                          </Link>
+                        </SidebarMenuButton>
                       </SidebarMenuItem>
                     ))}
                   </SidebarMenu>
