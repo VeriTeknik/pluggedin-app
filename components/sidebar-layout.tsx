@@ -19,6 +19,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from '@/components/ui/sidebar';
+import { useCodes } from '@/hooks/use-codes';
 
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
@@ -29,6 +30,7 @@ export default function SidebarLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { codes } = useCodes();
 
   return (
     <SidebarProvider>
@@ -104,34 +106,23 @@ export default function SidebarLayout({
         {pathname?.startsWith('/editor') && (
           <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
             <SidebarHeader className='h-16 flex items-center px-4 mt-4'>
-              <h2 className='text-lg font-semibold'>MCP Code</h2>
+              <h2 className='text-lg font-semibold'>Code Files</h2>
             </SidebarHeader>
             <SidebarContent>
               <SidebarGroup>
                 <SidebarGroupLabel>Files</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <Link href='/mcp-servers'>
-                          <span>Overview</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <Link href='/mcp-servers/status'>
-                          <span>Status</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                      <SidebarMenuButton asChild>
-                        <Link href='/mcp-servers/logs'>
-                          <span>Logs</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
+                    {codes.map((code) => (
+                      <SidebarMenuItem key={code.uuid}>
+                        <SidebarMenuButton asChild>
+                          <Link href={`/editor/${code.uuid}`}>
+                            <Code2 className='mr-2 h-4 w-4' />
+                            <span>{code.fileName}</span>
+                          </Link>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
                   </SidebarMenu>
                 </SidebarGroupContent>
               </SidebarGroup>
