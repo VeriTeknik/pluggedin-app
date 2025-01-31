@@ -105,7 +105,13 @@ export default function CustomMCPServersPage() {
       header: 'Description',
     }),
     columnHelper.accessor('code', {
-      cell: (info) => info.getValue(),
+      cell: (info) => (
+        <Link
+          href={`/editor/${info.row.original.code_uuid}`}
+          className='text-blue-600 hover:underline'>
+          View Code
+        </Link>
+      ),
       header: 'Code',
     }),
     columnHelper.accessor('additionalArgs', {
