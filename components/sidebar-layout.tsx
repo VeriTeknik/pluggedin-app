@@ -1,6 +1,6 @@
 'use client';
 
-import { Code2, Key, Server, Settings, Wrench } from 'lucide-react';
+import { Code2, Key, Plus, Server, Settings, Wrench } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -30,7 +30,7 @@ export default function SidebarLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { codes } = useCodes();
+  const { codes, createCode } = useCodes();
 
   return (
     <SidebarProvider>
@@ -113,6 +113,18 @@ export default function SidebarLayout({
                 <SidebarGroupLabel>Files</SidebarGroupLabel>
                 <SidebarGroupContent>
                   <SidebarMenu>
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        onClick={() => {
+                          const fileName = prompt('Enter file name:');
+                          if (fileName) {
+                            createCode(fileName, '');
+                          }
+                        }}>
+                        <Plus className='h-4 w-4 mr-2' />
+                        <span>New Code File</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
                     {codes.map((code) => (
                       <SidebarMenuItem key={code.uuid}>
                         <SidebarMenuButton asChild>
