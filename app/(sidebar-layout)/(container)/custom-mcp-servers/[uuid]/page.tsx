@@ -1,6 +1,7 @@
 'use client';
 
 import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { useEffect, useState } from 'react';
@@ -279,7 +280,14 @@ export default function CustomMcpServerDetailPage({
           </div>
 
           <div className='mb-3'>
-            <strong>Code File:</strong>
+            <strong>Code File:&nbsp;</strong>
+            <span>
+              <Link
+                href={`/editor/${customMcpServer.code_uuid}`}
+                className='text-blue-600 hover:underline'>
+                Edit Code
+              </Link>
+            </span>
             <p className='mt-1 text-sm text-muted-foreground'>
               {customMcpServer.codeFileName || 'No code file name set'}
             </p>

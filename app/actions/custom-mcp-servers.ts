@@ -61,6 +61,7 @@ export async function getCustomMcpServerByUuid(
       profile_uuid: customMcpServersTable.profile_uuid,
       status: customMcpServersTable.status,
       code: codesTable.code,
+      codeFileName: codesTable.fileName,
     })
     .from(customMcpServersTable)
     .leftJoin(codesTable, eq(customMcpServersTable.code_uuid, codesTable.uuid))
