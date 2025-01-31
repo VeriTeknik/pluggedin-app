@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, Check, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
@@ -16,6 +16,14 @@ import {
 } from '@/app/actions/custom-mcp-servers';
 import { Button } from '@/components/ui/button';
 import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -28,10 +36,18 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { McpServerStatus } from '@/db/schema';
+import { useCodes } from '@/hooks/use-codes';
 import { useProfiles } from '@/hooks/use-profiles';
 import { CustomMcpServer } from '@/types/custom-mcp-server';
 
@@ -44,6 +60,7 @@ export default function CustomMcpServerDetailPage({
   const { uuid } = use(params);
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
+  const [openCombobox, setOpenCombobox] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -52,6 +69,8 @@ export default function CustomMcpServerDetailPage({
       code_uuid: '',
     },
   });
+
+  const { codes } = useCodes();
 
   const {
     data: customMcpServer,
@@ -149,14 +168,75 @@ export default function CustomMcpServerDetailPage({
                 Edit
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className='sm:max-w-[425px]'>
               <DialogHeader>
                 <DialogTitle>Edit Custom MCP Server</DialogTitle>
               </DialogHeader>
               <Form {...form}>
                 <form
                   onSubmit={form.handleSubmit(onSubmit)}
-                  className='space-y-4'>
+                  className='space-y-4 pt-4'>
+                  <FormField
+                    control={form.control}
+                    name='code_uuid'
+                    render={({ field }) => (
+                      <FormItem className='flex flex-col'>
+                        <FormLabel>Code</FormLabel>
+                        <Popover
+                          open={openCombobox}
+                          onOpenChange={setOpenCombobox}>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant='outline'
+                                role='combobox'
+                                aria-expanded={openCombobox}
+                                className='w-full justify-between'>
+                                {field.value
+                                  ? codes?.find(
+                                      (code) => code.uuid === field.value
+                                    )?.fileName
+                                  : 'Select code...'}
+                                <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className='w-full p-0'>
+                            <Command>
+                              <CommandList>
+                                <CommandInput placeholder='Search code...' />
+                                <CommandEmpty>No code found.</CommandEmpty>
+                                <CommandGroup>
+                                  {codes?.map((code) => (
+                                    <CommandItem
+                                      key={code.uuid}
+                                      value={code.uuid}
+                                      onSelect={(currentValue) => {
+                                        form.setValue(
+                                          'code_uuid',
+                                          currentValue
+                                        );
+                                        setOpenCombobox(false);
+                                      }}>
+                                      <Check
+                                        className={`mr-2 h-4 w-4 ${
+                                          field.value === code.uuid
+                                            ? 'opacity-100'
+                                            : 'opacity-0'
+                                        }`}
+                                      />
+                                      {code.fileName}
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name='additionalArgs'
@@ -166,8 +246,9 @@ export default function CustomMcpServerDetailPage({
                           Additional Arguments (comma-separated)
                         </FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input placeholder='e.g. -y, --arg2' {...field} />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -177,29 +258,15 @@ export default function CustomMcpServerDetailPage({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Environment Variables (key=value, one per line)
+                          Environment Variables (KEY=value, one per line)
                         </FormLabel>
                         <FormControl>
-                          <textarea
-                            className='w-full min-h-[100px] px-3 py-2 rounded-md border'
+                          <Textarea
                             {...field}
+                            placeholder='KEY=value                                                                                ANOTHER_KEY=another_value'
                           />
                         </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='code_uuid'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Code</FormLabel>
-                        <FormControl>
-                          <textarea
-                            className='w-full min-h-[200px] px-3 py-2 rounded-md border font-mono'
-                            {...field}
-                          />
-                        </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -262,8 +329,8 @@ export default function CustomMcpServerDetailPage({
           <div className='mb-3'>
             <strong>Additional Arguments:</strong>
             <pre className='mt-2 p-2 bg-secondary rounded-md'>
-              {customMcpServer.additionalArgs.length > 0
-                ? customMcpServer.additionalArgs.join(' ')
+              {customMcpServer.additionalArgs.join(' ').trim().length > 0
+                ? customMcpServer.additionalArgs.join(' ').trim()
                 : 'No additional arguments set'}
             </pre>
           </div>
