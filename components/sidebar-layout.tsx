@@ -6,6 +6,17 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as React from 'react';
 
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +42,16 @@ export default function SidebarLayout({
 }) {
   const pathname = usePathname();
   const { codes, createCode } = useCodes();
+  const [open, setOpen] = React.useState(false);
+  const [fileName, setFileName] = React.useState('');
+
+  const handleCreateCode = async () => {
+    if (fileName.trim()) {
+      await createCode(fileName, '');
+      setFileName('');
+      setOpen(false);
+    }
+  };
 
   return (
     <SidebarProvider>
@@ -114,16 +135,42 @@ export default function SidebarLayout({
                 <SidebarGroupContent>
                   <SidebarMenu>
                     <SidebarMenuItem>
-                      <SidebarMenuButton
-                        onClick={() => {
-                          const fileName = prompt('Enter file name:');
-                          if (fileName) {
-                            createCode(fileName, '');
-                          }
-                        }}>
-                        <Plus className='h-4 w-4 mr-2' />
-                        <span>New Code File</span>
-                      </SidebarMenuButton>
+                      <Dialog open={open} onOpenChange={setOpen}>
+                        <DialogTrigger asChild>
+                          <SidebarMenuButton>
+                            <Plus className='h-4 w-4 mr-2' />
+                            <span>New Code File</span>
+                          </SidebarMenuButton>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Create New Code File</DialogTitle>
+                            <DialogDescription>
+                              Enter a name for your new code file.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className='py-4'>
+                            <Input
+                              value={fileName}
+                              onChange={(e) => setFileName(e.target.value)}
+                              placeholder='Enter file name'
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCreateCode();
+                                }
+                              }}
+                            />
+                          </div>
+                          <DialogFooter>
+                            <Button
+                              variant='outline'
+                              onClick={() => setOpen(false)}>
+                              Cancel
+                            </Button>
+                            <Button onClick={handleCreateCode}>Create</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </SidebarMenuItem>
                     {codes.map((code) => (
                       <SidebarMenuItem key={code.uuid}>
