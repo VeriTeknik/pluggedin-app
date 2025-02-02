@@ -44,7 +44,7 @@ export default function SearchPage() {
         params.set('offset', '0');
         router.push(`/search?${params.toString()}`);
       }
-    }, 300);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [searchQuery, query, router]);
