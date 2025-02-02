@@ -164,9 +164,17 @@ function AddMcpServerDialog({
                 </FormItem>
               )}
             />
-            <Button type='submit' disabled={isSubmitting}>
-              Add Server
-            </Button>
+            <div className='flex justify-end gap-4'>
+              <Button
+                variant='outline'
+                type='button'
+                onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type='submit' disabled={isSubmitting}>
+                Add Server
+              </Button>
+            </div>
           </form>
         </Form>
       </DialogContent>
