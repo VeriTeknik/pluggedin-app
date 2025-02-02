@@ -1,8 +1,15 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: '/service/:path*',
+        destination: 'http://localhost:8787/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

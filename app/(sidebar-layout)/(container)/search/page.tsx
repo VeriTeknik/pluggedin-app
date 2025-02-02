@@ -1,0 +1,80 @@
+'use client';
+
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import useSWR from 'swr';
+
+import { Input } from '@/components/ui/input';
+import type { PaginatedSearchResult } from '@/types/search';
+
+import CardGrid from './components/CardGrid';
+import { PaginationUi } from './components/PaginationUi';
+
+const PAGE_SIZE = 15;
+
+export default function SearchPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const query = searchParams.get('query') || '';
+  const offset = parseInt(searchParams.get('offset') || '0');
+  const [searchQuery, setSearchQuery] = useState(query);
+
+  const { data, error } = useSWR<PaginatedSearchResult>(
+    `/service/search?query=${encodeURIComponent(query)}&pageSize=${PAGE_SIZE}&offset=${offset}`,
+    async (url: string) => {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(
+          `Failed to fetch: ${res.status} ${res.statusText} - ${errorText}`
+        );
+      }
+      return res.json();
+    }
+  );
+
+  if (error) console.error('Search error:', error);
+  console.log('Search data:', data);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery !== query) {
+        const params = new URLSearchParams();
+        if (searchQuery) params.set('query', searchQuery);
+        params.set('offset', '0');
+        router.push(`/search?${params.toString()}`);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, query, router]);
+
+  const handlePageChange = (page: number) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('offset', ((page - 1) * PAGE_SIZE).toString());
+    router.push(`/search?${params.toString()}`);
+  };
+
+  return (
+    <div className='container mx-auto py-8 space-y-6 flex flex-col items-center'>
+      <h1 className='text-2xl font-bold'>Explore & Search MCP Servers</h1>
+      <Input
+        type='search'
+        placeholder='Search...'
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        className='max-w-xl mx-auto'
+      />
+
+      {data?.results && <CardGrid items={data.results} />}
+
+      {data && (
+        <PaginationUi
+          currentPage={Math.floor(offset / PAGE_SIZE) + 1}
+          totalPages={Math.ceil(data.total / PAGE_SIZE)}
+          onPageChange={handlePageChange}
+        />
+      )}
+    </div>
+  );
+}
