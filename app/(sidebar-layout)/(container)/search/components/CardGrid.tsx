@@ -234,7 +234,7 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                     name: item.name,
                     description: item.description,
                     command: item.command,
-                    args: item.args?.join(' ') || '',
+                    args: item.args?.join(', ') || '',
                     env: item.envs?.join().length
                       ? item.envs.join('=\n') + '='
                       : '',
