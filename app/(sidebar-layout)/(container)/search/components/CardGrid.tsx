@@ -29,6 +29,11 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
             <p className='text-sm text-muted-foreground mb-2'>
               Command: {item.command}
             </p>
+            {item.args && (
+              <p className='text-sm text-muted-foreground mb-2'>
+                Example Args: {item.args.join(' ')}
+              </p>
+            )}
             {item.envs.length > 0 && (
               <div className='flex flex-wrap gap-2 mt-2'>
                 {item.envs.map((env) => (
