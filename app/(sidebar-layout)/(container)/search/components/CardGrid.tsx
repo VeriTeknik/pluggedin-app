@@ -1,6 +1,6 @@
 import { Download, Github } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
 import { createMcpServer } from '@/app/actions/mcp-servers';
@@ -57,6 +57,10 @@ function AddMcpServerDialog({
   const form = useForm({
     defaultValues,
   });
+
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
 
   const onSubmit = async (values: typeof defaultValues) => {
     if (!currentProfile?.uuid) return;
@@ -231,7 +235,9 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                     description: item.description,
                     command: item.command,
                     args: item.args?.join(' ') || '',
-                    env: item.envs?.join('\n') || '',
+                    env: item.envs?.join().length
+                      ? item.envs.join('=\n') + '='
+                      : '',
                   });
                   setDialogOpen(true);
                 }}>
