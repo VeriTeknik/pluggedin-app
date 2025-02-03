@@ -10,7 +10,7 @@ import type { PaginatedSearchResult } from '@/types/search';
 import CardGrid from './components/CardGrid';
 import { PaginationUi } from './components/PaginationUi';
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 6;
 
 export default function SearchPage() {
   const router = useRouter();
