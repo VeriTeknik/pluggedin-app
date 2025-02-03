@@ -143,7 +143,7 @@ function AddMcpServerDialog({
               name='args'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Arguments (space-separated)</FormLabel>
+                  <FormLabel>Arguments (comma-separated)</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
