@@ -143,7 +143,7 @@ function AddMcpServerDialog({
               name='args'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Arguments (comma-separated)</FormLabel>
+                  <FormLabel>Arguments (space-separated)</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -242,7 +242,7 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                     name: item.name,
                     description: item.description,
                     command: item.command,
-                    args: item.args?.join(', ') || '',
+                    args: item.args?.join(' ') || '',
                     env: item.envs?.join().length
                       ? item.envs.join('=\n') + '='
                       : '',
