@@ -46,6 +46,8 @@ export default function McpServerDetailPage({
 
   const form = useForm({
     defaultValues: {
+      name: '',
+      description: '',
       command: '',
       args: '',
       env: '',
@@ -66,6 +68,8 @@ export default function McpServerDetailPage({
   useEffect(() => {
     if (mcpServer) {
       form.reset({
+        name: mcpServer.name,
+        description: mcpServer.description || '',
         command: mcpServer.command,
         args: mcpServer.args.join(' '),
         env: Object.entries(mcpServer.env)
@@ -76,6 +80,8 @@ export default function McpServerDetailPage({
   }, [mcpServer, form]);
 
   const onSubmit = async (data: {
+    name: string;
+    description: string;
     command: string;
     args: string;
     env: string;
@@ -153,12 +159,39 @@ export default function McpServerDetailPage({
                   className='space-y-4'>
                   <FormField
                     control={form.control}
+                    name='name'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder='Name' required />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name='description'
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="(Optional) Brief description of the server's purpose"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
                     name='command'
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Command</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input {...field} placeholder='e.g. npx or uvx' />
                         </FormControl>
                       </FormItem>
                     )}
@@ -170,7 +203,10 @@ export default function McpServerDetailPage({
                       <FormItem>
                         <FormLabel>Arguments (space-separated)</FormLabel>
                         <FormControl>
-                          <Input {...field} />
+                          <Input
+                            {...field}
+                            placeholder='e.g. mcp-server-time'
+                          />
                         </FormControl>
                       </FormItem>
                     )}
@@ -187,6 +223,7 @@ export default function McpServerDetailPage({
                           <textarea
                             className='w-full min-h-[100px] px-3 py-2 rounded-md border'
                             {...field}
+                            placeholder='KEY=value                                                                                ANOTHER_KEY=another_value'
                           />
                         </FormControl>
                       </FormItem>
