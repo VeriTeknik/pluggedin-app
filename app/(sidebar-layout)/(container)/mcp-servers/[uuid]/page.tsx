@@ -233,7 +233,18 @@ export default function McpServerDetailPage({
                     <Button
                       type='button'
                       variant='outline'
-                      onClick={() => setIsEditing(false)}>
+                      onClick={() => {
+                        form.reset({
+                          name: mcpServer.name,
+                          description: mcpServer.description || '',
+                          command: mcpServer.command,
+                          args: mcpServer.args.join(' '),
+                          env: Object.entries(mcpServer.env)
+                            .map(([key, value]) => `${key}=${value}`)
+                            .join('\n'),
+                        });
+                        setIsEditing(false);
+                      }}>
                       Cancel
                     </Button>
                     <Button type='submit'>Save Changes</Button>
