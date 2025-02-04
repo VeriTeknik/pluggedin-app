@@ -182,7 +182,7 @@ export default function CustomMCPServersPage() {
 
     setIsSubmitting(true);
     try {
-      const additionalArgs = values.additionalArgs.split(',').filter(Boolean);
+      const additionalArgs = values.additionalArgs.trim().split(/\s+/).filter(Boolean);
       const env: Record<string, string> = {};
       try {
         values.env.split('\n').forEach((line: string) => {
@@ -335,10 +335,10 @@ export default function CustomMCPServersPage() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>
-                        Additional Arguments (comma-separated)
+                        Additional Arguments (space-separated)
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder='e.g. -y, --arg2' {...field} />
+                        <Input placeholder='e.g. -y --arg2' {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

@@ -71,7 +71,7 @@ function AddMcpServerDialog({
         name: values.name,
         description: values.description,
         command: values.command,
-        args: values.args.split(' ').filter(Boolean),
+        args: values.args.trim().split(/\s+/).filter(Boolean),
         env: Object.fromEntries(
           values.env
             .split('\n')
