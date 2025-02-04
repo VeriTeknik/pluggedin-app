@@ -98,3 +98,45 @@ export const mcpServersTable = pgTable(
     index('mcp_servers_profile_uuid_idx').on(table.profile_uuid),
   ]
 );
+
+export const codesTable = pgTable('codes', {
+  uuid: uuid('uuid').primaryKey().defaultRandom(),
+  fileName: text('file_name').notNull(),
+  code: text('code').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const customMcpServersTable = pgTable(
+  'custom_mcp_servers',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    description: text('description'),
+    code_uuid: uuid('code_uuid')
+      .notNull()
+      .references(() => codesTable.uuid),
+    additionalArgs: text('additional_args')
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    env: jsonb('env')
+      .$type<{ [key: string]: string }>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid),
+    status: mcpServerStatusEnum('status')
+      .notNull()
+      .default(McpServerStatus.ACTIVE),
+  },
+  (table) => [
+    index('custom_mcp_servers_status_idx').on(table.status),
+    index('custom_mcp_servers_profile_uuid_idx').on(table.profile_uuid),
+  ]
+);

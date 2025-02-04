@@ -1,8 +1,15 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  /* config options here */
+  async rewrites() {
+    return [
+      {
+        source: '/service/:path*',
+        destination: 'https://metatool-service.jczstudio.workers.dev/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

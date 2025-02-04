@@ -1,0 +1,268 @@
+import { Download, Github } from 'lucide-react';
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
+
+import { createMcpServer } from '@/app/actions/mcp-servers';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { useProfiles } from '@/hooks/use-profiles';
+import { SearchIndex } from '@/types/search';
+
+interface AddMcpServerDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  defaultValues: {
+    name: string;
+    description: string;
+    command: string;
+    args: string;
+    env: string;
+  };
+}
+
+function AddMcpServerDialog({
+  open,
+  onOpenChange,
+  defaultValues,
+}: AddMcpServerDialogProps) {
+  const { currentProfile } = useProfiles();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const form = useForm({
+    defaultValues,
+  });
+
+  useEffect(() => {
+    form.reset(defaultValues);
+  }, [defaultValues, form]);
+
+  const onSubmit = async (values: typeof defaultValues) => {
+    if (!currentProfile?.uuid) return;
+
+    setIsSubmitting(true);
+    try {
+      await createMcpServer(currentProfile.uuid, {
+        name: values.name,
+        description: values.description,
+        command: values.command,
+        args: values.args.split(' ').filter(Boolean),
+        env: Object.fromEntries(
+          values.env
+            .split('\n')
+            .filter((line) => line.includes('='))
+            .map((line) => {
+              const [key, ...values] = line.split('=');
+              return [key.trim(), values.join('=').trim()];
+            })
+        ),
+      });
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add MCP Server</DialogTitle>
+          <DialogDescription>
+            Add a new MCP server with the following configuration.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+            <FormField
+              control={form.control}
+              name='name'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='description'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='command'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Command</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='args'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Arguments (space-separated)</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name='env'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Environment Variables (one per line)</FormLabel>
+                  <FormControl>
+                    <Textarea {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className='flex justify-end gap-4'>
+              <Button
+                variant='outline'
+                type='button'
+                onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type='submit' disabled={isSubmitting}>
+                Add Server
+              </Button>
+            </div>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+export default function CardGrid({ items }: { items: SearchIndex }) {
+  const [selectedItem, setSelectedItem] = useState<{
+    name: string;
+    description: string;
+    command: string;
+    args: string;
+    env: string;
+  } | null>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  return (
+    <>
+      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+        {Object.entries(items).map(([key, item]) => (
+          <Card key={key} className='flex flex-col'>
+            <CardHeader>
+              <CardTitle>{item.name}</CardTitle>
+              <CardDescription>{item.description}</CardDescription>
+            </CardHeader>
+            <CardContent className='flex-grow'>
+              <p className='text-sm text-muted-foreground mb-2'>
+                Package: {item.package_name}
+              </p>
+              <p className='text-sm text-muted-foreground mb-2'>
+                Command: {item.command}
+              </p>
+              {item.args && (
+                <p className='text-sm text-muted-foreground mb-2'>
+                  Example Args: {item.args.join(' ')}
+                </p>
+              )}
+              {item.envs.length > 0 && (
+                <div className='flex flex-wrap gap-2 mt-2'>
+                  {item.envs.map((env) => (
+                    <Badge key={env} variant='secondary'>
+                      {env}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+            <CardFooter className='flex justify-between'>
+              {item.githubUrl && (
+                <Button variant='outline' asChild>
+                  <Link
+                    href={item.githubUrl}
+                    target='_blank'
+                    rel='noopener noreferrer'>
+                    <Github className='w-4 h-4 mr-2' />
+                    GitHub
+                  </Link>
+                </Button>
+              )}
+              <Button
+                variant='default'
+                onClick={() => {
+                  setSelectedItem({
+                    name: item.name,
+                    description: item.description,
+                    command: item.command,
+                    args: item.args?.join(' ') || '',
+                    env: item.envs?.join().length
+                      ? item.envs.join('=\n') + '='
+                      : '',
+                  });
+                  setDialogOpen(true);
+                }}>
+                <Download className='w-4 h-4 mr-2' />
+                Install
+              </Button>
+            </CardFooter>
+          </Card>
+        ))}
+      </div>
+      {selectedItem && (
+        <AddMcpServerDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          defaultValues={selectedItem}
+        />
+      )}
+    </>
+  );
+}

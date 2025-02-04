@@ -6,6 +6,31 @@ The app is prioritized to be self hostable at first, and it is completely free a
 
 https://github.com/user-attachments/assets/1ab4515b-18dd-4863-aa11-72674910d330
 
+```mermaid
+sequenceDiagram
+    participant MCPClient as MCP Client (e.g. Claude Desktop)
+    participant MetaToolMCP as MetaTool MCP Server
+    participant MetaToolApp as MetaTool App
+    participant MCPServers as Installed MCP Servers in Metatool App
+
+    MCPClient ->> MetaToolMCP: Request list tools
+    MetaToolMCP ->> MetaToolApp: Get tools configuration & status
+    MetaToolApp ->> MetaToolMCP: Return tools configuration & status
+
+    loop For each listed MCP Server
+        MetaToolMCP ->> MCPServers: Request list_tools
+        MCPServers ->> MetaToolMCP: Return list of tools
+    end
+
+    MetaToolMCP ->> MetaToolMCP: Aggregate tool lists
+    MetaToolMCP ->> MCPClient: Return aggregated list of tools
+
+    MCPClient ->> MetaToolMCP: Call tool
+    MetaToolMCP ->> MCPServers: call_tool to target MCP Server
+    MCPServers ->> MetaToolMCP: Return tool response
+    MetaToolMCP ->> MCPClient: Return tool response
+```
+
 ## Highlights
 
 - You only need to install one mcp-server-metatool MCP server and metatool will handle the rest for you.
