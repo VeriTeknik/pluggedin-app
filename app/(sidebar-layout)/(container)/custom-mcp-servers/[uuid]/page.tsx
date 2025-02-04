@@ -90,7 +90,7 @@ export default function CustomMcpServerDetailPage({
       form.reset({
         name: customMcpServer.name,
         description: customMcpServer.description || '',
-        additionalArgs: customMcpServer.additionalArgs.join(', '),
+        additionalArgs: customMcpServer.additionalArgs.join(' '),
         env: Object.entries(customMcpServer.env)
           .map(([key, value]) => `${key}=${value}`)
           .join('\n'),
@@ -112,7 +112,7 @@ export default function CustomMcpServerDetailPage({
     const processedData = {
       ...data,
       additionalArgs:
-        data.additionalArgs.split(',').map((arg) => arg.trim()) || [],
+        data.additionalArgs.trim().split(/\s+/).map((arg) => arg.trim()) || [],
       env:
         Object.fromEntries(
           data.env
@@ -275,10 +275,10 @@ export default function CustomMcpServerDetailPage({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Additional Arguments (comma-separated)
+                          Additional Arguments (space-separated)
                         </FormLabel>
                         <FormControl>
-                          <Input placeholder='e.g. -y, --arg2' {...field} />
+                          <Input placeholder='e.g. -y --arg2' {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

@@ -106,9 +106,6 @@ export async function deleteCustomMcpServerByUuid(
           eq(customMcpServersTable.profile_uuid, profileUuid)
         )
       );
-
-    // Then delete the associated code
-    await db.delete(codesTable).where(eq(codesTable.uuid, server[0].code_uuid));
   }
 }
 

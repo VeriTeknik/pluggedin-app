@@ -67,7 +67,7 @@ export default function McpServerDetailPage({
     if (mcpServer) {
       form.reset({
         command: mcpServer.command,
-        args: mcpServer.args.join(', '),
+        args: mcpServer.args.join(' '),
         env: Object.entries(mcpServer.env)
           .map(([key, value]) => `${key}=${value}`)
           .join('\n'),
@@ -85,7 +85,11 @@ export default function McpServerDetailPage({
     // Process args and env before submission
     const processedData = {
       ...data,
-      args: data.args.split(',').map((arg) => arg.trim()) || [],
+      args:
+        data.args
+          .trim()
+          .split(/\s+/)
+          .map((arg) => arg.trim()) || [],
       env:
         Object.fromEntries(
           data.env
@@ -164,7 +168,7 @@ export default function McpServerDetailPage({
                     name='args'
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Arguments (comma-separated)</FormLabel>
+                        <FormLabel>Arguments (space-separated)</FormLabel>
                         <FormControl>
                           <Input {...field} />
                         </FormControl>
