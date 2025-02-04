@@ -6,7 +6,7 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/service/:path*',
-        destination: 'http://localhost:8787/:path*',
+        destination: 'https://metatool-service.jczstudio.workers.dev/:path*',
       },
     ];
   },
