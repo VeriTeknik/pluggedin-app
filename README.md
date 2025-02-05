@@ -54,7 +54,7 @@ Then open http://localhost:12005 in your browser to open Metatool App.
 It is recommended to have npx (node.js based mcp) and uvx (python based mcp) installed globally.
 To install uv check: https://docs.astral.sh/uv/getting-started/installation/
 
-You also need a MCP Client to connect to `mcp-server-metatool`. For example if you are using Claude Desktop, the config json may look like this:
+You also need a MCP Client to connect to `mcp-server-metatool`. For example if you are using [Claude Desktop](https://modelcontextprotocol.io/quickstart/user), the config json may look like this:
 ```json
 {
   "mcpServers": {
@@ -62,7 +62,7 @@ You also need a MCP Client to connect to `mcp-server-metatool`. For example if y
       "command": "uvx",
       "args": ["mcp-server-metatool"],
       "env": {
-        "METATOOL_API_KEY": "<your api key>",
+        "METATOOL_API_KEY": "<your api key>"
       }
     }
   }
@@ -78,7 +78,7 @@ Optionally you can also set the url to Metatool App server:
       "args": ["mcp-server-metatool"],
       "env": {
         "METATOOL_API_KEY": "<your api key>",
-        "METATOOL_API_BASE_URL": "http://localhost:12005",
+        "METATOOL_API_BASE_URL": "http://localhost:12005"
       }
     }
   }
