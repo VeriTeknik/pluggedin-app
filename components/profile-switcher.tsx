@@ -94,7 +94,7 @@ export function ProfileSwitcher() {
   return (
     <div className='flex flex-col gap-2 w-full p-2'>
       <div>
-        <p className='text-xs font-medium p-1'>Profiles</p>
+        <p className='text-xs font-medium p-1'>Profiles (Workspaces)</p>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -112,7 +112,7 @@ export function ProfileSwitcher() {
               <CommandList>
                 <CommandInput placeholder='Search profiles...' />
                 <CommandEmpty>No profile found.</CommandEmpty>
-                <CommandGroup heading='Profiles'>
+                <CommandGroup heading='Profiles (Workspaces)'>
                   {profiles?.map((profile) => (
                     <CommandItem
                       key={profile.uuid}

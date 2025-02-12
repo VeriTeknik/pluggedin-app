@@ -8,7 +8,6 @@ import {
   Server,
   Settings,
   Trash2,
-  Wrench,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -108,22 +107,22 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/custom-mcp-servers'>
                         <Wrench className='mr-2 h-4 w-4' />
                         <span>Custom MCP Servers</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  </SidebarMenuItem> */}
+                  {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/editor'>
                         <Code2 className='mr-2 h-4 w-4' />
                         <span>Python Code Editor</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  </SidebarMenuItem> */}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/api-keys'>
