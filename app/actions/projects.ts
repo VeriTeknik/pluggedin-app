@@ -20,7 +20,7 @@ export async function createProject(name: string) {
     const [profile] = await tx
       .insert(profilesTable)
       .values({
-        name: 'Default Profile',
+        name: 'Default Workspace',
         project_uuid: project.uuid,
       })
       .returning();

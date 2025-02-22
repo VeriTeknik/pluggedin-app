@@ -61,7 +61,7 @@ export function ProjectSwitcher() {
   return (
     <div className='flex flex-col gap-2 w-full p-2'>
       <div>
-        <p className='text-xs font-medium p-1'>Projects (Clients)</p>
+        <p className='text-xs font-medium p-1'>Projects (MCP Clients)</p>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -79,7 +79,7 @@ export function ProjectSwitcher() {
               <CommandList>
                 <CommandInput placeholder='Search projects...' />
                 <CommandEmpty>No project found.</CommandEmpty>
-                <CommandGroup heading='Projects (Clients)'>
+                <CommandGroup heading='Projects (MCP Clients)'>
                   {projects.map((project) => (
                     <CommandItem
                       key={project.uuid}

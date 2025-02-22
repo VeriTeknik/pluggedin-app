@@ -79,11 +79,11 @@ export function ProfileSwitcher() {
       });
       mutateProfiles();
     } catch (error) {
-      console.error('Failed to create profile:', error);
+      console.error('Failed to create workspace:', error);
       toast({
         title: 'Error',
         description:
-          error instanceof Error ? error.message : 'Failed to create profile',
+          error instanceof Error ? error.message : 'Failed to create workspace',
         variant: 'destructive',
       });
     } finally {
@@ -94,7 +94,7 @@ export function ProfileSwitcher() {
   return (
     <div className='flex flex-col gap-2 w-full p-2'>
       <div>
-        <p className='text-xs font-medium p-1'>Profiles (Workspaces)</p>
+        <p className='text-xs font-medium p-1'>Workspaces</p>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -112,7 +112,7 @@ export function ProfileSwitcher() {
               <CommandList>
                 <CommandInput placeholder='Search profiles...' />
                 <CommandEmpty>No profile found.</CommandEmpty>
-                <CommandGroup heading='Profiles (Workspaces)'>
+                <CommandGroup heading='Workspaces'>
                   {profiles?.map((profile) => (
                     <CommandItem
                       key={profile.uuid}
@@ -144,7 +144,7 @@ export function ProfileSwitcher() {
                       setShowNewProfileDialog(true);
                     }}>
                     <PlusCircle className='mr-2 h-5 w-5' />
-                    Create Profile
+                    Create Workspace
                   </CommandItem>
                 </CommandGroup>
               </CommandList>
@@ -181,7 +181,7 @@ export function ProfileSwitcher() {
         onOpenChange={setShowNewProfileDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create profile</DialogTitle>
+            <DialogTitle>Create workspace</DialogTitle>
             <DialogDescription>
               Add a new profile to your project.
             </DialogDescription>

@@ -90,8 +90,8 @@ export function CurrentProfileSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Current Profile</CardTitle>
-        <CardDescription>Manage your current profile settings</CardDescription>
+        <CardTitle>Current Workspace</CardTitle>
+        <CardDescription>Manage your Current Workspace settings</CardDescription>
       </CardHeader>
       <CardContent className='space-y-6'>
         <div className='space-y-4'>
@@ -147,8 +147,8 @@ export function CurrentProfileSection() {
               Danger Zone
             </h3>
             <p className='text-sm text-muted-foreground mt-1'>
-              Once you delete a profile, there is no going back. Please be
-              certain.
+              Once you delete a workspace, there is no going back. Please be
+              careful.
             </p>
             <Button
               variant='destructive'

@@ -143,7 +143,7 @@ export function CurrentProjectSection() {
             </h3>
             <p className='text-sm text-muted-foreground mt-1'>
               Once you delete a project, there is no going back. Please be
-              certain.
+              careful.
             </p>
             <Button
               variant='destructive'

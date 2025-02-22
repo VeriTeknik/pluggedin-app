@@ -87,7 +87,7 @@ export async function getProjectActiveProfile(currentProjectUuid: string) {
   const defaultProfile = await db
     .insert(profilesTable)
     .values({
-      name: 'Default Profile',
+      name: 'Default Workspace',
       project_uuid: currentProjectUuid,
     })
     .returning();
