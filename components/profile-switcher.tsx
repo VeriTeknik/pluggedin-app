@@ -171,10 +171,10 @@ export function ProfileSwitcher() {
         {!currentProject || !currentProfile
           ? 'Loading...'
           : currentProfile.uuid === activeProfile?.uuid
-            ? 'Profile activated'
+            ? 'Workspace activated'
             : isActivating
               ? 'Activating...'
-              : 'Activate this Profile'}
+              : 'Activate this Workspace'}
       </Button>
       <Dialog
         open={showNewProfileDialog}
