@@ -4,7 +4,7 @@ import useSWR from 'swr';
 import { getProjects } from '@/app/actions/projects';
 import { Project } from '@/types/project';
 
-const CURRENT_PROJECT_KEY = 'metatool-current-project';
+const CURRENT_PROJECT_KEY = 'metamcp-current-project';
 
 export const useProjects = () => {
   const { data, mutate, isLoading } = useSWR('projects', getProjects);

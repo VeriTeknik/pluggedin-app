@@ -134,7 +134,7 @@ export default function ApiKeysPage() {
         ) : (
           <div className='space-y-4'>
             <div className='text-sm text-muted-foreground'>
-              Your API keys are used to authenticate requests to the Metatool
+              Your API keys are used to authenticate requests to the MetaMCP
               API. Keep them secure and do not share them with others.
             </div>
             {apiKeys && apiKeys.length === 0 && (

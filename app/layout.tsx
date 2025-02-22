@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'MetaTool Dashboard',
-  description: 'The internal tool for MetaTool.',
+  title: 'MetaMCP Dashboard',
+  description: 'The internal tool for MetaMCP.',
 };
 
 export default function RootLayout({
