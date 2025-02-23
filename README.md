@@ -77,7 +77,7 @@ You also need a MCP Client to connect to `@metamcp/mcp-server-metamcp`. For exam
       "args": ["-y", "@metamcp/mcp-server-metamcp"],
       "env": {
         "METAMCP_API_KEY": "<your api key>",
-        "METATOOL_API_BASE_URL": "http://localhost:12005"
+        "METAMCP_API_BASE_URL": "http://localhost:12005"
       }
     }
   }
