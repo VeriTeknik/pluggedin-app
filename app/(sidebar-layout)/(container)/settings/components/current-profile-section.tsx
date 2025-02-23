@@ -79,7 +79,7 @@ export function CurrentProfileSection() {
       toast({
         title: 'Error',
         description:
-          error instanceof Error ? error.message : 'Failed to delete profile',
+          error instanceof Error ? error.message : 'Failed to delete workspace',
         variant: 'destructive',
       });
     } finally {
@@ -155,7 +155,7 @@ export function CurrentProfileSection() {
               className='mt-4'
               onClick={handleDelete}
               disabled={isLoading}>
-              Delete Profile
+              Delete Workspace
             </Button>
           </div>
         </div>

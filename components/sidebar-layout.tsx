@@ -2,11 +2,13 @@
 
 import {
   Code2,
+  Info,
   Key,
   Plus,
   Search,
   Server,
   Settings,
+  Terminal,
   Trash2,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -93,9 +95,17 @@ export default function SidebarLayout({
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
+                      <Link href='/setup-guide'>
+                        <Info className='mr-2 h-4 w-4' />
+                        <span>Setup Guide</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
                       <Link href='/search'>
                         <Search className='mr-2 h-4 w-4' />
-                        <span>Explore & Search</span>
+                        <span>Explore & Search (Beta)</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -128,6 +138,14 @@ export default function SidebarLayout({
                       <Link href='/api-keys'>
                         <Key className='mr-2 h-4 w-4' />
                         <span>API Keys</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/inspector-guide'>
+                        <Terminal className='mr-2 h-4 w-4' />
+                        <span>Inspector Guide</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

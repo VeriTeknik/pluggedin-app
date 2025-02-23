@@ -27,6 +27,30 @@ export async function createApiKey(projectUuid: string, name?: string) {
   return apiKey[0] as ApiKey;
 }
 
+export async function getFirstApiKey(projectUuid: string) {
+  if (!projectUuid) {
+    return null;
+  }
+
+  let apiKey = await db.query.apiKeysTable.findFirst({
+    where: eq(apiKeysTable.project_uuid, projectUuid),
+  });
+
+  if (!apiKey) {
+    const newApiKey = `sk_mt_${nanoid(64)}`;
+    await db.insert(apiKeysTable).values({
+      project_uuid: projectUuid,
+      api_key: newApiKey,
+    });
+
+    apiKey = await db.query.apiKeysTable.findFirst({
+      where: eq(apiKeysTable.project_uuid, projectUuid),
+    });
+  }
+
+  return apiKey as ApiKey;
+}
+
 export async function getProjectApiKeys(projectUuid: string) {
   const apiKeys = await db
     .select()

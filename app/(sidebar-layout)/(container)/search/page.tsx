@@ -58,7 +58,9 @@ function SearchContent() {
 
   return (
     <div className='container mx-auto py-8 space-y-6 flex flex-col items-center'>
-      <h1 className='text-2xl font-bold'>Explore & Search MCP Servers</h1>
+      <h1 className='text-2xl font-bold'>
+        Explore & Search MCP Servers (Beta)
+      </h1>
       <Input
         type='search'
         placeholder='Search...'
