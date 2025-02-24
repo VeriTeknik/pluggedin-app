@@ -88,7 +88,7 @@ You can get the API key from the MetaMCP App's API Keys page.
 
 ## License
 
-Elastic License 2.0 (ELv2)
+GNU AGPL v3
 
 ## Credits
 
