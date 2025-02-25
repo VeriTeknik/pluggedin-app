@@ -158,6 +158,53 @@ export default function SetupGuidePage() {
               </Highlight>
             </div>
           </div>
+
+          <div className='p-4 bg-gray-50 rounded-lg'>
+            <h3 className='font-medium mb-2'>Cursor Configuration</h3>
+            <p className='mb-2'>
+              For Cursor, you can configure MetaMCP directly in the settings:
+            </p>
+            <ol className='list-decimal list-inside mb-4 space-y-2'>
+              <li>Open Cursor and go to Cursor Settings</li>
+              <li>Navigate to the Features section</li>
+              <li>
+                Find &apos;MCP Servers&apos; and click &apos;Add new MCP
+                Server&apos;
+              </li>
+              <li>Use the following command:</li>
+            </ol>
+
+            <div className='relative'>
+              <button
+                onClick={() => {
+                  const command = `npx -y @metamcp/mcp-server-metamcp --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
+                  navigator.clipboard.writeText(command);
+                  toast({
+                    description: 'Cursor command copied to clipboard',
+                  });
+                }}
+                className='absolute top-2 right-2 p-2 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
+                title='Copy to clipboard'>
+                <Copy className='w-5 h-5' />
+              </button>
+              <Highlight
+                theme={themes.github}
+                code={`npx -y @metamcp/mcp-server-metamcp --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'}`}
+                language='bash'>
+                {({ tokens, getLineProps, getTokenProps }) => (
+                  <pre className='bg-[#f6f8fa] text-[#24292f] p-4 rounded-md overflow-x-auto'>
+                    {tokens.map((line, i) => (
+                      <div key={i} {...getLineProps({ line })}>
+                        {line.map((token, key) => (
+                          <span key={key} {...getTokenProps({ token })} />
+                        ))}
+                      </div>
+                    ))}
+                  </pre>
+                )}
+              </Highlight>
+            </div>
+          </div>
         </div>
       </section>
     </div>
