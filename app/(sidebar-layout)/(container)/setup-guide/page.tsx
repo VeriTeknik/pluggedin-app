@@ -138,7 +138,8 @@ export default function SetupGuidePage() {
       "command": "npx",
       "args": ["-y", "@metamcp/mcp-server-metamcp"],
       "env": {
-        "METAMCP_API_KEY": "${apiKey?.api_key ?? '<create an api key first>'}"
+        "METAMCP_API_KEY": "${apiKey?.api_key ?? '<create an api key first>'}",
+        "METAMCP_API_BASE_URL": "http://localhost:12005"
       }
     }
   }
@@ -189,7 +190,7 @@ export default function SetupGuidePage() {
               </button>
               <Highlight
                 theme={themes.github}
-                code={`npx -y @metamcp/mcp-server-metamcp --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'}`}
+                code={`npx -y @metamcp/mcp-server-metamcp --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'} --metamcp-api-base-url http://localhost:12005`}
                 language='bash'>
                 {({ tokens, getLineProps, getTokenProps }) => (
                   <pre className='bg-[#f6f8fa] text-[#24292f] p-4 rounded-md overflow-x-auto'>
