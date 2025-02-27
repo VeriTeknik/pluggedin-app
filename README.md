@@ -84,6 +84,12 @@ You also need a MCP Client to connect to `@metamcp/mcp-server-metamcp`. For exam
 }
 ```
 
+For Cursor, env vars aren't easy to get typed in so you may use args instead
+
+```bash
+npx -y @metamcp/mcp-server-metamcp --metamcp-api-key <your-api-key> --metamcp-api-base-url <base-url>
+```
+
 You can get the API key from the MetaMCP App's API Keys page.
 
 ## License
