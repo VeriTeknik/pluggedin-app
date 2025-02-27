@@ -16,7 +16,7 @@ export default function InspectorGuidePage() {
   );
   const { toast } = useToast();
 
-  const inspectorCommand = `npx -y @modelcontextprotocol/inspector npx -y @metamcp/mcp-server-metamcp -e METAMCP_API_KEY=${apiKey?.api_key || '<YOUR_API_KEY>'}`;
+  const inspectorCommand = `npx -y @modelcontextprotocol/inspector npx -y @metamcp/mcp-server-metamcp -e METAMCP_API_KEY=${apiKey?.api_key || '<YOUR_API_KEY>'} -e METAMCP_API_BASE_URL=http://localhost:12005`;
 
   return (
     <div className='container mx-auto py-6 flex flex-col items-start justify-center gap-6'>
