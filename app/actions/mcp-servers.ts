@@ -115,3 +115,42 @@ export async function createMcpServer(
     profile_uuid: profileUuid,
   });
 }
+
+export async function bulkImportMcpServers(
+  data: {
+    mcpServers: {
+      [name: string]: {
+        command: string;
+        args?: string[];
+        env?: { [key: string]: string };
+        description?: string;
+      };
+    };
+  },
+  profileUuid?: string | null
+) {
+  if (!profileUuid) {
+    throw new Error('Current workspace not found');
+  }
+
+  const { mcpServers } = data;
+
+  const serverEntries = Object.entries(mcpServers);
+
+  for (const [name, serverConfig] of serverEntries) {
+    const serverData = {
+      name,
+      description: serverConfig.description || '',
+      command: serverConfig.command,
+      args: serverConfig.args || [],
+      env: serverConfig.env || {},
+      profile_uuid: profileUuid,
+      status: McpServerStatus.ACTIVE,
+    };
+
+    // Insert the server into the database
+    await db.insert(mcpServersTable).values(serverData);
+  }
+
+  return { success: true, count: serverEntries.length };
+}
