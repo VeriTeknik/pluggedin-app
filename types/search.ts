@@ -6,6 +6,9 @@ export interface McpIndex {
   command: string;
   args: string[];
   envs: string[];
+  github_stars: number | null;
+  package_registry: string | null;
+  package_download_count: number | null;
 }
 
 export interface SearchIndex {
