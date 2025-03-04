@@ -74,7 +74,7 @@ You also need a MCP Client to connect to `@metamcp/mcp-server-metamcp`. For exam
   "mcpServers": {
     "MetaMCP": {
       "command": "npx",
-      "args": ["-y", "@metamcp/mcp-server-metamcp"],
+      "args": ["-y", "@metamcp/mcp-server-metamcp@latest"],
       "env": {
         "METAMCP_API_KEY": "<your api key>",
         "METAMCP_API_BASE_URL": "http://localhost:12005"
@@ -87,7 +87,7 @@ You also need a MCP Client to connect to `@metamcp/mcp-server-metamcp`. For exam
 For Cursor, env vars aren't easy to get typed in so you may use args instead
 
 ```bash
-npx -y @metamcp/mcp-server-metamcp --metamcp-api-key <your-api-key> --metamcp-api-base-url <base-url>
+npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key <your-api-key> --metamcp-api-base-url <base-url>
 ```
 
 You can get the API key from the MetaMCP App's API Keys page.

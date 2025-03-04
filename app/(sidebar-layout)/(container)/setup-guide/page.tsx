@@ -74,7 +74,7 @@ export default function SetupGuidePage() {
               1. Using Smithery AI MCP Registry
             </h3>
             <pre className='bg-gray-800 text-white p-4 rounded-md overflow-x-auto'>
-              npx -y @smithery/cli@latest install @metamcp/mcp-server-metamcp
+              npx -y @smithery/cli@latest install @metamcp/mcp-server-metamcp@latest
               --client claude
             </pre>
           </div> */}
@@ -110,7 +110,7 @@ export default function SetupGuidePage() {
                       mcpServers: {
                         MetaMCP: {
                           command: 'npx',
-                          args: ['-y', '@metamcp/mcp-server-metamcp'],
+                          args: ['-y', '@metamcp/mcp-server-metamcp@latest'],
                           env: {
                             METAMCP_API_KEY:
                               apiKey?.api_key ?? '<create an api key first>',
@@ -136,7 +136,7 @@ export default function SetupGuidePage() {
   "mcpServers": {
     "MetaMCP": {
       "command": "npx",
-      "args": ["-y", "@metamcp/mcp-server-metamcp"],
+      "args": ["-y", "@metamcp/mcp-server-metamcp@latest"],
       "env": {
         "METAMCP_API_KEY": "${apiKey?.api_key ?? '<create an api key first>'}",
         "METAMCP_API_BASE_URL": "http://localhost:12005"
@@ -178,7 +178,7 @@ export default function SetupGuidePage() {
             <div className='relative'>
               <button
                 onClick={() => {
-                  const command = `npx -y @metamcp/mcp-server-metamcp --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
+                  const command = `npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
                   navigator.clipboard.writeText(command);
                   toast({
                     description: 'Cursor command copied to clipboard',
@@ -190,7 +190,7 @@ export default function SetupGuidePage() {
               </button>
               <Highlight
                 theme={themes.github}
-                code={`npx -y @metamcp/mcp-server-metamcp --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'} --metamcp-api-base-url http://localhost:12005`}
+                code={`npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'} --metamcp-api-base-url http://localhost:12005`}
                 language='bash'>
                 {({ tokens, getLineProps, getTokenProps }) => (
                   <pre className='bg-[#f6f8fa] text-[#24292f] p-4 rounded-md overflow-x-auto'>
