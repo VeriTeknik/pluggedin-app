@@ -15,7 +15,8 @@ A few feature highlights:
 
 The app is also self hostable, free and open source. The differences between this repo and cloud version are:
 
-- Cloud version needs auth and session contexts
+- You can try how this app works using cloud version but I actually encourage you to self host if you are familiar with docker: it will provide unlimited access with lower latency, full private operations on your end.
+- Cloud version adds auth and session contexts
 - Cloud version provides server side encryption
 - Cloud version tweaks a little bit on serverless hosting
 
