@@ -3,7 +3,7 @@
 import { and, desc, eq, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { mcpServersTable, McpServerStatus } from '@/db/schema';
+import { mcpServersTable, McpServerStatus, McpServerType } from '@/db/schema';
 import { McpServer } from '@/types/mcp-server';
 
 export async function getMcpServers(profileUuid: string) {
@@ -27,23 +27,14 @@ export async function getMcpServers(profileUuid: string) {
 export async function getMcpServerByUuid(
   profileUuid: string,
   uuid: string
-): Promise<McpServer | null> {
-  const server = await db
-    .select()
-    .from(mcpServersTable)
-    .where(
-      and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
-      )
-    )
-    .limit(1);
-
-  if (server.length === 0) {
-    return null;
-  }
-
-  return server[0];
+): Promise<McpServer | undefined> {
+  const server = await db.query.mcpServersTable.findFirst({
+    where: and(
+      eq(mcpServersTable.uuid, uuid),
+      eq(mcpServersTable.profile_uuid, profileUuid)
+    ),
+  });
+  return server;
 }
 
 export async function deleteMcpServerByUuid(
@@ -85,6 +76,8 @@ export async function updateMcpServer(
     command?: string;
     args?: string[];
     env?: { [key: string]: string };
+    url?: string;
+    type?: McpServerType;
   }
 ): Promise<void> {
   await db
@@ -105,9 +98,11 @@ export async function createMcpServer(
   data: {
     name: string;
     description: string;
-    command: string;
+    command?: string;
     args: string[];
     env: { [key: string]: string };
+    url?: string;
+    type: McpServerType;
   }
 ): Promise<void> {
   await db.insert(mcpServersTable).values({
@@ -120,10 +115,12 @@ export async function bulkImportMcpServers(
   data: {
     mcpServers: {
       [name: string]: {
-        command: string;
+        command?: string;
         args?: string[];
         env?: { [key: string]: string };
         description?: string;
+        url?: string;
+        type?: McpServerType;
       };
     };
   },
@@ -141,9 +138,11 @@ export async function bulkImportMcpServers(
     const serverData = {
       name,
       description: serverConfig.description || '',
-      command: serverConfig.command,
+      command: serverConfig.command || null,
       args: serverConfig.args || [],
       env: serverConfig.env || {},
+      url: serverConfig.url || null,
+      type: serverConfig.type || McpServerType.STDIO,
       profile_uuid: profileUuid,
       status: McpServerStatus.ACTIVE,
     };
