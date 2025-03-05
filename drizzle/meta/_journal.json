@@ -43,6 +43,13 @@
       "when": 1738308243317,
       "tag": "0005_flashy_doomsday",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1741160099319,
+      "tag": "0006_curvy_strong_guy",
+      "breakpoints": true
     }
   ]
 }

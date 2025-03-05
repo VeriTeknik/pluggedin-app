@@ -19,9 +19,19 @@ export enum McpServerStatus {
   DECLINED = 'DECLINED',
 }
 
+export enum McpServerType {
+  STDIO = 'STDIO',
+  SSE = 'SSE',
+}
+
 export const mcpServerStatusEnum = pgEnum(
   'mcp_server_status',
   enumToPgEnum(McpServerStatus)
+);
+
+export const mcpServerTypeEnum = pgEnum(
+  'mcp_server_type',
+  enumToPgEnum(McpServerType)
 );
 
 export const projectsTable = pgTable('projects', {
@@ -74,7 +84,8 @@ export const mcpServersTable = pgTable(
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     description: text('description'),
-    command: text('command').notNull(),
+    type: mcpServerTypeEnum('type').notNull().default(McpServerType.STDIO),
+    command: text('command'),
     args: text('args')
       .array()
       .notNull()
@@ -83,6 +94,7 @@ export const mcpServersTable = pgTable(
       .$type<{ [key: string]: string }>()
       .notNull()
       .default(sql`'{}'::jsonb`),
+    url: text('url'),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -96,6 +108,11 @@ export const mcpServersTable = pgTable(
   (table) => [
     index('mcp_servers_status_idx').on(table.status),
     index('mcp_servers_profile_uuid_idx').on(table.profile_uuid),
+    index('mcp_servers_type_idx').on(table.type),
+    sql`CONSTRAINT mcp_servers_url_check CHECK (
+      (type = 'SSE' AND url IS NOT NULL AND command IS NULL AND url ~ '^https?://[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*(:[0-9]+)?(/[a-zA-Z0-9-._~:/?#\[\]@!$&''()*+,;=]*)?$') OR
+      (type = 'STDIO' AND url IS NULL AND command IS NOT NULL)
+    )`,
   ]
 );
 
