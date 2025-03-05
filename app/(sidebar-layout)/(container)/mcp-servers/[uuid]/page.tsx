@@ -27,6 +27,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -276,8 +277,13 @@ export default function McpServerDetailPage({
                               {...field}
                               placeholder='http://localhost:3000/sse'
                               required
+                              pattern="^(http|https)://[^\s/$.?#].[^\s]*$"
                             />
                           </FormControl>
+                          <p className='text-sm text-muted-foreground'>
+                            Must be a valid HTTP/HTTPS URL
+                          </p>
+                          <FormMessage />
                         </FormItem>
                       )}
                     />

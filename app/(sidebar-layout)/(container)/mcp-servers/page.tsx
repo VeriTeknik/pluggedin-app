@@ -522,8 +522,12 @@ export default function MCPServersPage() {
                                 {...field}
                                 placeholder='http://localhost:3000/sse'
                                 required
+                                pattern="^(http|https)://[^\s/$.?#].[^\s]*$"
                               />
                             </FormControl>
+                            <p className='text-sm text-muted-foreground'>
+                              Must be a valid HTTP/HTTPS URL
+                            </p>
                             <FormMessage />
                           </FormItem>
                         )}
