@@ -95,12 +95,20 @@ export default function MCPServersPage() {
       header: 'Description',
     }),
     columnHelper.accessor('command', {
-      cell: (info) => info.getValue(),
+      cell: (info) => info.getValue() || '-',
       header: 'Command',
     }),
     columnHelper.accessor('args', {
-      cell: (info) => info.getValue().join(' '),
+      cell: (info) => info.getValue().join(' ') || '-',
       header: 'Arguments',
+    }),
+    columnHelper.accessor('type', {
+      cell: (info) => info.getValue(),
+      header: 'Type',
+    }),
+    columnHelper.accessor('url', {
+      cell: (info) => info.getValue() || '-',
+      header: 'URL',
     }),
     columnHelper.accessor('status', {
       cell: (info) => (
@@ -305,8 +313,8 @@ export default function MCPServersPage() {
               </DialogHeader>
               <Tabs defaultValue={McpServerType.STDIO} className="w-full" onValueChange={(value) => setServerType(value as McpServerType)}>
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value={McpServerType.STDIO}>STDIO Server</TabsTrigger>
-                  <TabsTrigger value={McpServerType.SSE}>SSE Server</TabsTrigger>
+                  <TabsTrigger value={McpServerType.STDIO}>Command-based (STDIO)</TabsTrigger>
+                  <TabsTrigger value={McpServerType.SSE}>URL-based (SSE)</TabsTrigger>
                 </TabsList>
                 <TabsContent value={McpServerType.STDIO}>
                   <Form {...form}>
