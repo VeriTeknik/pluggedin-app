@@ -41,8 +41,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { McpServerStatus } from '@/db/schema';
+import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 import { McpServer } from '@/types/mcp-server';
@@ -59,6 +60,7 @@ export default function MCPServersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [importJson, setImportJson] = useState('');
   const [importError, setImportError] = useState('');
+  const [serverType, setServerType] = useState<McpServerType>(McpServerType.STDIO);
 
   const form = useForm({
     defaultValues: {
@@ -67,6 +69,8 @@ export default function MCPServersPage() {
       command: '',
       args: '',
       env: '',
+      url: '',
+      type: McpServerType.STDIO,
     },
   });
 
@@ -296,150 +300,253 @@ export default function MCPServersPage() {
               <DialogHeader>
                 <DialogTitle>Add MCP Server</DialogTitle>
                 <DialogDescription>
-                  Create a new MCP server configuration. Command and arguments
-                  will be used to start the server.
+                  Create a new MCP server configuration. Choose between STDIO (command-based) or SSE (URL-based) server type.
                 </DialogDescription>
               </DialogHeader>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(async (data) => {
-                    if (!currentProfile?.uuid) return;
-                    setIsSubmitting(true);
-                    try {
-                      const processedData = {
-                        ...data,
-                        args: data.args
-                          .split(',')
-                          .map((arg) => arg.trim())
-                          .filter(Boolean),
-                        env: Object.fromEntries(
-                          data.env
-                            .split('\n')
-                            .filter((line) => line.includes('='))
-                            .map((line) => {
-                              const [key, ...values] = line.split('=');
-                              return [key.trim(), values.join('=').trim()];
-                            })
-                        ),
-                        status: 'ACTIVE',
-                      };
+              <Tabs defaultValue={McpServerType.STDIO} className="w-full" onValueChange={(value) => setServerType(value as McpServerType)}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value={McpServerType.STDIO}>STDIO Server</TabsTrigger>
+                  <TabsTrigger value={McpServerType.SSE}>SSE Server</TabsTrigger>
+                </TabsList>
+                <TabsContent value={McpServerType.STDIO}>
+                  <Form {...form}>
+                    <form
+                      onSubmit={form.handleSubmit(async (data) => {
+                        if (!currentProfile?.uuid) return;
+                        setIsSubmitting(true);
+                        try {
+                          const processedData = {
+                            ...data,
+                            type: McpServerType.STDIO,
+                            args: data.args
+                              .split(',')
+                              .map((arg) => arg.trim())
+                              .filter(Boolean),
+                            env: Object.fromEntries(
+                              data.env
+                                .split('\n')
+                                .filter((line) => line.includes('='))
+                                .map((line) => {
+                                  const [key, ...values] = line.split('=');
+                                  return [key.trim(), values.join('=').trim()];
+                                })
+                            ),
+                            status: McpServerStatus.ACTIVE,
+                            url: undefined,
+                          };
 
-                      await createMcpServer(currentProfile.uuid, processedData);
+                          await createMcpServer(currentProfile.uuid, processedData);
+                          await mutate();
+                          setOpen(false);
+                          form.reset();
+                        } catch (error) {
+                          console.error('Error creating MCP server:', error);
+                        } finally {
+                          setIsSubmitting(false);
+                        }
+                      })}
+                      className='space-y-4'>
+                      <FormField
+                        control={form.control}
+                        name='name'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder='e.g., mcp-server-time'
+                                required
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name='description'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                {...field}
+                                placeholder="(Optional) Brief description of the server's purpose"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name='command'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Command</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder='e.g., npx or uvx'
+                                required
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name='args'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Arguments</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder='e.g., mcp-server-time, --local-timezone=America/Los_Angeles'
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name='env'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Environment Variables</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                {...field}
+                                placeholder='KEY=value                                                                                ANOTHER_KEY=another_value'
+                                className='font-mono text-sm'
+                              />
+                            </FormControl>
+                            <p className='text-sm text-muted-foreground'>
+                              Enter environment variables in KEY=value format, one
+                              per line
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className='flex justify-end space-x-2'>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          onClick={() => {
+                            setOpen(false);
+                            form.reset();
+                          }}
+                          disabled={isSubmitting}>
+                          Cancel
+                        </Button>
+                        <Button type='submit' disabled={isSubmitting}>
+                          {isSubmitting ? 'Creating...' : 'Create'}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </TabsContent>
+                <TabsContent value={McpServerType.SSE}>
+                  <Form {...form}>
+                    <form
+                      onSubmit={form.handleSubmit(async (data) => {
+                        if (!currentProfile?.uuid) return;
+                        setIsSubmitting(true);
+                        try {
+                          const processedData = {
+                            ...data,
+                            type: McpServerType.SSE,
+                            args: [],
+                            env: {},
+                            status: McpServerStatus.ACTIVE,
+                            command: undefined,
+                          };
 
-                      await mutate();
-                      setOpen(false);
-                      form.reset();
-                    } catch (error) {
-                      console.error('Error creating MCP server:', error);
-                    } finally {
-                      setIsSubmitting(false);
-                    }
-                  })}
-                  className='space-y-4'>
-                  <FormField
-                    control={form.control}
-                    name='name'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder='e.g. mcp-server-time'
-                            required
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='description'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="(Optional) Brief description of the server's purpose"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='command'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Command</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder='e.g. npx or uvx'
-                            required
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='args'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Arguments</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder='e.g. mcp-server-time, --local-timezone=America/Los_Angeles'
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='env'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Environment Variables</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder='KEY=value                                                                                ANOTHER_KEY=another_value'
-                            className='font-mono text-sm'
-                          />
-                        </FormControl>
-                        <p className='text-sm text-muted-foreground'>
-                          Enter environment variables in KEY=value format, one
-                          per line
-                        </p>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className='flex justify-end space-x-2'>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      onClick={() => {
-                        setOpen(false);
-                        form.reset();
-                      }}
-                      disabled={isSubmitting}>
-                      Cancel
-                    </Button>
-                    <Button type='submit' disabled={isSubmitting}>
-                      {isSubmitting ? 'Creating...' : 'Create'}
-                    </Button>
-                  </div>
-                </form>
-              </Form>
+                          await createMcpServer(currentProfile.uuid, processedData);
+                          await mutate();
+                          setOpen(false);
+                          form.reset();
+                        } catch (error) {
+                          console.error('Error creating MCP server:', error);
+                        } finally {
+                          setIsSubmitting(false);
+                        }
+                      })}
+                      className='space-y-4'>
+                      <FormField
+                        control={form.control}
+                        name='name'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Name</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder='e.g., figma-mcp-server'
+                                required
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name='description'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea
+                                {...field}
+                                placeholder="(Optional) Brief description of the server's purpose"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name='url'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Server URL</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder='http://localhost:3000/sse'
+                                required
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className='flex justify-end space-x-2'>
+                        <Button
+                          type='button'
+                          variant='outline'
+                          onClick={() => {
+                            setOpen(false);
+                            form.reset();
+                          }}
+                          disabled={isSubmitting}>
+                          Cancel
+                        </Button>
+                        <Button type='submit' disabled={isSubmitting}>
+                          {isSubmitting ? 'Creating...' : 'Create'}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </TabsContent>
+              </Tabs>
             </DialogContent>
           </Dialog>
         </div>

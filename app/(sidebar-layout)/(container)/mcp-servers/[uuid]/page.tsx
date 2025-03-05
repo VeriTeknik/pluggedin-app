@@ -191,7 +191,7 @@ export default function McpServerDetailPage({
                       <FormItem>
                         <FormLabel>Command</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder='e.g. npx or uvx' />
+                          <Input {...field} placeholder='e.g., npx or uvx' />
                         </FormControl>
                       </FormItem>
                     )}
@@ -205,7 +205,7 @@ export default function McpServerDetailPage({
                         <FormControl>
                           <Input
                             {...field}
-                            placeholder='e.g. mcp-server-time'
+                            placeholder='e.g., mcp-server-time'
                           />
                         </FormControl>
                       </FormItem>
