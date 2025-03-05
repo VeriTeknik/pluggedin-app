@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { McpServerStatus } from '@/db/schema';
+import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 
@@ -51,6 +51,8 @@ export default function McpServerDetailPage({
       command: '',
       args: '',
       env: '',
+      url: '',
+      type: McpServerType.STDIO,
     },
   });
 
@@ -58,7 +60,7 @@ export default function McpServerDetailPage({
     data: mcpServer,
     error,
     mutate,
-  } = useSWR<McpServer | null>(
+  } = useSWR<McpServer | undefined>(
     uuid && currentProfile?.uuid
       ? ['getMcpServerByUuid', uuid, currentProfile?.uuid]
       : null,
@@ -70,11 +72,13 @@ export default function McpServerDetailPage({
       form.reset({
         name: mcpServer.name,
         description: mcpServer.description || '',
-        command: mcpServer.command,
+        command: mcpServer.command || '',
         args: mcpServer.args.join(' '),
         env: Object.entries(mcpServer.env)
           .map(([key, value]) => `${key}=${value}`)
           .join('\n'),
+        url: mcpServer.url || '',
+        type: mcpServer.type,
       });
     }
   }, [mcpServer, form]);
@@ -85,19 +89,22 @@ export default function McpServerDetailPage({
     command: string;
     args: string;
     env: string;
+    url: string;
+    type: McpServerType;
   }) => {
     if (!mcpServer || !currentProfile?.uuid) return;
 
     // Process args and env before submission
     const processedData = {
       ...data,
-      args:
-        data.args
+      args: data.type === McpServerType.STDIO
+        ? data.args
           .trim()
           .split(/\s+/)
-          .map((arg) => arg.trim()) || [],
-      env:
-        Object.fromEntries(
+          .map((arg) => arg.trim())
+        : [],
+      env: data.type === McpServerType.STDIO
+        ? Object.fromEntries(
           data.env
             .split('\n')
             .filter((line) => line.includes('='))
@@ -105,7 +112,10 @@ export default function McpServerDetailPage({
               const [key, ...values] = line.split('=');
               return [key.trim(), values.join('=').trim()];
             })
-        ) || {},
+        ) || {}
+        : {},
+      command: data.type === McpServerType.STDIO ? data.command : undefined,
+      url: data.type === McpServerType.SSE ? data.url : undefined,
     };
 
     await updateMcpServer(currentProfile.uuid, mcpServer.uuid, processedData);
@@ -186,49 +196,92 @@ export default function McpServerDetailPage({
                   />
                   <FormField
                     control={form.control}
-                    name='command'
+                    name='type'
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Command</FormLabel>
+                        <FormLabel>Server Type</FormLabel>
                         <FormControl>
-                          <Input {...field} placeholder='e.g., npx or uvx' />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='args'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Arguments (space-separated)</FormLabel>
-                        <FormControl>
-                          <Input
+                          <select
                             {...field}
-                            placeholder='e.g., mcp-server-time'
-                          />
+                            className='w-full p-2 border rounded-md'
+                            onChange={(e) => {
+                              field.onChange(e);
+                              form.setValue('command', '');
+                              form.setValue('url', '');
+                            }}>
+                            <option value={McpServerType.STDIO}>STDIO Server</option>
+                            <option value={McpServerType.SSE}>SSE Server</option>
+                          </select>
                         </FormControl>
                       </FormItem>
                     )}
                   />
-                  <FormField
-                    control={form.control}
-                    name='env'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          Environment Variables (key=value, one per line)
-                        </FormLabel>
-                        <FormControl>
-                          <textarea
-                            className='w-full min-h-[100px] px-3 py-2 rounded-md border'
-                            {...field}
-                            placeholder='KEY=value                                                                                ANOTHER_KEY=another_value'
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
+                  {form.watch('type') === McpServerType.STDIO ? (
+                    <>
+                      <FormField
+                        control={form.control}
+                        name='command'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Command</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder='e.g., npx or uvx' required />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name='args'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Arguments (space-separated)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder='e.g., mcp-server-time'
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name='env'
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Environment Variables (key=value, one per line)
+                            </FormLabel>
+                            <FormControl>
+                              <textarea
+                                className='w-full min-h-[100px] px-3 py-2 rounded-md border'
+                                {...field}
+                                placeholder='KEY=value                                                                                ANOTHER_KEY=another_value'
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                    </>
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name='url'
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Server URL</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              placeholder='http://localhost:3000/sse'
+                              required
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  )}
                   <div className='flex justify-end gap-2'>
                     <Button
                       type='button'
@@ -237,11 +290,13 @@ export default function McpServerDetailPage({
                         form.reset({
                           name: mcpServer.name,
                           description: mcpServer.description || '',
-                          command: mcpServer.command,
+                          command: mcpServer.command || '',
                           args: mcpServer.args.join(' '),
                           env: Object.entries(mcpServer.env)
                             .map(([key, value]) => `${key}=${value}`)
                             .join('\n'),
+                          url: mcpServer.url || '',
+                          type: mcpServer.type,
                         });
                         setIsEditing(false);
                       }}>
@@ -294,30 +349,45 @@ export default function McpServerDetailPage({
             <span className='whitespace-pre-wrap'>{mcpServer.description}</span>
           </p>
 
-          <div className='mb-3'>
-            <strong>Command:</strong>
-            <pre className='mt-2 p-2 bg-secondary rounded-md'>
-              {mcpServer.command}
-            </pre>
-          </div>
+          <p className='mb-3'>
+            <strong>Type:</strong> {mcpServer.type}
+          </p>
 
-          <div className='mb-3'>
-            <strong>Arguments:</strong>
-            <pre className='mt-2 p-2 bg-secondary rounded-md'>
-              {mcpServer.args.join(' ')}
-            </pre>
-          </div>
+          {mcpServer.type === McpServerType.STDIO ? (
+            <>
+              <div className='mb-3'>
+                <strong>Command:</strong>
+                <pre className='mt-2 p-2 bg-secondary rounded-md'>
+                  {mcpServer.command}
+                </pre>
+              </div>
 
-          <div className='mb-3'>
-            <strong>Environment Variables:</strong>
-            <pre className='mt-2 p-2 bg-secondary rounded-md'>
-              {Object.entries(mcpServer.env).length > 0
-                ? Object.entries(mcpServer.env).map(
-                    ([key, value]) => `${key}=${value}\n`
-                  )
-                : 'No environment variables set'}
-            </pre>
-          </div>
+              <div className='mb-3'>
+                <strong>Arguments:</strong>
+                <pre className='mt-2 p-2 bg-secondary rounded-md'>
+                  {mcpServer.args.join(' ')}
+                </pre>
+              </div>
+
+              <div className='mb-3'>
+                <strong>Environment Variables:</strong>
+                <pre className='mt-2 p-2 bg-secondary rounded-md'>
+                  {Object.entries(mcpServer.env).length > 0
+                    ? Object.entries(mcpServer.env).map(
+                      ([key, value]) => `${key}=${value}\n`
+                    )
+                    : 'No environment variables set'}
+                </pre>
+              </div>
+            </>
+          ) : (
+            <div className='mb-3'>
+              <strong>Server URL:</strong>
+              <pre className='mt-2 p-2 bg-secondary rounded-md'>
+                {mcpServer.url}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
     </div>
