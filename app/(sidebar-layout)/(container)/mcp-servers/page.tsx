@@ -317,7 +317,7 @@ export default function MCPServersPage() {
                         try {
                           const processedData = {
                             ...data,
-                            type: McpServerType.STDIO,
+                            type: serverType,
                             args: data.args
                               .split(',')
                               .map((arg) => arg.trim())
