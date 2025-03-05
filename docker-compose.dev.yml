@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   metatool-postgres:
     container_name: metatool-postgres
