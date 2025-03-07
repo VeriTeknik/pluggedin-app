@@ -60,9 +60,6 @@ export default function MCPServersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [importJson, setImportJson] = useState('');
   const [importError, setImportError] = useState('');
-  const [serverType, setServerType] = useState<McpServerType>(
-    McpServerType.STDIO
-  );
 
   const form = useForm({
     defaultValues: {
@@ -314,12 +311,7 @@ export default function MCPServersPage() {
                   (command-based) or SSE (URL-based) server type.
                 </DialogDescription>
               </DialogHeader>
-              <Tabs
-                defaultValue={McpServerType.STDIO}
-                className='w-full'
-                onValueChange={(value) =>
-                  setServerType(value as McpServerType)
-                }>
+              <Tabs defaultValue={McpServerType.STDIO} className='w-full'>
                 <TabsList className='grid w-full grid-cols-2'>
                   <TabsTrigger value={McpServerType.STDIO}>
                     Command-based (STDIO)
