@@ -60,7 +60,9 @@ export default function MCPServersPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [importJson, setImportJson] = useState('');
   const [importError, setImportError] = useState('');
-  const [serverType, setServerType] = useState<McpServerType>(McpServerType.STDIO);
+  const [serverType, setServerType] = useState<McpServerType>(
+    McpServerType.STDIO
+  );
 
   const form = useForm({
     defaultValues: {
@@ -308,13 +310,23 @@ export default function MCPServersPage() {
               <DialogHeader>
                 <DialogTitle>Add MCP Server</DialogTitle>
                 <DialogDescription>
-                  Create a new MCP server configuration. Choose between STDIO (command-based) or SSE (URL-based) server type.
+                  Create a new MCP server configuration. Choose between STDIO
+                  (command-based) or SSE (URL-based) server type.
                 </DialogDescription>
               </DialogHeader>
-              <Tabs defaultValue={McpServerType.STDIO} className="w-full" onValueChange={(value) => setServerType(value as McpServerType)}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value={McpServerType.STDIO}>Command-based (STDIO)</TabsTrigger>
-                  <TabsTrigger value={McpServerType.SSE}>URL-based (SSE)</TabsTrigger>
+              <Tabs
+                defaultValue={McpServerType.STDIO}
+                className='w-full'
+                onValueChange={(value) =>
+                  setServerType(value as McpServerType)
+                }>
+                <TabsList className='grid w-full grid-cols-2'>
+                  <TabsTrigger value={McpServerType.STDIO}>
+                    Command-based (STDIO)
+                  </TabsTrigger>
+                  <TabsTrigger value={McpServerType.SSE}>
+                    URL-based (SSE)
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value={McpServerType.STDIO}>
                   <Form {...form}>
@@ -325,7 +337,7 @@ export default function MCPServersPage() {
                         try {
                           const processedData = {
                             ...data,
-                            type: serverType,
+                            type: McpServerType.STDIO,
                             args: data.args
                               .split(',')
                               .map((arg) => arg.trim())
@@ -343,7 +355,10 @@ export default function MCPServersPage() {
                             url: undefined,
                           };
 
-                          await createMcpServer(currentProfile.uuid, processedData);
+                          await createMcpServer(
+                            currentProfile.uuid,
+                            processedData
+                          );
                           await mutate();
                           setOpen(false);
                           form.reset();
@@ -434,8 +449,8 @@ export default function MCPServersPage() {
                               />
                             </FormControl>
                             <p className='text-sm text-muted-foreground'>
-                              Enter environment variables in KEY=value format, one
-                              per line
+                              Enter environment variables in KEY=value format,
+                              one per line
                             </p>
                             <FormMessage />
                           </FormItem>
@@ -475,7 +490,10 @@ export default function MCPServersPage() {
                             command: undefined,
                           };
 
-                          await createMcpServer(currentProfile.uuid, processedData);
+                          await createMcpServer(
+                            currentProfile.uuid,
+                            processedData
+                          );
                           await mutate();
                           setOpen(false);
                           form.reset();
@@ -530,7 +548,7 @@ export default function MCPServersPage() {
                                 {...field}
                                 placeholder='http://localhost:3000/sse'
                                 required
-                                pattern="^(http|https)://[^\s/$.?#].[^\s]*$"
+                                pattern='^(http|https)://[^\s/$.?#].[^\s]*$'
                               />
                             </FormControl>
                             <p className='text-sm text-muted-foreground'>
