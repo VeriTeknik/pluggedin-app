@@ -102,7 +102,7 @@ export async function createMcpServer(
     args: string[];
     env: { [key: string]: string };
     url?: string;
-    type: McpServerType;
+    type?: McpServerType;
   }
 ): Promise<void> {
   await db.insert(mcpServersTable).values({
