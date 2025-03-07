@@ -338,7 +338,7 @@ export default function CustomMCPServersPage() {
                         Additional Arguments (space-separated)
                       </FormLabel>
                       <FormControl>
-                        <Input placeholder='e.g. -y --arg2' {...field} />
+                        <Input placeholder='e.g., -y --arg2' {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

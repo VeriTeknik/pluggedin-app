@@ -198,7 +198,7 @@ export default function ApiKeysPage() {
               <Label htmlFor='name'>API Key Name (Optional)</Label>
               <Input
                 id='name'
-                placeholder='e.g., Production API Key'
+                placeholder='e.g.,, Production API Key'
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
               />

@@ -9,9 +9,9 @@ MetaMCP is "The One" MCP to manage all your MCPs. It uses a GUI fullstack app (t
 A few feature highlights:
 
 - GUI app to manage configurations with dynamic updates when `list_tools`, etc.
-- Support ANY MCP clients (e.g. Claude Desktop, Cursor, etc.) because MetaMCP is a MCP server.
+- Support ANY MCP clients (e.g., Claude Desktop, Cursor, etc.) because MetaMCP is a MCP server.
 - Support prompts, resources, tools under MCP.
-- Support multi-workspace: e.g. activate a workspace of DB1 or switch to DB2 in another workspace, preventing polluting context of DB1 to your MCP Client.
+- Support multi-workspace: e.g., activate a workspace of DB1 or switch to DB2 in another workspace, preventing polluting context of DB1 to your MCP Client.
 
 The app is also self hostable, free and open source. The differences between this repo and cloud version are:
 
@@ -28,7 +28,7 @@ Note that prompts and resources are also covered similar to tools.
 
 ```mermaid
 sequenceDiagram
-    participant MCPClient as MCP Client (e.g. Claude Desktop)
+    participant MCPClient as MCP Client (e.g., Claude Desktop)
     participant MetaMCPMCP as MetaMCP MCP Server
     participant MetaMCPApp as MetaMCP App
     participant MCPServers as Installed MCP Servers in MetaMCP App

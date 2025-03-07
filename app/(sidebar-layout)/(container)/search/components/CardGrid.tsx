@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { SearchIndex } from '@/types/search';
 
@@ -81,6 +82,7 @@ function AddMcpServerDialog({
               return [key.trim(), values.join('=').trim()];
             })
         ),
+        type: McpServerType.STDIO,
       });
       onOpenChange(false);
     } finally {
