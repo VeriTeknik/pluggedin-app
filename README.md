@@ -22,6 +22,9 @@ The app is also self hostable, free and open source. The differences between thi
 
 Check out demos at https://metamcp.com/
 
+⚠️ Warning: there are some known compatibility issues on Windows depending on the MCP client implementation, refer to https://github.com/metatool-ai/metatool-app/issues/15
+
+
 ## Architecture Overview
 
 Note that prompts and resources are also covered similar to tools.
