@@ -19,11 +19,13 @@ The app is also self hostable, free and open source. The differences between thi
 - Cloud version adds auth and session contexts
 - Cloud version provides server side encryption
 - Cloud version tweaks a little bit on serverless hosting
+- To use it with Smithery MCP hosting, it requires cloud hosted URL (or you can use ngrok etc.)
 
-Check out demos at https://metamcp.com/
+Check out demo videos at https://metamcp.com/. Here is an overview screenshot.
+
+![MetaMCP Overview Screenshot](screenshot.png)
 
 ⚠️ Warning: there are some known compatibility issues on Windows depending on the MCP client implementation, refer to https://github.com/metatool-ai/metatool-app/issues/15 for discussion or workaround solutions.
-
 
 ## Architecture Overview
 
