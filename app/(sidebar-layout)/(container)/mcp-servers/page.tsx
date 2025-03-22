@@ -268,7 +268,7 @@ export default function MCPServersPage() {
               <DialogHeader>
                 <DialogTitle>Import MCP Servers</DialogTitle>
                 <DialogDescription>
-                  Import multiple MCP server configurations from JSON. The JSON
+                  Import multiple MCP server configurations from JSON. This will incrementally add MCP servers without overwriting what you have here. The JSON
                   should follow the format:
                   <pre className='mt-2 p-2 bg-gray-100 rounded text-xs overflow-x-auto whitespace-pre-wrap break-all'>
                     {`{
