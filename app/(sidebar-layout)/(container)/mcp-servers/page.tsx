@@ -185,16 +185,22 @@ export default function MCPServersPage() {
                 <DialogDescription>
                   Import multiple MCP server configurations from JSON. The JSON
                   should follow the format:
-                  <pre className='mt-2 p-2 bg-gray-100 rounded text-xs overflow-auto'>
+                  <pre className='mt-2 p-2 bg-gray-100 rounded text-xs overflow-x-auto whitespace-pre-wrap break-all'>
                     {`{
   "mcpServers": {
-    "ServerName": {
+    "CommandBasedServerName": {
       "command": "command",
       "args": ["arg1", "arg2"],
       "env": {
         "KEY": "value"
       },
-      "description": "Optional description"
+      "description": "Optional description",
+      "type": "stdio" // optional, defaults to "stdio"
+    },
+    "UrlBasedServerName": {
+      "url": "https://example.com/sse",
+      "description": "Optional description",
+      "type": "sse" // optional, defaults to "stdio"
     }
   }
 }`}
@@ -256,9 +262,42 @@ export default function MCPServersPage() {
                           return;
                         }
 
+                        // Process each server based on its type
+                        const processedJson = {
+                          mcpServers: Object.entries(parsedJson.mcpServers).reduce((acc, [name, serverConfig]) => {
+                            const config = serverConfig as any;
+                            const serverType = config.type?.toLowerCase() === 'sse'
+                              ? McpServerType.SSE
+                              : McpServerType.STDIO;
+
+                            // Create server config based on type
+                            if (serverType === McpServerType.SSE) {
+                              acc[name] = {
+                                name,
+                                description: config.description || '',
+                                url: config.url,
+                                type: serverType,
+                                status: McpServerStatus.ACTIVE,
+                              };
+                            } else {
+                              // STDIO type
+                              acc[name] = {
+                                name,
+                                description: config.description || '',
+                                command: config.command,
+                                args: config.args || [],
+                                env: config.env || {},
+                                type: serverType,
+                                status: McpServerStatus.ACTIVE,
+                              };
+                            }
+                            return acc;
+                          }, {} as Record<string, any>)
+                        };
+
                         // Import the servers
                         const result = await bulkImportMcpServers(
-                          parsedJson,
+                          processedJson,
                           currentProfile?.uuid
                         );
 
