@@ -78,12 +78,12 @@ export default function SidebarLayout({
             <div className='flex items-center gap-4 mb-2'>
               <Image
                 src='/favicon.ico'
-                alt='MetaMCP Logo'
+                alt='Plugged.in Logo'
                 width={256}
                 height={256}
                 className='h-12 w-12'
               />
-              <h2 className='text-2xl font-semibold'>MetaMCP</h2>
+              <h2 className='text-2xl font-semibold'>Plugged.in</h2>
             </div>
             <ProjectSwitcher />
             <ProfileSwitcher />

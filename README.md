@@ -1,15 +1,14 @@
-# MetaMCP (formerly MetaTool)
+# Plugged.in (formerly MetaTool)
 
-[![](https://dcbadge.limes.pink/api/server/mNsyat7mFX)](https://discord.gg/mNsyat7mFX)
 
-https://metamcp.com (Cloud version online now and available for free)
+https://plugged.in 
 
-MetaMCP is "The One" MCP to manage all your MCPs. It uses a GUI fullstack app (this repo) and a local MCP proxy to achieve this. (see our latest npm repo [mcp-server-metamcp](https://github.com/metatool-ai/mcp-server-metamcp))
+Plugged.in is "The One" MCP to manage all your MCPs. It uses a GUI fullstack app (this repo) and a local MCP proxy to achieve this. (see our latest npm repo [pluggedin-mcp](https://github.com/VeriTeknik/pluggedin-mcp))
 
 A few feature highlights:
 
 - GUI app to manage configurations with dynamic updates when `list_tools`, etc.
-- Support ANY MCP clients (e.g., Claude Desktop, Cursor, etc.) because MetaMCP is a MCP server.
+- Support ANY MCP clients (e.g., Claude Desktop, Cursor, etc.) because Plugged.in is a MCP server.
 - Support prompts, resources, tools under MCP.
 - Support multi-workspace: e.g., activate a workspace of DB1 or switch to DB2 in another workspace, preventing polluting context of DB1 to your MCP Client.
 
@@ -21,9 +20,8 @@ The app is also self hostable, free and open source. The differences between thi
 - Cloud version tweaks a little bit on serverless hosting
 - To use it with Smithery MCP hosting, it requires cloud hosted URL (or you can use ngrok etc.)
 
-Check out demo videos at https://metamcp.com/. Here is an overview screenshot.
+Check out demo videos at https://plugged.in/. Here is an overview screenshot.
 
-![MetaMCP Overview Screenshot](screenshot.png)
 
 ⚠️ Warning: there are some known compatibility issues on Windows depending on the MCP client implementation, refer to https://github.com/metatool-ai/metatool-app/issues/15 for discussion or workaround solutions.
 
@@ -78,7 +76,7 @@ You also need a MCP Client to connect to `@metamcp/mcp-server-metamcp`. For exam
 ```json
 {
   "mcpServers": {
-    "MetaMCP": {
+    "PluggedinMCP": {
       "command": "npx",
       "args": ["-y", "@metamcp/mcp-server-metamcp@latest"],
       "env": {

@@ -1,0 +1,123 @@
+# Plugged.in Project Intelligence Rules
+
+## Project Structure Patterns
+
+1. The app uses a Next.js App Router structure:
+   - `app/` - Main application folder
+   - `app/(sidebar-layout)/` - Routes with the sidebar layout
+   - `app/actions/` - Server actions for backend operations
+   - `app/api/` - API routes for external access
+   - `db/` - Database schema and utilities
+   - `types/` - TypeScript type definitions
+   - `components/` - Reusable UI components
+   - `hooks/` - Custom React hooks
+
+2. MCP server logic is organized as:
+   - `db/schema.ts` - Database schema definitions
+   - `app/actions/mcp-servers.ts` - Server actions for MCP servers
+   - `app/actions/custom-mcp-servers.ts` - Server actions for custom MCP servers
+   - `types/mcp-server.ts` - Type definitions for MCP servers
+   - `app/(sidebar-layout)/(container)/mcp-servers/` - UI for MCP server management
+
+## Code Patterns
+
+1. Server-side operations use Next.js server actions:
+   ```typescript
+   'use server';
+   
+   export async function serverAction(arg1, arg2) {
+     // Database operations or other server-side logic
+   }
+   ```
+
+2. Database operations use Drizzle ORM with PostgreSQL:
+   ```typescript
+   import { db } from '@/db';
+   import { someTable } from '@/db/schema';
+   
+   // Query example
+   const result = await db.query.someTable.findFirst({
+     where: eq(someTable.id, someId)
+   });
+   
+   // Insert example
+   await db.insert(someTable).values({
+     field1: value1,
+     field2: value2
+   });
+   ```
+
+3. Frontend data fetching uses SWR:
+   ```typescript
+   const { data, error, mutate } = useSWR(
+     key,
+     () => fetchFunction(args)
+   );
+   ```
+
+4. UI components follow a pattern using shadcn/ui components:
+   - Use of Radix UI primitives with Tailwind styling
+   - Card-based layouts for information display
+   - Form components for user input
+   - Dialog components for modal interactions
+
+## MCP Implementation Patterns
+
+1. MCP Server Types:
+   - STDIO: Command-line based servers (command + args + env)
+   - SSE: HTTP-based servers (url)
+
+2. Server Configuration Schema:
+   ```typescript
+   {
+     name: string;
+     description?: string;
+     type: McpServerType; // STDIO or SSE
+     command?: string; // For STDIO servers
+     args?: string[]; // For STDIO servers
+     env?: { [key: string]: string }; // For STDIO servers
+     url?: string; // For SSE servers
+     status: McpServerStatus; // ACTIVE, INACTIVE, etc.
+   }
+   ```
+
+3. Custom MCP Server Pattern:
+   - Python code stored in the database (codes table)
+   - Additional args and env vars for execution
+   - Associated with a specific profile (workspace)
+
+## UI/UX Patterns
+
+1. Page Layout Pattern:
+   - Sidebar for navigation
+   - Container for main content
+   - Header with contextual actions
+   - Card-based UI for distinct sections
+
+2. Form Submission Pattern:
+   - Use React Hook Form for form state management
+   - Server action for form submission
+   - Optimistic UI updates with SWR mutate
+   - Toast notifications for action feedback
+
+3. Error Handling Pattern:
+   - Try/catch blocks around database operations
+   - User-friendly error messages
+   - Fallback UI for loading states
+   - SWR error states for data fetching issues
+
+## Refactoring Opportunities
+
+1. Consolidate MCP server management logic
+2. Create shared UI components for server configuration
+3. Improve error handling and validation
+4. Add more comprehensive type checking
+
+## Implementation Guidance
+
+When implementing new features, follow these patterns:
+1. Add database schema updates first
+2. Implement server actions for backend operations
+3. Create or update API endpoints if needed for external access
+4. Develop UI components with appropriate data fetching
+5. Add comprehensive error handling and loading states 

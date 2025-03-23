@@ -6,7 +6,7 @@ import { Profile } from '@/types/profile';
 
 import { useProjects } from './use-projects';
 
-const CURRENT_PROFILE_KEY = 'metamcp-current-profile';
+const CURRENT_PROFILE_KEY = 'pluggedin-current-profile';
 
 export function useProfiles() {
   const { currentProject } = useProjects();
