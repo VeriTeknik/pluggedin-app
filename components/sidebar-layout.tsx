@@ -11,6 +11,7 @@ import {
   Settings,
   Terminal,
   Trash2,
+  Wrench,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -114,7 +115,7 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/mcp-servers'>
                         <Server className='mr-2 h-4 w-4' />
-                        <span>MCP Servers</span>
+                        <span>Plugins</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -122,26 +123,26 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/mcp-playground'>
                         <Beaker className='mr-2 h-4 w-4' />
-                        <span>MCP Playground</span>
+                        <span>Playground</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  {/* <SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/custom-mcp-servers'>
                         <Wrench className='mr-2 h-4 w-4' />
                         <span>Custom MCP Servers</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem> */}
-                  {/* <SidebarMenuItem>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/editor'>
                         <Code2 className='mr-2 h-4 w-4' />
                         <span>Python Code Editor</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem> */}
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/api-keys'>
