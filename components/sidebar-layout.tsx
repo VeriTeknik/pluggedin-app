@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Beaker,
   Code2,
   Info,
   Key,
@@ -114,6 +115,14 @@ export default function SidebarLayout({
                       <Link href='/mcp-servers'>
                         <Server className='mr-2 h-4 w-4' />
                         <span>MCP Servers</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/mcp-playground'>
+                        <Beaker className='mr-2 h-4 w-4' />
+                        <span>MCP Playground</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
