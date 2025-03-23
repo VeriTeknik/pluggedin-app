@@ -19,6 +19,11 @@
    - `types/mcp-server.ts` - Type definitions for MCP servers
    - `app/(sidebar-layout)/(container)/mcp-servers/` - UI for MCP server management
 
+3. MCP playground components:
+   - `app/actions/mcp-playground.ts` - Server actions for MCP playground
+   - `app/(sidebar-layout)/(container)/mcp-playground/` - UI for MCP playground
+   - `app/(sidebar-layout)/(container)/mcp-playground/README.md` - Documentation
+
 ## Code Patterns
 
 1. Server-side operations use Next.js server actions:
@@ -61,6 +66,20 @@
    - Form components for user input
    - Dialog components for modal interactions
 
+5. Error handling pattern for server actions:
+   ```typescript
+   try {
+     // Operation logic
+     return { success: true, data };
+   } catch (error) {
+     console.error('Operation failed:', error);
+     return { 
+       success: false, 
+       error: error instanceof Error ? error.message : 'Unknown error' 
+     };
+   }
+   ```
+
 ## MCP Implementation Patterns
 
 1. MCP Server Types:
@@ -86,6 +105,55 @@
    - Additional args and env vars for execution
    - Associated with a specific profile (workspace)
 
+4. MCP Playground Session Pattern:
+   ```typescript
+   // Session storage
+   const activeSessions = new Map<string, {
+     agent: ReactAgent;
+     cleanup: CleanupFunction;
+     lastActive: Date;
+   }>();
+   
+   // Session initialization
+   async function initSession(profileUuid, serverUuids, llmConfig) {
+     const mcpServersConfig = formatServersForConversion(servers);
+     const { tools, cleanup } = await convertMcpToLangchainTools(mcpServersConfig);
+     const agent = createReactAgent({ llm, tools });
+     
+     activeSessions.set(profileUuid, { agent, cleanup, lastActive: new Date() });
+   }
+   
+   // Session cleanup
+   async function endSession(profileUuid) {
+     const session = activeSessions.get(profileUuid);
+     if (session) {
+       await session.cleanup();
+       activeSessions.delete(profileUuid);
+     }
+   }
+   ```
+
+5. Complex Content Processing Pattern:
+   ```typescript
+   function safeProcessContent(content: any): string {
+     if (content === null || content === undefined) {
+       return 'No content';
+     }
+     
+     if (typeof content === 'string') {
+       return content;
+     }
+     
+     // Special handling for {type, text} objects (common in MCP tools)
+     if (typeof content === 'object' && content.type === 'text' && content.text) {
+       return content.text;
+     }
+     
+     // Handle arrays and other objects
+     return JSON.stringify(content, null, 2);
+   }
+   ```
+
 ## UI/UX Patterns
 
 1. Page Layout Pattern:
@@ -100,11 +168,19 @@
    - Optimistic UI updates with SWR mutate
    - Toast notifications for action feedback
 
-3. Error Handling Pattern:
-   - Try/catch blocks around database operations
-   - User-friendly error messages
-   - Fallback UI for loading states
-   - SWR error states for data fetching issues
+3. Chat Interface Pattern:
+   ```tsx
+   {messages.map((message, index) => (
+     <div 
+       key={index}
+       className={message.role === 'human' ? 'justify-end' : 'justify-start'}
+     >
+       <div className={getMessageStyle(message.role)}>
+         <div className="whitespace-pre-wrap">{message.content}</div>
+       </div>
+     </div>
+   ))}
+   ```
 
 ## Refactoring Opportunities
 
@@ -112,6 +188,7 @@
 2. Create shared UI components for server configuration
 3. Improve error handling and validation
 4. Add more comprehensive type checking
+5. Enhance complex content processing for MCP tool responses
 
 ## Implementation Guidance
 

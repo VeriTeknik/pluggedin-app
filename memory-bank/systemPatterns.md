@@ -1,100 +1,287 @@
 # Plugged.in System Patterns
 
-## System Architecture
+## Architecture
 
-Plugged.in follows a multi-tiered architecture with several key components:
-
-1. **Frontend Interface**: Next.js-based web application providing the GUI
-2. **Backend Services**: Server-side actions and API endpoints
-3. **Database Layer**: PostgreSQL database with Drizzle ORM
-4. **MCP Proxy**: Currently, the system acts as a proxy between MCP clients and MCP servers
-5. **MCP Servers**: External servers managed by the application
+The Plugged.in application follows a modular architecture based on Next.js App Router:
 
 ```mermaid
 flowchart TD
-    Client[MCP Client] -->|Connect| Proxy[MCP Proxy]
-    Proxy -->|Forward Requests| Servers[MCP Servers]
-    UI[Web UI] -->|Configure| Backend[Backend Services]
-    Backend --> DB[Database]
-    Proxy --> Backend
+    Client[Client Applications] --> API[API Layer]
+    Browser[Browser UI] --> AppRouter[Next.js App Router]
+    AppRouter --> ServerActions[Server Actions]
+    ServerActions --> DB[Database]
+    API --> McpProxy[MCP Proxy]
+    McpProxy --> McpServers[MCP Servers]
+    ServerActions --> McpProxy
+    
+    AppRouter --> McpPlayground[MCP Playground]
+    McpPlayground --> LangChain[LangChain Integration]
+    LangChain --> McpServers
 ```
 
-## Evolution to Native Hosting
+### Key Components
 
-The planned architecture adds direct hosting capabilities:
+1. **Next.js App Router**: Manages routing and page rendering
+2. **Server Actions**: Handle server-side operations with direct database access
+3. **API Layer**: Provides API endpoints for MCP clients
+4. **MCP Proxy**: Routes requests to appropriate MCP servers
+5. **Database**: PostgreSQL with Drizzle ORM
+6. **MCP Playground**: Testing interface using LangChain to convert MCP servers to tools
 
-```mermaid
-flowchart TD
-    Client[MCP Client] -->|Connect| Proxy[MCP Proxy]
-    Proxy -->|Forward Requests| Router[Request Router]
-    Router -->|External Servers| ExternalServers[External MCP Servers]
-    Router -->|Native Hosted| ContainerManager[Container Manager]
-    ContainerManager -->|Manage| Containers[MCP Server Containers]
-    UI[Web UI] -->|Configure| Backend[Backend Services]
-    Backend --> DB[Database]
-    Backend --> ContainerManager
-    UI -->|Chat Interface| ChatService[Chat Service]
-    ChatService --> Router
-```
+## Data Models
 
-## Key Design Patterns
+### Core Entities
 
-### 1. Workspace Isolation Pattern
+1. **Projects**: Top-level organization unit
+2. **Profiles** (Workspaces): Environments within projects
+3. **MCP Servers**: Configurations for MCP servers
+4. **API Keys**: Authentication tokens for API access
 
-Each workspace (profile) is isolated with its own set of:
-- MCP server configurations
-- API keys
-- Tool access controls
-
-This ensures that contexts remain separate between different projects or domains.
-
-### 2. Server Type Abstraction
-
-The system abstracts different types of MCP servers:
-- **STDIO**: Command-line based servers using standard input/output
-- **SSE**: Server-Sent Events based servers accessed via HTTP
-
-This abstraction allows for unified management regardless of the server's implementation.
-
-### 3. Database Schema Design
+### Relationships
 
 ```mermaid
 erDiagram
-    projects ||--o{ profiles : contains
-    profiles ||--o{ mcp_servers : configures
-    projects ||--o{ api_keys : has
-    profiles ||--o{ custom_mcp_servers : configures
-    custom_mcp_servers ||--|| codes : uses
+    Projects ||--o{ Profiles : contains
+    Profiles ||--o{ MCPServers : contains
+    Projects ||--o{ APIKeys : authenticates
+    Profiles ||--o{ CustomMCPServers : contains
+    CustomMCPServers ||--|| Codes : uses
 ```
 
-The schema design supports multi-tenant operations with projects containing multiple profiles (workspaces).
+## Design Patterns
 
-### 4. Server Management Pattern
+### Workspace Isolation
 
-The current proxy pattern will evolve to include direct server management:
-- Container-based isolation for security
-- Resource allocation and monitoring
-- Status tracking and lifecycle management
+Each profile (workspace) has its own set of MCP servers, ensuring isolation between different environments or use cases:
 
-### 5. Tool Aggregation Pattern
+```mermaid
+flowchart TD
+    Project --> ProfileA[Profile A]
+    Project --> ProfileB[Profile B]
+    
+    ProfileA --> ServerA1[MCP Server A1]
+    ProfileA --> ServerA2[MCP Server A2]
+    
+    ProfileB --> ServerB1[MCP Server B1]
+    ProfileB --> ServerB2[MCP Server B2]
+```
 
-Tools from multiple MCP servers are aggregated and presented as a unified set to clients:
-- Deduplication of identical tools
-- Consistent naming and parameter handling
-- Tool routing to the appropriate server
+### Server Actions Pattern
 
-## Component Relationships
+Server-side operations use Next.js server actions with direct database access:
 
-1. **Projects & Profiles**: Projects contain multiple profiles (workspaces)
-2. **Profiles & Servers**: Each profile can configure multiple MCP servers
-3. **Servers & Tools**: Servers expose tools that are aggregated by the system
-4. **API Keys & Access**: API keys control access to specific projects
+```typescript
+'use server';
 
-## Evolution Strategy
+export async function someAction(arg1, arg2) {
+  // Database operations
+  const result = await db.query...
+  
+  // Return result to client
+  return { success: true, data: result };
+}
+```
 
-The transition from proxy to native hosting will follow these patterns:
+### MCP Server Management Pattern
 
-1. **Additive Changes**: Add native hosting capabilities without removing proxy functionality
-2. **Gradual Migration**: Allow users to migrate servers one at a time
-3. **Transparent Routing**: Route requests to either proxied or native servers transparently
-4. **Incremental Enhancement**: Add container management capabilities incrementally 
+MCP servers are configured and managed through a consistent interface:
+
+1. **STDIO Servers**: Executed as child processes via command, args, and environment variables
+2. **SSE Servers**: Connected via HTTP to a specified URL endpoint
+
+```typescript
+// STDIO Server Configuration
+{
+  name: "File System",
+  type: "STDIO",
+  command: "npx",
+  args: ["-y", "@modelcontextprotocol/server-filesystem", "."],
+  env: {},
+  status: "ACTIVE"
+}
+
+// SSE Server Configuration
+{
+  name: "External Service",
+  type: "SSE",
+  url: "https://example.com/mcp-server",
+  status: "ACTIVE"
+}
+```
+
+### MCP Playground Pattern
+
+The MCP Playground follows a session-based pattern for testing MCP servers:
+
+1. **Session Initialization**: 
+   - Select MCP servers to test
+   - Configure LLM parameters
+   - Convert MCP servers to LangChain tools
+   - Create ReAct agent with tools
+
+2. **Query Execution**:
+   - Send natural language query to agent
+   - Agent determines tools to use
+   - Tools invoke MCP server functionality
+   - Agent provides response based on tool outputs
+
+3. **Session Cleanup**:
+   - Properly close MCP server connections
+   - Release resources
+
+```mermaid
+sequenceDiagram
+    participant UI as UI
+    participant SA as Server Actions
+    participant LA as LangChain Agent
+    participant MCP as MCP Servers
+    
+    UI->>SA: Start Session (selected servers)
+    SA->>MCP: Initialize connections
+    SA->>LA: Create agent with tools
+    SA->>UI: Session ready
+    
+    UI->>SA: Execute query
+    SA->>LA: Process query
+    LA->>MCP: Call tools
+    MCP->>LA: Tool results
+    LA->>SA: Final response
+    SA->>UI: Display result
+    
+    UI->>SA: End session
+    SA->>MCP: Close connections
+    SA->>LA: Cleanup agent
+    SA->>UI: Session ended
+```
+
+## Implementation Patterns
+
+### Database Operations
+
+Database operations use Drizzle ORM with PostgreSQL:
+
+```typescript
+// Query example
+const results = await db.query.someTable.findMany({
+  where: eq(someTable.field, value),
+  orderBy: desc(someTable.createdAt)
+});
+
+// Insert example
+await db.insert(someTable).values({
+  field1: value1,
+  field2: value2
+});
+```
+
+### Content Processing
+
+Handling complex content returned by MCP tools:
+
+```typescript
+function safeProcessContent(content: any): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+  
+  if (typeof content === 'object') {
+    // Special handling for common patterns
+    if (content.type === 'text' && content.text) {
+      return content.text;
+    }
+    
+    // Fallback to JSON
+    return JSON.stringify(content);
+  }
+  
+  return String(content);
+}
+```
+
+### Error Handling
+
+Consistent error handling pattern for server actions:
+
+```typescript
+try {
+  // Operation logic
+  return { success: true, data };
+} catch (error) {
+  console.error('Operation failed:', error);
+  return { 
+    success: false, 
+    error: error instanceof Error ? error.message : 'Unknown error' 
+  };
+}
+```
+
+## UI Patterns
+
+### Card-Based Layout
+
+Information and controls are organized in card components:
+
+```tsx
+<Card>
+  <CardHeader>
+    <CardTitle>Component Title</CardTitle>
+    <CardDescription>Component description</CardDescription>
+  </CardHeader>
+  <CardContent>
+    {/* Main content */}
+  </CardContent>
+  <CardFooter>
+    {/* Actions */}
+  </CardFooter>
+</Card>
+```
+
+### Form Pattern
+
+Forms use React Hook Form with Zod validation:
+
+```tsx
+const form = useForm({
+  resolver: zodResolver(schema),
+  defaultValues: {
+    field1: "",
+    field2: ""
+  }
+});
+
+<Form {...form}>
+  <form onSubmit={form.handleSubmit(onSubmit)}>
+    <FormField
+      control={form.control}
+      name="field1"
+      render={({ field }) => (
+        <FormItem>
+          <FormLabel>Field 1</FormLabel>
+          <FormControl>
+            <Input {...field} />
+          </FormControl>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+    <Button type="submit">Submit</Button>
+  </form>
+</Form>
+```
+
+### Chat Interface Pattern
+
+Chat uses a message-based display with role-based styling:
+
+```tsx
+{messages.map((message, index) => (
+  <div 
+    key={index}
+    className={message.role === 'human' ? 'justify-end' : 'justify-start'}
+  >
+    <div className={getMessageStyle(message.role)}>
+      <div className="whitespace-pre-wrap">{message.content}</div>
+    </div>
+  </div>
+))}
+```
