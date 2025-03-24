@@ -12,8 +12,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
-    "@langchain/community": "^0.3.24",
-    "@langchain/core": "^0.3.30",
     "@monaco-editor/react": "^4.6.0",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-dialog": "^1.1.4",
