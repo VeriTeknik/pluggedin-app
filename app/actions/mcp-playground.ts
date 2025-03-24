@@ -7,7 +7,7 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
 
 import { getMcpServers } from '@/app/actions/mcp-servers';
-import { convertMcpToLangchainTools, McpServerCleanupFn } from '@/lib/langchain-mcp-tools-ts/dist/langchain-mcp-tools.js';
+import { convertMcpToLangchainTools, McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
 
 // Cache for Anthropic models with last fetch time
 interface ModelCache {
