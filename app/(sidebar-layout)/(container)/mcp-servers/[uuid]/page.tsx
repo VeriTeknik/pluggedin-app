@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Pencil, Trash2 } from 'lucide-react';
+import { Activity, ArrowLeft, Clock, Database, Globe, Save, Server, Terminal, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { useEffect, useState } from 'react';
@@ -13,24 +13,19 @@ import {
   toggleMcpServerStatus,
   updateMcpServer,
 } from '@/app/actions/mcp-servers';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
@@ -43,7 +38,9 @@ export default function McpServerDetailPage({
   const { currentProfile } = useProfiles();
   const { uuid } = use(params);
   const router = useRouter();
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -81,8 +78,33 @@ export default function McpServerDetailPage({
         url: mcpServer.url || '',
         type: mcpServer.type,
       });
+      setHasChanges(false);
     }
   }, [mcpServer, form]);
+
+  // Check for changes in form values
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      if (mcpServer) {
+        const isDifferent = 
+          value.name !== mcpServer.name ||
+          value.description !== (mcpServer.description || '') ||
+          (mcpServer.type === McpServerType.STDIO && (
+            value.command !== (mcpServer.command || '') ||
+            value.args !== mcpServer.args.join(' ') ||
+            value.env !== Object.entries(mcpServer.env)
+              .map(([key, value]) => `${key}=${value}`)
+              .join('\n')
+          )) ||
+          (mcpServer.type === McpServerType.SSE && value.url !== (mcpServer.url || '')) ||
+          value.type !== mcpServer.type;
+        
+        setHasChanges(isDifferent);
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form, mcpServer]);
 
   const onSubmit = async (data: {
     name: string;
@@ -121,7 +143,9 @@ export default function McpServerDetailPage({
 
     await updateMcpServer(currentProfile.uuid, mcpServer.uuid, processedData);
     await mutate();
-    setIsEditing(false);
+    setIsEditingName(false);
+    setIsEditingDescription(false);
+    setHasChanges(false);
   };
 
   const handleDelete = async () => {
@@ -136,10 +160,10 @@ export default function McpServerDetailPage({
   if (!mcpServer) return <div>Loading...</div>;
 
   return (
-    <div>
-      <div className='flex justify-between items-center mb-8'>
+    <div className="container mx-auto py-6">
+      <div className='flex justify-between items-center mb-6'>
         <Button
-          variant='outline'
+          variant='ghost'
           onClick={() => {
             if (window.history.length > 1) {
               router.back();
@@ -147,190 +171,38 @@ export default function McpServerDetailPage({
               router.push('/mcp-servers');
             }
           }}
-          className='flex items-center p-4'>
-          <ArrowLeft className='mr-2' size={16} />
-          Back
+          className='flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors'>
+          <ArrowLeft size={16} />
+          Back to servers
         </Button>
 
         <div className='flex gap-2'>
-          <Dialog open={isEditing} onOpenChange={setIsEditing}>
-            <DialogTrigger asChild>
-              <Button variant='outline'>
-                <Pencil className='h-4 w-4 mr-2' />
-                Edit
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit MCP Server</DialogTitle>
-              </DialogHeader>
-              <Form {...form}>
-                <form
-                  onSubmit={form.handleSubmit(onSubmit)}
-                  className='space-y-4'>
-                  <FormField
-                    control={form.control}
-                    name='name'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder='Name' required />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='description'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Input
-                            {...field}
-                            placeholder="(Optional) Brief description of the server's purpose"
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name='type'
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Server Type</FormLabel>
-                        <FormControl>
-                          <select
-                            {...field}
-                            className='w-full p-2 border rounded-md'
-                            onChange={(e) => {
-                              field.onChange(e);
-                              form.setValue('command', '');
-                              form.setValue('url', '');
-                            }}>
-                            <option value={McpServerType.STDIO}>STDIO Server</option>
-                            <option value={McpServerType.SSE}>SSE Server</option>
-                          </select>
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-                  {form.watch('type') === McpServerType.STDIO ? (
-                    <>
-                      <FormField
-                        control={form.control}
-                        name='command'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Command</FormLabel>
-                            <FormControl>
-                              <Input {...field} placeholder='e.g., npx or uvx' required />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name='args'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Arguments (space-separated)</FormLabel>
-                            <FormControl>
-                              <Input
-                                {...field}
-                                placeholder='e.g., mcp-server-time'
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name='env'
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Environment Variables (key=value, one per line)
-                            </FormLabel>
-                            <FormControl>
-                              <textarea
-                                className='w-full min-h-[100px] px-3 py-2 rounded-md border'
-                                {...field}
-                                placeholder='KEY=value                                                                                ANOTHER_KEY=another_value'
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </>
-                  ) : (
-                    <FormField
-                      control={form.control}
-                      name='url'
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Server URL</FormLabel>
-                          <FormControl>
-                            <Input
-                              {...field}
-                              placeholder='http://localhost:3000/sse'
-                              required
-                              pattern="^(http|https)://[^\s/$.?#].[^\s]*$"
-                            />
-                          </FormControl>
-                          <p className='text-sm text-muted-foreground'>
-                            Must be a valid HTTP/HTTPS URL
-                          </p>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                  <div className='flex justify-end gap-2'>
-                    <Button
-                      type='button'
-                      variant='outline'
-                      onClick={() => {
-                        form.reset({
-                          name: mcpServer.name,
-                          description: mcpServer.description || '',
-                          command: mcpServer.command || '',
-                          args: mcpServer.args.join(' '),
-                          env: Object.entries(mcpServer.env)
-                            .map(([key, value]) => `${key}=${value}`)
-                            .join('\n'),
-                          url: mcpServer.url || '',
-                          type: mcpServer.type,
-                        });
-                        setIsEditing(false);
-                      }}>
-                      Cancel
-                    </Button>
-                    <Button type='submit'>Save Changes</Button>
-                  </div>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-          <Button variant='destructive' onClick={handleDelete}>
+          {hasChanges && (
+            <Button 
+              variant='default' 
+              className="shadow-sm" 
+              onClick={form.handleSubmit(onSubmit)}
+            >
+              <Save className='h-4 w-4 mr-2' />
+              Save Changes
+            </Button>
+          )}
+          <Button variant='destructive' className="shadow-sm" onClick={handleDelete}>
             <Trash2 className='mr-2' size={16} />
-            Delete Server
+            Delete
           </Button>
         </div>
       </div>
 
-      <h1 className='text-3xl font-bold mb-8'>{mcpServer.name}</h1>
-
-      <div className='grid grid-cols-1 md:grid-cols-2 gap-8'>
-        <div className='space-y-4'>
-          <p className='mb-3'>
-            <strong>UUID:</strong> {mcpServer.uuid}
-          </p>
-
-          <p className='mb-3 flex items-center gap-2'>
-            <strong>Status:</strong>{' '}
+      <Card className="shadow-md border-muted mb-6">
+        <CardHeader className="pb-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-start gap-2">
+              <Badge variant={mcpServer.status === McpServerStatus.ACTIVE ? "default" : "secondary"}>
+                {mcpServer.status === McpServerStatus.ACTIVE ? "Active" : "Inactive"}
+              </Badge>
+              <Badge variant="outline">{mcpServer.type}</Badge>
+            </div>
             <Switch
               checked={mcpServer.status === McpServerStatus.ACTIVE}
               onCheckedChange={async (checked) => {
@@ -343,59 +215,181 @@ export default function McpServerDetailPage({
                 mutate();
               }}
             />
-          </p>
+          </div>
+          <div onClick={() => setIsEditingName(true)} className="cursor-pointer group">
+            {isEditingName ? (
+              <Input
+                value={form.watch('name')}
+                onChange={(e) => form.setValue('name', e.target.value)}
+                className="text-2xl font-bold mt-3"
+                onBlur={() => setIsEditingName(false)}
+                autoFocus
+              />
+            ) : (
+              <CardTitle className="text-2xl font-bold mt-3 group-hover:bg-muted/30 rounded px-1">
+                {form.watch('name')}
+              </CardTitle>
+            )}
+          </div>
+          <div onClick={() => setIsEditingDescription(true)} className="cursor-pointer group">
+            {isEditingDescription ? (
+              <Input
+                value={form.watch('description')}
+                onChange={(e) => form.setValue('description', e.target.value)}
+                className="text-md mt-1"
+                placeholder="Add a description..."
+                onBlur={() => setIsEditingDescription(false)}
+                autoFocus
+              />
+            ) : (
+              <CardDescription className="text-md mt-1 group-hover:bg-muted/30 rounded px-1">
+                {form.watch('description') || "Click to add a description..."}
+              </CardDescription>
+            )}
+          </div>
+        </CardHeader>
+      </Card>
 
-          <p className='mb-3'>
-            <strong>Created At:</strong>{' '}
-            {new Date(mcpServer.created_at).toLocaleString()}
-          </p>
-
-          <p className='mb-3'>
-            <strong>Description:</strong>{' '}
-            <span className='whitespace-pre-wrap'>{mcpServer.description}</span>
-          </p>
-
-          <p className='mb-3'>
-            <strong>Type:</strong> {mcpServer.type}
-          </p>
-
-          {mcpServer.type === McpServerType.STDIO ? (
-            <>
-              <div className='mb-3'>
-                <strong>Command:</strong>
-                <pre className='mt-2 p-2 bg-secondary rounded-md'>
-                  {mcpServer.command}
-                </pre>
-              </div>
-
-              <div className='mb-3'>
-                <strong>Arguments:</strong>
-                <pre className='mt-2 p-2 bg-secondary rounded-md'>
-                  {mcpServer.args.join(' ')}
-                </pre>
-              </div>
-
-              <div className='mb-3'>
-                <strong>Environment Variables:</strong>
-                <pre className='mt-2 p-2 bg-secondary rounded-md'>
-                  {Object.entries(mcpServer.env).length > 0
-                    ? Object.entries(mcpServer.env).map(
-                      ([key, value]) => `${key}=${value}\n`
-                    )
-                    : 'No environment variables set'}
-                </pre>
-              </div>
-            </>
-          ) : (
-            <div className='mb-3'>
-              <strong>Server URL:</strong>
-              <pre className='mt-2 p-2 bg-secondary rounded-md'>
-                {mcpServer.url}
-              </pre>
+      <Form {...form}>
+        <Tabs defaultValue="details" className="w-full">
+          <TabsList className="w-full justify-start mb-6">
+            <TabsTrigger value="details">Server Details</TabsTrigger>
+            <TabsTrigger value="config">Configuration</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="details">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="shadow-sm">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-md font-medium flex items-center">
+                    <Server className="mr-2 h-4 w-4" />
+                    Server Info
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-0">
+                  <div className="flex items-start justify-between border-b pb-2">
+                    <span className="text-sm font-medium text-muted-foreground">UUID</span>
+                    <span className="text-sm font-mono">{mcpServer.uuid}</span>
+                  </div>
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="text-sm font-medium text-muted-foreground flex items-center">
+                      <Activity className="mr-1 h-4 w-4" />
+                      Status
+                    </span>
+                    <Badge variant={mcpServer.status === McpServerStatus.ACTIVE ? "default" : "secondary"}>
+                      {mcpServer.status === McpServerStatus.ACTIVE ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between border-b pb-2">
+                    <span className="text-sm font-medium text-muted-foreground flex items-center">
+                      <Clock className="mr-1 h-4 w-4" />
+                      Created
+                    </span>
+                    <span className="text-sm">{new Date(mcpServer.created_at).toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-muted-foreground">Type</span>
+                    <div className="relative inline-block cursor-pointer group">
+                      <select
+                        value={form.watch('type')}
+                        onChange={(e) => form.setValue('type', e.target.value as McpServerType)}
+                        className="absolute opacity-0 w-full h-full cursor-pointer"
+                      >
+                        <option value={McpServerType.STDIO}>STDIO</option>
+                        <option value={McpServerType.SSE}>SSE</option>
+                      </select>
+                      <Badge variant="outline" className="group-hover:bg-muted">
+                        {form.watch('type') === McpServerType.STDIO ? "STDIO" : "SSE"}
+                      </Badge>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          )}
-        </div>
-      </div>
+          </TabsContent>
+          
+          <TabsContent value="config">
+            <div className="grid grid-cols-1 gap-6">
+              {form.watch('type') === McpServerType.STDIO ? (
+                <>
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-md font-medium flex items-center">
+                        <Terminal className="mr-2 h-4 w-4" />
+                        Command Configuration
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="mb-4">
+                        <h3 className="text-sm font-medium text-muted-foreground mb-2">Command</h3>
+                        <div className="relative group cursor-text">
+                          <Input
+                            value={form.watch('command')}
+                            onChange={(e) => form.setValue('command', e.target.value)}
+                            className="bg-muted p-3 rounded-md font-mono text-sm"
+                            placeholder="e.g., npx or uvx"
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="mb-4">
+                        <h3 className="text-sm font-medium text-muted-foreground mb-2">Arguments</h3>
+                        <div className="relative group cursor-text">
+                          <Input
+                            value={form.watch('args')}
+                            onChange={(e) => form.setValue('args', e.target.value)}
+                            className="bg-muted p-3 rounded-md font-mono text-sm"
+                            placeholder="e.g., mcp-server-time"
+                          />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-md font-medium flex items-center">
+                        <Database className="mr-2 h-4 w-4" />
+                        Environment Variables
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="relative group cursor-text">
+                        <textarea
+                          value={form.watch('env')}
+                          onChange={(e) => form.setValue('env', e.target.value)}
+                          className="w-full bg-muted p-3 rounded-md font-mono text-sm min-h-[150px] border-none resize-y"
+                          placeholder="KEY=value
+ANOTHER_KEY=another_value"
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : (
+                <Card className="shadow-sm">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-md font-medium flex items-center">
+                      <Globe className="mr-2 h-4 w-4" />
+                      Server URL
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="relative group cursor-text">
+                      <Input
+                        value={form.watch('url')}
+                        onChange={(e) => form.setValue('url', e.target.value)}
+                        className="bg-muted p-3 rounded-md font-mono text-sm"
+                        placeholder="http://localhost:3000/sse"
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+        </Tabs>
+      </Form>
     </div>
   );
 }
