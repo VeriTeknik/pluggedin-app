@@ -564,14 +564,14 @@ export default function McpPlaygroundPage() {
                               <div className='space-y-1 max-w-xs'>
                                 <p className='font-medium'>{server.name}</p>
                                 <p className='text-xs'>{server.description}</p>
-                                <p className='text-xs flex items-center space-x-1'>
+                                <div className='text-xs flex items-center space-x-1'>
                                   <span>Type:</span>
                                   <Badge
                                     variant='secondary'
                                     className='py-0 px-1.5 h-4 font-normal'>
                                     {server.type}
                                   </Badge>
-                                </p>
+                                </div>
                                 {server.command && (
                                   <p className='text-xs'>
                                     Command: {server.command}
