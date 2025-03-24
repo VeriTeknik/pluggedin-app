@@ -1,13 +1,24 @@
 'use server';
 
-import { AIMessage, HumanMessage } from '@langchain/core/messages';
-import { ChatAnthropic } from '@langchain/anthropic';
-import { ChatOpenAI } from '@langchain/openai';
-import { createReactAgent } from '@langchain/langgraph/prebuilt';
-import { MemorySaver } from '@langchain/langgraph';
 import { convertMcpToLangchainTools, McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
+import { ChatAnthropic } from '@langchain/anthropic';
+import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import { MemorySaver } from '@langchain/langgraph';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import { ChatOpenAI } from '@langchain/openai';
 
 import { getMcpServers } from '@/app/actions/mcp-servers';
+
+// Cache for Anthropic models with last fetch time
+interface ModelCache {
+  models: Array<{id: string, name: string}>;
+  lastFetched: Date;
+}
+
+const anthropicModelsCache: ModelCache = {
+  models: [],
+  lastFetched: new Date(0) // Set to epoch time initially
+};
 
 // Store active sessions with cleanup functions
 interface McpPlaygroundSession {
@@ -108,6 +119,95 @@ function initChatModel(config: {
   } else {
     throw new Error(`Unsupported provider: ${provider}`);
   }
+}
+
+// Fetch available Anthropic models
+export async function getAnthropicModels() {
+  try {
+    // Check if cache is still valid (less than 24 hours old)
+    const now = new Date();
+    const cacheAge = now.getTime() - anthropicModelsCache.lastFetched.getTime();
+    const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+    
+    if (cacheAge < CACHE_TTL && anthropicModelsCache.models.length > 0) {
+      // Use cached data
+      return { 
+        success: true, 
+        models: anthropicModelsCache.models,
+        fromCache: true
+      };
+    }
+    
+    // Need to fetch from API
+    const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
+    if (!anthropicApiKey) {
+      throw new Error("Anthropic API key not found");
+    }
+    
+    const response = await fetch('https://api.anthropic.com/v1/models', {
+      method: 'GET',
+      headers: {
+        'x-api-key': anthropicApiKey,
+        'anthropic-version': '2023-06-01'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Format and filter for Claude models only
+    const claudeModels = data.models
+      .filter((model: any) => model.id.startsWith('claude'))
+      .map((model: any) => ({
+        id: model.id,
+        name: formatModelName(model.id)
+      }));
+    
+    // Update cache
+    anthropicModelsCache.models = claudeModels;
+    anthropicModelsCache.lastFetched = now;
+    
+    return { 
+      success: true, 
+      models: claudeModels,
+      fromCache: false
+    };
+  } catch (error) {
+    console.error('Error fetching Anthropic models:', error);
+    
+    // Return cached data if available, even if outdated
+    if (anthropicModelsCache.models.length > 0) {
+      return { 
+        success: true, 
+        models: anthropicModelsCache.models,
+        fromCache: true,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+    
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+// Helper to format model names for display
+function formatModelName(modelId: string): string {
+  if (modelId.includes('claude-3-7-sonnet')) return 'Claude 3.7 Sonnet';
+  if (modelId.includes('claude-3-5-sonnet')) return 'Claude 3.5 Sonnet';
+  if (modelId.includes('claude-3-opus')) return 'Claude 3 Opus';
+  if (modelId.includes('claude-3-sonnet')) return 'Claude 3 Sonnet';
+  if (modelId.includes('claude-3-haiku')) return 'Claude 3 Haiku';
+  
+  // For any other models, capitalize and format nicely
+  return modelId
+    .split('-')
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 // Get or create a playground session for a profile
@@ -251,7 +351,7 @@ export async function executePlaygroundQuery(
       messages,
       debug: {
         messageCount: agentFinalState.messages.length,
-        messageTypes: agentFinalState.messages.map(m => m.constructor.name),
+        messageTypes: agentFinalState.messages.map((m: any) => m.constructor.name),
         lastMessageContentType: typeof agentFinalState.messages[agentFinalState.messages.length - 1].content
       }
     };
