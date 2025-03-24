@@ -95,6 +95,22 @@ export default function SidebarLayout({
               <SidebarGroupLabel>Navigation</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/mcp-playground'>
+                        <Beaker className='mr-2 h-4 w-4' />
+                        <span>Playground</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/mcp-servers'>
+                        <Server className='mr-2 h-4 w-4' />
+                        <span>Plugins</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/setup-guide'>
@@ -111,22 +127,9 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/mcp-servers'>
-                        <Server className='mr-2 h-4 w-4' />
-                        <span>Plugins</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/mcp-playground'>
-                        <Beaker className='mr-2 h-4 w-4' />
-                        <span>Playground</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  
+                  
+                  {/* TODO: Add custom MCP servers to the sidebar 
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/custom-mcp-servers'>
@@ -142,7 +145,7 @@ export default function SidebarLayout({
                         <span>Python Code Editor</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  </SidebarMenuItem>*/}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/api-keys'>
@@ -151,14 +154,14 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/inspector-guide'>
                         <Terminal className='mr-2 h-4 w-4' />
                         <span>Inspector Guide</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  </SidebarMenuItem> */}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/settings'>
