@@ -1,6 +1,5 @@
 'use server';
 
-import { convertMcpToLangchainTools, McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { MemorySaver } from '@langchain/langgraph';
@@ -8,6 +7,7 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
 
 import { getMcpServers } from '@/app/actions/mcp-servers';
+import { convertMcpToLangchainTools, McpServerCleanupFn } from '@/lib/langchain-mcp-tools-ts/dist/langchain-mcp-tools.js';
 
 // Cache for Anthropic models with last fetch time
 interface ModelCache {

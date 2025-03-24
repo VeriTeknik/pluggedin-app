@@ -6,6 +6,8 @@ import { db } from '@/db';
 import { mcpServersTable, McpServerStatus, McpServerType } from '@/db/schema';
 import { McpServer } from '@/types/mcp-server';
 
+
+
 export async function getMcpServers(profileUuid: string) {
   const servers = await db
     .select()

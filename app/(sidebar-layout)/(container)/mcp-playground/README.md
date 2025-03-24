@@ -1,6 +1,6 @@
 # MCP Playground
 
-The MCP Playground allows you to test your MCP servers with LangChain integration. This feature converts MCP servers into LangChain tools and creates an agent that can use these tools based on natural language instructions.
+The MCP Playground is a testing environment for MCP (Model Control Protocol) servers. It allows you to connect to multiple MCP servers and interact with them through a chat interface powered by LLMs like Claude or GPT.
 
 ## Getting Started
 
@@ -47,9 +47,67 @@ When you send a message:
 3. It executes the tools and receives results
 4. It provides a final response based on the results
 
+## Log Capture System
+
+The Playground includes a comprehensive log capture system that collects logs from MCP servers at various levels:
+
+### Log Levels
+
+The system supports the following log levels from the `langchain-mcp-tools` package:
+
+- **TRACE**: Most verbose level for detailed tracing (gray)
+- **DEBUG**: Debugging information (light blue)
+- **INFO**: General information messages (blue)
+- **WARN**: Warning messages that don't stop execution (yellow)
+- **ERROR**: Error messages that might allow continued execution (red)
+- **FATAL**: Critical errors that stop execution (bold red with background)
+
+Additionally, the UI categorizes logs into functional types:
+
+- **Connection**: Logs related to connecting to MCP servers (green)
+- **Execution**: Logs about tool execution (amber)
+- **Response**: Logs containing tool responses (purple)
+
+### How Log Capture Works
+
+1. The system intercepts console output from the `langchain-mcp-tools` package
+2. Log messages are parsed to determine their level and type
+3. Logs are stored with timestamps in the session state
+4. The UI displays logs with color coding and filtering options
+
+### Configuring Log Level
+
+You can configure the verbosity of logs when starting a session:
+
+1. Select a log level in the Model configuration tab
+2. Higher levels (like Debug or Trace) include all lower level messages
+3. The default level is "Info", which provides a balanced amount of detail
+
+### Filtering Logs
+
+The Logs tab includes filters that let you:
+
+- Show/hide specific log levels
+- Focus on particular types of operations
+- View initialization logs separately from runtime logs
+
+### Implementation Details
+
+- Console overrides in `app/actions/mcp-playground.ts` capture logs
+- The logger from `langchain-mcp-tools` uses standard console methods with level prefixes
+- Log capture preserves the original console behavior while adding collection
+
 ## Troubleshooting
 
 - **Connection Issues**: If you see connection errors, make sure your MCP servers are running and accessible
 - **Authentication Errors**: Verify that any required API keys or credentials are properly configured
 - **Tool Execution Errors**: Check that your MCP servers are functioning correctly outside the playground
-- **Agent Understanding Issues**: Try to be specific in your requests and provide clear instructions 
+- **Agent Understanding Issues**: Try to be specific in your requests and provide clear instructions
+- **Log Capture Issues**: If you're not seeing expected logs, check the log level, filters, and server connection
+
+If you're not seeing expected logs:
+
+1. Check that the log level is set appropriately (higher levels include more detail)
+2. Verify that log filters are enabled for the types of logs you want to see
+3. Make sure MCP servers are properly connected and active
+4. Check the server implementation to ensure it's using the logger correctly 

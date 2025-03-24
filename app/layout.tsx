@@ -16,8 +16,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'MetaMCP Dashboard',
-  description: 'The internal tool for MetaMCP.',
+  title: 'Plugged.in Dashboard',
+  description: 'Plugged.in. The AI crossroads.',
 };
 
 export default function RootLayout({
