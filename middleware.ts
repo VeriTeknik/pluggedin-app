@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
+// Only run middleware on matching paths
+export const config = {
+  matcher: [
+    /*
+     * Match all paths except for:
+     * 1. /api routes
+     * 2. /_next (Next.js internals)
+     * 3. /_static (inside /public)
+     * 4. all root files inside /public (e.g. /favicon.ico)
+     */
+    '/((?!api/auth/logout|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)',
+  ],
+};
+
 export default async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
   const isAuthenticated = !!token;
@@ -38,7 +52,8 @@ export default async function middleware(req: NextRequest) {
 
   // Redirect unauthenticated users to login
   if (requiresAuth && !isAuthenticated) {
-    return NextResponse.redirect(new URL('/login', req.url));
+    const response = NextResponse.redirect(new URL('/login', req.url));
+    return response;
   }
 
   return NextResponse.next();

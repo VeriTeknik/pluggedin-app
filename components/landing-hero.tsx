@@ -21,7 +21,7 @@ export function LandingHero() {
         <div className="relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-primary to-primary/60 rounded-full blur-sm opacity-70"></div>
           <Image
-            src="/favicon.ico"
+            src="/pluggedin-wl-black.png"
             alt="Plugged.in Logo"
             width={72}
             height={72}

@@ -115,7 +115,7 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/'>
                         <Image
-                          src='/favicon.ico'
+                          src='/pluggedin-wl-black.png'
                           alt='Plugged.in Logo'
                           width={16}
                           height={16}

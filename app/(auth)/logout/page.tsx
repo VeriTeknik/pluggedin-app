@@ -1,29 +1,53 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
+import { serverLogout } from '@/app/actions/auth';
 
 export default function LogoutPage() {
-  const router = useRouter();
-
   useEffect(() => {
     const performLogout = async () => {
       try {
-        // Use signOut with explicit callback and clear all cookies
+        // First call our server action to delete sessions from database
+        await serverLogout();
+        
+        // Then call our server-side API to clear cookies
+        await fetch('/api/auth/logout', { 
+          method: 'GET',
+          credentials: 'include'
+        });
+        
+        // Clear all cookies related to authentication
+        document.cookie.split(';').forEach(cookie => {
+          const [name] = cookie.trim().split('=');
+          
+          // Clear without domain (path only)
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
+          
+          // Clear with exact domain
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=plugged.in;`;
+          
+          // Clear with domain with leading dot
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.plugged.in;`;
+        });
+
+        // Use signOut with redirect: false to manually handle redirects
         await signOut({ 
           callbackUrl: '/',
-          redirect: true 
+          redirect: false 
         });
+        
+        // Force a hard refresh to clear any client-side state
+        window.location.href = '/';
       } catch (error) {
         console.error('Logout error:', error);
-        // Redirect to home even if there's an error
-        router.push('/');
+        // Force redirect to home even if there's an error
+        window.location.href = '/';
       }
     };
 
     performLogout();
-  }, [router]);
+  }, []);
 
   return (
     <div className="flex items-center justify-center h-screen">

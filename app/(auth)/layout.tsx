@@ -26,7 +26,7 @@ export default function AuthLayout({
         <div className="max-w-md w-full">
           <div className="md:hidden flex justify-center mb-8">
             <Image
-              src="/logo.png"
+              src="/pluggedin-wl-black.png"
               alt="Plugged.in Logo"
               width={150}
               height={75}
