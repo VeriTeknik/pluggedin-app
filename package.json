@@ -89,5 +89,17 @@
     "ts-prune": "^0.10.3",
     "tsx": "^4.19.2",
     "typescript": "^5"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "bcrypt",
+      "esbuild",
+      "sharp"
+    ],
+    "onlyBuiltDependencies": [
+      "bcrypt",
+      "esbuild",
+      "sharp"
+    ]
   }
 }
