@@ -1,10 +1,10 @@
-import { hash } from 'bcrypt';
+import { nanoid } from 'nanoid';
 import { NextRequest, NextResponse } from 'next/server';
+import { hash } from 'bcrypt';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { users } from '@/db/schema';
-import { nanoid } from 'nanoid';
+import { users, verificationTokens } from '@/db/schema';
 
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
@@ -31,24 +31,47 @@ export async function POST(req: NextRequest) {
 
     // Hash the password
     const hashedPassword = await hash(data.password, 10);
+    
+    // Generate a verification token
+    const verificationToken = nanoid(32);
+    const tokenExpiry = new Date();
+    tokenExpiry.setHours(tokenExpiry.getHours() + 24); // Token valid for 24 hours
 
     // Create the user
     await db.insert(users).values({
       id: nanoid(),
       name: data.name,
       email: data.email,
-      // Store password hash in email verification token
-      // It will be moved to the user record once email is verified
-      emailVerified: null,
+      password: hashedPassword,
+      emailVerified: null, // Email not verified yet
       created_at: new Date(),
       updated_at: new Date(),
     });
+    
+    // Store the verification token
+    await db.insert(verificationTokens).values({
+      identifier: data.email,
+      token: verificationToken,
+      expires: tokenExpiry,
+    });
 
-    // Send verification email
-    // This would typically use the email provider from next-auth
+    // Send verification email (would typically use an email provider)
+    // For development purposes, we'll just return the token in the response
+    // In production, you would use a service like SendGrid, Mailgun, etc.
+    
+    // Example code for sending email (commented out):
+    // await sendVerificationEmail({
+    //   to: data.email,
+    //   subject: 'Verify your email',
+    //   token: verificationToken
+    // });
 
     return NextResponse.json(
-      { message: 'User registered successfully' },
+      { 
+        message: 'User registered successfully! Please verify your email.',
+        // In production, you would remove the line below
+        verificationToken: verificationToken
+      },
       { status: 201 }
     );
   } catch (error) {

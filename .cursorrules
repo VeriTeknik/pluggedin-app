@@ -198,3 +198,4 @@ When implementing new features, follow these patterns:
 3. Create or update API endpoints if needed for external access
 4. Develop UI components with appropriate data fetching
 5. Add comprehensive error handling and loading states 
+6. Use pnpm

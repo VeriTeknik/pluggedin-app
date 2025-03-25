@@ -3,15 +3,11 @@
 import {
   Beaker,
   Code2,
-  Info,
   Key,
   Plus,
   Search,
   Server,
-  Settings,
-  Terminal,
   Trash2,
-  Wrench,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -32,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -41,12 +38,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
 import { useToast } from '@/hooks/use-toast';
 
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
+import { UserMenu } from './user-menu';
 
 export default function SidebarLayout({
   children,
@@ -128,14 +127,6 @@ export default function SidebarLayout({
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <Link href='/setup-guide'>
-                        <Info className='mr-2 h-4 w-4' />
-                        <span>Setup Guide</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
                       <Link href='/search'>
                         <Search className='mr-2 h-4 w-4' />
                         <span>Explore & Search (Beta)</span>
@@ -177,18 +168,16 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem> */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/settings'>
-                        <Settings className='mr-2 h-4 w-4' />
-                        <span>Settings</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
+          <SidebarFooter className="mt-auto px-2 py-4">
+            <SidebarSeparator />
+            <div className="pt-2">
+              <UserMenu />
+            </div>
+          </SidebarFooter>
         </Sidebar>
 
         {/* Secondary Sidebar */}

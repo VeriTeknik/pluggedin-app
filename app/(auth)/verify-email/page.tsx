@@ -6,46 +6,47 @@ import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Icons } from '@/components/ui/icons';
 
 export default function VerifyEmailPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
-
-  const [verifying, setVerifying] = useState(true);
-  const [verified, setVerified] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  
+  const [verificationState, setVerificationState] = useState<'loading' | 'success' | 'error'>('loading');
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   useEffect(() => {
-    async function verifyEmail() {
-      try {
-        if (!token) {
-          setError('Missing verification token');
-          setVerifying(false);
-          return;
-        }
+    if (!token) {
+      setVerificationState('error');
+      setErrorMessage('No verification token provided');
+      return;
+    }
 
+    const verifyEmail = async () => {
+      try {
         const response = await fetch('/api/auth/verify-email', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+          },
           body: JSON.stringify({ token }),
         });
 
         const data = await response.json();
 
-        if (!response.ok) {
-          setError(data.message || 'Verification failed');
-          setVerifying(false);
-          return;
+        if (response.ok) {
+          setVerificationState('success');
+        } else {
+          setVerificationState('error');
+          setErrorMessage(data.message || 'Failed to verify email');
         }
-
-        setVerified(true);
-        setVerifying(false);
-      } catch (err) {
-        setError('An unexpected error occurred');
-        setVerifying(false);
+      } catch (error) {
+        setVerificationState('error');
+        setErrorMessage('An error occurred during verification');
+        console.error('Verification error:', error);
       }
-    }
+    };
 
     verifyEmail();
   }, [token]);
@@ -53,32 +54,33 @@ export default function VerifyEmailPage() {
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle>Email Verification</CardTitle>
-        <CardDescription>
-          {verifying
-            ? 'Verifying your email...'
-            : verified
-            ? 'Your email has been verified!'
-            : 'Email verification failed.'}
+        <CardTitle className="text-2xl text-center">Email Verification</CardTitle>
+        <CardDescription className="text-center">
+          {verificationState === 'loading' && 'Verifying your email...'}
+          {verificationState === 'success' && 'Your email has been verified!'}
+          {verificationState === 'error' && 'Email verification failed'}
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        {verifying ? (
-          <div className="flex justify-center py-4">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : verified ? (
-          <p className="text-center text-green-600">
-            Your email has been successfully verified. You can now sign in to your account.
-          </p>
-        ) : (
-          <p className="text-center text-red-600">{error}</p>
+      <CardContent className="flex justify-center items-center py-6">
+        {verificationState === 'loading' && (
+          <Icons.spinner className="h-12 w-12 animate-spin" />
+        )}
+        {verificationState === 'success' && (
+          <Icons.check className="h-12 w-12 text-green-500" />
+        )}
+        {verificationState === 'error' && (
+          <>
+            <Icons.close className="h-12 w-12 text-red-500" />
+            <p className="text-red-500 mt-2">{errorMessage}</p>
+          </>
         )}
       </CardContent>
       <CardFooter className="flex justify-center">
-        {!verifying && (
+        {verificationState !== 'loading' && (
           <Button asChild>
-            <Link href="/login">Go to login</Link>
+            <Link href="/login">
+              {verificationState === 'success' ? 'Sign in to your account' : 'Return to login'}
+            </Link>
           </Button>
         )}
       </CardFooter>
