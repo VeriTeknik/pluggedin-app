@@ -14,11 +14,22 @@ export default async function middleware(req: NextRequest) {
   // Define routes that are only accessible to unauthenticated users
   const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 
+  // Define routes that can be accessed regardless of authentication status
+  const publicRoutes = ['/logout'];
+
   // Check if the route requires authentication
   const requiresAuth = protectedRoutes.some((route) => pathname.startsWith(route));
   
   // Check if the route is only for unauthenticated users
   const isAuthRoute = authRoutes.some((route) => pathname === route);
+
+  // Check if the route is public (accessible to both authenticated and unauthenticated users)
+  const isPublicRoute = publicRoutes.some((route) => pathname === route);
+
+  // Allow access to public routes
+  if (isPublicRoute) {
+    return NextResponse.next();
+  }
 
   // Redirect authenticated users away from auth routes
   if (isAuthRoute && isAuthenticated) {

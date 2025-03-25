@@ -33,7 +33,7 @@ export function UserMenu() {
     .toUpperCase() || 'U';
 
   const handleSignOut = async () => {
-    await signOut({ callbackUrl: '/' });
+    await signOut({ callbackUrl: '/logout' });
   };
 
   return (

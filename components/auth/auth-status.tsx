@@ -65,7 +65,7 @@ export function AuthStatus() {
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onClick={() => signOut({ callbackUrl: '/' })}
+          onClick={() => signOut({ callbackUrl: '/logout' })}
           className="text-red-600 cursor-pointer"
         >
           Sign Out
