@@ -38,8 +38,8 @@ export default function McpServerDetailPage({
   const { currentProfile } = useProfiles();
   const { uuid } = use(params);
   const router = useRouter();
-  const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  // const [isEditingName, setIsEditingName] = useState(false);
+  // const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   const form = useForm({
@@ -143,9 +143,9 @@ export default function McpServerDetailPage({
 
     await updateMcpServer(currentProfile.uuid, mcpServer.uuid, processedData);
     await mutate();
-    setIsEditingName(false);
-    setIsEditingDescription(false);
-    setHasChanges(false);
+    // setIsEditingName(false);
+    // setIsEditingDescription(false);
+    // setHasChanges(false);
   };
 
   const handleDelete = async () => {
