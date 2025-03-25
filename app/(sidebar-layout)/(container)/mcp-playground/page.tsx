@@ -111,6 +111,9 @@ export default function McpPlaygroundPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
+  // State for active tab
+  const [activeTab, setActiveTab] = useState('servers');
+  
   // State for log level
   const [logLevel, setLogLevel] = useState<LogLevel>('info');
 
@@ -166,13 +169,41 @@ export default function McpPlaygroundPage() {
 
   // Auto scroll to bottom of messages and logs
   useEffect(() => {
+    // Function to smoothly scroll to bottom if we're already near the bottom
+    const scrollToBottomIfNearBottom = (ref: React.RefObject<HTMLDivElement>) => {
+      if (ref.current) {
+        const container = ref.current.parentElement;
+        if (container) {
+          // Check if we're already scrolled near the bottom
+          const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
+          
+          // If we're near the bottom, scroll to bottom smoothly
+          if (isNearBottom) {
+            ref.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      }
+    };
+    
+    // Handle message scroll
     if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      scrollToBottomIfNearBottom(messagesEndRef);
     }
+    
+    // Handle logs scroll
     if (logsEndRef.current) {
-      logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      scrollToBottomIfNearBottom(logsEndRef);
     }
   }, [messages, clientLogs, serverLogs]);
+
+  // Auto scroll when tab changes to logs
+  useEffect(() => {
+    if (activeTab === 'logs' && logsEndRef.current) {
+      setTimeout(() => {
+        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [activeTab]);
 
   // Helper to add a log entry
   const addLog = (
@@ -189,8 +220,13 @@ export default function McpPlaygroundPage() {
   useEffect(() => {
     if (!isSessionActive || !profileUuid) return;
     
+    let isPolling = false;
+    
     const fetchServerLogs = async () => {
+      if (isPolling) return; // Prevent parallel requests
+      
       try {
+        isPolling = true;
         const result = await getServerLogs(profileUuid);
         if (result.success && result.logs) {
           // Filter logs that are newer than the last one we processed
@@ -202,8 +238,13 @@ export default function McpPlaygroundPage() {
           }
           
           if (newLogs.length > 0) {
+            // Process new logs, sort them by timestamp to ensure correct order
+            const sortedNewLogs = [...newLogs].sort((a, b) => 
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+            );
+            
             // Update server logs state
-            setServerLogs(prev => [...prev, ...newLogs]);
+            setServerLogs(prev => [...prev, ...sortedNewLogs]);
             
             // Update last processed timestamp
             const latestTimestamp = new Date(Math.max(
@@ -214,14 +255,16 @@ export default function McpPlaygroundPage() {
         }
       } catch (error) {
         console.error('Error fetching server logs:', error);
+      } finally {
+        isPolling = false;
       }
     };
     
     // Fetch logs immediately
     fetchServerLogs();
     
-    // Then fetch every 2 seconds
-    const interval = setInterval(fetchServerLogs, 2000);
+    // Then fetch every 500ms for a more streaming-like experience
+    const interval = setInterval(fetchServerLogs, 500);
     
     return () => clearInterval(interval);
   }, [isSessionActive, profileUuid, lastServerLogTimestamp]);
@@ -321,7 +364,15 @@ export default function McpPlaygroundPage() {
       if (result.success) {
         setIsSessionActive(true);
         setMessages([]);
+        
+        // Switch to logs tab to show server initialization
+        setActiveTab('logs');
+        
+        // Add immediate feedback logs to let users see activity right away
         addLog('connection', 'MCP playground session started successfully.');
+        addLog('info', 'Initializing MCP servers and tools...');
+        addLog('info', 'Connecting to language model...');
+        
         // Add logs for each active server
         const activeServers =
           mcpServers.filter((server) =>
@@ -543,8 +594,12 @@ export default function McpPlaygroundPage() {
                     mcpServers?.filter((s) => s.status === 'ACTIVE').length ===
                       0
                   }>
-                  <Play className='w-4 h-4 mr-2' />
-                  Start Playground
+                  {isProcessing ? (
+                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  ) : (
+                    <Play className='w-4 h-4 mr-2' />
+                  )}
+                  {isProcessing ? 'Starting...' : 'Start Playground'}
                 </Button>
               ) : (
                 <Button
@@ -552,8 +607,12 @@ export default function McpPlaygroundPage() {
                   variant='destructive'
                   onClick={endSession}
                   disabled={isProcessing}>
-                  <Power className='w-4 h-4 mr-2' />
-                  End Session
+                  {isProcessing ? (
+                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  ) : (
+                    <Power className='w-4 h-4 mr-2' />
+                  )}
+                  {isProcessing ? 'Ending...' : 'End Session'}
                 </Button>
               )}
             </div>
@@ -599,11 +658,16 @@ export default function McpPlaygroundPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Tabs defaultValue='servers'>
+              <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab}>
                 <TabsList className='grid w-full grid-cols-3'>
                   <TabsTrigger value='servers'>Servers</TabsTrigger>
                   <TabsTrigger value='llm'>Model</TabsTrigger>
-                  <TabsTrigger value='logs'>Logs</TabsTrigger>
+                  <TabsTrigger value='logs' className="relative">
+                    Logs
+                    {isSessionActive && (
+                      <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                    )}
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value='servers' className='space-y-4 mt-4'>
                   {isLoading ? (
@@ -1056,6 +1120,15 @@ export default function McpPlaygroundPage() {
                             </div>
                           ))
                       )}
+                      
+                      {/* Live indicator when session is active */}
+                      {isSessionActive && (
+                        <div className='flex items-center text-muted-foreground mt-2'>
+                          <div className='h-1.5 w-1.5 rounded-full bg-green-500 mr-2 animate-pulse'></div>
+                          <span className='text-xs italic'>Streaming logs...</span>
+                        </div>
+                      )}
+                      
                       <div ref={logsEndRef} />
                     </div>
                   </ScrollArea>
@@ -1092,11 +1165,16 @@ export default function McpPlaygroundPage() {
                         className='mt-4 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700'
                         onClick={startSession}
                         disabled={
+                          isProcessing ||
                           mcpServers?.filter((s) => s.status === 'ACTIVE')
                             .length === 0
                         }>
-                        <Play className='w-4 h-4 mr-2' />
-                        Start Session
+                        {isProcessing ? (
+                          <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                        ) : (
+                          <Play className='w-4 h-4 mr-2' />
+                        )}
+                        {isProcessing ? 'Starting...' : 'Start Session'}
                       </Button>
                     )}
                   </div>
