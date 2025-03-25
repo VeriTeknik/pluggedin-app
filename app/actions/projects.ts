@@ -54,7 +54,7 @@ export async function getProjects() {
   let projects = await db.select().from(projectsTable);
 
   if (projects.length === 0) {
-    const defaultProject = await createProject('Default Project');
+    const defaultProject = await createProject('Default Hub');
     projects = [defaultProject];
   }
 
