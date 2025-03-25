@@ -4,7 +4,8 @@ import { and, eq } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
 
 import { db } from '@/db';
-import { apiKeysTable } from '@/db/schema';
+import { apiKeysTable, projectsTable } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 import { ApiKey } from '@/types/api-key';
 
 const nanoid = customAlphabet(
@@ -13,6 +14,27 @@ const nanoid = customAlphabet(
 );
 
 export async function createApiKey(projectUuid: string, name?: string) {
+  const session = await getAuthSession();
+  
+  if (!session || !session.user.id) {
+    throw new Error('Unauthorized - you must be logged in to create API keys');
+  }
+  
+  // Verify the project belongs to the current user
+  const project = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, projectUuid))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found');
+  }
+  
+  if (project[0].user_id !== session.user.id) {
+    throw new Error('Unauthorized - you do not have access to this project');
+  }
+
   const newApiKey = `sk_mt_${nanoid(64)}`;
 
   const apiKey = await db
@@ -28,8 +50,29 @@ export async function createApiKey(projectUuid: string, name?: string) {
 }
 
 export async function getFirstApiKey(projectUuid: string) {
+  const session = await getAuthSession();
+  
+  if (!session || !session.user.id) {
+    throw new Error('Unauthorized - you must be logged in to access API keys');
+  }
+  
   if (!projectUuid) {
     return null;
+  }
+
+  // Verify the project belongs to the current user
+  const project = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, projectUuid))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found');
+  }
+  
+  if (project[0].user_id !== session.user.id) {
+    throw new Error('Unauthorized - you do not have access to this project');
   }
 
   let apiKey = await db.query.apiKeysTable.findFirst({
@@ -51,7 +94,28 @@ export async function getFirstApiKey(projectUuid: string) {
   return apiKey as ApiKey;
 }
 
-export async function getProjectApiKeys(projectUuid: string) {
+export async function getApiKeys(projectUuid: string) {
+  const session = await getAuthSession();
+  
+  if (!session || !session.user.id) {
+    throw new Error('Unauthorized - you must be logged in to view API keys');
+  }
+  
+  // Verify the project belongs to the current user
+  const project = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, projectUuid))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found');
+  }
+  
+  if (project[0].user_id !== session.user.id) {
+    throw new Error('Unauthorized - you do not have access to this project');
+  }
+
   const apiKeys = await db
     .select()
     .from(apiKeysTable)
@@ -60,7 +124,29 @@ export async function getProjectApiKeys(projectUuid: string) {
   return apiKeys as ApiKey[];
 }
 
-export async function deleteApiKey(projectUuid: string, apiKeyUuid: string) {
+export async function deleteApiKey(apiKeyUuid: string, projectUuid: string) {
+  const session = await getAuthSession();
+  
+  if (!session || !session.user.id) {
+    throw new Error('Unauthorized - you must be logged in to delete API keys');
+  }
+  
+  // Verify the project belongs to the current user
+  const project = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, projectUuid))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found');
+  }
+  
+  if (project[0].user_id !== session.user.id) {
+    throw new Error('Unauthorized - you do not have access to this project');
+  }
+
+  // Delete the API key only if it belongs to the specified project
   await db
     .delete(apiKeysTable)
     .where(
@@ -69,4 +155,6 @@ export async function deleteApiKey(projectUuid: string, apiKeyUuid: string) {
         eq(apiKeysTable.project_uuid, projectUuid)
       )
     );
+
+  return { success: true };
 }

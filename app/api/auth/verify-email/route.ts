@@ -1,9 +1,9 @@
-import { and,eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { users, verificationTokens } from '@/db/schema';
+import { profilesTable, projectsTable, users, verificationTokens } from '@/db/schema';
 
 const verifyEmailSchema = z.object({
   token: z.string(),
@@ -64,6 +64,41 @@ export async function POST(req: NextRequest) {
           eq(verificationTokens.token, verificationToken.token)
         )
       );
+
+    // Create a default project for the newly verified user
+    try {
+      // Manually insert a default project for this user
+      await db.transaction(async (tx) => {
+        // Insert the project
+        const [project] = await tx
+          .insert(projectsTable)
+          .values({
+            name: 'Default Hub',
+            active_profile_uuid: null,
+            user_id: user.id,
+          })
+          .returning();
+
+        // Create the default profile
+        const [profile] = await tx
+          .insert(profilesTable)
+          .values({
+            name: 'Default Workspace',
+            project_uuid: project.uuid,
+          })
+          .returning();
+
+        // Update the project with the profile UUID
+        await tx
+          .update(projectsTable)
+          .set({ active_profile_uuid: profile.uuid })
+          .where(eq(projectsTable.uuid, project.uuid));
+      });
+    } catch (projectError) {
+      console.error('Error creating default project:', projectError);
+      // We won't fail the verification process if project creation fails
+      // The project will be created when the user logs in
+    }
 
     return NextResponse.json(
       { message: 'Email verified successfully' },

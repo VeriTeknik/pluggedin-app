@@ -5,8 +5,30 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { profilesTable } from '@/db/schema';
 import { projectsTable } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 
 export async function createProfile(currentProjectUuid: string, name: string) {
+  const session = await getAuthSession();
+  
+  if (!session || !session.user.id) {
+    throw new Error('Unauthorized - you must be logged in to create profiles');
+  }
+  
+  // Verify the project belongs to the current user
+  const project = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, currentProjectUuid))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found');
+  }
+  
+  if (project[0].user_id !== session.user.id) {
+    throw new Error('Unauthorized - you do not have access to this project');
+  }
+
   const profile = await db
     .insert(profilesTable)
     .values({
@@ -33,6 +55,27 @@ export async function getProfile(profileUuid: string) {
 }
 
 export async function getProfiles(currentProjectUuid: string) {
+  const session = await getAuthSession();
+  
+  if (!session || !session.user.id) {
+    throw new Error('Unauthorized - you must be logged in to view profiles');
+  }
+  
+  // Verify the project belongs to the current user
+  const project = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, currentProjectUuid))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found');
+  }
+  
+  if (project[0].user_id !== session.user.id) {
+    throw new Error('Unauthorized - you do not have access to this project');
+  }
+  
   const profiles = await db
     .select()
     .from(profilesTable)
@@ -42,6 +85,14 @@ export async function getProfiles(currentProjectUuid: string) {
 }
 
 export async function getProjectActiveProfile(currentProjectUuid: string) {
+  const session = await getAuthSession();
+  
+  if (!session) {
+    // This function is also used internally by API authentication
+    // So we'll do authorization check later based on project ownership
+    // rather than failing early if there's no session
+  }
+  
   const project = await db
     .select()
     .from(projectsTable)
@@ -50,6 +101,11 @@ export async function getProjectActiveProfile(currentProjectUuid: string) {
 
   if (project.length === 0) {
     throw new Error('Project not found');
+  }
+
+  // If we have a session, verify the project belongs to the current user
+  if (session?.user.id && project[0].user_id !== session.user.id) {
+    throw new Error('Unauthorized - you do not have access to this project');
   }
 
   const currentProject = project[0];
@@ -105,6 +161,13 @@ export async function setProfileActive(
   projectUuid: string,
   profileUuid: string
 ) {
+  const session = await getAuthSession();
+  
+  if (!session || !session.user.id) {
+    throw new Error('Unauthorized - you must be logged in to update profiles');
+  }
+  
+  // Verify the project belongs to the current user
   const project = await db
     .select()
     .from(projectsTable)
@@ -113,6 +176,10 @@ export async function setProfileActive(
 
   if (project.length === 0) {
     throw new Error('Project not found');
+  }
+  
+  if (project[0].user_id !== session.user.id) {
+    throw new Error('Unauthorized - you do not have access to this project');
   }
 
   const updatedProject = await db
@@ -124,6 +191,8 @@ export async function setProfileActive(
   if (updatedProject.length === 0) {
     throw new Error('Project not found');
   }
+
+  return updatedProject[0];
 }
 
 export async function updateProfileName(profileUuid: string, newName: string) {

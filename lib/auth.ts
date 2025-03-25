@@ -1,6 +1,9 @@
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { compare } from 'bcrypt';
+import { randomUUID } from 'crypto';
+import { eq } from 'drizzle-orm';
 import { NextAuthOptions } from 'next-auth';
+import { AdapterUser } from 'next-auth/adapters';
 import { getServerSession } from 'next-auth/next';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import EmailProvider from 'next-auth/providers/email';
@@ -8,15 +11,93 @@ import GithubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 
 import { db } from '@/db';
-import { accounts, sessions, users, verificationTokens } from '@/db/schema';
+import { accounts, profilesTable, projectsTable, sessions, users, verificationTokens } from '@/db/schema';
 
-export const authOptions: NextAuthOptions = {
-  adapter: DrizzleAdapter(db, {
+// Custom adapter that extends DrizzleAdapter to ensure IDs are properly generated
+const createCustomAdapter = () => {
+  const adapter = DrizzleAdapter(db, {
     usersTable: users,
     accountsTable: accounts,
     sessionsTable: sessions,
     verificationTokensTable: verificationTokens
-  }),
+  });
+
+  return {
+    ...adapter,
+    createUser: async (userData: Omit<AdapterUser, "id">) => {
+      // Ensure user has an ID
+      const user = { ...userData, id: randomUUID() };
+      
+      await db.insert(users).values({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        emailVerified: user.emailVerified,
+        image: user.image,
+      });
+      
+      return {
+        id: user.id,
+        name: user.name || null,
+        email: user.email,
+        emailVerified: user.emailVerified || null,
+        image: user.image || null,
+        created_at: new Date(),
+        updated_at: new Date(),
+      };
+    },
+  };
+};
+
+// Helper function to create a default project for a user
+async function createDefaultProjectForUser(userId: string) {
+  try {
+    // First verify the user exists in the database
+    const userExists = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.id, userId),
+    });
+    
+    if (!userExists) {
+      throw new Error(`User with ID ${userId} does not exist in the database`);
+    }
+    
+    return await db.transaction(async (tx) => {
+      // First create the project
+      const [project] = await tx
+        .insert(projectsTable)
+        .values({
+          name: 'Default Hub',
+          active_profile_uuid: null,
+          user_id: userId,
+        })
+        .returning();
+
+      // Create the profile with the project UUID
+      const [profile] = await tx
+        .insert(profilesTable)
+        .values({
+          name: 'Default Workspace',
+          project_uuid: project.uuid,
+        })
+        .returning();
+
+      // Update the project with the correct profile UUID
+      const [updatedProject] = await tx
+        .update(projectsTable)
+        .set({ active_profile_uuid: profile.uuid })
+        .where(eq(projectsTable.uuid, project.uuid))
+        .returning();
+
+      return updatedProject;
+    });
+  } catch (error) {
+    console.error('Error creating default project for user:', error);
+    throw error;
+  }
+}
+
+export const authOptions: NextAuthOptions = {
+  adapter: createCustomAdapter(),
   secret: process.env.AUTH_SECRET,
   session: {
     strategy: 'jwt',
@@ -35,7 +116,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials) {
+      async authorize(credentials: Record<string, string> | undefined) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Email and password required');
         }
@@ -130,6 +211,26 @@ export const authOptions: NextAuthOptions = {
 
           // Set the id to the existing user id to ensure we use that account
           user.id = existingUser.id;
+          
+          // Check if the user has any projects, if not create a default one
+          const userProjects = await db
+            .select()
+            .from(projectsTable)
+            .where(eq(projectsTable.user_id, existingUser.id));
+          
+          if (userProjects.length === 0) {
+            try {
+              await createDefaultProjectForUser(existingUser.id);
+            } catch (projectError) {
+              console.error('Failed to create default project for existing user:', projectError);
+              // Continue with the sign-in even if project creation fails
+            }
+          }
+        } else if (user.id) {
+          // New user from OAuth - don't try to create a project here
+          // The adapter will create the user first, then we can create the project 
+          // in a subsequent request after the user is fully registered
+          console.log('New OAuth user detected - project will be created on first access');
         }
 
         return true;
@@ -141,8 +242,8 @@ export const authOptions: NextAuthOptions = {
     async session({ token, session }) {
       if (token) {
         session.user.id = token.id as string;
-        session.user.name = token.name;
-        session.user.email = token.email;
+        session.user.name = token.name || '';
+        session.user.email = token.email || '';
         session.user.image = token.picture;
       }
 
