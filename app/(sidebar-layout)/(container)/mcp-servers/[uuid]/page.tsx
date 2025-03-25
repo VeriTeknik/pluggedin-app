@@ -13,12 +13,12 @@ import {
   toggleMcpServerStatus,
   updateMcpServer,
 } from '@/app/actions/mcp-servers';
+import InlineEditText from '@/components/InlineEditText';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -216,37 +216,20 @@ export default function McpServerDetailPage({
               }}
             />
           </div>
-          <div onClick={() => setIsEditingName(true)} className="cursor-pointer group">
-            {isEditingName ? (
-              <Input
-                value={form.watch('name')}
-                onChange={(e) => form.setValue('name', e.target.value)}
-                className="text-2xl font-bold mt-3"
-                onBlur={() => setIsEditingName(false)}
-                autoFocus
-              />
-            ) : (
-              <CardTitle className="text-2xl font-bold mt-3 group-hover:bg-muted/30 rounded px-1">
-                {form.watch('name')}
-              </CardTitle>
-            )}
-          </div>
-          <div onClick={() => setIsEditingDescription(true)} className="cursor-pointer group">
-            {isEditingDescription ? (
-              <Input
-                value={form.watch('description')}
-                onChange={(e) => form.setValue('description', e.target.value)}
-                className="text-md mt-1"
-                placeholder="Add a description..."
-                onBlur={() => setIsEditingDescription(false)}
-                autoFocus
-              />
-            ) : (
-              <CardDescription className="text-md mt-1 group-hover:bg-muted/30 rounded px-1">
-                {form.watch('description') || "Click to add a description..."}
-              </CardDescription>
-            )}
-          </div>
+          <div onClick={() => {}}>
+  <InlineEditText
+    value={form.watch('name')}
+    onSave={(newName) => form.setValue('name', newName)}
+    placeholder="Enter server name"
+  />
+</div>
+<div onClick={() => {}}>
+  <InlineEditText
+    value={form.watch('description')}
+    onSave={(newDesc) => form.setValue('description', newDesc)}
+    placeholder="Click to add a description..."
+  />
+</div>
         </CardHeader>
       </Card>
 
