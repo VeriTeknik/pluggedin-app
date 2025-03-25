@@ -53,6 +53,23 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
   const router = useRouter();
   const { toast } = useToast();
 
+  const formActionMessage = (() => {
+    switch (type) {
+      case 'login':
+        return 'sign in to your account';
+      case 'register':
+        return 'create your account';
+      case 'forgot-password':
+        return 'reset your password';
+      case 'reset-password':
+        return 'update your password';
+      default:
+        return 'manage your account';
+    }
+  })();
+  
+  
+
   // Determine which schema to use based on the form type
   const schema = React.useMemo(() => {
     switch (type) {
@@ -266,7 +283,7 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
     <div className="space-y-6">
       <div className="space-y-2 text-center">
         <h1 className="text-3xl font-bold">{formTitle}</h1>
-        <p className="text-muted-foreground">Enter your details to {type === 'login' ? 'sign in to' : type === 'register' ? 'create' : 'manage'} your account</p>
+        <p className="text-muted-foreground">Enter your details to {formActionMessage}</p>
       </div>
 
       <Form {...form}>
