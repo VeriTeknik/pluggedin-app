@@ -97,6 +97,20 @@ export default function SidebarLayout({
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
+                      <Link href='/'>
+                        <Image
+                          src='/favicon.ico'
+                          alt='Plugged.in Logo'
+                          width={16}
+                          height={16}
+                          className='mr-2 h-4 w-4'
+                        />
+                        <span>Home</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
                       <Link href='/setup-guide'>
                         <Info className='mr-2 h-4 w-4' />
                         <span>Setup Guide</span>
