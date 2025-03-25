@@ -1,6 +1,6 @@
 'use server';
 
-import { convertMcpToLangchainTools, McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
+import { convertMcpToLangchainTools, McpServerCleanupFn, McpToolsLogger } from '@h1deya/langchain-mcp-tools';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { MemorySaver } from '@langchain/langgraph';
@@ -219,6 +219,7 @@ export async function getOrCreatePlaygroundSession(
     model: string;
     temperature?: number;
     maxTokens?: number;
+    logLevel?: 'error' | 'warn' | 'info' | 'debug';
   }
 ) {
   // If session exists and is active, return it
@@ -256,7 +257,7 @@ export async function getOrCreatePlaygroundSession(
     // Convert MCP servers to LangChain tools
     const { tools, cleanup } = await convertMcpToLangchainTools(
       mcpServersConfig,
-      { logLevel: 'info' }
+      { logLevel: llmConfig.logLevel || 'info' }
     );
 
     
