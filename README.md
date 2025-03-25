@@ -1,4 +1,4 @@
-# Plugged.in (formerly MetaTool)
+# Plugged.in
 
 
 https://plugged.in 

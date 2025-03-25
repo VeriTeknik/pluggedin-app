@@ -76,16 +76,17 @@ export default function SidebarLayout({
       <div className='flex flex-1 h-screen'>
         {/* Main Sidebar */}
         <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
-          <SidebarHeader className='flex flex-col justify-center items-center px-2 py-4'>
-            <div className='flex items-center gap-4 mb-2'>
-              <Image
-                src='/favicon.ico'
-                alt='Plugged.in Logo'
-                width={256}
-                height={256}
-                className='h-12 w-12'
-              />
-              <h2 className='text-2xl font-semibold'>Plugged.in</h2>
+          <SidebarHeader className='flex flex-col px-2 py-4'>
+            <div className='flex mb-2 px-3'>
+              <Link href="/">
+                <Image
+                  src='/pluggedin-wl-black.png'
+                  alt='Plugged.in Logo'
+                  width={288}
+                  height={72}
+                  className='h-144 w-36'
+                />
+              </Link>
             </div>
             <ProjectSwitcher />
             <ProfileSwitcher />
@@ -95,6 +96,22 @@ export default function SidebarLayout({
               <SidebarGroupLabel>Navigation</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/mcp-playground'>
+                        <Beaker className='mr-2 h-4 w-4' />
+                        <span>Playground</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/mcp-servers'>
+                        <Server className='mr-2 h-4 w-4' />
+                        <span>Plugins</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/setup-guide'>
@@ -111,22 +128,9 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/mcp-servers'>
-                        <Server className='mr-2 h-4 w-4' />
-                        <span>Plugins</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/mcp-playground'>
-                        <Beaker className='mr-2 h-4 w-4' />
-                        <span>Playground</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  
+                  
+                  {/* TODO: Add custom MCP servers to the sidebar 
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/custom-mcp-servers'>
@@ -142,7 +146,7 @@ export default function SidebarLayout({
                         <span>Python Code Editor</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  </SidebarMenuItem>*/}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/api-keys'>
@@ -151,14 +155,14 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/inspector-guide'>
                         <Terminal className='mr-2 h-4 w-4' />
                         <span>Inspector Guide</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  </SidebarMenuItem> */}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/settings'>

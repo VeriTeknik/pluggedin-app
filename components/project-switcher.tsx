@@ -61,25 +61,25 @@ export function ProjectSwitcher() {
   return (
     <div className='flex flex-col gap-2 w-full p-2'>
       <div>
-        <p className='text-xs font-medium p-1'>Projects (MCP Clients)</p>
+        <p className='text-xs font-medium p-1'>Hubs</p>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
               variant='outline'
               role='combobox'
               aria-expanded={open}
-              aria-label='Select a project'
+              aria-label='Select a hub'
               className='w-full justify-between'>
-              {currentProject?.name ?? 'Loading Projects...'}
+              {currentProject?.name ?? 'Loading Hubs...'}
               <ChevronsUpDown className='ml-auto h-4 w-4 shrink-0 opacity-50' />
             </Button>
           </PopoverTrigger>
           <PopoverContent className='w-[--radix-popover-trigger-width] p-0'>
             <Command>
               <CommandList>
-                <CommandInput placeholder='Search projects...' />
-                <CommandEmpty>No project found.</CommandEmpty>
-                <CommandGroup heading='Projects (MCP Clients)'>
+                <CommandInput placeholder='Search hubs...' />
+                <CommandEmpty>No hub found.</CommandEmpty>
+                <CommandGroup heading='Hubs'>
                   {projects.map((project) => (
                     <CommandItem
                       key={project.uuid}
@@ -110,7 +110,7 @@ export function ProjectSwitcher() {
                       setShowNewProjectDialog(true);
                     }}>
                     <PlusCircle className='mr-2 h-4 w-4' />
-                    Create Project
+                    Create Hub
                   </CommandItem>
                 </CommandGroup>
               </CommandList>
@@ -124,19 +124,19 @@ export function ProjectSwitcher() {
         onOpenChange={setShowNewProjectDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Project</DialogTitle>
+            <DialogTitle>Create Hub</DialogTitle>
             <DialogDescription>
-              Add a new project to organize your work.
+              Add a new hub to organize your work.
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4'>
             <div className='grid gap-2'>
-              <Label htmlFor='name'>Project name</Label>
+              <Label htmlFor='name'>Hub name</Label>
               <Input
                 id='name'
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder='Enter project name'
+                placeholder='Enter hub name'
               />
             </div>
           </div>
