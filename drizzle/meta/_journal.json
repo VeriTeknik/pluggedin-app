@@ -50,6 +50,34 @@
       "when": 1741160099319,
       "tag": "0006_curvy_strong_guy",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1742903463453,
+      "tag": "0007_white_vulture",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1742920791621,
+      "tag": "0008_boring_hercules",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1742920939373,
+      "tag": "0009_many_omega_sentinel",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1742920981827,
+      "tag": "0010_tricky_arachne",
+      "breakpoints": true
     }
   ]
 }

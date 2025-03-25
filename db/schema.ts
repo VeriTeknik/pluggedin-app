@@ -1,10 +1,11 @@
 import { sql } from 'drizzle-orm';
 import {
-  AnyPgColumn,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
@@ -34,18 +35,93 @@ export const mcpServerTypeEnum = pgEnum(
   enumToPgEnum(McpServerType)
 );
 
-export const projectsTable = pgTable('projects', {
-  uuid: uuid('uuid').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
+// Auth.js / NextAuth.js schema
+export const users = pgTable('users', {
+  id: text('id').notNull().primaryKey(),
+  name: text('name'),
+  email: text('email').notNull(),
+  password: text('password'),
+  emailVerified: timestamp('email_verified', { mode: 'date' }),
+  image: text('image'),
   created_at: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-  active_profile_uuid: uuid('active_profile_uuid').references(
-    (): AnyPgColumn => {
-      return profilesTable.uuid;
-    }
-  ),
+  updated_at: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
 });
+
+export const accounts = pgTable(
+  'accounts',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    provider: text('provider').notNull(),
+    providerAccountId: text('provider_account_id').notNull(),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: text('token_type'),
+    scope: text('scope'),
+    id_token: text('id_token'),
+    session_state: text('session_state'),
+  },
+  (account) => ({
+    compoundKey: primaryKey({
+      columns: [account.provider, account.providerAccountId],
+    }),
+    userIdIdx: index('accounts_user_id_idx').on(account.userId),
+  })
+);
+
+export const sessions = pgTable(
+  'sessions',
+  {
+    sessionToken: text('session_token').notNull().primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expires: timestamp('expires', { mode: 'date' }).notNull(),
+  },
+  (session) => ({
+    userIdIdx: index('sessions_user_id_idx').on(session.userId),
+  })
+);
+
+export const verificationTokens = pgTable(
+  'verification_tokens',
+  {
+    identifier: text('identifier').notNull(),
+    token: text('token').notNull(),
+    expires: timestamp('expires', { mode: 'date' }).notNull(),
+  },
+  (vt) => ({
+    compoundKey: primaryKey({
+      columns: [vt.identifier, vt.token],
+    }),
+  })
+);
+
+// Declare tables in an order that avoids circular references
+export const projectsTable = pgTable(
+  'projects', 
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    active_profile_uuid: uuid('active_profile_uuid'),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    index('projects_user_id_idx').on(table.user_id)
+  ]
+);
 
 export const profilesTable = pgTable(
   'profiles',
@@ -54,12 +130,42 @@ export const profilesTable = pgTable(
     name: text('name').notNull(),
     project_uuid: uuid('project_uuid')
       .notNull()
-      .references(() => projectsTable.uuid),
+      .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (table) => [index('profiles_project_uuid_idx').on(table.project_uuid)]
+  (table) => [
+    index('profiles_project_uuid_idx').on(table.project_uuid)
+  ]
+);
+
+// Define the foreign key relationship after both tables are defined
+// This will be applied in a separate migration
+export const projectsToProfilesRelation = {
+  // This should be run in a migration after both tables exist
+  addActiveProfileForeignKey: () => sql`
+    ALTER TABLE "projects" ADD CONSTRAINT "projects_active_profile_uuid_profiles_uuid_fk" 
+    FOREIGN KEY ("active_profile_uuid") REFERENCES "profiles"("uuid") ON DELETE set null;
+  `,
+};
+
+export const codesTable = pgTable(
+  'codes', 
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    fileName: text('file_name').notNull(),
+    code: text('code').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+  },
+  (table) => [
+    index('codes_user_id_idx').on(table.user_id)
+  ]
 );
 
 export const apiKeysTable = pgTable(
@@ -68,7 +174,7 @@ export const apiKeysTable = pgTable(
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     project_uuid: uuid('project_uuid')
       .notNull()
-      .references(() => projectsTable.uuid),
+      .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
     api_key: text('api_key').notNull(),
     name: text('name').default('API Key'),
     created_at: timestamp('created_at', { withTimezone: true })
@@ -100,7 +206,7 @@ export const mcpServersTable = pgTable(
       .defaultNow(),
     profile_uuid: uuid('profile_uuid')
       .notNull()
-      .references(() => profilesTable.uuid),
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     status: mcpServerStatusEnum('status')
       .notNull()
       .default(McpServerStatus.ACTIVE),
@@ -116,15 +222,6 @@ export const mcpServersTable = pgTable(
   ]
 );
 
-export const codesTable = pgTable('codes', {
-  uuid: uuid('uuid').primaryKey().defaultRandom(),
-  fileName: text('file_name').notNull(),
-  code: text('code').notNull(),
-  created_at: timestamp('created_at', { withTimezone: true })
-    .notNull()
-    .defaultNow(),
-});
-
 export const customMcpServersTable = pgTable(
   'custom_mcp_servers',
   {
@@ -133,7 +230,7 @@ export const customMcpServersTable = pgTable(
     description: text('description'),
     code_uuid: uuid('code_uuid')
       .notNull()
-      .references(() => codesTable.uuid),
+      .references(() => codesTable.uuid, { onDelete: 'cascade' }),
     additionalArgs: text('additional_args')
       .array()
       .notNull()
@@ -147,7 +244,7 @@ export const customMcpServersTable = pgTable(
       .defaultNow(),
     profile_uuid: uuid('profile_uuid')
       .notNull()
-      .references(() => profilesTable.uuid),
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     status: mcpServerStatusEnum('status')
       .notNull()
       .default(McpServerStatus.ACTIVE),

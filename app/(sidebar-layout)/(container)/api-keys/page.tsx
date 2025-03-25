@@ -7,7 +7,7 @@ import useSWR from 'swr';
 import {
   createApiKey,
   deleteApiKey,
-  getProjectApiKeys,
+  getApiKeys,
 } from '@/app/actions/api-keys';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,7 +33,7 @@ export default function ApiKeysPage() {
     mutate,
   } = useSWR(
     currentProject?.uuid ? `${currentProject?.uuid}/api-keys` : null,
-    () => getProjectApiKeys(currentProject?.uuid || '')
+    () => getApiKeys(currentProject?.uuid || '')
   );
   const [revealed, setRevealed] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -91,7 +91,7 @@ export default function ApiKeysPage() {
     }
     try {
       setIsDeleting(true);
-      await deleteApiKey(currentProject?.uuid, keyToDelete.uuid);
+      await deleteApiKey(keyToDelete.uuid, currentProject?.uuid);
       await mutate();
       setKeyToDelete(null);
       toast({
@@ -134,7 +134,7 @@ export default function ApiKeysPage() {
         ) : (
           <div className='space-y-4'>
             <div className='text-sm text-muted-foreground'>
-              Your API keys are used to authenticate requests to the MetaMCP
+              Your API keys are used to authenticate requests to the Plugged.in
               API. Keep them secure and do not share them with others.
             </div>
             {apiKeys && apiKeys.length === 0 && (

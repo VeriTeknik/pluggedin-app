@@ -1,14 +1,12 @@
 'use client';
 
 import {
+  Beaker,
   Code2,
-  Info,
   Key,
   Plus,
   Search,
   Server,
-  Settings,
-  Terminal,
   Trash2,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -30,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -39,12 +38,14 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
 import { useToast } from '@/hooks/use-toast';
 
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
+import { UserMenu } from './user-menu';
 
 export default function SidebarLayout({
   children,
@@ -74,16 +75,17 @@ export default function SidebarLayout({
       <div className='flex flex-1 h-screen'>
         {/* Main Sidebar */}
         <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
-          <SidebarHeader className='flex flex-col justify-center items-center px-2 py-4'>
-            <div className='flex items-center gap-4 mb-2'>
-              <Image
-                src='/favicon.ico'
-                alt='MetaMCP Logo'
-                width={256}
-                height={256}
-                className='h-12 w-12'
-              />
-              <h2 className='text-2xl font-semibold'>MetaMCP</h2>
+          <SidebarHeader className='flex flex-col px-2 py-4'>
+            <div className='flex mb-2 px-3'>
+              <Link href="/">
+                <Image
+                  src='/pluggedin-wl-black.png'
+                  alt='Plugged.in Logo'
+                  width={288}
+                  height={72}
+                  className='h-144 w-36'
+                />
+              </Link>
             </div>
             <ProjectSwitcher />
             <ProfileSwitcher />
@@ -93,11 +95,33 @@ export default function SidebarLayout({
               <SidebarGroupLabel>Navigation</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/mcp-playground'>
+                        <Beaker className='mr-2 h-4 w-4' />
+                        <span>Playground</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
-                      <Link href='/setup-guide'>
-                        <Info className='mr-2 h-4 w-4' />
-                        <span>Setup Guide</span>
+                      <Link href='/mcp-servers'>
+                        <Server className='mr-2 h-4 w-4' />
+                        <span>Plugins</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/'>
+                        <Image
+                          src='/favicon.ico'
+                          alt='Plugged.in Logo'
+                          width={16}
+                          height={16}
+                          className='mr-2 h-4 w-4'
+                        />
+                        <span>Home</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -109,30 +133,25 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  
+                  
+                  {/* TODO: Add custom MCP servers to the sidebar 
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/mcp-servers'>
-                        <Server className='mr-2 h-4 w-4' />
-                        <span>MCP Servers</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/custom-mcp-servers'>
                         <Wrench className='mr-2 h-4 w-4' />
                         <span>Custom MCP Servers</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem> */}
-                  {/* <SidebarMenuItem>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/editor'>
                         <Code2 className='mr-2 h-4 w-4' />
                         <span>Python Code Editor</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem> */}
+                  </SidebarMenuItem>*/}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/api-keys'>
@@ -141,26 +160,24 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
+                  {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/inspector-guide'>
                         <Terminal className='mr-2 h-4 w-4' />
                         <span>Inspector Guide</span>
                       </Link>
                     </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/settings'>
-                        <Settings className='mr-2 h-4 w-4' />
-                        <span>Settings</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  </SidebarMenuItem> */}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
           </SidebarContent>
+          <SidebarFooter className="mt-auto px-2 py-4">
+            <SidebarSeparator />
+            <div className="pt-2">
+              <UserMenu />
+            </div>
+          </SidebarFooter>
         </Sidebar>
 
         {/* Secondary Sidebar */}

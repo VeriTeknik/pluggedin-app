@@ -100,11 +100,11 @@ export default function SetupGuidePage() {
                   const jsonConfig = JSON.stringify(
                     {
                       mcpServers: {
-                        MetaMCP: {
+                        PluggedinMCP: {
                           command: 'npx',
-                          args: ['-y', '@metamcp/mcp-server-metamcp@latest'],
+                          args: ['-y', '@VeriTeknik/pluggedin-mcp@latest'],
                           env: {
-                            METAMCP_API_KEY:
+                            PLUGGEDIN_API_KEY:
                               apiKey?.api_key ?? '<create an api key first>',
                           },
                         },
@@ -126,11 +126,11 @@ export default function SetupGuidePage() {
                 theme={themes.github}
                 code={`{
   "mcpServers": {
-    "MetaMCP": {
+    "PluggedinMCP": {
       "command": "npx",
-      "args": ["-y", "@metamcp/mcp-server-metamcp@latest"],
+      "args": ["-y", "@VeriTeknik/pluggedin-mcp@latest"],
       "env": {
-        "METAMCP_API_KEY": "${apiKey?.api_key ?? '<create an api key first>'}"
+        "PLUGGEDIN_API_KEY": "${apiKey?.api_key ?? '<create an api key first>'}"
       }
     }
   }
@@ -157,7 +157,7 @@ export default function SetupGuidePage() {
       <section className='mb-8'> <div className='p-4 bg-gray-50 rounded-lg'>
         <h3 className='font-medium mb-2'>Cursor Configuration</h3>
         <p className='mb-2'>
-          For Cursor, you can configure MetaMCP directly in the settings:
+          For Cursor, you can configure Plugged.in MCP directly in the settings:
         </p>
         <ol className='list-decimal list-inside mb-4 space-y-2'>
           <li>Open Cursor and go to Cursor Settings</li>
@@ -169,7 +169,7 @@ export default function SetupGuidePage() {
         <div className='relative'>
           <button
             onClick={() => {
-              const command = `npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
+              const command = `npx -y @VeriTeknik/pluggedin-mcp@latest --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
               navigator.clipboard.writeText(command);
               toast({
                 description: 'Cursor command copied to clipboard',
@@ -181,7 +181,7 @@ export default function SetupGuidePage() {
           </button>
           <Highlight
             theme={themes.github}
-            code={`npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key ${apiKey?.api_key ?? '<create an api key first>'}`}
+            code={`npx -y @VeriTeknik/pluggedin-mcp@latest --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`}
             language='bash'>
             {({ tokens, getLineProps, getTokenProps }) => (
               <pre className='bg-[#f6f8fa] text-[#24292f] p-4 rounded-md overflow-x-auto'>
@@ -206,7 +206,7 @@ export default function SetupGuidePage() {
           </p>
 
           <p className='mb-4'>
-            Visit MetaMCP server listing directly on Smithery: <Link href="https://smithery.ai/server/@metatool-ai/mcp-server-metamcp" className='text-blue-600 hover:text-blue-800 underline' target="_blank" rel="noopener noreferrer">https://smithery.ai/server/@metatool-ai/mcp-server-metamcp</Link>
+            Visit Plugged.in MCP server listing directly on Smithery: <Link href="https://smithery.ai/server/@VeriTeknik/pluggedin-mcp" className='text-blue-600 hover:text-blue-800 underline' target="_blank" rel="noopener noreferrer">https://smithery.ai/server/@VeriTeknik/pluggedin-mcp</Link>
           </p>
 
           <p className='mb-4'>
@@ -220,7 +220,7 @@ export default function SetupGuidePage() {
           <div className='relative mb-6'>
             <button
               onClick={() => {
-                const command = `smithery run @metatool-ai/mcp-server-metamcp --config '{"metamcpApiKey":"${apiKey?.api_key ?? '<create an api key first>'}"}'`;
+                const command = `smithery run @VeriTeknik/pluggedin-mcp --config '{"pluggedinApiKey":"${apiKey?.api_key ?? '<create an api key first>'}"}'`;
                 navigator.clipboard.writeText(command);
                 toast({
                   description: 'Smithery command copied to clipboard',
@@ -232,7 +232,7 @@ export default function SetupGuidePage() {
             </button>
             <Highlight
               theme={themes.github}
-              code={`smithery run @metatool-ai/mcp-server-metamcp --config '{"metamcpApiKey":"${apiKey?.api_key ?? '<create an api key first>'}"}'`}
+              code={`smithery run @VeriTeknik/pluggedin-mcp --config '{"pluggedinApiKey":"${apiKey?.api_key ?? '<create an api key first>'}"}'`}
               language='bash'>
               {({ tokens, getLineProps, getTokenProps }) => (
                 <pre className='bg-[#f6f8fa] text-[#24292f] p-4 rounded-md overflow-x-auto'>
@@ -258,13 +258,13 @@ export default function SetupGuidePage() {
                 const jsonConfig = JSON.stringify(
                   {
                     mcpServers: {
-                      MetaMCP: {
+                      PluggedinMCP: {
                         command: "smithery",
                         args: [
                           "run",
-                          "@metatool-ai/mcp-server-metamcp",
+                          "@VeriTeknik/pluggedin-mcp@latest",
                           "--config",
-                          `{\"metamcpApiKey\":\"${apiKey?.api_key ?? '<create an api key first>'} \"}`
+                          `{\"pluggedinApiKey\":\"${apiKey?.api_key ?? '<create an api key first>'} \"}`
                         ]
                       }
                     }
@@ -285,13 +285,13 @@ export default function SetupGuidePage() {
               theme={themes.github}
               code={`{
   "mcpServers": {
-    "MetaMCP": {
+    "PluggedinMCP": {
       "command": "smithery",
       "args": [
         "run",
-        "@metatool-ai/mcp-server-metamcp",
+        "@VeriTeknik/pluggedin-mcp@latest",
         "--config",
-        "{\\"metamcpApiKey\\":\\"${apiKey?.api_key ?? '<create an api key first>'}\\"}"
+        "{\\"pluggedinApiKey\\":\\"${apiKey?.api_key ?? '<create an api key first>'}\\"}"
       ]
     }
   }

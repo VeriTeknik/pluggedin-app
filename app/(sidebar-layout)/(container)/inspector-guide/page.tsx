@@ -16,14 +16,14 @@ export default function InspectorGuidePage() {
   );
   const { toast } = useToast();
 
-  const inspectorCommand = `npx -y @modelcontextprotocol/inspector npx -y @metamcp/mcp-server-metamcp@latest -e METAMCP_API_KEY=${apiKey?.api_key || '<YOUR_API_KEY>'} -e METAMCP_API_BASE_URL=http://localhost:12005`;
+  const inspectorCommand = `npx -y @modelcontextprotocol/inspector npx -y @VeriTeknik/pluggedin-mcp@latest -e PLUGGEDIN_API_KEY=${apiKey?.api_key || '<YOUR_API_KEY>'} -e PLUGGEDIN_API_BASE_URL=http://localhost:12005`;
 
   return (
     <div className='container mx-auto py-6 flex flex-col items-start justify-center gap-6'>
       <p className='text-lg'>
-        Because MetaMCP is a local proxy and we currently don&apos;t support any
-        cloud hosting of your MCPs. You can use MCP&apos;s official inspector to
-        check what exact tools you will have access to with MetaMCP.The
+        Because Plugged.in is a local proxy and we currently don&apos;t support
+        any cloud hosting of your MCPs. You can use MCP&apos;s official inspector
+        to check what exact tools you will have access to with Plugged.in. The
         inspector command is used to start the inspector tool. You can use the
         command below to start the inspector tool. In the future we may support
         better experience for you to check inspection details directly on our
