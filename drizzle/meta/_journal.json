@@ -78,6 +78,13 @@
       "when": 1742920981827,
       "tag": "0010_tricky_arachne",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1742935626467,
+      "tag": "0011_flashy_harpoon",
+      "breakpoints": true
     }
   ]
 }
