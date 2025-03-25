@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useAuth } from '@/hooks/use-auth';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -11,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useAuth } from '@/hooks/use-auth';
 
 export function AuthStatus() {
   const { session, isAuthenticated, signOut } = useAuth();

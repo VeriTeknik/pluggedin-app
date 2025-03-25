@@ -10,6 +10,7 @@ import {
   text,
   timestamp,
   uuid,
+  bigint,
 } from 'drizzle-orm/pg-core';
 
 import { enumToPgEnum } from './utils/enum-to-pg-enum';

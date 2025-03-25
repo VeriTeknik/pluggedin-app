@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icons } from '@/components/ui/icons';
 
-export default function VerifyEmailPage() {
-  const router = useRouter();
+function VerifyEmailContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   
@@ -85,5 +84,23 @@ export default function VerifyEmailPage() {
         )}
       </CardFooter>
     </Card>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader>
+          <CardTitle className="text-2xl text-center">Email Verification</CardTitle>
+          <CardDescription className="text-center">Loading verification page...</CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center items-center py-6">
+          <Icons.spinner className="h-12 w-12 animate-spin" />
+        </CardContent>
+      </Card>
+    }>
+      <VerifyEmailContent />
+    </Suspense>
   );
 } 

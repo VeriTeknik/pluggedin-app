@@ -84,7 +84,7 @@ export default function McpServerDetailPage({
 
   // Check for changes in form values
   useEffect(() => {
-    const subscription = form.watch((value, { name, type }) => {
+    const subscription = form.watch((value) => {
       if (mcpServer) {
         const isDifferent = 
           value.name !== mcpServer.name ||

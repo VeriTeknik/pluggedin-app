@@ -1,6 +1,6 @@
+import { hash } from 'bcrypt';
 import { nanoid } from 'nanoid';
 import { NextRequest, NextResponse } from 'next/server';
-import { hash } from 'bcrypt';
 import { z } from 'zod';
 
 import { db } from '@/db';

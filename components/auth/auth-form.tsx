@@ -1,9 +1,9 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +42,15 @@ const resetPasswordSchema = z.object({
   message: "Passwords don't match",
   path: ['password_confirm'],
 });
+
+// Define types for each form variant
+type LoginFormValues = z.infer<typeof loginSchema>;
+type RegisterFormValues = z.infer<typeof registerSchema>;
+type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+type ResetPasswordFormValues = z.infer<typeof resetPasswordSchema>;
+
+// Union type of all possible form values
+type FormValues = LoginFormValues | RegisterFormValues | ForgotPasswordFormValues | ResetPasswordFormValues;
 
 interface AuthFormProps {
   type: 'login' | 'register' | 'forgot-password' | 'reset-password';
@@ -86,20 +95,21 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
     }
   }, [type]);
 
-  // Initialize form with the appropriate schema
-  const form = useForm<z.infer<typeof schema>>({
+  // Initialize form with the appropriate schema and type
+  const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: defaultValues || {},
   });
 
   // Submit handler for the form
-  const onSubmit = async (values: z.infer<typeof schema>) => {
+  const onSubmit = async (values: FormValues) => {
     try {
       switch (type) {
         case 'login': {
+          const loginValues = values as LoginFormValues;
           const response = await signIn('credentials', {
-            email: values.email,
-            password: values.password,
+            email: loginValues.email,
+            password: loginValues.password,
             redirect: false,
           });
 
@@ -113,15 +123,17 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
           }
 
           router.push('/mcp-servers');
-          if (onSuccess) onSuccess();
+          if (onSuccess) {
+            onSuccess();
+          }
           break;
         }
         case 'register': {
-          // Handle registration
+          const registerValues = values as RegisterFormValues;
           const response = await fetch('/api/auth/register', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(values),
+            body: JSON.stringify(registerValues),
           });
 
           const data = await response.json();
@@ -140,15 +152,17 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
             description: 'Registration successful! Please verify your email.',
           });
 
-          if (onSuccess) onSuccess();
+          if (onSuccess) {
+            onSuccess();
+          }
           break;
         }
         case 'forgot-password': {
-          // Handle forgot password
+          const forgotValues = values as ForgotPasswordFormValues;
           const response = await fetch('/api/auth/forgot-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: values.email }),
+            body: JSON.stringify({ email: forgotValues.email }),
           });
 
           const data = await response.json();
@@ -167,19 +181,20 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
             description: 'Password reset link sent to your email!',
           });
 
-          if (onSuccess) onSuccess();
+          if (onSuccess) {
+            onSuccess();
+          }
           break;
         }
         case 'reset-password': {
-          // Handle reset password
+          const resetValues = values as ResetPasswordFormValues;
           const token = new URLSearchParams(window.location.search).get('token');
-          
           const response = await fetch('/api/auth/reset-password', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               token,
-              password: values.password,
+              password: resetValues.password,
             }),
           });
 
@@ -200,7 +215,9 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
           });
 
           router.push('/login');
-          if (onSuccess) onSuccess();
+          if (onSuccess) {
+            onSuccess();
+          }
           break;
         }
       }
@@ -246,7 +263,9 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
 
   // Render the social login buttons
   const renderSocialLogin = () => {
-    if (type === 'forgot-password' || type === 'reset-password') return null;
+    if (type === 'forgot-password' || type === 'reset-password') {
+      return null;
+    }
 
     return (
       <div className="space-y-4 mt-4">
