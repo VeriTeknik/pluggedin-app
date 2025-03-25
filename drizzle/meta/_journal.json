@@ -50,6 +50,13 @@
       "when": 1741160099319,
       "tag": "0006_curvy_strong_guy",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1742903463453,
+      "tag": "0007_white_vulture",
+      "breakpoints": true
     }
   ]
 }
