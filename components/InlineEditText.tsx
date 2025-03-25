@@ -26,10 +26,24 @@ export default function InlineEditText({ value, onSave, placeholder }: InlineEdi
         setIsEditing(false);
       }}
       autoFocus
+      aria-label="Editing text"
+      role="textbox"
       placeholder={placeholder}
     />
   ) : (
-    <div onClick={() => setIsEditing(true)} className="cursor-pointer">
+    <div
+      tabIndex={0}
+      role="textbox"
+      aria-label="Editable text. Press Enter or Space to edit."
+      onClick={() => setIsEditing(true)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault(); // Prevent scrolling on space
+          setIsEditing(true);
+        }
+      }}
+      className="cursor-pointer"
+    >
       {value || placeholder || 'Click to edit'}
     </div>
   );

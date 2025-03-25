@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Plugged.in Dashboard',
+  title: 'Plugged.in',
   description: 'Plugged.in. The AI crossroads.',
 };
 

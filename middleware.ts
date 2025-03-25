@@ -9,7 +9,7 @@ export default async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
   // Define routes that require authentication
-  const protectedRoutes = ['/dashboard', '/mcp-servers', '/mcp-playground'];
+  const protectedRoutes = ['/search', '/mcp-servers', '/mcp-playground'];
   
   // Define routes that are only accessible to unauthenticated users
   const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
@@ -22,7 +22,7 @@ export default async function middleware(req: NextRequest) {
 
   // Redirect authenticated users away from auth routes
   if (isAuthRoute && isAuthenticated) {
-    return NextResponse.redirect(new URL('/dashboard', req.url));
+    return NextResponse.redirect(new URL('/mcp-servers', req.url));
   }
 
   // Redirect unauthenticated users to login

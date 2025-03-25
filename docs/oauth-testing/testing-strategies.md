@@ -185,7 +185,7 @@ describe('OAuth account linking', () => {
     cy.get('button[type=submit]').click();
     
     // Verify login succeeded
-    cy.url().should('include', '/dashboard');
+    cy.url().should('include', '/mcp-servers');
     
     // Logout
     cy.visit('/logout');
@@ -208,7 +208,7 @@ describe('OAuth account linking', () => {
     });
     
     // Should be redirected to dashboard again
-    cy.url().should('include', '/dashboard');
+    cy.url().should('include', '/mcp-servers');
     
     // Verify the accounts are linked (check profile page)
     cy.visit('/profile');
