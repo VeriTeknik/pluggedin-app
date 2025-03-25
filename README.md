@@ -103,3 +103,68 @@ GNU AGPL v3
 ## Credits
 
 - (Deprecated) Demo video uses MCP Client [5ire](https://5ire.app/)
+
+# OAuth Account Linking - Test Plan and Implementation Guide
+
+This documentation provides a comprehensive plan for testing and enhancing the OAuth account linking functionality in our Next.js application.
+
+## Overview
+
+OAuth account linking allows users to connect their existing accounts with social login providers (GitHub, Google, etc.). This functionality is critical for user experience but requires thorough testing due to its complexity.
+
+## Documentation Files
+
+- **[OAuth Account Linking Test Plan](docs/oauth-testing/oauth-account-linking-test-plan.md)**: Comprehensive test plan with scenarios and verification steps
+- **[Implementation Review](docs/oauth-testing/auth-implementation-review.md)**: Analysis of current implementation with improvement recommendations
+- **[Testing Strategies](docs/oauth-testing/testing-strategies.md)**: Detailed approaches for unit, integration, and E2E testing
+- **[Improved Implementation](lib/auth.improved.ts)**: Enhanced version of the auth implementation
+
+## Key Improvements Implemented
+
+The improved implementation (`lib/auth.improved.ts`) includes several enhancements:
+
+1. **Enhanced Email Verification**: Verifies that emails from OAuth providers are actually verified
+2. **Improved Logging**: Structured logging with error tracking IDs
+3. **Session Enhancement**: Adds list of linked providers to the session
+4. **Better Error Handling**: More robust error handling throughout the auth flow
+5. **Type Enhancements**: Extended types for better TypeScript support
+
+## Testing Approach
+
+We recommend a multi-layered testing approach:
+
+1. **Unit Tests**: Testing core authentication callbacks in isolation
+2. **Integration Tests**: Verifying database interactions and state changes
+3. **End-to-End Tests**: Validating the complete user journey
+
+## Implementation Steps
+
+To implement the improvements:
+
+1. Review the current implementation (`lib/auth.ts`)
+2. Compare with the improved version (`lib/auth.improved.ts`)
+3. Add the necessary schema updates for any new tables (e.g., `linkingAttempts`)
+4. Implement the enhanced logging mechanism
+5. Add tests based on the test plan
+
+## Security Considerations
+
+The implementation addresses several security concerns:
+
+- Verification of email ownership across providers
+- Potential account takeover vectors
+- Rate limiting for account linking operations
+- Comprehensive error logging for security events
+
+## Next Steps
+
+1. Implement the test plan according to the testing strategies
+2. Add schema changes for additional security features
+3. Consider implementing explicit user confirmation for account linking
+4. Add monitoring for authentication events and failures
+
+## Related Documentation
+
+- [NextAuth.js Documentation](https://next-auth.js.org/getting-started/introduction)
+- [Drizzle ORM Documentation](https://orm.drizzle.team/docs/overview)
+- [OAuth Security Best Practices](https://oauth.net/articles/authentication/)

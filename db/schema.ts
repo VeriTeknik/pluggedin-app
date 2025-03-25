@@ -2,12 +2,15 @@ import { sql } from 'drizzle-orm';
 import {
   AnyPgColumn,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uuid,
+  bigint,
 } from 'drizzle-orm/pg-core';
 
 import { enumToPgEnum } from './utils/enum-to-pg-enum';
@@ -156,4 +159,73 @@ export const customMcpServersTable = pgTable(
     index('custom_mcp_servers_status_idx').on(table.status),
     index('custom_mcp_servers_profile_uuid_idx').on(table.profile_uuid),
   ]
+);
+
+// Auth.js / NextAuth.js schema
+export const users = pgTable('users', {
+  id: text('id').notNull().primaryKey(),
+  name: text('name'),
+  email: text('email').notNull(),
+  password: text('password'),
+  emailVerified: timestamp('email_verified', { mode: 'date' }),
+  image: text('image'),
+  created_at: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const accounts = pgTable(
+  'accounts',
+  {
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').notNull(),
+    provider: text('provider').notNull(),
+    providerAccountId: text('provider_account_id').notNull(),
+    refresh_token: text('refresh_token'),
+    access_token: text('access_token'),
+    expires_at: integer('expires_at'),
+    token_type: text('token_type'),
+    scope: text('scope'),
+    id_token: text('id_token'),
+    session_state: text('session_state'),
+  },
+  (account) => ({
+    compoundKey: primaryKey({
+      columns: [account.provider, account.providerAccountId],
+    }),
+    userIdIdx: index('accounts_user_id_idx').on(account.userId),
+  })
+);
+
+export const sessions = pgTable(
+  'sessions',
+  {
+    sessionToken: text('session_token').notNull().primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    expires: timestamp('expires', { mode: 'date' }).notNull(),
+  },
+  (session) => ({
+    userIdIdx: index('sessions_user_id_idx').on(session.userId),
+  })
+);
+
+export const verificationTokens = pgTable(
+  'verification_tokens',
+  {
+    identifier: text('identifier').notNull(),
+    token: text('token').notNull(),
+    expires: timestamp('expires', { mode: 'date' }).notNull(),
+  },
+  (vt) => ({
+    compoundKey: primaryKey({
+      columns: [vt.identifier, vt.token],
+    }),
+  })
 );
