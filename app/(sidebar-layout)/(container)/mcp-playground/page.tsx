@@ -18,6 +18,7 @@ import {
   endPlaygroundSession,
   executePlaygroundQuery,
   getOrCreatePlaygroundSession,
+  getServerLogs,
 } from '@/app/actions/mcp-playground';
 import {
   getMcpServers,
@@ -151,6 +152,18 @@ export default function McpPlaygroundPage() {
     }[]
   >([]);
 
+  // State for server logs
+  const [serverLogs, setServerLogs] = useState<
+    {
+      level: string;
+      message: string;
+      timestamp: Date;
+    }[]
+  >([]);
+  
+  // Last processed server log timestamp
+  const [lastServerLogTimestamp, setLastServerLogTimestamp] = useState<Date | null>(null);
+
   // Auto scroll to bottom of messages and logs
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -159,7 +172,7 @@ export default function McpPlaygroundPage() {
     if (logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, clientLogs]);
+  }, [messages, clientLogs, serverLogs]);
 
   // Helper to add a log entry
   const addLog = (
@@ -171,6 +184,47 @@ export default function McpPlaygroundPage() {
       { type, message, timestamp: new Date() },
     ]);
   };
+  
+  // Poll for server logs when session is active
+  useEffect(() => {
+    if (!isSessionActive || !profileUuid) return;
+    
+    const fetchServerLogs = async () => {
+      try {
+        const result = await getServerLogs(profileUuid);
+        if (result.success && result.logs) {
+          // Filter logs that are newer than the last one we processed
+          let newLogs = result.logs;
+          if (lastServerLogTimestamp) {
+            newLogs = result.logs.filter(log => 
+              new Date(log.timestamp) > lastServerLogTimestamp
+            );
+          }
+          
+          if (newLogs.length > 0) {
+            // Update server logs state
+            setServerLogs(prev => [...prev, ...newLogs]);
+            
+            // Update last processed timestamp
+            const latestTimestamp = new Date(Math.max(
+              ...newLogs.map(log => new Date(log.timestamp).getTime())
+            ));
+            setLastServerLogTimestamp(latestTimestamp);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching server logs:', error);
+      }
+    };
+    
+    // Fetch logs immediately
+    fetchServerLogs();
+    
+    // Then fetch every 2 seconds
+    const interval = setInterval(fetchServerLogs, 2000);
+    
+    return () => clearInterval(interval);
+  }, [isSessionActive, profileUuid, lastServerLogTimestamp]);
 
   // Fetch MCP servers
   const {
@@ -222,6 +276,10 @@ export default function McpPlaygroundPage() {
 
     // Reset any previous errors
     setSessionError(null);
+    
+    // Reset server logs
+    setServerLogs([]);
+    setLastServerLogTimestamp(null);
 
     // Filter only ACTIVE servers
     const activeServerUuids = mcpServers
@@ -315,6 +373,9 @@ export default function McpPlaygroundPage() {
 
       if (result.success) {
         setIsSessionActive(false);
+        // Reset server logs state when session ends
+        setServerLogs([]);
+        setLastServerLogTimestamp(null);
         addLog('connection', 'MCP playground session ended successfully.');
         toast({
           title: 'Success',
@@ -833,11 +894,14 @@ export default function McpPlaygroundPage() {
                       MCP Client Logs
                     </div>
                     <div className="flex items-center space-x-1">
-                      {clientLogs.length > 0 && (
+                      {(clientLogs.length > 0 || serverLogs.length > 0) && (
                         <Button
                           variant='ghost'
                           size='sm'
-                          onClick={() => setClientLogs([])}
+                          onClick={() => {
+                            setClientLogs([]);
+                            setServerLogs([]);
+                          }}
                           className='h-7 text-xs'>
                           Clear
                         </Button>
@@ -916,23 +980,32 @@ export default function McpPlaygroundPage() {
                       </TooltipProvider>
                     </div>
                     <div className='p-3 font-mono text-xs space-y-1.5'>
-                      {clientLogs.length === 0 ? (
+                      {clientLogs.length === 0 && serverLogs.length === 0 ? (
                         <div className='text-muted-foreground text-center py-8'>
                           No logs available. Start a session to see logs.
                         </div>
                       ) : (
-                        // Filter logs based on log level
-                        clientLogs
+                        // Combine and sort client and server logs by timestamp
+                        [...clientLogs.map(log => ({
+                          source: 'client' as const,
+                          type: log.type,
+                          message: log.message,
+                          timestamp: log.timestamp,
+                          level: log.type === 'error' ? 'error' :
+                                 log.type === 'connection' ? 'warn' :
+                                 log.type === 'info' ? 'info' :
+                                 'info'
+                        })),
+                        ...serverLogs.map(log => ({
+                          source: 'server' as const,
+                          type: 'info',
+                          message: log.message,
+                          timestamp: log.timestamp,
+                          level: log.level
+                        }))]
+                          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+                          // Filter logs based on log level
                           .filter(log => {
-                            // Convert log type to level for filtering
-                            const logTypeToLevel = {
-                              'error': 'error' as LogLevel,
-                              'connection': 'warn' as LogLevel,
-                              'execution': 'info' as LogLevel,
-                              'info': 'info' as LogLevel,
-                              'response': 'info' as LogLevel
-                            };
-                            
                             // Special handling for logs with prefixes
                             if (log.message.startsWith('[DEBUG]')) {
                               return logLevel === 'debug';
@@ -941,7 +1014,6 @@ export default function McpPlaygroundPage() {
                               return ['warn', 'info', 'debug'].includes(logLevel);
                             }
                             
-                            const logMessageLevel = logTypeToLevel[log.type] || 'info';
                             const levels: { [key in LogLevel]: number } = {
                               error: 0,
                               warn: 1,
@@ -949,7 +1021,8 @@ export default function McpPlaygroundPage() {
                               debug: 3
                             };
                             
-                            return levels[logLevel] >= levels[logMessageLevel];
+                            const currentLogLevel = log.level || 'info';
+                            return levels[logLevel] >= levels[currentLogLevel as LogLevel];
                           })
                           .map((log, index) => (
                             <div key={index} className='flex'>
@@ -958,6 +1031,7 @@ export default function McpPlaygroundPage() {
                               </div>
                               <div
                                 className={`
+                                ${log.source === 'server' ? 'text-violet-500' : ''}
                                 ${log.type === 'info' ? 'text-blue-500' : ''}
                                 ${log.type === 'error' ? 'text-red-500' : ''}
                                 ${log.type === 'connection' ? 'text-green-500' : ''}
@@ -968,6 +1042,8 @@ export default function McpPlaygroundPage() {
                                   <span className="text-blue-400">[DEBUG]</span>
                                 ) : log.message.startsWith('[WARN]') ? (
                                   <span className="text-amber-400">[WARN]</span>
+                                ) : log.source === 'server' ? (
+                                  <span className="text-violet-400">[SERVER:{log.level.toUpperCase()}]</span>
                                 ) : (
                                   <span>[{log.type.toUpperCase()}]</span>
                                 )}{' '}

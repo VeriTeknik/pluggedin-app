@@ -95,6 +95,47 @@ function safeProcessContent(content: any): string {
   return String(content);
 }
 
+// Store server logs by profile
+const serverLogsByProfile: Map<string, Array<{level: string, message: string, timestamp: Date}>> = new Map();
+
+// Custom logger to capture server logs
+class ServerLogCapture implements McpToolsLogger {
+  constructor(private profileUuid: string, private logLevel: 'error' | 'warn' | 'info' | 'debug') {
+    // Initialize logs array for this profile if it doesn't exist
+    if (!serverLogsByProfile.has(profileUuid)) {
+      serverLogsByProfile.set(profileUuid, []);
+    }
+  }
+
+  private addLog(level: string, message: string) {
+    const logs = serverLogsByProfile.get(this.profileUuid) || [];
+    logs.push({ level, message, timestamp: new Date() });
+    serverLogsByProfile.set(this.profileUuid, logs);
+  }
+
+  debug(...args: unknown[]) {
+    if (this.logLevel === 'debug') {
+      this.addLog('debug', args.map(arg => String(arg)).join(' '));
+    }
+  }
+
+  info(...args: unknown[]) {
+    if (['info', 'debug'].includes(this.logLevel)) {
+      this.addLog('info', args.map(arg => String(arg)).join(' '));
+    }
+  }
+
+  warn(...args: unknown[]) {
+    if (['warn', 'info', 'debug'].includes(this.logLevel)) {
+      this.addLog('warn', args.map(arg => String(arg)).join(' '));
+    }
+  }
+
+  error(...args: unknown[]) {
+    this.addLog('error', args.map(arg => String(arg)).join(' '));
+  }
+}
+
 // Initialize chat model based on provider
 function initChatModel(config: {
   provider: 'openai' | 'anthropic';
@@ -231,6 +272,9 @@ export async function getOrCreatePlaygroundSession(
   }
 
   try {
+    // Clear any existing logs for this profile
+    serverLogsByProfile.set(profileUuid, []);
+    
     // Get all MCP servers for the profile
     const allServers = await getMcpServers(profileUuid);
     
@@ -254,13 +298,14 @@ export async function getOrCreatePlaygroundSession(
     // Initialize LLM
     const llm = initChatModel(llmConfig);
     
+    // Create a custom logger to capture logs
+    const logger = new ServerLogCapture(profileUuid, llmConfig.logLevel || 'info');
+    
     // Convert MCP servers to LangChain tools
     const { tools, cleanup } = await convertMcpToLangchainTools(
       mcpServersConfig,
-      { logLevel: llmConfig.logLevel || 'info' }
+      { logger }
     );
-
-    
     
     // Create agent
     const agent = createReactAgent({
@@ -279,6 +324,23 @@ export async function getOrCreatePlaygroundSession(
     return { success: true };
   } catch (error) {
     console.error('Failed to create playground session:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+// Get server logs for a profile
+export async function getServerLogs(profileUuid: string) {
+  try {
+    const logs = serverLogsByProfile.get(profileUuid) || [];
+    return { 
+      success: true, 
+      logs 
+    };
+  } catch (error) {
+    console.error('Failed to get server logs:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
