@@ -76,16 +76,17 @@ export default function SidebarLayout({
       <div className='flex flex-1 h-screen'>
         {/* Main Sidebar */}
         <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
-          <SidebarHeader className='flex flex-col justify-center items-center px-2 py-4'>
-            <div className='flex items-center gap-4 mb-2'>
-              <Image
-                src='/favicon.ico'
-                alt='Plugged.in Logo'
-                width={256}
-                height={256}
-                className='h-12 w-12'
-              />
-              <h2 className='text-2xl font-semibold'>Plugged.in</h2>
+          <SidebarHeader className='flex flex-col px-2 py-4'>
+            <div className='flex mb-2 px-3'>
+              <Link href="/">
+                <Image
+                  src='/pluggedin-wl-black.png'
+                  alt='Plugged.in Logo'
+                  width={288}
+                  height={72}
+                  className='h-144 w-36'
+                />
+              </Link>
             </div>
             <ProjectSwitcher />
             <ProfileSwitcher />
