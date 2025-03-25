@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:auth": "tsx scripts/apply-migrations.js",
-    "db:fix:fk": "tsx scripts/add-missing-fk.ts"
+    "db:fix:fk": "tsx scripts/add-missing-fk.ts",
+    "db:migrate:reset": "tsx scripts/apply-password-reset-migration.js"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.8.0",
@@ -70,6 +71,7 @@
     "@eslint/js": "^9.17.0",
     "@next/eslint-plugin-next": "^15.1.2",
     "@types/node": "^20",
+    "@types/nodemailer": "^6.4.17",
     "@types/pg": "^8.11.10",
     "@types/react": "^18.2.64",
     "@types/react-dom": "^18.2.21",

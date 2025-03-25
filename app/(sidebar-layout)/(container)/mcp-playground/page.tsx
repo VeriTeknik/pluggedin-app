@@ -12,11 +12,13 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
+import { McpToolsLogger } from '@h1deya/langchain-mcp-tools';
 
 import {
   endPlaygroundSession,
   executePlaygroundQuery,
   getOrCreatePlaygroundSession,
+  getServerLogs,
 } from '@/app/actions/mcp-playground';
 import {
   getMcpServers,
@@ -57,12 +59,60 @@ import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 import { McpServer } from '@/types/mcp-server';
 
+// Define log level type
+type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+
+// Custom logger class for MCP tools (now used only for local UI display)
+class ClientLogger implements McpToolsLogger {
+  constructor(
+    private readonly addLogCallback: (type: 'info' | 'error' | 'connection' | 'execution' | 'response', message: string) => void,
+    private readonly logLevel: LogLevel
+  ) {}
+
+  private shouldLog(level: LogLevel): boolean {
+    const levels: { [key in LogLevel]: number } = {
+      error: 0,
+      warn: 1,
+      info: 2,
+      debug: 3
+    };
+    return levels[this.logLevel] >= levels[level];
+  }
+
+  debug(...args: unknown[]) {
+    if (this.shouldLog('debug')) {
+      this.addLogCallback('info', `[DEBUG] ${args.map(arg => String(arg)).join(' ')}`);
+    }
+  }
+
+  info(...args: unknown[]) {
+    if (this.shouldLog('info')) {
+      this.addLogCallback('info', args.map(arg => String(arg)).join(' '));
+    }
+  }
+
+  warn(...args: unknown[]) {
+    if (this.shouldLog('warn')) {
+      this.addLogCallback('connection', `[WARN] ${args.map(arg => String(arg)).join(' ')}`);
+    }
+  }
+
+  error(...args: unknown[]) {
+    if (this.shouldLog('error')) {
+      this.addLogCallback('error', args.map(arg => String(arg)).join(' '));
+    }
+  }
+}
+
 export default function McpPlaygroundPage() {
   const { toast } = useToast();
   const { currentProfile } = useProfiles();
   const profileUuid = currentProfile?.uuid || '';
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // State for log level
+  const [logLevel, setLogLevel] = useState<LogLevel>('info');
 
   // State for LLM configuration
   const [llmConfig, setLlmConfig] = useState({
@@ -74,6 +124,9 @@ export default function McpPlaygroundPage() {
 
   // State for selected servers (will now use active servers instead of selection)
   const [isUpdatingServer, setIsUpdatingServer] = useState<string | null>(null);
+
+  // State for session errors
+  const [sessionError, setSessionError] = useState<string | null>(null);
 
   // State for session
   const [isSessionActive, setIsSessionActive] = useState(false);
@@ -99,6 +152,18 @@ export default function McpPlaygroundPage() {
     }[]
   >([]);
 
+  // State for server logs
+  const [serverLogs, setServerLogs] = useState<
+    {
+      level: string;
+      message: string;
+      timestamp: Date;
+    }[]
+  >([]);
+  
+  // Last processed server log timestamp
+  const [lastServerLogTimestamp, setLastServerLogTimestamp] = useState<Date | null>(null);
+
   // Auto scroll to bottom of messages and logs
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -107,7 +172,7 @@ export default function McpPlaygroundPage() {
     if (logsEndRef.current) {
       logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, clientLogs]);
+  }, [messages, clientLogs, serverLogs]);
 
   // Helper to add a log entry
   const addLog = (
@@ -119,6 +184,47 @@ export default function McpPlaygroundPage() {
       { type, message, timestamp: new Date() },
     ]);
   };
+  
+  // Poll for server logs when session is active
+  useEffect(() => {
+    if (!isSessionActive || !profileUuid) return;
+    
+    const fetchServerLogs = async () => {
+      try {
+        const result = await getServerLogs(profileUuid);
+        if (result.success && result.logs) {
+          // Filter logs that are newer than the last one we processed
+          let newLogs = result.logs;
+          if (lastServerLogTimestamp) {
+            newLogs = result.logs.filter(log => 
+              new Date(log.timestamp) > lastServerLogTimestamp
+            );
+          }
+          
+          if (newLogs.length > 0) {
+            // Update server logs state
+            setServerLogs(prev => [...prev, ...newLogs]);
+            
+            // Update last processed timestamp
+            const latestTimestamp = new Date(Math.max(
+              ...newLogs.map(log => new Date(log.timestamp).getTime())
+            ));
+            setLastServerLogTimestamp(latestTimestamp);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching server logs:', error);
+      }
+    };
+    
+    // Fetch logs immediately
+    fetchServerLogs();
+    
+    // Then fetch every 2 seconds
+    const interval = setInterval(fetchServerLogs, 2000);
+    
+    return () => clearInterval(interval);
+  }, [isSessionActive, profileUuid, lastServerLogTimestamp]);
 
   // Fetch MCP servers
   const {
@@ -168,6 +274,13 @@ export default function McpPlaygroundPage() {
   const startSession = async () => {
     if (!mcpServers) return;
 
+    // Reset any previous errors
+    setSessionError(null);
+    
+    // Reset server logs
+    setServerLogs([]);
+    setLastServerLogTimestamp(null);
+
     // Filter only ACTIVE servers
     const activeServerUuids = mcpServers
       .filter((server) => server.status === 'ACTIVE')
@@ -191,6 +304,7 @@ export default function McpPlaygroundPage() {
         'info',
         `LLM config: ${llmConfig.provider} ${llmConfig.model} (temp: ${llmConfig.temperature})`
       );
+      addLog('info', `Log level: ${logLevel}`);
 
       const result = await getOrCreatePlaygroundSession(
         profileUuid,
@@ -200,6 +314,7 @@ export default function McpPlaygroundPage() {
           model: llmConfig.model,
           temperature: llmConfig.temperature,
           maxTokens: llmConfig.maxTokens,
+          logLevel: logLevel,
         }
       );
 
@@ -224,22 +339,20 @@ export default function McpPlaygroundPage() {
           description: 'MCP playground session started.',
         });
       } else {
-        addLog(
-          'error',
-          `Failed to start session: ${result.error || 'Unknown error'}`
-        );
+        const errorMessage = result.error || 'Unknown error';
+        addLog('error', `Failed to start session: ${errorMessage}`);
+        setSessionError(errorMessage);
         toast({
           title: 'Error',
-          description: result.error || 'Failed to start session.',
+          description: errorMessage,
           variant: 'destructive',
         });
       }
     } catch (error) {
       console.error('Failed to start session:', error);
-      addLog(
-        'error',
-        `Exception: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      addLog('error', `Exception: ${errorMessage}`);
+      setSessionError(errorMessage);
       toast({
         title: 'Error',
         description: 'An unexpected error occurred.',
@@ -260,6 +373,9 @@ export default function McpPlaygroundPage() {
 
       if (result.success) {
         setIsSessionActive(false);
+        // Reset server logs state when session ends
+        setServerLogs([]);
+        setLastServerLogTimestamp(null);
         addLog('connection', 'MCP playground session ended successfully.');
         toast({
           title: 'Success',
@@ -509,6 +625,35 @@ export default function McpPlaygroundPage() {
                     </div>
                   ) : (
                     <div className='space-y-3'>
+                      {sessionError && (
+                        <div className="p-3 bg-red-50 border border-red-200 rounded-md mb-4">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0 text-red-500">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="12"></line>
+                                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                              </svg>
+                            </div>
+                            <div className="ml-3">
+                              <h3 className="text-sm font-medium text-red-800">Session Error</h3>
+                              <div className="mt-1 text-sm text-red-700">
+                                {sessionError}
+                              </div>
+                              <div className="mt-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline"
+                                  className="text-xs"
+                                  onClick={() => setSessionError(null)}
+                                >
+                                  Dismiss
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {mcpServers?.map((server: McpServer) => (
                         <TooltipProvider key={server.uuid}>
                           <Tooltip>
@@ -748,40 +893,168 @@ export default function McpPlaygroundPage() {
                       <Terminal className='w-4 h-4 mr-1.5' />
                       MCP Client Logs
                     </div>
-                    {clientLogs.length > 0 && (
-                      <Button
-                        variant='ghost'
-                        size='sm'
-                        onClick={() => setClientLogs([])}
-                        className='h-7 text-xs'>
-                        Clear
-                      </Button>
-                    )}
+                    <div className="flex items-center space-x-1">
+                      {(clientLogs.length > 0 || serverLogs.length > 0) && (
+                        <Button
+                          variant='ghost'
+                          size='sm'
+                          onClick={() => {
+                            setClientLogs([]);
+                            setServerLogs([]);
+                          }}
+                          className='h-7 text-xs'>
+                          Clear
+                        </Button>
+                      )}
+                      <div className="flex bg-secondary rounded-md p-0.5">
+                        {['error', 'warn', 'info', 'debug'].map((level) => (
+                          <Button
+                            key={level}
+                            size="sm"
+                            variant={logLevel === level ? 'secondary' : 'ghost'}
+                            className={`h-6 text-xs px-2 capitalize ${
+                              logLevel === level ? 'bg-background shadow-sm' : ''
+                            } ${
+                              level === 'error' ? 'text-red-500 hover:text-red-600' : 
+                              level === 'warn' ? 'text-amber-500 hover:text-amber-600' : 
+                              level === 'debug' ? 'text-blue-500 hover:text-blue-600' : 
+                              'text-green-500 hover:text-green-600'
+                            }`}
+                            onClick={() => setLogLevel(level as LogLevel)}
+                          >
+                            {level}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
+                  
+                  {sessionError && (
+                    <div className="p-3 bg-red-50 border border-red-200 rounded-md mb-4">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0 text-red-500">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                          </svg>
+                        </div>
+                        <div className="ml-3 flex-1">
+                          <h3 className="text-sm font-medium text-red-800">Session Error</h3>
+                          <div className="mt-1 text-sm text-red-700">
+                            {sessionError}
+                          </div>
+                          <div className="mt-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="text-xs"
+                              onClick={() => setSessionError(null)}
+                            >
+                              Dismiss
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <ScrollArea className='h-[calc(100vh-24rem)] border rounded-md bg-muted/20'>
+                    <div className="px-3 pt-2 pb-1 text-xs text-muted-foreground border-b border-muted-foreground/10">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger className="flex items-center gap-1">
+                            <div className={`w-2 h-2 rounded-full ${
+                              logLevel === 'error' ? 'bg-red-500' : 
+                              logLevel === 'warn' ? 'bg-amber-500' : 
+                              logLevel === 'debug' ? 'bg-blue-500' : 
+                              'bg-green-500'
+                            }`}></div>
+                            <span>Showing {logLevel} and above logs</span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Log levels: error {'<'} warn {'<'} info {'<'} debug</p>
+                            <p className="text-xs mt-1">Higher levels include all lower levels</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <div className='p-3 font-mono text-xs space-y-1.5'>
-                      {clientLogs.length === 0 ? (
+                      {clientLogs.length === 0 && serverLogs.length === 0 ? (
                         <div className='text-muted-foreground text-center py-8'>
                           No logs available. Start a session to see logs.
                         </div>
                       ) : (
-                        clientLogs.map((log, index) => (
-                          <div key={index} className='flex'>
-                            <div className='text-muted-foreground mr-2'>
-                              [{log.timestamp.toLocaleTimeString()}]
+                        // Combine and sort client and server logs by timestamp
+                        [...clientLogs.map(log => ({
+                          source: 'client' as const,
+                          type: log.type,
+                          message: log.message,
+                          timestamp: log.timestamp,
+                          level: log.type === 'error' ? 'error' :
+                                 log.type === 'connection' ? 'warn' :
+                                 log.type === 'info' ? 'info' :
+                                 'info'
+                        })),
+                        ...serverLogs.map(log => ({
+                          source: 'server' as const,
+                          type: 'info',
+                          message: log.message,
+                          timestamp: log.timestamp,
+                          level: log.level
+                        }))]
+                          .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
+                          // Filter logs based on log level
+                          .filter(log => {
+                            // Special handling for logs with prefixes
+                            if (log.message.startsWith('[DEBUG]')) {
+                              return logLevel === 'debug';
+                            }
+                            if (log.message.startsWith('[WARN]')) {
+                              return ['warn', 'info', 'debug'].includes(logLevel);
+                            }
+                            
+                            const levels: { [key in LogLevel]: number } = {
+                              error: 0,
+                              warn: 1,
+                              info: 2,
+                              debug: 3
+                            };
+                            
+                            const currentLogLevel = log.level || 'info';
+                            return levels[logLevel] >= levels[currentLogLevel as LogLevel];
+                          })
+                          .map((log, index) => (
+                            <div key={index} className='flex'>
+                              <div className='text-muted-foreground mr-2'>
+                                [{log.timestamp.toLocaleTimeString()}]
+                              </div>
+                              <div
+                                className={`
+                                ${log.source === 'server' ? 'text-violet-500' : ''}
+                                ${log.type === 'info' ? 'text-blue-500' : ''}
+                                ${log.type === 'error' ? 'text-red-500' : ''}
+                                ${log.type === 'connection' ? 'text-green-500' : ''}
+                                ${log.type === 'execution' ? 'text-amber-500' : ''}
+                                ${log.type === 'response' ? 'text-purple-500' : ''}
+                              `}>
+                                {log.message.startsWith('[DEBUG]') ? (
+                                  <span className="text-blue-400">[DEBUG]</span>
+                                ) : log.message.startsWith('[WARN]') ? (
+                                  <span className="text-amber-400">[WARN]</span>
+                                ) : log.source === 'server' ? (
+                                  <span className="text-violet-400">[SERVER:{log.level.toUpperCase()}]</span>
+                                ) : (
+                                  <span>[{log.type.toUpperCase()}]</span>
+                                )}{' '}
+                                {log.message.startsWith('[DEBUG]') ? 
+                                  log.message.substring(7) : 
+                                  log.message.startsWith('[WARN]') ?
+                                  log.message.substring(6) :
+                                  log.message}
+                              </div>
                             </div>
-                            <div
-                              className={`
-                              ${log.type === 'info' ? 'text-blue-500' : ''}
-                              ${log.type === 'error' ? 'text-red-500' : ''}
-                              ${log.type === 'connection' ? 'text-green-500' : ''}
-                              ${log.type === 'execution' ? 'text-amber-500' : ''}
-                              ${log.type === 'response' ? 'text-purple-500' : ''}
-                            `}>
-                              [{log.type.toUpperCase()}] {log.message}
-                            </div>
-                          </div>
-                        ))
+                          ))
                       )}
                       <div ref={logsEndRef} />
                     </div>

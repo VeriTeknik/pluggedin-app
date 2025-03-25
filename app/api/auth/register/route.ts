@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { users, verificationTokens } from '@/db/schema';
+import { sendEmail, generateVerificationEmail } from '@/lib/email';
 
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
@@ -55,22 +56,25 @@ export async function POST(req: NextRequest) {
       expires: tokenExpiry,
     });
 
-    // Send verification email (would typically use an email provider)
-    // For development purposes, we'll just return the token in the response
-    // In production, you would use a service like SendGrid, Mailgun, etc.
+    // Send the verification email
+    const emailSent = await sendEmail(generateVerificationEmail(data.email, verificationToken));
     
-    // Example code for sending email (commented out):
-    // await sendVerificationEmail({
-    //   to: data.email,
-    //   subject: 'Verify your email',
-    //   token: verificationToken
-    // });
+    // Log whether the email was sent for debugging
+    if (!emailSent) {
+      console.warn(`Failed to send verification email to ${data.email}`);
+    }
 
+    // For development purposes, we'll also return the token in the response
+    // In production, this would be removed
+    const isDev = process.env.NODE_ENV === 'development';
     return NextResponse.json(
       { 
         message: 'User registered successfully! Please verify your email.',
-        // In production, you would remove the line below
-        verificationToken: verificationToken
+        // Include token in development mode only
+        ...(isDev && { 
+          verificationToken, 
+          verificationUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005'}/verify-email?token=${verificationToken}` 
+        })
       },
       { status: 201 }
     );
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { message: 'Invalid registration data', errors: error.errors },
+        { message: 'Invalid input data', errors: error.errors },
         { status: 400 }
       );
     }

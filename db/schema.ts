@@ -254,3 +254,9 @@ export const customMcpServersTable = pgTable(
     index('custom_mcp_servers_profile_uuid_idx').on(table.profile_uuid),
   ]
 );
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  identifier: text("identifier").notNull(),
+  token: text("token").notNull(),
+  expires: timestamp("expires", { mode: 'date' }).notNull(),
+});

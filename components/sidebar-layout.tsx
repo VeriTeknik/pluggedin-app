@@ -95,6 +95,7 @@ export default function SidebarLayout({
               <SidebarGroupLabel>Navigation</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
+                  
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/mcp-playground'>
@@ -111,20 +112,7 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/'>
-                        <Image
-                          src='/pluggedin-wl-black.png'
-                          alt='Plugged.in Logo'
-                          width={16}
-                          height={16}
-                          className='mr-2 h-4 w-4'
-                        />
-                        <span>Home</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/search'>
