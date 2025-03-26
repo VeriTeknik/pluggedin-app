@@ -12,8 +12,32 @@ const __dirname = dirname(__filename);
 config({ path: '.env.local' });
 
 if (!process.env.DATABASE_URL) {
-  console.error('DATABASE_URL is not defined in .env.local');
-  process.exit(1);
+  // Try loading from .env.local or .env
+  try {
+    const envLocal = readFileSync('.env.local', 'utf-8');
+    const match = envLocal.match(/DATABASE_URL="(.+)"/);
+    if (match) {
+      process.env.DATABASE_URL = match[1];
+    } else {
+      console.error('DATABASE_URL is not defined in .env.local');
+      process.exit(1);
+    }
+  } catch (e) {
+    // If .env.local doesn't exist, try .env
+    try {
+      const env = readFileSync('.env', 'utf-8');
+      const match = env.match(/DATABASE_URL="(.+)"/);
+      if (match) {
+        process.env.DATABASE_URL = match[1];
+      } else {
+        console.error('DATABASE_URL is not defined in .env or .env.local');
+        process.exit(1);
+      }
+    } catch (e) {
+      console.error('DATABASE_URL is not defined and could not read .env or .env.local');
+      process.exit(1);
+    }
+  }
 }
 
 async function applyMigration() {
