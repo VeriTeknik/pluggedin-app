@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "next dev --port=12005",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port 12005",
     "lint": "next lint",
     "clean": "rm -rf .next node_modules/.cache",
     "dev:clean": "pnpm clean && pnpm dev",
