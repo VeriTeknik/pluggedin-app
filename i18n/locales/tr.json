@@ -1,0 +1,188 @@
+{
+  "common": {
+    "or": "VEYA",
+    "error": "Hata",
+    "success": "Başarılı",
+    "validation": {
+      "required": "Bu alan zorunludur",
+      "email": "Lütfen geçerli bir e-posta adresi girin",
+      "minLength": "En az {{count}} karakter olmalıdır",
+      "maxLength": "En fazla {{count}} karakter olmalıdır",
+      "passwordMatch": "Şifreler eşleşmelidir"
+    },
+    "errors": {
+      "unexpected": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+    }
+  },
+  "auth": {
+    "common": {
+      "emailLabel": "E-posta",
+      "emailPlaceholder": "E-posta adresinizi girin",
+      "passwordLabel": "Şifre",
+      "passwordPlaceholder": "Şifrenizi girin",
+      "confirmPasswordLabel": "Şifre Tekrar",
+      "confirmPasswordPlaceholder": "Şifrenizi tekrar girin"
+    },
+    "login": {
+      "title": "Giriş Yap",
+      "actionMessage": "hesabınıza giriş yapın",
+      "submitButton": "Giriş Yap",
+      "errors": {
+        "invalidCredentials": "Geçersiz e-posta veya şifre"
+      }
+    },
+    "register": {
+      "title": "Hesap Oluştur",
+      "actionMessage": "hesabınızı oluşturun",
+      "submitButton": "Hesap Oluştur",
+      "nameLabel": "Ad",
+      "namePlaceholder": "Adınızı girin",
+      "success": "Kayıt başarılı! Lütfen e-postanızı doğrulayın.",
+      "errors": {
+        "registrationFailed": "Kayıt başarısız oldu"
+      }
+    },
+    "forgotPassword": {
+      "title": "Şifremi Unuttum",
+      "actionMessage": "şifrenizi sıfırlayın",
+      "submitButton": "Sıfırlama Bağlantısı Gönder",
+      "success": "Şifre sıfırlama bağlantısı e-posta adresinize gönderildi!",
+      "errors": {
+        "requestFailed": "Sıfırlama bağlantısı gönderilemedi"
+      }
+    },
+    "resetPassword": {
+      "title": "Şifre Sıfırla",
+      "actionMessage": "yeni şifrenizi belirleyin",
+      "submitButton": "Şifreyi Sıfırla",
+      "success": "Şifre sıfırlama başarılı! Artık yeni şifrenizle giriş yapabilirsiniz.",
+      "errors": {
+        "resetFailed": "Şifre sıfırlama başarısız oldu"
+      }
+    },
+    "social": {
+      "github": "GitHub ile Devam Et",
+      "google": "Google ile Devam Et"
+    }
+  },
+  "landing": {
+    "navigation": {
+      "enterApp": "Uygulamaya Gir"
+    },
+    "hero": {
+      "title": "Yapay Zeka Merkezi",
+      "subtitle": "Birleşik bir platform ile AI yeteneklerinizi bağlayın, oluşturun ve genişletin. AI iş akışlarınızı geliştiren eklentiler oluşturun ve yönetin."
+    },
+    "features": {
+      "pluginManagement": {
+        "title": "Eklenti Yönetimi",
+        "description": "MCP sunucularını ve eklentilerini inceleyin, yapılandırın ve yönetin",
+        "content": "Çeşitli AI araçlarını ve servislerini birleşik bir arayüz üzerinden bağlayın. Eklentilerinizi merkezi bir kontrol panelinden yönetin.",
+        "action": "Eklentileri İncele"
+      },
+      "aiPlayground": {
+        "title": "AI Test Ortamı",
+        "description": "AI araçlarınızı interaktif bir ortamda test edin ve deneyin",
+        "content": "Eklentilerinizi aksiyon halinde deneyimleyin. Test ortamı, farklı yapılandırmaları test etmenizi ve gerçek zamanlı sonuçları görmenizi sağlar.",
+        "action": "Test Ortamını Aç"
+      },
+      "customDevelopment": {
+        "title": "Özel Geliştirme",
+        "description": "Kendi MCP sunucularınızı ve araçlarınızı oluşturun ve özelleştirin",
+        "content": "Python editörümüzü ve entegre geliştirme ortamımızı kullanarak özel yetenekler oluşturun. AI'nizi özel işlevlerle genişletin.",
+        "action": "Özel Araçlar Oluştur"
+      }
+    },
+    "gettingStarted": {
+      "title": "Plugged.in'e Yeni misiniz?",
+      "description": "Ortamınızı doğru şekilde yapılandırmak ve Plugged.in ile hemen geliştirmeye başlamak için kurulum kılavuzumuzu takip edin.",
+      "action": "Kurulum Kılavuzunu Görüntüle"
+    }
+  },
+  "mcpServers": {
+    "title": "MCP Sunucuları",
+    "subtitle": "Eklenti Yönetimi",
+    "description": "MCP sunucularınızı yapılandırın ve yönetin. Komut satırı veya URL tabanlı arayüzler aracılığıyla harici araçlara ve servislere bağlanın.",
+    "stats": {
+      "totalServers": "Toplam Sunucu",
+      "active": "Aktif",
+      "stdio": "STDIO",
+      "sse": "SSE"
+    },
+    "actions": {
+      "addServer": "Sunucu Ekle",
+      "import": "İçe Aktar",
+      "export": "Dışa Aktar",
+      "search": "Sunucularda ara...",
+      "edit": "Düzenle",
+      "delete": "Sil",
+      "deleteConfirm": "Bu MCP sunucusunu silmek istediğinizden emin misiniz?",
+      "cancel": "İptal",
+      "create": "Oluştur",
+      "creating": "Oluşturuluyor...",
+      "close": "Kapat",
+      "downloadJson": "JSON İndir",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı!"
+    },
+    "form": {
+      "success": "MCP sunucusu başarıyla oluşturuldu.",
+      "error": {
+        "createFailed": "MCP sunucusu oluşturulamadı."
+      },
+      "addTitle": "MCP Sunucusu Ekle",
+      "addDescription": "Yeni bir MCP sunucu yapılandırması oluşturun. STDIO (komut tabanlı) veya SSE (URL tabanlı) sunucu türü arasından seçim yapın.",
+      "commandBased": "Komut tabanlı (STDIO)",
+      "urlBased": "URL tabanlı (SSE)",
+      "name": "İsim",
+      "namePlaceholder": "örn., mcp-server-time",
+      "description": "Açıklama",
+      "descriptionPlaceholder": "(İsteğe bağlı) Sunucunun amacını kısaca açıklayın",
+      "command": "Komut",
+      "commandPlaceholder": "örn., npx veya uvx",
+      "arguments": "Argümanlar",
+      "argumentsPlaceholder": "örn., mcp-server-time, --local-timezone=America/Los_Angeles",
+      "envVars": "Ortam Değişkenleri",
+      "envVarsPlaceholder": "ANAHTAR=değer\nBAŞKA_ANAHTAR=başka_değer",
+      "envVarsHelp": "Ortam değişkenlerini ANAHTAR=değer formatında, her satıra bir tane olacak şekilde girin",
+      "serverUrl": "Sunucu URL'i",
+      "serverUrlPlaceholder": "http://localhost:3000/sse",
+      "serverUrlHelp": "Geçerli bir HTTP/HTTPS URL'i olmalıdır",
+      "created": "Oluşturulma"
+    },
+    "import": {
+      "title": "MCP Sunucularını İçe Aktar",
+      "description": "JSON'dan birden fazla MCP sunucu yapılandırmasını içe aktarın. Bu işlem mevcut sunucuları değiştirmeden yenilerini ekleyecektir.",
+      "jsonFormat": "JSON Formatı",
+      "jsonPlaceholder": "JSON'ınızı buraya yapıştırın",
+      "importing": "İçe Aktarılıyor...",
+      "importServers": "Sunucuları İçe Aktar",
+      "success": "{{count}} MCP sunucusu başarıyla içe aktarıldı.",
+      "error": {
+        "invalidJson": "Geçersiz JSON formatı",
+        "missingMcpServers": "JSON'da \"mcpServers\" nesnesi bulunmalıdır",
+        "importFailed": "Sunucular içe aktarılamadı. Lütfen konsolu kontrol edin."
+      }
+    },
+    "export": {
+      "title": "MCP Sunucu Yapılandırmasını Dışa Aktar",
+      "description": "MCP sunucu yapılandırmalarınız JSON formatında, başka bir örnekte içe aktarmaya hazır.",
+      "copyTooltip": "JSON'ı panoya kopyala",
+      "downloadSuccess": "{{count}} MCP sunucu yapılandırması indirildi.",
+      "error": {
+        "noServers": "Dışa aktarılacak MCP sunucusu yok.",
+        "copyFailed": "Panoya kopyalanamadı."
+      }
+    },
+    "status": {
+      "active": "Aktif",
+      "inactive": "Pasif"
+    },
+    "empty": {
+      "title": "Sunucu Bulunamadı",
+      "noResults": "\"{{search}}\" ile eşleşen sunucu yok",
+      "noServers": "Henüz hiç MCP sunucusu eklemediniz",
+      "addFirst": "İlk Sunucunuzu Ekleyin"
+    }
+  }
+}

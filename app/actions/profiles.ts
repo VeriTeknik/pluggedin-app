@@ -6,6 +6,7 @@ import { db } from '@/db';
 import { profilesTable } from '@/db/schema';
 import { projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { Profile } from '@/types/profile';
 
 export async function createProfile(currentProjectUuid: string, name: string) {
   const session = await getAuthSession();
@@ -209,6 +210,32 @@ export async function updateProfileName(profileUuid: string, newName: string) {
   const updatedProfile = await db
     .update(profilesTable)
     .set({ name: newName })
+    .where(eq(profilesTable.uuid, profileUuid))
+    .returning();
+
+  return updatedProfile[0];
+}
+
+export async function updateProfile(profileUuid: string, data: Partial<Profile>) {
+  const session = await getAuthSession();
+  
+  if (!session || !session.user.id) {
+    throw new Error('Unauthorized - you must be logged in to update profiles');
+  }
+
+  const profile = await db
+    .select()
+    .from(profilesTable)
+    .where(eq(profilesTable.uuid, profileUuid))
+    .limit(1);
+
+  if (profile.length === 0) {
+    throw new Error('Profile not found');
+  }
+
+  const updatedProfile = await db
+    .update(profilesTable)
+    .set(data)
     .where(eq(profilesTable.uuid, profileUuid))
     .returning();
 

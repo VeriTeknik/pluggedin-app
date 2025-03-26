@@ -4,6 +4,7 @@ import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -12,6 +13,7 @@ import { useThemeLogo } from '@/hooks/use-theme-logo';
 export function LandingHero() {
   const [mounted, setMounted] = useState(false);
   const { logoSrc } = useThemeLogo();
+  const { t } = useTranslation();
 
   // Ensure animations only start after component is mounted
   useEffect(() => {
@@ -44,24 +46,23 @@ export function LandingHero() {
         </div>
         
         <h2 className={`text-3xl font-semibold max-w-2xl transition-all duration-700 delay-200 ease-in-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          The AI Crossroads
+          {t('landing.hero.title')}
         </h2>
         
         <p className={`text-xl text-muted-foreground max-w-2xl transition-all duration-700 delay-300 ease-in-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
-          Connect, create, and extend your AI capabilities with a unified platform.
-          Build and manage plugins that enhance your AI workflows.
+          {t('landing.hero.subtitle')}
         </p>
         
         <div className={`flex gap-4 mt-8 transition-all duration-700 delay-400 ease-in-out ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'}`}>
           <Button asChild size="lg" className="px-6">
             <Link href="/setup-guide">
-              Get Started
+              {t('landing.gettingStarted.action')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button variant="outline" asChild size="lg" className="px-6">
             <Link href="/mcp-playground">
-              Try Playground
+              {t('landing.features.aiPlayground.action')}
             </Link>
           </Button>
         </div>
@@ -70,4 +71,4 @@ export function LandingHero() {
       </div>
     </div>
   );
-} 
+}

@@ -11,7 +11,10 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import { locales } from '@/i18n/config';
 import { enumToPgEnum } from './utils/enum-to-pg-enum';
+
+export const languageEnum = pgEnum('language', locales);
 
 export enum McpServerStatus {
   ACTIVE = 'ACTIVE',
@@ -134,6 +137,7 @@ export const profilesTable = pgTable(
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    language: languageEnum('language').default('en'),
   },
   (table) => [
     index('profiles_project_uuid_idx').on(table.project_uuid)

@@ -7,22 +7,31 @@ import { Project } from '@/types/project';
 const CURRENT_PROJECT_KEY = 'pluggedin-current-project';
 
 export const useProjects = () => {
-  const { data, mutate, isLoading } = useSWR('projects', getProjects);
+  const { data = [], mutate, isLoading } = useSWR('projects', getProjects, {
+    onError: () => []
+  });
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
   // Load saved project on mount
   useEffect(() => {
-    const savedProjectUuid = localStorage.getItem(CURRENT_PROJECT_KEY);
-    if (data?.length) {
-      if (savedProjectUuid) {
-        const savedProject = data.find((p) => p.uuid === savedProjectUuid);
-        if (savedProject) {
-          setCurrentProject(savedProject);
-          return;
+    try {
+      const savedProjectUuid = localStorage.getItem(CURRENT_PROJECT_KEY);
+      if (data?.length) {
+        if (savedProjectUuid) {
+          const savedProject = data.find((p) => p.uuid === savedProjectUuid);
+          if (savedProject) {
+            setCurrentProject(savedProject);
+            return;
+          }
         }
+        // If no saved project or saved project not found, use first project
+        setCurrentProject(data[0]);
+      } else {
+        setCurrentProject(null);
       }
-      // If no saved project or saved project not found, use first project
-      setCurrentProject(data[0]);
+    } catch (error) {
+      console.warn('Failed to load project:', error);
+      setCurrentProject(null);
     }
   }, [data]);
 
@@ -36,7 +45,10 @@ export const useProjects = () => {
       localStorage.removeItem(CURRENT_PROJECT_KEY);
     }
 
-    window.location.reload();
+    // Only reload if we're changing projects while authenticated
+    if (project) {
+      window.location.reload();
+    }
   };
 
   return {

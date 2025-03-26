@@ -2,22 +2,27 @@
 
 import { ArrowRight, Beaker, LogIn, Server, Wrench } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 
 import { Footer } from '@/components/footer';
 import { LandingHero } from '@/components/landing-hero';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { LanguageSwitcher } from '@/components/ui/language-switcher';
 
 export default function Home() {
+  const { t } = useTranslation();
+  
   return (
     <div className="min-h-screen flex flex-col">
       <div className="container mx-auto py-8 space-y-12 flex-grow">
         {/* Navigation */}
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-4 items-center">
+          <LanguageSwitcher />
           <Button asChild variant="outline">
             <Link href="/mcp-servers" className="flex items-center">
               <LogIn className="mr-2 h-4 w-4" />
-              Enter App
+              {t('landing.navigation.enterApp')}
             </Link>
           </Button>
         </div>
@@ -30,18 +35,18 @@ export default function Home() {
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <Server className="h-10 w-10 text-primary mb-4" />
-              <CardTitle>Plugin Management</CardTitle>
+              <CardTitle>{t('landing.features.pluginManagement.title')}</CardTitle>
               <CardDescription>
-                Browse, configure, and manage MCP servers and plugins
+                {t('landing.features.pluginManagement.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Connect various AI tools and services through a unified interface. Configure and manage your plugins from a central dashboard.
+                {t('landing.features.pluginManagement.content')}
               </p>
               <Button variant="outline" asChild className="w-full">
                 <Link href="/mcp-servers">
-                  Browse Plugins
+                  {t('landing.features.pluginManagement.action')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -51,18 +56,18 @@ export default function Home() {
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <Beaker className="h-10 w-10 text-primary mb-4" />
-              <CardTitle>AI Playground</CardTitle>
+              <CardTitle>{t('landing.features.aiPlayground.title')}</CardTitle>
               <CardDescription>
-                Test and experiment with your AI tools in an interactive environment
+                {t('landing.features.aiPlayground.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Experience your plugins in action. The playground allows you to test different configurations and see real-time results.
+                {t('landing.features.aiPlayground.content')}
               </p>
               <Button variant="outline" asChild className="w-full">
                 <Link href="/mcp-playground">
-                  Open Playground
+                  {t('landing.features.aiPlayground.action')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -72,18 +77,18 @@ export default function Home() {
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
               <Wrench className="h-10 w-10 text-primary mb-4" />
-              <CardTitle>Custom Development</CardTitle>
+              <CardTitle>{t('landing.features.customDevelopment.title')}</CardTitle>
               <CardDescription>
-                Create and customize your own MCP servers and tools
+                {t('landing.features.customDevelopment.description')}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">
-                Build custom capabilities using our Python editor and integrated development environment. Extend your AI with specialized functionalities.
+                {t('landing.features.customDevelopment.content')}
               </p>
               <Button variant="outline" asChild className="w-full">
                 <Link href="/custom-mcp-servers">
-                  Create Custom Tools
+                  {t('landing.features.customDevelopment.action')}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
@@ -94,13 +99,13 @@ export default function Home() {
         {/* Getting Started */}
         <section className="border rounded-lg p-8 bg-muted/10">
           <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-4">New to Plugged.in?</h2>
+            <h2 className="text-2xl font-semibold mb-4">{t('landing.gettingStarted.title')}</h2>
             <p className="text-muted-foreground mb-6">
-              Follow our setup guide to get your environment configured properly and start building with Plugged.in right away.
+              {t('landing.gettingStarted.description')}
             </p>
             <Button asChild>
               <Link href="/setup-guide">
-                View Setup Guide
+                {t('landing.gettingStarted.action')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

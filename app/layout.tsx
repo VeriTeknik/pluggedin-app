@@ -3,8 +3,10 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 
+import { I18nProvider } from '@/components/providers/i18n-provider';
 import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Toaster } from '@/components/ui/toaster';
 
 const geistSans = Geist({
@@ -43,10 +45,15 @@ export default function RootLayout({
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
-          <SessionProvider>{children}</SessionProvider>
-          <Toaster />
-        </ThemeProvider>
+        <I18nProvider>
+          <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
+            <SessionProvider>
+              <LanguageSwitcher />
+              {children}
+            </SessionProvider>
+            <Toaster />
+          </ThemeProvider>
+        </I18nProvider>
       </body>
     </html>
   );
