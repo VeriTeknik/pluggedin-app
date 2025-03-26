@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import { useEffect, useState } from 'react';
+
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 
 export default function AuthLayout({

@@ -42,9 +42,8 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
-import { useToast } from '@/hooks/use-toast';
-import { useTheme } from '@/components/providers/theme-provider';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
+import { useToast } from '@/hooks/use-toast';
 
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';

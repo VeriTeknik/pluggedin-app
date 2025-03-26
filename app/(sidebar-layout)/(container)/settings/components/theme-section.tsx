@@ -1,14 +1,15 @@
 "use client";
 
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
+
 import { useTheme } from "@/components/providers/theme-provider";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { FontFamily, fontFamilies, setFont } from "@/lib/font-utils";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { fontFamilies, FontFamily, setFont } from "@/lib/font-utils";
 
 type Theme = "light" | "dark" | "system";
 

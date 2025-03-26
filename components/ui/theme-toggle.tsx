@@ -1,5 +1,7 @@
 "use client";
 
+import { Monitor,Moon, Sun } from "lucide-react";
+
 import { useTheme } from "@/components/providers/theme-provider";
 import { Button } from "@/components/ui/button";
 import { 
@@ -8,7 +10,6 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { Moon, Sun, Monitor } from "lucide-react";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();

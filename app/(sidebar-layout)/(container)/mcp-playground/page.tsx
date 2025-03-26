@@ -1,5 +1,6 @@
 'use client';
 
+// import { McpToolsLogger } from '@h1deya/langchain-mcp-tools';
 import {
   Activity,
   Code,
@@ -13,18 +14,21 @@ import {
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
-import { McpToolsLogger } from '@h1deya/langchain-mcp-tools';
 
 import {
   endPlaygroundSession,
   executePlaygroundQuery,
   getOrCreatePlaygroundSession,
-  getServerLogs,
 } from '@/app/actions/mcp-playground';
 import {
   getMcpServers,
   toggleMcpServerStatus,
 } from '@/app/actions/mcp-servers';
+import {
+  getPlaygroundSettings,
+  type PlaygroundSettings,
+  updatePlaygroundSettings,
+} from '@/app/actions/playground-settings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -59,15 +63,11 @@ import { McpServerStatus } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 import { McpServer } from '@/types/mcp-server';
-import {
-  getPlaygroundSettings,
-  updatePlaygroundSettings,
-  type PlaygroundSettings,
-} from '@/app/actions/playground-settings';
 
 // Define log level type
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
+/*
 // Custom logger class for MCP tools (now used only for local UI display)
 class ClientLogger implements McpToolsLogger {
   constructor(
@@ -109,6 +109,7 @@ class ClientLogger implements McpToolsLogger {
     }
   }
 }
+*/
 
 export default function McpPlaygroundPage() {
   const { toast } = useToast();
@@ -172,7 +173,7 @@ export default function McpPlaygroundPage() {
   >([]);
   
   // Last processed server log timestamp
-  const [lastServerLogTimestamp, setLastServerLogTimestamp] = useState<Date | null>(null);
+  // const [lastServerLogTimestamp, setLastServerLogTimestamp] = useState<Date | null>(null);
 
   // Auto scroll to bottom of messages and logs
   useEffect(() => {
@@ -244,7 +245,6 @@ export default function McpPlaygroundPage() {
               new Date(log.timestamp) > lastServerLogTimestamp
             );
           }
-          
           if (newLogs.length > 0) {
             // Process new logs, sort them by timestamp to ensure correct order
             const sortedNewLogs = [...newLogs].sort((a, b) => 
@@ -331,7 +331,7 @@ export default function McpPlaygroundPage() {
     
     // Reset server logs
     setServerLogs([]);
-    setLastServerLogTimestamp(null);
+    // setLastServerLogTimestamp(null);
 
     // Filter only ACTIVE servers
     const activeServerUuids = mcpServers
@@ -435,7 +435,7 @@ export default function McpPlaygroundPage() {
         setIsSessionActive(false);
         // Reset server logs state when session ends
         setServerLogs([]);
-        setLastServerLogTimestamp(null);
+        // setLastServerLogTimestamp(null);
         addLog('connection', 'MCP playground session ended successfully.');
         toast({
           title: 'Success',

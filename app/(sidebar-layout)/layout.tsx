@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { initializeFont } from '@/lib/font-utils';
+
 import SidebarLayout from '@/components/sidebar-layout';
+import { initializeFont } from '@/lib/font-utils';
 
 export default function LoggedInLayout({
   children,
