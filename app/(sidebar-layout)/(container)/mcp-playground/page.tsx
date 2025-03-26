@@ -223,6 +223,7 @@ export default function McpPlaygroundPage() {
     ]);
   };
   
+  /*
   // Poll for server logs when session is active
   useEffect(() => {
     if (!isSessionActive || !profileUuid) return;
@@ -275,6 +276,7 @@ export default function McpPlaygroundPage() {
     
     return () => clearInterval(interval);
   }, [isSessionActive, profileUuid, lastServerLogTimestamp]);
+  */
 
   // Fetch MCP servers
   const {
@@ -574,20 +576,34 @@ export default function McpPlaygroundPage() {
     }
   };
 
+  // Effect to sync logLevel with llmConfig
+  useEffect(() => {
+    setLogLevel(llmConfig.logLevel);
+  }, [llmConfig.logLevel]);
+
+  // Effect to sync llmConfig with logLevel
+  useEffect(() => {
+    setLlmConfig(prev => ({
+      ...prev,
+      logLevel: logLevel
+    }));
+  }, [logLevel]);
+
   // Add effect to load settings
   useEffect(() => {
     const loadSettings = async () => {
       if (!profileUuid) return;
 
       const result = await getPlaygroundSettings(profileUuid);
-      if (result.success && result.data) {
+      if (result.success && result.settings) {
         setLlmConfig({
-          provider: result.data.provider,
-          model: result.data.model,
-          temperature: result.data.temperature,
-          maxTokens: result.data.maxTokens,
-          logLevel: result.data.logLevel,
+          provider: result.settings.provider,
+          model: result.settings.model,
+          temperature: result.settings.temperature,
+          maxTokens: result.settings.maxTokens,
+          logLevel: result.settings.logLevel,
         });
+        setLogLevel(result.settings.logLevel);
       }
     };
 
@@ -598,23 +614,38 @@ export default function McpPlaygroundPage() {
   const saveSettings = async () => {
     if (!profileUuid) return;
 
-    const result = await updatePlaygroundSettings(profileUuid, {
-      provider: llmConfig.provider,
-      model: llmConfig.model,
-      temperature: llmConfig.temperature,
-      maxTokens: llmConfig.maxTokens,
-      logLevel: llmConfig.logLevel,
-    });
+    try {
+      addLog('info', 'Saving playground settings...');
+      addLog('info', `Config: ${JSON.stringify(llmConfig, null, 2)}`);
 
-    if (result.success) {
-      toast({
-        title: 'Settings saved',
-        description: 'Your playground settings have been saved successfully.',
+      const result = await updatePlaygroundSettings(profileUuid, {
+        provider: llmConfig.provider,
+        model: llmConfig.model,
+        temperature: llmConfig.temperature,
+        maxTokens: llmConfig.maxTokens,
+        logLevel: llmConfig.logLevel,
       });
-    } else {
+
+      if (result.success) {
+        addLog('info', 'Settings saved successfully');
+        toast({
+          title: 'Settings saved',
+          description: 'Your playground settings have been saved successfully.',
+        });
+      } else {
+        addLog('error', `Failed to save settings: ${result.error || 'Unknown error'}`);
+        toast({
+          title: 'Error saving settings',
+          description: result.error || 'An unknown error occurred.',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      addLog('error', `Exception saving settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
       toast({
-        title: 'Error saving settings',
-        description: result.error || 'An unknown error occurred.',
+        title: 'Error',
+        description: 'An unexpected error occurred while saving settings.',
         variant: 'destructive',
       });
     }
@@ -868,7 +899,7 @@ export default function McpPlaygroundPage() {
                       onClick={saveSettings}
                       disabled={isSessionActive}>
                       <Save className='mr-2 h-4 w-4' />
-                      Save Settings
+                      Save
                     </Button>
                   </div>
 
@@ -1012,9 +1043,9 @@ export default function McpPlaygroundPage() {
                         Log Level
                       </Label>
                       <Select
-                        value={llmConfig.logLevel}
+                        value={logLevel}
                         onValueChange={(value) =>
-                          setLlmConfig({ ...llmConfig, logLevel: value as 'debug' | 'info' | 'warn' | 'error' })
+                          setLogLevel(value as LogLevel)
                         }
                         disabled={isSessionActive}>
                         <SelectTrigger className='mt-1.5'>
@@ -1044,7 +1075,7 @@ export default function McpPlaygroundPage() {
                         disabled={isSessionActive}
                         className='h-7 text-xs'>
                         <Save className='h-3 w-3 mr-1' />
-                        Save Settings
+                        Save
                       </Button>
                       {(clientLogs.length > 0 || serverLogs.length > 0) && (
                         <Button
@@ -1209,13 +1240,7 @@ export default function McpPlaygroundPage() {
                           ))
                       )}
                       
-                      {/* Live indicator when session is active */}
-                      {isSessionActive && (
-                        <div className='flex items-center text-muted-foreground mt-2'>
-                          <div className='h-1.5 w-1.5 rounded-full bg-green-500 mr-2 animate-pulse'></div>
-                          <span className='text-xs italic'>Streaming logs...</span>
-                        </div>
-                      )}
+                      
                       
                       <div ref={logsEndRef} />
                     </div>

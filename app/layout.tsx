@@ -41,6 +41,7 @@ export default function RootLayout({
       <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;500;600;700&display=swap" />
       </head>
       <body
+        suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
           <SessionProvider>{children}</SessionProvider>
