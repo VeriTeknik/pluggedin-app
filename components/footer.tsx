@@ -1,0 +1,103 @@
+'use client';
+
+import { HeartIcon } from 'lucide-react';
+import Link from 'next/link';
+
+import { Separator } from '@/components/ui/separator';
+import { cn } from '@/lib/utils';
+import { useThemeLogo } from '@/hooks/use-theme-logo';
+import Image from 'next/image';
+
+export function Footer({ className }: { className?: string }) {
+  const { logoSrc } = useThemeLogo();
+  const year = new Date().getFullYear();
+
+  return (
+    <footer className={cn('w-full mt-auto py-6', className)}>
+      <div className="container px-4 md:px-6">
+        <Separator className="mb-6" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Image src={logoSrc} alt="Plugged.in Logo" width={32} height={32} />
+              <span className="text-lg font-semibold">Plugged.in</span>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              The AI Crossroads. <br />
+              Connect, create, and extend your AI capabilities.
+            </p>
+          </div>
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">Resources</h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/setup-guide" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Setup Guide
+                </Link>
+              </li>
+              <li>
+                <Link href="/mcp-playground" className="text-muted-foreground hover:text-foreground transition-colors">
+                  MCP Playground
+                </Link>
+              </li>
+              <li>
+                <Link href="/mcp-servers" className="text-muted-foreground hover:text-foreground transition-colors">
+                  MCP Servers
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">Legal</h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/legal/privacy-policy" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/legal/terms-of-service" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Terms of Service
+                </Link>
+              </li>
+              <li>
+                <Link href="/legal/disclaimer" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Disclaimer
+                </Link>
+              </li>
+            </ul>
+          </div>
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm">Contact</h4>
+            <ul className="space-y-2 text-sm">
+              <li>
+                <Link href="/legal/contact" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Contact Us
+                </Link>
+              </li>
+              <li>
+                <a 
+                  href="https://github.com/pluggedin-app" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  GitHub
+                </a>
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div className="mt-6 text-center">
+          <p className="text-xs text-muted-foreground">
+            {/* Add a "Release Candidate" badge */}
+            <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-medium mr-2">
+              Release Candidate
+            </span>
+            &copy; {year} Plugged.in. All rights reserved.
+          </p>
+        </div>
+      </div>
+    </footer>
+  );
+} 

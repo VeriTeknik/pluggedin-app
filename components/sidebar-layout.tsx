@@ -8,6 +8,7 @@ import {
   Search,
   Server,
   Trash2,
+  FileText,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -158,6 +159,14 @@ export default function SidebarLayout({
                       <Link href='/api-keys'>
                         <Key className='mr-2 h-4 w-4' />
                         <span>API Keys</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/legal'>
+                        <FileText className='mr-2 h-4 w-4' />
+                        <span>Legal</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
