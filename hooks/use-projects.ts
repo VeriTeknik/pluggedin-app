@@ -1,24 +1,49 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { getProjects } from '@/app/actions/projects';
+import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 
 const CURRENT_PROJECT_KEY = 'pluggedin-current-project';
 
 export const useProjects = () => {
+  const { t } = useTranslation();
+  const { toast } = useToast();
   const { data = [], mutate, isLoading } = useSWR('projects', getProjects, {
     onError: (error) => {
-      if (error?.message?.includes('User not found in database')) {
+      // Handle session-related errors
+      if (
+        error?.message?.includes('User not found in database') ||
+        error?.message?.includes('Unauthorized') ||
+        error?.message?.includes('Session expired') ||
+        error?.message?.toLowerCase().includes('session') ||
+        error?.message?.toLowerCase().includes('auth')
+      ) {
+        // Show toast notification
+        toast({
+          title: t('common.error'),
+          description: t('common.errors.unexpected'),
+          variant: 'destructive',
+        });
+
         // Clear any session data
         localStorage.clear();
         sessionStorage.clear();
         
-        // Redirect to logout
+        // Redirect to logout for proper cleanup
         window.location.href = '/logout';
         return [];
       }
+
+      // Handle other errors
       console.error('Projects error:', error);
+      toast({
+        title: t('common.error'),
+        description: error?.message || t('common.errors.unexpected'),
+        variant: 'destructive',
+      });
       return [];
     }
   });

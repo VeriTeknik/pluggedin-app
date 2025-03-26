@@ -3,26 +3,21 @@
 import { ArrowRight, Monitor, Moon, Sun } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/components/providers/theme-provider';
 import { Button } from '@/components/ui/button';
 import { Glow } from '@/components/ui/glow';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
+import { useMounted } from '@/hooks/use-mounted';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { cn } from '@/lib/utils';
 
 export function LandingHero() {
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const { logoSrc } = useThemeLogo();
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
-
-  // Ensure animations only start after component is mounted
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Theme options for the enhanced theme selector
   const themeOptions = [

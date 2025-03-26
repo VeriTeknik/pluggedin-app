@@ -19,26 +19,29 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/components/ui/use-toast';
 
-const createLoginSchema = (t: (key: string) => string) => z.object({
+// Type for the translation function that supports interpolation
+type TranslationFunction = (key: string, options?: { count?: number }) => string;
+
+const createLoginSchema = (t: TranslationFunction) => z.object({
   email: z.string().email({ message: t('common.validation.email') }),
-  password: z.string().min(8, { message: t('common.validation.minLength') }),
+  password: z.string().min(8, { message: t('common.validation.minLength', { count: 8 }) }),
 });
 
-const createRegisterSchema = (t: (key: string) => string) => createLoginSchema(t).extend({
-  name: z.string().min(2, { message: t('common.validation.minLength') }),
-  password_confirm: z.string().min(8, { message: t('common.validation.minLength') }),
+const createRegisterSchema = (t: TranslationFunction) => createLoginSchema(t).extend({
+  name: z.string().min(2, { message: t('common.validation.minLength', { count: 2 }) }),
+  password_confirm: z.string().min(8, { message: t('common.validation.minLength', { count: 8 }) }),
 }).refine((data) => data.password === data.password_confirm, {
   message: t('common.validation.passwordMatch'),
   path: ['password_confirm'],
 });
 
-const createForgotPasswordSchema = (t: (key: string) => string) => z.object({
+const createForgotPasswordSchema = (t: TranslationFunction) => z.object({
   email: z.string().email({ message: t('common.validation.email') }),
 });
 
-const createResetPasswordSchema = (t: (key: string) => string) => z.object({
-  password: z.string().min(8, { message: t('common.validation.minLength') }),
-  password_confirm: z.string().min(8, { message: t('common.validation.minLength') }),
+const createResetPasswordSchema = (t: TranslationFunction) => z.object({
+  password: z.string().min(8, { message: t('common.validation.minLength', { count: 8 }) }),
+  password_confirm: z.string().min(8, { message: t('common.validation.minLength', { count: 8 }) }),
 }).refine((data) => data.password === data.password_confirm, {
   message: t('common.validation.passwordMatch'),
   path: ['password_confirm'],

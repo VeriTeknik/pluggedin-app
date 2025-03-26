@@ -1,10 +1,10 @@
 'use client';
 
 import { Globe } from 'lucide-react';
-import { useEffect, useState } from 'react';
 
 import { useLanguage } from '@/hooks/use-language';
-import { type Locale,localeNames } from '@/i18n/config';
+import { useMounted } from '@/hooks/use-mounted';
+import { type Locale, localeNames } from '@/i18n/config';
 
 import { Button } from './button';
 import {
@@ -21,11 +21,7 @@ const languageFlags: Record<Locale, string> = {
 
 export function LanguageSwitcher() {
   const { currentLanguage, setLanguage } = useLanguage();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   // Don't render anything until mounted to prevent hydration mismatch
   if (!mounted) {

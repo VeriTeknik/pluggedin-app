@@ -13,6 +13,12 @@ export default function AuthLayout({
   const { logoSrc } = useThemeLogo();
   const [mounted, setMounted] = useState(false);
 
+  // Define logo dimensions to keep Image and placeholder in sync
+  const desktopLogoWidth = 200;
+  const desktopLogoHeight = 100;
+  const mobileLogoWidth = 150;
+  const mobileLogoHeight = 75;
+
   // Ensure correct theme is applied after mount
   useEffect(() => {
     setMounted(true);
@@ -26,12 +32,18 @@ export default function AuthLayout({
             <Image
               src={logoSrc}
               alt="Plugged.in Logo"
-              width={200}
-              height={100}
+              width={desktopLogoWidth}
+              height={desktopLogoHeight}
               className="mx-auto"
             />
           ) : (
-            <div className="h-[100px] w-[200px] mx-auto" /> // Placeholder while not mounted
+            <div 
+              style={{ 
+                width: `${desktopLogoWidth}px`, 
+                height: `${desktopLogoHeight}px` 
+              }} 
+              className="mx-auto" 
+            /> // Placeholder while not mounted
           )}
           
           <p className="text-center mt-2 text-muted-foreground">
@@ -46,11 +58,18 @@ export default function AuthLayout({
               <Image
                 src={logoSrc}
                 alt="Plugged.in Logo"
-                width={150}
-                height={75}
+                width={mobileLogoWidth}
+                height={mobileLogoHeight}
+                className="mx-auto"
               />
             ) : (
-              <div className="h-[75px] w-[150px]" /> // Placeholder while not mounted
+              <div 
+                style={{ 
+                  width: `${mobileLogoWidth}px`, 
+                  height: `${mobileLogoHeight}px` 
+                }} 
+                className="mx-auto" 
+              /> // Placeholder while not mounted
             )}
           </div>
           {children}

@@ -1,20 +1,24 @@
 'use client';
 
-import { useTranslation } from 'react-i18next';
-import { useProfiles } from '@/hooks/use-profiles';
-import { isRTL, type Locale } from '@/i18n/config';
 import { useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { isRTL, type Locale } from '@/i18n/config';
 
 class LanguageStorage {
   private static readonly LANGUAGE_KEY = 'pluggedin_language';
   
   static getStoredLanguage(): string | null {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === 'undefined') {
+      return null;
+    }
     return localStorage.getItem(this.LANGUAGE_KEY);
   }
 
   static setStoredLanguage(language: string): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') {
+      return;
+    }
     localStorage.setItem(this.LANGUAGE_KEY, language);
   }
 }

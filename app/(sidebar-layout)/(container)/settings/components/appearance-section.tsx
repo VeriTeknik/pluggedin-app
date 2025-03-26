@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useTheme } from '@/components/providers/theme-provider';
@@ -20,15 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useMounted } from '@/hooks/use-mounted';
 
 export function AppearanceSection() {
   const { t } = useTranslation();
   const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useMounted();
 
   if (!mounted) {
     return null;

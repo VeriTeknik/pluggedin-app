@@ -12,7 +12,13 @@ export default function LoggedInLayout({
 }>) {
   // Initialize font from localStorage on component mount
   useEffect(() => {
-    initializeFont();
+    if (typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(() => {
+        initializeFont();
+      });
+    } else {
+      initializeFont();
+    }
   }, []);
 
   return <SidebarLayout>{children}</SidebarLayout>;
