@@ -5,6 +5,7 @@ import {
   Code,
   Play,
   Power,
+  Save,
   Send,
   Server,
   Settings,
@@ -58,6 +59,11 @@ import { McpServerStatus } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 import { McpServer } from '@/types/mcp-server';
+import {
+  getPlaygroundSettings,
+  updatePlaygroundSettings,
+  type PlaygroundSettings,
+} from '@/app/actions/playground-settings';
 
 // Define log level type
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
@@ -118,11 +124,12 @@ export default function McpPlaygroundPage() {
   const [logLevel, setLogLevel] = useState<LogLevel>('info');
 
   // State for LLM configuration
-  const [llmConfig, setLlmConfig] = useState({
+  const [llmConfig, setLlmConfig] = useState<PlaygroundSettings>({
     provider: 'anthropic',
     model: 'claude-3-7-sonnet-20250219',
     temperature: 0,
     maxTokens: 1000,
+    logLevel: 'info',
   });
 
   // State for selected servers (will now use active servers instead of selection)
@@ -567,6 +574,52 @@ export default function McpPlaygroundPage() {
     }
   };
 
+  // Add effect to load settings
+  useEffect(() => {
+    const loadSettings = async () => {
+      if (!profileUuid) return;
+
+      const result = await getPlaygroundSettings(profileUuid);
+      if (result.success && result.data) {
+        setLlmConfig({
+          provider: result.data.provider,
+          model: result.data.model,
+          temperature: result.data.temperature,
+          maxTokens: result.data.maxTokens,
+          logLevel: result.data.logLevel,
+        });
+      }
+    };
+
+    loadSettings();
+  }, [profileUuid]);
+
+  // Add save settings function
+  const saveSettings = async () => {
+    if (!profileUuid) return;
+
+    const result = await updatePlaygroundSettings(profileUuid, {
+      provider: llmConfig.provider,
+      model: llmConfig.model,
+      temperature: llmConfig.temperature,
+      maxTokens: llmConfig.maxTokens,
+      logLevel: llmConfig.logLevel,
+    });
+
+    if (result.success) {
+      toast({
+        title: 'Settings saved',
+        description: 'Your playground settings have been saved successfully.',
+      });
+    } else {
+      toast({
+        title: 'Error saving settings',
+        description: result.error || 'An unknown error occurred.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className='container mx-auto py-6 space-y-6'>
       {/* Hero Section */}
@@ -798,21 +851,25 @@ export default function McpPlaygroundPage() {
                   )}
                 </TabsContent>
                 <TabsContent value='llm' className='space-y-4 mt-4'>
-                  <div className='bg-muted/30 p-4 rounded-lg mb-2'>
-                    <div className='text-sm font-medium mb-2'>
-                      Selected Model
-                    </div>
-                    <div className='flex items-center'>
-                      <Badge className='bg-primary/10 text-primary border-primary/20 py-1.5 px-3'>
-                        {llmConfig.provider === 'anthropic'
-                          ? 'Anthropic'
-                          : 'OpenAI'}
-                      </Badge>
-                      <Separator orientation='vertical' className='mx-3 h-5' />
-                      <div className='text-sm font-medium'>
-                        {llmConfig.model}
+                  <div className='flex items-center justify-between mb-4'>
+                    <div className='bg-muted/30 p-4 rounded-lg flex-1'>
+                      <div className='text-sm font-medium mb-2'>Selected Model</div>
+                      <div className='flex items-center'>
+                        <Badge className='bg-primary/10 text-primary border-primary/20 py-1.5 px-3'>
+                          {llmConfig.provider === 'anthropic' ? 'Anthropic' : 'OpenAI'}
+                        </Badge>
+                        <Separator orientation='vertical' className='mx-3 h-5' />
+                        <div className='text-sm font-medium'>{llmConfig.model}</div>
                       </div>
                     </div>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={saveSettings}
+                      disabled={isSessionActive}>
+                      <Save className='mr-2 h-4 w-4' />
+                      Save Settings
+                    </Button>
                   </div>
 
                   <div className='space-y-4'>
@@ -823,7 +880,7 @@ export default function McpPlaygroundPage() {
                       <Select
                         value={llmConfig.provider}
                         onValueChange={(value) =>
-                          setLlmConfig({ ...llmConfig, provider: value })
+                          setLlmConfig({ ...llmConfig, provider: value as 'anthropic' | 'openai' })
                         }
                         disabled={isSessionActive}>
                         <SelectTrigger className='mt-1.5'>
@@ -949,15 +1006,46 @@ export default function McpPlaygroundPage() {
                         className='mt-1.5'
                       />
                     </div>
+
+                    <div>
+                      <Label htmlFor='logLevel' className='text-sm font-medium'>
+                        Log Level
+                      </Label>
+                      <Select
+                        value={llmConfig.logLevel}
+                        onValueChange={(value) =>
+                          setLlmConfig({ ...llmConfig, logLevel: value as 'debug' | 'info' | 'warn' | 'error' })
+                        }
+                        disabled={isSessionActive}>
+                        <SelectTrigger className='mt-1.5'>
+                          <SelectValue placeholder='Select log level' />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value='debug'>Debug</SelectItem>
+                          <SelectItem value='info'>Info</SelectItem>
+                          <SelectItem value='warn'>Warn</SelectItem>
+                          <SelectItem value='error'>Error</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </TabsContent>
                 <TabsContent value='logs' className='space-y-4 mt-4'>
-                  <div className='mb-2 flex items-center justify-between'>
+                  <div className='flex items-center justify-between mb-4'>
                     <div className='text-sm font-medium flex items-center'>
                       <Terminal className='w-4 h-4 mr-1.5' />
                       MCP Client Logs
                     </div>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant='outline'
+                        size='sm'
+                        onClick={saveSettings}
+                        disabled={isSessionActive}
+                        className='h-7 text-xs'>
+                        <Save className='h-3 w-3 mr-1' />
+                        Save Settings
+                      </Button>
                       {(clientLogs.length > 0 || serverLogs.length > 0) && (
                         <Button
                           variant='ghost'
