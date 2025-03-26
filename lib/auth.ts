@@ -10,6 +10,13 @@ import EmailProvider from 'next-auth/providers/email';
 import GithubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 
+// Extend the User type to include emailVerified
+declare module 'next-auth' {
+  interface User {
+    emailVerified?: Date | null;
+  }
+}
+
 import { db } from '@/db';
 import { accounts, profilesTable, projectsTable, sessions, users, verificationTokens } from '@/db/schema';
 
@@ -186,6 +193,7 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
             email: user.email,
             image: user.image,
+            emailVerified: user.emailVerified,
           };
         } catch (error) {
           console.error('Auth error:', error);
@@ -291,6 +299,7 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name || '';
         session.user.email = token.email || '';
         session.user.image = token.picture;
+        session.user.emailVerified = token.emailVerified;
       }
 
       return session;
@@ -299,13 +308,15 @@ export const authOptions: NextAuthOptions = {
       const dbUser = user ? { 
         id: user.id, 
         name: user.name || '', 
-        email: user.email || '' 
+        email: user.email || '',
+        emailVerified: user.emailVerified
       } : undefined;
 
       if (dbUser) {
         token.id = dbUser.id;
         token.name = dbUser.name;
         token.email = dbUser.email;
+        token.emailVerified = dbUser.emailVerified;
       }
 
       return token;
@@ -325,6 +336,7 @@ declare module 'next-auth' {
       name: string;
       email: string;
       image?: string;
+      emailVerified?: Date | null;
     };
   }
 }
@@ -335,5 +347,6 @@ declare module 'next-auth/jwt' {
     name: string;
     email: string;
     picture?: string;
+    emailVerified?: Date | null;
   }
 }

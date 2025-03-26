@@ -1,5 +1,6 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
 import { useEffect, useState } from 'react';
@@ -14,6 +15,7 @@ import { PaginationUi } from './components/PaginationUi';
 const PAGE_SIZE = 6;
 
 function SearchContent() {
+  const { t } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
   const query = searchParams.get('query') || '';
@@ -59,11 +61,14 @@ function SearchContent() {
   return (
     <div className='container mx-auto py-8 space-y-6 flex flex-col items-center'>
       <h1 className='text-2xl font-bold'>
-        Explore & Search MCP Servers (Beta)
+        {t('search.title')}
       </h1>
+      <p className='text-muted-foreground text-center'>
+        {t('search.subtitle')}
+      </p>
       <Input
         type='search'
-        placeholder='Search...'
+        placeholder={t('search.input.placeholder')}
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className='max-w-xl mx-auto'
@@ -83,8 +88,9 @@ function SearchContent() {
 }
 
 export default function SearchPage() {
+  const { t } = useTranslation();
   return (
-    <Suspense fallback={<div>Loading search...</div>}>
+    <Suspense fallback={<div>{t('search.loading')}</div>}>
       <SearchContent />
     </Suspense>
   );

@@ -8,8 +8,11 @@ import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Github, Mail } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 
 export default function ContactPage() {
+  const { t } = useTranslation();
+  
   return (
     <div className="flex flex-col space-y-6 p-6">
       <div className="flex flex-col space-y-2">
@@ -17,24 +20,24 @@ export default function ContactPage() {
           <Button asChild variant="ghost" size="icon" className="h-8 w-8">
             <Link href="/legal">
               <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Back to Legal</span>
+              <span className="sr-only">{t('legal.backToLegal')}</span>
             </Link>
           </Button>
-          <h1 className="text-3xl font-bold">Contact Us</h1>
+          <h1 className="text-3xl font-bold">{t('legal.pages.contact.title')}</h1>
         </div>
         <p className="text-muted-foreground">
-          Get in touch with the Plugged.in team
+          {t('legal.pages.contact.description')}
         </p>
-        <p className="text-xs text-muted-foreground">Last updated: March 26, 2024</p>
+        <p className="text-xs text-muted-foreground">{t('legal.lastUpdated')}: March 26, 2024</p>
         <Separator className="my-4" />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Contact Information</CardTitle>
+            <CardTitle>{t('legal.pages.contact.content.title')}</CardTitle>
             <CardDescription>
-              Ways to reach the Plugged.in team
+              {t('legal.pages.contact.content.description')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -152,4 +155,4 @@ export default function ContactPage() {
       </Card>
     </div>
   );
-} 
+}

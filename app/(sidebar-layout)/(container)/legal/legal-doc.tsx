@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 
 interface LegalDocProps {
   title: string;
@@ -15,6 +16,8 @@ interface LegalDocProps {
 }
 
 export function LegalDoc({ title, description, lastUpdated, children }: LegalDocProps) {
+  const { t } = useTranslation();
+  
   return (
     <div className="flex flex-col space-y-6 p-6">
       <div className="flex flex-col space-y-2">
@@ -22,7 +25,7 @@ export function LegalDoc({ title, description, lastUpdated, children }: LegalDoc
           <Button asChild variant="ghost" size="icon" className="h-8 w-8">
             <Link href="/legal">
               <ArrowLeft className="h-4 w-4" />
-              <span className="sr-only">Back to Legal</span>
+              <span className="sr-only">{t('legal.backToLegal')}</span>
             </Link>
           </Button>
           <h1 className="text-3xl font-bold">{title}</h1>
@@ -31,7 +34,7 @@ export function LegalDoc({ title, description, lastUpdated, children }: LegalDoc
           <p className="text-muted-foreground">{description}</p>
         )}
         {lastUpdated && (
-          <p className="text-xs text-muted-foreground">Last updated: {lastUpdated}</p>
+          <p className="text-xs text-muted-foreground">{t('legal.lastUpdated')}: {lastUpdated}</p>
         )}
         <Separator className="my-4" />
       </div>
@@ -45,4 +48,4 @@ export function LegalDoc({ title, description, lastUpdated, children }: LegalDoc
       </Card>
     </div>
   );
-} 
+}

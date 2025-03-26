@@ -1,14 +1,21 @@
 'use client';
 
 import { LegalDoc } from '../legal-doc';
+import { useTranslation } from 'react-i18next';
+import Link from 'next/link';
 
 export default function DisclaimerPage() {
+  const { t } = useTranslation();
+  
   return (
     <LegalDoc 
-      title="Disclaimer and Limitation of Liability" 
-      description="Important legal notices for Plugged.in"
+      title={t('legal.pages.disclaimer.title')}
+      description={t('legal.pages.disclaimer.description')}
       lastUpdated="March 26, 2024"
     >
+      <h2>{t('legal.pages.disclaimer.content.title')}</h2>
+      <p>{t('legal.pages.disclaimer.content.thirdParty')}</p>
+
       <h2>Release Candidate Status</h2>
       <p>
         <strong>IMPORTANT:</strong> Plugged.in is currently in Release Candidate status. This means that 
@@ -75,53 +82,16 @@ export default function DisclaimerPage() {
         FROM YOUR USE OF THE SERVICE. YOU USE THE RELEASE CANDIDATE AT YOUR OWN RISK.
       </p>
 
-      <h2>MCP Servers and Tools Disclaimer</h2>
-      <p>
-        Plugged.in provides a platform for managing Model Context Protocol (MCP) servers and tools. We do not 
-        control or endorse the content, messages, or information found in these tools or servers. We specifically 
-        disclaim any liability with regard to these tools and servers and any actions resulting from your 
-        participation in using them.
-      </p>
-      <p>
-        You are solely responsible for any MCP servers you configure, deploy, or interact with through our service. 
-        We accept no responsibility for any consequences that may result from your use of such servers or tools.
-      </p>
+      <h2>Third-Party Services</h2>
+      <p>{t('legal.pages.disclaimer.content.thirdParty')}</p>
 
-      <h2>Third-Party Links</h2>
-      <p>
-        The service may contain links to third-party websites or services that are not owned or controlled by us. 
-        We have no control over, and assume no responsibility for, the content, privacy policies, or practices of 
-        any third-party websites or services. You acknowledge and agree that we shall not be responsible or liable, 
-        directly or indirectly, for any damage or loss caused or alleged to be caused by or in connection with the 
-        use of or reliance on any such content, goods, or services available on or through any such websites or services.
-      </p>
-
-      <h2>Modification and Discontinuation</h2>
-      <p>
-        We reserve the right to modify, suspend, or discontinue the service (or any part thereof) at any time, with 
-        or without notice. We will not be liable to you or to any third party for any modification, suspension, or 
-        discontinuation of the service.
-      </p>
-      <p>
-        During the Release Candidate phase, features may be added, modified, or removed without prior notice as part 
-        of the development process.
-      </p>
-
-      <h2>Indemnification</h2>
-      <p>
-        You agree to defend, indemnify, and hold harmless us, our affiliates, and their respective officers, directors, 
-        employees, and agents from and against any and all claims, damages, obligations, losses, liabilities, costs or 
-        debt, and expenses (including but not limited to attorney's fees) arising from your use of and access to the 
-        service.
-      </p>
-
-      <h2>Contact Us</h2>
-      <p>
-        If you have any questions about this Disclaimer, please contact us:
-      </p>
+      <h2>{t('legal.pages.contact.title')}</h2>
+      <p>{t('legal.pages.contact.content.description')}</p>
       <ul>
-        <li>By visiting the <a href="/legal/contact">Contact page</a></li>
+        <li>
+          <Link href="/legal/contact">{t('legal.pages.contact.title')}</Link>
+        </li>
       </ul>
     </LegalDoc>
   );
-} 
+}

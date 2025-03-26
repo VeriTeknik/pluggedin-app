@@ -1,17 +1,31 @@
-'use client';
+import { getAuthSession } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { SettingsForm } from './components/settings-form';
+import { getConnectedAccounts } from './actions';
 
-import { CurrentProfileSection } from './components/current-profile-section';
-import { CurrentProjectSection } from './components/current-project-section';
-import { ThemeSection } from './components/theme-section';
+export default async function SettingsPage() {
+  const session = await getAuthSession();
 
-export default function SettingsPage() {
+  if (!session?.user) {
+    redirect('/login');
+  }
+
+  const connectedAccounts = await getConnectedAccounts(session.user.id);
+
   return (
-    <div>
-      <h1 className='text-2xl font-bold mb-6'>Settings</h1>
-      <div className='space-y-8'>
-        <CurrentProfileSection />
-        <CurrentProjectSection />
-        <ThemeSection />
+    <div className="container mx-auto py-10">
+      <div className="max-w-2xl mx-auto">
+        <h1 className="text-3xl font-bold mb-8">Settings</h1>
+        <SettingsForm 
+          user={{
+            id: session.user.id,
+            name: session.user.name,
+            email: session.user.email,
+            image: session.user.image,
+            emailVerified: session.user.emailVerified,
+          }}
+          connectedAccounts={connectedAccounts}
+        />
       </div>
     </div>
   );

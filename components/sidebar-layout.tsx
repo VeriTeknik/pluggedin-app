@@ -7,6 +7,7 @@ import {
   Plus,
   Search,
   Server,
+  Settings,
   Trash2,
   FileText,
 } from 'lucide-react';
@@ -159,6 +160,14 @@ export default function SidebarLayout({
                       <Link href='/api-keys'>
                         <Key className='mr-2 h-4 w-4' />
                         <span>API Keys</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/settings'>
+                        <Settings className='mr-2 h-4 w-4' />
+                        <span>Settings</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
