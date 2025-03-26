@@ -6,19 +6,12 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useTheme } from '@/components/providers/theme-provider';
 import { Button } from '@/components/ui/button';
+import { Glow } from '@/components/ui/glow';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
-import { useTheme } from '@/components/providers/theme-provider';
 import { cn } from '@/lib/utils';
-import { Glow } from '@/components/ui/glow';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 
 export function LandingHero() {
   const [mounted, setMounted] = useState(false);
