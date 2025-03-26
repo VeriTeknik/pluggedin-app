@@ -14,11 +14,11 @@ export function Footer({ className }: { className?: string }) {
 
   return (
     <footer className={cn('w-full mt-auto py-6', className)}>
-      <div className="container px-4 md:px-6">
+      <div className="container mx-auto px-4 md:px-6 max-w-4xl">
         <Separator className="mb-6" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 place-items-center text-center">
           <div className="space-y-3">
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-center space-x-2">
               <Image src={logoSrc} alt="Plugged.in Logo" width={32} height={32} />
               <span className="text-lg font-semibold">Plugged.in</span>
             </div>
@@ -90,7 +90,6 @@ export function Footer({ className }: { className?: string }) {
         </div>
         <div className="mt-6 text-center">
           <p className="text-xs text-muted-foreground">
-            {/* Add a "Release Candidate" badge */}
             <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-medium mr-2">
               Release Candidate
             </span>
