@@ -8,7 +8,19 @@ const CURRENT_PROJECT_KEY = 'pluggedin-current-project';
 
 export const useProjects = () => {
   const { data = [], mutate, isLoading } = useSWR('projects', getProjects, {
-    onError: () => []
+    onError: (error) => {
+      if (error?.message?.includes('User not found in database')) {
+        // Clear any session data
+        localStorage.clear();
+        sessionStorage.clear();
+        
+        // Redirect to logout
+        window.location.href = '/logout';
+        return [];
+      }
+      console.error('Projects error:', error);
+      return [];
+    }
   });
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 

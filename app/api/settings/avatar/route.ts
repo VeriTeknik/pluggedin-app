@@ -40,7 +40,14 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(bytes);
 
     // Ensure avatars directory exists
-    await writeFile(join(process.cwd(), 'public', 'avatars', '.gitkeep'), '');
+    const avatarsDir = join(process.cwd(), 'public', 'avatars');
+    try {
+      await writeFile(join(avatarsDir, '.gitkeep'), '');
+    } catch (error) {
+      // Create directory if it doesn't exist
+      const { mkdir } = require('fs/promises');
+      await mkdir(avatarsDir, { recursive: true });
+    }
 
     // Write file
     await writeFile(path, buffer);

@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Pencil, Save, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { deleteProfile, updateProfileName } from '@/app/actions/profiles';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 
 export function CurrentProfileSection() {
+  const { t } = useTranslation();
   const { currentProfile, mutateProfiles, setCurrentProfile } = useProfiles();
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(currentProfile?.name || '');
@@ -29,7 +31,7 @@ export function CurrentProfileSection() {
   }, [currentProfile]);
 
   if (!currentProfile) {
-    return <span>Loading Profile...</span>;
+    return <span>{t('settings.profile.loading', 'Loading Profile...')}</span>;
   }
 
   const handleUpdate = async () => {
@@ -40,16 +42,16 @@ export function CurrentProfileSection() {
       await mutateProfiles();
       setIsEditing(false);
       toast({
-        title: 'Success',
-        description: 'Profile name updated successfully',
+        title: t('common.success'),
+        description: t('settings.workspace.updateSuccess', 'Profile name updated successfully'),
       });
     } catch (error) {
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description:
           error instanceof Error
             ? error.message
-            : 'Failed to update profile name',
+            : t('settings.workspace.updateError', 'Failed to update profile name'),
         variant: 'destructive',
       });
     } finally {
@@ -60,7 +62,7 @@ export function CurrentProfileSection() {
   const handleDelete = async () => {
     if (
       !window.confirm(
-        'Are you sure you want to delete this profile? This action cannot be undone.'
+        t('settings.workspace.deleteConfirm', 'Are you sure you want to delete this profile? This action cannot be undone.')
       )
     ) {
       return;
@@ -72,14 +74,14 @@ export function CurrentProfileSection() {
       setCurrentProfile(null);
       await mutateProfiles();
       toast({
-        title: 'Success',
-        description: 'Profile deleted successfully',
+        title: t('common.success'),
+        description: t('settings.workspace.deleteSuccess', 'Profile deleted successfully'),
       });
     } catch (error) {
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description:
-          error instanceof Error ? error.message : 'Failed to delete workspace',
+          error instanceof Error ? error.message : t('settings.workspace.deleteError', 'Failed to delete workspace'),
         variant: 'destructive',
       });
     } finally {
@@ -90,8 +92,8 @@ export function CurrentProfileSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Current Workspace</CardTitle>
-        <CardDescription>Manage your Current Workspace settings</CardDescription>
+        <CardTitle>{t('settings.workspace.title', 'Current Workspace')}</CardTitle>
+        <CardDescription>{t('settings.workspace.description', 'Manage your Current Workspace settings')}</CardDescription>
       </CardHeader>
       <CardContent className='space-y-6'>
         <div className='space-y-4'>
@@ -101,7 +103,7 @@ export function CurrentProfileSection() {
                 <Input
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder='Profile name'
+                  placeholder={t('settings.workspace.namePlaceholder', 'Profile name')}
                   className='flex-1'
                 />
                 <Button
@@ -144,18 +146,17 @@ export function CurrentProfileSection() {
           <div className='border-t pt-6'>
             <h3 className='text-lg font-medium text-destructive flex items-center gap-2'>
               <AlertTriangle className='h-5 w-5' />
-              Danger Zone
+              {t('settings.workspace.dangerZone', 'Danger Zone')}
             </h3>
             <p className='text-sm text-muted-foreground mt-1'>
-              Once you delete a workspace, there is no going back. Please be
-              careful.
+              {t('settings.workspace.deleteWarning', 'Once you delete a workspace, there is no going back. Please be careful.')}
             </p>
             <Button
               variant='destructive'
               className='mt-4'
               onClick={handleDelete}
               disabled={isLoading}>
-              Delete Workspace
+              {t('settings.workspace.deleteButton', 'Delete Workspace')}
             </Button>
           </div>
         </div>

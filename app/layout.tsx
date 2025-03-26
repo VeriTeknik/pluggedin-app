@@ -3,7 +3,7 @@ import './globals.css';
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 
-import { I18nProvider } from '@/components/providers/i18n-provider';
+import { I18nProviderWrapper } from '@/components/providers/i18n-provider-wrapper';
 import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   description: 'Plugged.in. The AI crossroads.',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -45,7 +45,7 @@ export default function RootLayout({
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <I18nProvider>
+        <I18nProviderWrapper>
           <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
             <SessionProvider>
               <LanguageSwitcher />
@@ -53,7 +53,7 @@ export default function RootLayout({
             </SessionProvider>
             <Toaster />
           </ThemeProvider>
-        </I18nProvider>
+        </I18nProviderWrapper>
       </body>
     </html>
   );

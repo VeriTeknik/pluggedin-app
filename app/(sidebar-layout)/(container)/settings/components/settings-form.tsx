@@ -39,6 +39,10 @@ import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
+import { AppearanceSection } from './appearance-section';
+import { CurrentProfileSection } from './current-profile-section';
+import { CurrentProjectSection } from './current-project-section';
+
 interface SettingsFormProps {
   user: {
     id: string;
@@ -69,6 +73,8 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
 
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
@@ -88,26 +94,34 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
 
   const onProfileSubmit = async (values: z.infer<typeof profileSchema>) => {
     try {
+      setIsUpdatingProfile(true);
       const response = await fetch('/api/settings/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(values),
       });
 
-      if (!response.ok) throw new Error('Failed to update profile');
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || t('settings.profile.error'));
+      }
 
       toast({
-        title: 'Success',
-        description: 'Your profile has been updated.',
+        title: t('common.success'),
+        description: t('settings.profile.success'),
       });
 
+      // Update the form with new values
+      profileForm.reset(values);
       router.refresh();
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to update profile. Please try again.',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.profile.error'),
         variant: 'destructive',
       });
+    } finally {
+      setIsUpdatingProfile(false);
     }
   };
 
@@ -119,18 +133,21 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         body: JSON.stringify(values),
       });
 
-      if (!response.ok) throw new Error('Failed to update password');
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || t('settings.password.error'));
+      }
 
       toast({
-        title: 'Success',
-        description: 'Your password has been updated.',
+        title: t('common.success'),
+        description: t('settings.password.success'),
       });
 
       passwordForm.reset();
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to update password. Please try again.',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.password.error'),
         variant: 'destructive',
       });
     }
@@ -150,18 +167,23 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Failed to upload avatar');
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || t('settings.profile.error'));
+      }
+
+      const data = await response.json();
 
       toast({
-        title: 'Success',
-        description: 'Your avatar has been updated.',
+        title: t('common.success'),
+        description: t('settings.profile.success'),
       });
 
       router.refresh();
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to upload avatar. Please try again.',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.profile.error'),
         variant: 'destructive',
       });
     } finally {
@@ -170,22 +192,36 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   };
 
   const handleDeleteAccount = async () => {
+    if (!isConfirmingDelete) {
+      setIsConfirmingDelete(true);
+      return;
+    }
+
     try {
       setIsDeleting(true);
       const response = await fetch('/api/settings/account', {
         method: 'DELETE',
       });
 
-      if (!response.ok) throw new Error('Failed to delete account');
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || t('settings.account.error'));
+      }
 
-      router.push('/login');
+      // Clear any session data
+      window.localStorage.clear();
+      window.sessionStorage.clear();
+      
+      // Redirect to login page and force a full page reload
+      window.location.href = '/login';
     } catch (error) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete account. Please try again.',
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.account.error'),
         variant: 'destructive',
       });
       setIsDeleting(false);
+      setIsConfirmingDelete(false);
     }
   };
 
@@ -194,9 +230,9 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
       {/* Profile Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Profile</CardTitle>
+          <CardTitle>{t('settings.profile.title')}</CardTitle>
           <CardDescription>
-            Manage your profile information
+            {t('settings.profile.description')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -214,14 +250,14 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
                 disabled={isUploading}
               />
               <p className="text-sm text-muted-foreground mt-2">
-                Recommended: Square image, max 1MB
+                {t('settings.profile.avatar.recommendation')}
               </p>
             </div>
           </div>
 
           {/* Email */}
           <div className="space-y-2">
-            <Label>Email</Label>
+            <Label>{t('auth.common.emailLabel')}</Label>
             <div className="flex items-center space-x-2">
               <Input value={user.email} disabled />
               {user.emailVerified ? (
@@ -240,15 +276,17 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>{t('settings.profile.name.label')}</FormLabel>
                     <FormControl>
-                      <Input {...field} />
+                      <Input {...field} disabled={isUpdatingProfile} placeholder={t('settings.profile.name.placeholder')} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit">Update Profile</Button>
+              <Button type="submit" disabled={isUpdatingProfile}>
+                {isUpdatingProfile ? 'Updating...' : t('settings.profile.updateButton')}
+              </Button>
             </form>
           </Form>
         </CardContent>
@@ -257,13 +295,12 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
       {/* Connected Accounts */}
       <Card>
         <CardHeader>
-          <CardTitle>Connected Accounts</CardTitle>
+          <CardTitle>{t('settings.connectedAccounts.title', 'Connected Accounts')}</CardTitle>
           <CardDescription>
-            Manage your connected social accounts
+            {t('settings.connectedAccounts.description', 'Manage your connected social accounts')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* GitHub */}
           {/* GitHub */}
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
@@ -274,16 +311,16 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
                 <div className="font-medium">GitHub</div>
                 <div className="text-sm text-muted-foreground">
                   {connectedAccounts.includes('github') 
-                    ? 'Connected to GitHub'
-                    : 'Connect your GitHub account'}
+                    ? t('settings.connectedAccounts.github.connected', 'Connected to GitHub')
+                    : t('settings.connectedAccounts.github.connect', 'Connect your GitHub account')}
                 </div>
               </div>
             </div>
             {connectedAccounts.includes('github') ? (
-              <Badge variant="secondary" className="shrink-0">Connected</Badge>
+              <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
             ) : (
               <Button variant="outline" onClick={() => signIn('github')}>
-                Connect
+                {t('auth.social.github')}
               </Button>
             )}
           </div>
@@ -301,106 +338,126 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
                 <div className="font-medium">Google</div>
                 <div className="text-sm text-muted-foreground">
                   {connectedAccounts.includes('google') 
-                    ? 'Connected to Google'
-                    : 'Connect your Google account'}
+                    ? t('settings.connectedAccounts.google.connected', 'Connected to Google')
+                    : t('settings.connectedAccounts.google.connect', 'Connect your Google account')}
                 </div>
               </div>
             </div>
             {connectedAccounts.includes('google') ? (
-              <Badge variant="secondary" className="shrink-0">Connected</Badge>
+              <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
             ) : (
               <Button variant="outline" onClick={() => signIn('google')}>
-                Connect
+                {t('auth.social.google')}
               </Button>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Password Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Password</CardTitle>
-          <CardDescription>
-            Change your password
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...passwordForm}>
-            <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
-              <FormField
-                control={passwordForm.control}
-                name="currentPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Current Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={passwordForm.control}
-                name="newPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>New Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={passwordForm.control}
-                name="confirmPassword"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Confirm New Password</FormLabel>
-                    <FormControl>
-                      <Input type="password" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <Button type="submit">Change Password</Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+      {/* Password Section - Only show for non-OAuth users */}
+      {!connectedAccounts.length && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('settings.password.title')}</CardTitle>
+            <CardDescription>
+              {t('settings.password.description')}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...passwordForm}>
+              <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                <FormField
+                  control={passwordForm.control}
+                  name="currentPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('settings.password.current.label')}</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} placeholder={t('settings.password.current.placeholder')} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="newPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('settings.password.new.label')}</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} placeholder={t('settings.password.new.placeholder')} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={passwordForm.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('settings.password.confirm.label')}</FormLabel>
+                      <FormControl>
+                        <Input type="password" {...field} placeholder={t('settings.password.confirm.placeholder')} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <Button type="submit">{t('settings.password.updateButton')}</Button>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Current Workspace Section */}
+      <CurrentProfileSection />
+
+      {/* Current Project Section */}
+      <CurrentProjectSection />
+
+      {/* Appearance Section */}
+      <AppearanceSection />
 
       {/* Delete Account Section */}
       <Card>
         <CardHeader>
-          <CardTitle>Delete Account</CardTitle>
+          <CardTitle>{t('settings.account.title')}</CardTitle>
           <CardDescription>
-            Permanently delete your account and all associated data
+            {t('settings.account.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="destructive">Delete Account</Button>
+              <Button variant="destructive">{t('settings.account.deleteButton')}</Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Are you sure?</DialogTitle>
+                <DialogTitle>{t('settings.account.confirmTitle')}</DialogTitle>
                 <DialogDescription>
-                  This action cannot be undone. This will permanently delete your account
-                  and remove all associated data from our servers.
+                  {t('settings.account.confirmDescription')}
                 </DialogDescription>
               </DialogHeader>
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Please type "DELETE" to confirm:
+                </p>
+                <Input
+                  type="text"
+                  placeholder="Type DELETE to confirm"
+                  onChange={(e) => setIsConfirmingDelete(e.target.value === 'DELETE')}
+                />
+              </div>
               <DialogFooter>
                 <Button
                   variant="destructive"
                   onClick={handleDeleteAccount}
-                  disabled={isDeleting}
+                  disabled={!isConfirmingDelete || isDeleting}
                 >
-                  {isDeleting ? 'Deleting...' : 'Yes, delete my account'}
+                  {isDeleting ? t('settings.account.deletingButton') : t('settings.account.confirmButton')}
                 </Button>
               </DialogFooter>
             </DialogContent>

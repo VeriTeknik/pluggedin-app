@@ -2,6 +2,7 @@
 
 import { AlertTriangle, Pencil, Save, X } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { deleteProject, updateProjectName } from '@/app/actions/projects';
 import { Button } from '@/components/ui/button';
@@ -17,6 +18,7 @@ import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
 
 export function CurrentProjectSection() {
+  const { t } = useTranslation();
   const { currentProject, setCurrentProject, mutate } = useProjects();
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(currentProject?.name || '');
@@ -24,7 +26,7 @@ export function CurrentProjectSection() {
   const { toast } = useToast();
 
   if (!currentProject) {
-    return <span>Loading Project...</span>;
+    return <span>{t('settings.project.loading', 'Loading Project...')}</span>;
   }
 
   const handleUpdate = async () => {
@@ -35,16 +37,16 @@ export function CurrentProjectSection() {
       await mutate();
       setIsEditing(false);
       toast({
-        title: 'Success',
-        description: 'Project name updated successfully',
+        title: t('common.success'),
+        description: t('settings.project.updateSuccess', 'Project name updated successfully'),
       });
     } catch (error) {
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description:
           error instanceof Error
             ? error.message
-            : 'Failed to update project name',
+            : t('settings.project.updateError', 'Failed to update project name'),
         variant: 'destructive',
       });
     } finally {
@@ -55,7 +57,7 @@ export function CurrentProjectSection() {
   const handleDelete = async () => {
     if (
       !window.confirm(
-        'Are you sure you want to delete this project? This action cannot be undone.'
+        t('settings.project.deleteConfirm', 'Are you sure you want to delete this project? This action cannot be undone.')
       )
     ) {
       return;
@@ -67,14 +69,14 @@ export function CurrentProjectSection() {
       setCurrentProject(null);
       await mutate();
       toast({
-        title: 'Success',
-        description: 'Project deleted successfully',
+        title: t('common.success'),
+        description: t('settings.project.deleteSuccess', 'Project deleted successfully'),
       });
     } catch (error) {
       toast({
-        title: 'Error',
+        title: t('common.error'),
         description:
-          error instanceof Error ? error.message : 'Failed to delete project',
+          error instanceof Error ? error.message : t('settings.project.deleteError', 'Failed to delete project'),
         variant: 'destructive',
       });
     } finally {
@@ -85,8 +87,8 @@ export function CurrentProjectSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Current Project</CardTitle>
-        <CardDescription>Manage your current project settings</CardDescription>
+        <CardTitle>{t('settings.project.title', 'Current Hub')}</CardTitle>
+        <CardDescription>{t('settings.project.description', 'Manage your current hub settings')}</CardDescription>
       </CardHeader>
       <CardContent className='space-y-6'>
         <div className='space-y-4'>
@@ -96,7 +98,7 @@ export function CurrentProjectSection() {
                 <Input
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  placeholder='Project name'
+                  placeholder={t('settings.project.namePlaceholder', 'Project name')}
                   className='flex-1'
                 />
                 <Button
@@ -139,18 +141,17 @@ export function CurrentProjectSection() {
           <div className='border-t pt-6'>
             <h3 className='text-lg font-medium text-destructive flex items-center gap-2'>
               <AlertTriangle className='h-5 w-5' />
-              Danger Zone
+              {t('settings.project.dangerZone', 'Danger Zone')}
             </h3>
             <p className='text-sm text-muted-foreground mt-1'>
-              Once you delete a project, there is no going back. Please be
-              careful.
+              {t('settings.project.deleteWarning', 'Once you delete a project, there is no going back. Please be careful.')}
             </p>
             <Button
               variant='destructive'
               className='mt-4'
               onClick={handleDelete}
               disabled={isLoading}>
-              Delete Project
+              {t('settings.project.deleteButton', 'Delete Project')}
             </Button>
           </div>
         </div>

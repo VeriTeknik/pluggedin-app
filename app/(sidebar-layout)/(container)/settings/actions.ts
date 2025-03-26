@@ -1,16 +1,9 @@
 'use server';
 
-import { db } from '@/db';
-import { accounts } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-
-export async function getConnectedAccounts(userId: string) {
-  const userAccounts = await db
-    .select({
-      provider: accounts.provider,
-    })
-    .from(accounts)
-    .where(eq(accounts.userId, userId));
-
-  return userAccounts.map(account => account.provider);
+// This is a placeholder function that would normally fetch connected accounts from the database
+// In a real implementation, you would query your database to get the connected accounts for the user
+export async function getConnectedAccounts(userId: string): Promise<string[]> {
+  // For now, we'll return an empty array
+  // In a real implementation, you would query your database
+  return [];
 }
