@@ -125,8 +125,8 @@ export default function MCPServersPage() {
     columnHelper.accessor('type', {
       cell: (info) => (
         <Badge variant="outline" className={info.getValue() === McpServerType.STDIO 
-          ? "bg-purple-500/10 text-purple-700" 
-          : "bg-blue-500/10 text-blue-700"
+          ? "bg-purple-500/10 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-900" 
+          : "bg-blue-500/10 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-900"
         }>
           {info.getValue()}
         </Badge>
@@ -286,11 +286,11 @@ export default function MCPServersPage() {
 
   return (
     <div className="space-y-6">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-indigo-500/5 to-purple-500/5 p-6 rounded-lg border mb-6">
+      {/* Hero Section - Update with dark mode friendly styling */}
+      <div className="bg-gradient-to-r from-indigo-500/5 via-indigo-500/10 to-purple-500/10 dark:from-indigo-950/20 dark:via-indigo-900/20 dark:to-purple-900/20 p-6 rounded-lg border dark:border-slate-800 mb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="space-y-2">
-            <Badge className="bg-indigo-500/10 text-indigo-700 border-indigo-200 mb-2">MCP Servers</Badge>
+            <Badge className="bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 mb-2">MCP Servers</Badge>
             <h1 className="text-3xl font-bold tracking-tight">Plugin Management</h1>
             <p className="text-muted-foreground max-w-md">
               Configure and manage your MCP servers. Connect to external tools and services through command-line or URL-based interfaces.
@@ -577,17 +577,17 @@ export default function MCPServersPage() {
 
         {/* Stats summary */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-          <Card className="bg-white/50">
+          <Card className="bg-white/50 dark:bg-slate-900/70 dark:border-slate-800">
             <CardContent className="p-4 flex justify-between items-center">
               <div>
                 <p className="text-sm text-muted-foreground">Total Servers</p>
                 <p className="text-2xl font-bold">{servers.length}</p>
               </div>
-              <Database className="h-8 w-8 text-indigo-500/50" />
+              <Database className="h-8 w-8 text-indigo-500/50 dark:text-indigo-400/50" />
             </CardContent>
           </Card>
           
-          <Card className="bg-white/50">
+          <Card className="bg-white/50 dark:bg-slate-900/70 dark:border-slate-800">
             <CardContent className="p-4 flex justify-between items-center">
               <div>
                 <p className="text-sm text-muted-foreground">Active</p>
@@ -595,11 +595,11 @@ export default function MCPServersPage() {
                   {servers.filter(s => s.status === McpServerStatus.ACTIVE).length}
                 </p>
               </div>
-              <Activity className="h-8 w-8 text-green-500/50" />
+              <Activity className="h-8 w-8 text-green-500/50 dark:text-green-400/50" />
             </CardContent>
           </Card>
           
-          <Card className="bg-white/50">
+          <Card className="bg-white/50 dark:bg-slate-900/70 dark:border-slate-800">
             <CardContent className="p-4 flex justify-between items-center">
               <div>
                 <p className="text-sm text-muted-foreground">STDIO</p>
@@ -607,11 +607,11 @@ export default function MCPServersPage() {
                   {servers.filter(s => s.type === McpServerType.STDIO).length}
                 </p>
               </div>
-              <Terminal className="h-8 w-8 text-slate-500/50" />
+              <Terminal className="h-8 w-8 text-slate-500/50 dark:text-slate-400/50" />
             </CardContent>
           </Card>
           
-          <Card className="bg-white/50">
+          <Card className="bg-white/50 dark:bg-slate-900/70 dark:border-slate-800">
             <CardContent className="p-4 flex justify-between items-center">
               <div>
                 <p className="text-sm text-muted-foreground">SSE</p>
@@ -619,7 +619,7 @@ export default function MCPServersPage() {
                   {servers.filter(s => s.type === McpServerType.SSE).length}
                 </p>
               </div>
-              <Globe className="h-8 w-8 text-blue-500/50" />
+              <Globe className="h-8 w-8 text-blue-500/50 dark:text-blue-400/50" />
             </CardContent>
           </Card>
         </div>
@@ -891,10 +891,10 @@ export default function MCPServersPage() {
           {table.getRowModel().rows.map((row) => {
             const server = row.original;
             return (
-              <Card key={server.uuid} className="group hover:shadow-md transition-all">
+              <Card key={server.uuid} className="group hover:shadow-md transition-all dark:bg-slate-900/70 dark:border-slate-800 dark:hover:bg-slate-900/90">
                 <CardHeader className="pb-2">
                   <div className="flex justify-between items-start">
-                    <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10">
+                    <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10 dark:bg-primary/20">
                       {getServerIcon(server)}
                     </div>
                     <TooltipProvider>
@@ -934,16 +934,18 @@ export default function MCPServersPage() {
                 <CardContent>
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <Badge variant="outline">{server.type}</Badge>
+                      <Badge variant="outline" className="dark:border-slate-700">
+                        {server.type}
+                      </Badge>
                     </div>
                     <div className="flex items-center gap-1 text-muted-foreground justify-end">
                       {server.status === McpServerStatus.ACTIVE ? (
-                        <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-200">
+                        <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900">
                           <CheckCircle className="mr-1 h-3 w-3" />
                           Active
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200">
+                        <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900">
                           <XCircle className="mr-1 h-3 w-3" />
                           Inactive
                         </Badge>
@@ -973,7 +975,7 @@ export default function MCPServersPage() {
                 </CardContent>
                 
                 <CardFooter className="flex justify-between pt-2">
-                  <Button variant="outline" size="sm" asChild>
+                  <Button variant="outline" size="sm" asChild className="dark:border-slate-700 dark:hover:bg-slate-800">
                     <Link href={`/mcp-servers/${server.uuid}`}>
                       Edit
                     </Link>
@@ -1000,9 +1002,9 @@ export default function MCPServersPage() {
             );
           })}
           
-          {/* Empty state */}
+          {/* Empty state - Update for dark mode */}
           {table.getRowModel().rows.length === 0 && (
-            <div className="col-span-3 flex flex-col items-center justify-center p-12 border rounded-lg border-dashed">
+            <div className="col-span-3 flex flex-col items-center justify-center p-12 border rounded-lg border-dashed dark:border-slate-800">
               <Database className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <h3 className="text-lg font-medium">No Servers Found</h3>
               <p className="text-sm text-muted-foreground mb-4">
@@ -1019,16 +1021,16 @@ export default function MCPServersPage() {
           )}
         </div>
       ) : (
-        // Table view (keep the existing table implementation)
+        // Table view - Update for dark mode
         <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-300 rounded-md">
+          <table className="min-w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 rounded-md">
             <thead>
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
                   {headerGroup.headers.map((header) => (
                     <th
                       key={header.id}
-                      className='py-2 px-4 border-b text-left font-semibold bg-gray-100'
+                      className='py-2 px-4 border-b dark:border-slate-800 text-left font-semibold bg-gray-100 dark:bg-slate-800'
                       onClick={header.column.getToggleSortingHandler()}>
                       {flexRender(
                         header.column.columnDef.header,
@@ -1045,9 +1047,9 @@ export default function MCPServersPage() {
             </thead>
             <tbody>
               {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className='hover:bg-gray-50'>
+                <tr key={row.id} className='hover:bg-gray-50 dark:hover:bg-slate-800'>
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className='py-2 px-4 border-b'>
+                    <td key={cell.id} className='py-2 px-4 border-b dark:border-slate-800'>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

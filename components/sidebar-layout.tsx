@@ -13,6 +13,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as React from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -42,6 +43,8 @@ import {
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
 import { useToast } from '@/hooks/use-toast';
+import { useTheme } from '@/components/providers/theme-provider';
+import { useThemeLogo } from '@/hooks/use-theme-logo';
 
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
@@ -61,6 +64,13 @@ export default function SidebarLayout({
   );
   const [fileName, setFileName] = React.useState('');
   const { toast } = useToast();
+  const { logoSrc } = useThemeLogo();
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure correct theme is applied after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleCreateCode = async () => {
     if (fileName.trim()) {
@@ -78,13 +88,17 @@ export default function SidebarLayout({
           <SidebarHeader className='flex flex-col px-2 py-4'>
             <div className='flex mb-2 px-3'>
               <Link href="/">
-                <Image
-                  src='/pluggedin-wl-black.png'
-                  alt='Plugged.in Logo'
-                  width={288}
-                  height={72}
-                  className='h-144 w-36'
-                />
+                {mounted ? (
+                  <Image
+                    src={logoSrc}
+                    alt='Plugged.in Logo'
+                    width={288}
+                    height={72}
+                    className='h-144 w-36'
+                  />
+                ) : (
+                  <div className='h-144 w-36' /> // Placeholder while not mounted
+                )}
               </Link>
             </div>
             <ProjectSwitcher />
