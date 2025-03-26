@@ -14,13 +14,14 @@ export function Footer({ className }: { className?: string }) {
 
   return (
     <footer className={cn('w-full mt-auto py-6', className)}>
-      <div className="container mx-auto px-4 md:px-6 max-w-4xl">
+      <div className="container mx-auto px-4 md:px-6 max-w-10xl">
         <Separator className="mb-6" />
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 place-items-center text-center">
           <div className="space-y-3">
             <div className="flex items-center justify-center space-x-2">
-              <Image src={logoSrc} alt="Plugged.in Logo" width={32} height={32} />
-              <span className="text-lg font-semibold">Plugged.in</span>
+              <a href="https://veritech.net" className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
+                <Image src="/vtlogo.png" alt="Plugged.in Logo" width={210} height={50} />
+              </a>
             </div>
             <p className="text-sm text-muted-foreground">
               The AI Crossroads. <br />
@@ -77,7 +78,7 @@ export function Footer({ className }: { className?: string }) {
               </li>
               <li>
                 <a 
-                  href="https://github.com/pluggedin-app" 
+                  href="https://github.com/VeriTeknik/pluggedin-app" 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-foreground transition-colors"
@@ -93,7 +94,7 @@ export function Footer({ className }: { className?: string }) {
             <span className="inline-block bg-primary/10 text-primary px-2 py-0.5 rounded text-xs font-medium mr-2">
               Release Candidate
             </span>
-            &copy; {year} Plugged.in. All rights reserved.
+            &copy; {year} VeriTeknik B.V. All rights reserved.
           </p>
         </div>
       </div>
