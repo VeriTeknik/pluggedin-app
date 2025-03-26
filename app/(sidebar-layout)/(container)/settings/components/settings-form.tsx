@@ -2,10 +2,14 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -15,16 +19,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { useToast } from '@/components/ui/use-toast';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -33,11 +27,17 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { signIn } from 'next-auth/react';
-import { useState } from 'react';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/components/ui/use-toast';
 
 import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
@@ -155,7 +155,9 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
 
     try {
       setIsUploading(true);
@@ -172,7 +174,6 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         throw new Error(error || t('settings.profile.error'));
       }
 
-      const data = await response.json();
 
       toast({
         title: t('common.success'),
@@ -443,7 +444,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
               </DialogHeader>
               <div className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Please type "DELETE" to confirm:
+                  Please type &quot;DELETE&quot; to confirm:
                 </p>
                 <Input
                   type="text"

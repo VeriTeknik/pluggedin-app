@@ -1,10 +1,11 @@
-import { getAuthSession } from '@/lib/auth';
+import { eq } from 'drizzle-orm';
+import { mkdir, writeFile } from 'fs/promises';
+import { NextResponse } from 'next/server';
+import { join } from 'path';
+
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
-import { writeFile } from 'fs/promises';
-import { join } from 'path';
+import { getAuthSession } from '@/lib/auth';
 
 export async function POST(req: Request) {
   try {
@@ -43,9 +44,8 @@ export async function POST(req: Request) {
     const avatarsDir = join(process.cwd(), 'public', 'avatars');
     try {
       await writeFile(join(avatarsDir, '.gitkeep'), '');
-    } catch (error) {
+    } catch (_error) {
       // Create directory if it doesn't exist
-      const { mkdir } = require('fs/promises');
       await mkdir(avatarsDir, { recursive: true });
     }
 

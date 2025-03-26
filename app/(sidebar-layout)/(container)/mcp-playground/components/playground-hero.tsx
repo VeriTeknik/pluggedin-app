@@ -1,7 +1,8 @@
 'use client';
 
-import { Activity, Play, Power, Server, Code } from 'lucide-react';
+import { Activity, Code,Play, Power, Server } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';

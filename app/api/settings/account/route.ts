@@ -1,10 +1,11 @@
-import { getAuthSession } from '@/lib/auth';
-import { db } from '@/db';
-import { users, accounts, sessions, projectsTable, profilesTable, apiKeysTable, mcpServersTable, customMcpServersTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
 import { unlink } from 'fs/promises';
+import { NextResponse } from 'next/server';
 import { join } from 'path';
+
+import { db } from '@/db';
+import { accounts, apiKeysTable, customMcpServersTable,mcpServersTable, profilesTable, projectsTable, sessions, users } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 
 export async function DELETE(req: Request) {
   try {

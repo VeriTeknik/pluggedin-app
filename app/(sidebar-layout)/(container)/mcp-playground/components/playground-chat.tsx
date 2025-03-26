@@ -1,8 +1,9 @@
 'use client';
 
 import { Send, Settings } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -61,7 +62,7 @@ export function PlaygroundChat({
         }
       }
     }
-  }, [messages]);
+  }, [messages, messagesEndRef]);
 
   return (
     <Card className='flex flex-col h-[calc(100vh-12rem)] shadow-sm'>

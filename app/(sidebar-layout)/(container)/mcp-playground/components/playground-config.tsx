@@ -4,11 +4,10 @@ import {
   Save,
   Server,
   Terminal,
-  Settings,
-  Code,
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -38,7 +37,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { McpServer } from '@/types/mcp-server';
-import { McpServerStatus } from '@/db/schema';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
@@ -86,7 +84,6 @@ export function PlaygroundConfig({
   isLoading,
   mcpServers,
   isSessionActive,
-  isProcessing,
   isUpdatingServer,
   sessionError,
   setSessionError,

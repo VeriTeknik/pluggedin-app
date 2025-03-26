@@ -2,8 +2,10 @@
 
 import { Globe } from 'lucide-react';
 import { useEffect, useState } from 'react';
+
 import { useLanguage } from '@/hooks/use-language';
-import { localeNames, type Locale } from '@/i18n/config';
+import { type Locale,localeNames } from '@/i18n/config';
+
 import { Button } from './button';
 import {
   DropdownMenu,

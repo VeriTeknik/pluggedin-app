@@ -4,13 +4,13 @@ import { CheckCircle, Globe, Terminal, Trash2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
-import { McpServer } from '@/types/mcp-server';
-import { McpServerStatus, McpServerType } from '@/db/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { McpServerStatus, McpServerType } from '@/db/schema';
+import { McpServer } from '@/types/mcp-server';
 
 interface ServerCardProps {
   server: McpServer;

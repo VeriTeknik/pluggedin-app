@@ -115,7 +115,9 @@ export default function McpServerDetailPage({
     url: string;
     type: McpServerType;
   }) => {
-    if (!mcpServer || !currentProfile?.uuid) return;
+    if (!mcpServer || !currentProfile?.uuid) {
+      return;
+    }
 
     // Process args and env before submission
     const processedData = {
@@ -149,7 +151,9 @@ export default function McpServerDetailPage({
   };
 
   const handleDelete = async () => {
-    if (!mcpServer || !currentProfile?.uuid) return;
+    if (!mcpServer || !currentProfile?.uuid) {
+      return;
+    }
     if (confirm('Are you sure you want to delete this MCP server?')) {
       await deleteMcpServerByUuid(currentProfile.uuid, mcpServer.uuid);
       router.push('/mcp-servers');
@@ -206,7 +210,9 @@ export default function McpServerDetailPage({
             <Switch
               checked={mcpServer.status === McpServerStatus.ACTIVE}
               onCheckedChange={async (checked) => {
-                if (!currentProfile?.uuid || !mcpServer.uuid) return;
+                if (!currentProfile?.uuid || !mcpServer.uuid) {
+                  return;
+                }
                 await toggleMcpServerStatus(
                   currentProfile.uuid,
                   mcpServer.uuid,

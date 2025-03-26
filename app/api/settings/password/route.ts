@@ -1,10 +1,11 @@
-import { getAuthSession } from '@/lib/auth';
-import { db } from '@/db';
-import { users } from '@/db/schema';
+import { compare, hash } from 'bcrypt';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
-import { compare, hash } from 'bcrypt';
+
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(8),

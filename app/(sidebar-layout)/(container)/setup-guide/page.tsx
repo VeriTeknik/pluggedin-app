@@ -2,12 +2,12 @@
 
 import { Copy } from 'lucide-react';
 import Link from 'next/link';
-import { useTranslation } from 'react-i18next';
 import { Highlight, themes } from 'prism-react-renderer';
-import { useTheme } from '@/components/providers/theme-provider';
+import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { getFirstApiKey } from '@/app/actions/api-keys';
+import { useTheme } from '@/components/providers/theme-provider';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
 

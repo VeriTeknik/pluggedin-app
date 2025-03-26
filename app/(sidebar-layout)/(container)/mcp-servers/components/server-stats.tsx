@@ -4,8 +4,8 @@ import { Activity, Database, Globe, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { McpServer } from '@/types/mcp-server';
 import { McpServerStatus, McpServerType } from '@/db/schema';
+import { McpServer } from '@/types/mcp-server';
 
 interface ServerStatsProps {
   servers: McpServer[];

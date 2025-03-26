@@ -1,9 +1,9 @@
 'use client';
 
-import { useTheme } from '@/components/providers/theme-provider';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useTheme } from '@/components/providers/theme-provider';
 import { Button } from '@/components/ui/button';
 import {
   Card,

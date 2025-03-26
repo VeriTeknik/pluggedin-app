@@ -1,8 +1,9 @@
 'use client';
 
-import { LegalDoc } from '../legal-doc';
-import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
+
+import { LegalDoc } from '../legal-doc';
 
 export default function PrivacyPolicyPage() {
   const { t } = useTranslation();

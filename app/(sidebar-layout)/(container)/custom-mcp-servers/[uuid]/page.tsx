@@ -106,7 +106,9 @@ export default function CustomMcpServerDetailPage({
     env: string;
     code_uuid: string;
   }) => {
-    if (!customMcpServer || !currentProfile?.uuid) return;
+    if (!customMcpServer || !currentProfile?.uuid) {
+      return;
+    }
 
     // Process args and env before submission
     const processedData = {
@@ -136,7 +138,9 @@ export default function CustomMcpServerDetailPage({
   };
 
   const handleDelete = async () => {
-    if (!customMcpServer || !currentProfile?.uuid) return;
+    if (!customMcpServer || !currentProfile?.uuid) {
+      return;
+    }
     if (confirm('Are you sure you want to delete this Custom MCP server?')) {
       await deleteCustomMcpServerByUuid(
         currentProfile.uuid,
@@ -335,7 +339,9 @@ export default function CustomMcpServerDetailPage({
             <Switch
               checked={customMcpServer.status === McpServerStatus.ACTIVE}
               onCheckedChange={async (checked) => {
-                if (!currentProfile?.uuid || !customMcpServer.uuid) return;
+                if (!currentProfile?.uuid || !customMcpServer.uuid) {
+                  return;
+                }
                 await toggleCustomMcpServerStatus(
                   currentProfile.uuid,
                   customMcpServer.uuid,

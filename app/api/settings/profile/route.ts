@@ -1,9 +1,10 @@
-import { getAuthSession } from '@/lib/auth';
-import { db } from '@/db';
-import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),

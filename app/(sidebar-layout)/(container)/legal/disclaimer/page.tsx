@@ -1,8 +1,9 @@
 'use client';
 
-import { LegalDoc } from '../legal-doc';
-import { useTranslation } from 'react-i18next';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
+
+import { LegalDoc } from '../legal-doc';
 
 export default function DisclaimerPage() {
   const { t } = useTranslation();
@@ -48,7 +49,7 @@ export default function DisclaimerPage() {
 
       <h2>No Warranty</h2>
       <p>
-        THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT ANY WARRANTY OR REPRESENTATION OF ANY KIND, 
+        THE SERVICE IS PROVIDED &quot;AS IS&quot; AND &quot;AS AVAILABLE&quot; WITHOUT ANY WARRANTY OR REPRESENTATION OF ANY KIND, 
         WHETHER EXPRESS, IMPLIED, OR STATUTORY. WE SPECIFICALLY DISCLAIM ANY IMPLIED WARRANTIES OF TITLE, 
         MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
       </p>

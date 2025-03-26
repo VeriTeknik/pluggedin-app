@@ -1,7 +1,9 @@
-import { getAuthSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { SettingsForm } from './components/settings-form';
+
+import { getAuthSession } from '@/lib/auth';
+
 import { getConnectedAccounts } from './actions';
+import { SettingsForm } from './components/settings-form';
 
 export default async function SettingsPage() {
   const session = await getAuthSession();

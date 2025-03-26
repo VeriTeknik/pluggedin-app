@@ -1,12 +1,11 @@
 'use client';
 
-import { HeartIcon } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 
 import { Separator } from '@/components/ui/separator';
-import { cn } from '@/lib/utils';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
-import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 export function Footer({ className }: { className?: string }) {
   const { logoSrc } = useThemeLogo();

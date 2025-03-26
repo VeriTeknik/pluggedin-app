@@ -20,10 +20,10 @@ import {
 import { McpServerStatus } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
-import { PlaygroundHero } from './components/playground-hero';
-import { PlaygroundConfig } from './components/playground-config';
+
 import { PlaygroundChat } from './components/playground-chat';
-import { McpServer } from '@/types/mcp-server';
+import { PlaygroundConfig } from './components/playground-config';
+import { PlaygroundHero } from './components/playground-hero';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
@@ -148,7 +148,9 @@ export default function McpPlaygroundPage() {
 
   // Toggle server status
   const toggleServerStatus = async (serverUuid: string, status: boolean) => {
-    if (!profileUuid) return;
+    if (!profileUuid) {
+      return;
+    }
 
     try {
       setIsUpdatingServer(serverUuid);
@@ -183,7 +185,9 @@ export default function McpPlaygroundPage() {
 
   // Start session
   const startSession = async () => {
-    if (!mcpServers) return;
+    if (!mcpServers) {
+      return;
+    }
 
     // Reset any previous errors
     setSessionError(null);
@@ -327,7 +331,9 @@ export default function McpPlaygroundPage() {
 
   // Send message
   const sendMessage = async () => {
-    if (!inputValue.trim() || !isSessionActive) return;
+    if (!inputValue.trim() || !isSessionActive) {
+      return;
+    }
 
     try {
       setIsProcessing(true);
@@ -449,7 +455,9 @@ export default function McpPlaygroundPage() {
   // Add effect to load settings
   useEffect(() => {
     const loadSettings = async () => {
-      if (!profileUuid) return;
+      if (!profileUuid) {
+        return;
+      }
 
       const result = await getPlaygroundSettings(profileUuid);
       if (result.success && result.settings) {
@@ -469,7 +477,9 @@ export default function McpPlaygroundPage() {
 
   // Add save settings function
   const saveSettings = async () => {
-    if (!profileUuid) return;
+    if (!profileUuid) {
+      return;
+    }
 
     try {
       addLog('info', 'Saving playground settings...');

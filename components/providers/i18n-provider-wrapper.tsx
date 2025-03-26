@@ -1,6 +1,8 @@
 import { headers } from 'next/headers';
+
+import { defaultLocale, Locale,locales } from '@/i18n/config';
+
 import { I18nProvider } from './i18n-provider';
-import { defaultLocale, locales, Locale } from '@/i18n/config';
 
 async function getInitialLocale(): Promise<string> {
   try {

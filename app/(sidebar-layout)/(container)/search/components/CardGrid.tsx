@@ -1,8 +1,8 @@
-import { useTranslation } from 'react-i18next';
 import { Download, Github } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 
 import { createMcpServer } from '@/app/actions/mcp-servers';
 import { Badge } from '@/components/ui/badge';

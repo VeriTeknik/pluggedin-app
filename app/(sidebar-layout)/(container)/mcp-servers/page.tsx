@@ -9,10 +9,10 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Database, Settings, Upload, Download } from 'lucide-react';
+import { Database, Download,Settings, Upload } from 'lucide-react';
 import { useState } from 'react';
-import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 
 import {
   bulkImportMcpServers,
@@ -22,7 +22,7 @@ import {
   toggleMcpServerStatus,
 } from '@/app/actions/mcp-servers';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { McpServerStatus, McpServerType } from '@/db/schema';
@@ -30,10 +30,10 @@ import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 import { McpServer } from '@/types/mcp-server';
 
+import { ServerCard } from './components/server-card';
 import { ExportDialog, ImportDialog } from './components/server-dialogs';
 import { SseServerForm, StdioServerForm } from './components/server-forms';
 import { ServerHero } from './components/server-hero';
-import { ServerCard } from './components/server-card';
 import { ServerStats } from './components/server-stats';
 
 const columnHelper = createColumnHelper<McpServer>();
@@ -106,7 +106,9 @@ export default function MCPServersPage() {
   });
 
   const handleCreateServer = async (data: any) => {
-    if (!currentProfile?.uuid) return;
+    if (!currentProfile?.uuid) {
+      return;
+    }
     setIsSubmitting(true);
     try {
       await createMcpServer(currentProfile.uuid, data);
@@ -129,7 +131,9 @@ export default function MCPServersPage() {
   };
 
   const handleImport = async (importJson: string) => {
-    if (!currentProfile?.uuid) return;
+    if (!currentProfile?.uuid) {
+      return;
+    }
     setIsSubmitting(true);
     try {
       // Parse the JSON
