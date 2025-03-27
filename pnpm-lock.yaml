@@ -149,6 +149,9 @@ importers:
       react-i18next:
         specifier: ^15.4.1
         version: 15.4.1(i18next@24.2.3(typescript@5.7.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      sd-notify:
+        specifier: ^2.8.0
+        version: 2.8.0
       swr:
         specifier: ^2.3.0
         version: 2.3.0(react@18.3.1)
@@ -2592,6 +2595,9 @@ packages:
     resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
     engines: {node: '>=8'}
 
+  bindings@1.5.0:
+    resolution: {integrity: sha512-p2q/t/mhvuOj/UeLlV6566GD/guowlr0hHxClI0W9m7MWYkL1F0hLo+0Aexs9HSPCtR1SXQ0TD3MMKrXZajbiQ==}
+
   bl@4.1.0:
     resolution: {integrity: sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w==}
 
@@ -3409,6 +3415,9 @@ packages:
   file-type@16.5.4:
     resolution: {integrity: sha512-/yFHK0aGjFEgDJjEKP0pWCplsPFPhwyfwevf/pVxiN0tmE4L9LmwWxWukdJSHdoCli4VgQLehjJtwQBnqmsKcw==}
     engines: {node: '>=10'}
+
+  file-uri-to-path@1.0.0:
+    resolution: {integrity: sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==}
 
   filing-cabinet@3.3.1:
     resolution: {integrity: sha512-renEK4Hh6DUl9Vl22Y3cxBq1yh8oNvbAdXnhih0wVpmea+uyKjC9K4QeRjUaybIiIewdzfum+Fg15ZqJ/GyCaA==}
@@ -4975,6 +4984,11 @@ packages:
 
   scheduler@0.23.2:
     resolution: {integrity: sha512-UOShsPwz7NrMUqhR6t0hWjFduvOzbtv7toDH1/hIrfRNIDBnnBWd0CwJTGvTpngVlmwGCdP9/Zl/tVrDqcuYzQ==}
+
+  sd-notify@2.8.0:
+    resolution: {integrity: sha512-e+D1v0Y6UzmqXcPlaTkHk1QMdqk36mF/jIYv5gwry/N2Tb8/UNnpfG6ktGLpeBOR6TCC5hPKgqA+0hTl9sm2tA==}
+    engines: {node: '>=8.0.0'}
+    os: [linux, darwin, win32]
 
   semver-compare@1.0.0:
     resolution: {integrity: sha512-YM3/ITh2MJ5MtzaM429anh+x2jiLVjqILF4m4oyQB18W7Ggea7BfqdH/wGMK7dDiMghv/6WG7znWMwUDzJiXow==}
@@ -7485,6 +7499,10 @@ snapshots:
 
   binary-extensions@2.3.0: {}
 
+  bindings@1.5.0:
+    dependencies:
+      file-uri-to-path: 1.0.0
+
   bl@4.1.0:
     dependencies:
       buffer: 5.7.1
@@ -8470,6 +8488,8 @@ snapshots:
       readable-web-to-node-stream: 3.0.4
       strtok3: 6.3.0
       token-types: 4.2.1
+
+  file-uri-to-path@1.0.0: {}
 
   filing-cabinet@3.3.1:
     dependencies:
@@ -10057,6 +10077,10 @@ snapshots:
   scheduler@0.23.2:
     dependencies:
       loose-envify: 1.4.0
+
+  sd-notify@2.8.0:
+    dependencies:
+      bindings: 1.5.0
 
   semver-compare@1.0.0: {}
 

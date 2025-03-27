@@ -40,7 +40,15 @@ pnpm db:migrate
 
 # Build the application
 log "Building application..."
-pnpm build
+NODE_ENV=production pnpm build
+
+# Copy standalone build files
+log "Setting up standalone build..."
+rm -rf .next/standalone
+cp -r .next/standalone .next/
+cp -r .next/static .next/standalone/
+cp -r public .next/standalone/
+cp .env .next/standalone/
 
 # Setup and start the systemd service
 setup_systemd_service

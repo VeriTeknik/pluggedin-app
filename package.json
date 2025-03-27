@@ -64,6 +64,7 @@
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.54.2",
     "react-i18next": "^15.4.1",
+    "sd-notify": "^2.8.0",
     "swr": "^2.3.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",

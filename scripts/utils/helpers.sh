@@ -70,4 +70,6 @@ EOF
   sudo systemctl daemon-reload
   sudo systemctl restart pluggedin.service
   sudo systemctl enable pluggedin.service
-} 
+}
+
+sudo systemctl status pluggedin.service --no-pager 
