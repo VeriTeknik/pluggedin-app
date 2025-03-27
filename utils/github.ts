@@ -1,5 +1,6 @@
 import { McpServerSource } from '@/db/schema';
 import { McpIndex } from '@/types/search';
+
 import { detectCategory } from './categories';
 
 interface GitHubRepo {

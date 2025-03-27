@@ -30,13 +30,12 @@ export async function getMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<McpServer | undefined> {
-  const server = await db.query.mcpServersTable.findFirst({
-    where: and(
-      eq(mcpServersTable.uuid, uuid),
-      eq(mcpServersTable.profile_uuid, profileUuid)
-    ),
-  });
-  return server;
+  return await db.query.mcpServersTable.findFirst({
+      where: and(
+        eq(mcpServersTable.uuid, uuid),
+        eq(mcpServersTable.profile_uuid, profileUuid)
+      ),
+    });
 }
 
 export async function deleteMcpServerByUuid(

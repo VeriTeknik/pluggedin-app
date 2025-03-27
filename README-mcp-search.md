@@ -23,7 +23,7 @@ The search functionality integrates with several sources:
    - Integrates with the "awesome-mcp-servers" curated list
    - Shows stars and last update information
 
-4. **PluggedIn** - Local repository of user-created MCP servers
+4. **Plugged In** - Local repository of user-created MCP servers
    - Shows servers created by the user
    - Allows easy sharing and reuse
 

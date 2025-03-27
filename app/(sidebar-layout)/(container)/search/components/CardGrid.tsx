@@ -26,7 +26,9 @@ import { InstallDialog } from './InstallDialog';
 function CategoryBadge({ category }: { category?: McpServerCategory }) {
   const { t } = useTranslation();
   
-  if (!category) return null;
+  if (!category) {
+    return null;
+  }
   
   const iconName = getCategoryIcon(category);
   const IconComponent = (LucideIcons as Record<string, any>)[iconName];
@@ -130,7 +132,9 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
 
   // Helper to format ratings
   const formatRating = (rating?: number, count?: number) => {
-    if (!rating || !count) return null;
+    if (!rating || !count) {
+      return null;
+    }
     
     return (
       <div className="flex items-center">

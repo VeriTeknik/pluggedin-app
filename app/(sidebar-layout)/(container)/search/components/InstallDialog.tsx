@@ -72,7 +72,9 @@ export function InstallDialog({
     url: string | undefined;
     type: McpServerType;
   }) => {
-    if (!currentProfile?.uuid) return;
+    if (!currentProfile?.uuid) {
+      return;
+    }
 
     setIsSubmitting(true);
     try {

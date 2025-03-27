@@ -12,6 +12,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { locales } from '@/i18n/config';
+
 import { enumToPgEnum } from './utils/enum-to-pg-enum';
 
 export const languageEnum = pgEnum('language', locales);

@@ -3,8 +3,7 @@
 import { Filter, Layers, SortDesc } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
-import { useCallback, useEffect, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -27,6 +26,8 @@ import { getCategoryIcon } from '@/utils/categories';
 
 import CardGrid from './components/CardGrid';
 import { PaginationUi } from './components/PaginationUi';
+import { useFilteredResults } from './hooks/useFilteredResults';
+import { useSortedResults } from './hooks/useSortedResults';
 
 const PAGE_SIZE = 8;
 
@@ -92,100 +93,55 @@ function SearchContent() {
     }
   }, [data]);
 
-  // Filter results based on tags and category
-  const filteredResults = useCallback(() => {
-    if (!data?.results) return undefined;
-    
-    const filtered = Object.entries(data.results).reduce((acc, [key, item]) => {
-      let include = true;
-      
-      // Filter by tags if any are selected
-      if (tags.length > 0) {
-        if (!item.tags || !item.tags.some(tag => tags.includes(tag))) {
-          include = false;
-        }
-      }
-      
-      // Filter by category if selected
-      if (category && item.category !== category) {
-        include = false;
-      }
-      
-      if (include) {
-        acc[key] = item;
-      }
-      
-      return acc;
-    }, {} as Record<string, McpIndex>);
-    
-    return filtered;
-  }, [data, tags, category]);
+  // Use the new custom hooks for filtering and sorting
+  const getFilteredResults = useFilteredResults(data?.results, tags, category);
+  const getSortedResults = useSortedResults(data?.results, sort, getFilteredResults);
 
-  // Sort results based on selected sort option
-  const sortedResults = useCallback(() => {
-    if (!data?.results) return undefined;
-    
-    const filtered = filteredResults();
-    if (!filtered || Object.keys(filtered).length === 0) return filtered;
-    
-    const entries = Object.entries(filtered);
-    
-    switch (sort) {
-      case 'popularity':
-        return Object.fromEntries(
-          entries.sort((a, b) => {
-            const aCount = a[1].useCount || a[1].package_download_count || 0;
-            const bCount = b[1].useCount || b[1].package_download_count || 0;
-            return (bCount as number) - (aCount as number);
-          })
-        );
-        
-      case 'recent':
-        return Object.fromEntries(
-          entries.sort((a, b) => {
-            const aDate = a[1].updated_at ? new Date(a[1].updated_at) : new Date(0);
-            const bDate = b[1].updated_at ? new Date(b[1].updated_at) : new Date(0);
-            return bDate.getTime() - aDate.getTime();
-          })
-        );
-        
-      case 'stars':
-        return Object.fromEntries(
-          entries.sort((a, b) => {
-            const aStars = a[1].github_stars || 0;
-            const bStars = b[1].github_stars || 0;
-            return (bStars as number) - (aStars as number);
-          })
-        );
-        
-      default: // 'relevance' - keep original order
-        return filtered;
-    }
-  }, [data, filteredResults, sort]);
+  // Memoize search filters
+  const searchFilters = useMemo(() => ({
+    source,
+    sourceParam,
+    sort,
+    sortParam,
+    tags,
+    tagsParam,
+    category,
+    categoryParam,
+  }), [source, sourceParam, sort, sortParam, tags, tagsParam, category, categoryParam]);
 
   // Update URL when search parameters change
   useEffect(() => {
     const timer = setTimeout(() => {
       if (
         searchQuery !== query || 
-        sourceParam !== source || 
-        sortParam !== sort || 
-        tagsParam !== tags.join(',') ||
-        categoryParam !== category
+        searchFilters.sourceParam !== searchFilters.source || 
+        searchFilters.sortParam !== searchFilters.sort || 
+        searchFilters.tagsParam !== searchFilters.tags.join(',') ||
+        searchFilters.categoryParam !== searchFilters.category
       ) {
         const params = new URLSearchParams();
-        if (searchQuery) params.set('query', searchQuery);
-        if (source !== 'all') params.set('source', source);
-        if (sort !== 'relevance') params.set('sort', sort);
-        if (tags.length > 0) params.set('tags', tags.join(','));
-        if (category) params.set('category', category);
+        if (searchQuery) {
+          params.set('query', searchQuery);
+        }
+        if (searchFilters.source !== 'all') {
+          params.set('source', searchFilters.source);
+        }
+        if (searchFilters.sort !== 'relevance') {
+          params.set('sort', searchFilters.sort);
+        }
+        if (searchFilters.tags.length > 0) {
+          params.set('tags', searchFilters.tags.join(','));
+        }
+        if (searchFilters.category) {
+          params.set('category', searchFilters.category);
+        }
         params.set('offset', '0');
         router.push(`/search?${params.toString()}`);
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, query, source, sourceParam, sort, sortParam, tags, tagsParam, category, categoryParam, router]);
+  }, [searchQuery, query, searchFilters, router]);
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams);
@@ -417,15 +373,15 @@ function SearchContent() {
         )}
       </div>
 
-      {sortedResults() && Object.keys(sortedResults() || {}).length > 0 ? (
-        <CardGrid items={sortedResults() || {}} />
+      {getSortedResults() && Object.keys(getSortedResults() || {}).length > 0 ? (
+        <CardGrid items={getSortedResults() || {}} />
       ) : (
         <div className="text-center py-8">
           {error ? (
             <p className="text-destructive">{t('search.error')}</p>
           ) : data && Object.keys(data.results || {}).length === 0 ? (
             <p>{t('search.noResults')}</p>
-          ) : data && Object.keys(filteredResults() || {}).length === 0 ? (
+          ) : data && Object.keys(getFilteredResults() || {}).length === 0 ? (
             <p>{t('search.noMatchingFilters')}</p>
           ) : (
             <p>{t('search.loading')}</p>

@@ -11,7 +11,9 @@ import { fetchSmitheryServerDetails, getMcpServerFromSmitheryServer, updateMcpSe
  * Enrich a server with rating and installation metrics
  */
 async function enrichServerWithMetrics(server: McpIndex): Promise<McpIndex> {
-  if (!server.source || !server.external_id) return server;
+  if (!server.source || !server.external_id) {
+    return server;
+  }
   
   try {
     // Get metrics for this server

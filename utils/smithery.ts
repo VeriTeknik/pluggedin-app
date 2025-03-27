@@ -1,5 +1,6 @@
 import { McpServerSource } from '@/db/schema';
 import { McpIndex, SmitheryServer, SmitheryServerDetail } from '@/types/search';
+
 import { detectCategory } from './categories';
 
 /**

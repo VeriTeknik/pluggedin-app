@@ -139,7 +139,9 @@ async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
   const enrichedResults = { ...results };
   
   for (const [_key, server] of Object.entries(enrichedResults)) {
-    if (!server.source || !server.external_id) continue;
+    if (!server.source || !server.external_id) {
+      continue;
+    }
     
     try {
       // Get metrics for this server

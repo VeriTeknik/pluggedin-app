@@ -53,8 +53,12 @@ export function RateServerDialog({
   });
 
   const onSubmit = async (values: { rating: number; comment: string }) => {
-    if (!currentProfile?.uuid) return;
-    if (!serverData.source || !serverData.external_id) return;
+    if (!currentProfile?.uuid) {
+      return;
+    }
+    if (!serverData.source || !serverData.external_id) {
+      return;
+    }
     if (values.rating < 1 || values.rating > 5) {
       toast({
         title: 'Error',

@@ -323,7 +323,9 @@ export async function updateSearchCacheMetrics() {
         // Update metrics for each server in the results
         for (const [_key, server] of Object.entries(results)) {
           const typedServer = server as any;
-          if (!typedServer.source || !typedServer.external_id) continue;
+          if (!typedServer.source || !typedServer.external_id) {
+            continue;
+          }
           
           // Get metrics for this server
           const metricsResult = await getServerRatingMetrics(
