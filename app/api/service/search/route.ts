@@ -1,10 +1,10 @@
 import { addDays } from 'date-fns';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { db } from '@/db';
-import { McpServerSource, searchCacheTable, serverInstallationsTable, serverRatingsTable } from '@/db/schema';
-import { PaginatedSearchResult, SearchIndex, SmitherySearchResponse } from '@/types/search';
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
+import { db } from '@/db';
+import { McpServerSource, searchCacheTable } from '@/db/schema';
+import { PaginatedSearchResult, SearchIndex, SmitherySearchResponse } from '@/types/search';
 import { fetchAwesomeMcpServersList, getGitHubRepoAsMcpServer, getRepoPackageJson, searchGitHubRepos } from '@/utils/github';
 import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
 import { getMcpServerFromSmitheryServer } from '@/utils/smithery';
@@ -123,8 +123,8 @@ export async function GET(request: NextRequest) {
     // Paginate and return results
     const paginatedResults = paginateResults(results, offset, pageSize);
     return NextResponse.json(paginatedResults);
-  } catch (error) {
-    console.error('Search error:', error);
+  } catch (_error) {
+    console.error('Search error:', _error);
     return NextResponse.json(
       { error: 'Failed to search for MCP servers' },
       { status: 500 }
@@ -138,7 +138,7 @@ export async function GET(request: NextRequest) {
 async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
   const enrichedResults = { ...results };
   
-  for (const [key, server] of Object.entries(enrichedResults)) {
+  for (const [_key, server] of Object.entries(enrichedResults)) {
     if (!server.source || !server.external_id) continue;
     
     try {
@@ -155,8 +155,8 @@ async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
         server.rating_count = metricsResult.metrics.ratingCount;
         server.installation_count = metricsResult.metrics.installationCount;
       }
-    } catch (error) {
-      console.error(`Failed to get metrics for ${key}:`, error);
+    } catch (_error) {
+      console.error(`Failed to get metrics for ${_key}:`, _error);
       // Continue with next server even if metrics fail
     }
   }
@@ -226,8 +226,8 @@ async function searchNpm(query: string): Promise<SearchIndex> {
     
     // Enrich results with metrics
     return await enrichWithMetrics(results);
-  } catch (error) {
-    console.error('NPM search error:', error);
+  } catch (_error) {
+    console.error('NPM search error:', _error);
     return {}; // Return empty results on error
   }
 }
@@ -248,8 +248,8 @@ async function searchGitHub(query: string): Promise<SearchIndex> {
     if (!query) {
       try {
         awesomeRepos = await fetchAwesomeMcpServersList();
-      } catch (error) {
-        console.error('Error fetching awesome-mcp-servers list:', error);
+      } catch (_error) {
+        console.error('Error fetching awesome-mcp-servers list:', _error);
       }
     }
     
@@ -269,7 +269,7 @@ async function searchGitHub(query: string): Promise<SearchIndex> {
       let packageJson = null;
       try {
         packageJson = await getRepoPackageJson(repo);
-      } catch (error) {
+      } catch (_error) {
         // Continue without package.json
       }
       
@@ -279,8 +279,8 @@ async function searchGitHub(query: string): Promise<SearchIndex> {
     
     // Enrich results with metrics
     return await enrichWithMetrics(results);
-  } catch (error) {
-    console.error('GitHub search error:', error);
+  } catch (_error) {
+    console.error('GitHub search error:', _error);
     return {}; // Return empty results on error
   }
 }

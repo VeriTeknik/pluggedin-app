@@ -63,7 +63,15 @@ export function InstallDialog({
     },
   });
 
-  const onSubmit = async (values: typeof form.defaultValues) => {
+  const onSubmit = async (values: {
+    name: string;
+    description: string;
+    command: string;
+    args: string;
+    env: string;
+    url: string | undefined;
+    type: McpServerType;
+  }) => {
     if (!currentProfile?.uuid) return;
 
     setIsSubmitting(true);

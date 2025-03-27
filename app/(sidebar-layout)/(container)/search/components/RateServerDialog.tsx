@@ -40,7 +40,7 @@ export function RateServerDialog({
   onOpenChange,
   serverData,
 }: RateServerDialogProps) {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);

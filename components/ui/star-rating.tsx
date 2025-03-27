@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState } from 'react';
 import { Star as StarIcon } from 'lucide-react';
+import React, { createContext, useContext, useState } from 'react';
 
 import { cn } from '@/lib/utils';
 

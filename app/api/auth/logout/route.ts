@@ -1,11 +1,7 @@
-import { cookies } from 'next/headers';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 
 // GET handler for server-side logout
-export async function GET(req: NextRequest) {
-  // Get the cookie store
-  const cookieStore = cookies();
-  
+export async function GET() {
   // Clear all Next.js Auth cookies
   const cookieNames = [
     'next-auth.session-token',

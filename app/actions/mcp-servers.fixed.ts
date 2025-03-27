@@ -3,8 +3,9 @@
 import { and, desc, eq, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { mcpServersTable, McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
+import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType } from '@/db/schema';
 import type { McpServer } from '@/types/mcp-server';
+
 import { trackServerInstallation } from './mcp-server-metrics';
 
 export async function getMcpServers(profileUuid: string) {
@@ -129,11 +130,12 @@ export async function createMcpServer({
       return { success: false, error: 'URL is required for SSE servers' };
     }
     
-    if (serverType === McpServerType.SSE && !/^https?:\/\/.+/.test(url)) {
+    const urlIsValid = url ? /^https?:\/\/.+/.test(url) : false;
+    if (serverType === McpServerType.SSE && !urlIsValid) {
       return { success: false, error: 'URL must be a valid HTTP/HTTPS URL' };
     }
 
-    const insertResult = await db.insert(mcpServersTable).values({
+    const _insertResult = await db.insert(mcpServersTable).values({
       name,
       description,
       type: serverType,

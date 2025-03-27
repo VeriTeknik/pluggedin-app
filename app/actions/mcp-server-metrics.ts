@@ -9,7 +9,7 @@ import {
   serverInstallationsTable, 
   serverRatingsTable
 } from '@/db/schema';
-import { McpIndex, SearchIndex } from '@/types/search';
+import { SearchIndex } from '@/types/search';
 
 /**
  * Track a server installation
@@ -321,7 +321,7 @@ export async function updateSearchCacheMetrics() {
         let updated = false;
         
         // Update metrics for each server in the results
-        for (const [key, server] of Object.entries(results)) {
+        for (const [_key, server] of Object.entries(results)) {
           const typedServer = server as any;
           if (!typedServer.source || !typedServer.external_id) continue;
           
@@ -396,7 +396,7 @@ export async function updateServerInCache(
         let updated = false;
         
         // Find and update the specific server in the results
-        for (const [key, server] of Object.entries(results)) {
+        for (const [_key, server] of Object.entries(results)) {
           const typedServer = server as any;
           
           // Only update the specific server
@@ -425,7 +425,7 @@ export async function updateServerInCache(
     
     return { success: true };
   } catch (error) {
-    console.error('Error updating server in search cache:', error);
+    console.error('Error updating server in cache:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

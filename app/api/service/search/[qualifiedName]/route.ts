@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { McpServerSource } from '@/db/schema';
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
+import { McpServerSource } from '@/db/schema';
 import { McpIndex, SmitheryServer } from '@/types/search';
 import { getGitHubRepoAsMcpServer, getRepoPackageJson } from '@/utils/github';
 import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
@@ -40,9 +40,9 @@ async function enrichServerWithMetrics(server: McpIndex): Promise<McpIndex> {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { qualifiedName: string } }
+  { params }: { params: Promise<{ qualifiedName: string }> }
 ) {
-  const { qualifiedName } = params;
+  const { qualifiedName } = await params;
   
   try {
     let mcpServer: McpIndex | null = null;
@@ -91,8 +91,8 @@ export async function GET(
     mcpServer = await enrichServerWithMetrics(mcpServer);
     
     return NextResponse.json(mcpServer);
-  } catch (error) {
-    console.error('Error fetching server details:', error);
+  } catch (_error) {
+    console.error('Error fetching server details:', _error);
     return NextResponse.json(
       { error: 'Failed to fetch server details' },
       { status: 500 }
@@ -179,13 +179,13 @@ async function getGitHubRepoDetails(repoFullName: string): Promise<McpIndex | nu
     let packageJson = null;
     try {
       packageJson = await getRepoPackageJson(repo);
-    } catch (error) {
+    } catch (_error) {
       // Continue without package.json
     }
     
     return getGitHubRepoAsMcpServer(repo, packageJson);
-  } catch (error) {
-    console.error(`Error fetching GitHub repo details: ${error}`);
+  } catch (_error) {
+    console.error(`Error fetching GitHub repo details:`, _error);
     return null;
   }
 } 

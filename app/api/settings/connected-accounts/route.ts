@@ -47,3 +47,39 @@ async function getConnectedAccountsForUser(userId: string): Promise<string[]> {
   // For now, we'll return an empty array
   return [];
 }
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await getAuthSession();
+    
+    if (!session?.user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+    
+    const url = new URL(request.url);
+    const _userId = url.searchParams.get('userId');
+    const provider = url.searchParams.get('provider');
+    
+    if (!provider) {
+      return NextResponse.json(
+        { success: false, error: 'Provider is required' },
+        { status: 400 }
+      );
+    }
+    
+    // Remove the connected account
+    // This is a placeholder - replace with your actual implementation
+    console.log(`Removing ${provider} account for user ${_userId}`);
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error removing connected account:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to remove connected account' },
+      { status: 500 }
+    );
+  }
+}

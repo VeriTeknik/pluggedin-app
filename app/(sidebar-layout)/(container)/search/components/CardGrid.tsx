@@ -1,4 +1,4 @@
-import { Database, Download, ExternalLink, Github, Package, Star, ThumbsUp, UserPlus } from 'lucide-react';
+import { Database, Download, Github, Package, Star, ThumbsUp, UserPlus } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -41,7 +41,7 @@ function CategoryBadge({ category }: { category?: McpServerCategory }) {
 
 // Helper function to get source icon
 function SourceBadge({ source }: { source?: McpServerSource }) {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   
   switch (source) {
     case McpServerSource.SMITHERY:
@@ -76,7 +76,7 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
 }
 
 export default function CardGrid({ items }: { items: SearchIndex }) {
-  const { t } = useTranslation();
+  const { t: _t } = useTranslation();
   const [selectedServer, setSelectedServer] = useState<{
     name: string;
     description: string;
@@ -91,12 +91,12 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // For rating dialog
-  const [rateServer, setRateServer] = useState<{
+  const [_rateServer, setRateServer] = useState<{
     name: string;
     source?: McpServerSource;
     external_id?: string;
   } | null>(null);
-  const [rateDialogOpen, setRateDialogOpen] = useState(false);
+  const [_rateDialogOpen, setRateDialogOpen] = useState(false);
 
   const handleInstallClick = (key: string, item: any) => {
     // Determine if this is a stdio or SSE server
@@ -155,17 +155,17 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
             <CardContent className='flex-grow pb-2'>
               {item.package_name && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {t('search.card.package')}: {item.package_name}
+                  {_t('search.card.package')}: {item.package_name}
                 </p>
               )}
               {item.command && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {t('search.card.command')}: {item.command}
+                  {_t('search.card.command')}: {item.command}
                 </p>
               )}
               {item.args?.length > 0 && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {t('search.card.exampleArgs')}: {item.args.join(' ')}
+                  {_t('search.card.exampleArgs')}: {item.args.join(' ')}
                 </p>
               )}
               
@@ -191,7 +191,7 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                 {item.useCount !== undefined && (
                   <div className="flex items-center">
                     <Database className="h-3 w-3 mr-1" />
-                    {t('search.card.usageCount')}: {item.useCount}
+                    {_t('search.card.usageCount')}: {item.useCount}
                   </div>
                 )}
                 
@@ -249,7 +249,7 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                 size="sm"
                 onClick={() => handleInstallClick(key, item)}>
                 <Download className='w-4 h-4 mr-2' />
-                {t('search.card.install')}
+                {_t('search.card.install')}
               </Button>
             </CardFooter>
           </Card>
@@ -265,11 +265,11 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
       )}
       
       {/* Temporarily disable the rating dialog until we fix the import issue 
-      {rateServer && (
+      {_rateServer && (
         <RateServerDialog
-          open={rateDialogOpen}
+          open={_rateDialogOpen}
           onOpenChange={setRateDialogOpen}
-          serverData={rateServer}
+          serverData={_rateServer}
         />
       )} */}
     </>
