@@ -47,10 +47,12 @@ import { useCodes } from '@/hooks/use-codes';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
 
-import { version } from '../package.json';
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
 import { UserMenu } from './user-menu';
+
+// Temporary solution until we set up proper version importing
+const version = '0.1.1';
 
 export default function SidebarLayout({
   children,
@@ -88,25 +90,21 @@ export default function SidebarLayout({
         {/* Main Sidebar */}
         <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
           <SidebarHeader className='flex flex-col px-2 py-4'>
-            <div className='flex mb-2 px-3'>
+            <div className='mb-2 px-3'>
               <Link href="/">
-                {mounted ? (
-                  <>
-                    <Image
-                      src={logoSrc}
-                      alt='Plugged.in Logo'
-                      width={288}
-                      height={72}
-                      className='h-144 w-36'
-                    />
-                    <span className="text-xs text-muted-foreground absolute top-1 right-1">
-                      v{version}
-                    </span>
-                  </>
-                ) : (
-                  <div className='h-144 w-36' /> // Placeholder while not mounted
-                )}
+                <Image
+                  src={logoSrc}
+                  alt='Plugged.in Logo'
+                  width={288}
+                  height={72}
+                  className='h-144 w-36'
+                />
               </Link>
+              {mounted && (
+                <div className="text-xs text-muted-foreground mt-1">Release Candidate
+                  v{version}
+                </div>
+              )}
             </div>
             <ProjectSwitcher />
             <ProfileSwitcher />
