@@ -5,9 +5,11 @@ import { and, eq, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import { 
   McpServerSource, 
+  searchCacheTable,
   serverInstallationsTable, 
-  serverRatingsTable 
+  serverRatingsTable
 } from '@/db/schema';
+import { McpIndex, SearchIndex } from '@/types/search';
 
 /**
  * Track a server installation
@@ -272,6 +274,65 @@ export async function getServerRatingMetrics(
     };
   } catch (error) {
     console.error('Error getting server rating metrics:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+/**
+ * Update all search cache entries with the latest metrics
+ * Call this periodically to keep metrics updated
+ */
+export async function updateSearchCacheMetrics() {
+  try {
+    // Get all cache entries
+    const cacheEntries = await db.query.searchCacheTable.findMany();
+    
+    for (const entry of cacheEntries) {
+      try {
+        // Get results from cache
+        const results = entry.results as SearchIndex;
+        let updated = false;
+        
+        // Update metrics for each server in the results
+        for (const [key, server] of Object.entries(results)) {
+          const typedServer = server as any;
+          if (!typedServer.source || !typedServer.external_id) continue;
+          
+          // Get metrics for this server
+          const metricsResult = await getServerRatingMetrics(
+            undefined,
+            typedServer.external_id,
+            typedServer.source
+          );
+          
+          if (metricsResult.success && metricsResult.metrics) {
+            // Update metrics
+            typedServer.rating = metricsResult.metrics.averageRating;
+            typedServer.rating_count = metricsResult.metrics.ratingCount;
+            typedServer.installation_count = metricsResult.metrics.installationCount;
+            updated = true;
+          }
+        }
+        
+        // If any metrics were updated, update the cache entry
+        if (updated) {
+          await db
+            .update(searchCacheTable)
+            .set({ results })
+            .where(eq(searchCacheTable.uuid, entry.uuid));
+        }
+      } catch (error) {
+        console.error(`Error updating metrics for cache entry ${entry.uuid}:`, error);
+        // Continue with next entry even if one fails
+      }
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating search cache metrics:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

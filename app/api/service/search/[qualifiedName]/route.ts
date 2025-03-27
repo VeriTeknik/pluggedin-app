@@ -1,10 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { McpServerSource } from '@/db/schema';
+import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { McpIndex, SmitheryServer } from '@/types/search';
 import { getGitHubRepoAsMcpServer, getRepoPackageJson } from '@/utils/github';
 import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
 import { fetchSmitheryServerDetails, getMcpServerFromSmitheryServer, updateMcpServerWithDetails } from '@/utils/smithery';
+
+/**
+ * Enrich a server with rating and installation metrics
+ */
+async function enrichServerWithMetrics(server: McpIndex): Promise<McpIndex> {
+  if (!server.source || !server.external_id) return server;
+  
+  try {
+    // Get metrics for this server
+    const metricsResult = await getServerRatingMetrics(
+      undefined, // No server UUID for external sources
+      server.external_id,
+      server.source
+    );
+    
+    if (metricsResult.success && metricsResult.metrics) {
+      // Add metrics to server data
+      server.rating = metricsResult.metrics.averageRating;
+      server.rating_count = metricsResult.metrics.ratingCount;
+      server.installation_count = metricsResult.metrics.installationCount;
+    }
+  } catch (error) {
+    console.error(`Failed to get metrics for ${server.name}:`, error);
+    // Continue even if metrics fail
+  }
+  
+  return server;
+}
 
 /**
  * Get detailed information about a specific MCP server
@@ -57,6 +86,9 @@ export async function GET(
         { status: 404 }
       );
     }
+    
+    // Enrich with metrics before returning
+    mcpServer = await enrichServerWithMetrics(mcpServer);
     
     return NextResponse.json(mcpServer);
   } catch (error) {

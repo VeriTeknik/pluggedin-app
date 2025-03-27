@@ -35,8 +35,9 @@ export interface McpIndex {
   tags?: string[]; // For tagging
   updated_at?: string; // Last update timestamp
   url?: string | null; // URL for SSE servers
-  rating?: number; // User rating (1-5)
-  installations?: number; // Number of installations
+  rating?: number; // Average user rating (1-5)
+  rating_count?: number; // Number of ratings
+  installation_count?: number; // Number of installations
 }
 
 export interface SearchIndex {

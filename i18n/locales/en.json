@@ -232,6 +232,8 @@
       "exampleArgs": "Example Args",
       "install": "Install",
       "usageCount": "Usage count",
+      "ratings": "Ratings",
+      "installations": "Installations",
       "dialog": {
         "title": "Add MCP Server",
         "description": "Add a new MCP server with the following configuration",

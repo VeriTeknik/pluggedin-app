@@ -1,4 +1,4 @@
-import { Database, Download, ExternalLink, Github, Package } from 'lucide-react';
+import { Database, Download, ExternalLink, Github, Package, Star, UserPlus } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -107,6 +107,18 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
     setDialogOpen(true);
   };
 
+  // Helper to format ratings
+  const formatRating = (rating?: number, count?: number) => {
+    if (!rating || !count) return null;
+    
+    return (
+      <div className="flex items-center">
+        <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
+        {rating.toFixed(1)} ({count})
+      </div>
+    );
+  };
+
   return (
     <>
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
@@ -159,6 +171,15 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                   <div className="flex items-center">
                     <Database className="h-3 w-3 mr-1" />
                     {t('search.card.usageCount')}: {item.useCount}
+                  </div>
+                )}
+                
+                {formatRating(item.rating, item.rating_count)}
+                
+                {item.installation_count !== undefined && item.installation_count > 0 && (
+                  <div className="flex items-center">
+                    <UserPlus className="h-3 w-3 mr-1" />
+                    {item.installation_count}
                   </div>
                 )}
                 

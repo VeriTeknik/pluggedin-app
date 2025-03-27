@@ -2,8 +2,9 @@ import { addDays } from 'date-fns';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { McpServerSource, searchCacheTable } from '@/db/schema';
+import { McpServerSource, searchCacheTable, serverInstallationsTable, serverRatingsTable } from '@/db/schema';
 import { PaginatedSearchResult, SearchIndex, SmitherySearchResponse } from '@/types/search';
+import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { fetchAwesomeMcpServersList, getGitHubRepoAsMcpServer, getRepoPackageJson, searchGitHubRepos } from '@/utils/github';
 import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
 import { getMcpServerFromSmitheryServer } from '@/utils/smithery';
@@ -132,6 +133,38 @@ export async function GET(request: NextRequest) {
 }
 
 /**
+ * Enrich search results with rating and installation metrics
+ */
+async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
+  const enrichedResults = { ...results };
+  
+  for (const [key, server] of Object.entries(enrichedResults)) {
+    if (!server.source || !server.external_id) continue;
+    
+    try {
+      // Get metrics for this server
+      const metricsResult = await getServerRatingMetrics(
+        undefined, // No server UUID for external sources
+        server.external_id,
+        server.source
+      );
+      
+      if (metricsResult.success && metricsResult.metrics) {
+        // Add metrics to server data
+        server.rating = metricsResult.metrics.averageRating;
+        server.rating_count = metricsResult.metrics.ratingCount;
+        server.installation_count = metricsResult.metrics.installationCount;
+      }
+    } catch (error) {
+      console.error(`Failed to get metrics for ${key}:`, error);
+      // Continue with next server even if metrics fail
+    }
+  }
+  
+  return enrichedResults;
+}
+
+/**
  * Search for MCP servers in Smithery
  * 
  * @param query Search query
@@ -169,7 +202,8 @@ async function searchSmithery(query: string): Promise<SearchIndex> {
     results[server.qualifiedName] = mcpServer;
   }
 
-  return results;
+  // Enrich results with metrics
+  return await enrichWithMetrics(results);
 }
 
 /**
@@ -190,7 +224,8 @@ async function searchNpm(query: string): Promise<SearchIndex> {
       results[item.package.name] = mcpServer;
     }
     
-    return results;
+    // Enrich results with metrics
+    return await enrichWithMetrics(results);
   } catch (error) {
     console.error('NPM search error:', error);
     return {}; // Return empty results on error
@@ -242,7 +277,8 @@ async function searchGitHub(query: string): Promise<SearchIndex> {
       results[repo.full_name] = mcpServer;
     }
     
-    return results;
+    // Enrich results with metrics
+    return await enrichWithMetrics(results);
   } catch (error) {
     console.error('GitHub search error:', error);
     return {}; // Return empty results on error
