@@ -103,7 +103,7 @@ export default function SetupGuidePage() {
   "mcpServers": {
     "PluggedinMCP": {
       "command": "npx",
-      "args": ["-y", "@VeriTeknik/pluggedin-mcp@latest"],
+      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy@latest"],
       "env": {
         "PLUGGEDIN_API_KEY": "${apiKey?.api_key ?? '<create an api key first>'}"
       }
