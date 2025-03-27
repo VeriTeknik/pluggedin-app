@@ -450,50 +450,55 @@ export function PlaygroundConfig({
 
           {/* Logs Tab */}
           <TabsContent value='logs' className='space-y-4 mt-4'>
-            <div className='flex items-center justify-between mb-4'>
+            {/* Top row with title and save button */}
+            <div className='flex items-center justify-between mb-2'>
               <div className='text-sm font-medium flex items-center'>
                 <Terminal className='w-4 h-4 mr-1.5' />
                 {t('playground.config.logs.title')}
               </div>
-              <div className="flex items-center space-x-2">
+              <Button
+                variant='outline'
+                size='sm'
+                onClick={saveSettings}
+                disabled={isSessionActive}
+                className='h-7 text-xs'>
+                <Save className='h-3 w-3 mr-1' />
+                {t('playground.actions.save')}
+              </Button>
+            </div>
+            
+            {/* Second row with Clear button and log level controls */}
+            <div className='flex items-center justify-between mb-2'>
+              {clientLogs.length > 0 || serverLogs.length > 0 ? (
                 <Button
-                  variant='outline'
+                  variant='ghost'
                   size='sm'
-                  onClick={saveSettings}
-                  disabled={isSessionActive}
+                  onClick={clearLogs}
                   className='h-7 text-xs'>
-                  <Save className='h-3 w-3 mr-1' />
-                  {t('playground.actions.save')}
+                  {t('playground.actions.clear')}
                 </Button>
-                {(clientLogs.length > 0 || serverLogs.length > 0) && (
+              ) : (
+                <div></div> // Empty div to maintain layout when no logs
+              )}
+              <div className="flex bg-secondary rounded-md p-0.5">
+                {['error', 'warn', 'info', 'debug'].map((level) => (
                   <Button
-                    variant='ghost'
-                    size='sm'
-                    onClick={clearLogs}
-                    className='h-7 text-xs'>
-                    {t('playground.actions.clear')}
+                    key={level}
+                    size="sm"
+                    variant={logLevel === level ? 'secondary' : 'ghost'}
+                    className={`h-6 text-xs px-2 capitalize ${
+                      logLevel === level ? 'bg-background shadow-sm' : ''
+                    } ${
+                      level === 'error' ? 'text-red-500 hover:text-red-600' : 
+                      level === 'warn' ? 'text-amber-500 hover:text-amber-600' : 
+                      level === 'debug' ? 'text-blue-500 hover:text-blue-600' : 
+                      'text-green-500 hover:text-green-600'
+                    }`}
+                    onClick={() => setLogLevel(level as LogLevel)}
+                  >
+                    {level}
                   </Button>
-                )}
-                <div className="flex bg-secondary rounded-md p-0.5">
-                  {['error', 'warn', 'info', 'debug'].map((level) => (
-                    <Button
-                      key={level}
-                      size="sm"
-                      variant={logLevel === level ? 'secondary' : 'ghost'}
-                      className={`h-6 text-xs px-2 capitalize ${
-                        logLevel === level ? 'bg-background shadow-sm' : ''
-                      } ${
-                        level === 'error' ? 'text-red-500 hover:text-red-600' : 
-                        level === 'warn' ? 'text-amber-500 hover:text-amber-600' : 
-                        level === 'debug' ? 'text-blue-500 hover:text-blue-600' : 
-                        'text-green-500 hover:text-green-600'
-                      }`}
-                      onClick={() => setLogLevel(level as LogLevel)}
-                    >
-                      {level}
-                    </Button>
-                  ))}
-                </div>
+                ))}
               </div>
             </div>
             
@@ -508,7 +513,7 @@ export function PlaygroundConfig({
                     </svg>
                   </div>
                   <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-medium text-red-800">Session Error</h3>
+                    <h3 className="text-sm font-medium text-red-800">{t('playground.config.sessionError.title')}</h3>
                     <div className="mt-1 text-sm text-red-700">
                       {sessionError}
                     </div>
@@ -519,7 +524,7 @@ export function PlaygroundConfig({
                         className="text-xs"
                         onClick={() => setSessionError(null)}
                       >
-                        Dismiss
+                        {t('playground.actions.dismiss')}
                       </Button>
                     </div>
                   </div>
@@ -595,7 +600,7 @@ export function PlaygroundConfig({
                     .map((log, index) => (
                       <div key={index} className='flex'>
                         <div className='text-muted-foreground mr-2'>
-                          [{log.timestamp.toLocaleTimeString()}]
+                          [{log.timestamp.toLocaleTimeString(undefined, {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'})}]
                         </div>
                         <div
                           className={`

@@ -120,6 +120,10 @@ export default function McpPlaygroundPage() {
   // Auto scroll when tab changes to logs
   useEffect(() => {
     if (activeTab === 'logs' && logsEndRef.current) {
+      // First scroll immediately to improve responsiveness
+      logsEndRef.current.scrollIntoView();
+      
+      // Then do a smooth scroll after a short delay to ensure content is loaded
       setTimeout(() => {
         logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
@@ -255,6 +259,13 @@ export default function McpPlaygroundPage() {
             `Connected to "${server.name} (${server.type})"`
           );
         });
+
+        // Ensure logs are scrolled into view
+        setTimeout(() => {
+          if (logsEndRef.current) {
+            logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 100);
 
         toast({
           title: 'Success',
