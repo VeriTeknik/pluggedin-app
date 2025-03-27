@@ -1,4 +1,4 @@
-import { Database, Download, ExternalLink, Github, Package, Star, UserPlus } from 'lucide-react';
+import { Database, Download, ExternalLink, Github, Package, Star, ThumbsUp, UserPlus } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -19,6 +19,8 @@ import { McpServerCategory, SearchIndex } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
 import { InstallDialog } from './InstallDialog';
+// Temporarily disable the rating dialog until we fix the import issue
+// import { RateServerDialog } from './RateServerDialog';
 
 // Helper function to get category badge
 function CategoryBadge({ category }: { category?: McpServerCategory }) {
@@ -87,6 +89,14 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
     external_id?: string;
   } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // For rating dialog
+  const [rateServer, setRateServer] = useState<{
+    name: string;
+    source?: McpServerSource;
+    external_id?: string;
+  } | null>(null);
+  const [rateDialogOpen, setRateDialogOpen] = useState(false);
 
   const handleInstallClick = (key: string, item: any) => {
     // Determine if this is a stdio or SSE server
@@ -105,6 +115,17 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
     });
     
     setDialogOpen(true);
+  };
+
+  // Handle clicking the rate button
+  const handleRateClick = (key: string, item: any) => {
+    setRateServer({
+      name: item.name,
+      source: item.source,
+      external_id: item.external_id,
+    });
+    
+    setRateDialogOpen(true);
   };
 
   // Helper to format ratings
@@ -211,15 +232,15 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                 </Button>
               )}
               
-              {item.qualifiedName && (
-                <Button variant='outline' asChild size="sm">
-                  <Link
-                    href={`/api/service/search/${item.qualifiedName}`}
-                    target='_blank'
-                    rel='noopener noreferrer'>
-                    <ExternalLink className='w-4 h-4 mr-2' />
-                    Details
-                  </Link>
+              {item.source && item.external_id && (
+                <Button 
+                  variant='outline' 
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => handleRateClick(key, item)}
+                >
+                  <ThumbsUp className='w-4 h-4' />
+                  Rate
                 </Button>
               )}
               
@@ -242,6 +263,15 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
           serverData={selectedServer}
         />
       )}
+      
+      {/* Temporarily disable the rating dialog until we fix the import issue 
+      {rateServer && (
+        <RateServerDialog
+          open={rateDialogOpen}
+          onOpenChange={setRateDialogOpen}
+          serverData={rateServer}
+        />
+      )} */}
     </>
   );
 }

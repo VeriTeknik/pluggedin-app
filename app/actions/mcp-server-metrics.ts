@@ -65,6 +65,14 @@ export async function trackServerInstallation(
       source: source || McpServerSource.PLUGGEDIN,
     });
 
+    // Update cache for external servers
+    if (externalId && source) {
+      await updateServerInCache(externalId, source).catch(error => {
+        console.error('Failed to update cache after installation:', error);
+        // Don't fail the installation tracking if cache update fails
+      });
+    }
+
     return { success: true };
   } catch (error) {
     console.error('Error tracking server installation:', error);
@@ -155,6 +163,14 @@ export async function rateServer(
           );
       }
       
+      // Update cache for external servers
+      if (externalId && source) {
+        await updateServerInCache(externalId, source).catch(error => {
+          console.error('Failed to update cache after rating:', error);
+          // Don't fail the rating action if cache update fails
+        });
+      }
+      
       return { 
         success: true,
         message: 'Rating updated'
@@ -170,6 +186,14 @@ export async function rateServer(
       rating,
       comment,
     });
+
+    // Update cache for external servers
+    if (externalId && source) {
+      await updateServerInCache(externalId, source).catch(error => {
+        console.error('Failed to update cache after rating:', error);
+        // Don't fail the rating action if cache update fails
+      });
+    }
 
     return { success: true };
   } catch (error) {
@@ -333,6 +357,75 @@ export async function updateSearchCacheMetrics() {
     return { success: true };
   } catch (error) {
     console.error('Error updating search cache metrics:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+/**
+ * Update cached search results for a specific server after a rating or installation action
+ */
+export async function updateServerInCache(
+  externalId: string, 
+  source: McpServerSource
+) {
+  try {
+    // Get all cache entries
+    const cacheEntries = await db.query.searchCacheTable.findMany();
+    
+    // Get latest metrics for this server
+    const metricsResult = await getServerRatingMetrics(
+      undefined,
+      externalId,
+      source
+    );
+    
+    if (!metricsResult.success || !metricsResult.metrics) {
+      return { success: false, error: 'Failed to get updated metrics' };
+    }
+    
+    const { averageRating, ratingCount, installationCount } = metricsResult.metrics;
+    
+    // Update server in all cache entries
+    for (const entry of cacheEntries) {
+      try {
+        // Get results from cache
+        const results = entry.results as SearchIndex;
+        let updated = false;
+        
+        // Find and update the specific server in the results
+        for (const [key, server] of Object.entries(results)) {
+          const typedServer = server as any;
+          
+          // Only update the specific server
+          if (typedServer.external_id === externalId && typedServer.source === source) {
+            // Update metrics
+            typedServer.rating = averageRating;
+            typedServer.rating_count = ratingCount;
+            typedServer.installation_count = installationCount;
+            updated = true;
+            break; // Found and updated the server, no need to check more
+          }
+        }
+        
+        // If server was found and updated, update the cache entry
+        if (updated) {
+          await db
+            .update(searchCacheTable)
+            .set({ results })
+            .where(eq(searchCacheTable.uuid, entry.uuid));
+        }
+      } catch (error) {
+        console.error(`Error updating server in cache entry ${entry.uuid}:`, error);
+        // Continue with next entry even if one fails
+      }
+    }
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error updating server in search cache:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
