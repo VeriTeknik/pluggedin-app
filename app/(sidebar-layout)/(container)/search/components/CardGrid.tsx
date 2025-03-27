@@ -1,11 +1,9 @@
 import { Database, Download, ExternalLink, Github, Package } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { createMcpServer } from '@/app/actions/mcp-servers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,200 +14,26 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { McpServerSource, McpServerType } from '@/db/schema';
-import { useProfiles } from '@/hooks/use-profiles';
 import { McpServerCategory, SearchIndex } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
-interface AddMcpServerDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  defaultValues: {
-    name: string;
-    description: string;
-    command: string;
-    args: string;
-    env: string;
-    url: string | undefined;
-    type: McpServerType;
-  };
-}
+import { InstallDialog } from './InstallDialog';
 
-function AddMcpServerDialog({
-  open,
-  onOpenChange,
-  defaultValues,
-}: AddMcpServerDialogProps) {
+// Helper function to get category badge
+function CategoryBadge({ category }: { category?: McpServerCategory }) {
   const { t } = useTranslation();
-  const { currentProfile } = useProfiles();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm({
-    defaultValues,
-  });
-
-  useEffect(() => {
-    form.reset(defaultValues);
-  }, [defaultValues, form]);
-
-  const onSubmit = async (values: typeof defaultValues) => {
-    if (!currentProfile?.uuid) return;
-
-    setIsSubmitting(true);
-    try {
-      await createMcpServer(currentProfile.uuid, {
-        name: values.name,
-        description: values.description,
-        command: values.command,
-        args: values.args.trim().split(/\s+/).filter(Boolean),
-        env: Object.fromEntries(
-          values.env
-            .split('\n')
-            .filter((line) => line.includes('='))
-            .map((line) => {
-              const [key, ...values] = line.split('=');
-              return [key.trim(), values.join('=').trim()];
-            })
-        ),
-        type: values.type,
-        url: values.url,
-      });
-      onOpenChange(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  
+  if (!category) return null;
+  
+  const iconName = getCategoryIcon(category);
+  const IconComponent = (LucideIcons as Record<string, any>)[iconName];
+  
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('search.card.dialog.title')}</DialogTitle>
-          <DialogDescription>
-            {t('search.card.dialog.description')}
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-            <FormField
-              control={form.control}
-              name='name'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('search.card.dialog.name')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='description'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('search.card.dialog.description')}</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            {form.getValues('type') === McpServerType.STDIO ? (
-              <>
-                <FormField
-                  control={form.control}
-                  name='command'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('search.card.dialog.command')}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name='args'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('search.card.dialog.args')}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name='env'
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('search.card.dialog.env')}</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </>
-            ) : (
-              <FormField
-                control={form.control}
-                name='url'
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>{t('search.card.dialog.url')}</FormLabel>
-                    <FormControl>
-                      <Input 
-                        {...field} 
-                        value={field.value || ''} 
-                        onChange={(e) => field.onChange(e.target.value)}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            )}
-            <div className='flex justify-end gap-4'>
-              <Button
-                variant='outline'
-                type='button'
-                onClick={() => onOpenChange(false)}>
-                {t('search.card.dialog.cancel')}
-              </Button>
-              <Button type='submit' disabled={isSubmitting}>
-                {t('search.card.dialog.add')}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <Badge variant="secondary" className="gap-1">
+      {IconComponent && <IconComponent className="h-3 w-3" />}
+      {t(`search.categories.${category}`)}
+    </Badge>
   );
 }
 
@@ -249,26 +73,9 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
   }
 }
 
-// Helper function to get category badge
-function CategoryBadge({ category }: { category?: McpServerCategory }) {
-  const { t } = useTranslation();
-  
-  if (!category) return null;
-  
-  const iconName = getCategoryIcon(category);
-  const IconComponent = (LucideIcons as Record<string, any>)[iconName];
-  
-  return (
-    <Badge variant="secondary" className="gap-1">
-      {IconComponent && <IconComponent className="h-3 w-3" />}
-      {t(`search.categories.${category}`)}
-    </Badge>
-  );
-}
-
 export default function CardGrid({ items }: { items: SearchIndex }) {
   const { t } = useTranslation();
-  const [selectedItem, setSelectedItem] = useState<{
+  const [selectedServer, setSelectedServer] = useState<{
     name: string;
     description: string;
     command: string;
@@ -276,6 +83,8 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
     env: string;
     url: string | undefined;
     type: McpServerType;
+    source?: McpServerSource;
+    external_id?: string;
   } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -283,7 +92,7 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
     // Determine if this is a stdio or SSE server
     const isSSE = item.url || false;
     
-    setSelectedItem({
+    setSelectedServer({
       name: item.name,
       description: item.description,
       command: isSSE ? '' : item.command,
@@ -291,7 +100,10 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
       env: isSSE ? '' : item.envs?.map((env: string) => env).join('\n') || '',
       url: isSSE ? item.url : undefined,
       type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
+      source: item.source,
+      external_id: item.external_id,
     });
+    
     setDialogOpen(true);
   };
 
@@ -342,11 +154,28 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                 ))}
               </div>
               
-              {item.useCount !== undefined && (
-                <p className='text-xs text-muted-foreground mt-2'>
-                  {t('search.card.usageCount')}: {item.useCount}
-                </p>
-              )}
+              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                {item.useCount !== undefined && (
+                  <div className="flex items-center">
+                    <Database className="h-3 w-3 mr-1" />
+                    {t('search.card.usageCount')}: {item.useCount}
+                  </div>
+                )}
+                
+                {item.github_stars !== undefined && item.github_stars !== null && (
+                  <div className="flex items-center">
+                    <Github className="h-3 w-3 mr-1" />
+                    {item.github_stars}
+                  </div>
+                )}
+                
+                {item.package_download_count !== undefined && item.package_download_count !== null && (
+                  <div className="flex items-center">
+                    <Download className="h-3 w-3 mr-1" />
+                    {item.package_download_count}
+                  </div>
+                )}
+              </div>
             </CardContent>
             <CardFooter className='flex justify-between pt-2'>
               {item.githubUrl && (
@@ -385,11 +214,11 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
         ))}
       </div>
 
-      {selectedItem && (
-        <AddMcpServerDialog
+      {selectedServer && (
+        <InstallDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
-          defaultValues={selectedItem}
+          serverData={selectedServer}
         />
       )}
     </>

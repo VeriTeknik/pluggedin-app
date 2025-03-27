@@ -4,7 +4,6 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { 
-  mcpServersTable, 
   McpServerSource, 
   serverInstallationsTable, 
   serverRatingsTable 
@@ -15,8 +14,8 @@ import {
  */
 export async function trackServerInstallation(
   profileUuid: string,
-  serverUuid?: string,
-  externalId?: string,
+  serverUuid?: string | null,
+  externalId?: string | null,
   source?: McpServerSource
 ) {
   try {
@@ -59,8 +58,8 @@ export async function trackServerInstallation(
     // Record the installation
     await db.insert(serverInstallationsTable).values({
       profile_uuid: profileUuid,
-      server_uuid: serverUuid,
-      external_id: externalId,
+      server_uuid: serverUuid || undefined,
+      external_id: externalId || undefined,
       source: source || McpServerSource.PLUGGEDIN,
     });
 
