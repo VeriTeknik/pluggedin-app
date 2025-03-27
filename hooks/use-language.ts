@@ -38,6 +38,22 @@ export function useLanguage() {
       
       // Update direction for RTL support
       document.documentElement.dir = isRTL(language) ? 'rtl' : 'ltr';
+
+      // Update language in database
+      const response = await fetch('/api/settings/profile', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          language,
+          name: undefined // Keep existing name
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to update language in database:', await response.text());
+      }
     } catch (error) {
       console.error('Failed to update language:', error);
       // Revert to previous language if update fails

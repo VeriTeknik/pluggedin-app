@@ -38,6 +38,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { useLanguage } from '@/hooks/use-language';
 
 import { removeConnectedAccount } from '../actions';
 import { AppearanceSection } from './appearance-section';
@@ -57,6 +58,7 @@ interface SettingsFormProps {
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
+  language: z.enum(['en', 'tr']),
 });
 
 const passwordSchema = z.object({
@@ -72,6 +74,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const { toast } = useToast();
+  const { currentLanguage, setLanguage } = useLanguage();
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
@@ -82,6 +85,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
     resolver: zodResolver(profileSchema),
     defaultValues: {
       name: user.name,
+      language: currentLanguage,
     },
   });
 
@@ -267,57 +271,68 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
             {t('settings.profile.description')}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Avatar */}
-          <div className="flex items-center space-x-4">
-            <Avatar className="h-20 w-20">
-              <AvatarImage src={user.image} />
-              <AvatarFallback>{user.name?.charAt(0)?.toUpperCase()}</AvatarFallback>
-            </Avatar>
-            <div>
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleAvatarUpload}
-                disabled={isUploading}
-              />
-              <p className="text-sm text-muted-foreground mt-2">
-                {t('settings.profile.avatar.recommendation')}
-              </p>
-            </div>
-          </div>
-
-          {/* Email */}
-          <div className="space-y-2">
-            <Label>{t('auth.common.emailLabel')}</Label>
-            <div className="flex items-center space-x-2">
-              <Input value={user.email} disabled />
-              {user.emailVerified ? (
-                <Badge variant="secondary" className="shrink-0 bg-green-500/10 text-green-500 hover:bg-green-500/20">Verified</Badge>
-              ) : (
-                <Badge variant="destructive" className="shrink-0">Not Verified</Badge>
-              )}
-            </div>
-          </div>
-
-          {/* Name */}
+        <CardContent>
           <Form {...profileForm}>
             <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+              <div className="flex items-center gap-4">
+                <Avatar className="h-20 w-20">
+                  <AvatarImage src={user.image || ''} />
+                  <AvatarFallback>{user.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <Label htmlFor="avatar" className="cursor-pointer">
+                    <div className="text-sm text-muted-foreground">
+                      {t('settings.profile.avatar')}
+                    </div>
+                    <Input
+                      id="avatar"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarUpload}
+                      disabled={isUploading}
+                    />
+                  </Label>
+                </div>
+              </div>
               <FormField
                 control={profileForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('settings.profile.name.label')}</FormLabel>
+                    <FormLabel>{t('settings.profile.name')}</FormLabel>
                     <FormControl>
-                      <Input {...field} disabled={isUpdatingProfile} placeholder={t('settings.profile.name.placeholder')} />
+                      <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={profileForm.control}
+                name="language"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>{t('settings.profile.language')}</FormLabel>
+                    <FormControl>
+                      <select
+                        {...field}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setLanguage(e.target.value as 'en' | 'tr');
+                        }}
+                      >
+                        <option value="en">English</option>
+                        <option value="tr">Türkçe</option>
+                      </select>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
               <Button type="submit" disabled={isUpdatingProfile}>
-                {isUpdatingProfile ? 'Updating...' : t('settings.profile.updateButton')}
+                {isUpdatingProfile ? t('common.saving') : t('common.save')}
               </Button>
             </form>
           </Form>

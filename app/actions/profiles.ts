@@ -3,8 +3,8 @@
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { profilesTable } from '@/db/schema';
-import { projectsTable } from '@/db/schema';
+import { profilesTable, projectsTable } from '@/db/schema';
+import { type Locale } from '@/i18n/config';
 import { getAuthSession } from '@/lib/auth';
 import { Profile } from '@/types/profile';
 
@@ -77,12 +77,10 @@ export async function getProfiles(currentProjectUuid: string) {
     throw new Error('Unauthorized - you do not have access to this project');
   }
   
-  const profiles = await db
-    .select()
-    .from(profilesTable)
-    .where(eq(profilesTable.project_uuid, currentProjectUuid));
-
-  return profiles;
+  return await db
+      .select()
+      .from(profilesTable)
+      .where(eq(profilesTable.project_uuid, currentProjectUuid));
 }
 
 export async function getProjectActiveProfile(currentProjectUuid: string) {
@@ -277,4 +275,36 @@ export async function setActiveProfile(profileUuid: string) {
   }
 
   return profile[0];
+}
+
+export async function getActiveProfileLanguage(): Promise<Locale | null> {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user) {
+      return null;
+    }
+
+    // Get current project
+    const project = await db
+      .select()
+      .from(projectsTable)
+      .where(eq(projectsTable.user_id, session.user.id))
+      .limit(1);
+
+    if (!project[0]?.active_profile_uuid) {
+      return null;
+    }
+
+    // Get profile language
+    const profile = await db
+      .select({ language: profilesTable.language })
+      .from(profilesTable)
+      .where(eq(profilesTable.uuid, project[0].active_profile_uuid))
+      .limit(1);
+
+    return profile[0]?.language || null;
+  } catch (error) {
+    console.error('Failed to get active profile language:', error);
+    return null;
+  }
 }

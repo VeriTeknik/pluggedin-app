@@ -203,7 +203,7 @@
       "install": "Yükle",
       "dialog": {
         "title": "MCP Sunucusu Ekle",
-        "description": "Aşağıdaki yapılandırma ile yeni bir MCP sunucusu ekleyin",
+        "MCPdescription": "Aşağıdaki yapılandırma ile yeni bir MCP sunucusu ekleyin",
         "name": "İsim",
         "description": "Açıklama",
         "command": "Komut",
@@ -321,14 +321,11 @@
     "profile": {
       "title": "Profil",
       "description": "Profil bilgilerinizi yönetin",
-      "avatar": {
-        "upload": "Avatar Yükle",
-        "recommendation": "Önerilen: Kare görsel, maksimum 1MB"
-      },
-      "name": {
-        "label": "Ad",
-        "placeholder": "Adınızı girin"
-      },
+      "avatar": "Avatar Yükle",
+      "avatarRecommendation": "Önerilen: Kare görsel, maksimum 1MB",
+      "name": "Ad",
+      "namePlaceholder": "Adınızı girin",
+      "language": "Dil",
       "updateButton": "Profili Güncelle",
       "success": "Profil başarıyla güncellendi",
       "error": "Profil güncellenemedi"

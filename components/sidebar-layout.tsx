@@ -71,12 +71,17 @@ export default function SidebarLayout({
   const { toast } = useToast();
   const { logoSrc } = useThemeLogo();
   const [mounted, setMounted] = useState(false);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
-  // Ensure correct theme is applied after mount
+  // Ensure correct theme and i18n are applied after mount
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Skip rendering any translated content until after hydration
+  if (!mounted) {
+    return null;
+  }
 
   const handleCreateCode = async () => {
     if (fileName.trim()) {
@@ -94,25 +99,14 @@ export default function SidebarLayout({
           <SidebarHeader className='flex flex-col px-2 py-4'>
             <div className='mb-2 px-3'>
               <Link href="/" className="block">
-                {mounted ? (
-                  <Image
-                    src={logoSrc}
-                    alt='Plugged.in Logo'
-                    width={288}
-                    height={72}
-                    className='h-144 w-36'
-                    priority
-                  />
-                ) : (
-                  <Image
-                    src="/pluggedin-wl.png"
-                    alt='Plugged.in Logo'
-                    width={288}
-                    height={72}
-                    className='h-144 w-36'
-                    priority
-                  />
-                )}
+                <Image
+                  src={logoSrc}
+                  alt='Plugged.in Logo'
+                  width={288}
+                  height={72}
+                  className='h-144 w-36'
+                  priority
+                />
               </Link>
               <div className="text-xs text-muted-foreground mt-1">
                 {t('common.releaseCandidate', { version })}

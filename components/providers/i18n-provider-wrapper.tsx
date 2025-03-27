@@ -1,11 +1,19 @@
 import { headers } from 'next/headers';
 
-import { defaultLocale, Locale,locales } from '@/i18n/config';
+import { getActiveProfileLanguage } from '@/app/actions/profiles';
+import { defaultLocale, Locale, locales } from '@/i18n/config';
 
 import { I18nProvider } from './i18n-provider';
 
 async function getInitialLocale(): Promise<string> {
   try {
+    // First try to get language from active profile
+    const profileLanguage = await getActiveProfileLanguage();
+    if (profileLanguage) {
+      return profileLanguage;
+    }
+
+    // Fallback to browser language
     const headersList = await headers();
     const acceptLanguage = headersList.get('accept-language');
     

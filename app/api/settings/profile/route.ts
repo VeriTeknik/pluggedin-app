@@ -3,11 +3,13 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { users } from '@/db/schema';
+import { profilesTable, projectsTable, users } from '@/db/schema';
+import { locales } from '@/i18n/config';
 import { getAuthSession } from '@/lib/auth';
 
 const profileSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
+  name: z.string().min(2, 'Name must be at least 2 characters').optional(),
+  language: z.enum(locales),
 });
 
 export async function PATCH(req: Request) {
@@ -18,12 +20,32 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json();
-    const { name } = profileSchema.parse(body);
+    const { name, language } = profileSchema.parse(body);
 
+    // Update user name if provided
+    if (name) {
+      await db
+        .update(users)
+        .set({ name, updated_at: new Date() })
+        .where(eq(users.id, session.user.id));
+    }
+
+    // Get current project
+    const project = await db
+      .select()
+      .from(projectsTable)
+      .where(eq(projectsTable.user_id, session.user.id))
+      .limit(1);
+
+    if (!project[0]?.active_profile_uuid) {
+      return new NextResponse('No active profile found', { status: 404 });
+    }
+
+    // Update profile language
     await db
-      .update(users)
-      .set({ name, updated_at: new Date() })
-      .where(eq(users.id, session.user.id));
+      .update(profilesTable)
+      .set({ language })
+      .where(eq(profilesTable.uuid, project[0].active_profile_uuid));
 
     return NextResponse.json({ message: 'Profile updated successfully' });
   } catch (error) {

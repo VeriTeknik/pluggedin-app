@@ -238,7 +238,7 @@
       "installations": "Installations",
       "dialog": {
         "title": "Add MCP Server",
-        "description": "Add a new MCP server with the following configuration",
+        "MCPdescription": "Add a new MCP server with the following configuration",
         "name": "Name",
         "description": "Description",
         "command": "Command",
@@ -357,14 +357,11 @@
     "profile": {
       "title": "Profile",
       "description": "Manage your profile information",
-      "avatar": {
-        "upload": "Upload Avatar",
-        "recommendation": "Recommended: Square image, max 1MB"
-      },
-      "name": {
-        "label": "Name",
-        "placeholder": "Enter your name"
-      },
+      "avatar": "Upload Avatar",
+      "avatarRecommendation": "Recommended: Square image, max 1MB",
+      "name": "Name",
+      "namePlaceholder": "Enter your name",
+      "language": "Language",
       "updateButton": "Update Profile",
       "success": "Profile updated successfully",
       "error": "Failed to update profile"
