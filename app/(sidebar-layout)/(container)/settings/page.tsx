@@ -12,6 +12,7 @@ export default async function SettingsPage() {
     redirect('/login');
   }
 
+  // Fetch connected account providers
   const connectedAccounts = await getConnectedAccounts(session.user.id);
 
   return (

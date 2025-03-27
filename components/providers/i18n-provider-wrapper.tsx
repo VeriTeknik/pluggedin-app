@@ -9,7 +9,9 @@ async function getInitialLocale(): Promise<string> {
     const headersList = await headers();
     const acceptLanguage = headersList.get('accept-language');
     
-    if (!acceptLanguage) return defaultLocale;
+    if (!acceptLanguage) {
+      return defaultLocale;
+    }
     
     // Get language from accept-language header
     const browserLocales = acceptLanguage.split(',')
@@ -22,7 +24,7 @@ async function getInitialLocale(): Promise<string> {
     );
     
     return matchedLocale || defaultLocale;
-  } catch (error) {
+  } catch (_error) {
     // Fallback to default locale if headers are not available
     return defaultLocale;
   }

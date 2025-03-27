@@ -39,6 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 
+import { removeConnectedAccount } from '../actions';
 import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
@@ -75,6 +76,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [isRemovingAccount, setIsRemovingAccount] = useState<string | null>(null);
 
   const profileForm = useForm({
     resolver: zodResolver(profileSchema),
@@ -226,6 +228,35 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
     }
   };
 
+  const handleRemoveAccount = async (provider: string) => {
+    try {
+      setIsRemovingAccount(provider);
+      const result = await removeConnectedAccount(user.id, provider);
+      
+      if (result.success) {
+        toast({
+          title: t('common.success'),
+          description: t('settings.connectedAccounts.removed', `${provider} account disconnected successfully`),
+        });
+        router.refresh();
+      } else {
+        toast({
+          title: t('common.error'),
+          description: result.error || t('settings.connectedAccounts.error', 'Failed to disconnect account'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('settings.connectedAccounts.error', 'Failed to disconnect account'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRemovingAccount(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Profile Section */}
@@ -318,7 +349,17 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
               </div>
             </div>
             {connectedAccounts.includes('github') ? (
-              <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleRemoveAccount('github')}
+                  disabled={isRemovingAccount !== null}
+                >
+                  {isRemovingAccount === 'github' ? t('common.removing', 'Removing...') : t('common.remove', 'Remove')}
+                </Button>
+              </div>
             ) : (
               <Button variant="outline" onClick={() => signIn('github')}>
                 {t('auth.social.github')}
@@ -345,10 +386,54 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
               </div>
             </div>
             {connectedAccounts.includes('google') ? (
-              <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleRemoveAccount('google')}
+                  disabled={isRemovingAccount !== null}
+                >
+                  {isRemovingAccount === 'google' ? t('common.removing', 'Removing...') : t('common.remove', 'Remove')}
+                </Button>
+              </div>
             ) : (
               <Button variant="outline" onClick={() => signIn('google')}>
                 {t('auth.social.google')}
+              </Button>
+            )}
+          </div>
+
+          {/* Twitter */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <svg className="h-6 w-6" viewBox="0 0 24 24">
+                <path d="M22.46 6c-.77.35-1.6.58-2.46.69.88-.53 1.56-1.37 1.88-2.38-.83.5-1.75.85-2.72 1.05C18.37 4.5 17.26 4 16 4c-2.35 0-4.27 1.92-4.27 4.29 0 .34.04.67.11.98A12.28 12.28 0 0 1 3.11 4.93c-.37.63-.58 1.37-.58 2.15 0 1.49.75 2.81 1.91 3.56-.71 0-1.37-.2-1.95-.5v.03c0 2.08 1.48 3.82 3.44 4.21a4.22 4.22 0 0 1-1.93.07 4.28 4.28 0 0 0 4 2.98 8.54 8.54 0 0 1-5.33 1.84c-.34 0-.68-.02-1.02-.06C3.44 20.29 5.7 21 8.12 21 16 21 20.33 14.46 20.33 8.79c0-.19 0-.37-.01-.56.84-.6 1.56-1.36 2.14-2.23z" fill="#1DA1F2" />
+              </svg>
+              <div>
+                <div className="font-medium">Twitter</div>
+                <div className="text-sm text-muted-foreground">
+                  {connectedAccounts.includes('twitter') 
+                    ? t('settings.connectedAccounts.twitter.connected', 'Connected to Twitter')
+                    : t('settings.connectedAccounts.twitter.connect', 'Connect your Twitter account')}
+                </div>
+              </div>
+            </div>
+            {connectedAccounts.includes('twitter') ? (
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => handleRemoveAccount('twitter')}
+                  disabled={isRemovingAccount !== null}
+                >
+                  {isRemovingAccount === 'twitter' ? t('common.removing', 'Removing...') : t('common.remove', 'Remove')}
+                </Button>
+              </div>
+            ) : (
+              <Button variant="outline" onClick={() => signIn('twitter')}>
+                {t('auth.social.twitter', 'Connect with Twitter')}
               </Button>
             )}
           </div>
