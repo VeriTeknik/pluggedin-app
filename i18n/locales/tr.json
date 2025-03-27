@@ -3,6 +3,7 @@
     "or": "VEYA",
     "error": "Hata",
     "success": "Başarılı",
+    "releaseCandidate": "Yayın Adayı v{{version}}",
     "validation": {
       "required": "Bu alan zorunludur",
       "email": "Lütfen geçerli bir e-posta adresi girin",
@@ -188,6 +189,7 @@
   "search": {
     "title": "Arama",
     "subtitle": "Tüm içerikte arama yapın",
+    "explorePlugins": "Eklentileri Keşfet",
     "input": {
       "placeholder": "Ara..."
     },
@@ -309,6 +311,7 @@
   },
   "sidebar": {
     "toggle": "Kenar Çubuğunu Aç/Kapat",
+    "navigation": "Navigasyon",
     "keyboard": {
       "shortcut": "Klavye kısayolu: {{key}}"
     }

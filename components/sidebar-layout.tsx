@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as React from 'react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -70,6 +71,7 @@ export default function SidebarLayout({
   const { toast } = useToast();
   const { logoSrc } = useThemeLogo();
   const [mounted, setMounted] = useState(false);
+  const { t } = useTranslation();
 
   // Ensure correct theme is applied after mount
   useEffect(() => {
@@ -91,27 +93,37 @@ export default function SidebarLayout({
         <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
           <SidebarHeader className='flex flex-col px-2 py-4'>
             <div className='mb-2 px-3'>
-              <Link href="/">
-                <Image
-                  src={logoSrc}
-                  alt='Plugged.in Logo'
-                  width={288}
-                  height={72}
-                  className='h-144 w-36'
-                />
+              <Link href="/" className="block">
+                {mounted ? (
+                  <Image
+                    src={logoSrc}
+                    alt='Plugged.in Logo'
+                    width={288}
+                    height={72}
+                    className='h-144 w-36'
+                    priority
+                  />
+                ) : (
+                  <Image
+                    src="/pluggedin-wl.png"
+                    alt='Plugged.in Logo'
+                    width={288}
+                    height={72}
+                    className='h-144 w-36'
+                    priority
+                  />
+                )}
               </Link>
-              {mounted && (
-                <div className="text-xs text-muted-foreground mt-1">Release Candidate
-                  v{version}
-                </div>
-              )}
+              <div className="text-xs text-muted-foreground mt-1">
+                {t('common.releaseCandidate', { version })}
+              </div>
             </div>
             <ProjectSwitcher />
             <ProfileSwitcher />
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+              <SidebarGroupLabel>{t('sidebar.navigation')}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   
@@ -119,7 +131,7 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/mcp-playground'>
                         <FlaskConical className='mr-2 h-4 w-4' />
-                        <span>Playground</span>
+                        <span>{t('playground.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -127,7 +139,7 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/mcp-servers'>
                         <Unplug className='mr-2 h-4 w-4' />
-                        <span>Plugins</span>
+                        <span>{t('mcpServers.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -136,7 +148,7 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/search'>
                         <Blocks className='mr-2 h-4 w-4' />
-                        <span>Explore Plugins</span>
+                        <span>{t('search.explorePlugins')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -163,7 +175,7 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/api-keys'>
                         <Key className='mr-2 h-4 w-4' />
-                        <span>API Keys</span>
+                        <span>{t('apiKeys.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -171,7 +183,7 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/settings'>
                         <Settings className='mr-2 h-4 w-4' />
-                        <span>Settings</span>
+                        <span>{t('settings.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -179,7 +191,7 @@ export default function SidebarLayout({
                     <SidebarMenuButton asChild>
                       <Link href='/legal'>
                         <FileText className='mr-2 h-4 w-4' />
-                        <span>Legal</span>
+                        <span>{t('legal.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
