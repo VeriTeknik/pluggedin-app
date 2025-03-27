@@ -194,11 +194,44 @@
     "loading": "Loading search...",
     "noResults": "No results found",
     "error": "Error loading search results",
+    "sort": "Sort",
+    "sortBy": "Sort by",
+    "sortOptions": {
+      "relevance": "Relevance",
+      "popularity": "Popularity",
+      "recent": "Most recent",
+      "stars": "GitHub stars"
+    },
+    "filter": "Filter",
+    "filterByTags": "Filter by tags",
+    "noTagsAvailable": "No tags available",
+    "clearFilters": "Clear filters",
+    "clearAllFilters": "Clear all",
+    "noMatchingTags": "No results match the selected tags",
+    "noMatchingFilters": "No results match the selected filters",
+    "category": "Category",
+    "filterByCategory": "Filter by category",
+    "noCategoriesAvailable": "No categories available",
+    "allCategories": "All categories",
+    "categories": {
+      "LLM": "LLM",
+      "UTILITY": "Utility",
+      "TOOL": "Tool",
+      "DATA": "Data Access",
+      "CONNECTOR": "Connector",
+      "SEARCH": "Search",
+      "CODE": "Code",
+      "IMAGE": "Image",
+      "AUDIO": "Audio",
+      "VIDEO": "Video",
+      "OTHER": "Other"
+    },
     "card": {
       "package": "Package",
       "command": "Command",
       "exampleArgs": "Example Args",
       "install": "Install",
+      "usageCount": "Usage count",
       "dialog": {
         "title": "Add MCP Server",
         "description": "Add a new MCP server with the following configuration",
@@ -207,6 +240,7 @@
         "command": "Command",
         "args": "Arguments (space-separated)",
         "env": "Environment Variables (one per line)",
+        "url": "URL",
         "cancel": "Cancel",
         "add": "Add Server"
       }

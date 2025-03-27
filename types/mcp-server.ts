@@ -1,4 +1,4 @@
-import { McpServerStatus, McpServerType } from '@/db/schema';
+import { McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
 
 export interface McpServer {
   uuid: string;
@@ -14,4 +14,6 @@ export interface McpServer {
   status: McpServerStatus;
   type: McpServerType;
   url: string | null;
+  source: McpServerSource;
+  external_id: string | null;
 }

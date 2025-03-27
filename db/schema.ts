@@ -28,6 +28,13 @@ export enum McpServerType {
   SSE = 'SSE',
 }
 
+export enum McpServerSource {
+  PLUGGEDIN = 'PLUGGEDIN',
+  SMITHERY = 'SMITHERY',
+  NPM = 'NPM',
+  GITHUB = 'GITHUB',
+}
+
 export const mcpServerStatusEnum = pgEnum(
   'mcp_server_status',
   enumToPgEnum(McpServerStatus)
@@ -36,6 +43,11 @@ export const mcpServerStatusEnum = pgEnum(
 export const mcpServerTypeEnum = pgEnum(
   'mcp_server_type',
   enumToPgEnum(McpServerType)
+);
+
+export const mcpServerSourceEnum = pgEnum(
+  'mcp_server_source',
+  enumToPgEnum(McpServerSource)
 );
 
 // Auth.js / NextAuth.js schema
@@ -214,6 +226,10 @@ export const mcpServersTable = pgTable(
     status: mcpServerStatusEnum('status')
       .notNull()
       .default(McpServerStatus.ACTIVE),
+    source: mcpServerSourceEnum('source')
+      .notNull()
+      .default(McpServerSource.PLUGGEDIN),
+    external_id: text('external_id'),
   },
   (table) => [
     index('mcp_servers_status_idx').on(table.status),
@@ -287,5 +303,86 @@ export const playgroundSettingsTable = pgTable(
   },
   (table) => [
     index('playground_settings_profile_uuid_idx').on(table.profile_uuid),
+  ]
+);
+
+// Table for caching search results from external sources
+export const searchCacheTable = pgTable(
+  'search_cache',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    source: mcpServerSourceEnum('source').notNull(),
+    query: text('query').notNull(),
+    results: jsonb('results').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expires_at: timestamp('expires_at', { withTimezone: true })
+      .notNull(),
+  },
+  (table) => [
+    index('search_cache_source_query_idx').on(table.source, table.query),
+    index('search_cache_expires_at_idx').on(table.expires_at),
+  ]
+);
+
+// Table for tracking server installations
+export const serverInstallationsTable = pgTable(
+  'server_installations',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    server_uuid: uuid('server_uuid')
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    external_id: text('external_id'),
+    source: mcpServerSourceEnum('source').notNull(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('server_installations_server_uuid_idx').on(table.server_uuid),
+    index('server_installations_external_id_source_idx').on(table.external_id, table.source),
+    index('server_installations_profile_uuid_idx').on(table.profile_uuid),
+  ]
+);
+
+// Table for tracking server ratings
+export const serverRatingsTable = pgTable(
+  'server_ratings',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    server_uuid: uuid('server_uuid')
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    external_id: text('external_id'),
+    source: mcpServerSourceEnum('source').notNull(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    rating: integer('rating').notNull(), // 1-5 stars
+    comment: text('comment'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('server_ratings_server_uuid_idx').on(table.server_uuid),
+    index('server_ratings_external_id_source_idx').on(table.external_id, table.source),
+    index('server_ratings_profile_uuid_idx').on(table.profile_uuid),
+    // Each user can only rate a server once (by server_uuid or external_id + source)
+    index('server_ratings_unique_idx').on(
+      table.profile_uuid, 
+      table.server_uuid
+    ),
+    index('server_ratings_unique_external_idx').on(
+      table.profile_uuid, 
+      table.external_id,
+      table.source
+    ),
   ]
 );

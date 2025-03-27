@@ -1,12 +1,11 @@
 'use server';
 
-import { and, desc, eq, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { mcpServersTable, McpServerStatus, McpServerType } from '@/db/schema';
-import { McpServer } from '@/types/mcp-server';
-
-
+import { mcpServersTable, McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
+import type { McpServer } from '@/types/mcp-server';
+import { trackServerInstallation } from './mcp-server-metrics';
 
 export async function getMcpServers(profileUuid: string) {
   const servers = await db
@@ -95,22 +94,84 @@ export async function updateMcpServer(
     );
 }
 
-export async function createMcpServer(
-  profileUuid: string,
-  data: {
-    name: string;
-    description: string;
-    command?: string;
-    args: string[];
-    env: { [key: string]: string };
-    url?: string;
-    type?: McpServerType;
+export async function createMcpServer({
+  name,
+  profileUuid,
+  description,
+  command,
+  args,
+  env,
+  type,
+  url,
+  source,
+  external_id,
+}: {
+  name: string;
+  profileUuid: string;
+  description?: string;
+  command?: string;
+  args?: string[];
+  env?: { [key: string]: string };
+  type?: McpServerType;
+  url?: string;
+  source?: McpServerSource;
+  external_id?: string;
+}) {
+  try {
+    const serverType = type || McpServerType.STDIO;
+    
+    // Validate inputs based on type
+    if (serverType === McpServerType.STDIO && !command) {
+      return { success: false, error: 'Command is required for STDIO servers' };
+    }
+    
+    if (serverType === McpServerType.SSE && !url) {
+      return { success: false, error: 'URL is required for SSE servers' };
+    }
+    
+    if (serverType === McpServerType.SSE && !/^https?:\/\/.+/.test(url)) {
+      return { success: false, error: 'URL must be a valid HTTP/HTTPS URL' };
+    }
+
+    const insertResult = await db.insert(mcpServersTable).values({
+      name,
+      description,
+      type: serverType,
+      command: serverType === McpServerType.STDIO ? command : null,
+      args: args || [],
+      env: env || {},
+      url: serverType === McpServerType.SSE ? url : null,
+      profile_uuid: profileUuid,
+      source,
+      external_id,
+    });
+
+    // Get generated UUID from inserted row
+    const allServers = await db
+      .select()
+      .from(mcpServersTable)
+      .where(eq(mcpServersTable.profile_uuid, profileUuid));
+    
+    const newServer = allServers.at(-1);
+
+    // Track server installation
+    if (newServer && newServer.uuid) {
+      await trackServerInstallation(
+        profileUuid, 
+        newServer.uuid, 
+        external_id || null,
+        source
+      );
+    }
+
+    return { success: true, data: newServer };
+  } catch (error) {
+    console.error('Error creating MCP server:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
-): Promise<void> {
-  await db.insert(mcpServersTable).values({
-    ...data,
-    profile_uuid: profileUuid,
-  });
 }
 
 export async function bulkImportMcpServers(
