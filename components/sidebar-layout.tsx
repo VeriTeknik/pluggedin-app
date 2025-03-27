@@ -1,15 +1,15 @@
 'use client';
 
 import {
-  Beaker,
+  Blocks,
   Code2,
   FileText,
+  FlaskConical,
   Key,
   Plus,
-  Search,
-  Server,
   Settings,
   Trash2,
+  Unplug,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -47,6 +47,7 @@ import { useCodes } from '@/hooks/use-codes';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
 
+import { version } from '../package.json';
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
 import { UserMenu } from './user-menu';
@@ -90,13 +91,18 @@ export default function SidebarLayout({
             <div className='flex mb-2 px-3'>
               <Link href="/">
                 {mounted ? (
-                  <Image
-                    src={logoSrc}
-                    alt='Plugged.in Logo'
-                    width={288}
-                    height={72}
-                    className='h-144 w-36'
-                  />
+                  <>
+                    <Image
+                      src={logoSrc}
+                      alt='Plugged.in Logo'
+                      width={288}
+                      height={72}
+                      className='h-144 w-36'
+                    />
+                    <span className="text-xs text-muted-foreground absolute top-1 right-1">
+                      v{version}
+                    </span>
+                  </>
                 ) : (
                   <div className='h-144 w-36' /> // Placeholder while not mounted
                 )}
@@ -114,7 +120,7 @@ export default function SidebarLayout({
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/mcp-playground'>
-                        <Beaker className='mr-2 h-4 w-4' />
+                        <FlaskConical className='mr-2 h-4 w-4' />
                         <span>Playground</span>
                       </Link>
                     </SidebarMenuButton>
@@ -122,7 +128,7 @@ export default function SidebarLayout({
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/mcp-servers'>
-                        <Server className='mr-2 h-4 w-4' />
+                        <Unplug className='mr-2 h-4 w-4' />
                         <span>Plugins</span>
                       </Link>
                     </SidebarMenuButton>
@@ -131,8 +137,8 @@ export default function SidebarLayout({
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/search'>
-                        <Search className='mr-2 h-4 w-4' />
-                        <span>Explore & Search (Beta)</span>
+                        <Blocks className='mr-2 h-4 w-4' />
+                        <span>Explore Plugins</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

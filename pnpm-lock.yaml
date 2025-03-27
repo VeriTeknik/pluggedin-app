@@ -12,8 +12,8 @@ importers:
         specifier: ^1.8.0
         version: 1.8.0(nodemailer@6.10.0)
       '@h1deya/langchain-mcp-tools':
-        specifier: ^0.1.17
-        version: 0.1.17(openai@4.89.0(ws@8.18.1)(zod@3.24.1))
+        specifier: ^0.1.18
+        version: 0.1.18(openai@4.89.0(ws@8.18.1)(zod@3.24.1))
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.54.2(react@18.3.1))
@@ -806,8 +806,8 @@ packages:
   '@floating-ui/utils@0.2.8':
     resolution: {integrity: sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==}
 
-  '@h1deya/langchain-mcp-tools@0.1.17':
-    resolution: {integrity: sha512-tSpS772Bkygh9ZcSRzDepKxFL8D61oLpIrfQJ5Xw22BrLdfGifTQULkgmvJrt2tm3uEleWHehkU7qAXdFbg80A==}
+  '@h1deya/langchain-mcp-tools@0.1.18':
+    resolution: {integrity: sha512-tYXu/aUrEb4YH7Rh45hMuGBVAr6rWgXo9MzYVQ2V4TrqM+4TrOqDxWICE9mkCPdwe0D877UYMKYKXIzBvLRHKQ==}
 
   '@hookform/resolvers@3.10.0':
     resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
@@ -5987,7 +5987,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.8': {}
 
-  '@h1deya/langchain-mcp-tools@0.1.17(openai@4.89.0(ws@8.18.1)(zod@3.24.1))':
+  '@h1deya/langchain-mcp-tools@0.1.18(openai@4.89.0(ws@8.18.1)(zod@3.24.1))':
     dependencies:
       '@langchain/core': 0.3.43(openai@4.89.0(ws@8.18.1)(zod@3.24.1))
       '@modelcontextprotocol/sdk': 1.7.0
@@ -8825,7 +8825,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.2
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.8.4(debug@4.4.0))
+      retry-axios: 2.6.0(axios@1.8.4)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -10036,7 +10036,7 @@ snapshots:
       onetime: 5.1.2
       signal-exit: 3.0.7
 
-  retry-axios@2.6.0(axios@1.8.4(debug@4.4.0)):
+  retry-axios@2.6.0(axios@1.8.4):
     dependencies:
       axios: 1.8.4(debug@4.4.0)
 
