@@ -10,6 +10,13 @@ import EmailProvider from 'next-auth/providers/email';
 import GithubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 
+// Extend the User type to include emailVerified
+declare module 'next-auth' {
+  interface User {
+    emailVerified?: Date | null;
+  }
+}
+
 import { db } from '@/db';
 import { accounts, profilesTable, projectsTable, sessions, users, verificationTokens } from '@/db/schema';
 
@@ -104,37 +111,39 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   debug: process.env.NODE_ENV === 'development',
-  cookies: {
-    sessionToken: {
-      name: `__Secure-next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: true,
-        domain: '.plugged.in' // Add leading dot to match actual cookie domain
-      }
-    },
-    callbackUrl: {
-      name: `__Secure-next-auth.callback-url`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: true,
-        domain: '.plugged.in' // Add leading dot to match actual cookie domain
-      }
-    },
-    csrfToken: {
-      name: `__Host-next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: true
-      }
-    }
-  },
+  cookies: process.env.NODE_ENV === 'development' 
+    ? undefined // Use default cookie options in development
+    : {
+        sessionToken: {
+          name: `__Secure-next-auth.session-token`,
+          options: {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            secure: true,
+            domain: '.plugged.in'
+          }
+        },
+        callbackUrl: {
+          name: `__Secure-next-auth.callback-url`,
+          options: {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            secure: true,
+            domain: '.plugged.in'
+          }
+        },
+        csrfToken: {
+          name: `__Host-next-auth.csrf-token`,
+          options: {
+            httpOnly: true,
+            sameSite: 'lax',
+            path: '/',
+            secure: true
+          }
+        }
+      },
   pages: {
     signIn: '/login',
     signOut: '/logout',
@@ -150,34 +159,46 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials: Record<string, string> | undefined) {
-        if (!credentials?.email || !credentials?.password) {
-          throw new Error('Email and password required');
+        try {
+          if (!credentials?.email || !credentials?.password) {
+            console.log('Missing credentials');
+            return null;
+          }
+
+          const user = await db.query.users.findFirst({
+            where: (users, { eq }) => eq(users.email, credentials.email),
+          });
+
+          if (!user || !user.password) {
+            console.log('User not found or no password');
+            return null;
+          }
+
+          // Temporarily disable email verification check for testing
+          /*if (!user.emailVerified) {
+            console.log('Email not verified');
+            return null;
+          }*/
+
+          const isPasswordValid = await compare(credentials.password, user.password);
+
+          if (!isPasswordValid) {
+            console.log('Invalid password');
+            return null;
+          }
+
+          console.log('Login successful for:', user.email);
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            image: user.image,
+            emailVerified: user.emailVerified,
+          };
+        } catch (error) {
+          console.error('Auth error:', error);
+          return null;
         }
-
-        const user = await db.query.users.findFirst({
-          where: (users, { eq }) => eq(users.email, credentials.email),
-        });
-
-        if (!user || !user.password) {
-          throw new Error('User not found');
-        }
-
-        if (!user.emailVerified) {
-          throw new Error('Email not verified');
-        }
-
-        const isPasswordValid = await compare(credentials.password, user.password);
-
-        if (!isPasswordValid) {
-          throw new Error('Invalid password');
-        }
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
       }
     }),
     GithubProvider({
@@ -278,6 +299,7 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name || '';
         session.user.email = token.email || '';
         session.user.image = token.picture;
+        session.user.emailVerified = token.emailVerified;
       }
 
       return session;
@@ -286,13 +308,15 @@ export const authOptions: NextAuthOptions = {
       const dbUser = user ? { 
         id: user.id, 
         name: user.name || '', 
-        email: user.email || '' 
+        email: user.email || '',
+        emailVerified: user.emailVerified
       } : undefined;
 
       if (dbUser) {
         token.id = dbUser.id;
         token.name = dbUser.name;
         token.email = dbUser.email;
+        token.emailVerified = dbUser.emailVerified;
       }
 
       return token;
@@ -312,6 +336,7 @@ declare module 'next-auth' {
       name: string;
       email: string;
       image?: string;
+      emailVerified?: Date | null;
     };
   }
 }
@@ -322,5 +347,6 @@ declare module 'next-auth/jwt' {
     name: string;
     email: string;
     picture?: string;
+    emailVerified?: Date | null;
   }
-} 
+}

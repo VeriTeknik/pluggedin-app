@@ -2,6 +2,7 @@ import { Download, Github } from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 
 import { createMcpServer } from '@/app/actions/mcp-servers';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +53,7 @@ function AddMcpServerDialog({
   onOpenChange,
   defaultValues,
 }: AddMcpServerDialogProps) {
+  const { t } = useTranslation();
   const { currentProfile } = useProfiles();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -94,9 +96,9 @@ function AddMcpServerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add MCP Server</DialogTitle>
+          <DialogTitle>{t('search.card.dialog.title')}</DialogTitle>
           <DialogDescription>
-            Add a new MCP server with the following configuration.
+            {t('search.card.dialog.description')}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -106,7 +108,7 @@ function AddMcpServerDialog({
               name='name'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t('search.card.dialog.name')}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -119,7 +121,7 @@ function AddMcpServerDialog({
               name='description'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>{t('search.card.dialog.description')}</FormLabel>
                   <FormControl>
                     <Textarea {...field} />
                   </FormControl>
@@ -132,7 +134,7 @@ function AddMcpServerDialog({
               name='command'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Command</FormLabel>
+                  <FormLabel>{t('search.card.dialog.command')}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -145,7 +147,7 @@ function AddMcpServerDialog({
               name='args'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Arguments (space-separated)</FormLabel>
+                  <FormLabel>{t('search.card.dialog.args')}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -158,7 +160,7 @@ function AddMcpServerDialog({
               name='env'
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Environment Variables (one per line)</FormLabel>
+                  <FormLabel>{t('search.card.dialog.env')}</FormLabel>
                   <FormControl>
                     <Textarea {...field} />
                   </FormControl>
@@ -171,10 +173,10 @@ function AddMcpServerDialog({
                 variant='outline'
                 type='button'
                 onClick={() => onOpenChange(false)}>
-                Cancel
+                {t('search.card.dialog.cancel')}
               </Button>
               <Button type='submit' disabled={isSubmitting}>
-                Add Server
+                {t('search.card.dialog.add')}
               </Button>
             </div>
           </form>
@@ -185,6 +187,7 @@ function AddMcpServerDialog({
 }
 
 export default function CardGrid({ items }: { items: SearchIndex }) {
+  const { t } = useTranslation();
   const [selectedItem, setSelectedItem] = useState<{
     name: string;
     description: string;
@@ -205,14 +208,14 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
             </CardHeader>
             <CardContent className='flex-grow'>
               <p className='text-sm text-muted-foreground mb-2'>
-                Package: {item.package_name}
+                {t('search.card.package')}: {item.package_name}
               </p>
               <p className='text-sm text-muted-foreground mb-2'>
-                Command: {item.command}
+                {t('search.card.command')}: {item.command}
               </p>
               {item.args && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  Example Args: {item.args.join(' ')}
+                  {t('search.card.exampleArgs')}: {item.args.join(' ')}
                 </p>
               )}
               {item.envs.length > 0 && (
@@ -252,7 +255,7 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                   setDialogOpen(true);
                 }}>
                 <Download className='w-4 h-4 mr-2' />
-                Install
+                {t('search.card.install')}
               </Button>
             </CardFooter>
           </Card>

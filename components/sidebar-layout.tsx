@@ -3,16 +3,19 @@
 import {
   Beaker,
   Code2,
+  FileText,
   Key,
   Plus,
   Search,
   Server,
+  Settings,
   Trash2,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import * as React from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -41,6 +44,7 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
+import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
 
 import { ProfileSwitcher } from './profile-switcher';
@@ -61,6 +65,13 @@ export default function SidebarLayout({
   );
   const [fileName, setFileName] = React.useState('');
   const { toast } = useToast();
+  const { logoSrc } = useThemeLogo();
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure correct theme is applied after mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleCreateCode = async () => {
     if (fileName.trim()) {
@@ -78,13 +89,17 @@ export default function SidebarLayout({
           <SidebarHeader className='flex flex-col px-2 py-4'>
             <div className='flex mb-2 px-3'>
               <Link href="/">
-                <Image
-                  src='/pluggedin-wl-black.png'
-                  alt='Plugged.in Logo'
-                  width={288}
-                  height={72}
-                  className='h-144 w-36'
-                />
+                {mounted ? (
+                  <Image
+                    src={logoSrc}
+                    alt='Plugged.in Logo'
+                    width={288}
+                    height={72}
+                    className='h-144 w-36'
+                  />
+                ) : (
+                  <div className='h-144 w-36' /> // Placeholder while not mounted
+                )}
               </Link>
             </div>
             <ProjectSwitcher />
@@ -145,6 +160,22 @@ export default function SidebarLayout({
                       <Link href='/api-keys'>
                         <Key className='mr-2 h-4 w-4' />
                         <span>API Keys</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/settings'>
+                        <Settings className='mr-2 h-4 w-4' />
+                        <span>Settings</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild>
+                      <Link href='/legal'>
+                        <FileText className='mr-2 h-4 w-4' />
+                        <span>Legal</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

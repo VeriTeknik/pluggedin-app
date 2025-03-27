@@ -11,7 +11,10 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core';
 
+import { locales } from '@/i18n/config';
 import { enumToPgEnum } from './utils/enum-to-pg-enum';
+
+export const languageEnum = pgEnum('language', locales);
 
 export enum McpServerStatus {
   ACTIVE = 'ACTIVE',
@@ -134,6 +137,7 @@ export const profilesTable = pgTable(
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    language: languageEnum('language').default('en'),
   },
   (table) => [
     index('profiles_project_uuid_idx').on(table.project_uuid)
@@ -260,3 +264,28 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   token: text("token").notNull(),
   expires: timestamp("expires", { mode: 'date' }).notNull(),
 });
+
+// Add playground settings table
+export const playgroundSettingsTable = pgTable(
+  'playground_settings',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    provider: text('provider').notNull().default('anthropic'),
+    model: text('model').notNull().default('claude-3-7-sonnet-20250219'),
+    temperature: integer('temperature').notNull().default(0),
+    max_tokens: integer('max_tokens').notNull().default(1000),
+    log_level: text('log_level').notNull().default('info'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('playground_settings_profile_uuid_idx').on(table.profile_uuid),
+  ]
+);

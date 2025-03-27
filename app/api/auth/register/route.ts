@@ -5,7 +5,7 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { users, verificationTokens } from '@/db/schema';
-import { sendEmail, generateVerificationEmail } from '@/lib/email';
+import { generateVerificationEmail,sendEmail } from '@/lib/email';
 
 const registerSchema = z.object({
   name: z.string().min(2).max(100),

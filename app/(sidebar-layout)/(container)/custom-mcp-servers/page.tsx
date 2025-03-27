@@ -127,7 +127,9 @@ export default function CustomMCPServersPage() {
         <Switch
           checked={info.getValue() === McpServerStatus.ACTIVE}
           onCheckedChange={async (checked) => {
-            if (!profileUuid || !info.row.original.uuid) return;
+            if (!profileUuid || !info.row.original.uuid) {
+              return;
+            }
             await toggleCustomMcpServerStatus(
               profileUuid,
               info.row.original.uuid,

@@ -2,6 +2,7 @@
 
 import { Copy, Eye, EyeOff, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import {
@@ -42,12 +43,13 @@ export default function ApiKeysPage() {
   const [keyToDelete, setKeyToDelete] = useState<ApiKey | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
+  const { t } = useTranslation();
 
   const copyApiKey = async (apiKey: string) => {
     await navigator.clipboard.writeText(apiKey);
     toast({
-      title: 'API Key copied',
-      description: 'The API key has been copied to your clipboard.',
+      title: t('apiKeys.toast.copied.title'),
+      description: t('apiKeys.toast.copied.description'),
     });
   };
 
@@ -70,14 +72,16 @@ export default function ApiKeysPage() {
       setIsCreateDialogOpen(false);
       setNewKeyName('');
       toast({
-        title: 'API Key created',
-        description: 'Your new API key has been created successfully.',
+        title: t('apiKeys.toast.created.title'),
+        description: t('apiKeys.toast.created.description'),
       });
     } catch (error) {
       toast({
-        title: 'Error',
+        title: t('apiKeys.toast.error.title'),
         description:
-          error instanceof Error ? error.message : 'Failed to create API key',
+          error instanceof Error
+            ? error.message
+            : t('apiKeys.toast.error.createFailed'),
         variant: 'destructive',
       });
     } finally {
@@ -95,14 +99,16 @@ export default function ApiKeysPage() {
       await mutate();
       setKeyToDelete(null);
       toast({
-        title: 'API Key deleted',
-        description: 'Your API key has been deleted successfully.',
+        title: t('apiKeys.toast.deleted.title'),
+        description: t('apiKeys.toast.deleted.description'),
       });
     } catch (error) {
       toast({
-        title: 'Error',
+        title: t('apiKeys.toast.error.title'),
         description:
-          error instanceof Error ? error.message : 'Failed to delete API key',
+          error instanceof Error
+            ? error.message
+            : t('apiKeys.toast.error.deleteFailed'),
         variant: 'destructive',
       });
     } finally {
@@ -113,12 +119,12 @@ export default function ApiKeysPage() {
   return (
     <div>
       <div className='flex justify-between items-center mb-4'>
-        <h1 className='text-2xl font-bold'>API Keys</h1>
+        <h1 className='text-2xl font-bold'>{t('apiKeys.title')}</h1>
         <Button
           onClick={() => setIsCreateDialogOpen(true)}
           disabled={!currentProject?.uuid}>
           <Plus className='h-4 w-4 mr-2' />
-          Create API Key
+          {t('apiKeys.actions.create')}
         </Button>
       </div>
 
@@ -129,17 +135,16 @@ export default function ApiKeysPage() {
           <div className='text-red-500'>
             {error instanceof Error
               ? error.message
-              : 'Failed to fetch API keys'}
+              : t('common.errors.unexpected')}
           </div>
         ) : (
           <div className='space-y-4'>
             <div className='text-sm text-muted-foreground'>
-              Your API keys are used to authenticate requests to the Plugged.in
-              API. Keep them secure and do not share them with others.
+              {t('apiKeys.description')}
             </div>
             {apiKeys && apiKeys.length === 0 && (
               <div className='text-sm text-muted-foreground'>
-                No API keys yet. Create one to get started.
+                {t('apiKeys.empty')}
               </div>
             )}
             {apiKeys &&
@@ -156,7 +161,11 @@ export default function ApiKeysPage() {
                       variant='ghost'
                       size='icon'
                       onClick={toggleReveal}
-                      title={revealed ? 'Hide API key' : 'Show API key'}>
+                      title={
+                        revealed
+                          ? t('apiKeys.actions.hide')
+                          : t('apiKeys.actions.show')
+                      }>
                       {revealed ? (
                         <EyeOff className='h-4 w-4' />
                       ) : (
@@ -167,14 +176,14 @@ export default function ApiKeysPage() {
                       variant='ghost'
                       size='icon'
                       onClick={() => copyApiKey(apiKey.api_key)}
-                      title='Copy API key'>
+                      title={t('apiKeys.actions.copy')}>
                       <Copy className='h-4 w-4' />
                     </Button>
                     <Button
                       variant='ghost'
                       size='icon'
                       onClick={() => setKeyToDelete(apiKey)}
-                      title='Delete API key'>
+                      title={t('apiKeys.actions.delete')}>
                       <Trash2 className='h-4 w-4 text-destructive' />
                     </Button>
                   </div>
@@ -187,18 +196,17 @@ export default function ApiKeysPage() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create API Key</DialogTitle>
+            <DialogTitle>{t('apiKeys.dialog.create.title')}</DialogTitle>
             <DialogDescription>
-              Create a new API key for your project. You can optionally give it
-              a name to help identify its purpose.
+              {t('apiKeys.dialog.create.description')}
             </DialogDescription>
           </DialogHeader>
           <div className='space-y-4 py-4'>
             <div className='space-y-2'>
-              <Label htmlFor='name'>API Key Name (Optional)</Label>
+              <Label htmlFor='name'>{t('apiKeys.dialog.create.nameLabel')}</Label>
               <Input
                 id='name'
-                placeholder='e.g.,, Production API Key'
+                placeholder={t('apiKeys.dialog.create.namePlaceholder')}
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
               />
@@ -208,10 +216,12 @@ export default function ApiKeysPage() {
             <Button
               variant='outline'
               onClick={() => setIsCreateDialogOpen(false)}>
-              Cancel
+              {t('apiKeys.actions.cancel')}
             </Button>
             <Button onClick={handleCreateApiKey} disabled={isCreating}>
-              {isCreating ? 'Creating...' : 'Create API Key'}
+              {isCreating
+                ? t('apiKeys.actions.creating')
+                : t('apiKeys.actions.create')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -222,22 +232,26 @@ export default function ApiKeysPage() {
         onOpenChange={(open) => !open && setKeyToDelete(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Delete API Key</DialogTitle>
+            <DialogTitle>{t('apiKeys.dialog.delete.title')}</DialogTitle>
             <DialogDescription>
-              Are you sure you want to delete this API key
-              {keyToDelete?.name ? ` "${keyToDelete.name}"` : ''}? This action
-              cannot be undone.
+              {t('apiKeys.dialog.delete.description', {
+                name: keyToDelete?.name
+                  ? t('apiKeys.dialog.delete.namePrefix') + keyToDelete.name + '"'
+                  : '',
+              })}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant='outline' onClick={() => setKeyToDelete(null)}>
-              Cancel
+              {t('apiKeys.actions.cancel')}
             </Button>
             <Button
               variant='destructive'
               onClick={handleDeleteApiKey}
               disabled={isDeleting}>
-              {isDeleting ? 'Deleting...' : 'Delete API Key'}
+              {isDeleting
+                ? t('apiKeys.actions.deleting')
+                : t('apiKeys.actions.delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

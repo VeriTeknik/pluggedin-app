@@ -1,9 +1,10 @@
 'use server';
 
-import { db } from '@/db';
-import { sessions, users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getServerSession } from 'next-auth';
+
+import { db } from '@/db';
+import { sessions } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
 
 /**
