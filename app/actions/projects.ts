@@ -48,65 +48,70 @@ export async function getProject(projectUuid: string) {
 
 export async function getProjects() {
   return withAuth(async (session) => {
-    // First verify the user exists in the database
-    const userExists = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, session.user.id),
-    });
-    
-    if (!userExists) {
-      throw new Error('User not found in database. This may be an issue with your login session.');
-    }
-
-    let projects = await db
-      .select()
-      .from(projectsTable)
-      .where(eq(projectsTable.user_id, session.user.id));
-
-    if (projects.length === 0) {
-      // User has no projects, create a default one
-      try {
-        console.log('Creating default project for user:', session.user.id);
-        
-        // Direct DB transaction method instead of using createProject function
-        // This avoids dependency loops and ensures project creation works correctly
-        const defaultProject = await db.transaction(async (tx) => {
-          // Insert the project
-          const [project] = await tx
-            .insert(projectsTable)
-            .values({
-              name: 'Default Hub',
-              active_profile_uuid: null,
-              user_id: session.user.id,
-            })
-            .returning();
-
-          // Create the profile with the project UUID
-          const [profile] = await tx
-            .insert(profilesTable)
-            .values({
-              name: 'Default Workspace',
-              project_uuid: project.uuid,
-            })
-            .returning();
-
-          // Update the project with the profile UUID
-          const [updatedProject] = await tx
-            .update(projectsTable)
-            .set({ active_profile_uuid: profile.uuid })
-            .where(eq(projectsTable.uuid, project.uuid))
-            .returning();
-
-          return updatedProject;
-        });
-        
-        projects = [defaultProject];
-      } catch (error) {
-        console.error('Error creating default project:', error);
-        throw new Error('Failed to create default project: ' + (error instanceof Error ? error.message : String(error)));
+    try {
+      // First verify the user exists in the database
+      const userExists = await db.query.users.findFirst({
+        where: (users, { eq }) => eq(users.id, session.user.id),
+      });
+      
+      if (!userExists) {
+        throw new Error('User not found in database. This may be an issue with your login session.');
       }
-    }
 
-    return projects;
+      let projects = await db
+        .select()
+        .from(projectsTable)
+        .where(eq(projectsTable.user_id, session.user.id));
+
+      if (projects.length === 0) {
+        // User has no projects, create a default one
+        try {
+          console.log('Creating default project for user:', session.user.id);
+          
+          // Direct DB transaction method instead of using createProject function
+          // This avoids dependency loops and ensures project creation works correctly
+          const defaultProject = await db.transaction(async (tx) => {
+            // Insert the project
+            const [project] = await tx
+              .insert(projectsTable)
+              .values({
+                name: 'Default Hub',
+                active_profile_uuid: null,
+                user_id: session.user.id,
+              })
+              .returning();
+
+            // Create the profile with the project UUID
+            const [profile] = await tx
+              .insert(profilesTable)
+              .values({
+                name: 'Default Workspace',
+                project_uuid: project.uuid,
+              })
+              .returning();
+
+            // Update the project with the profile UUID
+            const [updatedProject] = await tx
+              .update(projectsTable)
+              .set({ active_profile_uuid: profile.uuid })
+              .where(eq(projectsTable.uuid, project.uuid))
+              .returning();
+
+            return updatedProject;
+          });
+          
+          projects = [defaultProject];
+        } catch (error) {
+          console.error('Error creating default project:', error);
+          throw new Error('Failed to create default project: ' + (error instanceof Error ? error.message : String(error)));
+        }
+      }
+
+      return projects;
+    } catch (error) {
+      console.error('Error in getProjects:', error);
+      throw error; // Re-throw to be handled by withAuth
+    }
   });
 }
 
