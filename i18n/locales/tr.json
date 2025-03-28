@@ -3,6 +3,7 @@
     "or": "VEYA",
     "error": "Hata",
     "success": "Başarılı",
+    "releaseCandidate": "Yayın Adayı v{{version}}",
     "validation": {
       "required": "Bu alan zorunludur",
       "email": "Lütfen geçerli bir e-posta adresi girin",
@@ -10,6 +11,10 @@
       "maxLength": "En fazla {{count}} karakter olmalıdır",
       "passwordMatch": "Şifreler eşleşmelidir"
     },
+    "save": "Kaydet",
+    "saving": "Kaydediliyor...",
+    "remove": "Kaldır",
+    "removing": "Kaldırılıyor...",
     "errors": {
       "unexpected": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
     }
@@ -62,7 +67,8 @@
     },
     "social": {
       "github": "GitHub ile Devam Et",
-      "google": "Google ile Devam Et"
+      "google": "Google ile Devam Et",
+      "twitter": "Twitter ile Bağlan"
     }
   },
   "landing": {
@@ -188,25 +194,64 @@
   "search": {
     "title": "Arama",
     "subtitle": "Tüm içerikte arama yapın",
+    "explorePlugins": "Eklentileri Keşfet",
     "input": {
       "placeholder": "Ara..."
     },
     "loading": "Arama yükleniyor...",
     "noResults": "Sonuç bulunamadı",
     "error": "Arama sonuçları yüklenirken hata oluştu",
+    "sort": "Sırala",
+    "sortBy": "Sıralama ölçütü",
+    "sortOptions": {
+      "relevance": "İlgi Düzeyi",
+      "popularity": "Popülerlik",
+      "recent": "En Yeni",
+      "stars": "GitHub Yıldızları"
+    },
+    "filter": "Filtrele",
+    "filterByTags": "Etiketlere göre filtrele",
+    "noTagsAvailable": "Kullanılabilir etiket yok",
+    "clearFilters": "Filtreleri temizle",
+    "clearAllFilters": "Tümünü temizle",
+    "noMatchingTags": "Seçili etiketlerle eşleşen sonuç yok",
+    "noMatchingFilters": "Seçili filtrelerle eşleşen sonuç yok",
+    "category": "Kategori",
+    "filterByCategory": "Kategoriye göre filtrele",
+    "noCategoriesAvailable": "Kullanılabilir kategori yok",
+    "allCategories": "Tüm Kategoriler",
+    "categories": {
+      "LLM": "LLM",
+      "UTILITY": "Yardımcı Program",
+      "TOOL": "Araç",
+      "DATA": "Veri Erişimi",
+      "CONNECTOR": "Bağlayıcı",
+      "SEARCH": "Arama",
+      "CODE": "Kod",
+      "IMAGE": "Görsel",
+      "AUDIO": "Ses",
+      "VIDEO": "Video",
+      "OTHER": "Diğer"
+    },
     "card": {
       "package": "Paket",
       "command": "Komut",
       "exampleArgs": "Örnek Argümanlar",
       "install": "Yükle",
+      "usageCount": "Kullanım sayısı",
+      "ratings": "Değerlendirmeler",
+      "installations": "Yüklemeler",
+      "exampleArgs": "Örnek Argümanlar",
+      "install": "Yükle",
       "dialog": {
         "title": "MCP Sunucusu Ekle",
-        "description": "Aşağıdaki yapılandırma ile yeni bir MCP sunucusu ekleyin",
+        "MCPdescription": "Aşağıdaki yapılandırma ile yeni bir MCP sunucusu ekleyin",
         "name": "İsim",
         "description": "Açıklama",
         "command": "Komut",
         "args": "Argümanlar (boşlukla ayrılmış)",
         "env": "Ortam Değişkenleri (her satıra bir tane)",
+        "url": "URL",
         "cancel": "İptal",
         "add": "Sunucu Ekle"
       }
@@ -309,6 +354,7 @@
   },
   "sidebar": {
     "toggle": "Kenar Çubuğunu Aç/Kapat",
+    "navigation": "Navigasyon",
     "keyboard": {
       "shortcut": "Klavye kısayolu: {{key}}"
     }
@@ -318,14 +364,12 @@
     "profile": {
       "title": "Profil",
       "description": "Profil bilgilerinizi yönetin",
-      "avatar": {
-        "upload": "Avatar Yükle",
-        "recommendation": "Önerilen: Kare görsel, maksimum 1MB"
-      },
-      "name": {
-        "label": "Ad",
-        "placeholder": "Adınızı girin"
-      },
+      "avatar": "Avatar Yükle",
+      "avatarRecommendation": "Önerilen: Kare görsel, maksimum 1MB",
+      "name": "Ad",
+      "namePlaceholder": "Adınızı girin",
+      "language": "Dil",
+      "avatarRecommendation": "Önerilen: Kare görsel, maksimum 1MB",
       "updateButton": "Profili Güncelle",
       "success": "Profil başarıyla güncellendi",
       "error": "Profil güncellenemedi"
@@ -359,6 +403,25 @@
       "deletingButton": "Siliniyor...",
       "success": "Hesap başarıyla silindi",
       "error": "Hesap silinemedi"
+    },
+    "connectedAccounts": {
+      "title": "Bağlı Hesaplar",
+      "description": "Bağlı sosyal hesaplarınızı yönetin",
+      "github": {
+        "connected": "GitHub'a bağlı",
+        "connect": "GitHub hesabınızı bağlayın"
+      },
+      "google": {
+        "connected": "Google'a bağlı",
+        "connect": "Google hesabınızı bağlayın"
+      },
+      "twitter": {
+        "connected": "Twitter'a bağlı",
+        "connect": "Twitter hesabınızı bağlayın"
+      },
+      "connected": "Bağlı",
+      "removed": "{{provider}} hesabı başarıyla kaldırıldı",
+      "error": "Hesap bağlantısı kaldırılamadı"
     }
   },
   "setupGuide": {
@@ -407,8 +470,9 @@
     }
   },
   "playground": {
-    "title": "Test Ortamı",
-    "subtitle": "MCP sunucularınızı güçlü LLM'ler ile test edin. Sunucu bağlantılarını yapılandırın, model ayarlarını düzenleyin ve araçlarınızı doğal dil kullanarak test edin.",
+    "title": "MCP Oyun Alanı",
+    "subtitle": "Model Bağlam Protokolü (MCP) araçları ile etkileşimde bulunun.",
+    "description": "LLM AI ve MCP araçlarını birlikte kullanmak için deneysel bir ortam.",
     "actions": {
       "start": "Test Ortamını Başlat",
       "starting": "Başlatılıyor...",
@@ -460,21 +524,35 @@
       }
     },
     "chat": {
-      "title": "Sohbet Arayüzü",
-      "subtitle": "MCP sunucularınızı doğal dil ile test edin",
-      "empty": {
-        "title": "MCP Test Ortamı",
-        "activeDescription": "MCP sunucularınızı test etmek için sorular sorun veya talimatlar verin. Mevcut araçları keşfedin veya belirli işlemler talep edin.",
-        "inactiveDescription": "Araçlarınızı doğal dil ile test etmeye başlamak için MCP sunucularını seçin ve bir oturum başlatın."
+      "title": "MCP Sohbet",
+      "subtitle": "AI ve MCP araçları ile konuşun",
+      "tool": {
+        "title": "Araç Çıktısı",
+        "debugInfo": "Hata ayıklama bilgisi"
       },
       "input": {
-        "activePlaceholder": "Mesajınızı yazın...",
-        "inactivePlaceholder": "Sohbete başlamak için bir oturum başlatın"
+        "activePlaceholder": "MCP araçları ile konuşun...",
+        "inactivePlaceholder": "Önce bir oturum başlatın"
       },
-      "tool": {
-        "title": "Araç Çalıştırma",
-        "debugInfo": "Hata Ayıklama Bilgisi"
-      }
+      "empty": {
+        "title": "MCP Oyun Alanı Sohbeti",
+        "activeDescription": "Bu agent LLM ve MCP araçları ile etkileşime geçebilir. Bir soru sorarak başlayın.",
+        "inactiveDescription": "Başlamak için lütfen bir oturum başlatın ve en az bir aktif MCP sunucusuna sahip olduğunuzdan emin olun."
+      },
+      "thinking": "Düşünüyor"
+    },
+    "provider": {
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
+    },
+    "logLevels": {
+      "debug": "Hata Ayıklama",
+      "info": "Bilgi",
+      "warn": "Uyarı",
+      "error": "Hata"
     }
+  },
+  "notifications": {
+    "title": "Bildirimler"
   }
 }

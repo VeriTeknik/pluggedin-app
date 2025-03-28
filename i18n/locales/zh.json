@@ -1,0 +1,556 @@
+{
+  "common": {
+    "or": "或",
+    "error": "错误",
+    "success": "成功",
+    "releaseCandidate": "候选版本 v{{version}}",
+    "validation": {
+      "required": "此字段为必填项",
+      "email": "请输入有效的电子邮件地址",
+      "minLength": "必须至少包含 {{count}} 个字符",
+      "maxLength": "最多只能包含 {{count}} 个字符",
+      "passwordMatch": "密码必须匹配"
+    },
+    "save": "保存",
+    "saving": "保存中...",
+    "remove": "移除",
+    "removing": "移除中...",
+    "errors": {
+      "unexpected": "发生意外错误。请重试。"
+    }
+  },
+  "auth": {
+    "common": {
+      "emailLabel": "电子邮件",
+      "emailPlaceholder": "输入您的电子邮件地址",
+      "passwordLabel": "密码",
+      "passwordPlaceholder": "输入您的密码",
+      "confirmPasswordLabel": "确认密码",
+      "confirmPasswordPlaceholder": "确认您的密码"
+    },
+    "login": {
+      "title": "登录",
+      "actionMessage": "登录您的帐户",
+      "submitButton": "登录",
+      "errors": {
+        "invalidCredentials": "电子邮件或密码无效"
+      }
+    },
+    "register": {
+      "title": "创建帐户",
+      "actionMessage": "创建您的帐户",
+      "submitButton": "创建帐户",
+      "nameLabel": "姓名",
+      "namePlaceholder": "输入您的姓名",
+      "success": "注册成功！请验证您的电子邮件。",
+      "errors": {
+        "registrationFailed": "注册失败"
+      }
+    },
+    "forgotPassword": {
+      "title": "忘记密码",
+      "actionMessage": "重置您的密码",
+      "submitButton": "发送重置链接",
+      "success": "密码重置链接已发送到您的电子邮件！",
+      "errors": {
+        "requestFailed": "发送重置链接失败"
+      }
+    },
+    "resetPassword": {
+      "title": "重置密码",
+      "actionMessage": "设置您的新密码",
+      "submitButton": "重置密码",
+      "success": "密码重置成功！您现在可以使用新密码登录。",
+      "errors": {
+        "resetFailed": "重置密码失败"
+      }
+    },
+    "social": {
+      "github": "使用 GitHub 继续",
+      "google": "使用 Google 继续",
+      "twitter": "使用 Twitter 连接"
+    }
+  },
+  "landing": {
+    "navigation": {
+      "enterApp": "进入应用"
+    },
+    "hero": {
+      "title": "AI 十字路口",
+      "subtitle": "通过统一平台连接、创建和扩展您的 AI 能力。构建和管理可增强您 AI 工作流程的插件。"
+    },
+    "features": {
+      "pluginManagement": {
+        "title": "插件管理",
+        "description": "浏览、配置和管理 MCP 服务器和插件",
+        "content": "通过统一界面连接各种 AI 工具和服务。从中央仪表板配置和管理您的插件。",
+        "action": "浏览插件"
+      },
+      "aiPlayground": {
+        "title": "AI 游乐场",
+        "description": "在交互式环境中测试和试验您的 AI 工具",
+        "content": "体验您的插件的实际效果。游乐场允许您测试不同的配置并查看实时结果。",
+        "action": "打开游乐场"
+      },
+      "customDevelopment": {
+        "title": "自定义开发",
+        "description": "创建和自定义您自己的 MCP 服务器和工具",
+        "content": "使用我们的 Python 编辑器和集成开发环境构建自定义功能。通过专业功能扩展您的 AI。",
+        "action": "创建自定义工具"
+      }
+    },
+    "gettingStarted": {
+      "title": "Plugged.in 新手？",
+      "description": "按照我们的设置指南正确配置您的环境，并立即开始使用 Plugged.in 进行构建。",
+      "action": "查看设置指南"
+    }
+  },
+  "mcpServers": {
+    "title": "MCP 服务器",
+    "subtitle": "插件管理",
+    "description": "配置和管理您的 MCP 服务器。通过命令行或基于 URL 的界面连接到外部工具和服务。",
+    "stats": {
+      "totalServers": "总服务器数",
+      "active": "活动",
+      "stdio": "STDIO",
+      "sse": "SSE"
+    },
+    "actions": {
+      "addServer": "添加服务器",
+      "import": "导入",
+      "export": "导出",
+      "search": "搜索服务器...",
+      "edit": "编辑",
+      "delete": "删除",
+      "deleteConfirm": "您确定要删除此 MCP 服务器吗？",
+      "cancel": "取消",
+      "create": "创建",
+      "creating": "创建中...",
+      "close": "关闭",
+      "downloadJson": "下载 JSON",
+      "copy": "复制",
+      "copied": "已复制！"
+    },
+    "form": {
+      "success": "MCP 服务器创建成功。",
+      "error": {
+        "createFailed": "创建 MCP 服务器失败。"
+      },
+      "addTitle": "添加 MCP 服务器",
+      "addDescription": "创建新的 MCP 服务器配置。在 STDIO（基于命令）或 SSE（基于 URL）服务器类型之间进行选择。",
+      "commandBased": "基于命令 (STDIO)",
+      "urlBased": "基于 URL (SSE)",
+      "name": "名称",
+      "namePlaceholder": "例如，mcp-server-time",
+      "description": "描述",
+      "descriptionPlaceholder": "（可选）服务器用途的简要描述",
+      "command": "命令",
+      "commandPlaceholder": "例如，npx 或 uvx",
+      "arguments": "参数",
+      "argumentsPlaceholder": "例如，mcp-server-time, --local-timezone=America/Los_Angeles",
+      "envVars": "环境变量",
+      "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
+      "envVarsHelp": "以 KEY=value 格式输入环境变量，每行一个",
+      "serverUrl": "服务器 URL",
+      "serverUrlPlaceholder": "http://localhost:3000/sse",
+      "serverUrlHelp": "必须是有效的 HTTP/HTTPS URL",
+      "created": "已创建"
+    },
+    "import": {
+      "title": "导入 MCP 服务器",
+      "description": "从 JSON 导入多个 MCP 服务器配置。这将添加新服务器而不会替换现有服务器。",
+      "jsonFormat": "JSON 格式",
+      "jsonPlaceholder": "在此处粘贴您的 JSON",
+      "importing": "导入中...",
+      "importServers": "导入服务器",
+      "success": "成功导入 {{count}} 个 MCP 服务器。",
+      "error": {
+        "invalidJson": "无效的 JSON 格式",
+        "missingMcpServers": "JSON 必须包含 \"mcpServers\" 对象",
+        "importFailed": "导入服务器失败。请检查控制台以获取详细信息。"
+      }
+    },
+    "export": {
+      "title": "导出 MCP 服务器配置",
+      "description": "您的 MCP 服务器配置（JSON 格式），可随时导入到另一个实例中。",
+      "copyTooltip": "将 JSON 复制到剪贴板",
+      "downloadSuccess": "已下载 {{count}} 个 MCP 服务器配置。",
+      "error": {
+        "noServers": "没有可导出的 MCP 服务器。",
+        "copyFailed": "复制到剪贴板失败。"
+      }
+    },
+    "status": {
+      "active": "活动",
+      "inactive": "非活动"
+    },
+    "empty": {
+      "title": "未找到服务器",
+      "noResults": "没有与 \"{{search}}\" 匹配的服务器",
+      "noServers": "您尚未添加任何 MCP 服务器",
+      "addFirst": "添加您的第一个服务器"
+    }
+  },
+  "search": {
+    "title": "搜索",
+    "subtitle": "搜索所有内容",
+    "explorePlugins": "探索插件",
+    "input": {
+      "placeholder": "搜索..."
+    },
+    "loading": "正在加载搜索...",
+    "noResults": "未找到结果",
+    "error": "加载搜索结果时出错",
+    "sort": "排序",
+    "sortBy": "排序方式",
+    "sortOptions": {
+      "relevance": "相关性",
+      "popularity": "受欢迎程度",
+      "recent": "最新",
+      "stars": "GitHub 星标"
+    },
+    "filter": "筛选",
+    "filterByTags": "按标签筛选",
+    "noTagsAvailable": "无可用标签",
+    "clearFilters": "清除筛选器",
+    "clearAllFilters": "清除所有",
+    "noMatchingTags": "没有与所选标签匹配的结果",
+    "noMatchingFilters": "没有与所选筛选器匹配的结果",
+    "category": "类别",
+    "filterByCategory": "按类别筛选",
+    "noCategoriesAvailable": "无可用类别",
+    "allCategories": "所有类别",
+    "categories": {
+      "LLM": "LLM",
+      "UTILITY": "实用工具",
+      "TOOL": "工具",
+      "DATA": "数据访问",
+      "CONNECTOR": "连接器",
+      "SEARCH": "搜索",
+      "CODE": "代码",
+      "IMAGE": "图像",
+      "AUDIO": "音频",
+      "VIDEO": "视频",
+      "OTHER": "其他"
+    },
+    "card": {
+      "package": "包",
+      "command": "命令",
+      "exampleArgs": "示例参数",
+      "install": "安装",
+      "usageCount": "使用次数",
+      "ratings": "评分",
+      "installations": "安装次数",
+      "dialog": {
+        "title": "添加 MCP 服务器",
+        "MCPdescription": "使用以下配置添加新的 MCP 服务器",
+        "name": "名称",
+        "description": "描述",
+        "command": "命令",
+        "args": "参数（以空格分隔）",
+        "env": "环境变量（每行一个）",
+        "url": "URL",
+        "cancel": "取消",
+        "add": "添加服务器"
+      }
+    }
+  },
+  "apiKeys": {
+    "title": "API 密钥",
+    "description": "您的 API 密钥用于验证对 Plugged.in API 的请求。请妥善保管，不要与他人分享。",
+    "empty": "尚无 API 密钥。创建一个以开始。",
+    "actions": {
+      "create": "创建 API 密钥",
+      "creating": "创建中...",
+      "delete": "删除 API 密钥",
+      "deleting": "删除中...",
+      "show": "显示 API 密钥",
+      "hide": "隐藏 API 密钥",
+      "copy": "复制 API 密钥",
+      "cancel": "取消"
+    },
+    "dialog": {
+      "create": {
+        "title": "创建 API 密钥",
+        "description": "为您的项目创建一个新的 API 密钥。您可以选择性地为其命名以帮助识别其用途。",
+        "nameLabel": "API 密钥名称（可选）",
+        "namePlaceholder": "例如，生产 API 密钥"
+      },
+      "delete": {
+        "title": "删除 API 密钥",
+        "description": "您确定要删除此 API 密钥{{name}}吗？此操作无法撤销。",
+        "namePrefix": " \""
+      }
+    },
+    "toast": {
+      "copied": {
+        "title": "API 密钥已复制",
+        "description": "API 密钥已复制到您的剪贴板。"
+      },
+      "created": {
+        "title": "API 密钥已创建",
+        "description": "您的新 API 密钥已成功创建。"
+      },
+      "deleted": {
+        "title": "API 密钥已删除",
+        "description": "您的 API 密钥已成功删除。"
+      },
+      "error": {
+        "title": "错误",
+        "createFailed": "创建 API 密钥失败",
+        "deleteFailed": "删除 API 密钥失败"
+      }
+    }
+  },
+  "legal": {
+    "title": "法律",
+    "subtitle": "重要文件",
+    "description": "Plugged.in 的重要文件和法律信息",
+    "pages": {
+      "privacy": {
+        "title": "隐私政策",
+        "description": "我们如何收集、使用和保护您的数据",
+        "content": {
+          "intro": "欢迎来到 Plugged.in（“我们”、“我们的”或“我们”）。本隐私政策解释了当您使用我们的服务时，我们如何收集、使用、披露和保护您的信息。请仔细阅读本隐私政策。",
+          "disclaimer": "如果您不同意本隐私政策的条款，请不要访问该服务。",
+          "note": "重要提示：Plugged.in 目前处于候选版本状态。随着服务的成熟和附加功能的实施，本隐私政策可能会更新。",
+          "thirdParty": "我们无法控制任何第三方网站或服务的内容、隐私政策或做法，也不承担任何责任。"
+        }
+      },
+      "terms": {
+        "title": "服务条款",
+        "description": "使用我们服务的条款和条件",
+        "content": {
+          "intro": "访问或使用 Plugged.in，即表示您同意这些条款以及可能适用的任何附加条款。如果您不同意这些条款，则不得访问或使用 Plugged.in。",
+          "responsibilities": {
+            "title": "您的责任",
+            "items": [
+              "遵守适用的法律法规使用 MCP 服务器和工具",
+              "不得将 MCP 服务器用于任何非法或未经授权的目的",
+              "对您配置或部署的 MCP 服务器负责"
+            ]
+          }
+        }
+      },
+      "disclaimer": {
+        "title": "免责声明",
+        "description": "重要法律声明",
+        "content": {
+          "title": "免责声明和责任限制",
+          "thirdParty": "该服务可能包含指向非我们所有或控制的第三方网站或服务的链接。我们无法控制任何第三方网站或服务的内容、隐私政策或做法，也不承担任何责任。"
+        }
+      },
+      "contact": {
+        "title": "联系方式",
+        "description": "如何联系我们",
+        "content": {
+          "title": "联系信息",
+          "description": "有关这些法律文件的任何问题，请联系我们"
+        }
+      }
+    }
+  },
+  "sidebar": {
+    "toggle": "切换侧边栏",
+    "navigation": "导航",
+    "keyboard": {
+      "shortcut": "键盘快捷键：{{key}}"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "profile": {
+      "title": "个人资料",
+      "description": "管理您的个人资料信息",
+      "avatar": "上传头像",
+      "avatarRecommendation": "推荐：方形图片，最大 1MB",
+      "name": "姓名",
+      "namePlaceholder": "输入您的姓名",
+      "language": "语言",
+      "avatarRecommendation": "推荐：方形图片，最大 1MB",
+      "updateButton": "更新个人资料",
+      "success": "个人资料更新成功",
+      "error": "更新个人资料失败"
+    },
+    "password": {
+      "title": "密码",
+      "description": "更改您的密码",
+      "current": {
+        "label": "当前密码",
+        "placeholder": "输入当前密码"
+      },
+      "new": {
+        "label": "新密码",
+        "placeholder": "输入新密码"
+      },
+      "confirm": {
+        "label": "确认新密码",
+        "placeholder": "确认新密码"
+      },
+      "updateButton": "更改密码",
+      "success": "密码更新成功",
+      "error": "更新密码失败"
+    },
+    "account": {
+      "title": "删除帐户",
+      "description": "永久删除您的帐户和所有相关数据",
+      "deleteButton": "删除帐户",
+      "confirmTitle": "您确定吗？",
+      "confirmDescription": "此操作无法撤销。这将永久删除您的帐户并从我们的服务器中删除所有相关数据。",
+      "confirmButton": "是的，删除我的帐户",
+      "deletingButton": "删除中...",
+      "success": "帐户删除成功",
+      "error": "删除帐户失败"
+    },
+    "connectedAccounts": {
+      "title": "已连接帐户",
+      "description": "管理您已连接的社交帐户",
+      "github": {
+        "connected": "已连接到 GitHub",
+        "connect": "连接您的 GitHub 帐户"
+      },
+      "google": {
+        "connected": "已连接到 Google",
+        "connect": "连接您的 Google 帐户"
+      },
+      "twitter": {
+        "connected": "已连接到 Twitter",
+        "connect": "连接您的 Twitter 帐户"
+      },
+      "connected": "已连接",
+      "removed": "{{provider}} 帐户已成功断开连接",
+      "error": "断开帐户连接失败"
+    }
+  },
+  "setupGuide": {
+    "title": "设置指南",
+    "proxyBenefits": {
+      "title": "Plugged.in MCP 的优势",
+      "description": "Plugged.in MCP 作为您所有 MCP 服务器的统一代理，提供以下几个优势：",
+      "benefits": [
+        "单一配置点 - 通过一个中央配置管理所有 MCP 服务器",
+        "自动更新 - 自动获取最新功能和安全更新",
+        "简化身份验证 - 为所有 MCP 服务器使用单个 API 密钥",
+        "增强安全性 - 内置安全功能和最佳实践",
+        "跨平台兼容性 - 在不同操作系统上无缝工作"
+      ]
+    },
+    "installation": {
+      "title": "安装方法",
+      "apiKeysNotice": "注意：您可以在 API 密钥页面管理您的 API 密钥",
+      "manualConfig": {
+        "title": "手动配置",
+        "description": "对于 Claude Desktop，请在以下位置找到配置文件：",
+        "paths": {
+          "macos": "macOS",
+          "windows": "Windows"
+        }
+      },
+      "cursorConfig": {
+        "title": "Cursor 配置",
+        "description": "对于 Cursor，您可以直接在设置中配置 Plugged.in MCP：",
+        "steps": [
+          "打开 Cursor 并转到 Cursor 设置",
+          "导航到 Features 部分",
+          "找到 'MCP Servers' 并单击 'Add new MCP Server'",
+          "使用以下命令："
+        ]
+      }
+    },
+    "smithery": {
+      "title": "Smithery Windows 配置",
+      "description": "我们建议使用 Smithery 在云端的 docker 中运行 MCP，以实现最大兼容性。",
+      "setupLink": "要在 Windows 上设置 Smithery CLI，请查看此处：",
+      "serverLink": "直接在 Smithery 上访问 Plugged.in MCP 服务器列表：",
+      "windowsNote": "对于 Windows 上的 Smithery，您还可以使用以下配置选项：",
+      "terminalCommand": "您可以直接在终端中运行 Smithery 命令：",
+      "desktopConfig": "或者在您的 Claude Desktop 配置文件中进行配置："
+    }
+  },
+  "playground": {
+    "title": "MCP 游乐场",
+    "subtitle": "与模型上下文协议 (MCP) 工具交互。",
+    "description": "一个用于将 LLM AI 与 MCP 工具结合使用的实验环境。",
+    "actions": {
+      "start": "启动游乐场",
+      "starting": "启动中...",
+      "end": "结束会话",
+      "ending": "结束中...",
+      "save": "保存",
+      "clear": "清除",
+      "dismiss": "关闭"
+    },
+    "status": {
+      "active": "活动",
+      "inactive": "非活动",
+      "sessionActive": "会话活动",
+      "serversConnected": "{{count}} 个服务器已连接"
+    },
+    "config": {
+      "title": "配置",
+      "subtitle": "配置 LLM 并选择 MCP 服务器",
+      "tabs": {
+        "servers": "服务器",
+        "llm": "模型",
+        "logs": "日志"
+      },
+      "noServers": {
+        "title": "未配置 MCP 服务器。",
+        "action": "转到 MCP 服务器"
+      },
+      "sessionError": {
+        "title": "会话错误"
+      },
+      "model": {
+        "title": "选定模型",
+        "provider": "提供商",
+        "model": "模型",
+        "temperature": "温度",
+        "temperatureHints": {
+          "precise": "精确",
+          "creative": "创意"
+        },
+        "maxTokens": "最大令牌数",
+        "logLevel": "日志级别"
+      },
+      "logs": {
+        "title": "MCP 客户端日志",
+        "showingLevel": "显示 {{level}} 及以上级别的日志",
+        "levels": "日志级别：error < warn < info < debug",
+        "levelsHint": "更高级别包含所有较低级别",
+        "empty": "无可用日志。启动会话以查看日志。"
+      }
+    },
+    "chat": {
+      "title": "MCP 聊天",
+      "subtitle": "与 AI 和 MCP 工具聊天",
+      "tool": {
+        "title": "工具输出",
+        "debugInfo": "调试信息"
+      },
+      "input": {
+        "activePlaceholder": "与 MCP 工具聊天...",
+        "inactivePlaceholder": "请先启动会话"
+      },
+      "empty": {
+        "title": "MCP 游乐场聊天",
+        "activeDescription": "此代理可以与 LLM 和 MCP 工具交互。从提问开始。",
+        "inactiveDescription": "请启动会话并确保您至少有一个活动的 MCP 服务器。"
+      },
+      "thinking": "思考中"
+    },
+    "provider": {
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
+    },
+    "logLevels": {
+      "debug": "调试",
+      "info": "信息",
+      "warn": "警告",
+      "error": "错误"
+    }
+  },
+  "notifications": {
+    "title": "通知"
+  }
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowRight, Beaker, LogIn, Server, Wrench } from 'lucide-react';
+import { ArrowRight, FlaskConical, LogIn, Unplug, Wrench } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
@@ -34,7 +34,7 @@ export default function Home() {
         <section className="grid md:grid-cols-3 gap-6">
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
-              <Server className="h-10 w-10 text-primary mb-4" />
+              <Unplug className="h-10 w-10 text-primary mb-4" />
               <CardTitle>{t('landing.features.pluginManagement.title')}</CardTitle>
               <CardDescription>
                 {t('landing.features.pluginManagement.description')}
@@ -55,7 +55,7 @@ export default function Home() {
 
           <Card className="hover:shadow-md transition-shadow">
             <CardHeader>
-              <Beaker className="h-10 w-10 text-primary mb-4" />
+              <FlaskConical className="h-10 w-10 text-primary mb-4" />
               <CardTitle>{t('landing.features.aiPlayground.title')}</CardTitle>
               <CardDescription>
                 {t('landing.features.aiPlayground.description')}

@@ -9,9 +9,11 @@ import {
   text,
   timestamp,
   uuid,
+  boolean,
 } from 'drizzle-orm/pg-core';
 
 import { locales } from '@/i18n/config';
+
 import { enumToPgEnum } from './utils/enum-to-pg-enum';
 
 export const languageEnum = pgEnum('language', locales);
@@ -28,6 +30,13 @@ export enum McpServerType {
   SSE = 'SSE',
 }
 
+export enum McpServerSource {
+  PLUGGEDIN = 'PLUGGEDIN',
+  SMITHERY = 'SMITHERY',
+  NPM = 'NPM',
+  GITHUB = 'GITHUB',
+}
+
 export const mcpServerStatusEnum = pgEnum(
   'mcp_server_status',
   enumToPgEnum(McpServerStatus)
@@ -36,6 +45,11 @@ export const mcpServerStatusEnum = pgEnum(
 export const mcpServerTypeEnum = pgEnum(
   'mcp_server_type',
   enumToPgEnum(McpServerType)
+);
+
+export const mcpServerSourceEnum = pgEnum(
+  'mcp_server_source',
+  enumToPgEnum(McpServerSource)
 );
 
 // Auth.js / NextAuth.js schema
@@ -214,6 +228,10 @@ export const mcpServersTable = pgTable(
     status: mcpServerStatusEnum('status')
       .notNull()
       .default(McpServerStatus.ACTIVE),
+    source: mcpServerSourceEnum('source')
+      .notNull()
+      .default(McpServerSource.PLUGGEDIN),
+    external_id: text('external_id'),
   },
   (table) => [
     index('mcp_servers_status_idx').on(table.status),
@@ -289,3 +307,154 @@ export const playgroundSettingsTable = pgTable(
     index('playground_settings_profile_uuid_idx').on(table.profile_uuid),
   ]
 );
+
+// Table for caching search results from external sources
+export const searchCacheTable = pgTable(
+  'search_cache',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    source: mcpServerSourceEnum('source').notNull(),
+    query: text('query').notNull(),
+    results: jsonb('results').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expires_at: timestamp('expires_at', { withTimezone: true })
+      .notNull(),
+  },
+  (table) => [
+    index('search_cache_source_query_idx').on(table.source, table.query),
+    index('search_cache_expires_at_idx').on(table.expires_at),
+  ]
+);
+
+// Table for tracking server installations
+export const serverInstallationsTable = pgTable(
+  'server_installations',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    server_uuid: uuid('server_uuid')
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    external_id: text('external_id'),
+    source: mcpServerSourceEnum('source').notNull(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('server_installations_server_uuid_idx').on(table.server_uuid),
+    index('server_installations_external_id_source_idx').on(table.external_id, table.source),
+    index('server_installations_profile_uuid_idx').on(table.profile_uuid),
+  ]
+);
+
+// Table for tracking server ratings
+export const serverRatingsTable = pgTable(
+  'server_ratings',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    server_uuid: uuid('server_uuid')
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    external_id: text('external_id'),
+    source: mcpServerSourceEnum('source').notNull(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    rating: integer('rating').notNull(), // 1-5 stars
+    comment: text('comment'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('server_ratings_server_uuid_idx').on(table.server_uuid),
+    index('server_ratings_external_id_source_idx').on(table.external_id, table.source),
+    index('server_ratings_profile_uuid_idx').on(table.profile_uuid),
+    // Each user can only rate a server once (by server_uuid or external_id + source)
+    index('server_ratings_unique_idx').on(
+      table.profile_uuid, 
+      table.server_uuid
+    ),
+    index('server_ratings_unique_external_idx').on(
+      table.profile_uuid, 
+      table.external_id,
+      table.source
+    ),
+  ]
+);
+
+// Audit log tablosu
+export const auditLogsTable = pgTable("audit_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
+  type: text("type").notNull(), // API_CALL, MCP_REQUEST, AUTH_ACTION, etc.
+  action: text("action").notNull(),
+  request_path: text("request_path"),
+  request_method: text("request_method"),
+  request_body: jsonb("request_body"),
+  response_status: integer("response_status"),
+  response_time_ms: integer("response_time_ms"),
+  user_agent: text("user_agent"),
+  ip_address: text("ip_address"),
+  server_uuid: uuid("server_uuid").references(() => mcpServersTable.uuid),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  metadata: jsonb("metadata"),
+},
+(table) => [
+  index('audit_logs_profile_uuid_idx').on(table.profile_uuid),
+  index('audit_logs_type_idx').on(table.type),
+  index('audit_logs_created_at_idx').on(table.created_at),
+]);
+
+// Notification tablosu
+export const notificationsTable = pgTable("notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
+  type: text("type").notNull(), // SYSTEM, ALERT, INFO, SUCCESS, WARNING
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  read: boolean("read").default(false).notNull(),
+  link: text("link"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expires_at: timestamp("expires_at", { withTimezone: true }),
+},
+(table) => [
+  index('notifications_profile_uuid_idx').on(table.profile_uuid),
+  index('notifications_read_idx').on(table.read),
+  index('notifications_created_at_idx').on(table.created_at),
+]);
+
+// Sistem loglama tablosu
+export const systemLogsTable = pgTable("system_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  level: text("level").notNull(), // ERROR, WARN, INFO, DEBUG
+  source: text("source").notNull(), // SYSTEM, MCP_SERVER, DATABASE, etc.
+  message: text("message").notNull(),
+  details: jsonb("details"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+},
+(table) => [
+  index('system_logs_level_idx').on(table.level),
+  index('system_logs_source_idx').on(table.source),
+  index('system_logs_created_at_idx').on(table.created_at),
+]);
+
+// Log retention policy tablosu
+export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
+  retention_days: integer("retention_days").default(7).notNull(),
+  // max_log_size_mb: integer("max_log_size_mb").default(100).notNull(), // Removed unused column
+  is_active: boolean("is_active").default(true).notNull(),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+},
+(table) => [
+  index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
+]);

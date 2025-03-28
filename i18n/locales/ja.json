@@ -1,0 +1,556 @@
+{
+  "common": {
+    "or": "または",
+    "error": "エラー",
+    "success": "成功",
+    "releaseCandidate": "リリース候補 v{{version}}",
+    "validation": {
+      "required": "このフィールドは必須です",
+      "email": "有効なメールアドレスを入力してください",
+      "minLength": "少なくとも{{count}}文字必要です",
+      "maxLength": "最大{{count}}文字までです",
+      "passwordMatch": "パスワードが一致する必要があります"
+    },
+    "save": "保存",
+    "saving": "保存中...",
+    "remove": "削除",
+    "removing": "削除中...",
+    "errors": {
+      "unexpected": "予期せぬエラーが発生しました。もう一度お試しください。"
+    }
+  },
+  "auth": {
+    "common": {
+      "emailLabel": "メールアドレス",
+      "emailPlaceholder": "メールアドレスを入力してください",
+      "passwordLabel": "パスワード",
+      "passwordPlaceholder": "パスワードを入力してください",
+      "confirmPasswordLabel": "パスワードを確認",
+      "confirmPasswordPlaceholder": "パスワードを再入力してください"
+    },
+    "login": {
+      "title": "サインイン",
+      "actionMessage": "アカウントにサインイン",
+      "submitButton": "サインイン",
+      "errors": {
+        "invalidCredentials": "メールアドレスまたはパスワードが無効です"
+      }
+    },
+    "register": {
+      "title": "アカウント作成",
+      "actionMessage": "アカウントを作成",
+      "submitButton": "アカウント作成",
+      "nameLabel": "名前",
+      "namePlaceholder": "名前を入力してください",
+      "success": "登録が成功しました！メールを確認してください。",
+      "errors": {
+        "registrationFailed": "登録に失敗しました"
+      }
+    },
+    "forgotPassword": {
+      "title": "パスワードをお忘れですか",
+      "actionMessage": "パスワードをリセット",
+      "submitButton": "リセットリンクを送信",
+      "success": "パスワードリセットリンクがメールに送信されました！",
+      "errors": {
+        "requestFailed": "リセットリンクの送信に失敗しました"
+      }
+    },
+    "resetPassword": {
+      "title": "パスワードをリセット",
+      "actionMessage": "新しいパスワードを設定",
+      "submitButton": "パスワードをリセット",
+      "success": "パスワードのリセットに成功しました！新しいパスワードでログインできます。",
+      "errors": {
+        "resetFailed": "パスワードのリセットに失敗しました"
+      }
+    },
+    "social": {
+      "github": "GitHubで続行",
+      "google": "Googleで続行",
+      "twitter": "Twitterで接続"
+    }
+  },
+  "landing": {
+    "navigation": {
+      "enterApp": "アプリに入る"
+    },
+    "hero": {
+      "title": "AIの交差点",
+      "subtitle": "統一されたプラットフォームでAI機能を接続、作成、拡張します。AIワークフローを強化するプラグインを構築および管理します。"
+    },
+    "features": {
+      "pluginManagement": {
+        "title": "プラグイン管理",
+        "description": "MCPサーバーとプラグインを参照、設定、管理します",
+        "content": "統一されたインターフェースを通じて、さまざまなAIツールとサービスを接続します。中央ダッシュボードからプラグインを設定および管理します。",
+        "action": "プラグインを閲覧"
+      },
+      "aiPlayground": {
+        "title": "AIプレイグラウンド",
+        "description": "インタラクティブな環境でAIツールをテストおよび実験します",
+        "content": "プラグインの動作を体験してください。プレイグラウンドでは、さまざまな構成をテストし、リアルタイムの結果を確認できます。",
+        "action": "プレイグラウンドを開く"
+      },
+      "customDevelopment": {
+        "title": "カスタム開発",
+        "description": "独自のMCPサーバーとツールを作成およびカスタマイズします",
+        "content": "Pythonエディターと統合開発環境を使用してカスタム機能を構築します。専門的な機能でAIを拡張します。",
+        "action": "カスタムツールを作成"
+      }
+    },
+    "gettingStarted": {
+      "title": "Plugged.inは初めてですか？",
+      "description": "セットアップガイドに従って環境を適切に設定し、すぐにPlugged.inで構築を開始してください。",
+      "action": "セットアップガイドを表示"
+    }
+  },
+  "mcpServers": {
+    "title": "MCPサーバー",
+    "subtitle": "プラグイン管理",
+    "description": "MCPサーバーを設定および管理します。コマンドラインまたはURLベースのインターフェースを介して外部ツールおよびサービスに接続します。",
+    "stats": {
+      "totalServers": "合計サーバー数",
+      "active": "アクティブ",
+      "stdio": "STDIO",
+      "sse": "SSE"
+    },
+    "actions": {
+      "addServer": "サーバーを追加",
+      "import": "インポート",
+      "export": "エクスポート",
+      "search": "サーバーを検索...",
+      "edit": "編集",
+      "delete": "削除",
+      "deleteConfirm": "このMCPサーバーを削除してもよろしいですか？",
+      "cancel": "キャンセル",
+      "create": "作成",
+      "creating": "作成中...",
+      "close": "閉じる",
+      "downloadJson": "JSONをダウンロード",
+      "copy": "コピー",
+      "copied": "コピーしました！"
+    },
+    "form": {
+      "success": "MCPサーバーが正常に作成されました。",
+      "error": {
+        "createFailed": "MCPサーバーの作成に失敗しました。"
+      },
+      "addTitle": "MCPサーバーを追加",
+      "addDescription": "新しいMCPサーバー構成を作成します。STDIO（コマンドベース）またはSSE（URLベース）サーバータイプを選択します。",
+      "commandBased": "コマンドベース (STDIO)",
+      "urlBased": "URLベース (SSE)",
+      "name": "名前",
+      "namePlaceholder": "例：mcp-server-time",
+      "description": "説明",
+      "descriptionPlaceholder": "（オプション）サーバーの目的の簡単な説明",
+      "command": "コマンド",
+      "commandPlaceholder": "例：npx または uvx",
+      "arguments": "引数",
+      "argumentsPlaceholder": "例：mcp-server-time, --local-timezone=America/Los_Angeles",
+      "envVars": "環境変数",
+      "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
+      "envVarsHelp": "環境変数をKEY=value形式で入力します（1行に1つ）",
+      "serverUrl": "サーバーURL",
+      "serverUrlPlaceholder": "http://localhost:3000/sse",
+      "serverUrlHelp": "有効なHTTP/HTTPS URLである必要があります",
+      "created": "作成日時"
+    },
+    "import": {
+      "title": "MCPサーバーをインポート",
+      "description": "JSONから複数のMCPサーバー構成をインポートします。これにより、既存のサーバーを置き換えることなく新しいサーバーが追加されます。",
+      "jsonFormat": "JSON形式",
+      "jsonPlaceholder": "ここにJSONを貼り付けます",
+      "importing": "インポート中...",
+      "importServers": "サーバーをインポート",
+      "success": "{{count}}個のMCPサーバーが正常にインポートされました。",
+      "error": {
+        "invalidJson": "無効なJSON形式",
+        "missingMcpServers": "JSONには「mcpServers」オブジェクトが含まれている必要があります",
+        "importFailed": "サーバーのインポートに失敗しました。詳細についてはコンソールを確認してください。"
+      }
+    },
+    "export": {
+      "title": "MCPサーバー構成をエクスポート",
+      "description": "JSON形式のMCPサーバー構成。別のインスタンスにインポートする準備ができています。",
+      "copyTooltip": "JSONをクリップボードにコピー",
+      "downloadSuccess": "{{count}}個のMCPサーバー構成がダウンロードされました。",
+      "error": {
+        "noServers": "エクスポートするMCPサーバーがありません。",
+        "copyFailed": "クリップボードへのコピーに失敗しました。"
+      }
+    },
+    "status": {
+      "active": "アクティブ",
+      "inactive": "非アクティブ"
+    },
+    "empty": {
+      "title": "サーバーが見つかりません",
+      "noResults": "「{{search}}」に一致するサーバーはありません",
+      "noServers": "まだMCPサーバーを追加していません",
+      "addFirst": "最初のサーバーを追加"
+    }
+  },
+  "search": {
+    "title": "検索",
+    "subtitle": "すべてのコンテンツを検索",
+    "explorePlugins": "プラグインを探索",
+    "input": {
+      "placeholder": "検索..."
+    },
+    "loading": "検索を読み込み中...",
+    "noResults": "結果が見つかりません",
+    "error": "検索結果の読み込み中にエラーが発生しました",
+    "sort": "並べ替え",
+    "sortBy": "並べ替え基準",
+    "sortOptions": {
+      "relevance": "関連性",
+      "popularity": "人気度",
+      "recent": "最新",
+      "stars": "GitHubスター"
+    },
+    "filter": "フィルター",
+    "filterByTags": "タグでフィルター",
+    "noTagsAvailable": "利用可能なタグはありません",
+    "clearFilters": "フィルターをクリア",
+    "clearAllFilters": "すべてクリア",
+    "noMatchingTags": "選択したタグに一致する結果はありません",
+    "noMatchingFilters": "選択したフィルターに一致する結果はありません",
+    "category": "カテゴリ",
+    "filterByCategory": "カテゴリでフィルター",
+    "noCategoriesAvailable": "利用可能なカテゴリはありません",
+    "allCategories": "すべてのカテゴリ",
+    "categories": {
+      "LLM": "LLM",
+      "UTILITY": "ユーティリティ",
+      "TOOL": "ツール",
+      "DATA": "データアクセス",
+      "CONNECTOR": "コネクタ",
+      "SEARCH": "検索",
+      "CODE": "コード",
+      "IMAGE": "画像",
+      "AUDIO": "音声",
+      "VIDEO": "動画",
+      "OTHER": "その他"
+    },
+    "card": {
+      "package": "パッケージ",
+      "command": "コマンド",
+      "exampleArgs": "引数の例",
+      "install": "インストール",
+      "usageCount": "使用回数",
+      "ratings": "評価",
+      "installations": "インストール数",
+      "dialog": {
+        "title": "MCPサーバーを追加",
+        "MCPdescription": "次の構成で新しいMCPサーバーを追加します",
+        "name": "名前",
+        "description": "説明",
+        "command": "コマンド",
+        "args": "引数（スペース区切り）",
+        "env": "環境変数（1行に1つ）",
+        "url": "URL",
+        "cancel": "キャンセル",
+        "add": "サーバーを追加"
+      }
+    }
+  },
+  "apiKeys": {
+    "title": "APIキー",
+    "description": "APIキーは、Plugged.in APIへのリクエストを認証するために使用されます。安全に保管し、他人と共有しないでください。",
+    "empty": "まだAPIキーがありません。開始するには1つ作成してください。",
+    "actions": {
+      "create": "APIキーを作成",
+      "creating": "作成中...",
+      "delete": "APIキーを削除",
+      "deleting": "削除中...",
+      "show": "APIキーを表示",
+      "hide": "APIキーを非表示",
+      "copy": "APIキーをコピー",
+      "cancel": "キャンセル"
+    },
+    "dialog": {
+      "create": {
+        "title": "APIキーを作成",
+        "description": "プロジェクト用に新しいAPIキーを作成します。オプションで、目的を識別しやすくするために名前を付けることができます。",
+        "nameLabel": "APIキー名（オプション）",
+        "namePlaceholder": "例：本番APIキー"
+      },
+      "delete": {
+        "title": "APIキーを削除",
+        "description": "このAPIキー{{name}}を削除してもよろしいですか？この操作は元に戻せません。",
+        "namePrefix": "「"
+      }
+    },
+    "toast": {
+      "copied": {
+        "title": "APIキーがコピーされました",
+        "description": "APIキーがクリップボードにコピーされました。"
+      },
+      "created": {
+        "title": "APIキーが作成されました",
+        "description": "新しいAPIキーが正常に作成されました。"
+      },
+      "deleted": {
+        "title": "APIキーが削除されました",
+        "description": "APIキーが正常に削除されました。"
+      },
+      "error": {
+        "title": "エラー",
+        "createFailed": "APIキーの作成に失敗しました",
+        "deleteFailed": "APIキーの削除に失敗しました"
+      }
+    }
+  },
+  "legal": {
+    "title": "法的情報",
+    "subtitle": "重要書類",
+    "description": "Plugged.inの重要書類および法的情報",
+    "pages": {
+      "privacy": {
+        "title": "プライバシーポリシー",
+        "description": "データの収集、使用、保護方法",
+        "content": {
+          "intro": "Plugged.in（「当社」、「弊社」、または「私たち」）へようこそ。このプライバシーポリシーは、お客様が当社のサービスを使用する際に、当社がお客様の情報をどのように収集、使用、開示、保護するかを説明します。このプライバシーポリシーを注意深くお読みください。",
+          "disclaimer": "このプライバシーポリシーの条件に同意しない場合は、サービスにアクセスしないでください。",
+          "note": "重要事項：Plugged.inは現在リリース候補ステータスです。サービスの成熟および追加機能の実装に伴い、このプライバシーポリシーは更新される場合があります。",
+          "thirdParty": "当社は、第三者のサイトまたはサービスのコンテンツ、プライバシーポリシー、または慣行について管理することはできず、責任を負いません。"
+        }
+      },
+      "terms": {
+        "title": "利用規約",
+        "description": "当社のサービスを利用するための利用規約",
+        "content": {
+          "intro": "Plugged.inにアクセスまたは使用することにより、お客様は本規約および適用される可能性のある追加規約に同意したものとみなされます。本規約に同意しない場合は、Plugged.inにアクセスまたは使用してはなりません。",
+          "responsibilities": {
+            "title": "お客様の責任",
+            "items": [
+              "適用される法律および規制に従ってMCPサーバーおよびツールを使用する",
+              "違法または不正な目的でMCPサーバーを使用しない",
+              "構成または展開するMCPサーバーについて責任を負う"
+            ]
+          }
+        }
+      },
+      "disclaimer": {
+        "title": "免責事項",
+        "description": "重要な法的通知",
+        "content": {
+          "title": "免責事項および責任制限",
+          "thirdParty": "本サービスには、当社が所有または管理していない第三者のWebサイトまたはサービスへのリンクが含まれる場合があります。当社は、第三者のWebサイトまたはサービスのコンテンツ、プライバシーポリシー、または慣行について管理することはできず、責任を負いません。"
+        }
+      },
+      "contact": {
+        "title": "お問い合わせ",
+        "description": "お問い合わせ方法",
+        "content": {
+          "title": "連絡先情報",
+          "description": "これらの法的文書に関するご質問は、お問い合わせください"
+        }
+      }
+    }
+  },
+  "sidebar": {
+    "toggle": "サイドバーを切り替え",
+    "navigation": "ナビゲーション",
+    "keyboard": {
+      "shortcut": "キーボードショートカット：{{key}}"
+    }
+  },
+  "settings": {
+    "title": "設定",
+    "profile": {
+      "title": "プロフィール",
+      "description": "プロフィール情報を管理します",
+      "avatar": "アバターをアップロード",
+      "avatarRecommendation": "推奨：正方形の画像、最大1MB",
+      "name": "名前",
+      "namePlaceholder": "名前を入力してください",
+      "language": "言語",
+      "avatarRecommendation": "推奨：正方形の画像、最大1MB",
+      "updateButton": "プロフィールを更新",
+      "success": "プロフィールが正常に更新されました",
+      "error": "プロフィールの更新に失敗しました"
+    },
+    "password": {
+      "title": "パスワード",
+      "description": "パスワードを変更します",
+      "current": {
+        "label": "現在のパスワード",
+        "placeholder": "現在のパスワードを入力してください"
+      },
+      "new": {
+        "label": "新しいパスワード",
+        "placeholder": "新しいパスワードを入力してください"
+      },
+      "confirm": {
+        "label": "新しいパスワードを確認",
+        "placeholder": "新しいパスワードを再入力してください"
+      },
+      "updateButton": "パスワードを変更",
+      "success": "パスワードが正常に更新されました",
+      "error": "パスワードの更新に失敗しました"
+    },
+    "account": {
+      "title": "アカウントを削除",
+      "description": "アカウントと関連するすべてのデータを完全に削除します",
+      "deleteButton": "アカウントを削除",
+      "confirmTitle": "よろしいですか？",
+      "confirmDescription": "この操作は元に戻せません。これにより、アカウントとサーバー上のすべての関連データが完全に削除されます。",
+      "confirmButton": "はい、アカウントを削除します",
+      "deletingButton": "削除中...",
+      "success": "アカウントが正常に削除されました",
+      "error": "アカウントの削除に失敗しました"
+    },
+    "connectedAccounts": {
+      "title": "接続済みアカウント",
+      "description": "接続済みのソーシャルアカウントを管理します",
+      "github": {
+        "connected": "GitHubに接続済み",
+        "connect": "GitHubアカウントを接続"
+      },
+      "google": {
+        "connected": "Googleに接続済み",
+        "connect": "Googleアカウントを接続"
+      },
+      "twitter": {
+        "connected": "Twitterに接続済み",
+        "connect": "Twitterアカウントを接続"
+      },
+      "connected": "接続済み",
+      "removed": "{{provider}} アカウントの接続が正常に解除されました",
+      "error": "アカウントの接続解除に失敗しました"
+    }
+  },
+  "setupGuide": {
+    "title": "セットアップガイド",
+    "proxyBenefits": {
+      "title": "Plugged.in MCPの利点",
+      "description": "Plugged.in MCPは、すべてのMCPサーバーの統一プロキシとして機能し、いくつかの利点を提供します。",
+      "benefits": [
+        "単一構成ポイント - すべてのMCPサーバーを1つの中央構成で管理",
+        "自動更新 - 最新の機能とセキュリティ更新を自動的に取得",
+        "簡略化された認証 - すべてのMCPサーバーに単一のAPIキーを使用",
+        "強化されたセキュリティ - 組み込みのセキュリティ機能とベストプラクティス",
+        "クロスプラットフォーム互換性 - 異なるオペレーティングシステム間でシームレスに動作"
+      ]
+    },
+    "installation": {
+      "title": "インストール方法",
+      "apiKeysNotice": "注意：APIキーはAPIキーページで管理できます",
+      "manualConfig": {
+        "title": "手動構成",
+        "description": "Claude Desktopの場合、構成ファイルは次の場所にあります。",
+        "paths": {
+          "macos": "macOS",
+          "windows": "Windows"
+        }
+      },
+      "cursorConfig": {
+        "title": "Cursor構成",
+        "description": "Cursorの場合、設定で直接Plugged.in MCPを構成できます。",
+        "steps": [
+          "Cursorを開き、Cursor設定に移動します",
+          "機能セクションに移動します",
+          "「MCPサーバー」を見つけて「新しいMCPサーバーを追加」をクリックします",
+          "次のコマンドを使用します："
+        ]
+      }
+    },
+    "smithery": {
+      "title": "Smithery Windows構成",
+      "description": "最大の互換性を得るために、クラウド上のdockerでMCPを実行するにはSmitheryを使用することをお勧めします。",
+      "setupLink": "WindowsでSmithery CLIをセットアップするには、こちらをご覧ください：",
+      "serverLink": "Smitheryで直接Plugged.in MCPサーバーリストにアクセスします：",
+      "windowsNote": "Windows上のSmitheryでは、次の構成オプションも使用できます：",
+      "terminalCommand": "ターミナルで直接Smitheryコマンドを実行できます：",
+      "desktopConfig": "または、Claude Desktop構成ファイルで構成します："
+    }
+  },
+  "playground": {
+    "title": "MCPプレイグラウンド",
+    "subtitle": "モデルコンテキストプロトコル（MCP）ツールと対話します。",
+    "description": "LLM AIとMCPツールを一緒に使用するための実験的な環境。",
+    "actions": {
+      "start": "プレイグラウンドを開始",
+      "starting": "開始中...",
+      "end": "セッションを終了",
+      "ending": "終了中...",
+      "save": "保存",
+      "clear": "クリア",
+      "dismiss": "閉じる"
+    },
+    "status": {
+      "active": "アクティブ",
+      "inactive": "非アクティブ",
+      "sessionActive": "セッションアクティブ",
+      "serversConnected": "{{count}}台のサーバーが接続されています"
+    },
+    "config": {
+      "title": "構成",
+      "subtitle": "LLMを構成し、MCPサーバーを選択します",
+      "tabs": {
+        "servers": "サーバー",
+        "llm": "モデル",
+        "logs": "ログ"
+      },
+      "noServers": {
+        "title": "MCPサーバーが構成されていません。",
+        "action": "MCPサーバーに移動"
+      },
+      "sessionError": {
+        "title": "セッションエラー"
+      },
+      "model": {
+        "title": "選択されたモデル",
+        "provider": "プロバイダー",
+        "model": "モデル",
+        "temperature": "温度",
+        "temperatureHints": {
+          "precise": "正確",
+          "creative": "創造的"
+        },
+        "maxTokens": "最大トークン数",
+        "logLevel": "ログレベル"
+      },
+      "logs": {
+        "title": "MCPクライアントログ",
+        "showingLevel": "{{level}}以上のログを表示中",
+        "levels": "ログレベル：error < warn < info < debug",
+        "levelsHint": "上位レベルにはすべての下位レベルが含まれます",
+        "empty": "利用可能なログはありません。ログを表示するにはセッションを開始してください。"
+      }
+    },
+    "chat": {
+      "title": "MCPチャット",
+      "subtitle": "AIおよびMCPツールとチャット",
+      "tool": {
+        "title": "ツール出力",
+        "debugInfo": "デバッグ情報"
+      },
+      "input": {
+        "activePlaceholder": "MCPツールとチャット...",
+        "inactivePlaceholder": "最初にセッションを開始してください"
+      },
+      "empty": {
+        "title": "MCPプレイグラウンドチャット",
+        "activeDescription": "このエージェントはLLMおよびMCPツールと対話できます。質問から始めてください。",
+        "inactiveDescription": "セッションを開始し、少なくとも1つのアクティブなMCPサーバーがあることを確認してください。"
+      },
+      "thinking": "考え中"
+    },
+    "provider": {
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
+    },
+    "logLevels": {
+      "debug": "デバッグ",
+      "info": "情報",
+      "warn": "警告",
+      "error": "エラー"
+    }
+  },
+  "notifications": {
+    "title": "通知"
+  }
+}

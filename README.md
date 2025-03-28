@@ -139,6 +139,18 @@ The Plugged.in service requires:
    NODE_ENV=production pnpm build
    ```
 
+### Security Considerations
+
+**MCP Server Sandboxing (Linux/Ubuntu)**
+
+- **Problem:** STDIO-based MCP servers are executed as child processes. Without sandboxing, they inherit the permissions of the main application, potentially allowing unrestricted filesystem access, which poses a significant security risk.
+- **Solution:** This application automatically wraps the execution of STDIO MCP servers with `firejail --quiet` when running on a Linux system. This utilizes Firejail's default security profile to restrict the server's capabilities, notably limiting filesystem access.
+- **Requirement:** The `firejail` package **must be installed** on the Ubuntu/Linux production server for this sandboxing to be effective. You can typically install it using:
+  ```bash
+  sudo apt update && sudo apt install firejail
+  ```
+- **Note:** This sandboxing is applied automatically within the application logic (`app/actions/mcp-playground.ts`) and does not require manual configuration per server. SSE servers are not affected by this specific sandboxing mechanism.
+
 ### Service Configuration
 
 Create a systemd service file at `/etc/systemd/system/pluggedin.service`:

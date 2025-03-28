@@ -1,11 +1,11 @@
 'use client';
 
-import { ArrowRight, Monitor, Moon, Sun } from 'lucide-react';
+import { ArrowRight } from 'lucide-react'; // Removed unused Monitor, Moon, Sun
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
-import { useTheme } from '@/components/providers/theme-provider';
+// Removed unused useTheme import
 import { Button } from '@/components/ui/button';
 import { Glow } from '@/components/ui/glow';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
@@ -17,14 +17,7 @@ export function LandingHero() {
   const mounted = useMounted();
   const { logoSrc } = useThemeLogo();
   const { t } = useTranslation();
-  const { theme, setTheme } = useTheme();
-
-  // Theme options for the enhanced theme selector
-  const themeOptions = [
-    { value: 'light', label: 'Light', icon: <Sun className="h-4 w-4 mr-2" /> },
-    { value: 'dark', label: 'Dark', icon: <Moon className="h-4 w-4 mr-2" /> },
-    { value: 'system', label: 'System', icon: <Monitor className="h-4 w-4 mr-2" /> },
-  ];
+  // Removed unused theme, setTheme, and themeOptions variables
 
   return (
     <div className="relative overflow-hidden">
@@ -54,7 +47,7 @@ export function LandingHero() {
             {/* Only render the logo image once mounted to ensure correct theme is applied */}
             {mounted && (
               <Image
-                src="/pluggedin-wl-black.png"
+                src={logoSrc} // Use logoSrc from hook
                 alt="Plugged.in Logo"
                 width={288}
                 height={72}

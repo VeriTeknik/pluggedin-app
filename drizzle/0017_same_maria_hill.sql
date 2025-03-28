@@ -1,0 +1,1 @@
+ALTER TABLE "log_retention_policies" DROP COLUMN "max_log_size_mb";

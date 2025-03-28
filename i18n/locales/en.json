@@ -3,6 +3,7 @@
     "or": "OR",
     "error": "Error",
     "success": "Success",
+    "releaseCandidate": "Release Candidate v{{version}}",
     "validation": {
       "required": "This field is required",
       "email": "Please enter a valid email address",
@@ -10,6 +11,10 @@
       "maxLength": "Must be at most {{count}} characters",
       "passwordMatch": "Passwords must match"
     },
+    "save": "Save",
+    "saving": "Saving...",
+    "remove": "Remove",
+    "removing": "Removing...",
     "errors": {
       "unexpected": "An unexpected error occurred. Please try again."
     }
@@ -62,7 +67,8 @@
     },
     "social": {
       "github": "Continue with GitHub",
-      "google": "Continue with Google"
+      "google": "Continue with Google",
+      "twitter": "Connect with Twitter"
     }
   },
   "landing": {
@@ -188,25 +194,62 @@
   "search": {
     "title": "Search",
     "subtitle": "Search across all content",
+    "explorePlugins": "Explore Plugins",
     "input": {
       "placeholder": "Search..."
     },
     "loading": "Loading search...",
     "noResults": "No results found",
     "error": "Error loading search results",
+    "sort": "Sort",
+    "sortBy": "Sort by",
+    "sortOptions": {
+      "relevance": "Relevance",
+      "popularity": "Popularity",
+      "recent": "Most recent",
+      "stars": "GitHub stars"
+    },
+    "filter": "Filter",
+    "filterByTags": "Filter by tags",
+    "noTagsAvailable": "No tags available",
+    "clearFilters": "Clear filters",
+    "clearAllFilters": "Clear all",
+    "noMatchingTags": "No results match the selected tags",
+    "noMatchingFilters": "No results match the selected filters",
+    "category": "Category",
+    "filterByCategory": "Filter by category",
+    "noCategoriesAvailable": "No categories available",
+    "allCategories": "All categories",
+    "categories": {
+      "LLM": "LLM",
+      "UTILITY": "Utility",
+      "TOOL": "Tool",
+      "DATA": "Data Access",
+      "CONNECTOR": "Connector",
+      "SEARCH": "Search",
+      "CODE": "Code",
+      "IMAGE": "Image",
+      "AUDIO": "Audio",
+      "VIDEO": "Video",
+      "OTHER": "Other"
+    },
     "card": {
       "package": "Package",
       "command": "Command",
       "exampleArgs": "Example Args",
       "install": "Install",
+      "usageCount": "Usage count",
+      "ratings": "Ratings",
+      "installations": "Installations",
       "dialog": {
         "title": "Add MCP Server",
-        "description": "Add a new MCP server with the following configuration",
+        "MCPdescription": "Add a new MCP server with the following configuration",
         "name": "Name",
         "description": "Description",
         "command": "Command",
         "args": "Arguments (space-separated)",
         "env": "Environment Variables (one per line)",
+        "url": "URL",
         "cancel": "Cancel",
         "add": "Add Server"
       }
@@ -309,6 +352,7 @@
   },
   "sidebar": {
     "toggle": "Toggle Sidebar",
+    "navigation": "Navigation",
     "keyboard": {
       "shortcut": "Keyboard shortcut: {{key}}"
     }
@@ -318,14 +362,12 @@
     "profile": {
       "title": "Profile",
       "description": "Manage your profile information",
-      "avatar": {
-        "upload": "Upload Avatar",
-        "recommendation": "Recommended: Square image, max 1MB"
-      },
-      "name": {
-        "label": "Name",
-        "placeholder": "Enter your name"
-      },
+      "avatar": "Upload Avatar",
+      "avatarRecommendation": "Recommended: Square image, max 1MB",
+      "name": "Name",
+      "namePlaceholder": "Enter your name",
+      "language": "Language",
+      "avatarRecommendation": "Recommended: Square image, max 1MB",
       "updateButton": "Update Profile",
       "success": "Profile updated successfully",
       "error": "Failed to update profile"
@@ -359,6 +401,25 @@
       "deletingButton": "Deleting...",
       "success": "Account deleted successfully",
       "error": "Failed to delete account"
+    },
+    "connectedAccounts": {
+      "title": "Connected Accounts",
+      "description": "Manage your connected social accounts",
+      "github": {
+        "connected": "Connected to GitHub",
+        "connect": "Connect your GitHub account"
+      },
+      "google": {
+        "connected": "Connected to Google",
+        "connect": "Connect your Google account"
+      },
+      "twitter": {
+        "connected": "Connected to Twitter",
+        "connect": "Connect your Twitter account"
+      },
+      "connected": "Connected",
+      "removed": "{{provider}} account disconnected successfully",
+      "error": "Failed to disconnect account"
     }
   },
   "setupGuide": {
@@ -407,8 +468,9 @@
     }
   },
   "playground": {
-    "title": "Playground",
-    "subtitle": "Test your MCP servers with powerful LLMs. Configure server connections, adjust model settings, and interact using natural language to see your tools in action.",
+    "title": "MCP Playground",
+    "subtitle": "Interact with Model Context Protocol (MCP) tools.",
+    "description": "An experimental environment for using LLM AI with MCP tools.",
     "actions": {
       "start": "Start Playground",
       "starting": "Starting...",
@@ -460,21 +522,35 @@
       }
     },
     "chat": {
-      "title": "Chat Interface",
-      "subtitle": "Test your MCP servers with natural language",
-      "empty": {
-        "title": "MCP Playground",
-        "activeDescription": "Ask questions or give instructions to test your MCP servers. Try exploring what tools are available or request specific actions.",
-        "inactiveDescription": "Select MCP servers and start a session to begin testing your tools with natural language."
+      "title": "MCP Chat",
+      "subtitle": "Chat with AI and MCP tools",
+      "tool": {
+        "title": "Tool Output",
+        "debugInfo": "Debug information"
       },
       "input": {
-        "activePlaceholder": "Type your message...",
-        "inactivePlaceholder": "Start a session to begin chatting"
+        "activePlaceholder": "Chat with MCP tools...",
+        "inactivePlaceholder": "Start a session first"
       },
-      "tool": {
-        "title": "Tool Execution",
-        "debugInfo": "Debug Info"
-      }
+      "empty": {
+        "title": "MCP Playground Chat",
+        "activeDescription": "This agent can interact with LLM and MCP tools. Start by asking a question.",
+        "inactiveDescription": "Please start a session and make sure you have at least one active MCP server."
+      },
+      "thinking": "Thinking"
+    },
+    "provider": {
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
+    },
+    "logLevels": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warn",
+      "error": "Error"
     }
+  },
+  "notifications": {
+    "title": "Notifications"
   }
 }

@@ -16,7 +16,11 @@ import {
 
 const languageFlags: Record<Locale, string> = {
   en: '🇬🇧',
-  tr: '🇹🇷'
+  tr: '🇹🇷',
+  nl: '🇳🇱',
+  zh: '🇨🇳',
+  ja: '🇯🇵',
+  hi: '🇮🇳'
 };
 
 export function LanguageSwitcher() {

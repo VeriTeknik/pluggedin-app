@@ -1,12 +1,15 @@
 'use server';
 
-import { convertMcpToLangchainTools, McpServerCleanupFn, McpToolsLogger } from '@h1deya/langchain-mcp-tools';
+import { convertMcpToLangchainTools, McpServerCleanupFn } from '@h1deya/langchain-mcp-tools'; // Removed unused McpToolsLogger
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
 
+import { logAuditEvent } from '@/app/actions/audit-logger';
+import { ensureLogDirectories } from '@/app/actions/log-retention';
+import { createEnhancedMcpLogger } from '@/app/actions/mcp-server-logger';
 import { getMcpServers } from '@/app/actions/mcp-servers';
 
 // Cache for Anthropic models with last fetch time
@@ -98,43 +101,60 @@ function safeProcessContent(content: any): string {
 // Store server logs by profile
 const serverLogsByProfile: Map<string, Array<{level: string, message: string, timestamp: Date}>> = new Map();
 
-// Custom logger to capture server logs
-class ServerLogCapture implements McpToolsLogger {
-  constructor(private profileUuid: string, private logLevel: 'error' | 'warn' | 'info' | 'debug') {
-    // Initialize logs array for this profile if it doesn't exist
-    if (!serverLogsByProfile.has(profileUuid)) {
-      serverLogsByProfile.set(profileUuid, []);
+// Helper function to add a log for a profile - exported for use in mcp-server-logger
+export async function addServerLogForProfile(profileUuid: string, level: string, message: string) {
+  const logs = serverLogsByProfile.get(profileUuid) || [];
+  
+  // Create the new log entry
+  const newLog = { level, message, timestamp: new Date() };
+  
+  // Add the log to the array with performance optimizations
+  logs.push(newLog);
+  
+  // Limit to maximum 2000 logs to prevent memory leaks
+  const MAX_LOGS_IN_MEMORY = 2000;
+  if (logs.length > MAX_LOGS_IN_MEMORY) {
+    // More efficient splice - remove in bigger chunks to reduce array manipulation
+    // Remove 20% of the logs when we hit the limit instead of just 1 at a time
+    const removeCount = Math.floor(MAX_LOGS_IN_MEMORY * 0.2);
+    logs.splice(0, removeCount);
+  }
+  
+  serverLogsByProfile.set(profileUuid, logs);
+  
+  // Handle console logs (MCP:INFO, etc.) and add them to the logs
+  if (message.includes('[MCP:')) {
+    const match = message.match(/\[MCP:(INFO|ERROR|WARN|DEBUG)\]\s+(.*)/i);
+    if (match) {
+      const mcpLevel = match[1].toLowerCase();
+      const mcpMessage = match[2];
+      
+      // Check for duplicates in the last ~20 logs rather than the whole array
+      // This is more efficient while still catching most duplicates
+      // const newLogSignature = `${mcpLevel}:${mcpMessage}`; // Removed unused variable
+      
+      const recentLogs = logs.slice(-20);
+      const recentDuplicate = recentLogs.some(existingLog => {
+        if (existingLog.level === mcpLevel && existingLog.message === mcpMessage) {
+          const timeDiff = Math.abs(new Date().getTime() - existingLog.timestamp.getTime());
+          return timeDiff < 100; // Increased window to 100ms to catch more duplicates
+        }
+        return false;
+      });
+      
+      // Only add if it's not a duplicate
+      if (!recentDuplicate) {
+        logs.push({ 
+          level: mcpLevel,
+          message: mcpMessage,
+          timestamp: new Date()
+        });
+      }
     }
-  }
-
-  private addLog(level: string, message: string) {
-    const logs = serverLogsByProfile.get(this.profileUuid) || [];
-    logs.push({ level, message, timestamp: new Date() });
-    serverLogsByProfile.set(this.profileUuid, logs);
-  }
-
-  debug(...args: unknown[]) {
-    if (this.logLevel === 'debug') {
-      this.addLog('debug', args.map(arg => String(arg)).join(' '));
-    }
-  }
-
-  info(...args: unknown[]) {
-    if (['info', 'debug'].includes(this.logLevel)) {
-      this.addLog('info', args.map(arg => String(arg)).join(' '));
-    }
-  }
-
-  warn(...args: unknown[]) {
-    if (['warn', 'info', 'debug'].includes(this.logLevel)) {
-      this.addLog('warn', args.map(arg => String(arg)).join(' '));
-    }
-  }
-
-  error(...args: unknown[]) {
-    this.addLog('error', args.map(arg => String(arg)).join(' '));
   }
 }
+
+// Removed unused ServerLogCapture class definition
 
 // Initialize chat model based on provider
 function initChatModel(config: {
@@ -142,20 +162,23 @@ function initChatModel(config: {
   model: string;
   temperature?: number;
   maxTokens?: number;
+  streaming?: boolean;
 }) {
-  const { provider, model, temperature = 0, maxTokens } = config;
+  const { provider, model, temperature = 0, maxTokens, streaming = true } = config;
   
   if (provider === 'openai') {
     return new ChatOpenAI({
       modelName: model,
       temperature,
       maxTokens,
+      streaming,
     });
   } else if (provider === 'anthropic') {
     return new ChatAnthropic({
       modelName: model,
       temperature,
       maxTokens,
+      streaming,
     });
   } else {
     throw new Error(`Unsupported provider: ${provider}`);
@@ -261,6 +284,7 @@ export async function getOrCreatePlaygroundSession(
     temperature?: number;
     maxTokens?: number;
     logLevel?: 'error' | 'warn' | 'info' | 'debug';
+    streaming?: boolean;
   }
 ) {
   // If session exists and is active, return it
@@ -275,6 +299,9 @@ export async function getOrCreatePlaygroundSession(
     // Clear any existing logs for this profile
     serverLogsByProfile.set(profileUuid, []);
     
+    // Ensure log directories exist
+    await ensureLogDirectories();
+    
     // Get all MCP servers for the profile
     const allServers = await getMcpServers(profileUuid);
     
@@ -283,45 +310,135 @@ export async function getOrCreatePlaygroundSession(
       selectedServerUuids.includes(server.uuid)
     );
     
-    // Format servers for conversion
+    // Format servers for conversion and apply sandboxing for STDIO using firejail
     const mcpServersConfig: Record<string, any> = {};
     selectedServers.forEach(server => {
-      mcpServersConfig[server.name] = {
-        command: server.command,
-        args: server.args,
-        env: server.env,
-        url: server.url,
-        type: server.type
-      };
+      if (server.type === 'STDIO' && server.command) {
+        // Prepend firejail command for sandboxing on Linux
+        mcpServersConfig[server.name] = {
+          command: 'firejail', // The command is now firejail
+          args: [
+            '--quiet', // Suppress firejail output
+            server.command, // Original command becomes an argument to firejail
+            ...(server.args || []) // Append original args
+          ],
+          env: server.env,
+          url: server.url,
+          type: server.type
+        };
+      } else {
+        // For non-STDIO servers, keep the original config
+        mcpServersConfig[server.name] = {
+          command: server.command,
+          args: server.args,
+          env: server.env,
+          url: server.url,
+          type: server.type
+        };
+      }
     });
     
-    // Initialize LLM
-    const llm = initChatModel(llmConfig);
+    // Initialize LLM with streaming 
+    const llm = initChatModel({
+      provider: llmConfig.provider,
+      model: llmConfig.model,
+      temperature: llmConfig.temperature,
+      maxTokens: llmConfig.maxTokens,
+      streaming: llmConfig.streaming !== false, // Varsayılan olarak true olacak
+    });
     
-    // Create a custom logger to capture logs
-    const logger = new ServerLogCapture(profileUuid, llmConfig.logLevel || 'info');
-    
-    // Convert MCP servers to LangChain tools
-    const { tools, cleanup } = await convertMcpToLangchainTools(
-      mcpServersConfig,
-      { logger }
+    // Create our enhanced logger using the factory function
+    const logger = await createEnhancedMcpLogger(
+      profileUuid, 
+      llmConfig.logLevel || 'info',
+      mcpServersConfig
     );
     
-    // Create agent
-    const agent = createReactAgent({
-      llm,
-      tools,
-      checkpointSaver: new MemorySaver(),
+    // Log the session start
+    await logAuditEvent({
+      profileUuid,
+      type: 'MCP_REQUEST',
+      action: 'START_SESSION',
+      metadata: {
+        serverCount: selectedServers.length,
+        serverUuids: selectedServerUuids,
+        // Log only essential, less sensitive LLM info
+        llmProvider: llmConfig.provider,
+        llmModel: llmConfig.model,
+        // OMIT llmConfig.temperature, llmConfig.maxTokens, llmConfig.logLevel
+      }
     });
     
-    // Store session
-    activeSessions.set(profileUuid, {
-      agent,
-      cleanup,
-      lastActive: new Date()
-    });
-    
-    return { success: true };
+    try {
+      // Convert MCP servers to LangChain tools with our custom logger and stderr redirection
+      // Add timeout handling for better error messages
+      const { tools, cleanup } = await Promise.race([
+        convertMcpToLangchainTools(
+          mcpServersConfig,
+          { logger }
+        ),
+        new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error('MCP server initialization timed out (error -32001). This could be due to network issues or server load. Try disabling Brave Search server if you don\'t need it, or try again later when the network is more stable.'));
+          }, 30000); // Reduce timeout to 30 seconds for better user experience
+        })
+      ]);
+      
+      // Create agent with streaming callbacks
+      const agent = createReactAgent({
+        llm,
+        tools,
+        checkpointSaver: new MemorySaver(),
+      });
+      
+      // Create enhanced cleanup function
+      const enhancedCleanup: McpServerCleanupFn = async () => {
+        try {
+          // First close any log files
+          logger.cleanup();
+          
+          // Then call the original cleanup
+          await cleanup();
+          
+          // Log the session end
+          await logAuditEvent({
+            profileUuid,
+            type: 'MCP_REQUEST',
+            action: 'END_SESSION',
+          });
+        } catch (error) {
+          console.error('Enhanced cleanup error:', error);
+        }
+      };
+      
+      // Store session
+      activeSessions.set(profileUuid, {
+        agent,
+        cleanup: enhancedCleanup,
+        lastActive: new Date()
+      });
+      
+      return { success: true };
+    } catch (error) {
+      // Add more detailed error handling for MCP server initialization
+      console.error('Failed to initialize MCP servers:', error);
+      await addServerLogForProfile(
+        profileUuid,
+        'error',
+        `Failed to initialize MCP servers: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
+      
+      // Try to clean up any partially initialized resources
+      try {
+        if (logger && typeof logger.cleanup === 'function') {
+          await logger.cleanup();
+        }
+      } catch (cleanupError) {
+        console.error('Error during cleanup after initialization failure:', cleanupError);
+      }
+      
+      throw error; // Re-throw to be caught by the outer try/catch
+    }
   } catch (error) {
     console.error('Failed to create playground session:', error);
     return { 
@@ -331,13 +448,27 @@ export async function getOrCreatePlaygroundSession(
   }
 }
 
-// Get server logs for a profile
+// Function to get server logs with optimized performance
 export async function getServerLogs(profileUuid: string) {
   try {
     const logs = serverLogsByProfile.get(profileUuid) || [];
+    
+    // Check for partial/streaming messages
+    const hasPartialMessage = logs.some(log => 
+      log.level === 'streaming' && 
+      log.message.includes('"isPartial":true')
+    );
+    
+    // Limit the returned logs to improve UI performance
+    const MAX_LOGS_TO_RETURN = 1000;
+    const logsToReturn = logs.length > MAX_LOGS_TO_RETURN 
+      ? logs.slice(logs.length - MAX_LOGS_TO_RETURN) 
+      : logs;
+    
     return { 
       success: true, 
-      logs 
+      logs: logsToReturn,
+      hasPartialMessage 
     };
   } catch (error) {
     console.error('Failed to get server logs:', error);
@@ -365,11 +496,88 @@ export async function executePlaygroundQuery(
     // Update last active timestamp
     session.lastActive = new Date();
     
-    // Execute query
+    // Track streaming state for partial message updates
+    let currentAiMessage = '';
+    let isFirstToken = true;
+    
+    // Execute query with streaming enabled
     const agentFinalState = await session.agent.invoke(
       { messages: [new HumanMessage(query)] },
-      { configurable: { thread_id: profileUuid } }
+      { 
+        configurable: { thread_id: profileUuid },
+        callbacks: [
+          {
+            handleLLMNewToken: async (token) => {
+              // Add token to current message
+              currentAiMessage += token;
+              
+              // Log token for debugging
+              await addServerLogForProfile(
+                profileUuid, 
+                'info', 
+                `[STREAMING] Token: ${token.slice(0, 20)}${token.length > 20 ? '...' : ''}`
+              );
+              
+              // Create a partial message for immediate display
+              // When we first get a token, create a partial message in the logs
+              if (isFirstToken) {
+                const partialMessage = {
+                  role: 'ai',
+                  content: currentAiMessage,
+                  timestamp: new Date(),
+                  isPartial: true // Mark as partial for UI handling
+                };
+                
+                serverLogsByProfile.set(profileUuid + '_partial', [{ 
+                  level: 'streaming', 
+                  message: JSON.stringify(partialMessage),
+                  timestamp: new Date()
+                }]);
+                
+                isFirstToken = false;
+              } else {
+                // Update the partial message with new content
+                const partialMessage = {
+                  role: 'ai',
+                  content: currentAiMessage,
+                  timestamp: new Date(),
+                  isPartial: true 
+                };
+                
+                serverLogsByProfile.set(profileUuid + '_partial', [{ 
+                  level: 'streaming', 
+                  message: JSON.stringify(partialMessage),
+                  timestamp: new Date()
+                }]);
+              }
+            },
+            handleToolStart: async (tool) => {
+              // Tool çalıştırılmaya başladığında loglara ekliyoruz
+              await addServerLogForProfile(
+                profileUuid, 
+                'info', 
+                `[TOOL] Starting: ${tool.name}`
+              );
+              
+              // Reset current AI message when tool starts
+              currentAiMessage = '';
+              isFirstToken = true;
+            },
+            handleToolEnd: async (output) => {
+              // Tool çalışması bittiğinde loglara ekliyoruz
+              await addServerLogForProfile(
+                profileUuid, 
+                'info', 
+                `[TOOL] Completed: ${output?.name || 'unknown'}`
+              );
+            }
+          }
+        ]
+      }
     );
+    
+    // Clean up streaming state
+    serverLogsByProfile.delete(profileUuid + '_partial');
     
     // Process the result
     let result: string;
@@ -447,4 +655,4 @@ export async function endPlaygroundSession(profileUuid: string) {
   }
   
   return { success: true }; // Session doesn't exist, so consider it ended
-} 
+}

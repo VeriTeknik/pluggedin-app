@@ -1,10 +1,9 @@
-import { Download, Github } from 'lucide-react';
+import { Database, Download, Github, Package, Star, ThumbsUp, UserPlus } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { createMcpServer } from '@/app/actions/mcp-servers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,222 +14,224 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { McpServerType } from '@/db/schema';
-import { useProfiles } from '@/hooks/use-profiles';
-import { SearchIndex } from '@/types/search';
+import { McpServerSource, McpServerType } from '@/db/schema';
+import { McpServerCategory, SearchIndex } from '@/types/search';
+import { getCategoryIcon } from '@/utils/categories';
 
-interface AddMcpServerDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  defaultValues: {
-    name: string;
-    description: string;
-    command: string;
-    args: string;
-    env: string;
-  };
-}
+import { InstallDialog } from './InstallDialog';
+// Temporarily disable the rating dialog until we fix the import issue
+// import { RateServerDialog } from './RateServerDialog';
 
-function AddMcpServerDialog({
-  open,
-  onOpenChange,
-  defaultValues,
-}: AddMcpServerDialogProps) {
+// Helper function to get category badge
+function CategoryBadge({ category }: { category?: McpServerCategory }) {
   const { t } = useTranslation();
-  const { currentProfile } = useProfiles();
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const form = useForm({
-    defaultValues,
-  });
-
-  useEffect(() => {
-    form.reset(defaultValues);
-  }, [defaultValues, form]);
-
-  const onSubmit = async (values: typeof defaultValues) => {
-    if (!currentProfile?.uuid) return;
-
-    setIsSubmitting(true);
-    try {
-      await createMcpServer(currentProfile.uuid, {
-        name: values.name,
-        description: values.description,
-        command: values.command,
-        args: values.args.trim().split(/\s+/).filter(Boolean),
-        env: Object.fromEntries(
-          values.env
-            .split('\n')
-            .filter((line) => line.includes('='))
-            .map((line) => {
-              const [key, ...values] = line.split('=');
-              return [key.trim(), values.join('=').trim()];
-            })
-        ),
-        type: McpServerType.STDIO,
-      });
-      onOpenChange(false);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+  
+  if (!category) {
+    return null;
+  }
+  
+  const iconName = getCategoryIcon(category);
+  const IconComponent = (LucideIcons as Record<string, any>)[iconName];
+  
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('search.card.dialog.title')}</DialogTitle>
-          <DialogDescription>
-            {t('search.card.dialog.description')}
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-            <FormField
-              control={form.control}
-              name='name'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('search.card.dialog.name')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='description'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('search.card.dialog.description')}</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='command'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('search.card.dialog.command')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='args'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('search.card.dialog.args')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='env'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('search.card.dialog.env')}</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className='flex justify-end gap-4'>
-              <Button
-                variant='outline'
-                type='button'
-                onClick={() => onOpenChange(false)}>
-                {t('search.card.dialog.cancel')}
-              </Button>
-              <Button type='submit' disabled={isSubmitting}>
-                {t('search.card.dialog.add')}
-              </Button>
-            </div>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+    <Badge variant="secondary" className="gap-1">
+      {IconComponent && <IconComponent className="h-3 w-3" />}
+      {t(`search.categories.${category}`)}
+    </Badge>
   );
 }
 
-export default function CardGrid({ items }: { items: SearchIndex }) {
-  const { t } = useTranslation();
-  const [selectedItem, setSelectedItem] = useState<{
+// Helper function to get source icon
+function SourceBadge({ source }: { source?: McpServerSource }) {
+  const { t: _t } = useTranslation();
+  
+  switch (source) {
+    case McpServerSource.SMITHERY:
+      return (
+        <Badge variant="outline" className="gap-1">
+          <Database className="h-3 w-3" />
+          Smithery
+        </Badge>
+      );
+    case McpServerSource.NPM:
+      return (
+        <Badge variant="outline" className="gap-1">
+          <Package className="h-3 w-3" />
+          NPM
+        </Badge>
+      );
+    case McpServerSource.GITHUB:
+      return (
+        <Badge variant="outline" className="gap-1">
+          <Github className="h-3 w-3" />
+          GitHub
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant="outline" className="gap-1">
+          <Database className="h-3 w-3" />
+          PluggedIn
+        </Badge>
+      );
+  }
+}
+
+export default function CardGrid({ items, installedServerMap }: { items: SearchIndex; installedServerMap: Map<string, string> }) {
+  const { t: _t } = useTranslation();
+  const [selectedServer, setSelectedServer] = useState<{
     name: string;
     description: string;
     command: string;
     args: string;
     env: string;
+    url: string | undefined;
+    type: McpServerType;
+    source?: McpServerSource;
+    external_id?: string;
   } | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // For rating dialog
+  const [_rateServer, setRateServer] = useState<{
+    name: string;
+    source?: McpServerSource;
+    external_id?: string;
+  } | null>(null);
+  const [_rateDialogOpen, setRateDialogOpen] = useState(false);
+
+  const handleInstallClick = (key: string, item: any) => {
+    // Determine if this is a stdio or SSE server
+    const isSSE = item.url || false;
+    
+    setSelectedServer({
+      name: item.name,
+      description: item.description,
+      command: isSSE ? '' : item.command,
+      args: isSSE ? '' : item.args?.join(' ') || '',
+      env: isSSE ? '' : item.envs?.map((env: string) => env).join('\n') || '',
+      url: isSSE ? item.url : undefined,
+      type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
+      source: item.source,
+      external_id: item.external_id,
+    });
+    
+    setDialogOpen(true);
+  };
+
+  // Handle clicking the rate button
+  const handleRateClick = (key: string, item: any) => {
+    setRateServer({
+      name: item.name,
+      source: item.source,
+      external_id: item.external_id,
+    });
+    
+    setRateDialogOpen(true);
+  };
+
+  // Helper to format ratings
+  const formatRating = (rating?: number, count?: number) => {
+    if (!rating || !count) {
+      return null;
+    }
+    
+    return (
+      <div className="flex items-center">
+        <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
+        {rating.toFixed(1)} ({count})
+      </div>
+    );
+  };
 
   return (
     <>
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-        {Object.entries(items).map(([key, item]) => (
+        {Object.entries(items).map(([key, item]) => {
+          // Check if the server is installed
+          const installedUuid = item.source && item.external_id
+            ? installedServerMap.get(`${item.source}:${item.external_id}`)
+            : undefined;
+
+          return (
           <Card key={key} className='flex flex-col'>
-            <CardHeader>
-              <CardTitle>{item.name}</CardTitle>
+            <CardHeader className="pb-2">
+              <div className="flex justify-between items-start">
+                <CardTitle className="mr-2">{item.name}</CardTitle>
+                <SourceBadge source={item.source} />
+              </div>
               <CardDescription>{item.description}</CardDescription>
             </CardHeader>
-            <CardContent className='flex-grow'>
-              <p className='text-sm text-muted-foreground mb-2'>
-                {t('search.card.package')}: {item.package_name}
-              </p>
-              <p className='text-sm text-muted-foreground mb-2'>
-                {t('search.card.command')}: {item.command}
-              </p>
-              {item.args && (
+            <CardContent className='flex-grow pb-2'>
+              {item.package_name && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {t('search.card.exampleArgs')}: {item.args.join(' ')}
+                  {_t('search.card.package')}: {item.package_name}
                 </p>
               )}
-              {item.envs.length > 0 && (
-                <div className='flex flex-wrap gap-2 mt-2'>
-                  {item.envs.map((env) => (
-                    <Badge key={env} variant='secondary'>
-                      {env}
-                    </Badge>
-                  ))}
-                </div>
+              {item.command && (
+                <p className='text-sm text-muted-foreground mb-2'>
+                  {_t('search.card.command')}: {item.command}
+                </p>
               )}
+              {item.args?.length > 0 && (
+                <p className='text-sm text-muted-foreground mb-2'>
+                  {_t('search.card.exampleArgs')}: {item.args.join(' ')}
+                </p>
+              )}
+              
+              <div className="flex flex-wrap gap-2 mt-2">
+                {item.category && (
+                  <CategoryBadge category={item.category} />
+                )}
+                
+                {item.envs?.map((env: string) => (
+                  <Badge key={env} variant='secondary'>
+                    {env}
+                  </Badge>
+                ))}
+                
+                {item.tags?.map((tag: string) => (
+                  <Badge key={tag} variant='outline'>
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
+                {item.useCount !== undefined && (
+                  <div className="flex items-center">
+                    <Database className="h-3 w-3 mr-1" />
+                    {_t('search.card.usageCount')}: {item.useCount}
+                  </div>
+                )}
+                
+                {formatRating(item.rating, item.rating_count)}
+                
+                {item.installation_count !== undefined && item.installation_count > 0 && (
+                  <div className="flex items-center">
+                    <UserPlus className="h-3 w-3 mr-1" />
+                    {item.installation_count}
+                  </div>
+                )}
+                
+                {item.github_stars !== undefined && item.github_stars !== null && (
+                  <div className="flex items-center">
+                    <Github className="h-3 w-3 mr-1" />
+                    {item.github_stars}
+                  </div>
+                )}
+                
+                {item.package_download_count !== undefined && item.package_download_count !== null && (
+                  <div className="flex items-center">
+                    <Download className="h-3 w-3 mr-1" />
+                    {item.package_download_count}
+                  </div>
+                )}
+              </div>
             </CardContent>
-            <CardFooter className='flex justify-between'>
+            <CardFooter className='flex justify-between pt-2'>
               {item.githubUrl && (
-                <Button variant='outline' asChild>
+                <Button variant='outline' asChild size="sm">
                   <Link
                     href={item.githubUrl}
                     target='_blank'
@@ -240,34 +241,59 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                   </Link>
                 </Button>
               )}
-              <Button
-                variant='default'
-                onClick={() => {
-                  setSelectedItem({
-                    name: item.name,
-                    description: item.description,
-                    command: item.command,
-                    args: item.args?.join(' ') || '',
-                    env: item.envs?.join().length
-                      ? item.envs.join('=\n') + '='
-                      : '',
-                  });
-                  setDialogOpen(true);
-                }}>
-                <Download className='w-4 h-4 mr-2' />
-                {t('search.card.install')}
-              </Button>
+              
+              {item.source && item.external_id && (
+                <Button 
+                  variant='outline' 
+                  size="sm"
+                  className="gap-1"
+                  onClick={() => handleRateClick(key, item)}
+                >
+                  <ThumbsUp className='w-4 h-4' />
+                  Rate
+                </Button>
+              )}
+              
+              {installedUuid ? (
+                  // Render Edit button if installed
+                  <Button variant='secondary' size="sm" asChild>
+                    <Link href={`/mcp-servers/${installedUuid}`}>
+                      <LucideIcons.Edit className='w-4 h-4 mr-2' />
+                      {_t('search.card.edit')}
+                    </Link>
+                  </Button>
+                ) : (
+                  // Render Install button if not installed
+                  <Button
+                    variant='default'
+                    size="sm"
+                    onClick={() => handleInstallClick(key, item)}>
+                    <Download className='w-4 h-4 mr-2' />
+                    {_t('search.card.install')}
+                  </Button>
+                )}
             </CardFooter>
           </Card>
-        ))}
+          );
+        })}
       </div>
-      {selectedItem && (
-        <AddMcpServerDialog
+
+      {selectedServer && (
+        <InstallDialog
           open={dialogOpen}
           onOpenChange={setDialogOpen}
-          defaultValues={selectedItem}
+          serverData={selectedServer}
         />
       )}
+      
+      {/* Temporarily disable the rating dialog until we fix the import issue 
+      {_rateServer && (
+        <RateServerDialog
+          open={_rateDialogOpen}
+          onOpenChange={setRateDialogOpen}
+          serverData={_rateServer}
+        />
+      )} */}
     </>
   );
 }

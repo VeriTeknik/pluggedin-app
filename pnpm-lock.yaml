@@ -12,8 +12,8 @@ importers:
         specifier: ^1.8.0
         version: 1.8.0(nodemailer@6.10.0)
       '@h1deya/langchain-mcp-tools':
-        specifier: ^0.1.17
-        version: 0.1.17(openai@4.89.0(ws@8.18.1)(zod@3.24.1))
+        specifier: ^0.1.19
+        version: 0.1.19(openai@4.89.0(ws@8.18.1)(zod@3.24.1))
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.54.2(react@18.3.1))
@@ -101,12 +101,15 @@ importers:
       cmdk:
         specifier: 1.0.0
         version: 1.0.0(@types/react-dom@18.3.5(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       dotenv:
         specifier: ^16.4.7
         version: 16.4.7
       drizzle-orm:
         specifier: 0.38.2
-        version: 0.38.2(@types/pg@8.11.10)(@types/react@18.3.20)(pg@8.13.1)(react@18.3.1)
+        version: 0.38.2(@types/pg@8.11.10)(@types/react@18.3.20)(pg@8.13.1)(postgres@3.4.5)(react@18.3.1)
       i18next:
         specifier: ^24.2.3
         version: 24.2.3(typescript@5.7.2)
@@ -134,6 +137,9 @@ importers:
       pg:
         specifier: ^8.13.1
         version: 8.13.1
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.5
       prism-react-renderer:
         specifier: ^2.4.1
         version: 2.4.1(react@18.3.1)
@@ -149,6 +155,12 @@ importers:
       react-i18next:
         specifier: ^15.4.1
         version: 15.4.1(i18next@24.2.3(typescript@5.7.2))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-virtualized-auto-sizer:
+        specifier: ^1.0.25
+        version: 1.0.25(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-window:
+        specifier: ^1.8.11
+        version: 1.8.11(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       sd-notify:
         specifier: ^2.8.0
         version: 2.8.0
@@ -192,6 +204,12 @@ importers:
       '@types/react-dom':
         specifier: ^18.2.21
         version: 18.3.5(@types/react@18.3.20)
+      '@types/react-virtualized-auto-sizer':
+        specifier: ^1.0.4
+        version: 1.0.4
+      '@types/react-window':
+        specifier: ^1.8.8
+        version: 1.8.8
       '@typescript-eslint/eslint-plugin':
         specifier: ^8.18.1
         version: 8.18.1(@typescript-eslint/parser@8.18.1(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2))(eslint@9.17.0(jiti@1.21.7))(typescript@5.7.2)
@@ -803,8 +821,8 @@ packages:
   '@floating-ui/utils@0.2.8':
     resolution: {integrity: sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==}
 
-  '@h1deya/langchain-mcp-tools@0.1.17':
-    resolution: {integrity: sha512-tSpS772Bkygh9ZcSRzDepKxFL8D61oLpIrfQJ5Xw22BrLdfGifTQULkgmvJrt2tm3uEleWHehkU7qAXdFbg80A==}
+  '@h1deya/langchain-mcp-tools@0.1.19':
+    resolution: {integrity: sha512-1VCUqkbDhLIlEnMT/GZ7nc7O+3tVNbgTaVSZnv6KpkMoRIs9aZRkT4l6foNp46xmO9GPUEO4FBKQGLl4Eyp/zA==}
 
   '@hookform/resolvers@3.10.0':
     resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
@@ -2324,6 +2342,12 @@ packages:
     peerDependencies:
       '@types/react': ^18.0.0
 
+  '@types/react-virtualized-auto-sizer@1.0.4':
+    resolution: {integrity: sha512-nhYwlFiYa8M3S+O2T9QO/e1FQUYMr/wJENUdf/O0dhRi1RS/93rjrYQFYdbUqtdFySuhrtnEDX29P6eKOttY+A==}
+
+  '@types/react-window@1.8.8':
+    resolution: {integrity: sha512-8Ls660bHR1AUA2kuRvVG9D/4XpRC6wjAaPT9dil7Ckc76eP9TKWZwwmgfq8Q1LANX3QNDnoU4Zp48A3w+zK69Q==}
+
   '@types/react@18.3.20':
     resolution: {integrity: sha512-IPaCZN7PShZK/3t6Q87pfTkRm6oLTd4vztyoj+cbHUF1g3FfVb2tFIL79uCRKEfv16AhqDMBywP2VW3KIZUvcg==}
 
@@ -2820,6 +2844,9 @@ packages:
   data-view-byte-offset@1.0.1:
     resolution: {integrity: sha512-BS8PfmtDGnrgYdOonGZQdLZslWIeCGFP9tpan0hi1Co2Zr2NKADsvGYA8XxuG/4UWgJ6Cjtv+YJnB6MM69QGlQ==}
     engines: {node: '>= 0.4'}
+
+  date-fns@4.1.0:
+    resolution: {integrity: sha512-Ukq0owbQXxa/U3EGtsdVBkR1w7KOQ5gIBqdH2hkvknzZPYvBxb/aa6E8L7tmjFtkwZBu3UXBbjIgPo/Ez4xaNg==}
 
   debug@3.2.7:
     resolution: {integrity: sha512-CFjzYYAi4ThfiQvizrFQevTTXHtnCqWfe7x1AhgEscTz6ZbLbfoLRLPugTQyBth6f8ZERVUSyWHFD/7Wu4t1XQ==}
@@ -4120,6 +4147,9 @@ packages:
     resolution: {integrity: sha512-aisnrDP4GNe06UcKFnV5bfMNPBUw4jsLGaWwWfnH3v02GnBuXX2MCVn5RbrWo0j3pczUilYblq7fQ7Nw2t5XKw==}
     engines: {node: '>= 0.8'}
 
+  memoize-one@5.2.1:
+    resolution: {integrity: sha512-zYiwtZUcYyXKo/np96AGZAckk+FWWsUdJ3cHGGmld7+AhvcWmQyGCYUh1hc4Q/pkOhb65dQR/pqCyK0cOaHz4Q==}
+
   memory-fs@0.5.0:
     resolution: {integrity: sha512-jA0rdU5KoQMC0e6ppoNRtpp6vjFq6+NY7r8hywnC7V+1Xj/MtHwGIbB1QaK/dunyjWteJzmkpd7ooeWg10T7GA==}
     engines: {node: '>=4.3.0 <5.0.0 || >=5.10'}
@@ -4669,6 +4699,10 @@ packages:
   postgres-range@1.1.4:
     resolution: {integrity: sha512-i/hbxIE9803Alj/6ytL7UHQxRvZkI9O4Sy+J3HGc4F4oo/2eQAjTSNJ0bfxyse3bH0nuVesCk+3IRLaMtG3H6w==}
 
+  postgres@3.4.5:
+    resolution: {integrity: sha512-cDWgoah1Gez9rN3H4165peY9qfpEo+SA61oQv65O3cRUE1pOEoJWwddwcqKE8XZYjbblOJlYDlLV4h67HrEVDg==}
+    engines: {node: '>=12'}
+
   preact-render-to-string@5.2.6:
     resolution: {integrity: sha512-JyhErpYOvBV1hEPwIxc/fHWXPfnEGdRKxc8gFdAZ7XV4tlzyzG847XAyEZqoDnynP88akM4eaHcSOzNcLWFguw==}
     peerDependencies:
@@ -4845,6 +4879,19 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  react-virtualized-auto-sizer@1.0.25:
+    resolution: {integrity: sha512-YHsksEGDfsHbHuaBVDYwJmcktblcHGafz4ZVuYPQYuSHMUGjpwmUCrAOcvMSGMwwk1eFWj1M/1GwYpNPuyhaBg==}
+    peerDependencies:
+      react: ^15.3.0 || ^16.0.0-alpha || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^15.3.0 || ^16.0.0-alpha || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  react-window@1.8.11:
+    resolution: {integrity: sha512-+SRbUVT2scadgFSWx+R1P754xHPEqvcfSfVX10QYg6POOz+WNgkN48pS+BtZNIMGiL1HYrSEiCkwsMS15QogEQ==}
+    engines: {node: '>8.0.0'}
+    peerDependencies:
+      react: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^15.0.0 || ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   react@18.3.1:
     resolution: {integrity: sha512-wS+hAgJShR0KhEvPJArfuPVN1+Hz1t0Y6n5jLrGQbkb4urgPE/0Rve+1kMB1v/oWgHgm4WIcV+i7F2pTVj+2iQ==}
@@ -5981,7 +6028,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.8': {}
 
-  '@h1deya/langchain-mcp-tools@0.1.17(openai@4.89.0(ws@8.18.1)(zod@3.24.1))':
+  '@h1deya/langchain-mcp-tools@0.1.19(openai@4.89.0(ws@8.18.1)(zod@3.24.1))':
     dependencies:
       '@langchain/core': 0.3.43(openai@4.89.0(ws@8.18.1)(zod@3.24.1))
       '@modelcontextprotocol/sdk': 1.7.0
@@ -6347,7 +6394,7 @@ snapshots:
 
   '@radix-ui/primitive@1.0.1':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
 
   '@radix-ui/primitive@1.1.1': {}
 
@@ -6423,7 +6470,7 @@ snapshots:
 
   '@radix-ui/react-compose-refs@1.0.1(@types/react@18.3.20)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.20
@@ -6436,7 +6483,7 @@ snapshots:
 
   '@radix-ui/react-context@1.0.1(@types/react@18.3.20)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.20
@@ -6500,7 +6547,7 @@ snapshots:
 
   '@radix-ui/react-dismissable-layer@1.0.5(@types/react-dom@18.3.5(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       '@radix-ui/primitive': 1.0.1
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.20)(react@18.3.1)
       '@radix-ui/react-primitive': 1.0.3(@types/react-dom@18.3.5(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -6555,7 +6602,7 @@ snapshots:
 
   '@radix-ui/react-focus-guards@1.0.1(@types/react@18.3.20)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.20
@@ -6568,7 +6615,7 @@ snapshots:
 
   '@radix-ui/react-focus-scope@1.0.4(@types/react-dom@18.3.5(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.20)(react@18.3.1)
       '@radix-ui/react-primitive': 1.0.3(@types/react-dom@18.3.5(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@radix-ui/react-use-callback-ref': 1.0.1(@types/react@18.3.20)(react@18.3.1)
@@ -6602,7 +6649,7 @@ snapshots:
 
   '@radix-ui/react-id@1.0.1(@types/react@18.3.20)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-use-layout-effect': 1.0.1(@types/react@18.3.20)(react@18.3.1)
       react: 18.3.1
     optionalDependencies:
@@ -6711,7 +6758,7 @@ snapshots:
 
   '@radix-ui/react-portal@1.0.4(@types/react-dom@18.3.5(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-primitive': 1.0.3(@types/react-dom@18.3.5(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
@@ -6741,7 +6788,7 @@ snapshots:
 
   '@radix-ui/react-presence@1.0.1(@types/react-dom@18.3.5(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.20)(react@18.3.1)
       '@radix-ui/react-use-layout-effect': 1.0.1(@types/react@18.3.20)(react@18.3.1)
       react: 18.3.1
@@ -6897,7 +6944,7 @@ snapshots:
 
   '@radix-ui/react-slot@1.0.2(@types/react@18.3.20)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-compose-refs': 1.0.1(@types/react@18.3.20)(react@18.3.1)
       react: 18.3.1
     optionalDependencies:
@@ -6990,7 +7037,7 @@ snapshots:
 
   '@radix-ui/react-use-callback-ref@1.0.1(@types/react@18.3.20)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.20
@@ -7003,7 +7050,7 @@ snapshots:
 
   '@radix-ui/react-use-controllable-state@1.0.1(@types/react@18.3.20)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-use-callback-ref': 1.0.1(@types/react@18.3.20)(react@18.3.1)
       react: 18.3.1
     optionalDependencies:
@@ -7018,7 +7065,7 @@ snapshots:
 
   '@radix-ui/react-use-escape-keydown@1.0.3(@types/react@18.3.20)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-use-callback-ref': 1.0.1(@types/react@18.3.20)(react@18.3.1)
       react: 18.3.1
     optionalDependencies:
@@ -7033,7 +7080,7 @@ snapshots:
 
   '@radix-ui/react-use-layout-effect@1.0.1(@types/react@18.3.20)(react@18.3.1)':
     dependencies:
-      '@babel/runtime': 7.26.0
+      '@babel/runtime': 7.27.0
       react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.20
@@ -7165,6 +7212,14 @@ snapshots:
   '@types/prop-types@15.7.14': {}
 
   '@types/react-dom@18.3.5(@types/react@18.3.20)':
+    dependencies:
+      '@types/react': 18.3.20
+
+  '@types/react-virtualized-auto-sizer@1.0.4':
+    dependencies:
+      '@types/react': 18.3.20
+
+  '@types/react-window@1.8.8':
     dependencies:
       '@types/react': 18.3.20
 
@@ -7739,6 +7794,8 @@ snapshots:
       es-errors: 1.3.0
       is-data-view: 1.0.2
 
+  date-fns@4.1.0: {}
+
   debug@3.2.7:
     dependencies:
       ms: 2.1.3
@@ -7927,11 +7984,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.38.2(@types/pg@8.11.10)(@types/react@18.3.20)(pg@8.13.1)(react@18.3.1):
+  drizzle-orm@0.38.2(@types/pg@8.11.10)(@types/react@18.3.20)(pg@8.13.1)(postgres@3.4.5)(react@18.3.1):
     optionalDependencies:
       '@types/pg': 8.11.10
       '@types/react': 18.3.20
       pg: 8.13.1
+      postgres: 3.4.5
       react: 18.3.1
 
   dunder-proto@1.0.1:
@@ -9221,6 +9279,8 @@ snapshots:
 
   media-typer@1.1.0: {}
 
+  memoize-one@5.2.1: {}
+
   memory-fs@0.5.0:
     dependencies:
       errno: 0.1.8
@@ -9737,6 +9797,8 @@ snapshots:
 
   postgres-range@1.1.4: {}
 
+  postgres@3.4.5: {}
+
   preact-render-to-string@5.2.6(preact@10.26.4):
     dependencies:
       preact: 10.26.4
@@ -9924,6 +9986,18 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       '@types/react': 18.3.20
+
+  react-virtualized-auto-sizer@1.0.25(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+
+  react-window@1.8.11(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+    dependencies:
+      '@babel/runtime': 7.27.0
+      memoize-one: 5.2.1
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
 
   react@18.3.1:
     dependencies:

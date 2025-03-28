@@ -16,6 +16,7 @@ export function I18nProvider({
     // Set initial locale synchronously to match server
     if (initialLocale) {
       i18n.changeLanguage(initialLocale);
+      localStorage.setItem('pluggedin_language', initialLocale);
     }
 
     // After initial render, check localStorage

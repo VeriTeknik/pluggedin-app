@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react'; // Import useCallback
 import useSWR from 'swr';
 
 import {
   endPlaygroundSession,
   executePlaygroundQuery,
   getOrCreatePlaygroundSession,
+  getServerLogs
 } from '@/app/actions/mcp-playground';
 import {
   getMcpServers,
@@ -32,6 +33,7 @@ interface Message {
   content: string;
   debug?: string;
   timestamp?: Date;
+  isPartial?: boolean;
 }
 
 interface LogEntry {
@@ -81,12 +83,21 @@ export default function McpPlaygroundPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
 
   // State for client logs
   const [clientLogs, setClientLogs] = useState<LogEntry[]>([]);
 
   // State for server logs
   const [serverLogs, setServerLogs] = useState<ServerLogEntry[]>([]);
+
+  // Polling interval for logs when thinking
+  const logsPollingRef = useRef<number | null>(null);
+  const [pollInterval, setPollInterval] = useState<number>(1000); // Default polling interval
+  const lastLogCountRef = useRef<number>(0); // Track number of logs to detect changes
+
+  // Ref for settings throttling
+  const updateSettingsThrottledRef = useRef<NodeJS.Timeout | null>(null);
 
   // Auto scroll to bottom of messages and logs
   useEffect(() => {
@@ -115,16 +126,38 @@ export default function McpPlaygroundPage() {
     if (logsEndRef.current) {
       scrollToBottomIfNearBottom(logsEndRef);
     }
-  }, [messages, clientLogs, serverLogs]);
+  }, [messages, clientLogs, serverLogs, isThinking]);
 
   // Auto scroll when tab changes to logs
   useEffect(() => {
     if (activeTab === 'logs' && logsEndRef.current) {
+      // First scroll immediately to improve responsiveness
+      logsEndRef.current.scrollIntoView();
+      
+      // Then do a smooth scroll after a short delay to ensure content is loaded
       setTimeout(() => {
         logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     }
   }, [activeTab]);
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      // Temizlik işlemlerini yap
+      if (logsPollingRef.current) {
+        clearInterval(logsPollingRef.current);
+      }
+    };
+  }, []);
+
+  // Update polling when thinking state changes
+  useEffect(() => {
+    if (isSessionActive) {
+      // Adjust polling interval based on thinking state
+      setPollInterval(isThinking ? 250 : 1000);
+    }
+  }, [isThinking, isSessionActive]);
 
   // Helper to add a log entry
   const addLog = (
@@ -136,6 +169,138 @@ export default function McpPlaygroundPage() {
       { type, message, timestamp: new Date() },
     ]);
   };
+
+  // Start polling for server logs with adaptive intervals
+  const startLogPolling = () => {
+    // Clear any existing interval first
+    if (logsPollingRef.current) {
+      clearInterval(logsPollingRef.current);
+      logsPollingRef.current = null;
+    }
+    
+    // Start with appropriate interval based on current state
+    const initialInterval = isThinking ? 250 : 1000;
+    setPollInterval(initialInterval);
+    
+    // Create and store new polling interval
+    createPollingInterval(initialInterval);
+  };
+
+  // Helper to create polling interval with specific delay, wrapped in useCallback
+  const createPollingInterval = useCallback((interval: number) => {
+    logsPollingRef.current = window.setInterval(async () => {
+      if (!profileUuid || !isSessionActive) return;
+
+      try {
+        const result = await getServerLogs(profileUuid);
+        if (result.success && result.logs) {
+          // Detect if number of logs has changed
+          const newLogCount = result.logs.length;
+          const logsDelta = newLogCount - lastLogCountRef.current;
+          lastLogCountRef.current = newLogCount;
+          
+          // Adapt polling rate based on activity
+          if (isThinking) {
+            // When thinking, use more frequent updates
+            if (logsDelta > 5) {
+              // Lots of new logs - poll more frequently (up to 200ms)
+              setPollInterval(prev => Math.max(200, prev - 50));
+            } else if (logsDelta === 0) {
+              // No new logs - gradually slow down (up to 500ms when thinking)
+              setPollInterval(prev => Math.min(500, prev + 50));
+            }
+          } else {
+            // When not thinking, use less frequent updates
+            if (logsDelta > 0) {
+              // Some activity - poll more frequently
+              setPollInterval(prev => Math.max(750, prev - 50));
+            } else {
+              // No activity - gradually slow down (up to 2000ms when idle)
+              setPollInterval(prev => Math.min(2000, prev + 100));
+            }
+          }
+          
+          // Update logs
+          setServerLogs(result.logs);
+
+          // Handle streaming message if available
+          if (result.hasPartialMessage) {
+            const streamingLog = result.logs.find(log => 
+              log.level === 'streaming' && 
+              log.message.includes('"isPartial":true')
+            );
+            
+            if (streamingLog && streamingLog.message) {
+              try {
+                const partialMessage = JSON.parse(streamingLog.message);
+                if (partialMessage.isPartial) {
+                  // Update current message or add new one
+                  setMessages(prev => {
+                    // Check if we already have a partial message
+                    const hasPartialMessage = prev.some(m => m.isPartial);
+                    
+                    if (hasPartialMessage) {
+                      // Replace the existing partial message
+                      return prev.map(m => 
+                        m.isPartial ? partialMessage : m
+                      );
+                    } else {
+                      // Add the partial message
+                      return [...prev, partialMessage];
+                    }
+                  });
+                }
+              } catch (e) {
+                console.error('Failed to parse streaming message', e);
+              }
+            }
+          }
+
+          // Update scroll if needed
+          if (logsEndRef.current && activeTab === 'logs') {
+            logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to poll server logs:', error);
+        // Slow down polling on errors
+        setPollInterval(prev => Math.min(3000, prev + 500));
+      }
+    }, interval);
+  }, [profileUuid, isSessionActive, isThinking, activeTab, setPollInterval, setServerLogs, setMessages, logsEndRef, lastLogCountRef]); // Add dependencies for useCallback
+
+  // Stop polling for server logs
+  const stopLogPolling = () => {
+    if (logsPollingRef.current) {
+      clearInterval(logsPollingRef.current);
+      logsPollingRef.current = null;
+    }
+  };
+
+  // Apply polling interval changes
+  useEffect(() => {
+    // Only update if we have an active session and the interval has changed
+    if (isSessionActive && logsPollingRef.current) {
+      // Clear existing interval
+      clearInterval(logsPollingRef.current);
+      logsPollingRef.current = null;
+      
+      // Create new interval with updated polling rate
+      createPollingInterval(pollInterval);
+    }
+    // Removed unnecessary eslint-disable comment
+  }, [pollInterval, isSessionActive, profileUuid, createPollingInterval]); // Add createPollingInterval to dependencies
+
+  // Cleanup effect
+  useEffect(() => {
+    return () => {
+      // Clean up interval when component unmounts
+      if (logsPollingRef.current) {
+        clearInterval(logsPollingRef.current);
+        logsPollingRef.current = null;
+      }
+    };
+  }, []);
 
   // Fetch MCP servers
   const {
@@ -210,17 +375,25 @@ export default function McpPlaygroundPage() {
       return;
     }
 
-    try {
-      setIsProcessing(true);
-      addLog('info', 'Starting MCP playground session...');
-      addLog('info', `Active servers: ${activeServerUuids.length}`);
-      addLog(
+    // --- Start Polling Immediately ---
+    // Reset logs and start polling *before* awaiting the session creation
+    setServerLogs([]);
+    setClientLogs([]); // Also clear client logs for a fresh start
+    addLog('info', 'Initiating MCP playground session...');
+    addLog('info', `Attempting to connect ${activeServerUuids.length} server(s)...`);
+    addLog(
         'info',
         `LLM config: ${llmConfig.provider} ${llmConfig.model} (temp: ${llmConfig.temperature})`
       );
       addLog('info', `Log level: ${logLevel}`);
+      setActiveTab('logs'); // Switch to logs tab immediately
+      startLogPolling(); // Start polling now
 
-      const result = await getOrCreatePlaygroundSession(
+    try {
+      setIsProcessing(true); // Keep processing state until session is confirmed or fails
+
+      // Initiate session creation but don't await here yet
+      const sessionPromise = getOrCreatePlaygroundSession(
         profileUuid,
         activeServerUuids,
         {
@@ -232,55 +405,43 @@ export default function McpPlaygroundPage() {
         }
       );
 
+      // Now await the promise and handle the result
+      const result = await sessionPromise;
+
       if (result.success) {
         setIsSessionActive(true);
-        setMessages([]);
-        
-        // Switch to logs tab to show server initialization
-        setActiveTab('logs');
-        
-        // Add immediate feedback logs to let users see activity right away
-        addLog('connection', 'MCP playground session started successfully.');
-        addLog('info', 'Initializing MCP servers and tools...');
-        addLog('info', 'Connecting to language model...');
-        
-        // Add logs for each active server
-        const activeServers =
-          mcpServers.filter((server) =>
-            activeServerUuids.includes(server.uuid)
-          ) || [];
-        activeServers.forEach((server) => {
-          addLog(
-            'connection',
-            `Connected to "${server.name} (${server.type})"`
-          );
-        });
-
+        setMessages([]); // Clear chat messages on successful session start
+        addLog('connection', 'MCP playground session active.'); // Confirmation log
         toast({
           title: 'Success',
           description: 'MCP playground session started.',
         });
       } else {
+        // Session failed, stop polling and show error
+        stopLogPolling();
         const errorMessage = result.error || 'Unknown error';
         addLog('error', `Failed to start session: ${errorMessage}`);
         setSessionError(errorMessage);
         toast({
-          title: 'Error',
+          title: 'Error starting session',
           description: errorMessage,
           variant: 'destructive',
         });
       }
     } catch (error) {
+      // Catch errors from initiating the action or awaiting the promise
+      stopLogPolling(); // Stop polling on error
       console.error('Failed to start session:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      addLog('error', `Exception: ${errorMessage}`);
+      addLog('error', `Exception during session start: ${errorMessage}`);
       setSessionError(errorMessage);
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred.',
+        description: 'An unexpected error occurred during session start.',
         variant: 'destructive',
       });
     } finally {
+      // Only set isProcessing to false once the promise resolves/rejects
       setIsProcessing(false);
     }
   };
@@ -290,6 +451,9 @@ export default function McpPlaygroundPage() {
     try {
       setIsProcessing(true);
       addLog('info', 'Ending MCP playground session...');
+
+      // Stop log polling
+      stopLogPolling();
 
       const result = await endPlaygroundSession(profileUuid);
 
@@ -337,8 +501,9 @@ export default function McpPlaygroundPage() {
 
     try {
       setIsProcessing(true);
+      setIsThinking(true);
 
-      // Add user message
+      // Kullanıcı mesajını ekle
       const userMessage = {
         role: 'human',
         content: inputValue,
@@ -349,7 +514,14 @@ export default function McpPlaygroundPage() {
 
       addLog('execution', `Executing query: "${userMessage.content}"`);
 
-      // Execute query
+      // Log polling hızını artır
+      stopLogPolling();
+      startLogPolling();
+
+      // Arayüzü güncelle ve düşünme durumunu göster
+      setActiveTab('chat');
+
+      // LLM'e sorguyu gönder
       const result = await executePlaygroundQuery(
         profileUuid,
         userMessage.content
@@ -383,7 +555,7 @@ export default function McpPlaygroundPage() {
 
             setMessages((prev) => [...prev, ...timestampedMessages]);
 
-            // Log tool messages separately
+            // Tool mesajlarını ayrıca logla 
             timestampedMessages.forEach((msg: any) => {
               if (msg.role === 'tool') {
                 addLog(
@@ -436,46 +608,46 @@ export default function McpPlaygroundPage() {
       ]);
     } finally {
       setIsProcessing(false);
+      setIsThinking(false);
+      
+      // Normal polling hızına dön
+      stopLogPolling();
+      startLogPolling();
     }
   };
 
-  // Effect to sync logLevel with llmConfig
-  useEffect(() => {
-    setLogLevel(llmConfig.logLevel);
-  }, [llmConfig.logLevel]);
-
-  // Effect to sync llmConfig with logLevel
-  useEffect(() => {
-    setLlmConfig(prev => ({
-      ...prev,
-      logLevel: logLevel
-    }));
-  }, [logLevel]);
-
-  // Add effect to load settings
+  // Add effect to load settings only once
   useEffect(() => {
     const loadSettings = async () => {
       if (!profileUuid) {
         return;
       }
 
-      const result = await getPlaygroundSettings(profileUuid);
-      if (result.success && result.settings) {
-        setLlmConfig({
-          provider: result.settings.provider,
-          model: result.settings.model,
-          temperature: result.settings.temperature,
-          maxTokens: result.settings.maxTokens,
-          logLevel: result.settings.logLevel,
-        });
-        setLogLevel(result.settings.logLevel);
+      try {
+        const result = await getPlaygroundSettings(profileUuid);
+        if (result.success && result.settings) {
+          // Set both states simultaneously to avoid desync
+          const newSettings = {
+            provider: result.settings.provider,
+            model: result.settings.model,
+            temperature: result.settings.temperature,
+            maxTokens: result.settings.maxTokens,
+            logLevel: result.settings.logLevel,
+          };
+          
+          setLlmConfig(newSettings);
+          setLogLevel(result.settings.logLevel);
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        addLog('error', `Failed to load settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     };
 
     loadSettings();
   }, [profileUuid]);
 
-  // Add save settings function
+  // Save settings with improved debounce
   const saveSettings = async () => {
     if (!profileUuid) {
       return;
@@ -483,40 +655,48 @@ export default function McpPlaygroundPage() {
 
     try {
       addLog('info', 'Saving playground settings...');
-      addLog('info', `Config: ${JSON.stringify(llmConfig, null, 2)}`);
 
-      const result = await updatePlaygroundSettings(profileUuid, {
-        provider: llmConfig.provider,
-        model: llmConfig.model,
-        temperature: llmConfig.temperature,
-        maxTokens: llmConfig.maxTokens,
-        logLevel: llmConfig.logLevel,
-      });
-
-      if (result.success) {
-        addLog('info', 'Settings saved successfully');
-        toast({
-          title: 'Settings saved',
-          description: 'Your playground settings have been saved successfully.',
-        });
-      } else {
-        addLog('error', `Failed to save settings: ${result.error || 'Unknown error'}`);
-        toast({
-          title: 'Error saving settings',
-          description: result.error || 'An unknown error occurred.',
-          variant: 'destructive',
-        });
+      // Cancel any pending updates
+      if (updateSettingsThrottledRef.current) {
+        clearTimeout(updateSettingsThrottledRef.current);
       }
+      
+      // Set a longer debounce to ensure we don't trigger multiple saves
+      updateSettingsThrottledRef.current = setTimeout(async () => {
+        try {
+          const result = await updatePlaygroundSettings(profileUuid, llmConfig);
+          
+          if (result.success) {
+            addLog('info', 'Settings saved successfully');
+          } else {
+            addLog('error', `Failed to save settings: ${result.error || 'Unknown error'}`);
+          }
+          updateSettingsThrottledRef.current = null;
+        } catch (error) {
+          console.error('Failed to save settings:', error);
+          addLog('error', `Exception saving settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
+          updateSettingsThrottledRef.current = null;
+        }
+      }, 1500); // 1.5 second delay for debounce
+
     } catch (error) {
-      console.error('Error saving settings:', error);
+      console.error('Failed to save settings:', error);
       addLog('error', `Exception saving settings: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      toast({
-        title: 'Error',
-        description: 'An unexpected error occurred while saving settings.',
-        variant: 'destructive',
-      });
     }
   };
+
+  // Cleanup effect for all timers
+  useEffect(() => {
+    return () => {
+      // Clean up all timers when component unmounts
+      if (logsPollingRef.current) {
+        clearInterval(logsPollingRef.current);
+      }
+      if (updateSettingsThrottledRef.current) {
+        clearTimeout(updateSettingsThrottledRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className='container mx-auto py-6 space-y-6'>
@@ -529,8 +709,9 @@ export default function McpPlaygroundPage() {
         llmConfig={llmConfig}
       />
 
-      <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-        <div>
+      <div className='grid grid-cols-12 gap-6'>
+        {/* Config section wider: md:col-span-5, lg:col-span-4 */}
+        <div className='col-span-12 md:col-span-5 lg:col-span-4'>
           <PlaygroundConfig
             isLoading={isLoading}
             mcpServers={mcpServers}
@@ -557,13 +738,15 @@ export default function McpPlaygroundPage() {
           />
         </div>
 
-        <div className='md:col-span-2'>
+        {/* Chat section adjusted: md:col-span-7, lg:col-span-8 */}
+        <div className='col-span-12 md:col-span-7 lg:col-span-8'>
           <PlaygroundChat
             messages={messages}
             inputValue={inputValue}
             setInputValue={setInputValue}
             isSessionActive={isSessionActive}
             isProcessing={isProcessing}
+            isThinking={isThinking}
             sendMessage={sendMessage}
             startSession={startSession}
             messagesEndRef={messagesEndRef}

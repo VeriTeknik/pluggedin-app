@@ -7,7 +7,7 @@ import { db } from '@/db';
 import { accounts, apiKeysTable, customMcpServersTable,mcpServersTable, profilesTable, projectsTable, sessions, users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
-export async function DELETE(req: Request) {
+export async function DELETE(_req: Request) { // Prefix unused req with _
   try {
     const session = await getAuthSession();
     if (!session?.user) {
@@ -86,6 +86,27 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ message: 'Account deleted successfully' });
   } catch (error) {
     console.error('Account deletion error:', error);
+    return new NextResponse('Internal Server Error', { status: 500 });
+  }
+}
+
+export async function GET() {
+  try {
+    const session = await getAuthSession();
+    
+    if (!session?.user) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+    
+    // Return user account information
+    return NextResponse.json({
+      id: session.user.id,
+      name: session.user.name,
+      email: session.user.email,
+      image: session.user.image
+    });
+  } catch (error) {
+    console.error('Error fetching account information:', error);
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

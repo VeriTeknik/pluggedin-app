@@ -111,7 +111,10 @@ export default function MCPServersPage() {
     }
     setIsSubmitting(true);
     try {
-      await createMcpServer(currentProfile.uuid, data);
+      await createMcpServer({
+        ...data,
+        profileUuid: currentProfile.uuid
+      });
       await mutate();
       setOpen(false);
       toast({

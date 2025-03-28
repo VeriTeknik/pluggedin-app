@@ -9,6 +9,7 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import EmailProvider from 'next-auth/providers/email';
 import GithubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
+import TwitterProvider from 'next-auth/providers/twitter';
 
 // Extend the User type to include emailVerified
 declare module 'next-auth' {
@@ -18,7 +19,7 @@ declare module 'next-auth' {
 }
 
 import { db } from '@/db';
-import { accounts, profilesTable, projectsTable, sessions, users, verificationTokens } from '@/db/schema';
+import { accounts, sessions, users, verificationTokens } from '@/db/schema';
 
 // Custom adapter that extends DrizzleAdapter to ensure IDs are properly generated
 const createCustomAdapter = () => {
@@ -56,52 +57,6 @@ const createCustomAdapter = () => {
   };
 };
 
-// Helper function to create a default project for a user
-async function createDefaultProjectForUser(userId: string) {
-  try {
-    // First verify the user exists in the database
-    const userExists = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, userId),
-    });
-    
-    if (!userExists) {
-      throw new Error(`User with ID ${userId} does not exist in the database`);
-    }
-    
-    return await db.transaction(async (tx) => {
-      // First create the project
-      const [project] = await tx
-        .insert(projectsTable)
-        .values({
-          name: 'Default Hub',
-          active_profile_uuid: null,
-          user_id: userId,
-        })
-        .returning();
-
-      // Create the profile with the project UUID
-      const [profile] = await tx
-        .insert(profilesTable)
-        .values({
-          name: 'Default Workspace',
-          project_uuid: project.uuid,
-        })
-        .returning();
-
-      // Update the project with the correct profile UUID
-      const [updatedProject] = await tx
-        .update(projectsTable)
-        .set({ active_profile_uuid: profile.uuid })
-        .where(eq(projectsTable.uuid, project.uuid))
-        .returning();
-
-      return updatedProject;
-    });
-  } catch (error) {
-    console.error('Error creating default project for user:', error);
-    throw error;
-  }
-}
 
 export const authOptions: NextAuthOptions = {
   adapter: createCustomAdapter(),
@@ -209,6 +164,11 @@ export const authOptions: NextAuthOptions = {
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     }),
+    TwitterProvider({
+      clientId: process.env.TWITTER_CLIENT_ID!,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET!,
+      version: "2.0",
+    }),
     EmailProvider({
       server: {
         host: process.env.EMAIL_SERVER_HOST,
@@ -238,17 +198,19 @@ export const authOptions: NextAuthOptions = {
           where: (users, { eq }) => eq(users.email, user.email as string),
         });
 
+        // If the user exists but this is a new OAuth account,
+        // link this new account to the existing user
         if (existingUser) {
-          // User exists - check if this OAuth account is already linked
-          const linkedAccount = await db.query.accounts.findFirst({
-            where: (accounts, { eq, and }) => and(
-              eq(accounts.userId, existingUser.id),
-              eq(accounts.provider, account?.provider || '')
+          // Check if this provider+providerAccountId combination exists already
+          const existingAccount = await db.query.accounts.findFirst({
+            where: (accounts, { and, eq }) => and(
+              eq(accounts.provider, account?.provider as string),
+              eq(accounts.providerAccountId, account?.providerAccountId as string)
             ),
           });
 
-          if (!linkedAccount && account) {
-            // Link this OAuth account to the existing user
+          // If this exact account doesn't exist yet, create it
+          if (!existingAccount && account) {
             await db.insert(accounts).values({
               userId: existingUser.id,
               type: account.type,
@@ -256,40 +218,28 @@ export const authOptions: NextAuthOptions = {
               providerAccountId: account.providerAccountId,
               refresh_token: account.refresh_token,
               access_token: account.access_token,
+              expires_at: account.expires_at,
               token_type: account.token_type,
               scope: account.scope,
               id_token: account.id_token,
               session_state: account.session_state,
             });
-          }
-
-          // Set the id to the existing user id to ensure we use that account
-          user.id = existingUser.id;
-          
-          // Check if the user has any projects, if not create a default one
-          const userProjects = await db
-            .select()
-            .from(projectsTable)
-            .where(eq(projectsTable.user_id, existingUser.id));
-          
-          if (userProjects.length === 0) {
-            try {
-              await createDefaultProjectForUser(existingUser.id);
-            } catch (projectError) {
-              console.error('Failed to create default project for existing user:', projectError);
-              // Continue with the sign-in even if project creation fails
+            
+            // Update user information if needed
+            if (user.image && !existingUser.image) {
+              await db.update(users)
+                .set({ image: user.image, updated_at: new Date() })
+                .where(eq(users.id, existingUser.id));
             }
           }
-        } else if (user.id) {
-          // New user from OAuth - don't try to create a project here
-          // The adapter will create the user first, then we can create the project 
-          // in a subsequent request after the user is fully registered
-          console.log('New OAuth user detected - project will be created on first access');
+
+          // Override the user.id to ensure it matches our database
+          user.id = existingUser.id;
         }
 
         return true;
       } catch (error) {
-        console.error("Error in signIn callback:", error);
+        console.error('Error in signIn callback:', error);
         return false;
       }
     },

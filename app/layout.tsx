@@ -1,9 +1,10 @@
 import './globals.css';
 
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Quicksand } from 'next/font/google'; // Import Quicksand
 
 import { I18nProviderWrapper } from '@/components/providers/i18n-provider-wrapper';
+import { NotificationProvider } from '@/components/providers/notification-provider';
 import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
@@ -19,6 +20,14 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
+// Load Quicksand font using next/font
+const quicksand = Quicksand({
+  variable: '--font-quicksand',
+  weight: ['400', '500', '600', '700'], // Specify the weights needed
+  subsets: ['latin'],
+  display: 'swap', // Match the display=swap from the original link
+});
+
 export const metadata: Metadata = {
   title: 'Plugged.in',
   description: 'Plugged.in. The AI crossroads.',
@@ -32,17 +41,19 @@ export default async function RootLayout({
   return (
     <html lang='en' suppressHydrationWarning>
       <head>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" />
+      {/* Removed the <link> tag for Quicksand font */}
       
       </head>
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        className={`${geistSans.variable} ${geistMono.variable} ${quicksand.variable} antialiased`}> {/* Add quicksand variable */}
         <I18nProviderWrapper>
           <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
             <SessionProvider>
-              <LanguageSwitcher />
-              {children}
+              <NotificationProvider>
+                <LanguageSwitcher />
+                {children}
+              </NotificationProvider>
             </SessionProvider>
             <Toaster />
           </ThemeProvider>
