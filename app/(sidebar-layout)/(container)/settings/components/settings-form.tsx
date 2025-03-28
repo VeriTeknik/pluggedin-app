@@ -39,7 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/hooks/use-language';
-import { locales, localeNames } from '@/i18n/config'; // Import locales and names
+import { localeNames,locales } from '@/i18n/config'; // Import locales and names
 
 import { removeConnectedAccount } from '../actions';
 import { AppearanceSection } from './appearance-section';
