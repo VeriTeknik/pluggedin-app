@@ -47,6 +47,7 @@ import {
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
+import { useProjects } from '@/hooks/use-projects';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
 
@@ -76,11 +77,18 @@ export default function SidebarLayout({
   const [fileName, setFileName] = React.useState('');
   const { toast } = useToast();
   const { logoSrc } = useThemeLogo();
+  const { isAuthenticated } = useProjects();
   const [mounted, setMounted] = useState(false);
-  const { t } = useTranslation(); // Removed unused i18n
+  const { t } = useTranslation();
   
   // State for sidebar expansion
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+  const [sidebarExpanded, setSidebarExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(SIDEBAR_STATE_KEY);
+      return saved !== null ? JSON.parse(saved) : true;
+    }
+    return true;
+  });
 
   // Load sidebar state from localStorage on mount
   useEffect(() => {
@@ -99,7 +107,7 @@ export default function SidebarLayout({
   useEffect(() => {
     if (mounted) {
       try {
-        localStorage.setItem(SIDEBAR_STATE_KEY, String(sidebarExpanded));
+        localStorage.setItem(SIDEBAR_STATE_KEY, JSON.stringify(sidebarExpanded));
         
         // Also update via cookie to ensure the sidebar.tsx component picks it up
         document.cookie = `sidebar:state=${sidebarExpanded}; path=/; max-age=${60 * 60 * 24 * 7}`;
@@ -123,6 +131,19 @@ export default function SidebarLayout({
       setOpen(false);
     }
   };
+
+  // If not authenticated, only show minimal layout
+  if (!isAuthenticated) {
+    return (
+      <div className='flex flex-1 h-screen'>
+        <div className='flex-1 flex flex-col'>
+          <main className='flex-1 overflow-y-auto'>
+            {children}
+          </main>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider defaultOpen={sidebarExpanded}>

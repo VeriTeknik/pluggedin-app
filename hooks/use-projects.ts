@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -11,46 +12,81 @@ const CURRENT_PROJECT_KEY = 'pluggedin-current-project';
 export const useProjects = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { data = [], mutate, isLoading } = useSWR('projects', getProjects, {
-    onError: (error) => {
-      // Handle session-related errors
-      if (
-        error?.message?.includes('User not found in database') ||
-        error?.message?.includes('Unauthorized') ||
-        error?.message?.includes('Session expired') ||
-        error?.message?.toLowerCase().includes('session') ||
-        error?.message?.toLowerCase().includes('auth')
-      ) {
-        // Show toast notification
+  const { status: sessionStatus } = useSession();
+
+  // Only fetch projects if authenticated
+  const { data = [], mutate, isLoading, error } = useSWR(
+    // Only fetch if authenticated
+    sessionStatus === 'authenticated' ? 'projects' : null,
+    getProjects,
+    {
+      onError: (error) => {
+        // Handle session-related errors
+        if (
+          error?.message?.includes('User not found in database') ||
+          error?.message?.includes('Unauthorized') ||
+          error?.message?.includes('Session expired') ||
+          error?.message?.toLowerCase().includes('session') ||
+          error?.message?.toLowerCase().includes('auth')
+        ) {
+          // Show toast notification
+          toast({
+            title: t('common.error'),
+            description: t('common.errors.unexpected'),
+            variant: 'destructive',
+          });
+
+          // Clear any session data
+          localStorage.clear();
+          sessionStorage.clear();
+          
+          // Redirect to logout for proper cleanup
+          window.location.href = '/logout';
+          return [];
+        }
+
+        // Handle server component render errors
+        if (error?.message?.includes('Server Components render')) {
+          console.error('Server Components render error:', error);
+          // Return empty array to prevent UI from breaking
+          return [];
+        }
+
+        // Handle other errors
+        console.error('Projects error:', error);
         toast({
           title: t('common.error'),
-          description: t('common.errors.unexpected'),
+          description: error?.message || t('common.errors.unexpected'),
           variant: 'destructive',
         });
-
-        // Clear any session data
-        localStorage.clear();
-        sessionStorage.clear();
-        
-        // Redirect to logout for proper cleanup
-        window.location.href = '/logout';
         return [];
-      }
-
-      // Handle other errors
-      console.error('Projects error:', error);
-      toast({
-        title: t('common.error'),
-        description: error?.message || t('common.errors.unexpected'),
-        variant: 'destructive',
-      });
-      return [];
+      },
+      // Add retry configuration
+      shouldRetryOnError: (err) => {
+        // Don't retry on auth errors or server component render errors
+        if (
+          err?.message?.includes('Unauthorized') ||
+          err?.message?.includes('Session expired') ||
+          err?.message?.includes('Server Components render')
+        ) {
+          return false;
+        }
+        return true;
+      },
+      // Limit retries
+      errorRetryCount: 3
     }
-  });
+  );
+
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
-  // Load saved project on mount
+  // Load saved project on mount only if authenticated
   useEffect(() => {
+    if (sessionStatus !== 'authenticated') {
+      setCurrentProject(null);
+      return;
+    }
+
     try {
       const savedProjectUuid = localStorage.getItem(CURRENT_PROJECT_KEY);
       if (data?.length) {
@@ -70,7 +106,7 @@ export const useProjects = () => {
       console.warn('Failed to load project:', error);
       setCurrentProject(null);
     }
-  }, [data]);
+  }, [data, sessionStatus]);
 
   // Persist project selection
   const handleSetCurrentProject = (project: Project | null) => {
@@ -83,7 +119,7 @@ export const useProjects = () => {
     }
 
     // Only reload if we're changing projects while authenticated
-    if (project) {
+    if (project && sessionStatus === 'authenticated') {
       window.location.reload();
     }
   };
@@ -93,6 +129,8 @@ export const useProjects = () => {
     currentProject,
     setCurrentProject: handleSetCurrentProject,
     mutate,
-    isLoading,
+    isLoading: isLoading || sessionStatus === 'loading',
+    error,
+    isAuthenticated: sessionStatus === 'authenticated'
   };
 };

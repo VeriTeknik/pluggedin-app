@@ -35,7 +35,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 
 export function ProfileSwitcher() {
-  const { currentProject } = useProjects();
+  const { currentProject, isAuthenticated } = useProjects();
   const {
     profiles,
     currentProfile,
@@ -50,6 +50,11 @@ export function ProfileSwitcher() {
   const [newProfileName, setNewProfileName] = React.useState('');
   const [isCreating, setIsCreating] = React.useState(false);
   const [isActivating, setIsActivating] = React.useState(false);
+
+  // Don't render anything if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   async function handleCreateProfile() {
     if (!newProfileName.trim()) {
@@ -101,17 +106,17 @@ export function ProfileSwitcher() {
               variant='outline'
               role='combobox'
               aria-expanded={open}
-              aria-label='Select a profile'
+              aria-label='Select a workspace'
               className='w-full justify-between'>
-              {currentProfile?.name ?? 'Loading Profiles...'}
+              {currentProfile?.name ?? 'Loading Workspaces...'}
               <ChevronsUpDown className='ml-auto h-4 w-4 shrink-0 opacity-50' />
             </Button>
           </PopoverTrigger>
           <PopoverContent className='w-[--radix-popover-trigger-width] p-0'>
             <Command>
               <CommandList>
-                <CommandInput placeholder='Search profiles...' />
-                <CommandEmpty>No profile found.</CommandEmpty>
+                <CommandInput placeholder='Search workspaces...' />
+                <CommandEmpty>No workspace found.</CommandEmpty>
                 <CommandGroup heading='Workspaces'>
                   {profiles?.map((profile) => (
                     <CommandItem
@@ -119,7 +124,6 @@ export function ProfileSwitcher() {
                       onSelect={() => {
                         setCurrentProfile(profile);
                         setOpen(false);
-                        window.location.reload();
                       }}
                       className='text-sm'>
                       {profile.name}
@@ -176,27 +180,26 @@ export function ProfileSwitcher() {
               ? 'Activating...'
               : 'Activate this Workspace'}
       </Button>
+
       <Dialog
         open={showNewProfileDialog}
         onOpenChange={setShowNewProfileDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create workspace</DialogTitle>
+            <DialogTitle>Create Workspace</DialogTitle>
             <DialogDescription>
-              Add a new profile to your project.
+              Add a new workspace to organize your work.
             </DialogDescription>
           </DialogHeader>
-          <div>
-            <div className='space-y-4 py-2 pb-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='name'>Profile name</Label>
-                <Input
-                  id='name'
-                  placeholder='Enter profile name'
-                  value={newProfileName}
-                  onChange={(e) => setNewProfileName(e.target.value)}
-                />
-              </div>
+          <div className='grid gap-4 py-4'>
+            <div className='grid gap-2'>
+              <Label htmlFor='name'>Workspace name</Label>
+              <Input
+                id='name'
+                value={newProfileName}
+                onChange={(e) => setNewProfileName(e.target.value)}
+                placeholder='Enter workspace name'
+              />
             </div>
           </div>
           <DialogFooter>
@@ -205,8 +208,10 @@ export function ProfileSwitcher() {
               onClick={() => setShowNewProfileDialog(false)}>
               Cancel
             </Button>
-            <Button disabled={isCreating} onClick={handleCreateProfile}>
-              Continue
+            <Button
+              onClick={handleCreateProfile}
+              disabled={!newProfileName || isCreating}>
+              {isCreating ? 'Creating...' : 'Create'}
             </Button>
           </DialogFooter>
         </DialogContent>

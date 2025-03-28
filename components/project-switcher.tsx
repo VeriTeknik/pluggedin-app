@@ -33,11 +33,16 @@ import { useProjects } from '@/hooks/use-projects';
 import { cn } from '@/lib/utils';
 
 export function ProjectSwitcher() {
-  const { projects, currentProject, setCurrentProject, mutate } = useProjects();
+  const { projects, currentProject, setCurrentProject, mutate, isAuthenticated } = useProjects();
   const [open, setOpen] = React.useState(false);
   const [showNewProjectDialog, setShowNewProjectDialog] = React.useState(false);
   const [newProjectName, setNewProjectName] = React.useState('');
   const [isCreating, setIsCreating] = React.useState(false);
+
+  // Don't render anything if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
 
   if (!projects) {
     return <span>Loading Projects...</span>;
