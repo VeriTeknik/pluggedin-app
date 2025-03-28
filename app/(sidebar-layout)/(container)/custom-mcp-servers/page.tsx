@@ -41,6 +41,7 @@ import {
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -326,6 +327,9 @@ export default function CustomMCPServersPage() {
                           </Command>
                         </PopoverContent>
                       </Popover>
+                      <FormDescription>
+                        Select the code snippet that will be executed for this server.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -342,6 +346,9 @@ export default function CustomMCPServersPage() {
                       <FormControl>
                         <Input placeholder='e.g., -y --arg2' {...field} />
                       </FormControl>
+                      <FormDescription>
+                        These arguments will be passed to the selected code script upon execution.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

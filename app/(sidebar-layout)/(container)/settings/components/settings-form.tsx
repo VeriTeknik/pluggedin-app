@@ -39,6 +39,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { useLanguage } from '@/hooks/use-language';
+import { locales, localeNames } from '@/i18n/config'; // Import locales and names
 
 import { removeConnectedAccount } from '../actions';
 import { AppearanceSection } from './appearance-section';
@@ -58,7 +59,7 @@ interface SettingsFormProps {
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters'),
-  language: z.enum(['en', 'tr']),
+  language: z.enum(['en', 'tr', 'nl', 'zh', 'ja', 'hi']), // Updated to include all supported languages
 });
 
 const passwordSchema = z.object({
@@ -320,11 +321,16 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         onChange={(e) => {
                           field.onChange(e);
-                          setLanguage(e.target.value as 'en' | 'tr');
+                          // Cast to Locale type from config
+                          setLanguage(e.target.value as typeof locales[number]); 
                         }}
                       >
-                        <option value="en">English</option>
-                        <option value="tr">Türkçe</option>
+                        {/* Dynamically generate options */}
+                        {locales.map((locale) => (
+                          <option key={locale} value={locale}>
+                            {localeNames[locale]}
+                          </option>
+                        ))}
                       </select>
                     </FormControl>
                     <FormMessage />

@@ -65,7 +65,7 @@ export default function NotificationsPage() {
     try {
       await markNotificationAsRead(id, profileUuid);
       refreshNotifications();
-    } catch (error) {
+    } catch (_error) { // Prefix unused error with _
       toast({
         title: 'Error',
         description: 'Failed to mark notification as read',
@@ -85,7 +85,7 @@ export default function NotificationsPage() {
         description: 'Notification deleted',
       });
       refreshNotifications();
-    } catch (error) {
+    } catch (_error) { // Prefix unused error with _
       toast({
         title: 'Error',
         description: 'Failed to delete notification',
@@ -105,7 +105,7 @@ export default function NotificationsPage() {
         description: 'All notifications deleted',
       });
       refreshNotifications();
-    } catch (error) {
+    } catch (_error) { // Prefix unused error with _
       toast({
         title: 'Error',
         description: 'Failed to delete all notifications',
@@ -300,4 +300,4 @@ export default function NotificationsPage() {
       </Card>
     </div>
   );
-} 
+}

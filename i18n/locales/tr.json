@@ -11,6 +11,10 @@
       "maxLength": "En fazla {{count}} karakter olmalıdır",
       "passwordMatch": "Şifreler eşleşmelidir"
     },
+    "save": "Kaydet",
+    "saving": "Kaydediliyor...",
+    "remove": "Kaldır",
+    "removing": "Kaldırılıyor...",
     "errors": {
       "unexpected": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
     }
@@ -63,7 +67,8 @@
     },
     "social": {
       "github": "GitHub ile Devam Et",
-      "google": "Google ile Devam Et"
+      "google": "Google ile Devam Et",
+      "twitter": "Twitter ile Bağlan"
     }
   },
   "landing": {
@@ -196,9 +201,46 @@
     "loading": "Arama yükleniyor...",
     "noResults": "Sonuç bulunamadı",
     "error": "Arama sonuçları yüklenirken hata oluştu",
+    "sort": "Sırala",
+    "sortBy": "Sıralama ölçütü",
+    "sortOptions": {
+      "relevance": "İlgi Düzeyi",
+      "popularity": "Popülerlik",
+      "recent": "En Yeni",
+      "stars": "GitHub Yıldızları"
+    },
+    "filter": "Filtrele",
+    "filterByTags": "Etiketlere göre filtrele",
+    "noTagsAvailable": "Kullanılabilir etiket yok",
+    "clearFilters": "Filtreleri temizle",
+    "clearAllFilters": "Tümünü temizle",
+    "noMatchingTags": "Seçili etiketlerle eşleşen sonuç yok",
+    "noMatchingFilters": "Seçili filtrelerle eşleşen sonuç yok",
+    "category": "Kategori",
+    "filterByCategory": "Kategoriye göre filtrele",
+    "noCategoriesAvailable": "Kullanılabilir kategori yok",
+    "allCategories": "Tüm Kategoriler",
+    "categories": {
+      "LLM": "LLM",
+      "UTILITY": "Yardımcı Program",
+      "TOOL": "Araç",
+      "DATA": "Veri Erişimi",
+      "CONNECTOR": "Bağlayıcı",
+      "SEARCH": "Arama",
+      "CODE": "Kod",
+      "IMAGE": "Görsel",
+      "AUDIO": "Ses",
+      "VIDEO": "Video",
+      "OTHER": "Diğer"
+    },
     "card": {
       "package": "Paket",
       "command": "Komut",
+      "exampleArgs": "Örnek Argümanlar",
+      "install": "Yükle",
+      "usageCount": "Kullanım sayısı",
+      "ratings": "Değerlendirmeler",
+      "installations": "Yüklemeler",
       "exampleArgs": "Örnek Argümanlar",
       "install": "Yükle",
       "dialog": {
@@ -209,6 +251,7 @@
         "command": "Komut",
         "args": "Argümanlar (boşlukla ayrılmış)",
         "env": "Ortam Değişkenleri (her satıra bir tane)",
+        "url": "URL",
         "cancel": "İptal",
         "add": "Sunucu Ekle"
       }
@@ -326,6 +369,7 @@
       "name": "Ad",
       "namePlaceholder": "Adınızı girin",
       "language": "Dil",
+      "avatarRecommendation": "Önerilen: Kare görsel, maksimum 1MB",
       "updateButton": "Profili Güncelle",
       "success": "Profil başarıyla güncellendi",
       "error": "Profil güncellenemedi"
@@ -359,6 +403,25 @@
       "deletingButton": "Siliniyor...",
       "success": "Hesap başarıyla silindi",
       "error": "Hesap silinemedi"
+    },
+    "connectedAccounts": {
+      "title": "Bağlı Hesaplar",
+      "description": "Bağlı sosyal hesaplarınızı yönetin",
+      "github": {
+        "connected": "GitHub'a bağlı",
+        "connect": "GitHub hesabınızı bağlayın"
+      },
+      "google": {
+        "connected": "Google'a bağlı",
+        "connect": "Google hesabınızı bağlayın"
+      },
+      "twitter": {
+        "connected": "Twitter'a bağlı",
+        "connect": "Twitter hesabınızı bağlayın"
+      },
+      "connected": "Bağlı",
+      "removed": "{{provider}} hesabı başarıyla kaldırıldı",
+      "error": "Hesap bağlantısı kaldırılamadı"
     }
   },
   "setupGuide": {
@@ -474,10 +537,22 @@
       "empty": {
         "title": "MCP Oyun Alanı Sohbeti",
         "activeDescription": "Bu agent LLM ve MCP araçları ile etkileşime geçebilir. Bir soru sorarak başlayın.",
-        "inactiveDescription": "Başlamak için lütfen bir oturum başlatın ve en az bir aktif MCP sunucusuna sahip olduğunuzdan emin olun.",
-        "thinking": "Düşünüyor"
+        "inactiveDescription": "Başlamak için lütfen bir oturum başlatın ve en az bir aktif MCP sunucusuna sahip olduğunuzdan emin olun."
       },
       "thinking": "Düşünüyor"
+    },
+    "provider": {
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
+    },
+    "logLevels": {
+      "debug": "Hata Ayıklama",
+      "info": "Bilgi",
+      "warn": "Uyarı",
+      "error": "Hata"
     }
+  },
+  "notifications": {
+    "title": "Bildirimler"
   }
 }

@@ -1,6 +1,6 @@
 'use server';
 
-import { convertMcpToLangchainTools, McpServerCleanupFn, McpToolsLogger } from '@h1deya/langchain-mcp-tools';
+import { convertMcpToLangchainTools, McpServerCleanupFn } from '@h1deya/langchain-mcp-tools'; // Removed unused McpToolsLogger
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { MemorySaver } from '@langchain/langgraph';
@@ -129,11 +129,10 @@ export async function addServerLogForProfile(profileUuid: string, level: string,
       const mcpLevel = match[1].toLowerCase();
       const mcpMessage = match[2];
       
-      // Create a unique string representation of this log to check for duplicates
-      const newLogSignature = `${mcpLevel}:${mcpMessage}`;
-      
       // Check for duplicates in the last ~20 logs rather than the whole array
       // This is more efficient while still catching most duplicates
+      // const newLogSignature = `${mcpLevel}:${mcpMessage}`; // Removed unused variable
+      
       const recentLogs = logs.slice(-20);
       const recentDuplicate = recentLogs.some(existingLog => {
         if (existingLog.level === mcpLevel && existingLog.message === mcpMessage) {
@@ -155,41 +154,7 @@ export async function addServerLogForProfile(profileUuid: string, level: string,
   }
 }
 
-// Custom logger to capture server logs
-class ServerLogCapture implements McpToolsLogger {
-  constructor(private profileUuid: string, private logLevel: 'error' | 'warn' | 'info' | 'debug') {
-    // Initialize logs array for this profile if it doesn't exist
-    if (!serverLogsByProfile.has(profileUuid)) {
-      serverLogsByProfile.set(profileUuid, []);
-    }
-  }
-
-  private async addLog(level: string, message: string) {
-    await addServerLogForProfile(this.profileUuid, level, message);
-  }
-
-  async debug(...args: unknown[]) {
-    if (this.logLevel === 'debug') {
-      await this.addLog('debug', args.map(arg => String(arg)).join(' '));
-    }
-  }
-
-  async info(...args: unknown[]) {
-    if (['info', 'debug'].includes(this.logLevel)) {
-      await this.addLog('info', args.map(arg => String(arg)).join(' '));
-    }
-  }
-
-  async warn(...args: unknown[]) {
-    if (['warn', 'info', 'debug'].includes(this.logLevel)) {
-      await this.addLog('warn', args.map(arg => String(arg)).join(' '));
-    }
-  }
-
-  async error(...args: unknown[]) {
-    await this.addLog('error', args.map(arg => String(arg)).join(' '));
-  }
-}
+// Removed unused ServerLogCapture class definition
 
 // Initialize chat model based on provider
 function initChatModel(config: {
@@ -345,16 +310,32 @@ export async function getOrCreatePlaygroundSession(
       selectedServerUuids.includes(server.uuid)
     );
     
-    // Format servers for conversion
+    // Format servers for conversion and apply sandboxing for STDIO using firejail
     const mcpServersConfig: Record<string, any> = {};
     selectedServers.forEach(server => {
-      mcpServersConfig[server.name] = {
-        command: server.command,
-        args: server.args,
-        env: server.env,
-        url: server.url,
-        type: server.type
-      };
+      if (server.type === 'STDIO' && server.command) {
+        // Prepend firejail command for sandboxing on Linux
+        mcpServersConfig[server.name] = {
+          command: 'firejail', // The command is now firejail
+          args: [
+            '--quiet', // Suppress firejail output
+            server.command, // Original command becomes an argument to firejail
+            ...(server.args || []) // Append original args
+          ],
+          env: server.env,
+          url: server.url,
+          type: server.type
+        };
+      } else {
+        // For non-STDIO servers, keep the original config
+        mcpServersConfig[server.name] = {
+          command: server.command,
+          args: server.args,
+          env: server.env,
+          url: server.url,
+          type: server.type
+        };
+      }
     });
     
     // Initialize LLM with streaming 
@@ -381,7 +362,10 @@ export async function getOrCreatePlaygroundSession(
       metadata: {
         serverCount: selectedServers.length,
         serverUuids: selectedServerUuids,
-        llmConfig
+        // Log only essential, less sensitive LLM info
+        llmProvider: llmConfig.provider,
+        llmModel: llmConfig.model,
+        // OMIT llmConfig.temperature, llmConfig.maxTokens, llmConfig.logLevel
       }
     });
     
@@ -671,4 +655,4 @@ export async function endPlaygroundSession(profileUuid: string) {
   }
   
   return { success: true }; // Session doesn't exist, so consider it ended
-} 
+}

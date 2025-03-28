@@ -7,6 +7,7 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { getMcpServers } from '@/app/actions/mcp-servers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -21,6 +22,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { McpServerSource } from '@/db/schema';
+import { useProfiles } from '@/hooks/use-profiles';
+import { McpServer } from '@/types/mcp-server';
 import { McpIndex, McpServerCategory, PaginatedSearchResult } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
@@ -53,6 +56,27 @@ function SearchContent() {
   );
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableCategories, setAvailableCategories] = useState<McpServerCategory[]>([]);
+  const { currentProfile } = useProfiles();
+  const profileUuid = currentProfile?.uuid;
+
+  // Fetch installed servers for the current profile
+  const { data: installedServersData } = useSWR<McpServer[]>(
+    profileUuid ? `${profileUuid}/installed-mcp-servers` : null,
+    () => (profileUuid ? getMcpServers(profileUuid) : Promise.resolve([]))
+  );
+
+  // Create a memoized map for quick lookup: 'source:external_id' -> uuid
+  const installedServerMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (installedServersData) {
+      installedServersData.forEach(server => {
+        if (server.source && server.external_id) {
+          map.set(`${server.source}:${server.external_id}`, server.uuid);
+        }
+      });
+    }
+    return map;
+  }, [installedServersData]);
 
   // Prepare API URL with parameters
   const apiUrl = source === 'all' 
@@ -375,7 +399,7 @@ function SearchContent() {
       </div>
 
       {getSortedResults() && Object.keys(getSortedResults() || {}).length > 0 ? (
-        <CardGrid items={getSortedResults() || {}} />
+        <CardGrid items={getSortedResults() || {}} installedServerMap={installedServerMap} />
       ) : (
         <div className="text-center py-8">
           {error ? (

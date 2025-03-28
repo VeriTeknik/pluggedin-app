@@ -7,7 +7,11 @@ import { McpServerSource, searchCacheTable } from '@/db/schema';
 import { PaginatedSearchResult, SearchIndex, SmitherySearchResponse } from '@/types/search';
 import { fetchAwesomeMcpServersList, getGitHubRepoAsMcpServer, getRepoPackageJson, searchGitHubRepos } from '@/utils/github';
 import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
-import { getMcpServerFromSmitheryServer } from '@/utils/smithery';
+import { 
+  fetchSmitheryServerDetails, 
+  getMcpServerFromSmitheryServer, 
+  updateMcpServerWithDetails 
+} from '@/utils/smithery';
 
 // Define cache TTL in minutes
 const CACHE_TTL: Record<McpServerSource, number> = {
@@ -222,7 +226,15 @@ async function searchSmithery(query: string): Promise<SearchIndex> {
   const results: SearchIndex = {};
   
   for (const server of data.servers) {
-    const mcpServer = getMcpServerFromSmitheryServer(server);
+    let mcpServer = getMcpServerFromSmitheryServer(server);
+    try {
+      // Fetch details to get command/args/url
+      const details = await fetchSmitheryServerDetails(server.qualifiedName);
+      mcpServer = updateMcpServerWithDetails(mcpServer, details);
+    } catch (detailError) {
+      console.error(`Failed to fetch details for Smithery server ${server.qualifiedName}:`, detailError);
+      // Continue with the basic info if details fail
+    }
     results[server.qualifiedName] = mcpServer;
   }
 
@@ -379,4 +391,4 @@ function paginateResults(results: SearchIndex, offset: number, pageSize: number)
     pageSize,
     hasMore: offset + pageSize < totalResults,
   };
-} 
+}

@@ -12,8 +12,8 @@ importers:
         specifier: ^1.8.0
         version: 1.8.0(nodemailer@6.10.0)
       '@h1deya/langchain-mcp-tools':
-        specifier: ^0.1.18
-        version: 0.1.18(openai@4.89.0(ws@8.18.1)(zod@3.24.1))
+        specifier: ^0.1.19
+        version: 0.1.19(openai@4.89.0(ws@8.18.1)(zod@3.24.1))
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.54.2(react@18.3.1))
@@ -109,7 +109,7 @@ importers:
         version: 16.4.7
       drizzle-orm:
         specifier: 0.38.2
-        version: 0.38.2(@types/pg@8.11.10)(@types/react@18.3.20)(pg@8.13.1)(react@18.3.1)
+        version: 0.38.2(@types/pg@8.11.10)(@types/react@18.3.20)(pg@8.13.1)(postgres@3.4.5)(react@18.3.1)
       i18next:
         specifier: ^24.2.3
         version: 24.2.3(typescript@5.7.2)
@@ -137,6 +137,9 @@ importers:
       pg:
         specifier: ^8.13.1
         version: 8.13.1
+      postgres:
+        specifier: ^3.4.5
+        version: 3.4.5
       prism-react-renderer:
         specifier: ^2.4.1
         version: 2.4.1(react@18.3.1)
@@ -818,8 +821,8 @@ packages:
   '@floating-ui/utils@0.2.8':
     resolution: {integrity: sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==}
 
-  '@h1deya/langchain-mcp-tools@0.1.18':
-    resolution: {integrity: sha512-tYXu/aUrEb4YH7Rh45hMuGBVAr6rWgXo9MzYVQ2V4TrqM+4TrOqDxWICE9mkCPdwe0D877UYMKYKXIzBvLRHKQ==}
+  '@h1deya/langchain-mcp-tools@0.1.19':
+    resolution: {integrity: sha512-1VCUqkbDhLIlEnMT/GZ7nc7O+3tVNbgTaVSZnv6KpkMoRIs9aZRkT4l6foNp46xmO9GPUEO4FBKQGLl4Eyp/zA==}
 
   '@hookform/resolvers@3.10.0':
     resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
@@ -4696,6 +4699,10 @@ packages:
   postgres-range@1.1.4:
     resolution: {integrity: sha512-i/hbxIE9803Alj/6ytL7UHQxRvZkI9O4Sy+J3HGc4F4oo/2eQAjTSNJ0bfxyse3bH0nuVesCk+3IRLaMtG3H6w==}
 
+  postgres@3.4.5:
+    resolution: {integrity: sha512-cDWgoah1Gez9rN3H4165peY9qfpEo+SA61oQv65O3cRUE1pOEoJWwddwcqKE8XZYjbblOJlYDlLV4h67HrEVDg==}
+    engines: {node: '>=12'}
+
   preact-render-to-string@5.2.6:
     resolution: {integrity: sha512-JyhErpYOvBV1hEPwIxc/fHWXPfnEGdRKxc8gFdAZ7XV4tlzyzG847XAyEZqoDnynP88akM4eaHcSOzNcLWFguw==}
     peerDependencies:
@@ -6021,7 +6028,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.8': {}
 
-  '@h1deya/langchain-mcp-tools@0.1.18(openai@4.89.0(ws@8.18.1)(zod@3.24.1))':
+  '@h1deya/langchain-mcp-tools@0.1.19(openai@4.89.0(ws@8.18.1)(zod@3.24.1))':
     dependencies:
       '@langchain/core': 0.3.43(openai@4.89.0(ws@8.18.1)(zod@3.24.1))
       '@modelcontextprotocol/sdk': 1.7.0
@@ -7977,11 +7984,12 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  drizzle-orm@0.38.2(@types/pg@8.11.10)(@types/react@18.3.20)(pg@8.13.1)(react@18.3.1):
+  drizzle-orm@0.38.2(@types/pg@8.11.10)(@types/react@18.3.20)(pg@8.13.1)(postgres@3.4.5)(react@18.3.1):
     optionalDependencies:
       '@types/pg': 8.11.10
       '@types/react': 18.3.20
       pg: 8.13.1
+      postgres: 3.4.5
       react: 18.3.1
 
   dunder-proto@1.0.1:
@@ -9788,6 +9796,8 @@ snapshots:
   postgres-interval@3.0.0: {}
 
   postgres-range@1.1.4: {}
+
+  postgres@3.4.5: {}
 
   preact-render-to-string@5.2.6(preact@10.26.4):
     dependencies:

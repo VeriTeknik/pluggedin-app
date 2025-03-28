@@ -450,7 +450,7 @@ export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
   id: uuid("id").defaultRandom().primaryKey(),
   profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
   retention_days: integer("retention_days").default(7).notNull(),
-  max_log_size_mb: integer("max_log_size_mb").default(100).notNull(),
+  // max_log_size_mb: integer("max_log_size_mb").default(100).notNull(), // Removed unused column
   is_active: boolean("is_active").default(true).notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),

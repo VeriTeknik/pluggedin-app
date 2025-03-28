@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react'; // Import useCallback
 import useSWR from 'swr';
 
 import {
@@ -186,8 +186,8 @@ export default function McpPlaygroundPage() {
     createPollingInterval(initialInterval);
   };
 
-  // Helper to create polling interval with specific delay
-  const createPollingInterval = (interval: number) => {
+  // Helper to create polling interval with specific delay, wrapped in useCallback
+  const createPollingInterval = useCallback((interval: number) => {
     logsPollingRef.current = window.setInterval(async () => {
       if (!profileUuid || !isSessionActive) return;
 
@@ -267,7 +267,7 @@ export default function McpPlaygroundPage() {
         setPollInterval(prev => Math.min(3000, prev + 500));
       }
     }, interval);
-  };
+  }, [profileUuid, isSessionActive, isThinking, activeTab, setPollInterval, setServerLogs, setMessages, logsEndRef, lastLogCountRef]); // Add dependencies for useCallback
 
   // Stop polling for server logs
   const stopLogPolling = () => {
@@ -288,7 +288,8 @@ export default function McpPlaygroundPage() {
       // Create new interval with updated polling rate
       createPollingInterval(pollInterval);
     }
-  }, [pollInterval, isSessionActive, profileUuid]);
+    // Removed unnecessary eslint-disable comment
+  }, [pollInterval, isSessionActive, profileUuid, createPollingInterval]); // Add createPollingInterval to dependencies
 
   // Cleanup effect
   useEffect(() => {
@@ -374,17 +375,25 @@ export default function McpPlaygroundPage() {
       return;
     }
 
-    try {
-      setIsProcessing(true);
-      addLog('info', 'Starting MCP playground session...');
-      addLog('info', `Active servers: ${activeServerUuids.length}`);
-      addLog(
+    // --- Start Polling Immediately ---
+    // Reset logs and start polling *before* awaiting the session creation
+    setServerLogs([]);
+    setClientLogs([]); // Also clear client logs for a fresh start
+    addLog('info', 'Initiating MCP playground session...');
+    addLog('info', `Attempting to connect ${activeServerUuids.length} server(s)...`);
+    addLog(
         'info',
         `LLM config: ${llmConfig.provider} ${llmConfig.model} (temp: ${llmConfig.temperature})`
       );
       addLog('info', `Log level: ${logLevel}`);
+      setActiveTab('logs'); // Switch to logs tab immediately
+      startLogPolling(); // Start polling now
 
-      const result = await getOrCreatePlaygroundSession(
+    try {
+      setIsProcessing(true); // Keep processing state until session is confirmed or fails
+
+      // Initiate session creation but don't await here yet
+      const sessionPromise = getOrCreatePlaygroundSession(
         profileUuid,
         activeServerUuids,
         {
@@ -396,75 +405,43 @@ export default function McpPlaygroundPage() {
         }
       );
 
+      // Now await the promise and handle the result
+      const result = await sessionPromise;
+
       if (result.success) {
         setIsSessionActive(true);
-        setMessages([]);
-        
-        // Switch to logs tab to show server initialization
-        setActiveTab('logs');
-        
-        // Add immediate feedback logs to let users see activity right away
-        addLog('connection', 'MCP playground session started successfully.');
-        addLog('info', 'Initializing MCP servers and tools...');
-        addLog('info', 'Connecting to language model...');
-        
-        // Add logs for each active server
-        const activeServers =
-          mcpServers.filter((server) =>
-            activeServerUuids.includes(server.uuid)
-          ) || [];
-        activeServers.forEach((server) => {
-          addLog(
-            'connection',
-            `Connected to "${server.name} (${server.type})"`
-          );
-        });
-
-        // Start log polling to get real-time updates
-        startLogPolling();
-
-        // Ensure logs are scrolled into view
-        setTimeout(() => {
-          if (logsEndRef.current) {
-            logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          }
-        }, 100);
-
+        setMessages([]); // Clear chat messages on successful session start
+        addLog('connection', 'MCP playground session active.'); // Confirmation log
         toast({
           title: 'Success',
           description: 'MCP playground session started.',
         });
       } else {
+        // Session failed, stop polling and show error
+        stopLogPolling();
         const errorMessage = result.error || 'Unknown error';
-        
-        // Special handling for timeout errors
-        if (errorMessage.includes('timed out')) {
-          addLog('error', `Failed to start session: Connection timeout`);
-          addLog('info', 'One or more MCP servers failed to respond in time.');
-          addLog('info', 'Try disabling Brave Search server if you don\'t need it,');
-          addLog('info', 'or try again later when the network is more stable.');
-        } else {
-          addLog('error', `Failed to start session: ${errorMessage}`);
-        }
-        
+        addLog('error', `Failed to start session: ${errorMessage}`);
         setSessionError(errorMessage);
         toast({
-          title: 'Error',
+          title: 'Error starting session',
           description: errorMessage,
           variant: 'destructive',
         });
       }
     } catch (error) {
+      // Catch errors from initiating the action or awaiting the promise
+      stopLogPolling(); // Stop polling on error
       console.error('Failed to start session:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      addLog('error', `Exception: ${errorMessage}`);
+      addLog('error', `Exception during session start: ${errorMessage}`);
       setSessionError(errorMessage);
       toast({
         title: 'Error',
-        description: 'An unexpected error occurred.',
+        description: 'An unexpected error occurred during session start.',
         variant: 'destructive',
       });
     } finally {
+      // Only set isProcessing to false once the promise resolves/rejects
       setIsProcessing(false);
     }
   };
@@ -733,7 +710,8 @@ export default function McpPlaygroundPage() {
       />
 
       <div className='grid grid-cols-12 gap-6'>
-        <div className='col-span-12 md:col-span-4 lg:col-span-3'>
+        {/* Config section wider: md:col-span-5, lg:col-span-4 */}
+        <div className='col-span-12 md:col-span-5 lg:col-span-4'>
           <PlaygroundConfig
             isLoading={isLoading}
             mcpServers={mcpServers}
@@ -760,7 +738,8 @@ export default function McpPlaygroundPage() {
           />
         </div>
 
-        <div className='col-span-12 md:col-span-8 lg:col-span-9'>
+        {/* Chat section adjusted: md:col-span-7, lg:col-span-8 */}
+        <div className='col-span-12 md:col-span-7 lg:col-span-8'>
           <PlaygroundChat
             messages={messages}
             inputValue={inputValue}

@@ -7,7 +7,7 @@ import { db } from '@/db';
 import { accounts, apiKeysTable, customMcpServersTable,mcpServersTable, profilesTable, projectsTable, sessions, users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
-export async function DELETE(req: Request) {
+export async function DELETE(_req: Request) { // Prefix unused req with _
   try {
     const session = await getAuthSession();
     if (!session?.user) {

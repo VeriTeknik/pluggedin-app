@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
 }
 
 // This is a placeholder function - replace with your actual implementation
-async function getConnectedAccountsForUser(userId: string): Promise<string[]> {
+async function getConnectedAccountsForUser(_userId: string): Promise<string[]> { // Prefix unused userId with _
   // In a real implementation, you would query your database
   // to get the connected accounts for the user
   

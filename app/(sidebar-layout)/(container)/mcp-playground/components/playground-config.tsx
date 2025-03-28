@@ -143,47 +143,8 @@ export function PlaygroundConfig({
     }
   };
 
-  // Create a function to render the log entry with proper formatting
-  const renderLogEntry = (log: ServerLogEntry, index: number) => {
-    // Format timestamp
-    const time = log.timestamp 
-      ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
-      : '';
-    
-    // Use proper styling based on log level
-    const levelStyles = {
-      error: 'text-red-500 font-semibold',
-      warn: 'text-yellow-500 font-semibold',
-      info: 'text-blue-500',
-      debug: 'text-green-500 text-sm',
-      streaming: 'text-purple-500 italic'
-    };
-    
-    const levelStyle = levelStyles[log.level as keyof typeof levelStyles] || '';
-    
-    // Truncate very long messages to prevent display issues
-    const truncateText = (text: string, maxLength = 150) => {
-      if (!text) return '';
-      if (text.length <= maxLength) return text;
-      return text.substring(0, maxLength) + '...';
-    };
-    
-    return (
-      <div key={`server-log-${index}`} className="py-1 border-b border-border/30 last:border-0">
-        <div className="flex items-start">
-          <span className="text-xs text-muted-foreground whitespace-nowrap mr-2">
-            [{time}]
-          </span>
-          <span className={`${levelStyle} text-xs uppercase whitespace-nowrap mr-2`}>
-            [{log.level}]
-          </span>
-          <span className="text-sm whitespace-pre-wrap break-words overflow-hidden">
-            {truncateText(log.message)}
-          </span>
-        </div>
-      </div>
-    );
-  };
+  // The renderLogEntry function previously here was removed as it was unused.
+  // Log rendering is handled inline within the 'logs' tab content below.
 
   return (
     <Card className='shadow-sm h-[calc(100vh-12rem)] flex flex-col'>
@@ -374,8 +335,8 @@ export function PlaygroundConfig({
                     <SelectValue placeholder={t('playground.config.model.provider')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='anthropic'>Anthropic</SelectItem>
-                    <SelectItem value='openai'>OpenAI</SelectItem>
+                    <SelectItem value='anthropic'>{t('playground.provider.anthropic')}</SelectItem>
+                    <SelectItem value='openai'>{t('playground.provider.openai')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -508,10 +469,11 @@ export function PlaygroundConfig({
                     <SelectValue placeholder={t('playground.config.model.logLevel')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='debug'>Debug</SelectItem>
-                    <SelectItem value='info'>Info</SelectItem>
-                    <SelectItem value='warn'>Warn</SelectItem>
-                    <SelectItem value='error'>Error</SelectItem>
+                    {/* Use corrected keys */}
+                    <SelectItem value='debug'>{t('playground.logLevels.debug')}</SelectItem>
+                    <SelectItem value='info'>{t('playground.logLevels.info')}</SelectItem>
+                    <SelectItem value='warn'>{t('playground.logLevels.warn')}</SelectItem>
+                    <SelectItem value='error'>{t('playground.logLevels.error')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -520,30 +482,34 @@ export function PlaygroundConfig({
 
           {/* Logs Tab */}
           <TabsContent value='logs' className='space-y-4 mt-4'>
+            {/* Reverted Layout: Side-by-side */}
             <div className='flex items-center justify-between mb-2'>
               <div>
-                <Label className='text-sm font-medium mb-1 block'>
-                  {t('playground.logLevel')}
+                {/* Ensure correct key is used here */}
+                <Label className='text-sm font-medium mb-1 block sr-only'> {/* Hide label visually, keep for accessibility */}
+                  {t('playground.config.model.logLevel')}
                 </Label>
                 <Select
                   value={logLevel}
                   onValueChange={handleLogLevelChange}
                   disabled={isSessionActive}>
-                  <SelectTrigger className='w-40'>
-                    <SelectValue placeholder={t('playground.logLevel')} />
+                  <SelectTrigger className='w-40'> {/* Restored width */}
+                    {/* Ensure correct key is used here */}
+                    <SelectValue placeholder={t('playground.config.model.logLevel')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value='error'>Error</SelectItem>
-                    <SelectItem value='warn'>Warn</SelectItem>
-                    <SelectItem value='info'>Info</SelectItem>
-                    <SelectItem value='debug'>Debug</SelectItem>
+                    {/* Use corrected keys */}
+                    <SelectItem value='error'>{t('playground.logLevels.error')}</SelectItem>
+                    <SelectItem value='warn'>{t('playground.logLevels.warn')}</SelectItem>
+                    <SelectItem value='info'>{t('playground.logLevels.info')}</SelectItem>
+                    <SelectItem value='debug'>{t('playground.logLevels.debug')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Button 
-                  variant='outline' 
-                  size='sm' 
+                <Button
+                  variant='outline'
+                  size='sm'
                   onClick={clearLogs}
                 >
                   <Trash2 className='mr-2 h-4 w-4' />
@@ -552,6 +518,7 @@ export function PlaygroundConfig({
               </div>
             </div>
 
+            {/* Restored original height calculation */}
             <div className="h-[calc(100vh-25rem)] rounded-md border">
               {serverLogs.length === 0 && clientLogs.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">

@@ -6,10 +6,18 @@ import { defaultLocale, locales } from './config';
 // Import all locale files
 import en from './locales/en.json';
 import tr from './locales/tr.json';
+import nl from './locales/nl.json';
+import zh from './locales/zh.json';
+import ja from './locales/ja.json';
+import hi from './locales/hi.json';
 
 const resources = {
   en: { translation: en },
-  tr: { translation: tr }
+  tr: { translation: tr },
+  nl: { translation: nl },
+  zh: { translation: zh },
+  ja: { translation: ja },
+  hi: { translation: hi }
 };
 
 // Language detection options

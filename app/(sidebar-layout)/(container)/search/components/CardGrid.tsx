@@ -77,7 +77,7 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
   }
 }
 
-export default function CardGrid({ items }: { items: SearchIndex }) {
+export default function CardGrid({ items, installedServerMap }: { items: SearchIndex; installedServerMap: Map<string, string> }) {
   const { t: _t } = useTranslation();
   const [selectedServer, setSelectedServer] = useState<{
     name: string;
@@ -147,7 +147,13 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
   return (
     <>
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-        {Object.entries(items).map(([key, item]) => (
+        {Object.entries(items).map(([key, item]) => {
+          // Check if the server is installed
+          const installedUuid = item.source && item.external_id
+            ? installedServerMap.get(`${item.source}:${item.external_id}`)
+            : undefined;
+
+          return (
           <Card key={key} className='flex flex-col'>
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
@@ -248,16 +254,28 @@ export default function CardGrid({ items }: { items: SearchIndex }) {
                 </Button>
               )}
               
-              <Button
-                variant='default'
-                size="sm"
-                onClick={() => handleInstallClick(key, item)}>
-                <Download className='w-4 h-4 mr-2' />
-                {_t('search.card.install')}
-              </Button>
+              {installedUuid ? (
+                  // Render Edit button if installed
+                  <Button variant='secondary' size="sm" asChild>
+                    <Link href={`/mcp-servers/${installedUuid}`}>
+                      <LucideIcons.Edit className='w-4 h-4 mr-2' />
+                      {_t('search.card.edit')}
+                    </Link>
+                  </Button>
+                ) : (
+                  // Render Install button if not installed
+                  <Button
+                    variant='default'
+                    size="sm"
+                    onClick={() => handleInstallClick(key, item)}>
+                    <Download className='w-4 h-4 mr-2' />
+                    {_t('search.card.install')}
+                  </Button>
+                )}
             </CardFooter>
           </Card>
-        ))}
+          );
+        })}
       </div>
 
       {selectedServer && (

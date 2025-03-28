@@ -11,6 +11,10 @@
       "maxLength": "Must be at most {{count}} characters",
       "passwordMatch": "Passwords must match"
     },
+    "save": "Save",
+    "saving": "Saving...",
+    "remove": "Remove",
+    "removing": "Removing...",
     "errors": {
       "unexpected": "An unexpected error occurred. Please try again."
     }
@@ -63,7 +67,8 @@
     },
     "social": {
       "github": "Continue with GitHub",
-      "google": "Continue with Google"
+      "google": "Continue with Google",
+      "twitter": "Connect with Twitter"
     }
   },
   "landing": {
@@ -362,6 +367,7 @@
       "name": "Name",
       "namePlaceholder": "Enter your name",
       "language": "Language",
+      "avatarRecommendation": "Recommended: Square image, max 1MB",
       "updateButton": "Update Profile",
       "success": "Profile updated successfully",
       "error": "Failed to update profile"
@@ -395,6 +401,25 @@
       "deletingButton": "Deleting...",
       "success": "Account deleted successfully",
       "error": "Failed to delete account"
+    },
+    "connectedAccounts": {
+      "title": "Connected Accounts",
+      "description": "Manage your connected social accounts",
+      "github": {
+        "connected": "Connected to GitHub",
+        "connect": "Connect your GitHub account"
+      },
+      "google": {
+        "connected": "Connected to Google",
+        "connect": "Connect your Google account"
+      },
+      "twitter": {
+        "connected": "Connected to Twitter",
+        "connect": "Connect your Twitter account"
+      },
+      "connected": "Connected",
+      "removed": "{{provider}} account disconnected successfully",
+      "error": "Failed to disconnect account"
     }
   },
   "setupGuide": {
@@ -513,6 +538,19 @@
         "inactiveDescription": "Please start a session and make sure you have at least one active MCP server."
       },
       "thinking": "Thinking"
+    },
+    "provider": {
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
+    },
+    "logLevels": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warn",
+      "error": "Error"
     }
+  },
+  "notifications": {
+    "title": "Notifications"
   }
 }

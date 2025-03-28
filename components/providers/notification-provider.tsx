@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'; // Import useCallback
 
 import { getNotifications, markAllNotificationsAsRead,markNotificationAsRead } from '@/app/actions/notifications';
 import { useProfiles } from '@/hooks/use-profiles';
@@ -43,8 +43,8 @@ export function NotificationProvider({
   // Get unread count
   const unreadCount = notifications.filter(n => !n.read).length;
   
-  // Load notifications
-  const refreshNotifications = async () => {
+  // Load notifications (memoized with useCallback)
+  const refreshNotifications = useCallback(async () => {
     if (!profileUuid) return;
     
     try {
@@ -57,7 +57,7 @@ export function NotificationProvider({
     } catch (error) {
       console.error('Error loading notifications:', error);
     }
-  };
+  }, [profileUuid]); // Add profileUuid as dependency for useCallback
   
   // Mark as read
   const markAsRead = async (id: string) => {
@@ -109,7 +109,7 @@ export function NotificationProvider({
     // Poll for new notifications every minute
     const interval = setInterval(refreshNotifications, 60000);
     return () => clearInterval(interval);
-  }, [profileUuid]);
+  }, [profileUuid, refreshNotifications]); // Add refreshNotifications to dependency array
   
   return (
     <NotificationContext.Provider value={{
@@ -131,4 +131,4 @@ export const useNotifications = () => {
     throw new Error('useNotifications must be used within a NotificationProvider');
   }
   return context;
-}; 
+};

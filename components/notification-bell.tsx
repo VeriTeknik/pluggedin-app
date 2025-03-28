@@ -20,21 +20,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   
-  // Function to get variant based on notification type
-  const getVariantByType = (type: string) => {
-    switch (type.toUpperCase()) {
-      case 'SUCCESS':
-        return 'default';
-      case 'WARNING':
-        return 'warning';
-      case 'ALERT':
-        return 'destructive';
-      case 'INFO':
-        return 'secondary';
-      default:
-        return 'outline';
-    }
-  };
+  // Removed unused getVariantByType function
   
   // Function to get icon color based on notification type
   const getColorByType = (type: string) => {
@@ -140,4 +126,4 @@ export function NotificationBell() {
       </DropdownMenuContent>
     </DropdownMenu>
   );
-} 
+}

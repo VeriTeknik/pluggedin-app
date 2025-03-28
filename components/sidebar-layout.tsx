@@ -77,7 +77,7 @@ export default function SidebarLayout({
   const { toast } = useToast();
   const { logoSrc } = useThemeLogo();
   const [mounted, setMounted] = useState(false);
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation(); // Removed unused i18n
   
   // State for sidebar expansion
   const [sidebarExpanded, setSidebarExpanded] = useState(true);
@@ -109,10 +109,7 @@ export default function SidebarLayout({
     }
   }, [sidebarExpanded, mounted]);
 
-  // Toggle sidebar function that directly modifies the state
-  const toggleSidebar = React.useCallback(() => {
-    setSidebarExpanded((prevState) => !prevState);
-  }, []);
+  // Removed unused toggleSidebar function
 
   // Skip rendering any translated content until after hydration
   if (!mounted) {
@@ -245,10 +242,10 @@ export default function SidebarLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('notifications.title', 'Bildirimler')} className="group-data-[collapsible=icon]:justify-center">
+                    <SidebarMenuButton asChild tooltip={t('notifications.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/notifications'>
                         <Bell className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('notifications.title', 'Bildirimler')}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{t('notifications.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
