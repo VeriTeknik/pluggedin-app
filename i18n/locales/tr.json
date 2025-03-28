@@ -407,8 +407,9 @@
     }
   },
   "playground": {
-    "title": "Test Ortamı",
-    "subtitle": "MCP sunucularınızı güçlü LLM'ler ile test edin. Sunucu bağlantılarını yapılandırın, model ayarlarını düzenleyin ve araçlarınızı doğal dil kullanarak test edin.",
+    "title": "MCP Oyun Alanı",
+    "subtitle": "Model Bağlam Protokolü (MCP) araçları ile etkileşimde bulunun.",
+    "description": "LLM AI ve MCP araçlarını birlikte kullanmak için deneysel bir ortam.",
     "actions": {
       "start": "Test Ortamını Başlat",
       "starting": "Başlatılıyor...",
@@ -460,21 +461,23 @@
       }
     },
     "chat": {
-      "title": "Sohbet Arayüzü",
-      "subtitle": "MCP sunucularınızı doğal dil ile test edin",
-      "empty": {
-        "title": "MCP Test Ortamı",
-        "activeDescription": "MCP sunucularınızı test etmek için sorular sorun veya talimatlar verin. Mevcut araçları keşfedin veya belirli işlemler talep edin.",
-        "inactiveDescription": "Araçlarınızı doğal dil ile test etmeye başlamak için MCP sunucularını seçin ve bir oturum başlatın."
+      "title": "MCP Sohbet",
+      "subtitle": "AI ve MCP araçları ile konuşun",
+      "tool": {
+        "title": "Araç Çıktısı",
+        "debugInfo": "Hata ayıklama bilgisi"
       },
       "input": {
-        "activePlaceholder": "Mesajınızı yazın...",
-        "inactivePlaceholder": "Sohbete başlamak için bir oturum başlatın"
+        "activePlaceholder": "MCP araçları ile konuşun...",
+        "inactivePlaceholder": "Önce bir oturum başlatın"
       },
-      "tool": {
-        "title": "Araç Çalıştırma",
-        "debugInfo": "Hata Ayıklama Bilgisi"
-      }
+      "empty": {
+        "title": "MCP Oyun Alanı Sohbeti",
+        "activeDescription": "Bu agent LLM ve MCP araçları ile etkileşime geçebilir. Bir soru sorarak başlayın.",
+        "inactiveDescription": "Başlamak için lütfen bir oturum başlatın ve en az bir aktif MCP sunucusuna sahip olduğunuzdan emin olun.",
+        "thinking": "Düşünüyor"
+      },
+      "thinking": "Düşünüyor"
     }
   }
 }

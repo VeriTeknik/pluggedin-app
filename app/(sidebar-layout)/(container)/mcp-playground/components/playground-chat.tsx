@@ -1,6 +1,6 @@
 'use client';
 
-import { Send, Settings } from 'lucide-react';
+import { Loader2,Send, Settings } from 'lucide-react';
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -22,6 +22,7 @@ interface Message {
   content: string;
   debug?: string;
   timestamp?: Date;
+  isPartial?: boolean;
 }
 
 interface PlaygroundChatProps {
@@ -30,6 +31,7 @@ interface PlaygroundChatProps {
   setInputValue: (value: string) => void;
   isSessionActive: boolean;
   isProcessing: boolean;
+  isThinking: boolean;
   sendMessage: () => void;
   startSession: () => void;
   messagesEndRef: React.RefObject<HTMLDivElement>;
@@ -44,6 +46,7 @@ export function PlaygroundChat({
   setInputValue,
   isSessionActive,
   isProcessing,
+  isThinking,
   sendMessage,
   startSession,
   messagesEndRef,
@@ -62,17 +65,17 @@ export function PlaygroundChat({
         }
       }
     }
-  }, [messages, messagesEndRef]);
+  }, [messages, messagesEndRef, isThinking]);
 
   return (
-    <Card className='flex flex-col h-[calc(100vh-12rem)] shadow-sm'>
-      <CardHeader className='pb-3'>
+    <Card className='flex flex-col h-[calc(100vh-12rem)] shadow-sm w-full'>
+      <CardHeader className='pb-3 flex-shrink-0'>
         <CardTitle>{t('playground.chat.title')}</CardTitle>
         <CardDescription>
           {t('playground.chat.subtitle')}
         </CardDescription>
       </CardHeader>
-      <CardContent className='flex-1 overflow-hidden'>
+      <CardContent className='flex-1 overflow-hidden p-0 px-4'>
         <ScrollArea className='h-[calc(100vh-20rem)] pr-4'>
           {messages.length === 0 ? (
             <div className='flex flex-col items-center justify-center h-full text-center p-8'>
@@ -104,7 +107,7 @@ export function PlaygroundChat({
               )}
             </div>
           ) : (
-            <div className='space-y-4 pb-1'>
+            <div className='space-y-4 pb-1 pt-4'>
               {messages.map((message, index) => (
                 <div
                   key={index}
@@ -119,11 +122,14 @@ export function PlaygroundChat({
                         ? 'bg-primary text-primary-foreground ml-4'
                         : message.role === 'tool'
                           ? 'bg-muted/80 border border-muted-foreground/10'
-                          : 'bg-secondary'
+                          : message.isPartial
+                            ? 'bg-secondary/80 border-l-4 border-primary/60 animate-pulse'
+                            : 'bg-secondary'
                     }`}>
                     {message.timestamp && (
                       <div className='text-xs text-muted-foreground/70 mb-1'>
                         {message.timestamp.toLocaleTimeString()}
+                        {message.isPartial && ` · ${t('playground.chat.thinking')}`}
                       </div>
                     )}
 
@@ -153,13 +159,26 @@ export function PlaygroundChat({
                   </div>
                 </div>
               ))}
+              
+              {isThinking && (
+                <div className="flex justify-start">
+                  <div className="bg-secondary rounded-lg p-3 animate-pulse flex items-center space-x-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    <span className="text-sm">{t('playground.chat.thinking')}</span>
+                    <span className="text-sm animate-bounce delay-100">.</span>
+                    <span className="text-sm animate-bounce delay-200">.</span>
+                    <span className="text-sm animate-bounce delay-300">.</span>
+                  </div>
+                </div>
+              )}
+              
               <div ref={messagesEndRef} />
             </div>
           )}
         </ScrollArea>
       </CardContent>
       <Separator />
-      <CardFooter className='p-4'>
+      <CardFooter className='p-4 flex-shrink-0 mt-auto'>
         <div className='flex w-full items-center space-x-2'>
           <Textarea
             placeholder={
@@ -175,17 +194,21 @@ export function PlaygroundChat({
                 sendMessage();
               }
             }}
-            disabled={!isSessionActive || isProcessing}
+            disabled={!isSessionActive || isProcessing || isThinking}
             className='flex-1 min-h-10 resize-none bg-background border-muted-foreground/20'
           />
           <Button
             size='icon'
             onClick={sendMessage}
             disabled={
-              !isSessionActive || !inputValue.trim() || isProcessing
+              !isSessionActive || !inputValue.trim() || isProcessing || isThinking
             }
-            className={`transition-all ${isProcessing ? 'animate-pulse' : ''}`}>
-            <Send className='h-4 w-4' />
+            className={`transition-all ${isProcessing || isThinking ? 'animate-pulse' : ''}`}>
+            {isThinking ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className='h-4 w-4' />
+            )}
           </Button>
         </div>
       </CardFooter>

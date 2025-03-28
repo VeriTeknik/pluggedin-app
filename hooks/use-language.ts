@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
+import debounce from 'lodash/debounce';
 import { useTranslation } from 'react-i18next';
 
 import { isRTL, type Locale } from '@/i18n/config';
@@ -25,6 +26,31 @@ class LanguageStorage {
 
 export function useLanguage() {
   const { i18n } = useTranslation();
+  
+  // Create a persistent debounced function using useRef
+  const updateLanguageDebounced = useRef(
+    debounce(async (language: string) => {
+      try {
+        const response = await fetch('/api/settings/profile', {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            language,
+            name: undefined // Keep existing name
+          }),
+        });
+
+        if (!response.ok) {
+          console.error('Failed to update language in database:', await response.text());
+        }
+      } catch (error) {
+        console.error('Failed to update language in database:', error);
+      }
+    }, 300)
+  ).current;
+  
   const setLanguage = useCallback(async (language: Locale) => {
     try {
       // Update i18next
@@ -39,28 +65,15 @@ export function useLanguage() {
       // Update direction for RTL support
       document.documentElement.dir = isRTL(language) ? 'rtl' : 'ltr';
 
-      // Update language in database
-      const response = await fetch('/api/settings/profile', {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          language,
-          name: undefined // Keep existing name
-        }),
-      });
-
-      if (!response.ok) {
-        console.error('Failed to update language in database:', await response.text());
-      }
+      // Update language in database (debounced)
+      updateLanguageDebounced(language);
     } catch (error) {
       console.error('Failed to update language:', error);
       // Revert to previous language if update fails
       const prevLang = i18n.language;
       await i18n.changeLanguage(prevLang);
     }
-  }, [i18n]);
+  }, [i18n, updateLanguageDebounced]);
 
   return {
     currentLanguage: i18n.language as Locale,

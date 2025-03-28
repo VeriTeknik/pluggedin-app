@@ -3,6 +3,30 @@ import { McpIndex } from '@/types/search';
 
 import { detectCategory } from './categories';
 
+const PACKAGE_JSON_CACHE_TTL: number = 10 * 60 * 1000; // Cache TTL of 10 minutes
+
+interface PackageJsonCacheEntry {
+  data: any;
+  timestamp: number;
+}
+
+// Cache for package.json data to reduce redundant API calls
+const packageJsonCache: Map<string, PackageJsonCacheEntry> = new Map();
+
+const getPackageJsonCache = (key: string): any | undefined => {
+  const entry = packageJsonCache.get(key);
+  if (entry && (Date.now() - entry.timestamp < PACKAGE_JSON_CACHE_TTL)) {
+    return entry.data;
+  } else if (entry) {
+    packageJsonCache.delete(key); // Evict expired entry
+  }
+  return undefined;
+};
+
+const setPackageJsonCache = (key: string, data: any): void => {
+  packageJsonCache.set(key, { data, timestamp: Date.now() });
+};
+
 interface GitHubRepo {
   name: string;
   full_name: string;
@@ -186,6 +210,12 @@ export async function fetchAwesomeMcpServersList(): Promise<GitHubRepo[]> {
  * Get repository package.json if available
  */
 export async function getRepoPackageJson(repo: GitHubRepo): Promise<any | null> {
+  // Check if we have a cached version first
+  const cachedData = getPackageJsonCache(repo.full_name);
+  if (cachedData !== undefined) {
+    return cachedData;
+  }
+
   const url = `https://api.github.com/repos/${repo.full_name}/contents/package.json`;
   
   try {
@@ -198,6 +228,8 @@ export async function getRepoPackageJson(repo: GitHubRepo): Promise<any | null> 
     });
     
     if (!response.ok) {
+      // Cache null result to avoid repeated failed requests
+      setPackageJsonCache(repo.full_name, null);
       return null;
     }
     
@@ -205,12 +237,19 @@ export async function getRepoPackageJson(repo: GitHubRepo): Promise<any | null> 
     
     if (data.encoding === 'base64') {
       const content = Buffer.from(data.content, 'base64').toString('utf-8');
-      return JSON.parse(content);
+      const packageJson = JSON.parse(content);
+      
+      // Save the parsed result in the cache
+      setPackageJsonCache(repo.full_name, packageJson);
+      return packageJson;
     }
     
+    // Cache null result for unexpected format
+    setPackageJsonCache(repo.full_name, null);
     return null;
   } catch (error) {
     console.error(`Error fetching package.json for ${repo.full_name}:`, error);
+    // Don't cache errors - allow retry on transient issues
     return null;
   }
 } 

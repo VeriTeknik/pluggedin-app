@@ -1,15 +1,29 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 
 import type { McpIndex } from '@/types/search';
 
 type SortOption = 'relevance' | 'popularity' | 'recent' | 'stars';
 
+export interface SortState {
+  sort: {
+    option: SortOption;
+    isDefault: boolean;
+  };
+  getSortedResults: () => Record<string, McpIndex> | undefined;
+}
+
 export const useSortedResults = (
   data: Record<string, McpIndex> | undefined,
-  sort: SortOption,
+  sortOption: SortOption,
   getFilteredResults: () => Record<string, McpIndex> | undefined
-) => {
-  return useCallback((): Record<string, McpIndex> | undefined => {
+): SortState => {
+  // Create sort state information
+  const sort = useMemo(() => ({
+    option: sortOption,
+    isDefault: sortOption === 'relevance',
+  }), [sortOption]);
+  
+  const getSortedResults = useCallback((): Record<string, McpIndex> | undefined => {
     if (!data) {
       return undefined;
     }
@@ -19,9 +33,14 @@ export const useSortedResults = (
       return filtered;
     }
     
+    // If using default sort, return filtered results as-is
+    if (sort.isDefault) {
+      return filtered;
+    }
+    
     const entries = Object.entries(filtered);
     
-    switch (sort) {
+    switch (sort.option) {
       case 'popularity':
         return Object.fromEntries(
           entries.sort((a, b) => {
@@ -53,4 +72,9 @@ export const useSortedResults = (
         return filtered;
     }
   }, [data, getFilteredResults, sort]);
+  
+  return {
+    sort,
+    getSortedResults
+  };
 }; 

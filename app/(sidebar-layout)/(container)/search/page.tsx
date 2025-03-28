@@ -93,31 +93,32 @@ function SearchContent() {
     }
   }, [data]);
 
-  // Use the new custom hooks for filtering and sorting
-  const getFilteredResults = useFilteredResults(data?.results, tags, category);
-  const getSortedResults = useSortedResults(data?.results, sort, getFilteredResults);
+  // Use the enhanced custom hooks for filtering and sorting
+  const { filter, getFilteredResults } = useFilteredResults(data?.results, tags, category);
+  const { sort: sortState, getSortedResults } = useSortedResults(data?.results, sort, getFilteredResults);
 
-  // Memoize search filters
-  const searchFilters = useMemo(() => ({
-    source,
-    sourceParam,
-    sort,
-    sortParam,
-    tags,
-    tagsParam,
-    category,
-    categoryParam,
-  }), [source, sourceParam, sort, sortParam, tags, tagsParam, category, categoryParam]);
+  // Memoize search filters with enhanced state information
+  const searchFilters = useMemo(() => {
+    return {
+      source,
+      sort: sort,
+      tags: tags.join(','),
+      category,
+      // Include enhanced state information from hooks
+      filterState: filter,
+      sortState
+    };
+  }, [source, sort, tags, category, filter, sortState]);
 
   // Update URL when search parameters change
   useEffect(() => {
     const timer = setTimeout(() => {
       if (
         searchQuery !== query || 
-        searchFilters.sourceParam !== searchFilters.source || 
-        searchFilters.sortParam !== searchFilters.sort || 
-        searchFilters.tagsParam !== searchFilters.tags.join(',') ||
-        searchFilters.categoryParam !== searchFilters.category
+        searchFilters.source !== sourceParam || 
+        searchFilters.sort !== sortParam || 
+        searchFilters.tags !== tagsParam ||
+        searchFilters.category !== categoryParam
       ) {
         const params = new URLSearchParams();
         if (searchQuery) {
@@ -126,13 +127,13 @@ function SearchContent() {
         if (searchFilters.source !== 'all') {
           params.set('source', searchFilters.source);
         }
-        if (searchFilters.sort !== 'relevance') {
+        if (!searchFilters.sortState.isDefault) {
           params.set('sort', searchFilters.sort);
         }
-        if (searchFilters.tags.length > 0) {
-          params.set('tags', searchFilters.tags.join(','));
+        if (searchFilters.filterState.hasTags) {
+          params.set('tags', searchFilters.tags);
         }
-        if (searchFilters.category) {
+        if (searchFilters.filterState.hasCategory) {
           params.set('category', searchFilters.category);
         }
         params.set('offset', '0');
@@ -141,7 +142,7 @@ function SearchContent() {
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, query, searchFilters, router]);
+  }, [searchQuery, query, searchFilters, sourceParam, sortParam, tagsParam, categoryParam, router]);
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams);
@@ -381,7 +382,7 @@ function SearchContent() {
             <p className="text-destructive">{t('search.error')}</p>
           ) : data && Object.keys(data.results || {}).length === 0 ? (
             <p>{t('search.noResults')}</p>
-          ) : data && Object.keys(getFilteredResults() || {}).length === 0 ? (
+          ) : data && getFilteredResults() && Object.keys(getFilteredResults() || {}).length === 0 ? (
             <p>{t('search.noMatchingFilters')}</p>
           ) : (
             <p>{t('search.loading')}</p>

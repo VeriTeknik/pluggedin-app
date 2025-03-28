@@ -443,8 +443,9 @@
     }
   },
   "playground": {
-    "title": "Playground",
-    "subtitle": "Test your MCP servers with powerful LLMs. Configure server connections, adjust model settings, and interact using natural language to see your tools in action.",
+    "title": "MCP Playground",
+    "subtitle": "Interact with Model Context Protocol (MCP) tools.",
+    "description": "An experimental environment for using LLM AI with MCP tools.",
     "actions": {
       "start": "Start Playground",
       "starting": "Starting...",
@@ -496,21 +497,22 @@
       }
     },
     "chat": {
-      "title": "Chat Interface",
-      "subtitle": "Test your MCP servers with natural language",
-      "empty": {
-        "title": "MCP Playground",
-        "activeDescription": "Ask questions or give instructions to test your MCP servers. Try exploring what tools are available or request specific actions.",
-        "inactiveDescription": "Select MCP servers and start a session to begin testing your tools with natural language."
+      "title": "MCP Chat",
+      "subtitle": "Chat with AI and MCP tools",
+      "tool": {
+        "title": "Tool Output",
+        "debugInfo": "Debug information"
       },
       "input": {
-        "activePlaceholder": "Type your message...",
-        "inactivePlaceholder": "Start a session to begin chatting"
+        "activePlaceholder": "Chat with MCP tools...",
+        "inactivePlaceholder": "Start a session first"
       },
-      "tool": {
-        "title": "Tool Execution",
-        "debugInfo": "Debug Info"
-      }
+      "empty": {
+        "title": "MCP Playground Chat",
+        "activeDescription": "This agent can interact with LLM and MCP tools. Start by asking a question.",
+        "inactiveDescription": "Please start a session and make sure you have at least one active MCP server."
+      },
+      "thinking": "Thinking"
     }
   }
 }

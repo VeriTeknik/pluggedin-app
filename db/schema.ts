@@ -9,6 +9,7 @@ import {
   text,
   timestamp,
   uuid,
+  boolean,
 } from 'drizzle-orm/pg-core';
 
 import { locales } from '@/i18n/config';
@@ -387,3 +388,73 @@ export const serverRatingsTable = pgTable(
     ),
   ]
 );
+
+// Audit log tablosu
+export const auditLogsTable = pgTable("audit_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
+  type: text("type").notNull(), // API_CALL, MCP_REQUEST, AUTH_ACTION, etc.
+  action: text("action").notNull(),
+  request_path: text("request_path"),
+  request_method: text("request_method"),
+  request_body: jsonb("request_body"),
+  response_status: integer("response_status"),
+  response_time_ms: integer("response_time_ms"),
+  user_agent: text("user_agent"),
+  ip_address: text("ip_address"),
+  server_uuid: uuid("server_uuid").references(() => mcpServersTable.uuid),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  metadata: jsonb("metadata"),
+},
+(table) => [
+  index('audit_logs_profile_uuid_idx').on(table.profile_uuid),
+  index('audit_logs_type_idx').on(table.type),
+  index('audit_logs_created_at_idx').on(table.created_at),
+]);
+
+// Notification tablosu
+export const notificationsTable = pgTable("notifications", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
+  type: text("type").notNull(), // SYSTEM, ALERT, INFO, SUCCESS, WARNING
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  read: boolean("read").default(false).notNull(),
+  link: text("link"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  expires_at: timestamp("expires_at", { withTimezone: true }),
+},
+(table) => [
+  index('notifications_profile_uuid_idx').on(table.profile_uuid),
+  index('notifications_read_idx').on(table.read),
+  index('notifications_created_at_idx').on(table.created_at),
+]);
+
+// Sistem loglama tablosu
+export const systemLogsTable = pgTable("system_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  level: text("level").notNull(), // ERROR, WARN, INFO, DEBUG
+  source: text("source").notNull(), // SYSTEM, MCP_SERVER, DATABASE, etc.
+  message: text("message").notNull(),
+  details: jsonb("details"),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+},
+(table) => [
+  index('system_logs_level_idx').on(table.level),
+  index('system_logs_source_idx').on(table.source),
+  index('system_logs_created_at_idx').on(table.created_at),
+]);
+
+// Log retention policy tablosu
+export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
+  retention_days: integer("retention_days").default(7).notNull(),
+  max_log_size_mb: integer("max_log_size_mb").default(100).notNull(),
+  is_active: boolean("is_active").default(true).notNull(),
+  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+},
+(table) => [
+  index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
+]);

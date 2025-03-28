@@ -86,11 +86,22 @@ export async function GET(request: NextRequest) {
     
     // If all are cached, combine and return
     if (cachedSmithery && cachedNpm && cachedGitHub) {
-      const combinedResults = {
-        ...cachedSmithery,
-        ...cachedNpm,
-        ...cachedGitHub,
-      };
+      const combinedResults: SearchIndex = {};
+      
+      // Add smithery results with namespace prefix
+      Object.entries(cachedSmithery).forEach(([key, value]) => {
+        combinedResults[`smithery:${key}`] = value;
+      });
+      
+      // Add npm results with namespace prefix
+      Object.entries(cachedNpm).forEach(([key, value]) => {
+        combinedResults[`npm:${key}`] = value;
+      });
+      
+      // Add github results with namespace prefix
+      Object.entries(cachedGitHub).forEach(([key, value]) => {
+        combinedResults[`github:${key}`] = value;
+      });
       
       // Paginate and return
       const paginatedResults = paginateResults(combinedResults, offset, pageSize);
@@ -113,12 +124,23 @@ export async function GET(request: NextRequest) {
       await cacheResults(McpServerSource.GITHUB, query, githubResults);
     }
     
-    // Combine all results
-    results = {
-      ...smitheryResults,
-      ...npmResults,
-      ...githubResults,
-    };
+    // Combine all results under namespaced keys to avoid collisions
+    results = {} as SearchIndex;
+    
+    // Add smithery results with namespace prefix
+    Object.entries(smitheryResults).forEach(([key, value]) => {
+      results[`smithery:${key}`] = value;
+    });
+    
+    // Add npm results with namespace prefix
+    Object.entries(npmResults).forEach(([key, value]) => {
+      results[`npm:${key}`] = value;
+    });
+    
+    // Add github results with namespace prefix
+    Object.entries(githubResults).forEach(([key, value]) => {
+      results[`github:${key}`] = value;
+    });
     
     // Paginate and return results
     const paginatedResults = paginateResults(results, offset, pageSize);

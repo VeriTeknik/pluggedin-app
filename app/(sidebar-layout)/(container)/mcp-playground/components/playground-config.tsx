@@ -1,11 +1,7 @@
 'use client';
 
-import {
-  Save,
-  Server,
-  Terminal,
-} from 'lucide-react';
-import { useEffect } from 'react';
+import { Save, Server, Trash2 } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +15,6 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
   SelectContent,
@@ -36,7 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { McpServer } from '@/types/mcp-server';
+import type { McpServer } from '@/types/mcp-server';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
@@ -102,28 +97,103 @@ export function PlaygroundConfig({
 }: PlaygroundConfigProps) {
   const { t } = useTranslation();
   
-  // Effect to sync logLevel with llmConfig
+  // Create a ref to track previous log level value
+  const prevLogLevelRef = useRef(logLevel);
+  const logLevelChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Fix the settings saved loop with a single, properly controlled useEffect
   useEffect(() => {
-    setLogLevel(llmConfig.logLevel);
-  }, [llmConfig.logLevel, setLogLevel]);
+    // Only trigger save if the log level actually changed
+    if (prevLogLevelRef.current !== logLevel) {
+      // Clear any existing timers
+      if (logLevelChangeTimerRef.current) {
+        clearTimeout(logLevelChangeTimerRef.current);
+      }
+      
+      // Update llmConfig when logLevel changes (without triggering another render)
+      if (llmConfig.logLevel !== logLevel) {
+        setLlmConfig((prev: typeof llmConfig) => ({
+          ...prev,
+          logLevel: logLevel
+        }));
+      }
+      
+      // Debounced save with longer timeout to avoid rapid consecutive saves
+      logLevelChangeTimerRef.current = setTimeout(() => {
+        saveSettings().then(() => {
+          // Update previous value reference AFTER the save completes
+          prevLogLevelRef.current = logLevel;
+        });
+        logLevelChangeTimerRef.current = null;
+      }, 1000);
+    }
+    
+    // Cleanup function
+    return () => {
+      if (logLevelChangeTimerRef.current) {
+        clearTimeout(logLevelChangeTimerRef.current);
+      }
+    };
+  }, [logLevel, llmConfig.logLevel, setLlmConfig, saveSettings]);
+  
+  // Handler to update log level without triggering save cascade
+  const handleLogLevelChange = (level: LogLevel) => {
+    if (level !== logLevel) {
+      setLogLevel(level);
+    }
+  };
 
-  // Effect to sync llmConfig with logLevel
-  useEffect(() => {
-    setLlmConfig((prev: typeof llmConfig) => ({
-      ...prev,
-      logLevel: logLevel
-    }));
-  }, [logLevel, setLlmConfig]);
+  // Create a function to render the log entry with proper formatting
+  const renderLogEntry = (log: ServerLogEntry, index: number) => {
+    // Format timestamp
+    const time = log.timestamp 
+      ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) 
+      : '';
+    
+    // Use proper styling based on log level
+    const levelStyles = {
+      error: 'text-red-500 font-semibold',
+      warn: 'text-yellow-500 font-semibold',
+      info: 'text-blue-500',
+      debug: 'text-green-500 text-sm',
+      streaming: 'text-purple-500 italic'
+    };
+    
+    const levelStyle = levelStyles[log.level as keyof typeof levelStyles] || '';
+    
+    // Truncate very long messages to prevent display issues
+    const truncateText = (text: string, maxLength = 150) => {
+      if (!text) return '';
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength) + '...';
+    };
+    
+    return (
+      <div key={`server-log-${index}`} className="py-1 border-b border-border/30 last:border-0">
+        <div className="flex items-start">
+          <span className="text-xs text-muted-foreground whitespace-nowrap mr-2">
+            [{time}]
+          </span>
+          <span className={`${levelStyle} text-xs uppercase whitespace-nowrap mr-2`}>
+            [{log.level}]
+          </span>
+          <span className="text-sm whitespace-pre-wrap break-words overflow-hidden">
+            {truncateText(log.message)}
+          </span>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <Card className='shadow-sm'>
-      <CardHeader className='pb-3'>
+    <Card className='shadow-sm h-[calc(100vh-12rem)] flex flex-col'>
+      <CardHeader className='pb-3 flex-shrink-0'>
         <CardTitle>{t('playground.config.title')}</CardTitle>
         <CardDescription>
           {t('playground.config.subtitle')}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className='flex-1 overflow-hidden'>
         <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab}>
           <TabsList className='grid w-full grid-cols-3'>
             <TabsTrigger value='servers'>{t('playground.config.tabs.servers')}</TabsTrigger>
@@ -431,7 +501,7 @@ export function PlaygroundConfig({
                 <Select
                   value={logLevel}
                   onValueChange={(value) =>
-                    setLogLevel(value as LogLevel)
+                    handleLogLevelChange(value as LogLevel)
                   }
                   disabled={isSessionActive}>
                   <SelectTrigger className='mt-1.5'>
@@ -450,188 +520,140 @@ export function PlaygroundConfig({
 
           {/* Logs Tab */}
           <TabsContent value='logs' className='space-y-4 mt-4'>
-            {/* Top row with title and save button */}
             <div className='flex items-center justify-between mb-2'>
-              <div className='text-sm font-medium flex items-center'>
-                <Terminal className='w-4 h-4 mr-1.5' />
-                {t('playground.config.logs.title')}
+              <div>
+                <Label className='text-sm font-medium mb-1 block'>
+                  {t('playground.logLevel')}
+                </Label>
+                <Select
+                  value={logLevel}
+                  onValueChange={handleLogLevelChange}
+                  disabled={isSessionActive}>
+                  <SelectTrigger className='w-40'>
+                    <SelectValue placeholder={t('playground.logLevel')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value='error'>Error</SelectItem>
+                    <SelectItem value='warn'>Warn</SelectItem>
+                    <SelectItem value='info'>Info</SelectItem>
+                    <SelectItem value='debug'>Debug</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={saveSettings}
-                disabled={isSessionActive}
-                className='h-7 text-xs'>
-                <Save className='h-3 w-3 mr-1' />
-                {t('playground.actions.save')}
-              </Button>
-            </div>
-            
-            {/* Second row with Clear button and log level controls */}
-            <div className='flex items-center justify-between mb-2'>
-              {clientLogs.length > 0 || serverLogs.length > 0 ? (
-                <Button
-                  variant='ghost'
-                  size='sm'
+              <div>
+                <Button 
+                  variant='outline' 
+                  size='sm' 
                   onClick={clearLogs}
-                  className='h-7 text-xs'>
-                  {t('playground.actions.clear')}
+                >
+                  <Trash2 className='mr-2 h-4 w-4' />
+                  {t('playground.actions.clearLogs')}
                 </Button>
-              ) : (
-                <div></div> // Empty div to maintain layout when no logs
-              )}
-              <div className="flex bg-secondary rounded-md p-0.5">
-                {['error', 'warn', 'info', 'debug'].map((level) => (
-                  <Button
-                    key={level}
-                    size="sm"
-                    variant={logLevel === level ? 'secondary' : 'ghost'}
-                    className={`h-6 text-xs px-2 capitalize ${
-                      logLevel === level ? 'bg-background shadow-sm' : ''
-                    } ${
-                      level === 'error' ? 'text-red-500 hover:text-red-600' : 
-                      level === 'warn' ? 'text-amber-500 hover:text-amber-600' : 
-                      level === 'debug' ? 'text-blue-500 hover:text-blue-600' : 
-                      'text-green-500 hover:text-green-600'
-                    }`}
-                    onClick={() => setLogLevel(level as LogLevel)}
-                  >
-                    {level}
-                  </Button>
-                ))}
               </div>
             </div>
-            
-            {sessionError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-md mb-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0 text-red-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <circle cx="12" cy="12" r="10"></circle>
-                      <line x1="12" y1="8" x2="12" y2="12"></line>
-                      <line x1="12" y1="16" x2="12.01" y2="16"></line>
-                    </svg>
-                  </div>
-                  <div className="ml-3 flex-1">
-                    <h3 className="text-sm font-medium text-red-800">{t('playground.config.sessionError.title')}</h3>
-                    <div className="mt-1 text-sm text-red-700">
-                      {sessionError}
-                    </div>
-                    <div className="mt-2">
-                      <Button 
-                        size="sm" 
-                        variant="outline"
-                        className="text-xs"
-                        onClick={() => setSessionError(null)}
-                      >
-                        {t('playground.actions.dismiss')}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
 
-            <ScrollArea className='h-[calc(100vh-24rem)] border rounded-md bg-muted/20'>
-              <div className="px-3 pt-2 pb-1 text-xs text-muted-foreground border-b border-muted-foreground/10">
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger className="flex items-center gap-1">
-                      <div className={`w-2 h-2 rounded-full ${
-                        logLevel === 'error' ? 'bg-red-500' : 
-                        logLevel === 'warn' ? 'bg-amber-500' : 
-                        logLevel === 'debug' ? 'bg-blue-500' : 
-                        'bg-green-500'
-                      }`}></div>
-                      <span>{t('playground.config.logs.showingLevel', { level: logLevel })}</span>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{t('playground.config.logs.levels')}</p>
-                      <p className="text-xs mt-1">{t('playground.config.logs.levelsHint')}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              </div>
-              <div className='p-3 font-mono text-xs space-y-1.5'>
-                {clientLogs.length === 0 && serverLogs.length === 0 ? (
-                  <div className='text-muted-foreground text-center py-8'>
-                    {t('playground.config.logs.empty')}
-                  </div>
-                ) : (
-                  // Combine and sort client and server logs by timestamp
-                  [...clientLogs.map(log => ({
-                    source: 'client' as const,
-                    type: log.type,
-                    message: log.message,
-                    timestamp: log.timestamp,
-                    level: log.type === 'error' ? 'error' :
-                           log.type === 'connection' ? 'warn' :
-                           log.type === 'info' ? 'info' :
-                           'info'
-                  })),
-                  ...serverLogs.map(log => ({
-                    source: 'server' as const,
-                    type: 'info',
-                    message: log.message,
-                    timestamp: log.timestamp,
-                    level: log.level
-                  }))]
-                    .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime())
-                    // Filter logs based on log level
-                    .filter(log => {
-                      // Special handling for logs with prefixes
-                      if (log.message.startsWith('[DEBUG]')) {
-                        return logLevel === 'debug';
-                      }
-                      if (log.message.startsWith('[WARN]')) {
-                        return ['warn', 'info', 'debug'].includes(logLevel);
-                      }
+            <div className="h-[calc(100vh-25rem)] rounded-md border">
+              {serverLogs.length === 0 && clientLogs.length === 0 ? (
+                <div className="text-center text-muted-foreground py-8">
+                  {t('playground.logs.empty')}
+                </div>
+              ) : (
+                <div className="h-full overflow-auto">
+                  {/* Simplified logs display for better performance and readability */}
+                  <div className="space-y-0.5 p-2">
+                    {(() => {
+                      // Combine and sort logs
+                      const allLogs = [
+                        ...clientLogs.map(log => ({
+                          type: 'client' as const,
+                          timestamp: log.timestamp,
+                          level: log.type,
+                          message: log.message
+                        })),
+                        ...serverLogs.map(log => ({
+                          type: 'server' as const,
+                          timestamp: new Date(log.timestamp),
+                          level: log.level,
+                          message: log.message
+                        }))
+                      ].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
                       
-                      const levels: { [key in LogLevel]: number } = {
-                        error: 0,
-                        warn: 1,
-                        info: 2,
-                        debug: 3
+                      // Truncate very long messages
+                      const truncateText = (text: string, maxLength = 200) => {
+                        if (!text) return '';
+                        if (text.length <= maxLength) return text;
+                        return text.substring(0, maxLength) + '...';
                       };
                       
-                      const currentLogLevel = log.level || 'info';
-                      return levels[logLevel] >= levels[currentLogLevel as LogLevel];
-                    })
-                    .map((log, index) => (
-                      <div key={index} className='flex'>
-                        <div className='text-muted-foreground mr-2'>
-                          [{log.timestamp.toLocaleTimeString(undefined, {hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit'})}]
-                        </div>
-                        <div
-                          className={`
-                          ${log.source === 'server' ? 'text-violet-500' : ''}
-                          ${log.type === 'info' ? 'text-blue-500' : ''}
-                          ${log.type === 'error' ? 'text-red-500' : ''}
-                          ${log.type === 'connection' ? 'text-green-500' : ''}
-                          ${log.type === 'execution' ? 'text-amber-500' : ''}
-                          ${log.type === 'response' ? 'text-purple-500' : ''}
-                        `}>
-                          {log.message.startsWith('[DEBUG]') ? (
-                            <span className="text-blue-400">[DEBUG]</span>
-                          ) : log.message.startsWith('[WARN]') ? (
-                            <span className="text-amber-400">[WARN]</span>
-                          ) : log.source === 'server' ? (
-                            <span className="text-violet-400">[SERVER:{log.level.toUpperCase()}]</span>
-                          ) : (
-                            <span>[{log.type.toUpperCase()}]</span>
-                          )}{' '}
-                          {log.message.startsWith('[DEBUG]') ? 
-                            log.message.substring(7) : 
-                            log.message.startsWith('[WARN]') ?
-                            log.message.substring(6) :
-                            log.message}
-                        </div>
-                      </div>
-                    ))
-                )}
-                <div ref={logsEndRef} />
-              </div>
-            </ScrollArea>
+                      // Filter for giant messages (potential issues)
+                      const isLikelyBinary = (text: string) => {
+                        // Check for signs of binary data or very long single-line content
+                        return text.length > 500 && !text.includes('\n') && /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/.test(text);
+                      };
+                      
+                      return allLogs.map((log, index) => {
+                        // Format timestamp
+                        const time = log.timestamp.toLocaleTimeString([], { 
+                          hour: '2-digit', 
+                          minute: '2-digit', 
+                          second: '2-digit' 
+                        });
+                        
+                        // Get appropriate style
+                        let levelStyle = '';
+                        if (log.type === 'client') {
+                          levelStyle = log.level === 'error' 
+                            ? 'text-red-500 font-bold'
+                            : log.level === 'info'
+                              ? 'text-blue-500'
+                              : log.level === 'execution'
+                                ? 'text-yellow-500'
+                                : log.level === 'connection'
+                                  ? 'text-green-500'
+                                  : 'text-purple-500';
+                        } else {
+                          levelStyle = {
+                            error: 'text-red-500 font-semibold',
+                            warn: 'text-yellow-500 font-semibold',
+                            info: 'text-blue-500',
+                            debug: 'text-green-500',
+                            streaming: 'text-purple-500 italic'
+                          }[log.level as string] || '';
+                        }
+                        
+                        // Handle special message formats
+                        let cleanedMessage = log.message;
+                        
+                        // Check for binary-looking data
+                        if (isLikelyBinary(cleanedMessage)) {
+                          cleanedMessage = '[Binary data or invalid text content - hidden for display]';
+                        }
+                        
+                        return (
+                          <div 
+                            key={`log-${log.type}-${index}`} 
+                            className="py-1 border-b border-border/10 text-xs last:border-0 hover:bg-muted/40 transition-colors"
+                          >
+                            <div className="grid grid-cols-[auto_auto_1fr] gap-2">
+                              <span className="text-muted-foreground whitespace-nowrap">
+                                [{time}]
+                              </span>
+                              <span className={`${levelStyle} uppercase whitespace-nowrap`}>
+                                [{log.level}]
+                              </span>
+                              <span className="whitespace-pre-wrap break-words overflow-hidden">
+                                {truncateText(cleanedMessage)}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      });
+                    })()}
+                    <div ref={logsEndRef} />
+                  </div>
+                </div>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </CardContent>

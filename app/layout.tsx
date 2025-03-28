@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 
 import { I18nProviderWrapper } from '@/components/providers/i18n-provider-wrapper';
+import { NotificationProvider } from '@/components/providers/notification-provider';
 import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
@@ -41,8 +42,10 @@ export default async function RootLayout({
         <I18nProviderWrapper>
           <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
             <SessionProvider>
-              <LanguageSwitcher />
-              {children}
+              <NotificationProvider>
+                <LanguageSwitcher />
+                {children}
+              </NotificationProvider>
             </SessionProvider>
             <Toaster />
           </ThemeProvider>

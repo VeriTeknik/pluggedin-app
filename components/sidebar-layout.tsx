@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  Bell,
   Blocks,
   Code2,
   FileText,
@@ -42,18 +43,23 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
+  SidebarRail,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
 
+import { NotificationBell } from './notification-bell';
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
 import { UserMenu } from './user-menu';
 
 // Temporary solution until we set up proper version importing
 const version = '0.1.1';
+
+// Local storage key for sidebar state
+const SIDEBAR_STATE_KEY = 'sidebar:expanded';
 
 export default function SidebarLayout({
   children,
@@ -72,10 +78,40 @@ export default function SidebarLayout({
   const { logoSrc } = useThemeLogo();
   const [mounted, setMounted] = useState(false);
   const { t, i18n } = useTranslation();
+  
+  // State for sidebar expansion
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
-  // Ensure correct theme and i18n are applied after mount
+  // Load sidebar state from localStorage on mount
   useEffect(() => {
     setMounted(true);
+    try {
+      const savedState = localStorage.getItem(SIDEBAR_STATE_KEY);
+      if (savedState !== null) {
+        setSidebarExpanded(savedState === 'true');
+      }
+    } catch (error) {
+      console.error('Failed to load sidebar state from localStorage:', error);
+    }
+  }, []);
+
+  // Save sidebar state to localStorage when it changes
+  useEffect(() => {
+    if (mounted) {
+      try {
+        localStorage.setItem(SIDEBAR_STATE_KEY, String(sidebarExpanded));
+        
+        // Also update via cookie to ensure the sidebar.tsx component picks it up
+        document.cookie = `sidebar:state=${sidebarExpanded}; path=/; max-age=${60 * 60 * 24 * 7}`;
+      } catch (error) {
+        console.error('Failed to save sidebar state to localStorage:', error);
+      }
+    }
+  }, [sidebarExpanded, mounted]);
+
+  // Toggle sidebar function that directly modifies the state
+  const toggleSidebar = React.useCallback(() => {
+    setSidebarExpanded((prevState) => !prevState);
   }, []);
 
   // Skip rendering any translated content until after hydration
@@ -92,28 +128,47 @@ export default function SidebarLayout({
   };
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={sidebarExpanded}>
       <div className='flex flex-1 h-screen'>
         {/* Main Sidebar */}
-        <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
+        <Sidebar collapsible='icon' variant="sidebar" className='w-64 flex-shrink-0 border-r' style={{ '--sidebar-width-icon': '3.5rem' } as React.CSSProperties}>
           <SidebarHeader className='flex flex-col px-2 py-4'>
             <div className='mb-2 px-3'>
-              <Link href="/" className="block">
-                <Image
-                  src={logoSrc}
-                  alt='Plugged.in Logo'
-                  width={288}
-                  height={72}
-                  className='h-144 w-36'
-                  priority
-                />
-              </Link>
-              <div className="text-xs text-muted-foreground mt-1">
+              <div className="flex items-center justify-between">
+                <div className="flex-1 flex justify-center">
+                  <Link href="/" className="flex items-center justify-center">
+                    <Image
+                      src={logoSrc}
+                      alt='Plugged.in Logo'
+                      width={288}
+                      height={72}
+                      className='h-10 w-36 group-data-[collapsible=icon]:hidden'
+                      priority
+                    />
+                    {/* Small logo for collapsed state */}
+                    <div className="hidden group-data-[collapsible=icon]:block group-data-[collapsible=icon]:text-center group-data-[collapsible=icon]:pt-2">
+                      <Image
+                        src="/P-logo-gr.png"
+                        alt="P Logo"
+                        width={16}
+                        height={16}
+                        className="w-4 h-4 mx-auto"
+                      />
+                    </div>
+                  </Link>
+                </div>
+                <div className="group-data-[collapsible=icon]:hidden">
+                  <NotificationBell />
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1 group-data-[collapsible=icon]:hidden">
                 {t('common.releaseCandidate', { version })}
               </div>
             </div>
-            <ProjectSwitcher />
-            <ProfileSwitcher />
+            <div className="group-data-[collapsible=icon]:hidden">
+              <ProjectSwitcher />
+              <ProfileSwitcher />
+            </div>
           </SidebarHeader>
           <SidebarContent>
             <SidebarGroup>
@@ -122,27 +177,27 @@ export default function SidebarLayout({
                 <SidebarMenu>
                   
                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={t('playground.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/mcp-playground'>
-                        <FlaskConical className='mr-2 h-4 w-4' />
-                        <span>{t('playground.title')}</span>
+                        <FlaskConical className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('playground.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={t('mcpServers.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/mcp-servers'>
-                        <Unplug className='mr-2 h-4 w-4' />
-                        <span>{t('mcpServers.title')}</span>
+                        <Unplug className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('mcpServers.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={t('search.explorePlugins')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/search'>
-                        <Blocks className='mr-2 h-4 w-4' />
-                        <span>{t('search.explorePlugins')}</span>
+                        <Blocks className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('search.explorePlugins')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -166,26 +221,34 @@ export default function SidebarLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>*/}
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={t('apiKeys.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/api-keys'>
-                        <Key className='mr-2 h-4 w-4' />
-                        <span>{t('apiKeys.title')}</span>
+                        <Key className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('apiKeys.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={t('settings.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/settings'>
-                        <Settings className='mr-2 h-4 w-4' />
-                        <span>{t('settings.title')}</span>
+                        <Settings className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('settings.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild tooltip={t('legal.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/legal'>
-                        <FileText className='mr-2 h-4 w-4' />
-                        <span>{t('legal.title')}</span>
+                        <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('legal.title')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('notifications.title', 'Bildirimler')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/notifications'>
+                        <Bell className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('notifications.title', 'Bildirimler')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -204,16 +267,24 @@ export default function SidebarLayout({
           <SidebarFooter className="mt-auto px-2 py-4">
             <SidebarSeparator />
             <div className="pt-2">
-              <UserMenu />
+              <div className="group-data-[collapsible=icon]:hidden">
+                <UserMenu />
+              </div>
             </div>
           </SidebarFooter>
+          <SidebarRail />
         </Sidebar>
 
         {/* Secondary Sidebar */}
         {pathname?.startsWith('/editor') && (
-          <Sidebar collapsible='none' className='w-64 flex-shrink-0 border-r'>
+          <Sidebar collapsible='icon' className='w-64 flex-shrink-0 border-r' style={{ '--sidebar-width-icon': '3.5rem' } as React.CSSProperties}>
             <SidebarHeader className='h-16 flex items-center px-4 mt-4'>
-              <h2 className='text-lg font-semibold'>Code Files</h2>
+              <div className="flex items-center justify-between w-full">
+                <h2 className='text-lg font-semibold group-data-[collapsible=icon]:hidden'>Code Files</h2>
+                <div className="hidden group-data-[collapsible=icon]:block group-data-[collapsible=icon]:text-center w-full">
+                  <Code2 className="h-4 w-4 mx-auto" />
+                </div>
+              </div>
             </SidebarHeader>
             <SidebarContent>
               <SidebarGroup>
@@ -223,9 +294,9 @@ export default function SidebarLayout({
                     <SidebarMenuItem>
                       <Dialog open={open} onOpenChange={setOpen}>
                         <DialogTrigger asChild>
-                          <SidebarMenuButton>
-                            <Plus className='h-4 w-4 mr-2' />
-                            <span>New Code File</span>
+                          <SidebarMenuButton tooltip="New Code File" className="group-data-[collapsible=icon]:justify-center">
+                            <Plus className='h-4 w-4 mr-2 group-data-[collapsible=icon]:mr-0' />
+                            <span className="group-data-[collapsible=icon]:hidden">New Code File</span>
                           </SidebarMenuButton>
                         </DialogTrigger>
                         <DialogContent>
@@ -260,18 +331,18 @@ export default function SidebarLayout({
                     </SidebarMenuItem>
                     {codes.map((code) => (
                       <SidebarMenuItem key={code.uuid}>
-                        <SidebarMenuButton asChild className='w-full'>
+                        <SidebarMenuButton asChild className='w-full group-data-[collapsible=icon]:justify-center' tooltip={code.fileName}>
                           <Link
                             href={`/editor/${code.uuid}`}
                             className='flex items-center w-full group'>
                             <div className='flex-grow flex items-center'>
-                              <Code2 className='mr-2 h-4 w-4' />
-                              <span>{code.fileName}</span>
+                              <Code2 className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                              <span className="group-data-[collapsible=icon]:hidden">{code.fileName}</span>
                             </div>
                             <Button
                               variant='ghost'
                               size='icon'
-                              className='h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity'
+                              className='h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity group-data-[collapsible=icon]:hidden'
                               onClick={(e) => {
                                 e.preventDefault();
                                 setSelectedCodeUuid(code.uuid);
@@ -287,6 +358,7 @@ export default function SidebarLayout({
                 </SidebarGroupContent>
               </SidebarGroup>
             </SidebarContent>
+            <SidebarRail />
           </Sidebar>
         )}
 
@@ -332,7 +404,12 @@ export default function SidebarLayout({
         </Dialog>
 
         {/* Main Content Area */}
-        <SidebarInset className='flex-grow'>
+        <SidebarInset className='flex-grow'
+          // Make content area take full width when sidebar is collapsed
+          style={{
+            marginLeft: sidebarExpanded ? '0' : '-2.5rem'
+          }}
+        >
           <main className='h-full overflow-auto'>{children}</main>
         </SidebarInset>
       </div>

@@ -22,8 +22,8 @@ export async function PATCH(req: Request) {
     const body = await req.json();
     const { name, language } = profileSchema.parse(body);
 
-    // Update user name if provided
-    if (name) {
+    // Update user name only if explicitly provided
+    if (name !== undefined) {
       await db
         .update(users)
         .set({ name, updated_at: new Date() })
