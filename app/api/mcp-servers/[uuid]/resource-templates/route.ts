@@ -1,11 +1,13 @@
 import {eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server'; // Import NextResponse
+import { NextRequest, NextResponse } from 'next/server'; // Ensure both are imported
 
 import { db } from '@/db';
-import { mcpServersTable,resourceTemplatesTable } from '@/db/schema';
+import { mcpServersTable, resourceTemplatesTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth'; // Use getAuthSession
 // Assuming a client exists or will be created to interact with the pluggedin-mcp proxy
 // import { getPluggedinMcpClient } from '@/lib/pluggedin-mcp-client'; // Placeholder
+
+// Remove explicit interface RouteContext
 
 // Helper function to parse variables from URI Template (RFC 6570 basic syntax)
 function parseTemplateVariables(uriTemplate: string): string[] {
@@ -20,17 +22,18 @@ function parseTemplateVariables(uriTemplate: string): string[] {
   return Array.from(variables);
 }
 
+// Apply correct signature for potentially promised params
 export async function GET(
-  request: Request,
-  { params }: { params: { uuid: string } } // params might be a Promise
+  request: NextRequest,
+  { params }: { params: Promise<{ uuid: string }> } // Type inner params as Promise
 ) {
-  const awaitedParams = await params; // Await the params object
+  const { uuid: serverUuid } = await params; // Await and destructure uuid
   const session = await getAuthSession(); // Call getAuthSession
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const userId = session.user.id;
-  const serverUuid = awaitedParams.uuid; // Use the awaited params
+  // serverUuid is now defined above
 
   try {
     // 1. Authorize: Verify the user owns the server via project/profile

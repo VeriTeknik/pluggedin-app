@@ -1,7 +1,9 @@
+'use server'; // Add the directive
+
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { toolsTable, ToolStatus } from '@/db/schema';
+import { ToggleStatus,toolsTable } from '@/db/schema'; // Use ToggleStatus
 
 export async function getToolsByMcpServerUuid(mcpServerUuid: string) {
   try {
@@ -15,7 +17,7 @@ export async function getToolsByMcpServerUuid(mcpServerUuid: string) {
   }
 }
 
-export async function toggleToolStatus(uuid: string, status: ToolStatus) {
+export async function toggleToolStatus(uuid: string, status: ToggleStatus) { // Change type to ToggleStatus
   try {
     await db
       .update(toolsTable)

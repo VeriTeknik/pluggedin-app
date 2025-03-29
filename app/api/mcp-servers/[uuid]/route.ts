@@ -1,5 +1,5 @@
 import {eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
@@ -15,15 +15,16 @@ const updateServerSchema = z.object({
 });
 
 export async function PATCH(
-  request: Request,
-  { params }: { params: { uuid: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ uuid: string }> }
 ) {
+  const { uuid: serverUuid } = await params;
+  
   const session = await getAuthSession();
   if (!session?.user?.id) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const userId = session.user.id;
-  const serverUuid = params.uuid;
 
   try {
     const body = await request.json();

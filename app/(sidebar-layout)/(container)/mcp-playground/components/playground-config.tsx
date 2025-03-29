@@ -525,7 +525,14 @@ export function PlaygroundConfig({
                   {t('playground.logs.empty')}
                 </div>
               ) : (
-                <div className="h-full overflow-auto">
+                <div 
+                  className="h-full overflow-auto" 
+                  onScroll={(e) => {
+                    // Prevent any attempt to automatically scroll
+                    e.stopPropagation();
+                  }}
+                  data-user-scroll="true"
+                >
                   {/* Simplified logs display for better performance and readability */}
                   <div className="space-y-0.5 p-2">
                     {(() => {

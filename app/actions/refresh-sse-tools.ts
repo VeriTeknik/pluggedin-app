@@ -1,7 +1,9 @@
 import { eq } from 'drizzle-orm';
+import { sql } from 'drizzle-orm'; // Import sql for excluded
 
 import { db } from '@/db';
-import { mcpServersTable, toolsTable, ToolStatus } from '@/db/schema';
+// Re-import toolsTable and use ToggleStatus
+import { mcpServersTable, ToggleStatus,toolsTable } from '@/db/schema';
 
 export async function refreshSseTools(serverUuid: string) {
   try {
@@ -25,32 +27,38 @@ export async function refreshSseTools(serverUuid: string) {
       throw new Error('Failed to fetch tools from SSE server');
     }
 
-    const tools = await response.json();
+    const tools = await response.json(); // Keep fetching, maybe log it?
 
-    // Update tools in database
+    console.log(`Fetched tools for SSE server ${serverUuid}:`, tools); // Log fetched tools
+
+    // Uncomment and update database logic
     await db.transaction(async (tx) => {
-      // First, mark all existing tools as inactive
+      // First, mark all existing tools for this server as inactive
       await tx
         .update(toolsTable)
-        .set({ status: ToolStatus.INACTIVE })
+        .set({ status: ToggleStatus.INACTIVE }) // Use ToggleStatus
         .where(eq(toolsTable.mcp_server_uuid, serverUuid));
 
-      // Then, update or insert new tools
+      // Then, update or insert new tools, setting them as active
       if (tools && Array.isArray(tools)) {
-        for (const tool of tools) {
-          await tx
+        const toolsToUpsert = tools.map((tool: any) => ({ // Assume tool structure from fetch
+          name: tool.name,
+          description: tool.description,
+          toolSchema: tool.inputSchema || tool.toolSchema, // Handle potential naming difference
+          mcp_server_uuid: serverUuid,
+          status: ToggleStatus.ACTIVE, // Set as ACTIVE
+        }));
+
+        if (toolsToUpsert.length > 0) {
+           await tx
             .insert(toolsTable)
-            .values({
-              ...tool,
-              mcp_server_uuid: serverUuid,
-              status: ToolStatus.ACTIVE,
-            })
+            .values(toolsToUpsert)
             .onConflictDoUpdate({
               target: [toolsTable.mcp_server_uuid, toolsTable.name],
               set: {
-                description: tool.description,
-                toolSchema: tool.toolSchema,
-                status: ToolStatus.ACTIVE,
+                description: sql`excluded.description`,
+                toolSchema: sql`excluded.tool_schema`,
+                status: ToggleStatus.ACTIVE, // Ensure status is updated to ACTIVE
               },
             });
         }

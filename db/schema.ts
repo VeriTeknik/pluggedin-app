@@ -1,5 +1,6 @@
-import { sql, relations } from 'drizzle-orm'; // Import relations
+import { relations,sql } from 'drizzle-orm'; // Import relations
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -8,8 +9,8 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique, // Import unique
   uuid,
-  boolean,
 } from 'drizzle-orm/pg-core';
 
 import { locales } from '@/i18n/config';
@@ -51,6 +52,27 @@ export const mcpServerSourceEnum = pgEnum(
   'mcp_server_source',
   enumToPgEnum(McpServerSource)
 );
+
+// Enum for tool/server active/inactive status
+export enum ToggleStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+}
+export const toggleStatusEnum = pgEnum(
+  'toggle_status',
+  enumToPgEnum(ToggleStatus)
+);
+
+// Enum for profile capabilities
+export enum ProfileCapability {
+  TOOLS_MANAGEMENT = 'TOOLS_MANAGEMENT',
+  // Add other capabilities here if needed
+}
+export const profileCapabilityEnum = pgEnum(
+  'profile_capability',
+  enumToPgEnum(ProfileCapability)
+);
+
 
 // Auth.js / NextAuth.js schema
 export const users = pgTable('users', {
@@ -168,6 +190,11 @@ export const profilesTable = pgTable(
       .notNull()
       .defaultNow(),
     language: languageEnum('language').default('en'),
+    // Add capabilities column
+    enabled_capabilities: profileCapabilityEnum('enabled_capabilities')
+      .array()
+      .notNull()
+      .default(sql`'{}'::profile_capability[]`),
   },
   (table) => [
     index('profiles_project_uuid_idx').on(table.project_uuid)
@@ -509,6 +536,39 @@ export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
   index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
 ]);
 
+// Table for storing discovered tools
+export const toolsTable = pgTable(
+  'tools',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    description: text('description'),
+    toolSchema: jsonb('tool_schema') // Store the inputSchema JSON
+      .$type<{
+        type: 'object';
+        properties?: Record<string, any>;
+        required?: string[]; // Add required if needed
+      }>()
+      .notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    mcp_server_uuid: uuid('mcp_server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    status: toggleStatusEnum('status').notNull().default(ToggleStatus.ACTIVE),
+  },
+  (table) => [
+    index('tools_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+    unique('tools_unique_tool_name_per_server_idx').on( // Ensure tool name is unique per server
+      table.mcp_server_uuid,
+      table.name
+    ),
+    index('tools_status_idx').on(table.status), // Index status for filtering
+  ]
+);
+
+
 // Table for storing discovered resource templates
 export const resourceTemplatesTable = pgTable(
   'resource_templates',
@@ -538,6 +598,14 @@ export const resourceTemplatesTable = pgTable(
 export const resourceTemplatesRelations = relations(resourceTemplatesTable, ({ one }) => ({
   mcpServer: one(mcpServersTable, {
     fields: [resourceTemplatesTable.mcp_server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// Relations for toolsTable
+export const toolsRelations = relations(toolsTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [toolsTable.mcp_server_uuid],
     references: [mcpServersTable.uuid],
   }),
 }));

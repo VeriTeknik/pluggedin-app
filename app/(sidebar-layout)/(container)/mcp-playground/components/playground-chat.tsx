@@ -1,7 +1,7 @@
 'use client';
 
-import { Loader2,Send, Settings } from 'lucide-react';
-import { useEffect } from 'react';
+import { Loader2, Send, Settings } from 'lucide-react';
+// Removed unused useEffect, useRef
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -53,19 +53,7 @@ export function PlaygroundChat({
   mcpServers,
 }: PlaygroundChatProps) {
   const { t } = useTranslation();
-  
-  // Auto scroll to bottom of messages
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      const container = messagesEndRef.current.parentElement;
-      if (container) {
-        const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-        if (isNearBottom) {
-          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
-    }
-  }, [messages, messagesEndRef, isThinking]);
+  // Removed useEffect for scrolling - will be handled by parent
 
   return (
     <Card className='flex flex-col h-[calc(100vh-12rem)] shadow-sm w-full'>
@@ -76,7 +64,14 @@ export function PlaygroundChat({
         </CardDescription>
       </CardHeader>
       <CardContent className='flex-1 overflow-hidden p-0 px-4'>
-        <ScrollArea className='h-[calc(100vh-20rem)] pr-4'>
+        <ScrollArea 
+          className='h-[calc(100vh-20rem)] pr-4'
+          onScroll={(e) => {
+            // Prevent any attempt to automatically scroll
+            e.stopPropagation();
+          }}
+          data-custom-scroll="true"
+        >
           {messages.length === 0 ? (
             <div className='flex flex-col items-center justify-center h-full text-center p-8'>
               <div className='bg-muted/30 rounded-full p-4 mb-4'>

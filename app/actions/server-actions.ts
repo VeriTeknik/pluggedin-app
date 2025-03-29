@@ -3,9 +3,9 @@
 import { and,eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { mcpServersTable, McpServerStatus,profilesTable } from '@/db/schema';
+import { mcpServersTable, McpServerStatus, ProfileCapability,profilesTable } from '@/db/schema'; // Import ProfileCapability
 
-export async function updateProfileCapabilities(uuid: string, capabilities: string[]) {
+export async function updateProfileCapabilities(uuid: string, capabilities: ProfileCapability[]) { // Change type to ProfileCapability[]
   try {
     await db
       .update(profilesTable)

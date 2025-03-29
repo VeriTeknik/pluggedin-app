@@ -313,21 +313,34 @@ export async function getOrCreatePlaygroundSession(
     // Format servers for conversion and apply sandboxing for STDIO using firejail
     const mcpServersConfig: Record<string, any> = {};
     selectedServers.forEach(server => {
+      // Check if the server is STDIO and has a command
       if (server.type === 'STDIO' && server.command) {
-        // Prepend firejail command for sandboxing on Linux
-        mcpServersConfig[server.name] = {
-          command: 'firejail', // The command is now firejail
-          args: [
-            '--quiet', // Suppress firejail output
-            server.command, // Original command becomes an argument to firejail
-            ...(server.args || []) // Append original args
-          ],
-          env: server.env,
-          url: server.url,
-          type: server.type
-        };
+        // Check if the platform is Linux to apply firejail sandboxing
+        if (process.platform === 'linux') {
+          // Prepend firejail command for sandboxing on Linux
+          mcpServersConfig[server.name] = {
+            command: 'firejail', // The command is now firejail
+            args: [
+              '--quiet', // Suppress firejail output
+              server.command, // Original command becomes an argument to firejail
+              ...(server.args || []) // Append original args
+            ],
+            env: server.env,
+            url: server.url,
+            type: server.type
+          };
+        } else {
+          // For non-Linux platforms (like macOS), use the original command directly
+          mcpServersConfig[server.name] = {
+            command: server.command,
+            args: server.args,
+            env: server.env,
+            url: server.url,
+            type: server.type
+          };
+        }
       } else {
-        // For non-STDIO servers, keep the original config
+        // For non-STDIO servers or servers without a command, keep the original config
         mcpServersConfig[server.name] = {
           command: server.command,
           args: server.args,

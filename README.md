@@ -13,6 +13,9 @@ A few feature highlights:
 - Support multi-workspace: e.g., activate a workspace of DB1 or switch to DB2 in another workspace, preventing polluting context of DB1 to your MCP Client.
 - **Resource Template Discovery**: View available resource templates (including variables) for connected MCP servers.
 - **Server Notes**: Add custom notes and instructions to each configured MCP server.
+- **Extensive Logging**: Provides detailed logging capabilities for MCP interactions in the Playground, aiding debugging and understanding.
+- **Model Agnostic Playground**: Utilizes Langchain, allowing testing of MCP tools with various LLMs (not just Claude).
+- **Expanded Discovery**: Search for MCP servers across GitHub, Smithery, and npmjs.com.
 
 The app is also self hostable, free and open source. The differences between this repo and cloud version are:
 

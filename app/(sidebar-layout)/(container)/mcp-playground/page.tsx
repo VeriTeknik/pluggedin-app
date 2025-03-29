@@ -98,47 +98,20 @@ export default function McpPlaygroundPage() {
 
   // Ref for settings throttling
   const updateSettingsThrottledRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Auto scroll to bottom of messages and logs
+  
+  // User scroll control flag
+  const [userScrollControlled, setUserScrollControlled] = useState(false);
+  
+  // Modified scrolling behavior that's disabled
   useEffect(() => {
-    // Function to smoothly scroll to bottom if we're already near the bottom
-    const scrollToBottomIfNearBottom = (ref: React.RefObject<HTMLDivElement>) => {
-      if (ref.current) {
-        const container = ref.current.parentElement;
-        if (container) {
-          // Check if we're already scrolled near the bottom
-          const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 100;
-          
-          // If we're near the bottom, scroll to bottom smoothly
-          if (isNearBottom) {
-            ref.current.scrollIntoView({ behavior: 'smooth' });
-          }
-        }
-      }
-    };
-    
-    // Handle message scroll
-    if (messagesEndRef.current) {
-      scrollToBottomIfNearBottom(messagesEndRef);
-    }
-    
-    // Handle logs scroll
-    if (logsEndRef.current) {
-      scrollToBottomIfNearBottom(logsEndRef);
-    }
-  }, [messages, clientLogs, serverLogs, isThinking]);
+    // Intentionally empty to disable auto-scrolling
+    // This prevents unwanted scrolling when the user is manually navigating
+  }, [messages, clientLogs, serverLogs]); 
 
-  // Auto scroll when tab changes to logs
+  // Auto scroll ONLY on user request, never automatically
+  const didInitialScrollRef = useRef<boolean>(false);
   useEffect(() => {
-    if (activeTab === 'logs' && logsEndRef.current) {
-      // First scroll immediately to improve responsiveness
-      logsEndRef.current.scrollIntoView();
-      
-      // Then do a smooth scroll after a short delay to ensure content is loaded
-      setTimeout(() => {
-        logsEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
-    }
+    // Do nothing - disable auto scrolling completely
   }, [activeTab]);
 
   // Cleanup effect
@@ -203,23 +176,23 @@ export default function McpPlaygroundPage() {
           
           // Adapt polling rate based on activity
           if (isThinking) {
-                      // When thinking, use more frequent updates
-                      if (logsDelta > 5) {
-                        // Lots of new logs - poll more frequently (up to 200ms)
-                        setPollInterval(prev => Math.max(200, prev - 50));
-                      } else if (logsDelta === 0) {
-                        // No new logs - gradually slow down (up to 500ms when thinking)
-                        setPollInterval(prev => Math.min(500, prev + 50));
-                      }
-                    }
+            // When thinking, use more frequent updates
+            if (logsDelta > 5) {
+              // Lots of new logs - poll more frequently (up to 200ms)
+              setPollInterval(prev => Math.max(200, prev - 50));
+            } else if (logsDelta === 0) {
+              // No new logs - gradually slow down (up to 500ms when thinking)
+              setPollInterval(prev => Math.min(500, prev + 50));
+            }
+          }
           else if (logsDelta > 0) {
-                        // Some activity - poll more frequently
-                        setPollInterval(prev => Math.max(750, prev - 50));
-                      }
+            // Some activity - poll more frequently
+            setPollInterval(prev => Math.max(750, prev - 50));
+          }
           else {
-                        // No activity - gradually slow down (up to 2000ms when idle)
-                        setPollInterval(prev => Math.min(2000, prev + 100));
-                      }
+            // No activity - gradually slow down (up to 2000ms when idle)
+            setPollInterval(prev => Math.min(2000, prev + 100));
+          }
           
           // Update logs
           setServerLogs(result.logs);
@@ -257,10 +230,8 @@ export default function McpPlaygroundPage() {
             }
           }
 
-          // Update scroll if needed
-          if (logsEndRef.current && activeTab === 'logs') {
-            logsEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          }
+          // Remove auto-scroll from polling - scroll only happens when user is near bottom
+          // which is already handled by the auto-scroll effect
         }
       } catch (error) {
         console.error('Failed to poll server logs:', error);
@@ -268,7 +239,7 @@ export default function McpPlaygroundPage() {
         setPollInterval(prev => Math.min(3000, prev + 500));
       }
     }, interval);
-  }, [profileUuid, isSessionActive, isThinking, activeTab, setPollInterval, setServerLogs, setMessages, logsEndRef, lastLogCountRef]); // Add dependencies for useCallback
+  }, [profileUuid, isSessionActive, isThinking, activeTab, setPollInterval, setServerLogs, setMessages, logsEndRef, lastLogCountRef]);
 
   // Stop polling for server logs
   const stopLogPolling = () => {
@@ -386,9 +357,10 @@ export default function McpPlaygroundPage() {
         'info',
         `LLM config: ${llmConfig.provider} ${llmConfig.model} (temp: ${llmConfig.temperature})`
       );
-      addLog('info', `Log level: ${logLevel}`);
-      setActiveTab('logs'); // Switch to logs tab immediately
-      startLogPolling(); // Start polling now
+    addLog('info', `Log level: ${logLevel}`);
+    // Don't force tab change - let user stay where they are
+    // This prevents unwanted scrolling
+    startLogPolling(); // Start polling now
 
     try {
       setIsProcessing(true); // Keep processing state until session is confirmed or fails
@@ -411,7 +383,7 @@ export default function McpPlaygroundPage() {
 
       if (result.success) {
         setIsSessionActive(true);
-        setMessages([]); // Clear chat messages on successful session start
+        updateMessages([]); // Clear chat messages on successful session start
         addLog('connection', 'MCP playground session active.'); // Confirmation log
         toast({
           title: 'Success',
@@ -494,7 +466,28 @@ export default function McpPlaygroundPage() {
     }
   };
 
-  // Send message
+  // Modified message update function to prevent automatic scroll
+  const updateMessages = useCallback((newMessages: Message[] | ((prev: Message[]) => Message[])) => {
+    // Use functional update to avoid closures with outdated state
+    setMessages(prev => {
+      // Calculate the new messages
+      const updatedMessages = typeof newMessages === 'function' 
+        ? newMessages(prev) 
+        : newMessages;
+      
+      // Get current scroll position before DOM update
+      const currentScrollY = window.scrollY;
+      
+      // After React updates the DOM, reset scroll position
+      setTimeout(() => {
+        window.scrollTo(0, currentScrollY);
+      }, 0);
+      
+      return updatedMessages;
+    });
+  }, []);
+
+  // Send message with controlled scroll
   const sendMessage = async () => {
     if (!inputValue.trim() || !isSessionActive) {
       return;
@@ -504,14 +497,22 @@ export default function McpPlaygroundPage() {
       setIsProcessing(true);
       setIsThinking(true);
 
+      // Record current scroll position
+      const scrollPosition = window.scrollY;
+
       // Kullanıcı mesajını ekle
       const userMessage = {
         role: 'human',
         content: inputValue,
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, userMessage]);
+      
+      // Use the controlled update function
+      updateMessages((prev) => [...prev, userMessage]);
       setInputValue('');
+
+      // Restore scroll position
+      setTimeout(() => window.scrollTo(0, scrollPosition), 0);
 
       addLog('execution', `Executing query: "${userMessage.content}"`);
 
@@ -519,8 +520,9 @@ export default function McpPlaygroundPage() {
       stopLogPolling();
       startLogPolling();
 
-      // Arayüzü güncelle ve düşünme durumunu göster
-      setActiveTab('chat');
+      // Only update thinking state, don't force tab change
+      // This prevents unwanted scrolling
+      setIsThinking(true);
 
       // LLM'e sorguyu gönder
       const result = await executePlaygroundQuery(
@@ -548,15 +550,22 @@ export default function McpPlaygroundPage() {
           );
 
           if (newMessages.length > 0) {
+            // Record current scroll position before updating UI
+            const scrollPos = window.scrollY;
+
             // Add timestamp to each message
             const timestampedMessages = newMessages.map((m: any) => ({
               ...m,
               timestamp: new Date(),
             }));
 
-            setMessages((prev) => [...prev, ...timestampedMessages]);
+            // Use the controlled update function 
+            updateMessages((prev) => [...prev, ...timestampedMessages]);
 
-            // Tool mesajlarını ayrıca logla 
+            // Restore scroll position
+            setTimeout(() => window.scrollTo(0, scrollPos), 0);
+
+            // Tool mesajlarını ayrıca logla
             timestampedMessages.forEach((msg: any) => {
               if (msg.role === 'tool') {
                 addLog(
@@ -578,7 +587,7 @@ export default function McpPlaygroundPage() {
           variant: 'destructive',
         });
         // Add error message to chat
-        setMessages((prev) => [
+        updateMessages((prev) => [
           ...prev,
           {
             role: 'ai',
@@ -599,7 +608,7 @@ export default function McpPlaygroundPage() {
         variant: 'destructive',
       });
       // Add error message to chat
-      setMessages((prev) => [
+      updateMessages((prev) => [
         ...prev,
         {
           role: 'ai',
@@ -699,6 +708,37 @@ export default function McpPlaygroundPage() {
     };
   }, []);
 
+  // Add a scroll guard to prevent programmatic scrolling
+  useEffect(() => {
+    // Create a scroll guard function
+    const scrollGuard = (e: Event) => {
+      // This won't be perfect, but can help in some cases
+      if (e.target !== document && e.target !== window) {
+        // Let user scrolling happen normally
+        return;
+      }
+
+      // Get the last known scroll position
+      const lastScroll = window.scrollY;
+      
+      // If there's a programmatic scroll attempt, schedule a reset
+      setTimeout(() => {
+        // If the scroll position changed without user interaction, reset it
+        if (window.scrollY !== lastScroll && !userScrollControlled) {
+          window.scrollTo(0, lastScroll);
+        }
+      }, 100);
+    };
+    
+    // Add the event listener
+    window.addEventListener('scroll', scrollGuard, { passive: true });
+    
+    // Cleanup
+    return () => {
+      window.removeEventListener('scroll', scrollGuard);
+    };
+  }, [userScrollControlled]);
+
   return (
     <div className='container mx-auto py-6 space-y-6'>
       <PlaygroundHero
@@ -713,30 +753,32 @@ export default function McpPlaygroundPage() {
       <div className='grid grid-cols-12 gap-6'>
         {/* Config section wider: md:col-span-5, lg:col-span-4 */}
         <div className='col-span-12 md:col-span-5 lg:col-span-4'>
-          <PlaygroundConfig
-            isLoading={isLoading}
-            mcpServers={mcpServers}
-            isSessionActive={isSessionActive}
-            isProcessing={isProcessing}
-            isUpdatingServer={isUpdatingServer}
-            sessionError={sessionError}
-            setSessionError={setSessionError}
-            toggleServerStatus={toggleServerStatus}
-            llmConfig={llmConfig}
-            setLlmConfig={setLlmConfig}
-            logLevel={logLevel}
-            setLogLevel={setLogLevel}
-            clientLogs={clientLogs}
-            serverLogs={serverLogs}
-            clearLogs={() => {
-              setClientLogs([]);
-              setServerLogs([]);
-            }}
-            saveSettings={saveSettings}
-            logsEndRef={logsEndRef}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-          />
+          {profileUuid && ( // Ensure profile is loaded before rendering config
+            <PlaygroundConfig
+              isLoading={isLoading}
+              mcpServers={mcpServers}
+              isSessionActive={isSessionActive}
+              isProcessing={isProcessing}
+              isUpdatingServer={isUpdatingServer}
+              sessionError={sessionError}
+              setSessionError={setSessionError}
+              toggleServerStatus={toggleServerStatus}
+              llmConfig={llmConfig}
+              setLlmConfig={setLlmConfig}
+              logLevel={logLevel}
+              setLogLevel={setLogLevel}
+              clientLogs={clientLogs}
+              serverLogs={serverLogs}
+              clearLogs={() => {
+                setClientLogs([]);
+                setServerLogs([]);
+              }}
+              saveSettings={saveSettings}
+              logsEndRef={logsEndRef}
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+            />
+          )}
         </div>
 
         {/* Chat section adjusted: md:col-span-7, lg:col-span-8 */}
