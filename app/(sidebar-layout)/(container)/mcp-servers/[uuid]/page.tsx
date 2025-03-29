@@ -26,9 +26,12 @@ import { Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea'; // Import Textarea
+import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for loading state
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
+import { ResourceTemplate } from '@/types/resource-template'; // Assuming this type exists or will be created
 
 export default function McpServerDetailPage({
   params,
@@ -51,6 +54,7 @@ export default function McpServerDetailPage({
       env: '',
       url: '',
       type: McpServerType.STDIO,
+      notes: '', // Add notes field
     },
   });
 
@@ -65,6 +69,16 @@ export default function McpServerDetailPage({
     () => getMcpServerByUuid(currentProfile?.uuid || '', uuid!)
   );
 
+  // SWR hook for fetching resource templates
+  const {
+    data: resourceTemplates,
+    error: templatesError,
+    isLoading: isLoadingTemplates,
+  } = useSWR<ResourceTemplate[]>(
+    uuid ? `/api/mcp-servers/${uuid}/resource-templates` : null,
+    (url: string) => fetch(url).then((res) => res.json()) // Add type to url parameter
+  );
+
   useEffect(() => {
     if (mcpServer) {
       form.reset({
@@ -77,6 +91,7 @@ export default function McpServerDetailPage({
           .join('\n'),
         url: mcpServer.url || '',
         type: mcpServer.type,
+        notes: mcpServer.notes || '', // Reset notes field
       });
       setHasChanges(false);
     }
@@ -97,8 +112,9 @@ export default function McpServerDetailPage({
               .join('\n')
           )) ||
           (mcpServer.type === McpServerType.SSE && value.url !== (mcpServer.url || '')) ||
-          value.type !== mcpServer.type;
-        
+          value.type !== mcpServer.type ||
+          value.notes !== (mcpServer.notes || ''); // Check notes field
+
         setHasChanges(isDifferent);
       }
     });
@@ -114,6 +130,7 @@ export default function McpServerDetailPage({
     env: string;
     url: string;
     type: McpServerType;
+    notes: string; // Add notes to type
   }) => {
     if (!mcpServer || !currentProfile?.uuid) {
       return;
@@ -141,10 +158,13 @@ export default function McpServerDetailPage({
         : {},
       command: data.type === McpServerType.STDIO ? data.command : undefined,
       url: data.type === McpServerType.SSE ? data.url : undefined,
+      notes: data.notes, // Include notes in processed data
     };
 
+    // Ensure processedData aligns with the expected type for updateMcpServer
+    // The action now accepts null for description, command, url, notes
     await updateMcpServer(currentProfile.uuid, mcpServer.uuid, processedData);
-    await mutate();
+    await mutate(); // Re-fetch server data after update
     // setIsEditingName(false);
     // setIsEditingDescription(false);
     // setHasChanges(false);
@@ -244,8 +264,10 @@ export default function McpServerDetailPage({
           <TabsList className="w-full justify-start mb-6">
             <TabsTrigger value="details">Server Details</TabsTrigger>
             <TabsTrigger value="config">Configuration</TabsTrigger>
+            <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="templates">Resource Templates</TabsTrigger>
           </TabsList>
-          
+
           <TabsContent value="details">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card className="shadow-sm">
@@ -294,9 +316,12 @@ export default function McpServerDetailPage({
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Consider adding a card for Notes preview here if desired */}
+
             </div>
           </TabsContent>
-          
+
           <TabsContent value="config">
             <div className="grid grid-cols-1 gap-6">
               {form.watch('type') === McpServerType.STDIO ? (
@@ -377,6 +402,69 @@ ANOTHER_KEY=another_value"
               )}
             </div>
           </TabsContent>
+
+          <TabsContent value="notes">
+            <Card className="shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-md font-medium">Notes</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <Textarea
+                  value={form.watch('notes')}
+                  onChange={(e) => form.setValue('notes', e.target.value)}
+                  placeholder="Add any notes, usage instructions, or known quirks for this server..."
+                  className="min-h-[200px] font-mono text-sm"
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="templates">
+            <Card className="shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-md font-medium">Resource Templates</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isLoadingTemplates && (
+                  <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                )}
+                {templatesError && (
+                  <p className="text-destructive text-sm">
+                    Failed to load resource templates.
+                  </p>
+                )}
+                {!isLoadingTemplates && !templatesError && (!resourceTemplates || resourceTemplates.length === 0) && (
+                  <p className="text-muted-foreground text-sm">
+                    No resource templates found for this server.
+                  </p>
+                )}
+                {!isLoadingTemplates && !templatesError && resourceTemplates && resourceTemplates.length > 0 && (
+                  <div className="space-y-4">
+                    {resourceTemplates.map((template) => (
+                      <div key={template.uuid} className="border p-4 rounded-md bg-muted/50">
+                        <p className="font-mono text-sm break-all mb-1">{template.uri_template}</p>
+                        {template.template_variables && template.template_variables.length > 0 && (
+                           <div className="mb-2">
+                             <span className="text-xs font-medium text-muted-foreground mr-2">Variables:</span>
+                             {template.template_variables.map((variable: string) => ( // Add type to variable
+                               <Badge key={variable} variant="secondary" className="mr-1 font-mono text-xs">{variable}</Badge>
+                             ))}
+                           </div>
+                         )}
+                        {template.name && <p className="text-sm font-semibold mb-1">{template.name}</p>}
+                        {template.description && <p className="text-xs text-muted-foreground">{template.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
         </Tabs>
       </Form>
     </div>

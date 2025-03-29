@@ -73,19 +73,35 @@ export async function updateMcpServer(
   uuid: string,
   data: {
     name?: string;
-    description?: string;
-    command?: string;
+    description?: string | null;
+    command?: string | null; // Allow null
     args?: string[];
     env?: { [key: string]: string };
-    url?: string;
+    url?: string | null; // Allow null
     type?: McpServerType;
+    notes?: string | null;
   }
 ): Promise<void> {
+  // Construct the update object carefully to handle undefined vs null
+  // Construct the update object carefully to handle undefined vs null
+  const updateData: Partial<typeof mcpServersTable.$inferInsert> = {};
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.description !== undefined) updateData.description = data.description; // Handles null
+  if (data.command !== undefined) updateData.command = data.command; // Handles null
+  if (data.args !== undefined) updateData.args = data.args;
+  if (data.env !== undefined) updateData.env = data.env;
+  if (data.url !== undefined) updateData.url = data.url; // Handles null
+  if (data.type !== undefined) updateData.type = data.type;
+  if (data.notes !== undefined) updateData.notes = data.notes; // Handles null
+
+  if (Object.keys(updateData).length === 0) {
+    console.warn("updateMcpServer called with no fields to update.");
+    return; // No fields to update
+  }
+
   await db
     .update(mcpServersTable)
-    .set({
-      ...data,
-    })
+    .set(updateData)
     .where(
       and(
         eq(mcpServersTable.uuid, uuid),
@@ -221,4 +237,4 @@ export async function bulkImportMcpServers(
   }
 
   return { success: true, count: serverEntries.length };
-} 
+}

@@ -16,4 +16,5 @@ export interface McpServer {
   url: string | null;
   source: McpServerSource;
   external_id: string | null;
+  notes: string | null; // Added notes field
 }

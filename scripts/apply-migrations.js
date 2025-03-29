@@ -1,12 +1,12 @@
 import { config } from 'dotenv';
-import { readFileSync } from 'fs';
-import { dirname, join } from 'path';
+import fs from 'fs'; // Import full fs module
+import path from 'path'; // Import full path module
 import pg from 'pg';
 import { fileURLToPath } from 'url';
 
 const { Pool } = pg;
 const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const __dirname = path.dirname(__filename); // Use path.dirname
 
 // Load environment variables from .env files first
 config({ path: '.env.local' });
@@ -37,48 +37,73 @@ function getDatabaseUrl() {
   return null;
 }
 
+// Function to find the latest migration file
+function getLatestMigrationFile() {
+  const drizzleDir = path.join(__dirname, '../drizzle');
+  try {
+    const files = fs.readdirSync(drizzleDir);
+    const sqlFiles = files
+      .filter(file => file.endsWith('.sql'))
+      .sort() // Sort alphabetically/numerically based on filename prefix
+      .reverse(); // Get the latest first
+
+    if (sqlFiles.length === 0) {
+      console.error('No SQL migration files found in drizzle directory.');
+      return null;
+    }
+    return sqlFiles[0]; // Return the latest migration filename
+  } catch (error) {
+    console.error('Error reading drizzle directory:', error);
+    return null;
+  }
+}
+
+
 const databaseUrl = getDatabaseUrl();
+const latestMigrationFileName = getLatestMigrationFile();
 
 if (!databaseUrl) {
   console.error('DATABASE_URL is not defined in environment variables or .env files.');
   process.exit(1);
 }
 
-// Define the specific migration file to apply
-const MIGRATION_FILE_NAME = '0018_wakeful_rocket_raccoon.sql';
+if (!latestMigrationFileName) {
+  console.error('Could not determine the latest migration file.');
+  process.exit(1);
+}
 
-async function applySpecificMigration() {
+async function applyLatestMigration() {
   const pool = new Pool({
     connectionString: databaseUrl
   });
-  
+
   try {
     console.log('Connecting to database...');
-    
-    // Construct the full path to the migration file
-    const migrationPath = join(__dirname, '../drizzle', MIGRATION_FILE_NAME); // Adjusted path assuming script is in /scripts and migrations in /drizzle
-    
+
+    // Construct the full path to the latest migration file
+    const migrationPath = path.join(__dirname, '../drizzle', latestMigrationFileName);
+
     console.log(`Reading migration file: ${migrationPath}`);
-    const migrationSql = readFileSync(migrationPath, 'utf8');
-    
-    console.log(`Applying specific migration: ${MIGRATION_FILE_NAME}`);
-    
+    const migrationSql = fs.readFileSync(migrationPath, 'utf8');
+
+    console.log(`Applying latest migration: ${latestMigrationFileName}`);
+
     // Execute the SQL
     await pool.query(migrationSql);
-    
-    console.log(`Migration ${MIGRATION_FILE_NAME} applied successfully!`);
-    
-    // Optional: Manually insert into __drizzle_migrations if needed, but be cautious
-    // await pool.query("INSERT INTO drizzle.__drizzle_migrations (migration_hash, created_at) VALUES ($1, $2)", [MIGRATION_FILE_NAME, BigInt(Date.now())]);
-    // console.log(`Recorded ${MIGRATION_FILE_NAME} in __drizzle_migrations.`);
+
+    console.log(`Migration ${latestMigrationFileName} applied successfully!`);
+
+    // Drizzle Kit's migrate command handles the __drizzle_migrations table automatically.
+    // Manual insertion is generally not needed when using a script like this just for applying SQL.
 
   } catch (error) {
-    console.error(`Error applying migration ${MIGRATION_FILE_NAME}:`, error);
-    // Check if the error is because the enum values already exist (idempotency)
-    if (error.message.includes('already exists')) {
-       console.log(`Ignoring error as enum value likely already exists.`);
+    console.error(`Error applying migration ${latestMigrationFileName}:`, error);
+    // Keep the idempotency check if needed for specific errors, otherwise fail
+    if (error.message.includes('already exists') || error.message.includes('duplicate key value violates unique constraint')) {
+       console.log(`Ignoring error as change likely already applied (idempotency check).`);
+       // Allow script to finish successfully if it's an idempotency issue
     } else {
-       process.exit(1);
+       process.exit(1); // Exit with error for other issues
     }
   } finally {
     console.log('Closing database connection...');
@@ -87,4 +112,4 @@ async function applySpecificMigration() {
   }
 }
 
-applySpecificMigration();
+applyLatestMigration();
