@@ -1,5 +1,6 @@
-import { db } from '@/db';
 import { eq } from 'drizzle-orm';
+
+import { db } from '@/db';
 import { toolsTable, ToolStatus } from '@/db/schema';
 
 export async function getToolsByMcpServerUuid(mcpServerUuid: string) {

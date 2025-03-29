@@ -1,9 +1,10 @@
+import {eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
+
 import { db } from '@/db';
 import { mcpServersTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 import { getAuthSession } from '@/lib/auth';
-import { z } from 'zod';
 
 // Define schema for PATCH request body
 const updateServerSchema = z.object({

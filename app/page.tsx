@@ -2,8 +2,8 @@
 
 import { ArrowRight, FlaskConical, LogIn, Unplug, Wrench } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect,useState } from 'react'; // Import useState and useEffect
 import { useTranslation } from 'react-i18next';
-import { useState, useEffect } from 'react'; // Import useState and useEffect
 
 import { Footer } from '@/components/footer';
 import { LandingHero } from '@/components/landing-hero';

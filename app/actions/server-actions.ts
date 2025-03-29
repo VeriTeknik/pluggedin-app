@@ -1,8 +1,9 @@
 'use server';
 
+import { and,eq } from 'drizzle-orm';
+
 import { db } from '@/db';
-import { eq, and } from 'drizzle-orm';
-import { profilesTable, mcpServersTable, McpServerStatus } from '@/db/schema';
+import { mcpServersTable, McpServerStatus,profilesTable } from '@/db/schema';
 
 export async function updateProfileCapabilities(uuid: string, capabilities: string[]) {
   try {
@@ -18,17 +19,15 @@ export async function updateProfileCapabilities(uuid: string, capabilities: stri
 
 export async function getMcpServers(profileUuid: string, status: McpServerStatus) {
   try {
-    const servers = await db
-      .select()
-      .from(mcpServersTable)
-      .where(
-        and(
-          eq(mcpServersTable.profile_uuid, profileUuid),
-          eq(mcpServersTable.status, status)
-        )
-      );
-
-    return servers;
+    return await db
+          .select()
+          .from(mcpServersTable)
+          .where(
+            and(
+              eq(mcpServersTable.profile_uuid, profileUuid),
+              eq(mcpServersTable.status, status)
+            )
+          );
   } catch (error) {
     console.error('Error getting MCP servers:', error);
     throw new Error('Failed to get MCP servers');

@@ -1,7 +1,8 @@
+import {eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server'; // Import NextResponse
+
 import { db } from '@/db';
-import { resourceTemplatesTable, mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { mcpServersTable,resourceTemplatesTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth'; // Use getAuthSession
 // Assuming a client exists or will be created to interact with the pluggedin-mcp proxy
 // import { getPluggedinMcpClient } from '@/lib/pluggedin-mcp-client'; // Placeholder

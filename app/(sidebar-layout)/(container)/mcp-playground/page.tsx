@@ -189,7 +189,9 @@ export default function McpPlaygroundPage() {
   // Helper to create polling interval with specific delay, wrapped in useCallback
   const createPollingInterval = useCallback((interval: number) => {
     logsPollingRef.current = window.setInterval(async () => {
-      if (!profileUuid || !isSessionActive) return;
+      if (!profileUuid || !isSessionActive) {
+        return;
+      }
 
       try {
         const result = await getServerLogs(profileUuid);
@@ -201,24 +203,23 @@ export default function McpPlaygroundPage() {
           
           // Adapt polling rate based on activity
           if (isThinking) {
-            // When thinking, use more frequent updates
-            if (logsDelta > 5) {
-              // Lots of new logs - poll more frequently (up to 200ms)
-              setPollInterval(prev => Math.max(200, prev - 50));
-            } else if (logsDelta === 0) {
-              // No new logs - gradually slow down (up to 500ms when thinking)
-              setPollInterval(prev => Math.min(500, prev + 50));
-            }
-          } else {
-            // When not thinking, use less frequent updates
-            if (logsDelta > 0) {
-              // Some activity - poll more frequently
-              setPollInterval(prev => Math.max(750, prev - 50));
-            } else {
-              // No activity - gradually slow down (up to 2000ms when idle)
-              setPollInterval(prev => Math.min(2000, prev + 100));
-            }
-          }
+                      // When thinking, use more frequent updates
+                      if (logsDelta > 5) {
+                        // Lots of new logs - poll more frequently (up to 200ms)
+                        setPollInterval(prev => Math.max(200, prev - 50));
+                      } else if (logsDelta === 0) {
+                        // No new logs - gradually slow down (up to 500ms when thinking)
+                        setPollInterval(prev => Math.min(500, prev + 50));
+                      }
+                    }
+          else if (logsDelta > 0) {
+                        // Some activity - poll more frequently
+                        setPollInterval(prev => Math.max(750, prev - 50));
+                      }
+          else {
+                        // No activity - gradually slow down (up to 2000ms when idle)
+                        setPollInterval(prev => Math.min(2000, prev + 100));
+                      }
           
           // Update logs
           setServerLogs(result.logs);

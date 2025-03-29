@@ -1,6 +1,7 @@
-import { db } from '@/db';
 import { eq } from 'drizzle-orm';
-import { mcpServersTable, toolsTable, McpServerStatus, ToolStatus } from '@/db/schema';
+
+import { db } from '@/db';
+import { mcpServersTable, toolsTable, ToolStatus } from '@/db/schema';
 
 export async function refreshSseTools(serverUuid: string) {
   try {
