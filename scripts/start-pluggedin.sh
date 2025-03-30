@@ -53,4 +53,4 @@ cp .env .next/standalone/
 # Setup and start the systemd service
 setup_systemd_service
 
-log "Plugged.in application is now running on port 12005" 
+log "Plugged.in application is now running on port 12005"
