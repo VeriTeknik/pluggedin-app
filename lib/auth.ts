@@ -76,7 +76,7 @@ export const authOptions: NextAuthOptions = {
             sameSite: 'lax',
             path: '/',
             secure: true,
-            domain: '.plugged.in'
+            domain: process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL).hostname : undefined
           }
         },
         callbackUrl: {
@@ -86,7 +86,7 @@ export const authOptions: NextAuthOptions = {
             sameSite: 'lax',
             path: '/',
             secure: true,
-            domain: '.plugged.in'
+            domain: process.env.NEXTAUTH_URL ? new URL(process.env.NEXTAUTH_URL).hostname : undefined
           }
         },
         csrfToken: {

@@ -55,7 +55,9 @@ export async function getProjects() {
       });
       
       if (!userExists) {
-        throw new Error('User not found in database. This may be an issue with your login session.');
+        console.warn(`User ${session.user.id} not found in database despite valid session`);
+        // Return empty array instead of throwing error
+        return [];
       }
 
       let projects = await db
@@ -103,14 +105,16 @@ export async function getProjects() {
           projects = [defaultProject];
         } catch (error) {
           console.error('Error creating default project:', error);
-          throw new Error('Failed to create default project: ' + (error instanceof Error ? error.message : String(error)));
+          // Return empty array instead of throwing error
+          return [];
         }
       }
 
       return projects;
     } catch (error) {
       console.error('Error in getProjects:', error);
-      throw error; // Re-throw to be handled by withAuth
+      // Return empty array instead of re-throwing
+      return [];
     }
   });
 }

@@ -18,6 +18,13 @@ export default function LogoutPage() {
           credentials: 'include'
         });
         
+        // Get the domain from current hostname
+        const hostname = window.location.hostname;
+        const domainParts = hostname.split('.');
+        const baseDomain = domainParts.length >= 2 
+          ? domainParts.slice(-2).join('.') 
+          : hostname;
+        
         // Clear all cookies related to authentication
         document.cookie.split(';').forEach(cookie => {
           const [name] = cookie.trim().split('=');
@@ -26,10 +33,15 @@ export default function LogoutPage() {
           document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/;`;
           
           // Clear with exact domain
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=plugged.in;`;
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=${hostname};`;
           
-          // Clear with domain with leading dot
-          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.plugged.in;`;
+          // Clear with parent domain
+          document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.${baseDomain};`;
+          
+          // Clear with subdomain
+          if (domainParts.length > 2) {
+            document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; domain=.${hostname};`;
+          }
         });
 
         // Use signOut with redirect: false to manually handle redirects
