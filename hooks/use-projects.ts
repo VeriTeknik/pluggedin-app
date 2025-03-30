@@ -21,44 +21,25 @@ export const useProjects = () => {
     getProjects,
     {
       onError: (error) => {
-        // Handle session-related errors
-        if (
-          error?.message?.includes('User not found in database') ||
-          error?.message?.includes('Unauthorized') ||
-          error?.message?.includes('Session expired') ||
-          error?.message?.toLowerCase().includes('session') ||
-          error?.message?.toLowerCase().includes('auth')
-        ) {
-          // Show toast notification
-          toast({
-            title: t('common.error'),
-            description: t('common.errors.unexpected'),
-            variant: 'destructive',
-          });
-
-          // Clear any session data
-          localStorage.clear();
-          sessionStorage.clear();
-          
-          // Redirect to logout for proper cleanup
-          window.location.href = '/logout';
-          return [];
-        }
-
-        // Handle server component render errors
-        if (error?.message?.includes('Server Components render')) {
-          console.error('Server Components render error:', error);
-          // Return empty array to prevent UI from breaking
-          return [];
-        }
-
-        // Handle other errors
+        // Log the error but don't automatically redirect
         console.error('Projects error:', error);
+        
+        // Show toast notification for user feedback
         toast({
           title: t('common.error'),
           description: error?.message || t('common.errors.unexpected'),
           variant: 'destructive',
         });
+        
+        // For auth issues, clear the stored project
+        const isAuthIssue = 
+          error?.message?.toLowerCase().includes('unauthorized') ||
+          error?.message?.toLowerCase().includes('session expired');
+          
+        if (isAuthIssue) {
+          localStorage.removeItem(CURRENT_PROJECT_KEY);
+        }
+        
         return [];
       },
       // Add retry configuration
@@ -74,7 +55,7 @@ export const useProjects = () => {
         return true;
       },
       // Limit retries
-      errorRetryCount: 3
+      errorRetryCount: 2
     }
   );
 

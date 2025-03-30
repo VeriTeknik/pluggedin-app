@@ -11,8 +11,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 
 export default function Home() {
-  const { t } = useTranslation();
-  
+  const { t, ready } = useTranslation();
+
+  if (!ready) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <div className="container mx-auto py-8 space-y-12 flex-grow">

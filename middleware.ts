@@ -25,13 +25,32 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // Define routes that require authentication
-  const protectedRoutes = ['/search', '/mcp-servers', '/mcp-playground'];
+  const protectedRoutes = [
+    '/search', 
+    '/mcp-servers', 
+    '/mcp-playground',
+    '/custom-mcp-servers',
+    '/settings',
+    '/api-keys',
+    '/notifications',
+    '/editor'
+  ];
   
   // Define routes that are only accessible to unauthenticated users
   const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 
   // Define routes that can be accessed regardless of authentication status
-  const publicRoutes = ['/logout'];
+  const publicRoutes = [
+    '/', 
+    '/logout',
+    '/setup-guide',
+    '/inspector-guide',
+    '/legal',
+    '/legal/contact',
+    '/legal/disclaimer',
+    '/legal/privacy-policy',
+    '/legal/terms-of-service'
+  ];
 
   // Process MCP API requests for audit logging
   if (pathname.startsWith('/api/mcp/')) {
@@ -82,7 +101,9 @@ export async function middleware(request: NextRequest) {
   const isAuthRoute = authRoutes.some((route) => pathname === route);
 
   // Check if the route is public (accessible to both authenticated and unauthenticated users)
-  const isPublicRoute = publicRoutes.some((route) => pathname === route);
+  const isPublicRoute = publicRoutes.some((route) => 
+    route === pathname || (pathname.startsWith(route) && route !== '/')
+  );
 
   // Allow access to public routes
   if (isPublicRoute) {
@@ -96,7 +117,9 @@ export async function middleware(request: NextRequest) {
 
   // Redirect unauthenticated users to login
   if (requiresAuth && !isAuthenticated) {
-    const response = NextResponse.redirect(new URL('/login', request.url));
+    // Store the current URL as the callback URL
+    const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
+    const response = NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));
     return response;
   }
 
