@@ -56,11 +56,11 @@ import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
 import { UserMenu } from './user-menu';
 
-// Temporary solution until we set up proper version importing
-const version = '0.1.1';
-
 // Local storage key for sidebar state
 const SIDEBAR_STATE_KEY = 'sidebar:expanded';
+
+// Get version from environment variable (set in next.config.ts)
+const version = process.env.NEXT_PUBLIC_APP_VERSION || '0.4.0';
 
 export default function SidebarLayout({
   children,
