@@ -28,7 +28,9 @@ export function I18nProvider({
       // If no stored lang and current lang is default, try browser detection
       const browserLang = navigator.language.split('-')[0]; // Get base language (e.g., 'en' from 'en-US')
       if (locales.includes(browserLang as Locale) && browserLang !== defaultLocale) {
-        console.log(`Detected browser language: ${browserLang}, setting language.`);
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug(`Detected browser language: ${browserLang}, setting language.`);
+        }
         i18n.changeLanguage(browserLang);
         localStorage.setItem('pluggedin_language', browserLang);
       }

@@ -2,7 +2,6 @@
 
 import { ArrowRight, FlaskConical, LogIn, Unplug, Wrench } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect,useState } from 'react'; // Import useState and useEffect
 import { useTranslation } from 'react-i18next';
 
 import { Footer } from '@/components/footer';
@@ -12,12 +11,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 
 export default function Home() {
-  const { t } = useTranslation();
-  const [isClient, setIsClient] = useState(false);
+  const { t, ready } = useTranslation();
 
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
+  if (!ready) {
+    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -28,8 +26,7 @@ export default function Home() {
           <Button asChild variant="outline">
             <Link href="/mcp-servers" className="flex items-center">
               <LogIn className="mr-2 h-4 w-4" />
-              {/* Only render translated text after client mount */}
-              {isClient ? t('landing.navigation.enterApp') : 'Enter App'}
+              {t('landing.navigation.enterApp')}
             </Link>
           </Button>
         </div>

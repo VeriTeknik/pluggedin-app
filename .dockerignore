@@ -11,3 +11,7 @@ LICENSE
 .next
 *.swp
 /scripts
+
+# TypeDoc
+typedoc.json
+docs/api/
