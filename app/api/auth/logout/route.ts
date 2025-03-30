@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 // GET handler for server-side logout
-export async function GET() {
+export async function GET(req: NextRequest) {
   // Clear all Next.js Auth cookies
   const cookieNames = [
     'next-auth.session-token',
@@ -24,28 +24,51 @@ export async function GET() {
     }
   );
   
+  // Get domain from host header or NEXTAUTH_URL
+  let hostname = req.headers.get('host') || '';
+  if (hostname.includes(':')) {
+    hostname = hostname.split(':')[0]; // Remove port if present
+  }
+  
+  // Get the base domain (e.g., plugged.in from rc1.plugged.in)
+  const domainParts = hostname.split('.');
+  const baseDomain = domainParts.length >= 2 
+    ? domainParts.slice(-2).join('.') 
+    : hostname;
+  
   // Delete all cookies related to authentication
   cookieNames.forEach(name => {
-    // Delete with normal domain
+    // Delete with default options (no domain)
     response.cookies.delete(name);
     
-    // Also try with domain flag
+    // Try with exact hostname
     response.cookies.set({
       name,
       value: '',
       expires: new Date(0),
       path: '/',
-      domain: '.plugged.in', // Match the domain with leading dot
+      domain: hostname,
     });
     
-    // And try without leading dot
+    // Try with base domain with leading dot
     response.cookies.set({
       name,
       value: '',
       expires: new Date(0),
       path: '/',
-      domain: 'plugged.in',
+      domain: `.${baseDomain}`,
     });
+    
+    // Try with full domain with leading dot
+    if (domainParts.length > 2) {
+      response.cookies.set({
+        name,
+        value: '',
+        expires: new Date(0),
+        path: '/',
+        domain: `.${hostname}`,
+      });
+    }
   });
   
   return response;
