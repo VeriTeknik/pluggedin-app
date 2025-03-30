@@ -89,9 +89,10 @@ export function PlaygroundHero({
             <Separator orientation='vertical' className='mx-3 h-4' />
             <div className='text-sm text-muted-foreground flex items-center gap-1.5'>
               <Server className='h-3.5 w-3.5' />
-              {t('playground.status.serversConnected', {
-                count: mcpServers?.filter((s) => s.status === 'ACTIVE').length || 0
-              })}
+              {(() => {
+                const activeCount = mcpServers?.filter((s) => s.status === 'ACTIVE').length || 0;
+                return `${activeCount} ${activeCount === 1 ? 'server' : 'servers'} connected`;
+              })()}
             </div>
             <Separator orientation='vertical' className='mx-3 h-4' />
             <div className='text-sm text-muted-foreground flex items-center gap-1.5'>

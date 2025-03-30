@@ -1,7 +1,9 @@
-import { headers } from 'next/headers';
+// Remove headers import as it forces dynamic rendering
+// import { headers } from 'next/headers';
 
 import { getActiveProfileLanguage } from '@/app/actions/profiles';
-import { defaultLocale, Locale, locales } from '@/i18n/config';
+// Remove unused Locale and locales imports
+import { defaultLocale } from '@/i18n/config';
 
 import { I18nProvider } from './i18n-provider';
 
@@ -13,27 +15,15 @@ async function getInitialLocale(): Promise<string> {
       return profileLanguage;
     }
 
-    // Fallback to browser language
-    const headersList = await headers();
-    const acceptLanguage = headersList.get('accept-language');
-    
-    if (!acceptLanguage) {
-      return defaultLocale;
-    }
-    
-    // Get language from accept-language header
-    const browserLocales = acceptLanguage.split(',')
-      .map((locale: string) => locale.split(';')[0])
-      .map((locale: string) => locale.split('-')[0]);
-      
-    // Find first matching locale
-    const matchedLocale = browserLocales.find((locale: string) => 
-      locales.includes(locale as Locale)
-    );
-    
-    return matchedLocale || defaultLocale;
-  } catch (_error) {
-    // Fallback to default locale if headers are not available
+    // Remove browser language detection using headers() on the server
+    // Client-side detection will be handled in the I18nProvider client component
+
+    // Always return defaultLocale if profile language is not found on the server
+    return defaultLocale;
+
+  } catch (error) {
+    // Log the error for debugging, but still return default
+    console.error("Failed to get active profile language:", error);
     return defaultLocale;
   }
 }

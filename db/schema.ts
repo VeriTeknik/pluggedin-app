@@ -1,5 +1,6 @@
-import { sql } from 'drizzle-orm';
+import { relations,sql } from 'drizzle-orm'; // Import relations
 import {
+  boolean,
   index,
   integer,
   jsonb,
@@ -8,8 +9,8 @@ import {
   primaryKey,
   text,
   timestamp,
+  unique, // Import unique
   uuid,
-  boolean,
 } from 'drizzle-orm/pg-core';
 
 import { locales } from '@/i18n/config';
@@ -51,6 +52,27 @@ export const mcpServerSourceEnum = pgEnum(
   'mcp_server_source',
   enumToPgEnum(McpServerSource)
 );
+
+// Enum for tool/server active/inactive status
+export enum ToggleStatus {
+  ACTIVE = 'ACTIVE',
+  INACTIVE = 'INACTIVE',
+}
+export const toggleStatusEnum = pgEnum(
+  'toggle_status',
+  enumToPgEnum(ToggleStatus)
+);
+
+// Enum for profile capabilities
+export enum ProfileCapability {
+  TOOLS_MANAGEMENT = 'TOOLS_MANAGEMENT',
+  // Add other capabilities here if needed
+}
+export const profileCapabilityEnum = pgEnum(
+  'profile_capability',
+  enumToPgEnum(ProfileCapability)
+);
+
 
 // Auth.js / NextAuth.js schema
 export const users = pgTable('users', {
@@ -140,6 +162,22 @@ export const projectsTable = pgTable(
   ]
 );
 
+// Relations for projectsTable
+export const projectsRelations = relations(projectsTable, ({ one, many }) => ({
+  user: one(users, {
+    fields: [projectsTable.user_id],
+    references: [users.id],
+  }),
+  profiles: many(profilesTable),
+  apiKeys: many(apiKeysTable),
+  activeProfile: one(profilesTable, {
+    fields: [projectsTable.active_profile_uuid],
+    references: [profilesTable.uuid],
+    relationName: 'activeProfile', // Optional: Define a name if needed
+  }),
+}));
+
+
 export const profilesTable = pgTable(
   'profiles',
   {
@@ -152,11 +190,36 @@ export const profilesTable = pgTable(
       .notNull()
       .defaultNow(),
     language: languageEnum('language').default('en'),
+    // Add capabilities column
+    enabled_capabilities: profileCapabilityEnum('enabled_capabilities')
+      .array()
+      .notNull()
+      .default(sql`'{}'::profile_capability[]`),
   },
   (table) => [
     index('profiles_project_uuid_idx').on(table.project_uuid)
   ]
 );
+
+// Relations for profilesTable
+export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
+  project: one(projectsTable, {
+    fields: [profilesTable.project_uuid],
+    references: [projectsTable.uuid],
+  }),
+  mcpServers: many(mcpServersTable),
+  customMcpServers: many(customMcpServersTable),
+  playgroundSettings: one(playgroundSettingsTable, { // Assuming one-to-one or one-to-many where profile is unique
+    fields: [profilesTable.uuid],
+    references: [playgroundSettingsTable.profile_uuid],
+  }),
+  serverInstallations: many(serverInstallationsTable),
+  serverRatings: many(serverRatingsTable),
+  auditLogs: many(auditLogsTable),
+  notifications: many(notificationsTable),
+  logRetentionPolicies: many(logRetentionPoliciesTable), // Assuming one profile can have multiple policies over time? Or one-to-one?
+}));
+
 
 // Define the foreign key relationship after both tables are defined
 // This will be applied in a separate migration
@@ -232,6 +295,7 @@ export const mcpServersTable = pgTable(
       .notNull()
       .default(McpServerSource.PLUGGEDIN),
     external_id: text('external_id'),
+    notes: text('notes'), // Added notes column
   },
   (table) => [
     index('mcp_servers_status_idx').on(table.status),
@@ -243,6 +307,19 @@ export const mcpServersTable = pgTable(
     )`,
   ]
 );
+
+// Relations for mcpServersTable
+export const mcpServersRelations = relations(mcpServersTable, ({ one, many }) => ({
+  profile: one(profilesTable, {
+    fields: [mcpServersTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  resourceTemplates: many(resourceTemplatesTable),
+  serverInstallations: many(serverInstallationsTable),
+  serverRatings: many(serverRatingsTable),
+  auditLogs: many(auditLogsTable),
+}));
+
 
 export const customMcpServersTable = pgTable(
   'custom_mcp_servers',
@@ -458,3 +535,99 @@ export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
 (table) => [
   index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
 ]);
+
+// Table for storing discovered tools
+export const toolsTable = pgTable(
+  'tools',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    name: text('name').notNull(),
+    description: text('description'),
+    toolSchema: jsonb('tool_schema') // Store the inputSchema JSON
+      .$type<{
+        type: 'object';
+        properties?: Record<string, any>;
+        required?: string[]; // Add required if needed
+      }>()
+      .notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    mcp_server_uuid: uuid('mcp_server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    status: toggleStatusEnum('status').notNull().default(ToggleStatus.ACTIVE),
+  },
+  (table) => [
+    index('tools_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+    unique('tools_unique_tool_name_per_server_idx').on( // Ensure tool name is unique per server
+      table.mcp_server_uuid,
+      table.name
+    ),
+    index('tools_status_idx').on(table.status), // Index status for filtering
+  ]
+);
+
+
+// Table for storing discovered resource templates
+export const resourceTemplatesTable = pgTable(
+  'resource_templates',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    mcp_server_uuid: uuid('mcp_server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    uri_template: text('uri_template').notNull(),
+    name: text('name'),
+    description: text('description'),
+    mime_type: text('mime_type'),
+    template_variables: jsonb('template_variables') // Store extracted variables as JSON array
+      .$type<string[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('resource_templates_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+  ]
+);
+
+// Relations for resourceTemplatesTable
+export const resourceTemplatesRelations = relations(resourceTemplatesTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [resourceTemplatesTable.mcp_server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// Relations for toolsTable
+export const toolsRelations = relations(toolsTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [toolsTable.mcp_server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// Add other relations as needed for users, accounts, sessions etc. if complex queries are used elsewhere
+export const usersRelations = relations(users, ({ many }) => ({
+	accounts: many(accounts),
+  sessions: many(sessions),
+  projects: many(projectsTable),
+  codes: many(codesTable),
+}));
+
+export const accountsRelations = relations(accounts, ({ one }) => ({
+	user: one(users, {
+		fields: [accounts.userId],
+		references: [users.id],
+	}),
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id],
+  }),
+}));

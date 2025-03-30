@@ -60,7 +60,9 @@ export default function NotificationsPage() {
 
   // Handle mark as read
   const handleMarkAsRead = async (id: string) => {
-    if (!profileUuid) return;
+    if (!profileUuid) {
+      return;
+    }
 
     try {
       await markNotificationAsRead(id, profileUuid);
@@ -76,7 +78,9 @@ export default function NotificationsPage() {
 
   // Handle delete notification
   const handleDelete = async (id: string) => {
-    if (!profileUuid) return;
+    if (!profileUuid) {
+      return;
+    }
 
     try {
       await deleteNotification(id, profileUuid);
@@ -96,7 +100,9 @@ export default function NotificationsPage() {
 
   // Handle delete all notifications
   const handleDeleteAll = async () => {
-    if (!profileUuid) return;
+    if (!profileUuid) {
+      return;
+    }
 
     try {
       await deleteAllNotifications(profileUuid);
@@ -116,8 +122,12 @@ export default function NotificationsPage() {
 
   // Filter notifications based on active tab
   const filteredNotifications = notifications.filter((notification) => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'unread') return !notification.read;
+    if (activeTab === 'all') {
+      return true;
+    }
+    if (activeTab === 'unread') {
+      return !notification.read;
+    }
     return notification.type.toUpperCase() === activeTab.toUpperCase();
   });
 
