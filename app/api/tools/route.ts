@@ -113,7 +113,7 @@ export async function POST(request: Request) {
         description,
         toolSchema, // Ensure this matches the jsonb structure expected by the DB
         mcp_server_uuid,
-        // status: ToggleStatus.ACTIVE // Default to ACTIVE on report? Or let proxy decide?
+        status: ToggleStatus.ACTIVE, // Default to ACTIVE on report
       });
     }
 
