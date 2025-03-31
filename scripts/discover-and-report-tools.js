@@ -12,32 +12,32 @@
 // A more robust solution might involve calling the pluggedin-mcp executable directly
 // or having pluggedin-mcp expose this as a library function.
 
+import path from 'node:path'; // Import path module
+
 async function main() {
-  let reportAllCapabilities; // Renamed variable
-  try {
-    // Attempt to import from a potential node_modules location or linked workspace
-    const module1 = await import('pluggedin-mcp/dist/report-tools.js');
-    reportAllCapabilities = module1.reportAllCapabilities; // Use correct function name
-  } catch (e1) {
-    console.warn("Could not import 'pluggedin-mcp/dist/report-tools.js'. Trying relative path...");
-    try {
-      // Fallback for potentially different structures (e.g., monorepo sibling)
-      // This path is highly dependent on the actual project layout.
-      // Using file URL for relative dynamic import
-      const relativePath = '../../pluggedin-mcp/dist/report-tools.js';
-      const modulePath = new URL(relativePath, import.meta.url).pathname;
-      const module2 = await import(modulePath);
-      reportAllCapabilities = module2.reportAllCapabilities; // Use correct function name
-    } catch (e2) {
-      console.error("Failed to import reportAllCapabilities function from pluggedin-mcp."); // Updated error message
-      console.error("Ensure pluggedin-mcp is built and accessible from pluggedin-app/scripts.");
-      console.error("Error 1:", e1.message);
-      console.error("Error 2:", e2.message);
-      process.exit(1);
-    }
+  let reportAllCapabilities;
+  const mcpDistPath = process.env.PLUGGEDIN_MCP_DIST_PATH; // Read path from env var
+
+  if (!mcpDistPath) {
+    console.error("Error: PLUGGEDIN_MCP_DIST_PATH environment variable is not set.");
+    console.error("Please set this variable to the absolute path of the pluggedin-mcp/dist directory.");
+    process.exit(1);
   }
 
-  if (typeof reportAllCapabilities !== 'function') { // Check the renamed variable
+  const reportToolsPath = path.join(mcpDistPath, 'report-tools.js'); // Construct full path
+
+  try {
+    // Import using the path constructed from the environment variable
+    const mcpModule = await import(reportToolsPath); // Use different variable name
+    reportAllCapabilities = mcpModule.reportAllCapabilities;
+  } catch (e) {
+    console.error(`Failed to import reportAllCapabilities function from ${reportToolsPath}.`);
+    console.error("Ensure PLUGGEDIN_MCP_DIST_PATH is correct and pluggedin-mcp is built.");
+    console.error("Error:", e.message);
+    process.exit(1);
+  }
+
+  if (typeof reportAllCapabilities !== 'function') {
     console.error("reportAllCapabilities was imported but is not a function. Check the export in pluggedin-mcp."); // Updated error message
     process.exit(1);
   }
