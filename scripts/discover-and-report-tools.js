@@ -13,11 +13,11 @@
 // or having pluggedin-mcp expose this as a library function.
 
 async function main() {
-  let reportAllTools;
+  let reportAllCapabilities; // Renamed variable
   try {
     // Attempt to import from a potential node_modules location or linked workspace
     const module1 = await import('pluggedin-mcp/dist/report-tools.js');
-    reportAllTools = module1.reportAllTools;
+    reportAllCapabilities = module1.reportAllCapabilities; // Use correct function name
   } catch (e1) {
     console.warn("Could not import 'pluggedin-mcp/dist/report-tools.js'. Trying relative path...");
     try {
@@ -27,9 +27,9 @@ async function main() {
       const relativePath = '../../pluggedin-mcp/dist/report-tools.js';
       const modulePath = new URL(relativePath, import.meta.url).pathname;
       const module2 = await import(modulePath);
-      reportAllTools = module2.reportAllTools;
+      reportAllCapabilities = module2.reportAllCapabilities; // Use correct function name
     } catch (e2) {
-      console.error("Failed to import reportAllTools function from pluggedin-mcp.");
+      console.error("Failed to import reportAllCapabilities function from pluggedin-mcp."); // Updated error message
       console.error("Ensure pluggedin-mcp is built and accessible from pluggedin-app/scripts.");
       console.error("Error 1:", e1.message);
       console.error("Error 2:", e2.message);
@@ -37,8 +37,8 @@ async function main() {
     }
   }
 
-  if (typeof reportAllTools !== 'function') {
-    console.error("reportAllTools was imported but is not a function. Check the export in pluggedin-mcp.");
+  if (typeof reportAllCapabilities !== 'function') { // Check the renamed variable
+    console.error("reportAllCapabilities was imported but is not a function. Check the export in pluggedin-mcp."); // Updated error message
     process.exit(1);
   }
 
@@ -50,11 +50,11 @@ async function main() {
   // Consider using a library like dotenv if needed.
 
   try {
-    await reportAllTools();
-    console.log('Tool discovery and reporting completed successfully.');
-    // process.exit(0); // reportAllTools should not exit anymore
+    await reportAllCapabilities(); // Call the correct function
+    console.log('Capability discovery and reporting completed successfully.'); // Updated log message
+    // process.exit(0); // reportAllCapabilities should not exit anymore
   } catch (error) {
-    console.error('Error during tool discovery and reporting:', error);
+    console.error('Error during capability discovery and reporting:', error); // Updated error message
     // Re-throw the error so the calling process (execAsync) knows it failed
     throw error; 
   }
