@@ -18,7 +18,9 @@
     "version:patch": "pnpm version patch",
     "version:minor": "pnpm version minor",
     "version:major": "pnpm version major",
-    "postversion": "git push && git push --tags"
+    "postversion": "git push && git push --tags",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.8.0",
@@ -48,6 +50,7 @@
     "@tanstack/react-table": "^8.20.6",
     "@types/bcrypt": "^5.0.2",
     "@types/lodash": "^4.17.15",
+    "@types/swagger-ui-react": "^5.18.0",
     "bcrypt": "^5.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -73,6 +76,7 @@
     "react-virtualized-auto-sizer": "^1.0.25",
     "react-window": "^1.8.11",
     "sd-notify": "^2.8.0",
+    "swagger-ui-react": "^5.20.2",
     "swr": "^2.3.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
@@ -94,6 +98,7 @@
     "@types/react-window": "^1.8.8",
     "@typescript-eslint/eslint-plugin": "^8.18.1",
     "@typescript-eslint/parser": "^8.18.1",
+    "@vitejs/plugin-react": "^4.3.4",
     "depcheck": "^1.4.7",
     "dotenv-cli": "^8.0.0",
     "drizzle-kit": "^0.30.5",
@@ -101,6 +106,7 @@
     "eslint-config-next": "15.1.1",
     "eslint-plugin-simple-import-sort": "^12.1.1",
     "eslint-plugin-unused-imports": "^4.1.4",
+    "next-swagger-doc": "^0.4.1",
     "next-unused": "^0.0.6",
     "postcss": "^8",
     "prettier": "^3.4.2",

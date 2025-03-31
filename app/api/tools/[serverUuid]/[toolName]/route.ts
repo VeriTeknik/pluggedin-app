@@ -2,10 +2,51 @@
 import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-import { authenticateApiKey } from '@/app/api/auth'; // Using path alias relative to app root
-import { db } from '@/db'; // Using path alias
-import { mcpServersTable, toolsTable } from '@/db/schema'; // Using path alias
+import { authenticateApiKey } from '@/app/api/auth';
+import { db } from '@/db';
+import { mcpServersTable, toolsTable } from '@/db/schema';
 
+/**
+ * @swagger
+ * /api/tools/{serverUuid}/{toolName}:
+ *   get:
+ *     summary: Get details for a specific tool
+ *     description: Retrieves the detailed information (including schema) for a specific tool identified by its parent server UUID and tool name, ensuring it belongs to the authenticated user's active profile. Requires API key authentication. This is used by the pluggedin-mcp proxy when reading tool resources.
+ *     tags:
+ *       - Tools
+ *     security:
+ *       - apiKey: []
+ *     parameters:
+ *       - in: path
+ *         name: serverUuid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The UUID of the parent MCP server.
+ *       - in: path
+ *         name: toolName
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The name of the tool.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the tool details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 tool:
+ *                   $ref: '#/components/schemas/Tool' # Assuming Tool schema is defined
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or profile.
+ *       404:
+ *         description: Not Found - Tool not found for the given server UUID and tool name, or not associated with the active profile.
+ *       500:
+ *         description: Internal Server Error.
+ */
 export async function GET(
   request: Request,
   { params }: { params: { serverUuid: string; toolName: string } }

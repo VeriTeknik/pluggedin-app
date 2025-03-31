@@ -5,9 +5,66 @@ import { db } from '@/db';
 // Import the correct table and enum names from your schema
 import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema'; // Import McpServerStatus
 
-import { authenticateApiKey } from '../auth'; // Assuming this path is correct
+import { authenticateApiKey } from '../auth';
 
-// GET handler to fetch tools with optional status filter
+/**
+ * Validates the provided tool status string against the ToggleStatus enum.
+ * Defaults to ACTIVE if the status is missing or invalid.
+ * @param status - The status string to validate (optional).
+ * @returns The validated ToggleStatus enum value.
+ */
+function validateToolStatus(status: string | undefined): ToggleStatus {
+  // Check if status is provided and is a valid enum value
+  if (status && Object.values(ToggleStatus).includes(status as ToggleStatus)) {
+    return status as ToggleStatus;
+  }
+  // Default to ACTIVE if status is missing or invalid
+  return ToggleStatus.ACTIVE;
+}
+
+/**
+ * @swagger
+ * /api/tools:
+ *   get:
+ *     summary: Get tools for the active profile
+ *     description: Retrieves a list of tools associated with the authenticated user's active profile. Filters by tool status (defaulting to ACTIVE) and ensures the parent MCP server is also ACTIVE. Requires API key authentication.
+ *     tags:
+ *       - Tools
+ *     security:
+ *       - apiKey: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [ACTIVE, INACTIVE]
+ *         required: false
+ *         description: Filter tools by status (defaults to ACTIVE if not provided).
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved tools.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       mcp_server_uuid:
+ *                         type: string
+ *                         format: uuid
+ *                       name:
+ *                         type: string
+ *                       status:
+ *                         $ref: '#/components/schemas/ToggleStatus' # Assuming ToggleStatus is defined elsewhere or needs definition
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key.
+ *       500:
+ *         description: Internal Server Error.
+ */
 export async function GET(request: Request) {
   try {
     const auth = await authenticateApiKey(request);
@@ -58,8 +115,86 @@ export async function GET(request: Request) {
   }
 }
 
-
-// POST handler to report/update tools from pluggedin-mcp
+/**
+ * @swagger
+ * /api/tools:
+ *   post:
+ *     summary: Report/Update tools from MCP Proxy
+ *     description: Allows the pluggedin-mcp proxy server (or other authorized clients) to report discovered tools for a specific MCP server belonging to the authenticated user's profile. Performs an upsert operation based on mcp_server_uuid and tool name. Requires API key authentication.
+ *     tags:
+ *       - Tools
+ *     security:
+ *       - apiKey: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tools
+ *             properties:
+ *               tools:
+ *                 type: array
+ *                 description: An array of tool objects to report/update.
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - name
+ *                     - toolSchema
+ *                     - mcp_server_uuid
+ *                   properties:
+ *                     name:
+ *                       type: string
+ *                     description:
+ *                       type: string
+ *                       nullable: true
+ *                     toolSchema:
+ *                       type: object # Represents JSONB
+ *                       description: The JSON schema definition for the tool's input.
+ *                     mcp_server_uuid:
+ *                       type: string
+ *                       format: uuid
+ *                     status:
+ *                       $ref: '#/components/schemas/ToggleStatus' # Assuming ToggleStatus is defined
+ *                       description: Optional status (defaults to ACTIVE if not provided).
+ *     responses:
+ *       200:
+ *         description: Tools processed successfully. May include validation errors for specific tools.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   description: Array of successfully inserted/updated tool records (structure depends on DB return).
+ *                 errors:
+ *                   type: array
+ *                   description: Array of validation errors encountered for specific tools.
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       tool:
+ *                         type: object # The tool data that failed validation
+ *                       error:
+ *                         type: string # The validation error message
+ *                 success:
+ *                   type: boolean
+ *                   description: True if at least one tool was successfully processed and no validation errors occurred.
+ *                 failureCount:
+ *                   type: integer
+ *                   description: Number of tools that failed validation.
+ *                 successCount:
+ *                   type: integer
+ *                   description: Number of tools successfully inserted/updated.
+ *       400:
+ *         description: Bad Request - Invalid request body (e.g., missing 'tools' array).
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key.
+ *       500:
+ *         description: Internal Server Error - Database error or other server-side issue.
+ */
 export async function POST(request: Request) {
   try {
     const auth = await authenticateApiKey(request);
@@ -119,7 +254,8 @@ export async function POST(request: Request) {
         description,
         toolSchema, // Ensure this matches the jsonb structure expected by the DB
         mcp_server_uuid,
-        status: ToggleStatus.ACTIVE, // Default to ACTIVE on report
+        // Use the validation function, passing the status from the incoming tool data
+        status: validateToolStatus(currentTool.status),
       });
     }
 

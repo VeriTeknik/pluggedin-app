@@ -1,8 +1,6 @@
 'use client';
 
 // React / Next imports
-import { useState } from 'react';
-
 // Third-party library imports
 import {
   createColumnHelper,
@@ -14,6 +12,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { Database, Download, Settings, Upload } from 'lucide-react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -26,31 +25,27 @@ import {
   getMcpServers,
   toggleMcpServerStatus,
 } from '@/app/actions/mcp-servers';
-
 // Internal UI components
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-
 // Internal DB schema
 import { McpServerStatus, McpServerType } from '@/db/schema';
-
 // Internal hooks
 import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
-
 // Internal types
 import { ApiKey } from '@/types/api-key';
 import { McpServer } from '@/types/mcp-server';
 
+import { ServerCard } from './components/server-card';
 // Local components
 import { ExportDialog, ImportDialog } from './components/server-dialogs';
-import { ServerCard } from './components/server-card';
+import { SseServerForm, StdioServerForm } from './components/server-forms';
 import { ServerHero } from './components/server-hero';
 import { ServerStats } from './components/server-stats';
-import { SseServerForm, StdioServerForm } from './components/server-forms';
 
 
 // DiscoverToolsButton Component Definition

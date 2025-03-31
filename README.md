@@ -1,116 +1,123 @@
-# Plugged.in
+# plugged.in App
 
+<div align="center">
+  <img src="https://via.placeholder.com/200x200?text=plugged.in" alt="plugged.in Logo" width="200" height="200">
+  <h3>The Crossroads for AI Data Exchanges</h3>
+  <p>A unified management interface for all your MCP servers</p>
 
-https://plugged.in 
+  [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
+  [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
+  [![Next.js](https://img.shields.io/badge/Next.js-14+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+  [![MCP](https://img.shields.io/badge/MCP-Compatible-green?style=for-the-badge)](https://modelcontextprotocol.io/)
+</div>
 
-Plugged.in is "The One" MCP to manage all your MCPs. It uses a GUI fullstack app (this repo) and a local MCP proxy to achieve this. (see our latest npm repo [pluggedin-mcp](https://github.com/VeriTeknik/pluggedin-mcp))
+## 📋 Overview
 
-A few feature highlights:
+The plugged.in App is a comprehensive web application for managing Machine Conversation Protocol (MCP) servers. It works in conjunction with the [plugged.in MCP Proxy](https://github.com/VeriTeknik/pluggedin-mcp) to provide a unified interface for discovering, configuring, and utilizing AI tools across multiple MCP servers.
 
-- GUI app to manage configurations with dynamic updates when `list_tools`, etc.
-- Support ANY MCP clients (e.g., Claude Desktop, Cursor, etc.) because Plugged.in is a MCP server.
-- Support prompts, resources, tools under MCP.
-- Support multi-workspace: e.g., activate a workspace of DB1 or switch to DB2 in another workspace, preventing polluting context of DB1 to your MCP Client.
-- **Resource Template Discovery**: View available resource templates (including variables) for connected MCP servers.
-- **Server Notes**: Add custom notes and instructions to each configured MCP server.
-- **Extensive Logging**: Provides detailed logging capabilities for MCP interactions in the Playground, aiding debugging and understanding.
-- **Model Agnostic Playground**: Utilizes Langchain, allowing testing of MCP tools with various LLMs (not just Claude).
-- **Expanded Discovery**: Search for MCP servers across GitHub, Smithery, and npmjs.com.
+This application enables seamless integration with any MCP client (Claude, Cline, Cursor, etc.) while providing advanced management capabilities through an intuitive web interface.
 
-The app is also self hostable, free and open source. The differences between this repo and cloud version are:
+## ✨ Key Features
 
-- You can try how this app works using cloud version but I actually encourage you to self host if you are familiar with docker: it will provide unlimited access with lower latency, full private operations on your end.
-- Cloud version adds auth and session contexts
-- Cloud version provides server side encryption
-- Cloud version tweaks a little bit on serverless hosting
-- To use it with Smithery MCP hosting, it requires cloud hosted URL (or you can use ngrok etc.)
+- **Multi-Workspace Support**: Switch between different sets of MCP configurations to prevent context pollution
+- **Interactive Playground**: Test and experiment with your MCP tools directly in the browser
+- **Tool Management**: Discover, organize, and manage AI tools from multiple sources
+- **Resource Template Discovery**: View available resource templates (including variables) for connected MCP servers
+- **Server Notes**: Add custom notes and instructions to each configured MCP server
+- **Extensive Logging**: Detailed logging capabilities for MCP interactions in the Playground
+- **Model Agnostic**: Test MCP tools with various LLMs through Langchain integration
+- **Expanded Discovery**: Search for MCP servers across GitHub, Smithery, and npmjs.com
+- **Self-Hostable**: Run your own instance with full control over your data
 
-Check out demo videos at https://plugged.in/. Here is an overview screenshot.
+## 🚀 Quick Start with Docker
 
-
-⚠️ Warning: there are some known compatibility issues on Windows depending on the MCP client implementation, refer to https://github.com/metatool-ai/metatool-app/issues/15 for discussion or workaround solutions.
-
-## Architecture Overview
-
-Note that prompts and resources are also covered similar to tools.
-
-```mermaid
-sequenceDiagram
-    participant MCPClient as MCP Client (e.g., Claude Desktop)
-    participant MetaMCPMCP as MetaMCP MCP Server
-    participant MetaMCPApp as MetaMCP App
-    participant MCPServers as Installed MCP Servers in MetaMCP App
-
-    MCPClient ->> MetaMCPMCP: Request list tools
-    MetaMCPMCP ->> MetaMCPApp: Get tools configuration & status
-    MetaMCPApp ->> MetaMCPMCP: Return tools configuration & status
-
-    loop For each listed MCP Server
-        MetaMCPMCP ->> MCPServers: Request list_tools
-        MCPServers ->> MetaMCPMCP: Return list of tools
-    end
-
-    MetaMCPMCP ->> MetaMCPMCP: Aggregate tool lists
-    MetaMCPMCP ->> MCPClient: Return aggregated list of tools
-
-    MCPClient ->> MetaMCPMCP: Call tool
-    MetaMCPMCP ->> MCPServers: call_tool to target MCP Server
-    MCPServers ->> MetaMCPMCP: Return tool response
-    MetaMCPMCP ->> MCPClient: Return tool response
-```
-
-## Installation
-
-To get instantly started with cloud version visit https://metamcp.com/.
-To get started with this self hostable version of MetaMCP App, the eastiest way is to clone the repository and use Docker Compose to run it.
+The easiest way to get started with the plugged.in App is using Docker Compose:
 
 ```bash
-git clone https://github.com/metatool-ai/metatool-app.git
-cd metatool-app
-cp example.env .env
+# Clone the repository
+git clone https://github.com/VeriTeknik/pluggedin-app.git
+cd pluggedin-app
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your specific configuration
+
+# Start the application with Docker Compose
 docker compose up --build -d
 ```
 
-Then open http://localhost:12005 in your browser to open MetaMCP App.
+Then open http://localhost:12005 in your browser to access the plugged.in App.
 
-It is recommended to have npx (node.js based mcp) and uvx (python based mcp) installed globally.
-To install uv check: https://docs.astral.sh/uv/getting-started/installation/
+## 🔌 Connecting MCP Clients
 
-You also need a MCP Client to connect to `@metamcp/mcp-server-metamcp`. For example if you are using [Claude Desktop](https://modelcontextprotocol.io/quickstart/user), the config json may look like this:
+### Prerequisites
+
+- The plugged.in App running (either self-hosted or at https://plugged.in)
+- An API key from the plugged.in App (available in the API Keys page)
+- The plugged.in MCP Proxy installed
+
+### Claude Desktop Configuration
 
 ```json
 {
   "mcpServers": {
-    "PluggedinMCP": {
+    "pluggedin": {
       "command": "npx",
-      "args": ["-y", "@metamcp/mcp-server-metamcp@latest"],
+      "args": ["-y", "@pluggedin/mcp-proxy@latest"],
       "env": {
-        "METAMCP_API_KEY": "<your api key>",
-        "METAMCP_API_BASE_URL": "http://localhost:12005"
+        "PLUGGEDIN_API_KEY": "YOUR_API_KEY",
+        "PLUGGEDIN_API_BASE_URL": "http://localhost:12005" // For self-hosted instances
       }
     }
   }
 }
 ```
 
-For Cursor, env vars aren't easy to get typed in so you may use args instead
+### Cursor Configuration
+
+For Cursor, you can use command-line arguments:
 
 ```bash
-npx -y @metamcp/mcp-server-metamcp@latest --metamcp-api-key <your-api-key> --metamcp-api-base-url <base-url>
+npx -y @pluggedin/mcp-proxy@latest --pluggedin-api-key YOUR_API_KEY --pluggedin-api-base-url http://localhost:12005
 ```
 
-You can get the API key from the MetaMCP App's API Keys page.
+## 🏗️ System Architecture
 
-## Production Deployment
+The plugged.in ecosystem consists of two main components:
+
+```mermaid
+sequenceDiagram
+    participant MCPClient as MCP Client (e.g., Claude Desktop)
+    participant PluggedinMCP as plugged.in MCP Proxy
+    participant PluggedinApp as plugged.in App
+    participant MCPServers as Installed MCP Servers
+
+    MCPClient ->> PluggedinMCP: Request list tools
+    PluggedinMCP ->> PluggedinApp: Get tools configuration & status
+    PluggedinApp ->> PluggedinMCP: Return tools configuration & status
+
+    loop For each listed MCP Server
+        PluggedinMCP ->> MCPServers: Request list_tools
+        MCPServers ->> PluggedinMCP: Return list of tools
+    end
+
+    PluggedinMCP ->> PluggedinMCP: Aggregate tool lists
+    PluggedinMCP ->> MCPClient: Return aggregated list of tools
+
+    MCPClient ->> PluggedinMCP: Call tool
+    PluggedinMCP ->> MCPServers: call_tool to target MCP Server
+    MCPServers ->> PluggedinMCP: Return tool response
+    PluggedinMCP ->> MCPClient: Return tool response
+```
+
+## 💻 Production Deployment
 
 ### System Requirements
-
-The Plugged.in service requires:
 
 - Node.js v18+ (recommended v20+)
 - PostgreSQL 15+
 - PNPM package manager
-- Nginx web server
+- Nginx web server (for production deployments)
 - Systemd (for service management)
 
 ### Production Setup
@@ -126,9 +133,9 @@ The Plugged.in service requires:
    pnpm install
    ```
 
-3. Set up environment variables by copying and editing `.env.local.example`:
+3. Set up environment variables:
    ```bash
-   cp .env.local.example .env
+   cp .env.example .env
    # Edit .env with your specific configuration
    ```
 
@@ -144,319 +151,128 @@ The Plugged.in service requires:
    NODE_ENV=production pnpm build
    ```
 
-### Security Considerations
+6. Create a systemd service file at `/etc/systemd/system/pluggedin.service`:
+   ```ini
+   [Unit]
+   Description=plugged.in Application Service
+   After=network.target postgresql.service
+   Wants=postgresql.service
 
-**MCP Server Sandboxing (Linux/Ubuntu)**
+   [Service]
+   User=pluggedin
+   Group=pluggedin
+   WorkingDirectory=/home/pluggedin/pluggedin-app
+   ExecStart=/usr/bin/pnpm start
+   Restart=always
+   RestartSec=10
+   StandardOutput=append:/var/log/pluggedin/pluggedin_app.log
+   StandardError=append:/var/log/pluggedin/pluggedin_app.log
+   Environment=PATH=/usr/bin:/usr/local/bin
+   Environment=NODE_ENV=production
+   Environment=PORT=12005
 
-- **Problem:** STDIO-based MCP servers are executed as child processes. Without sandboxing, they inherit the permissions of the main application, potentially allowing unrestricted filesystem access, which poses a significant security risk.
-- **Solution:** This application automatically wraps the execution of STDIO MCP servers with `firejail --quiet` when running on a Linux system. This utilizes Firejail's default security profile to restrict the server's capabilities, notably limiting filesystem access.
-- **Requirement:** The `firejail` package **must be installed** on the Ubuntu/Linux production server for this sandboxing to be effective. You can typically install it using:
-  ```bash
-  sudo apt update && sudo apt install firejail
-  ```
-- **Note:** This sandboxing is applied automatically within the application logic (`app/actions/mcp-playground.ts`) and does not require manual configuration per server. SSE servers are not affected by this specific sandboxing mechanism.
-
-### Service Configuration
-
-Create a systemd service file at `/etc/systemd/system/pluggedin.service`:
-
-```
-[Unit]
-Description=Plugged.in Application Service
-After=network.target postgresql.service
-Wants=postgresql.service
-
-[Service]
-User=pluggedin
-Group=pluggedin
-WorkingDirectory=/home/pluggedin/pluggedin-app
-ExecStart=/usr/bin/pnpm start
-Restart=always
-RestartSec=10
-StartLimitInterval=60
-StartLimitBurst=3
-StandardOutput=append:/var/log/pluggedin/pluggedin_app.log
-StandardError=append:/var/log/pluggedin/pluggedin_app.log
-Environment=PATH=/usr/bin:/usr/local/bin
-Environment=NODE_ENV=production
-Environment=PORT=12005
-
-# Service timeouts
-TimeoutStartSec=30
-TimeoutStopSec=30
-
-[Install]
-WantedBy=multi-user.target
-```
-
-### Nginx Configuration
-
-1. Create the Nginx configuration file at `/etc/nginx/sites-available/plugged.in`:
-
-```
-# HTTPS Server
-server {
-    listen 443 ssl;
-    server_name your-domain.com;
-
-    # SSL configuration (using Let's Encrypt)
-    ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-    include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
-    # Next.js static files
-    location /_next/static/ {
-        alias /home/pluggedin/pluggedin-app/.next/static/;
-        expires 365d;
-        access_log off;
-        add_header Cache-Control "public, max-age=31536000, immutable";
-        
-        # Fix MIME type issues
-        include /etc/nginx/mime.types;
-        default_type application/octet-stream;
-        
-        # Enable compression
-        gzip on;
-        gzip_vary on;
-        gzip_min_length 10240;
-        gzip_proxied any;
-        gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml application/javascript;
-    }
-
-    # Proxy settings for Node.js application
-    location / {
-        proxy_pass http://localhost:12005;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_cache_bypass $http_upgrade;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Additional headers for OAuth
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Forwarded-Port $server_port;
-        
-        # Increase timeout for OAuth redirects
-        proxy_connect_timeout 300s;
-        proxy_send_timeout 300s;
-        proxy_read_timeout 300s;
-    }
-}
-
-# HTTP redirect to HTTPS
-server {
-    listen 80;
-    server_name your-domain.com;
-    return 301 https://$host$request_uri;
-}
-```
-
-2. Enable the site and update nginx to run as the pluggedin user:
-
-```bash
-# Create symbolic link
-sudo ln -s /etc/nginx/sites-available/plugged.in /etc/nginx/sites-enabled/
-
-# Update nginx.conf to run as pluggedin user
-sudo sed -i 's/user www-data;/user pluggedin;/' /etc/nginx/nginx.conf
-
-# Test and restart nginx
-sudo nginx -t
-sudo systemctl restart nginx
-```
-
-### Starting the Service
-
-1. Create required directories:
-   ```bash
-   sudo mkdir -p /var/log/pluggedin
-   sudo chown -R pluggedin:pluggedin /var/log/pluggedin
+   [Install]
+   WantedBy=multi-user.target
    ```
 
-2. Enable and start the service:
+7. Set up Nginx as a reverse proxy:
+   ```nginx
+   # HTTPS Server
+   server {
+       listen 443 ssl;
+       server_name your-domain.com;
+
+       # SSL configuration
+       ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+       ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+
+       # Next.js static files
+       location /_next/static/ {
+           alias /home/pluggedin/pluggedin-app/.next/static/;
+           expires 365d;
+           add_header Cache-Control "public, max-age=31536000, immutable";
+       }
+
+       # Proxy settings for Node.js application
+       location / {
+           proxy_pass http://localhost:12005;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host $host;
+           proxy_cache_bypass $http_upgrade;
+       }
+   }
+
+   # HTTP redirect to HTTPS
+   server {
+       listen 80;
+       server_name your-domain.com;
+       return 301 https://$host$request_uri;
+   }
+   ```
+
+8. Enable and start the service:
    ```bash
    sudo systemctl daemon-reload
    sudo systemctl enable pluggedin.service
    sudo systemctl start pluggedin.service
    ```
 
-3. Check the service status:
-   ```bash
-   sudo systemctl status pluggedin.service
-   ```
+### Security Considerations
 
-### Service Management Commands
+**MCP Server Sandboxing (Linux/Ubuntu)**
 
-#### Starting the Service
+The plugged.in App automatically wraps the execution of STDIO MCP servers with `firejail --quiet` when running on a Linux system. This utilizes Firejail's default security profile to restrict the server's capabilities, notably limiting filesystem access.
+
+To enable this security feature, install Firejail:
+
 ```bash
-sudo systemctl start pluggedin.service
+sudo apt update && sudo apt install firejail
 ```
 
-#### Stopping the Service
-```bash
-sudo systemctl stop pluggedin.service
-```
+## 🔄 Cloud vs. Self-Hosted
 
-#### Restarting the Service
-```bash
-sudo systemctl restart pluggedin.service
-```
+| Feature | Self-Hosted | Cloud (plugged.in) |
+|---------|------------|-------------------|
+| Cost | Free | Free tier available |
+| Data Privacy | Full control | Server-side encryption |
+| Authentication | Optional | Built-in |
+| Session Context | Basic | Enhanced |
+| Hosting | Your infrastructure | Managed service |
+| Updates | Manual | Automatic |
+| Latency | Depends on your setup | Optimized global CDN |
 
-#### Checking Service Status
-```bash
-sudo systemctl status pluggedin.service
-```
+## 🧩 Integration with plugged.in MCP Proxy
 
-#### Viewing Service Logs
-```bash
-# View last 100 lines
-sudo journalctl -u pluggedin.service -n 100
+The plugged.in App is designed to work seamlessly with the [plugged.in MCP Proxy](https://github.com/VeriTeknik/pluggedin-mcp), which provides:
 
-# Follow logs in real-time
-sudo journalctl -u pluggedin.service -f
+- A unified interface for all MCP clients
+- Tool discovery and reporting
+- Request routing to the appropriate MCP servers
+- Support for the latest MCP specification
 
-# Application-specific logs
-tail -f /var/log/pluggedin/pluggedin_app.log
-```
+## 📚 Related Resources
 
-### Updating the Application
+- [plugged.in MCP Proxy Repository](https://github.com/VeriTeknik/pluggedin-mcp)
+- [Machine Conversation Protocol (MCP) Specification](https://modelcontextprotocol.io/)
+- [Claude Desktop Documentation](https://docs.anthropic.com/claude/docs/claude-desktop)
+- [Cline Documentation](https://docs.cline.bot/)
 
-1. Pull the latest code:
-   ```bash
-   cd /home/pluggedin/pluggedin-app
-   git pull
-   ```
+## 🤝 Contributing
 
-2. Install any new dependencies:
-   ```bash
-   pnpm install
-   ```
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-3. Run any new migrations:
-   ```bash
-   pnpm db:migrate:auth
-   pnpm db:generate
-   pnpm db:migrate
-   ```
+## 📄 License
 
-4. Rebuild the application:
-   ```bash
-   NODE_ENV=production pnpm build
-   ```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-5. Restart the service:
-   ```bash
-   sudo systemctl restart pluggedin.service
-   ```
+## 🔮 Roadmap
 
-### Troubleshooting
+The plugged.in project is actively developing several exciting features:
 
-#### 404 Errors for Next.js Static Files
-
-If static files are returning 404 errors:
-
-1. Ensure nginx is running as `pluggedin` user
-2. Check permissions on `.next/static/` directory
-3. Verify the nginx configuration has the correct path to static files
-4. Restart nginx:
-   ```bash
-   sudo systemctl restart nginx
-   ```
-
-#### Service Fails to Start
-
-If the service fails to start:
-
-1. Check service logs:
-   ```bash
-   sudo journalctl -u pluggedin.service -n 50
-   ```
-
-2. Verify the application builds correctly:
-   ```bash
-   cd /home/pluggedin/pluggedin-app
-   NODE_ENV=production pnpm build
-   ```
-
-3. Try starting manually to see any errors:
-   ```bash
-   cd /home/pluggedin/pluggedin-app
-   pnpm start
-   ```
-
-## License
-
-GNU AGPL v3
-
-## Credits
-
-- (Deprecated) Demo video uses MCP Client [5ire](https://5ire.app/)
-
-# OAuth Account Linking - Test Plan and Implementation Guide
-
-This documentation provides a comprehensive plan for testing and enhancing the OAuth account linking functionality in our Next.js application.
-
-## Overview
-
-OAuth account linking allows users to connect their existing accounts with social login providers (GitHub, Google, etc.). This functionality is critical for user experience but requires thorough testing due to its complexity.
-
-## Documentation Files
-
-- **[OAuth Account Linking Test Plan](docs/oauth-testing/oauth-account-linking-test-plan.md)**: Comprehensive test plan with scenarios and verification steps
-- **[Implementation Review](docs/oauth-testing/auth-implementation-review.md)**: Analysis of current implementation with improvement recommendations
-- **[Testing Strategies](docs/oauth-testing/testing-strategies.md)**: Detailed approaches for unit, integration, and E2E testing
-- **[Improved Implementation](lib/auth.improved.ts)**: Enhanced version of the auth implementation
-
-## Key Improvements Implemented
-
-The improved implementation (`lib/auth.improved.ts`) includes several enhancements:
-
-1. **Enhanced Email Verification**: Verifies that emails from OAuth providers are actually verified
-2. **Improved Logging**: Structured logging with error tracking IDs
-3. **Session Enhancement**: Adds list of linked providers to the session
-4. **Better Error Handling**: More robust error handling throughout the auth flow
-5. **Type Enhancements**: Extended types for better TypeScript support
-
-## Testing Approach
-
-We recommend a multi-layered testing approach:
-
-1. **Unit Tests**: Testing core authentication callbacks in isolation
-2. **Integration Tests**: Verifying database interactions and state changes
-3. **End-to-End Tests**: Validating the complete user journey
-
-## Implementation Steps
-
-To implement the improvements:
-
-1. Review the current implementation (`lib/auth.ts`)
-2. Compare with the improved version (`lib/auth.improved.ts`)
-3. Add the necessary schema updates for any new tables (e.g., `linkingAttempts`)
-4. Implement the enhanced logging mechanism
-5. Add tests based on the test plan
-
-## Security Considerations
-
-The implementation addresses several security concerns:
-
-- Verification of email ownership across providers
-- Potential account takeover vectors
-- Rate limiting for account linking operations
-- Comprehensive error logging for security events
-
-## Next Steps
-
-1. Implement the test plan according to the testing strategies
-2. Add schema changes for additional security features
-3. Consider implementing explicit user confirmation for account linking
-4. Add monitoring for authentication events and failures
-
-## Related Documentation
-
-- [NextAuth.js Documentation](https://next-auth.js.org/getting-started/introduction)
-- [Drizzle ORM Documentation](https://orm.drizzle.team/docs/overview)
-- [OAuth Security Best Practices](https://oauth.net/articles/authentication/)
+- **Persistent Chat History**: Save and retrieve conversation logs across sessions
+- **Retrieval-Augmented Generation (RAG)**: Integration with vector databases like Milvus
+- **Generative UI (GenUI)**: Dynamically generate UI elements based on LLM responses
+- **Independent LLM Support**: Integration with platforms like Kinesis Network
+- **Collaboration & Sharing**: Multi-user sessions and embeddable chat widgets

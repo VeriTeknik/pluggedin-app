@@ -4,9 +4,11 @@ import { NextResponse } from 'next/server';
 
 import { authenticateApiKey } from '@/app/api/auth'; // Use path alias relative to app root
 import { db } from '@/db';
-import { mcpServersTable, resourcesTable, ToggleStatus } from '@/db/schema'; // Import ToggleStatus
+import { mcpServersTable, resourcesTable, ToggleStatus } from '@/db/schema';
 
-// Define the expected structure for a single resource in the POST request
+/**
+ * Represents the expected input structure for a single resource in the POST request body.
+ */
 interface ResourceInput {
   uri: string;
   name?: string;
@@ -16,7 +18,74 @@ interface ResourceInput {
   // Add other fields if necessary
 }
 
-// POST handler to receive and store/update resources
+/**
+ * @swagger
+ * /api/resources:
+ *   post:
+ *     summary: Report/Update resources from MCP Proxy
+ *     description: Allows the pluggedin-mcp proxy server (or other authorized clients) to report discovered resources for specific MCP servers belonging to the authenticated user's profile. Performs an upsert operation based on mcp_server_uuid and resource URI. Requires API key authentication.
+ *     tags:
+ *       - Resources
+ *     security:
+ *       - apiKey: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - resources
+ *             properties:
+ *               resources:
+ *                 type: array
+ *                 description: An array of resource objects to report/update.
+ *                 items:
+ *                   type: object
+ *                   required:
+ *                     - uri
+ *                     - mcp_server_uuid
+ *                   properties:
+ *                     uri:
+ *                       type: string
+ *                       format: uri
+ *                     name:
+ *                       type: string
+ *                       nullable: true
+ *                     description:
+ *                       type: string
+ *                       nullable: true
+ *                     mime_type:
+ *                       type: string
+ *                       nullable: true
+ *                     mcp_server_uuid:
+ *                       type: string
+ *                       format: uuid
+ *     responses:
+ *       200:
+ *         description: Resources processed successfully. May include validation errors for specific resources.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 successCount:
+ *                   type: integer
+ *                 errorCount:
+ *                   type: integer
+ *                 errors:
+ *                   type: array
+ *                   items:
+ *                     type: object # Structure of error objects
+ *       400:
+ *         description: Bad Request - Invalid request body (e.g., missing 'resources' array).
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or profile.
+ *       500:
+ *         description: Internal Server Error - Database error or other server-side issue.
+ */
 export async function POST(request: Request) {
   try {
     const auth = await authenticateApiKey(request);
@@ -102,7 +171,57 @@ export async function POST(request: Request) {
   }
 }
 
-// GET handler to retrieve cached resources for the profile
+/**
+ * @swagger
+ * /api/resources:
+ *   get:
+ *     summary: Get active resources for the active profile
+ *     description: Retrieves a list of all ACTIVE resources associated with the authenticated user's active profile, joined with their parent MCP server name. Requires API key authentication.
+ *     tags:
+ *       - Resources
+ *     security:
+ *       - apiKey: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved resources.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 results:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       uuid:
+ *                         type: string
+ *                         format: uuid
+ *                       mcp_server_uuid:
+ *                         type: string
+ *                         format: uuid
+ *                       uri:
+ *                         type: string
+ *                         format: uri
+ *                       name:
+ *                         type: string
+ *                         nullable: true
+ *                       description:
+ *                         type: string
+ *                         nullable: true
+ *                       mime_type:
+ *                         type: string
+ *                         nullable: true
+ *                       status:
+ *                         $ref: '#/components/schemas/ToggleStatus' # Assuming ToggleStatus is defined
+ *                       serverName:
+ *                         type: string
+ *                         description: Name of the parent MCP server.
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or profile.
+ *       500:
+ *         description: Internal Server Error.
+ */
 export async function GET(request: Request) {
   try {
     const auth = await authenticateApiKey(request);
