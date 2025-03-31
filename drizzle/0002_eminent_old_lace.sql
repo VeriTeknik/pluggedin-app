@@ -1,4 +1,4 @@
-CREATE TABLE "codes" (
+CREATE TABLE IF NOT EXISTS "codes" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"code" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL

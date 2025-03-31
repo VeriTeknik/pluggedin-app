@@ -1,4 +1,4 @@
-CREATE TABLE "playground_settings" (
+CREATE TABLE IF NOT EXISTS "playground_settings" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"profile_uuid" uuid NOT NULL,
 	"provider" text DEFAULT 'anthropic' NOT NULL,

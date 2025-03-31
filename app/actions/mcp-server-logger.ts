@@ -20,8 +20,9 @@ export async function createEnhancedMcpLogger(
   // Internal class implementation
   class EnhancedMcpLoggerImpl {
     // Store both handles (for async close) and descriptors (for sync passing)
-    private serverLogHandles: Map<string, fs.FileHandle> = new Map();
-    private serverLogDescriptors: Map<string, number> = new Map();
+    // --- DISABLED FILE LOGGING ---
+    // private serverLogHandles: Map<string, fs.FileHandle> = new Map();
+    // private serverLogDescriptors: Map<string, number> = new Map();
     private mcpServerLogDir: string;
     private isInitialized: Promise<void>; // Promise to track initialization
 
@@ -42,37 +43,39 @@ export async function createEnhancedMcpLogger(
         // Ensure log directories exist
         await ensureLogDirectories(); // Assuming this uses fs.promises
 
-        // Create log file for each server
-        const initPromises = Object.keys(this.mcpServers).map(async (serverName) => {
-          try {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const logFilePath = path.join(
-              this.mcpServerLogDir,
-              `${this.profileUuid}_${serverName}_${timestamp}.log`
-            );
+        // --- DISABLED FILE LOGGING ---
+        // // Create log file for each server
+        // const initPromises = Object.keys(this.mcpServers).map(async (serverName) => {
+        //   try {
+        //     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        //     const logFilePath = path.join(
+        //       this.mcpServerLogDir,
+        //       `${this.profileUuid}_${serverName}_${timestamp}.log`
+        //     );
 
-            // Open file synchronously for append/writing to get descriptor immediately
-            // Use 'a' mode for appending. Store both handle and descriptor.
-            // Note: fsSync.openSync returns a file descriptor (number)
-            const logFd = fsSync.openSync(logFilePath, 'a'); // Use fsSync here
-            // We still need the handle for async closing later
-            const fileHandle = await fs.open(logFilePath, 'a'); // Keep using fs/promises for async open
+        //     // Open file synchronously for append/writing to get descriptor immediately
+        //     // Use 'a' mode for appending. Store both handle and descriptor.
+        //     // Note: fsSync.openSync returns a file descriptor (number)
+        //     const logFd = fsSync.openSync(logFilePath, 'a'); // Use fsSync here
+        //     // We still need the handle for async closing later
+        //     const fileHandle = await fs.open(logFilePath, 'a'); // Keep using fs/promises for async open
 
-            // Store handle and descriptor
-            this.serverLogHandles.set(serverName, fileHandle);
-            this.serverLogDescriptors.set(serverName, logFd);
+        //     // Store handle and descriptor
+        //     this.serverLogHandles.set(serverName, fileHandle);
+        //     this.serverLogDescriptors.set(serverName, logFd);
 
-            // Assign the file descriptor to the 'errlog' property as per the example
-            this.mcpServers[serverName].errlog = logFd;
+        //     // Assign the file descriptor to the 'errlog' property as per the example
+        //     this.mcpServers[serverName].errlog = logFd;
 
-            // Log info - Use internal method but avoid ensureInitialized call during init
-            await this._internalAddLog('info', `Initialized log file for ${serverName}: ${logFilePath} (fd: ${logFd})`);
-          } catch (error) {
-            // Log error but don't prevent other initializations
-            await this._internalAddLog('error', `Failed to initialize log file for ${serverName}: ${error}`);
-          }
-        });
-        await Promise.all(initPromises); // Wait for all initializations
+        //     // Log info - Use internal method but avoid ensureInitialized call during init
+        //     await this._internalAddLog('info', `Initialized log file for ${serverName}: ${logFilePath} (fd: ${logFd})`);
+        //   } catch (error) {
+        //     // Log error but don't prevent other initializations
+        //     await this._internalAddLog('error', `Failed to initialize log file for ${serverName}: ${error}`);
+        //   }
+        // });
+        // await Promise.all(initPromises); // Wait for all initializations
+        await this._internalAddLog('info', `File logging is disabled.`); // Log that file logging is off
 
       } catch (error) {
         console.error('Failed to initialize log directory:', error);
@@ -198,93 +201,99 @@ export async function createEnhancedMcpLogger(
     // Cleanup function - close all open file handles
     async cleanup() {
         await this.ensureInitialized(); // Ensure init is done before cleanup
-        // Close handles using the stored handles map
-        const closePromises = Array.from(this.serverLogHandles.entries()).map(async ([serverName, fileHandle]) => {
-            try {
-                await fileHandle.close(); // Use async close on the handle
-                // Use internal log to avoid ensureInitialized deadlock during cleanup
-                await this._internalAddLog('info', `Closed log file handle for ${serverName}`);
-            } catch (error) {
-                console.error(`Error closing log file: ${serverName}`, error);
-            }
-        });
-        await Promise.all(closePromises);
-        this.serverLogHandles.clear();
-        this.serverLogDescriptors.clear(); // Also clear descriptors map
+        // --- DISABLED FILE LOGGING ---
+        // // Close handles using the stored handles map
+        // const closePromises = Array.from(this.serverLogHandles.entries()).map(async ([serverName, fileHandle]) => {
+        //     try {
+        //         await fileHandle.close(); // Use async close on the handle
+        //         // Use internal log to avoid ensureInitialized deadlock during cleanup
+        //         await this._internalAddLog('info', `Closed log file handle for ${serverName}`);
+        //     } catch (error) {
+        //         console.error(`Error closing log file: ${serverName}`, error);
+        //     }
+        // });
+        // await Promise.all(closePromises);
+        // this.serverLogHandles.clear();
+        // this.serverLogDescriptors.clear(); // Also clear descriptors map
+        await this._internalAddLog('info', `File logging was disabled, no files to close.`);
     }
 
     // Get log files for this profile (Asynchronous version)
     async getLogFiles(): Promise<{ success: boolean; files?: { name: string; serverName: string; timestamp: Date; size: number; path: string }[]; error?: string }> {
-      try {
-        await this.ensureInitialized(); // Ensure init is done
+      // --- DISABLED FILE LOGGING ---
+      // Return empty array as file logging is disabled
+      return { success: true, files: [] };
 
-        // Check if directory exists using fs.promises.stat
-        try {
-          await fs.stat(this.mcpServerLogDir);
-        } catch (error: any) {
-          if (error.code === 'ENOENT') {
-            // Directory doesn't exist, return empty list
-            return { success: true, files: [] };
-          }
-          // Other error accessing directory, re-throw
-          throw error;
-        }
+      // try {
+      //   await this.ensureInitialized(); // Ensure init is done
 
-        // Read all files in directory asynchronously
-        const allFiles = await fs.readdir(this.mcpServerLogDir);
+      //   // Check if directory exists using fs.promises.stat
+      //   try {
+      //     await fs.stat(this.mcpServerLogDir);
+      //   } catch (error: any) {
+      //     if (error.code === 'ENOENT') {
+      //       // Directory doesn't exist, return empty list
+      //       return { success: true, files: [] };
+      //     }
+      //     // Other error accessing directory, re-throw
+      //     throw error;
+      //   }
 
-        // Filter for this profile's log files
-        const profileLogFiles = allFiles.filter(file =>
-          file.startsWith(`${this.profileUuid}_`) && file.endsWith('.log')
-        );
+      //   // Read all files in directory asynchronously
+      //   const allFiles = await fs.readdir(this.mcpServerLogDir);
 
-        // Get file details asynchronously
-        const fileDetailPromises = profileLogFiles.map(async (fileName) => {
-          const filePath = path.join(this.mcpServerLogDir, fileName);
-          try {
-            const stats = await fs.stat(filePath);
+      //   // Filter for this profile's log files
+      //   const profileLogFiles = allFiles.filter(file =>
+      //     file.startsWith(`${this.profileUuid}_`) && file.endsWith('.log')
+      //   );
 
-            // Extract server name and timestamp from filename
-            // Example: profileUuid_server-name_2024-03-28T12-00-00-000Z.log
-            const nameParts = fileName
-              .replace(`${this.profileUuid}_`, '')
-              .replace('.log', '')
-              .split('_');
+      //   // Get file details asynchronously
+      //   const fileDetailPromises = profileLogFiles.map(async (fileName) => {
+      //     const filePath = path.join(this.mcpServerLogDir, fileName);
+      //     try {
+      //       const stats = await fs.stat(filePath);
 
-            // Handle cases where server name might contain underscores
-            // const timestampStr = nameParts.pop() || ''; // Removed unused variable
-            nameParts.pop(); // Still need to remove the timestamp part
-            const serverName = nameParts.join('_'); // Join remaining parts as server name
+      //       // Extract server name and timestamp from filename
+      //       // Example: profileUuid_server-name_2024-03-28T12-00-00-000Z.log
+      //       const nameParts = fileName
+      //         .replace(`${this.profileUuid}_`, '')
+      //         .replace('.log', '')
+      //         .split('_');
 
-            return {
-              name: fileName,
-              serverName: serverName || 'unknown', // Handle potential parsing issues
-              timestamp: stats.mtime, // Use modification time
-              size: stats.size,
-              path: filePath
-            };
-          } catch (statError) {
-            console.error(`Failed to get stats for log file ${fileName}:`, statError);
-            return null; // Return null for files that couldn't be stat'd
-          }
-        });
+      //       // Handle cases where server name might contain underscores
+      //       // const timestampStr = nameParts.pop() || ''; // Removed unused variable
+      //       nameParts.pop(); // Still need to remove the timestamp part
+      //       const serverName = nameParts.join('_'); // Join remaining parts as server name
 
-        // Wait for all promises and filter out nulls
-        const fileDetails = (await Promise.all(fileDetailPromises))
-                              .filter((details): details is { name: string; serverName: string; timestamp: Date; size: number; path: string } => details !== null);
+      //       return {
+      //         name: fileName,
+      //         serverName: serverName || 'unknown', // Handle potential parsing issues
+      //         timestamp: stats.mtime, // Use modification time
+      //         size: stats.size,
+      //         path: filePath
+      //       };
+      //     } catch (statError) {
+      //       console.error(`Failed to get stats for log file ${fileName}:`, statError);
+      //       return null; // Return null for files that couldn't be stat'd
+      //     }
+      //   });
+
+      //   // Wait for all promises and filter out nulls
+      //   const fileDetails = (await Promise.all(fileDetailPromises))
+      //                         .filter((details): details is { name: string; serverName: string; timestamp: Date; size: number; path: string } => details !== null);
 
 
-        // Sort files by date (newest first)
-        fileDetails.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+      //   // Sort files by date (newest first)
+      //   fileDetails.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
-        return { success: true, files: fileDetails };
-      } catch (error) {
-        console.error('Error getting MCP server log files:', error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        };
-      }
+      //   return { success: true, files: fileDetails };
+      // } catch (error) {
+      //   console.error('Error getting MCP server log files:', error);
+      //   return {
+      //     success: false,
+      //     error: error instanceof Error ? error.message : 'Unknown error'
+      //   };
+      // }
     }
   }
 

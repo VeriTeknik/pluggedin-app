@@ -1,5 +1,5 @@
 CREATE TYPE "public"."mcp_server_status" AS ENUM('ACTIVE', 'INACTIVE', 'SUGGESTED', 'DECLINED');--> statement-breakpoint
-CREATE TABLE "api_keys" (
+CREATE TABLE IF NOT EXISTS "api_keys" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"project_uuid" uuid NOT NULL,
 	"api_key" text NOT NULL,
@@ -7,7 +7,7 @@ CREATE TABLE "api_keys" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "mcp_servers" (
+CREATE TABLE IF NOT EXISTS "mcp_servers" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"description" text,
@@ -19,14 +19,14 @@ CREATE TABLE "mcp_servers" (
 	"status" "mcp_server_status" DEFAULT 'ACTIVE' NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "profiles" (
+CREATE TABLE IF NOT EXISTS "profiles" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"project_uuid" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "projects" (
+CREATE TABLE IF NOT EXISTS "projects" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,

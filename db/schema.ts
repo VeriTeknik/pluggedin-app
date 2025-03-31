@@ -45,16 +45,16 @@ export const mcpServerStatusEnum = pgEnum(
 
 export const mcpServerTypeEnum = pgEnum(
   'mcp_server_type',
-  enumToPgEnum(McpServerType)
-);
-
-export const mcpServerSourceEnum = pgEnum(
-  'mcp_server_source',
-  enumToPgEnum(McpServerSource)
-);
-
-// Enum for tool/server active/inactive status
-export enum ToggleStatus {
+   enumToPgEnum(McpServerType)
+ );
+ 
+ export const mcpServerSourceEnum = pgEnum(
+   'mcp_server_source',
+   enumToPgEnum(McpServerSource)
+ );
+ 
+ // Enum for tool/server active/inactive status
+ export enum ToggleStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
 }
@@ -255,14 +255,18 @@ export const apiKeysTable = pgTable(
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     project_uuid: uuid('project_uuid')
       .notNull()
-      .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
-    api_key: text('api_key').notNull(),
+      .references(() => projectsTable.uuid, { onDelete: 'cascade' }), // Correct foreign key reference
+    api_key: text('api_key').notNull(), // Assuming this column should exist based on table name
     name: text('name').default('API Key'),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    // Removed source, external_id, notes columns
   },
-  (table) => [index('api_keys_project_uuid_idx').on(table.project_uuid)]
+  (table) => [
+    index('api_keys_project_uuid_idx').on(table.project_uuid),
+    unique('api_keys_key_unique_idx').on(table.api_key), // Add unique constraint if desired
+  ]
 );
 
 export const mcpServersTable = pgTable(
@@ -389,11 +393,11 @@ export const playgroundSettingsTable = pgTable(
 export const searchCacheTable = pgTable(
   'search_cache',
   {
-    uuid: uuid('uuid').primaryKey().defaultRandom(),
-    source: mcpServerSourceEnum('source').notNull(),
-    query: text('query').notNull(),
-    results: jsonb('results').notNull(),
-    created_at: timestamp('created_at', { withTimezone: true })
+     uuid: uuid('uuid').primaryKey().defaultRandom(),
+     source: mcpServerSourceEnum('source').notNull(),
+     query: text('query').notNull(),
+     results: jsonb('results').notNull(),
+     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
     expires_at: timestamp('expires_at', { withTimezone: true })
@@ -411,12 +415,12 @@ export const serverInstallationsTable = pgTable(
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     server_uuid: uuid('server_uuid')
-      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
-    external_id: text('external_id'),
-    source: mcpServerSourceEnum('source').notNull(),
-    profile_uuid: uuid('profile_uuid')
-      .notNull()
-      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+       .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+     external_id: text('external_id'),
+     source: mcpServerSourceEnum('source').notNull(),
+     profile_uuid: uuid('profile_uuid')
+       .notNull()
+       .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -434,12 +438,12 @@ export const serverRatingsTable = pgTable(
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     server_uuid: uuid('server_uuid')
-      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
-    external_id: text('external_id'),
-    source: mcpServerSourceEnum('source').notNull(),
-    profile_uuid: uuid('profile_uuid')
-      .notNull()
-      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+       .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+     external_id: text('external_id'),
+     source: mcpServerSourceEnum('source').notNull(),
+     profile_uuid: uuid('profile_uuid')
+       .notNull()
+       .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     rating: integer('rating').notNull(), // 1-5 stars
     comment: text('comment'),
     created_at: timestamp('created_at', { withTimezone: true })
@@ -601,6 +605,44 @@ export const resourceTemplatesRelations = relations(resourceTemplatesTable, ({ o
     references: [mcpServersTable.uuid],
   }),
 }));
+
+
+// Table for storing discovered resources (non-template)
+export const resourcesTable = pgTable(
+  'resources',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    mcp_server_uuid: uuid('mcp_server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    uri: text('uri').notNull(),
+    name: text('name'),
+    description: text('description'),
+    mime_type: text('mime_type'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    // Add status if needed for filtering active/inactive resources
+    status: toggleStatusEnum('status').notNull().default(ToggleStatus.ACTIVE), 
+  },
+  (table) => [
+    index('resources_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+    unique('resources_unique_uri_per_server_idx').on( // Ensure URI is unique per server
+      table.mcp_server_uuid,
+      table.uri
+    ),
+    index('resources_status_idx').on(table.status), // Index status for filtering
+  ]
+);
+
+// Relations for resourcesTable
+export const resourcesRelations = relations(resourcesTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [resourcesTable.mcp_server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
 
 // Relations for toolsTable
 export const toolsRelations = relations(toolsTable, ({ one }) => ({

@@ -1,4 +1,4 @@
-CREATE TABLE "custom_mcp_servers" (
+CREATE TABLE IF NOT EXISTS "custom_mcp_servers" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
 	"description" text,

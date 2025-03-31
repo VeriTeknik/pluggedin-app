@@ -1,16 +1,19 @@
 'use server';
 
-import { convertMcpToLangchainTools, McpServerCleanupFn } from '@h1deya/langchain-mcp-tools'; // Removed unused McpToolsLogger
+// Import progressivelyInitializeMcpServers and other necessary modules
+import { McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
 
-import { logAuditEvent } from '@/app/actions/audit-logger';
-import { ensureLogDirectories } from '@/app/actions/log-retention';
-import { createEnhancedMcpLogger } from '@/app/actions/mcp-server-logger';
-import { getMcpServers } from '@/app/actions/mcp-servers';
+import { logAuditEvent } from '@/app/actions/audit-logger'; // Correct path alias
+import { ensureLogDirectories } from '@/app/actions/log-retention'; // Correct path alias
+import { createEnhancedMcpLogger } from '@/app/actions/mcp-server-logger'; // Correct path alias
+import { getMcpServers } from '@/app/actions/mcp-servers'; // Correct path alias
+
+import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization'; // Import the new function
 
 // Cache for Anthropic models with last fetch time
 interface ModelCache {
@@ -55,11 +58,11 @@ function safeProcessContent(content: any): string {
   if (content === null || content === undefined) {
     return 'No content';
   }
-  
+
   if (typeof content === 'string') {
     return content;
   }
-  
+
   // Handle arrays
   if (Array.isArray(content)) {
     try {
@@ -73,7 +76,7 @@ function safeProcessContent(content: any): string {
       return `[Array content: ${content.length} items]`;
     }
   }
-  
+
   // Handle objects
   if (typeof content === 'object') {
     try {
@@ -81,19 +84,19 @@ function safeProcessContent(content: any): string {
       if (content.type === 'text' && typeof content.text === 'string') {
         return content.text;
       }
-      
+
       // If it has a toString method that's not the default Object.toString
       if (content.toString && content.toString !== Object.prototype.toString) {
         return content.toString();
       }
-      
+
       // Last resort: stringify the object
       return JSON.stringify(content, null, 2);
     } catch (_e) {
       return `[Complex object: ${Object.keys(content).join(', ')}]`;
     }
   }
-  
+
   // For any other types
   return String(content);
 }
@@ -104,13 +107,13 @@ const serverLogsByProfile: Map<string, Array<{level: string, message: string, ti
 // Helper function to add a log for a profile - exported for use in mcp-server-logger
 export async function addServerLogForProfile(profileUuid: string, level: string, message: string) {
   const logs = serverLogsByProfile.get(profileUuid) || [];
-  
+
   // Create the new log entry
   const newLog = { level, message, timestamp: new Date() };
-  
+
   // Add the log to the array with performance optimizations
   logs.push(newLog);
-  
+
   // Limit to maximum 2000 logs to prevent memory leaks
   const MAX_LOGS_IN_MEMORY = 2000;
   if (logs.length > MAX_LOGS_IN_MEMORY) {
@@ -119,20 +122,20 @@ export async function addServerLogForProfile(profileUuid: string, level: string,
     const removeCount = Math.floor(MAX_LOGS_IN_MEMORY * 0.2);
     logs.splice(0, removeCount);
   }
-  
+
   serverLogsByProfile.set(profileUuid, logs);
-  
+
   // Handle console logs (MCP:INFO, etc.) and add them to the logs
   if (message.includes('[MCP:')) {
     const match = message.match(/\[MCP:(INFO|ERROR|WARN|DEBUG)\]\s+(.*)/i);
     if (match) {
       const mcpLevel = match[1].toLowerCase();
       const mcpMessage = match[2];
-      
+
       // Check for duplicates in the last ~20 logs rather than the whole array
       // This is more efficient while still catching most duplicates
       // const newLogSignature = `${mcpLevel}:${mcpMessage}`; // Removed unused variable
-      
+
       const recentLogs = logs.slice(-20);
       const recentDuplicate = recentLogs.some(existingLog => {
         if (existingLog.level === mcpLevel && existingLog.message === mcpMessage) {
@@ -141,10 +144,10 @@ export async function addServerLogForProfile(profileUuid: string, level: string,
         }
         return false;
       });
-      
+
       // Only add if it's not a duplicate
       if (!recentDuplicate) {
-        logs.push({ 
+        logs.push({
           level: mcpLevel,
           message: mcpMessage,
           timestamp: new Date()
@@ -165,7 +168,7 @@ function initChatModel(config: {
   streaming?: boolean;
 }) {
   const { provider, model, temperature = 0, maxTokens, streaming = true } = config;
-  
+
   if (provider === 'openai') {
     return new ChatOpenAI({
       modelName: model,
@@ -192,22 +195,22 @@ export async function getAnthropicModels() {
     const now = new Date();
     const cacheAge = now.getTime() - anthropicModelsCache.lastFetched.getTime();
     const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-    
+
     if (cacheAge < CACHE_TTL && anthropicModelsCache.models.length > 0) {
       // Use cached data
-      return { 
-        success: true, 
+      return {
+        success: true,
         models: anthropicModelsCache.models,
         fromCache: true
       };
     }
-    
+
     // Need to fetch from API
     const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
     if (!anthropicApiKey) {
       throw new Error("Anthropic API key not found");
     }
-    
+
     const response = await fetch('https://api.anthropic.com/v1/models', {
       method: 'GET',
       headers: {
@@ -215,13 +218,13 @@ export async function getAnthropicModels() {
         'anthropic-version': '2023-06-01'
       }
     });
-    
+
     if (!response.ok) {
       throw new Error(`API request failed: ${response.status} ${response.statusText}`);
     }
-    
+
     const data = await response.json();
-    
+
     // Format and filter for Claude models only
     const claudeModels = data.models
       .filter((model: any) => model.id.startsWith('claude'))
@@ -229,32 +232,32 @@ export async function getAnthropicModels() {
         id: model.id,
         name: formatModelName(model.id)
       }));
-    
+
     // Update cache
     anthropicModelsCache.models = claudeModels;
     anthropicModelsCache.lastFetched = now;
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       models: claudeModels,
       fromCache: false
     };
   } catch (error) {
     console.error('Error fetching Anthropic models:', error);
-    
+
     // Return cached data if available, even if outdated
     if (anthropicModelsCache.models.length > 0) {
-      return { 
-        success: true, 
+      return {
+        success: true,
         models: anthropicModelsCache.models,
         fromCache: true,
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
-    
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
@@ -266,7 +269,7 @@ function formatModelName(modelId: string): string {
   if (modelId.includes('claude-3-opus')) return 'Claude 3 Opus';
   if (modelId.includes('claude-3-sonnet')) return 'Claude 3 Sonnet';
   if (modelId.includes('claude-3-haiku')) return 'Claude 3 Haiku';
-  
+
   // For any other models, capitalize and format nicely
   return modelId
     .split('-')
@@ -298,18 +301,18 @@ export async function getOrCreatePlaygroundSession(
   try {
     // Clear any existing logs for this profile
     serverLogsByProfile.set(profileUuid, []);
-    
+
     // Ensure log directories exist
     await ensureLogDirectories();
-    
+
     // Get all MCP servers for the profile
     const allServers = await getMcpServers(profileUuid);
-    
+
     // Filter servers based on selected UUIDs
-    const selectedServers = allServers.filter(server => 
+    const selectedServers = allServers.filter(server =>
       selectedServerUuids.includes(server.uuid)
     );
-    
+
     // Format servers for conversion and apply sandboxing for STDIO using firejail
     const mcpServersConfig: Record<string, any> = {};
     selectedServers.forEach(server => {
@@ -350,23 +353,23 @@ export async function getOrCreatePlaygroundSession(
         };
       }
     });
-    
-    // Initialize LLM with streaming 
+
+    // Initialize LLM with streaming
     const llm = initChatModel({
       provider: llmConfig.provider,
       model: llmConfig.model,
       temperature: llmConfig.temperature,
       maxTokens: llmConfig.maxTokens,
-      streaming: llmConfig.streaming !== false, // Varsayılan olarak true olacak
+      streaming: llmConfig.streaming !== false, // Default to true
     });
-    
+
     // Create our enhanced logger using the factory function
     const logger = await createEnhancedMcpLogger(
-      profileUuid, 
+      profileUuid,
       llmConfig.logLevel || 'info',
       mcpServersConfig
     );
-    
+
     // Log the session start
     await logAuditEvent({
       profileUuid,
@@ -381,38 +384,45 @@ export async function getOrCreatePlaygroundSession(
         // OMIT llmConfig.temperature, llmConfig.maxTokens, llmConfig.logLevel
       }
     });
-    
+
     try {
-      // Convert MCP servers to LangChain tools with our custom logger and stderr redirection
-      // Add timeout handling for better error messages
-      const { tools, cleanup } = await Promise.race([
-        convertMcpToLangchainTools(
-          mcpServersConfig,
-          { logger }
-        ),
-        new Promise<never>((_, reject) => {
-          setTimeout(() => {
-            reject(new Error('MCP server initialization timed out (error -32001). This could be due to network issues or server load. Try disabling Brave Search server if you don\'t need it, or try again later when the network is more stable.'));
-          }, 30000); // Reduce timeout to 30 seconds for better user experience
-        })
-      ]);
-      
-      // Create agent with streaming callbacks
+      // --- Use Progressive Initialization ---
+      const { tools, cleanup, failedServers } = await progressivelyInitializeMcpServers(
+        mcpServersConfig,
+        profileUuid,
+        {
+          logger,
+          perServerTimeout: 20000, // 20 seconds per server (configurable)
+          totalTimeout: 60000 // 60 seconds total (configurable)
+        }
+      );
+
+      // Log any failed servers
+      if (failedServers.length > 0) {
+        await addServerLogForProfile(
+          profileUuid,
+          'warn',
+          `Some MCP servers failed to initialize: ${failedServers.join(', ')}. Continuing with available servers.`
+        );
+      }
+      // --- End Progressive Initialization ---
+
+      // Create agent with streaming callbacks using the tools that initialized successfully
       const agent = createReactAgent({
         llm,
-        tools,
+        tools, // Use the tools returned by progressive initialization
         checkpointSaver: new MemorySaver(),
       });
-      
-      // Create enhanced cleanup function
+
+      // Create enhanced cleanup function using the combined cleanup from progressive init
       const enhancedCleanup: McpServerCleanupFn = async () => {
         try {
           // First close any log files
           logger.cleanup();
-          
-          // Then call the original cleanup
+
+          // Then call the combined cleanup from progressive init
           await cleanup();
-          
+
           // Log the session end
           await logAuditEvent({
             profileUuid,
@@ -423,25 +433,27 @@ export async function getOrCreatePlaygroundSession(
           console.error('Enhanced cleanup error:', error);
         }
       };
-      
+
       // Store session
       activeSessions.set(profileUuid, {
         agent,
         cleanup: enhancedCleanup,
         lastActive: new Date()
       });
-      
+
       return { success: true };
     } catch (error) {
       // Add more detailed error handling for MCP server initialization
       console.error('Failed to initialize MCP servers:', error);
+      // Use the improved error message from progressive initialization if available
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error during server initialization';
       await addServerLogForProfile(
         profileUuid,
         'error',
-        `Failed to initialize MCP servers: ${error instanceof Error ? error.message : 'Unknown error'}`
+        `Failed to initialize MCP servers: ${errorMessage}`
       );
-      
-      // Try to clean up any partially initialized resources
+
+      // Try to clean up any partially initialized resources (logger cleanup)
       try {
         if (logger && typeof logger.cleanup === 'function') {
           await logger.cleanup();
@@ -449,14 +461,14 @@ export async function getOrCreatePlaygroundSession(
       } catch (cleanupError) {
         console.error('Error during cleanup after initialization failure:', cleanupError);
       }
-      
+
       throw error; // Re-throw to be caught by the outer try/catch
     }
   } catch (error) {
     console.error('Failed to create playground session:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
@@ -465,29 +477,29 @@ export async function getOrCreatePlaygroundSession(
 export async function getServerLogs(profileUuid: string) {
   try {
     const logs = serverLogsByProfile.get(profileUuid) || [];
-    
+
     // Check for partial/streaming messages
-    const hasPartialMessage = logs.some(log => 
-      log.level === 'streaming' && 
+    const hasPartialMessage = logs.some(log =>
+      log.level === 'streaming' &&
       log.message.includes('"isPartial":true')
     );
-    
+
     // Limit the returned logs to improve UI performance
     const MAX_LOGS_TO_RETURN = 1000;
-    const logsToReturn = logs.length > MAX_LOGS_TO_RETURN 
-      ? logs.slice(logs.length - MAX_LOGS_TO_RETURN) 
+    const logsToReturn = logs.length > MAX_LOGS_TO_RETURN
+      ? logs.slice(logs.length - MAX_LOGS_TO_RETURN)
       : logs;
-    
-    return { 
-      success: true, 
+
+    return {
+      success: true,
       logs: logsToReturn,
-      hasPartialMessage 
+      hasPartialMessage
     };
   } catch (error) {
     console.error('Failed to get server logs:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
@@ -499,38 +511,38 @@ export async function executePlaygroundQuery(
 ) {
   const session = activeSessions.get(profileUuid);
   if (!session) {
-    return { 
-      success: false, 
-      error: 'No active session found. Please start a new session.' 
+    return {
+      success: false,
+      error: 'No active session found. Please start a new session.'
     };
   }
-  
+
   try {
     // Update last active timestamp
     session.lastActive = new Date();
-    
+
     // Track streaming state for partial message updates
     let currentAiMessage = '';
     let isFirstToken = true;
-    
+
     // Execute query with streaming enabled
     const agentFinalState = await session.agent.invoke(
       { messages: [new HumanMessage(query)] },
-      { 
+      {
         configurable: { thread_id: profileUuid },
         callbacks: [
           {
             handleLLMNewToken: async (token) => {
               // Add token to current message
               currentAiMessage += token;
-              
+
               // Log token for debugging
               await addServerLogForProfile(
-                profileUuid, 
-                'info', 
+                profileUuid,
+                'info',
                 `[STREAMING] Token: ${token.slice(0, 20)}${token.length > 20 ? '...' : ''}`
               );
-              
+
               // Create a partial message for immediate display
               // When we first get a token, create a partial message in the logs
               if (isFirstToken) {
@@ -540,13 +552,13 @@ export async function executePlaygroundQuery(
                   timestamp: new Date(),
                   isPartial: true // Mark as partial for UI handling
                 };
-                
-                serverLogsByProfile.set(profileUuid + '_partial', [{ 
-                  level: 'streaming', 
+
+                serverLogsByProfile.set(profileUuid + '_partial', [{
+                  level: 'streaming',
                   message: JSON.stringify(partialMessage),
                   timestamp: new Date()
                 }]);
-                
+
                 isFirstToken = false;
               } else {
                 // Update the partial message with new content
@@ -554,11 +566,11 @@ export async function executePlaygroundQuery(
                   role: 'ai',
                   content: currentAiMessage,
                   timestamp: new Date(),
-                  isPartial: true 
+                  isPartial: true
                 };
-                
-                serverLogsByProfile.set(profileUuid + '_partial', [{ 
-                  level: 'streaming', 
+
+                serverLogsByProfile.set(profileUuid + '_partial', [{
+                  level: 'streaming',
                   message: JSON.stringify(partialMessage),
                   timestamp: new Date()
                 }]);
@@ -567,11 +579,11 @@ export async function executePlaygroundQuery(
             handleToolStart: async (tool) => {
               // Tool çalıştırılmaya başladığında loglara ekliyoruz
               await addServerLogForProfile(
-                profileUuid, 
-                'info', 
+                profileUuid,
+                'info',
                 `[TOOL] Starting: ${tool.name}`
               );
-              
+
               // Reset current AI message when tool starts
               currentAiMessage = '';
               isFirstToken = true;
@@ -579,8 +591,8 @@ export async function executePlaygroundQuery(
             handleToolEnd: async (output) => {
               // Tool çalışması bittiğinde loglara ekliyoruz
               await addServerLogForProfile(
-                profileUuid, 
-                'info', 
+                profileUuid,
+                'info',
                 `[TOOL] Completed: ${output?.name || 'unknown'}`
               );
             }
@@ -588,10 +600,10 @@ export async function executePlaygroundQuery(
         ]
       }
     );
-    
+
     // Clean up streaming state
     serverLogsByProfile.delete(profileUuid + '_partial');
-    
+
     // Process the result
     let result: string;
     const lastMessage = agentFinalState.messages[agentFinalState.messages.length - 1];
@@ -600,40 +612,40 @@ export async function executePlaygroundQuery(
     } else {
       result = safeProcessContent(lastMessage.content);
     }
-    
+
     // Get all messages for display with debugging information
     const messages = agentFinalState.messages.map((message: any, index: number) => {
       // Add debugging information
       const contentType = typeof message.content;
-      const contentKeys = message.content && typeof message.content === 'object' ? 
+      const contentKeys = message.content && typeof message.content === 'object' ?
         Object.keys(message.content) : [];
-      
+
       const debugInfo = `[DEBUG: Message ${index}, Type: ${message.constructor.name}, Content type: ${contentType}, Keys: ${contentKeys.join(',')}]`;
-      
+
       if (message instanceof HumanMessage) {
-        return { 
-          role: 'human', 
+        return {
+          role: 'human',
           content: message.content,
           debug: debugInfo
         };
       } else if (message instanceof AIMessage) {
-        return { 
-          role: 'ai', 
+        return {
+          role: 'ai',
           content: safeProcessContent(message.content),
           debug: debugInfo
         };
       } else {
-        return { 
-          role: 'tool', 
+        return {
+          role: 'tool',
           content: safeProcessContent(message.content),
           debug: debugInfo
         };
       }
     });
-    
-    return { 
-      success: true, 
-      result, 
+
+    return {
+      success: true,
+      result,
       messages,
       debug: {
         messageCount: agentFinalState.messages.length,
@@ -643,9 +655,9 @@ export async function executePlaygroundQuery(
     };
   } catch (error) {
     console.error('Error executing playground query:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
 }
@@ -660,12 +672,12 @@ export async function endPlaygroundSession(profileUuid: string) {
       return { success: true };
     } catch (error) {
       console.error('Error ending playground session:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
   }
-  
+
   return { success: true }; // Session doesn't exist, so consider it ended
 }
