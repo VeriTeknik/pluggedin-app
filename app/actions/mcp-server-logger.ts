@@ -66,7 +66,7 @@ export async function createEnhancedMcpLogger(
             this.mcpServers[serverName].errlog = logFd;
 
             // Log info - Use internal method but avoid ensureInitialized call during init
-            await this._internalAddLog('info', `Initialized log file for ${serverName}: ${logFilePath} (fd: ${logFd})`);
+            // await this._internalAddLog('info', `Initialized log file for ${serverName}: ${logFilePath} (fd: ${logFd})`);
           } catch (error) {
             // Log error but don't prevent other initializations
             await this._internalAddLog('error', `Failed to initialize log file for ${serverName}: ${error}`);
