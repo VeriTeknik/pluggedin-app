@@ -1,6 +1,6 @@
 // app/api/tools/[serverUuid]/[toolName]/route.ts
 import { and, eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server'; // Use NextResponse, Request is globally available
+import { NextRequest, NextResponse } from 'next/server';
 
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
@@ -49,11 +49,11 @@ import { mcpServersTable, toolsTable } from '@/db/schema';
  *         description: Internal Server Error.
  */
 export async function GET(
-  request: Request,
-  { params }: { params: { serverUuid: string; toolName: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ serverUuid: string; toolName: string }> }
 ) {
   try {
-    const { serverUuid, toolName } = params;
+    const { serverUuid, toolName } = await params;
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
-import useSWR from 'swr'; // Moved useSWR up
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import useSWR from 'swr';
 
 import {
   endPlaygroundSession,
@@ -106,13 +106,15 @@ export function usePlayground() {
   } = useSWR(profileUuid ? `${profileUuid}/mcp-servers` : null, () =>
     getMcpServers(profileUuid)
   );
-  const mcpServers = mcpServersData || []; // Provide default empty array
+  
+  // Wrap mcpServers in useMemo to prevent unnecessary re-renders
+  const mcpServers = useMemo(() => mcpServersData || [], [mcpServersData]);
 
   // Fetch Playground Settings
   const {
-    data: playgroundSettingsData,
+    data: _playgroundSettingsData,
     isLoading: isLoadingSettings,
-    mutate: mutateSettings,
+    mutate: _mutateSettings,
   } = useSWR(
     profileUuid ? `${profileUuid}/playground-settings` : null,
     () => getPlaygroundSettings(profileUuid),
