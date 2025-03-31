@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
 // Import the correct table and enum names from your schema
-import { mcpServersTable, ToggleStatus,toolsTable } from '@/db/schema';
+import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema'; // Import McpServerStatus
 
 import { authenticateApiKey } from '../auth'; // Assuming this path is correct
 
@@ -16,12 +16,18 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status'); // e.g., 'ACTIVE' or 'INACTIVE'
 
-    // Base conditions: filter by the authenticated user's active profile
-    const conditions = [eq(mcpServersTable.profile_uuid, auth.activeProfile.uuid)];
+    // Base conditions: filter by the authenticated user's active profile AND ensure parent server is ACTIVE
+    const conditions = [
+      eq(mcpServersTable.profile_uuid, auth.activeProfile.uuid),
+      eq(mcpServersTable.status, McpServerStatus.ACTIVE) // Filter by parent server status
+    ];
 
-    // Add status filter if provided and valid
+    // Add tool status filter if provided and valid
     if (status && Object.values(ToggleStatus).includes(status as ToggleStatus)) {
       conditions.push(eq(toolsTable.status, status as ToggleStatus));
+    } else {
+      // Default to fetching only ACTIVE tools if no specific status is requested
+      conditions.push(eq(toolsTable.status, ToggleStatus.ACTIVE));
     }
 
     // Perform the query joining tools and servers tables

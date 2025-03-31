@@ -606,6 +606,44 @@ export const resourceTemplatesRelations = relations(resourceTemplatesTable, ({ o
   }),
 }));
 
+
+// Table for storing discovered resources (non-template)
+export const resourcesTable = pgTable(
+  'resources',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    mcp_server_uuid: uuid('mcp_server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    uri: text('uri').notNull(),
+    name: text('name'),
+    description: text('description'),
+    mime_type: text('mime_type'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    // Add status if needed for filtering active/inactive resources
+    status: toggleStatusEnum('status').notNull().default(ToggleStatus.ACTIVE), 
+  },
+  (table) => [
+    index('resources_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+    unique('resources_unique_uri_per_server_idx').on( // Ensure URI is unique per server
+      table.mcp_server_uuid,
+      table.uri
+    ),
+    index('resources_status_idx').on(table.status), // Index status for filtering
+  ]
+);
+
+// Relations for resourcesTable
+export const resourcesRelations = relations(resourcesTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [resourcesTable.mcp_server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+
 // Relations for toolsTable
 export const toolsRelations = relations(toolsTable, ({ one }) => ({
   mcpServer: one(mcpServersTable, {
