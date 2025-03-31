@@ -1,10 +1,11 @@
 // app/api/tools/[serverUuid]/[toolName]/route.ts
 import { and, eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server'; // Use NextResponse, Request is globally available
 
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { mcpServersTable, toolsTable } from '@/db/schema';
+
 
 /**
  * @swagger
@@ -52,6 +53,7 @@ export async function GET(
   { params }: { params: { serverUuid: string; toolName: string } }
 ) {
   try {
+    const { serverUuid, toolName } = params;
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
 
@@ -62,8 +64,6 @@ export async function GET(
         { status: 401 } // Unauthorized or Bad Request might be appropriate
       );
     }
-
-    const { serverUuid, toolName } = params;
 
     // Fetch the specific tool associated with the authenticated user's active profile
     const tool = await db

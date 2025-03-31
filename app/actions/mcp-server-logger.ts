@@ -1,9 +1,5 @@
 'use server';
 
-import * as fsSync from 'fs'; // Import synchronous fs module
-import fs from 'fs/promises'; // Import promises version
-import path from 'path';
-
 import { db } from '@/db';
 import { systemLogsTable } from '@/db/schema';
 
