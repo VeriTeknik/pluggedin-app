@@ -494,7 +494,7 @@ ANOTHER_KEY=another_value"
                 )}
                 {!isLoadingTools && !toolsError && (!serverTools || serverTools.length === 0) && (
                   <p className="text-muted-foreground text-sm">
-                    No tools discovered for this server yet. Try using the "Discover Tools" button on the server card.
+                    No tools discovered for this server yet. Try using the &quot;Discover Tools&quot; button on the server card.
                   </p>
                 )}
                 {!isLoadingTools && !toolsError && serverTools && serverTools.length > 0 && (
@@ -507,9 +507,9 @@ ANOTHER_KEY=another_value"
                         {tool.toolSchema && (
                           <details className="text-xs mt-2"> {/* Added margin top */}
                             <summary className="cursor-pointer text-muted-foreground hover:text-foreground">View Schema</summary> {/* Added hover effect */}
-                            {/* Wrap JSON stringify in code tag inside pre */}
+                            {/* Use dangerouslySetInnerHTML to avoid quote escaping issues */}
                             <pre className="mt-1 p-2 bg-muted dark:bg-slate-800 rounded text-xs overflow-auto max-h-60">
-                              <code>{JSON.stringify(tool.toolSchema, null, 2)}</code>
+                              <code dangerouslySetInnerHTML={{ __html: JSON.stringify(tool.toolSchema, null, 2) }} />
                             </pre>
                           </details>
                         )}

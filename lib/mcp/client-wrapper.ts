@@ -1,19 +1,16 @@
 // Standard library imports (none in this case)
 
 // Third-party library imports
-import { Client } from '@modelcontextprotocol/sdk/client';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse';
-import {
-  StdioClientTransport,
-  StdioServerParameters,
-} from '@modelcontextprotocol/sdk/client/stdio';
-import { Transport } from '@modelcontextprotocol/sdk/shared/transport';
-import {
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
+import { StdioClientTransport, StdioServerParameters } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import { 
   ListResourceTemplatesResultSchema,
   ListToolsResultSchema,
   ResourceTemplate,
-  Tool,
-} from '@modelcontextprotocol/sdk/types';
+  Tool
+} from '@modelcontextprotocol/sdk/types.js';
 
 // Internal application imports
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
@@ -53,9 +50,9 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
         args: serverConfig.args || [],
         // Merge process.env with serverConfig.env, giving precedence to serverConfig.env
         env: {
-          ...process.env, // Inherit parent process environment (includes PATH)
+          ...(process.env as Record<string, string>), // Inherit parent process environment (includes PATH)
           ...(serverConfig.env || {}), // Server-specific env vars override
-        },
+        } as Record<string, string>,
       };
       transport = new StdioClientTransport(stdioParams);
     } else if (serverConfig.type === McpServerType.SSE) {
