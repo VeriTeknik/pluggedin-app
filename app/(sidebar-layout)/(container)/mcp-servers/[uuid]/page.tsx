@@ -1,19 +1,21 @@
 'use client';
 
-import { Activity, ArrowLeft, Clock, Database, Globe, Save, Server, Terminal, Trash2 } from 'lucide-react';
+import { Activity, ArrowLeft, Clock, Database, Globe, RefreshCw, Save, Server, Terminal, Trash2 } from 'lucide-react'; // Added RefreshCw
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next'; // Added useTranslation
 import useSWR from 'swr';
 
+import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Added action import
 import {
   deleteMcpServerByUuid,
   getMcpServerByUuid,
   toggleMcpServerStatus,
   updateMcpServer,
 } from '@/app/actions/mcp-servers';
-import { getToolsForServer } from '@/app/actions/tools'; // Import action to get tools
+import { getToolsForServer } from '@/app/actions/tools';
 import InlineEditText from '@/components/InlineEditText';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,15 +27,18 @@ import {
 } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for loading state
+import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea'; // Import Textarea
-import { McpServerStatus, McpServerType } from '@/db/schema'; // Removed unused toolsTable import
+import { Textarea } from '@/components/ui/textarea';
+import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
+import { useToast } from '@/hooks/use-toast'; // Added useToast
 import { McpServer } from '@/types/mcp-server';
-import { ResourceTemplate } from '@/types/resource-template'; // Assuming this type exists or will be created
-import type { Tool } from '@/types/tool'; // Use type import
+import { ResourceTemplate } from '@/types/resource-template';
+import type { Tool } from '@/types/tool';
+
+import { ResourceList } from '../components/resource-list';
 
 export default function McpServerDetailPage({
   params,
@@ -43,7 +48,10 @@ export default function McpServerDetailPage({
   const { currentProfile } = useProfiles();
   const { uuid } = use(params);
   const router = useRouter();
+  const { t } = useTranslation(); // Initialize useTranslation
+  const { toast } = useToast(); // Initialize useToast
   const [hasChanges, setHasChanges] = useState(false);
+  const [isDiscovering, setIsDiscovering] = useState(false); // Add state for discovery loading
 
   const form = useForm({
     defaultValues: {
@@ -190,6 +198,33 @@ export default function McpServerDetailPage({
     }
   };
 
+  // Add handleDiscover function (adapted from ServerCard)
+  const handleDiscover = async () => {
+    if (!currentProfile?.uuid || !uuid) { // Use uuid from params
+      toast({ title: t('common.error'), description: t('mcpServers.errors.missingInfo'), variant: 'destructive' });
+      return;
+    }
+    setIsDiscovering(true);
+    try {
+      // Use uuid from params directly
+      const result = await discoverSingleServerTools(currentProfile.uuid, uuid);
+      if (result.success) {
+        toast({ title: t('common.success'), description: result.message });
+        // Optionally revalidate SWR data for tools/resources/templates here if needed
+        // mutateTools(); // Assuming mutate functions exist for SWR hooks
+        // mutateTemplates();
+        // mutateResources();
+      } else {
+        throw new Error(result.error || t('mcpServers.errors.discoveryFailed'));
+      }
+    } catch (error: any) {
+      toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
+    } finally {
+      setIsDiscovering(false);
+    }
+  };
+
+
   if (error) return <div>Failed to load MCP server</div>;
   if (!mcpServer) return <div>Loading...</div>; // Keep simple loading state
 
@@ -221,6 +256,17 @@ export default function McpServerDetailPage({
               Save Changes
             </Button>
           )}
+          {/* Add Discover Button */}
+          <Button
+            variant="secondary"
+            size="default" // Match size of other buttons potentially
+            onClick={handleDiscover}
+            disabled={isDiscovering}
+            className="shadow-sm"
+          >
+            <RefreshCw size={16} className={`mr-2 ${isDiscovering ? 'animate-spin' : ''}`} />
+            {isDiscovering ? t('mcpServers.actions.discovering') : t('mcpServers.actions.discover')}
+          </Button>
           <Button variant='destructive' className="shadow-sm" onClick={handleDelete}>
             <Trash2 className='mr-2' size={16} />
             Delete
@@ -272,8 +318,9 @@ export default function McpServerDetailPage({
             <TabsTrigger value="details">Server Details</TabsTrigger>
             <TabsTrigger value="config">Configuration</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="resources">Resources</TabsTrigger> {/* Add Resources Tab Trigger */}
             <TabsTrigger value="templates">Resource Templates</TabsTrigger>
-            <TabsTrigger value="tools">Tools</TabsTrigger> {/* Add Tools Tab */}
+            <TabsTrigger value="tools">Tools</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details">
@@ -473,7 +520,20 @@ ANOTHER_KEY=another_value"
             </Card>
           </TabsContent>
 
-          {/* Add Tools Tab Content */}
+          {/* Add Resources Tab Content */}
+          <TabsContent value="resources">
+             <Card className="shadow-sm">
+               <CardHeader className="pb-2">
+                 <CardTitle className="text-md font-medium">Discovered Resources</CardTitle>
+               </CardHeader>
+               <CardContent className="pt-0">
+                 {/* Render the ResourceList component */}
+                 <ResourceList serverUuid={uuid} />
+               </CardContent>
+             </Card>
+          </TabsContent>
+
+          {/* Tools Tab Content */}
           <TabsContent value="tools">
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
@@ -507,9 +567,10 @@ ANOTHER_KEY=another_value"
                         {tool.toolSchema && (
                           <details className="text-xs mt-2"> {/* Added margin top */}
                             <summary className="cursor-pointer text-muted-foreground hover:text-foreground">View Schema</summary> {/* Added hover effect */}
-                            {/* Use dangerouslySetInnerHTML to avoid quote escaping issues */}
+                            {/* Use dangerouslySetInnerHTML to avoid quote escaping issues, escape quotes */}
                             <pre className="mt-1 p-2 bg-muted dark:bg-slate-800 rounded text-xs overflow-auto max-h-60">
-                              <code dangerouslySetInnerHTML={{ __html: JSON.stringify(tool.toolSchema, null, 2) }} />
+                              {/* Correctly escape quotes for HTML */}
+                              <code dangerouslySetInnerHTML={{ __html: JSON.stringify(tool.toolSchema, null, 2).replace(/"/g, '"') }} />
                             </pre>
                           </details>
                         )}

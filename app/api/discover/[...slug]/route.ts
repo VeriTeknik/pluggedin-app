@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server'; // Sorted
 import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Sorted
 import { authenticateApiKey } from '@/app/api/auth'; // Sorted
 import { db } from '@/db'; // Sorted
-import { McpServerStatus, mcpServersTable } from '@/db/schema'; // Sorted
+import { mcpServersTable,McpServerStatus } from '@/db/schema'; // Sorted
 
 export const dynamic = 'force-dynamic';
 
