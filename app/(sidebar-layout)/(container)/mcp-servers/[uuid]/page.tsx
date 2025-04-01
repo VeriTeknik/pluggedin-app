@@ -37,8 +37,8 @@ import { useToast } from '@/hooks/use-toast'; // Added useToast
 import { McpServer } from '@/types/mcp-server';
 import { ResourceTemplate } from '@/types/resource-template';
 import type { Tool } from '@/types/tool';
-
 import { ResourceList } from '../components/resource-list';
+import { ResourceTemplateList } from '../components/resource-template-list'; // Import the new component
 
 export default function McpServerDetailPage({
   params,
@@ -480,7 +480,10 @@ ANOTHER_KEY=another_value"
                 <CardTitle className="text-md font-medium">Resource Templates</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                {isLoadingTemplates && (
+                {/* Render ResourceTemplateList instead of manual rendering */}
+                <ResourceTemplateList serverUuid={uuid} />
+                {/* Remove manual rendering logic below */}
+                {/* {isLoadingTemplates && (
                   <div className="space-y-4">
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
@@ -515,12 +518,12 @@ ANOTHER_KEY=another_value"
                       </div>
                     ))}
                   </div>
-                )}
+                )} */}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Add Resources Tab Content */}
+          {/* Resources Tab Content */}
           <TabsContent value="resources">
              <Card className="shadow-sm">
                <CardHeader className="pb-2">
