@@ -101,9 +101,6 @@ importers:
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
-      client:
-        specifier: link:@modelcontextprotocol/sdk/client
-        version: link:@modelcontextprotocol/sdk/client
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -185,9 +182,6 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.17)
-      types:
-        specifier: link:@modelcontextprotocol/sdk/types
-        version: link:@modelcontextprotocol/sdk/types
       vitest:
         specifier: ^3.0.9
         version: 3.0.9(@types/debug@4.1.12)(@types/node@20.17.28)(jiti@1.21.7)(tsx@4.19.3)(yaml@2.7.1)
@@ -10479,7 +10473,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.2
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.8.4)
+      retry-axios: 2.6.0(axios@1.8.4(debug@4.4.0))
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -11880,7 +11874,7 @@ snapshots:
 
   ret@0.2.2: {}
 
-  retry-axios@2.6.0(axios@1.8.4):
+  retry-axios@2.6.0(axios@1.8.4(debug@4.4.0)):
     dependencies:
       axios: 1.8.4(debug@4.4.0)
 

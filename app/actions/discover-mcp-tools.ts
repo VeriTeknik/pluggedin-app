@@ -4,14 +4,17 @@ import { and, eq } from 'drizzle-orm';
 
 // import { revalidatePath } from 'next/cache'; // Removed unused import
 import { db } from '@/db';
-import { mcpServersTable, resourceTemplatesTable, ToggleStatus,toolsTable } from '@/db/schema'; // Added resourceTemplatesTable
+import { mcpServersTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema'; // Sorted
+import { listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Sorted
 // Removed getUserData import - profileUuid will be passed as argument
 // Import the actual discovery logic using @h1deya/langchain-mcp-tools
 // Note: convertMcpToLangchainTools only handles tools. We need direct SDK usage for templates.
 // import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
-import { listResourceTemplatesFromServer,listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Import from our wrapper
 // Remove explicit SDK type imports - rely on inference from wrapper functions
-// import type { Tool, ResourceTemplate } from '@modelcontextprotocol/sdk/types';
+
+// Infer Resource type from the imported function's return type
+type ResourcesArray = Awaited<ReturnType<typeof listResourcesFromServer>>;
+type InferredResource = ResourcesArray[number];
 
 /**
  * Discovers tools for a single MCP server and updates the database.
@@ -48,10 +51,12 @@ export async function discoverSingleServerTools(
     // Ensure server name is used as key, handle potential null/empty names
     console.log(`[Action] Found server config for ${serverConfig.name || serverUuid}`);
 
-    let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = []; // Infer type
-    let discoveredTemplates: Awaited<ReturnType<typeof listResourceTemplatesFromServer>> = []; // Infer type
+    let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = [];
+    let discoveredTemplates: Awaited<ReturnType<typeof listResourceTemplatesFromServer>> = [];
+    let discoveredResources: Awaited<ReturnType<typeof listResourcesFromServer>> = []; // Added
     let toolError: string | null = null;
     let templateError: string | null = null;
+    let resourceError: string | null = null; // Added
 
     // --- Discover Tools ---
     try {
@@ -113,22 +118,51 @@ export async function discoverSingleServerTools(
         templateError = error.message;
     }
 
+    // --- Discover Static Resources ---
+    try {
+        console.log(`[Action] Discovering static resources for ${serverConfig.name || serverUuid}...`);
+        discoveredResources = await listResourcesFromServer(serverConfig);
+        console.log(`[Action] Discovered ${discoveredResources.length} static resources.`);
+
+        // Delete existing resources
+        console.log(`[Action] Deleting old static resources for server: ${serverUuid}`);
+        await db.delete(resourcesTable).where(eq(resourcesTable.mcp_server_uuid, serverUuid));
+
+        // Insert new resources
+        if (discoveredResources.length > 0) {
+            console.log(`[Action] Inserting ${discoveredResources.length} new static resources...`);
+            const resourcesToInsert = discoveredResources.map((resource: InferredResource) => ({ // Use inferred type
+                mcp_server_uuid: serverUuid,
+                uri: resource.uri,
+                name: resource.name,
+                description: resource.description,
+                mime_type: typeof resource.mimeType === 'string' ? resource.mimeType : null, // Ensure it's a string or null
+                size: resource.size ?? null, // Handle optional size
+            }));
+            await db.insert(resourcesTable).values(resourcesToInsert);
+        }
+    } catch (error: any) {
+        console.error(`[Action Error] Failed to discover/store static resources for ${serverConfig.name || serverUuid}:`, error);
+        resourceError = error.message;
+    }
+
     // --- Final Result ---
     // Revalidate relevant paths if needed
     // revalidatePath('/mcp-servers');
 
-    const success = !toolError && !templateError;
+    const success = !toolError && !templateError && !resourceError; // Include resourceError
     let message = '';
     if (success) {
-        message = `Successfully discovered ${discoveredTools.length} tools and ${discoveredTemplates.length} templates for ${serverConfig.name || serverUuid}.`;
+        message = `Successfully discovered ${discoveredTools.length} tools, ${discoveredTemplates.length} templates, and ${discoveredResources.length} resources for ${serverConfig.name || serverUuid}.`;
     } else {
         message = `Discovery partially failed for ${serverConfig.name || serverUuid}.`;
         if (toolError) message += ` Tool error: ${toolError}`;
         if (templateError) message += ` Template error: ${templateError}`;
+        if (resourceError) message += ` Resource error: ${resourceError}`; // Add resource error
     }
     console.log(`[Action] Discovery process finished for ${serverUuid}. Success: ${success}`);
 
-    return { success, message, error: success ? undefined : (toolError || templateError || 'Unknown discovery error') };
+    return { success, message, error: success ? undefined : (toolError || templateError || resourceError || 'Unknown discovery error') }; // Include resourceError
 
   } catch (error: any) {
     console.error(`[Action Error] Failed to discover tools for server ${serverUuid}:`, error);
