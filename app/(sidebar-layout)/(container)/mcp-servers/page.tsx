@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 // Internal actions
-import { getFirstApiKey } from '@/app/actions/api-keys';
+// import { getFirstApiKey } from '@/app/actions/api-keys'; // Removed unused import
 import {
   bulkImportMcpServers,
   createMcpServer,
@@ -34,10 +34,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 // Internal hooks
 import { useProfiles } from '@/hooks/use-profiles';
-import { useProjects } from '@/hooks/use-projects';
+// import { useProjects } from '@/hooks/use-projects'; // Removed unused import
 import { useToast } from '@/hooks/use-toast';
 // Internal types
-import { ApiKey } from '@/types/api-key';
+// import { ApiKey } from '@/types/api-key'; // Removed unused import
 import { McpServer } from '@/types/mcp-server';
 
 import { ServerCard } from './components/server-card';
@@ -48,84 +48,7 @@ import { ServerHero } from './components/server-hero';
 import { ServerStats } from './components/server-stats';
 
 
-// DiscoverToolsButton Component Definition
-function DiscoverToolsButton() {
-  const [isDiscovering, setIsDiscovering] = useState(false);
-  const { toast } = useToast();
-  const { currentProject } = useProjects(); // Get current project
-
-  // Fetch the API key using SWR
-  const { data: apiKeyData, isLoading: apiKeyLoading } = useSWR<ApiKey | null>(
-    currentProject ? `${currentProject.uuid}/first-api-key` : null,
-    () => getFirstApiKey(currentProject?.uuid || '')
-  );
-
-  const handleDiscoverTools = async () => {
-    const apiKey = apiKeyData?.api_key; // Extract the key string
-
-    if (!apiKey) {
-      toast({
-        title: 'Error',
-        description: apiKeyLoading ? 'Loading API Key...' : 'API Key not found for the current project.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIsDiscovering(true);
-    try {
-      // The API route uses authenticateApiKey, so the request likely needs
-      // credentials (e.g., cookies handled by the browser, or an Authorization header
-      // if the API key needs to be sent manually from the client).
-      // For simplicity, assuming browser handles session/cookies.
-      const response = await fetch('/api/tools/discover', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`, // Add Authorization header
-        },
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        // Use details from API error if available, otherwise the error message
-        throw new Error(data.details || data.error || 'Failed to discover tools');
-      }
-
-      toast({
-        title: 'Success',
-        description: data.message || 'Tool discovery initiated.', // Use message from API
-        variant: 'default', // Use 'default' or check available variants in use-toast.ts
-      });
-      // Optionally log details for debugging in the browser console
-      if (data.details) {
-        console.log('Tool Discovery Details:', data.details);
-      }
-    } catch (error: any) {
-      console.error('Error discovering tools:', error);
-      toast({
-        title: 'Error',
-        description: error.message || 'Failed to discover tools. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsDiscovering(false);
-    }
-  };
-
-  // Assuming 't' function for translation is not needed directly in this button text
-  // If needed, it would have to be passed as a prop.
-  return (
-    <Button
-      onClick={handleDiscoverTools}
-      disabled={isDiscovering || apiKeyLoading || !apiKeyData} // Disable while loading or if no key
-      variant="secondary"
-    >
-      {isDiscovering ? 'Discovering...' : (apiKeyLoading ? 'Loading Key...' : 'Discover Tools')}
-    </Button>
-  );
-}
+// Removed DiscoverToolsButton Component Definition
 
 
 const columnHelper = createColumnHelper<McpServer>();
@@ -371,8 +294,7 @@ export default function MCPServersPage() {
               <Download className="mr-2 h-4 w-4" />
               {t('mcpServers.actions.export')}
             </Button>
-            {/* Render DiscoverToolsButton without passing apiKey prop */}
-            <DiscoverToolsButton />
+            {/* Removed global DiscoverToolsButton */}
           </div>
         </div>
       </div>

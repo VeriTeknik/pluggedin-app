@@ -7,6 +7,7 @@ import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType } from
 import type { McpServer } from '@/types/mcp-server';
 
 import { trackServerInstallation } from './mcp-server-metrics';
+import { discoverSingleServerTools } from './discover-mcp-tools'; // Import the discovery action
 
 export async function getMcpServers(profileUuid: string) {
   const servers = await db
@@ -81,8 +82,7 @@ export async function updateMcpServer(
     type?: McpServerType;
     notes?: string | null;
   }
-): Promise<void> {
-  // Construct the update object carefully to handle undefined vs null
+): Promise<void> { // Changed return type to void as it doesn't explicitly return the server
   // Construct the update object carefully to handle undefined vs null
   const updateData: Partial<typeof mcpServersTable.$inferInsert> = {};
   if (data.name !== undefined) updateData.name = data.name;
@@ -108,6 +108,22 @@ export async function updateMcpServer(
         eq(mcpServersTable.profile_uuid, profileUuid)
       )
     );
+
+  // Trigger discovery after update
+  try {
+    console.log(`[Action] Triggering tool discovery for updated server: ${uuid}`);
+    // Don't await this, let it run in the background
+    discoverSingleServerTools(profileUuid, uuid).catch(discoveryError => {
+       console.error(`[Action Warning] Background tool discovery failed after update for server ${uuid}:`, discoveryError);
+    });
+  } catch (error) {
+    // Catch synchronous errors if discoverSingleServerTools itself throws immediately (unlikely for async)
+    console.error(`[Action Warning] Failed to trigger tool discovery after update for server ${uuid}:`, error);
+    // Do not re-throw, allow the update operation to be considered successful
+  }
+
+  // Revalidate path if needed
+  // revalidatePath('/mcp-servers');
 }
 
 export async function createMcpServer({
@@ -132,25 +148,26 @@ export async function createMcpServer({
   url?: string;
   source?: McpServerSource;
   external_id?: string;
-}) {
+}) { // Removed explicit return type to match actual returns
   try {
     const serverType = type || McpServerType.STDIO;
-    
+
     // Validate inputs based on type
     if (serverType === McpServerType.STDIO && !command) {
       return { success: false, error: 'Command is required for STDIO servers' };
     }
-    
+
     if (serverType === McpServerType.SSE && !url) {
       return { success: false, error: 'URL is required for SSE servers' };
     }
-    
+
     const urlIsValid = url ? /^https?:\/\/.+/.test(url) : false;
     if (serverType === McpServerType.SSE && !urlIsValid) {
       return { success: false, error: 'URL must be a valid HTTP/HTTPS URL' };
     }
 
-    const _insertResult = await db.insert(mcpServersTable).values({
+    // Insert and get the newly created server record
+    const inserted = await db.insert(mcpServersTable).values({
       name,
       description,
       type: serverType,
@@ -161,32 +178,41 @@ export async function createMcpServer({
       profile_uuid: profileUuid,
       source,
       external_id,
-    });
+    }).returning(); // Use returning() to get the inserted row
 
-    // Get generated UUID from inserted row
-    const allServers = await db
-      .select()
-      .from(mcpServersTable)
-      .where(eq(mcpServersTable.profile_uuid, profileUuid));
-    
-    const newServer = allServers.at(-1);
+    const newServer = inserted[0]; // Get the first (and only) inserted row
 
-    // Track server installation
-    if (newServer && newServer.uuid) {
-      try {
-        await trackServerInstallation(
-          profileUuid, 
-          newServer.uuid, 
-          external_id || null,
-          source
-        );
-      } catch (trackingError) {
-        console.error('Error tracking installation:', trackingError);
-        // Continue even if tracking fails
-      }
+    if (!newServer || !newServer.uuid) {
+       throw new Error("Failed to retrieve new server details after insertion.");
     }
 
-    return { success: true, data: newServer };
+    // Track server installation
+    try {
+      await trackServerInstallation(
+        profileUuid,
+        newServer.uuid,
+        external_id || null,
+        source
+      );
+    } catch (trackingError) {
+      console.error('Error tracking installation:', trackingError);
+      // Continue even if tracking fails
+    }
+
+    // Trigger discovery after creation
+    try {
+      console.log(`[Action] Triggering tool discovery for created server: ${newServer.uuid}`);
+      // Don't await this, let it run in the background
+      discoverSingleServerTools(profileUuid, newServer.uuid).catch(discoveryError => {
+         console.error(`[Action Warning] Background tool discovery failed after creation for server ${newServer.uuid}:`, discoveryError);
+      });
+    } catch (error) {
+      // Catch synchronous errors if discoverSingleServerTools itself throws immediately (unlikely for async)
+      console.error(`[Action Warning] Failed to trigger tool discovery after creation for server ${newServer.uuid}:`, error);
+      // Do not re-throw, allow the creation operation to be considered successful
+    }
+
+    return { success: true, data: newServer }; // Return success and the new server data
   } catch (error) {
     console.error('Error creating MCP server:', error);
     return {
@@ -218,6 +244,7 @@ export async function bulkImportMcpServers(
   const { mcpServers } = data;
 
   const serverEntries = Object.entries(mcpServers);
+  const createdServerUuids: string[] = []; // Keep track of created UUIDs
 
   for (const [name, serverConfig] of serverEntries) {
     const serverData = {
@@ -233,7 +260,21 @@ export async function bulkImportMcpServers(
     };
 
     // Insert the server into the database
-    await db.insert(mcpServersTable).values(serverData);
+    const inserted = await db.insert(mcpServersTable).values(serverData).returning({ uuid: mcpServersTable.uuid });
+    if (inserted[0]?.uuid) {
+        createdServerUuids.push(inserted[0].uuid);
+    }
+  }
+
+  // Trigger discovery for all newly created servers in the background
+  if (createdServerUuids.length > 0 && profileUuid) {
+      console.log(`[Action] Triggering background tool discovery for ${createdServerUuids.length} bulk imported servers...`);
+      // Fire off discovery tasks without awaiting each one individually
+      createdServerUuids.forEach(uuid => {
+          discoverSingleServerTools(profileUuid, uuid).catch(discoveryError => {
+              console.error(`[Action Warning] Background tool discovery failed during bulk import for server ${uuid}:`, discoveryError);
+          });
+      });
   }
 
   return { success: true, count: serverEntries.length };

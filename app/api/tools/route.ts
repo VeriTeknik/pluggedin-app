@@ -94,8 +94,8 @@ export async function GET(request: Request) {
         name: toolsTable.name,
         status: toolsTable.status,
         // Add other tool fields if needed
-        // description: toolsTable.description,
-        // toolSchema: toolsTable.toolSchema,
+        description: toolsTable.description, // <-- UNCOMMENTED
+        toolSchema: toolsTable.toolSchema, // <-- UNCOMMENTED
         // uuid: toolsTable.uuid,
       })
       .from(toolsTable)

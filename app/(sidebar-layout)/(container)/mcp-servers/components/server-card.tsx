@@ -11,6 +11,11 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { McpServer } from '@/types/mcp-server';
+import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Import the action
+import { useProfiles } from '@/hooks/use-profiles'; // Import useProfiles
+import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useState } from 'react'; // Import useState
+import { RefreshCw } from 'lucide-react'; // Import RefreshCw icon
 
 interface ServerCardProps {
   server: McpServer;
@@ -27,6 +32,30 @@ const getServerIcon = (server: McpServer) => {
 
 export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps) {
   const { t } = useTranslation();
+  const { currentProfile } = useProfiles(); // Get current profile
+  const { toast } = useToast();
+  const [isDiscovering, setIsDiscovering] = useState(false);
+
+  const handleDiscover = async () => {
+    if (!currentProfile?.uuid || !server.uuid) {
+      toast({ title: t('common.error'), description: t('mcpServers.errors.missingInfo'), variant: 'destructive' });
+      return;
+    }
+    setIsDiscovering(true);
+    try {
+      const result = await discoverSingleServerTools(currentProfile.uuid, server.uuid);
+      if (result.success) {
+        toast({ title: t('common.success'), description: result.message });
+      } else {
+        throw new Error(result.error || t('mcpServers.errors.discoveryFailed'));
+      }
+    } catch (error: any) {
+      toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
+    } finally {
+      setIsDiscovering(false);
+    }
+  };
+
   return (
     <Card className="group hover:shadow-md transition-all dark:bg-slate-900/70 dark:border-slate-800 dark:hover:bg-slate-900/90">
       <CardHeader className="pb-2">
@@ -109,8 +138,19 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
             {t('mcpServers.actions.edit')}
           </Link>
         </Button>
-        <Button 
-          variant="destructive" 
+        {/* Add Discover Tools Button */}
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleDiscover}
+          disabled={isDiscovering}
+          className="dark:border-slate-700 dark:hover:bg-slate-800"
+        >
+          <RefreshCw size={14} className={`mr-1 ${isDiscovering ? 'animate-spin' : ''}`} />
+          {isDiscovering ? t('mcpServers.actions.discovering') : t('mcpServers.actions.discover')}
+        </Button>
+        <Button
+          variant="destructive"
           size="sm"
           onClick={onDelete}
         >
