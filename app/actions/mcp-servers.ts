@@ -6,8 +6,8 @@ import { db } from '@/db';
 import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType } from '@/db/schema';
 import type { McpServer } from '@/types/mcp-server';
 
-import { trackServerInstallation } from './mcp-server-metrics';
 import { discoverSingleServerTools } from './discover-mcp-tools'; // Import the discovery action
+import { trackServerInstallation } from './mcp-server-metrics';
 
 export async function getMcpServers(profileUuid: string) {
   const servers = await db

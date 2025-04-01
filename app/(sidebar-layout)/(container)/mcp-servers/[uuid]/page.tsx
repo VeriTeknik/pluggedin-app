@@ -13,6 +13,7 @@ import {
   toggleMcpServerStatus,
   updateMcpServer,
 } from '@/app/actions/mcp-servers';
+import { getToolsForServer } from '@/app/actions/tools'; // Import action to get tools
 import InlineEditText from '@/components/InlineEditText';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,10 +29,11 @@ import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for load
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea'; // Import Textarea
-import { McpServerStatus, McpServerType } from '@/db/schema';
+import { McpServerStatus, McpServerType } from '@/db/schema'; // Removed unused toolsTable import
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 import { ResourceTemplate } from '@/types/resource-template'; // Assuming this type exists or will be created
+import type { Tool } from '@/types/tool'; // Use type import
 
 export default function McpServerDetailPage({
   params,
@@ -41,8 +43,6 @@ export default function McpServerDetailPage({
   const { currentProfile } = useProfiles();
   const { uuid } = use(params);
   const router = useRouter();
-  // const [isEditingName, setIsEditingName] = useState(false);
-  // const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
 
   const form = useForm({
@@ -76,8 +76,19 @@ export default function McpServerDetailPage({
     isLoading: isLoadingTemplates,
   } = useSWR<ResourceTemplate[]>(
     uuid ? `/api/mcp-servers/${uuid}/resource-templates` : null,
-    (url: string) => fetch(url).then((res) => res.json()) // Add type to url parameter
+    (url: string) => fetch(url).then((res) => res.json())
   );
+
+  // SWR hook for fetching tools
+  const {
+    data: serverTools,
+    error: toolsError,
+    isLoading: isLoadingTools,
+  } = useSWR<Tool[]>(
+    uuid ? `/${uuid}/tools` : null, // Unique key for SWR
+    () => getToolsForServer(uuid!) // Fetch tools using the action
+  );
+
 
   useEffect(() => {
     if (mcpServer) {
@@ -99,9 +110,10 @@ export default function McpServerDetailPage({
 
   // Check for changes in form values
   useEffect(() => {
-    const subscription = form.watch((value) => {
+    // Add type for 'value' parameter
+    const subscription = form.watch((value: typeof form.control._defaultValues) => {
       if (mcpServer) {
-        const isDifferent = 
+        const isDifferent =
           value.name !== mcpServer.name ||
           value.description !== (mcpServer.description || '') ||
           (mcpServer.type === McpServerType.STDIO && (
@@ -118,7 +130,7 @@ export default function McpServerDetailPage({
         setHasChanges(isDifferent);
       }
     });
-    
+
     return () => subscription.unsubscribe();
   }, [form, mcpServer]);
 
@@ -149,8 +161,8 @@ export default function McpServerDetailPage({
         ? Object.fromEntries(
           data.env
             .split('\n')
-            .filter((line) => line.includes('='))
-            .map((line) => {
+            .filter((line: string) => line.includes('=')) // Add type for line
+            .map((line: string) => { // Add type for line
               const [key, ...values] = line.split('=');
               return [key.trim(), values.join('=').trim()];
             })
@@ -165,9 +177,7 @@ export default function McpServerDetailPage({
     // The action now accepts null for description, command, url, notes
     await updateMcpServer(currentProfile.uuid, mcpServer.uuid, processedData);
     await mutate(); // Re-fetch server data after update
-    // setIsEditingName(false);
-    // setIsEditingDescription(false);
-    // setHasChanges(false);
+    // setHasChanges(false); // Resetting form in useEffect handles this
   };
 
   const handleDelete = async () => {
@@ -181,7 +191,7 @@ export default function McpServerDetailPage({
   };
 
   if (error) return <div>Failed to load MCP server</div>;
-  if (!mcpServer) return <div>Loading...</div>;
+  if (!mcpServer) return <div>Loading...</div>; // Keep simple loading state
 
   return (
     <div className="container mx-auto py-6">
@@ -202,9 +212,9 @@ export default function McpServerDetailPage({
 
         <div className='flex gap-2'>
           {hasChanges && (
-            <Button 
-              variant='default' 
-              className="shadow-sm" 
+            <Button
+              variant='default'
+              className="shadow-sm"
               onClick={form.handleSubmit(onSubmit)}
             >
               <Save className='h-4 w-4 mr-2' />
@@ -229,7 +239,7 @@ export default function McpServerDetailPage({
             </div>
             <Switch
               checked={mcpServer.status === McpServerStatus.ACTIVE}
-              onCheckedChange={async (checked) => {
+              onCheckedChange={async (checked: boolean) => { // Add type for checked
                 if (!currentProfile?.uuid || !mcpServer.uuid) {
                   return;
                 }
@@ -242,20 +252,17 @@ export default function McpServerDetailPage({
               }}
             />
           </div>
-          <div onClick={() => {}}>
-  <InlineEditText
-    value={form.watch('name')}
-    onSave={(newName) => form.setValue('name', newName)}
-    placeholder="Enter server name"
-  />
-</div>
-<div onClick={() => {}}>
-  <InlineEditText
-    value={form.watch('description')}
-    onSave={(newDesc) => form.setValue('description', newDesc)}
-    placeholder="Click to add a description..."
-  />
-</div>
+          {/* Removed onClick wrappers */}
+          <InlineEditText
+            value={form.watch('name')}
+            onSave={(newName: string) => form.setValue('name', newName)} // Add type
+            placeholder="Enter server name"
+          />
+          <InlineEditText
+            value={form.watch('description')}
+            onSave={(newDesc: string) => form.setValue('description', newDesc)} // Add type
+            placeholder="Click to add a description..."
+          />
         </CardHeader>
       </Card>
 
@@ -266,6 +273,7 @@ export default function McpServerDetailPage({
             <TabsTrigger value="config">Configuration</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
             <TabsTrigger value="templates">Resource Templates</TabsTrigger>
+            <TabsTrigger value="tools">Tools</TabsTrigger> {/* Add Tools Tab */}
           </TabsList>
 
           <TabsContent value="details">
@@ -303,7 +311,7 @@ export default function McpServerDetailPage({
                     <div className="relative inline-block cursor-pointer group">
                       <select
                         value={form.watch('type')}
-                        onChange={(e) => form.setValue('type', e.target.value as McpServerType)}
+                        onChange={(e: React.ChangeEvent<HTMLSelectElement>) => form.setValue('type', e.target.value as McpServerType)} // Add type for e
                         className="absolute opacity-0 w-full h-full cursor-pointer"
                       >
                         <option value={McpServerType.STDIO}>STDIO</option>
@@ -339,19 +347,19 @@ export default function McpServerDetailPage({
                         <div className="relative group cursor-text">
                           <Input
                             value={form.watch('command')}
-                            onChange={(e) => form.setValue('command', e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => form.setValue('command', e.target.value)} // Add type for e
                             className="bg-muted p-3 rounded-md font-mono text-sm"
                             placeholder="e.g., npx or uvx"
                           />
                         </div>
                       </div>
-                      
+
                       <div className="mb-4">
                         <h3 className="text-sm font-medium text-muted-foreground mb-2">Arguments</h3>
                         <div className="relative group cursor-text">
                           <Input
                             value={form.watch('args')}
-                            onChange={(e) => form.setValue('args', e.target.value)}
+                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => form.setValue('args', e.target.value)} // Add type for e
                             className="bg-muted p-3 rounded-md font-mono text-sm"
                             placeholder="e.g., mcp-server-time"
                           />
@@ -359,7 +367,7 @@ export default function McpServerDetailPage({
                       </div>
                     </CardContent>
                   </Card>
-                  
+
                   <Card className="shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-md font-medium flex items-center">
@@ -371,7 +379,7 @@ export default function McpServerDetailPage({
                       <div className="relative group cursor-text">
                         <textarea
                           value={form.watch('env')}
-                          onChange={(e) => form.setValue('env', e.target.value)}
+                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => form.setValue('env', e.target.value)} // Add type for e
                           className="w-full bg-muted p-3 rounded-md font-mono text-sm min-h-[150px] border-none resize-y"
                           placeholder="KEY=value
 ANOTHER_KEY=another_value"
@@ -392,7 +400,7 @@ ANOTHER_KEY=another_value"
                     <div className="relative group cursor-text">
                       <Input
                         value={form.watch('url')}
-                        onChange={(e) => form.setValue('url', e.target.value)}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => form.setValue('url', e.target.value)} // Add type for e
                         className="bg-muted p-3 rounded-md font-mono text-sm"
                         placeholder="http://localhost:3000/sse"
                       />
@@ -411,7 +419,7 @@ ANOTHER_KEY=another_value"
               <CardContent className="pt-0">
                 <Textarea
                   value={form.watch('notes')}
-                  onChange={(e) => form.setValue('notes', e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => form.setValue('notes', e.target.value)} // Add type for e
                   placeholder="Add any notes, usage instructions, or known quirks for this server..."
                   className="min-h-[200px] font-mono text-sm"
                 />
@@ -457,6 +465,54 @@ ANOTHER_KEY=another_value"
                          )}
                         {template.name && <p className="text-sm font-semibold mb-1">{template.name}</p>}
                         {template.description && <p className="text-xs text-muted-foreground">{template.description}</p>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Add Tools Tab Content */}
+          <TabsContent value="tools">
+            <Card className="shadow-sm">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-md font-medium">Discovered Tools</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {isLoadingTools && (
+                  <div className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                )}
+                {toolsError && (
+                  <p className="text-destructive text-sm">
+                    Failed to load tools.
+                  </p>
+                )}
+                {!isLoadingTools && !toolsError && (!serverTools || serverTools.length === 0) && (
+                  <p className="text-muted-foreground text-sm">
+                    No tools discovered for this server yet. Try using the "Discover Tools" button on the server card.
+                  </p>
+                )}
+                {!isLoadingTools && !toolsError && serverTools && serverTools.length > 0 && (
+                  <div className="space-y-4">
+                    {serverTools.map((tool) => (
+                      <div key={tool.uuid} className="border p-4 rounded-md bg-muted/50">
+                        <p className="font-semibold text-sm mb-1">{tool.name}</p>
+                        {tool.description && <p className="text-xs text-muted-foreground mb-2">{tool.description}</p>}
+                        {/* Optionally display schema preview */}
+                        {tool.toolSchema && (
+                          <details className="text-xs mt-2"> {/* Added margin top */}
+                            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">View Schema</summary> {/* Added hover effect */}
+                            {/* Wrap JSON stringify in code tag inside pre */}
+                            <pre className="mt-1 p-2 bg-muted dark:bg-slate-800 rounded text-xs overflow-auto max-h-60">
+                              <code>{JSON.stringify(tool.toolSchema, null, 2)}</code>
+                            </pre>
+                          </details>
+                        )}
                       </div>
                     ))}
                   </div>

@@ -1,16 +1,17 @@
 'use server';
 
 import { and, eq } from 'drizzle-orm';
+
 // import { revalidatePath } from 'next/cache'; // Removed unused import
-
 import { db } from '@/db';
-import { mcpServersTable, toolsTable, ToggleStatus } from '@/db/schema'; // Added ToggleStatus
+import { mcpServersTable, resourceTemplatesTable, ToggleStatus,toolsTable } from '@/db/schema'; // Added resourceTemplatesTable
 // Removed getUserData import - profileUuid will be passed as argument
-
 // Import the actual discovery logic using @h1deya/langchain-mcp-tools
-import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
-// import { BaseLanguageModel } from '@langchain/core/language_models/base'; // Removed unused import
-// import { Tool as LangchainTool } from '@langchain/core/tools'; // Use any[] for discoveredTools type
+// Note: convertMcpToLangchainTools only handles tools. We need direct SDK usage for templates.
+// import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
+import { listResourceTemplatesFromServer,listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Import from our wrapper
+// Remove explicit SDK type imports - rely on inference from wrapper functions
+// import type { Tool, ResourceTemplate } from '@modelcontextprotocol/sdk/types';
 
 /**
  * Discovers tools for a single MCP server and updates the database.
@@ -45,91 +46,89 @@ export async function discoverSingleServerTools(
 
     // 1. Construct the McpServersConfig object for the single server
     // Ensure server name is used as key, handle potential null/empty names
-    const serverKey = serverConfig.name || serverUuid;
-    const configForTool: McpServersConfig = { [serverKey]: serverConfig as any };
+    console.log(`[Action] Found server config for ${serverConfig.name || serverUuid}`);
 
-    let discoveredTools: any[] = []; // Use any[] to avoid type mismatch from library
-    let cleanup: (() => Promise<void>) | undefined;
+    let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = []; // Infer type
+    let discoveredTemplates: Awaited<ReturnType<typeof listResourceTemplatesFromServer>> = []; // Infer type
+    let toolError: string | null = null;
+    let templateError: string | null = null;
 
+    // --- Discover Tools ---
     try {
-        console.log(`[Action] Connecting to ${serverKey} to discover tools...`);
-        // 2. Call convertMcpToLangchainTools to get tools
-        // We don't need the LLM here, just the tools and cleanup
-        const result = await convertMcpToLangchainTools(
-            configForTool,
-            {
-                // No LLM needed for discovery
-                // llm: undefined as unknown as BaseLanguageModel,
-                // No logger needed here, handle errors directly
-                // logger: undefined,
-            }
-        );
-        discoveredTools = result.tools;
-        cleanup = result.cleanup; // Get the cleanup function
-        console.log(`[Action] Discovered ${discoveredTools.length} tools from ${serverKey}.`);
+        console.log(`[Action] Discovering tools for ${serverConfig.name || serverUuid}...`);
+        discoveredTools = await listToolsFromServer(serverConfig);
+        console.log(`[Action] Discovered ${discoveredTools.length} tools.`);
 
-    } catch (discoveryError: any) {
-        console.error(`[Action Error] Failed to connect or list tools for ${serverKey}:`, discoveryError);
-        // Return specific error message
-        return { success: false, message: `Failed to connect or list tools for ${serverConfig.name || serverUuid}.`, error: discoveryError.message };
-    } finally {
-        // Ensure cleanup is called even if discovery fails after connection
-        if (cleanup) {
-            console.log(`[Action] Cleaning up connection for ${serverKey}...`);
-            await cleanup().catch(cleanupError => {
-                console.error(`[Action Error] Error during cleanup for ${serverKey}:`, cleanupError);
-                // Don't block return if cleanup fails, but log it
-            });
-        }
-    }
+        // Delete existing tools
+        console.log(`[Action] Deleting old tools for server: ${serverUuid}`);
+        await db.delete(toolsTable).where(eq(toolsTable.mcp_server_uuid, serverUuid));
 
-    // 3. Delete existing tools for this serverUuid from toolsTable
-    console.log(`[Action] Deleting old tools for server: ${serverUuid}`);
-    await db.delete(toolsTable).where(eq(toolsTable.mcp_server_uuid, serverUuid));
-
-    // 4. Insert the newly discovered tools into toolsTable
-    if (discoveredTools.length > 0) {
-        console.log(`[Action] Inserting ${discoveredTools.length} new tools for server: ${serverUuid}`);
-        const toolsToInsert = discoveredTools.map(tool => {
-            // Extract schema - Langchain Tool has 'schema' which is the Zod schema
-            // We need the JSON representation for the DB
-            let toolSchemaJson: any = {};
-            try {
-                // Attempt to get JSON schema from the Langchain tool if possible
-                // This depends on the internal structure of the Tool object from the library
-                // Assuming tool.schema is the Zod schema object
-                if (tool.schema && typeof tool.schema === 'object') {
-                   // If it's already a plain object (less likely), use it
-                   // More likely it's a Zod schema, need conversion (zod-to-json-schema might be needed here if not already done by library)
-                   // For now, let's assume it might be directly usable or needs specific handling
-                   // Let's store the raw schema object for now, casting to any
-                   toolSchemaJson = tool.schema;
-                } else {
-                   console.warn(`[Action] Could not extract schema for tool ${tool.name} from ${serverKey}. Storing empty object.`);
-                }
-            } catch (schemaError) {
-                 console.error(`[Action Error] Failed to process schema for tool ${tool.name} from ${serverKey}:`, schemaError);
-                 toolSchemaJson = { error: 'Schema processing failed' };
-            }
-
-            return {
+        // Insert new tools
+        if (discoveredTools.length > 0) {
+            console.log(`[Action] Inserting ${discoveredTools.length} new tools...`);
+            const toolsToInsert = discoveredTools.map(tool => ({
                 mcp_server_uuid: serverUuid,
                 name: tool.name,
                 description: tool.description,
-                toolSchema: toolSchemaJson, // Store the extracted/processed schema
-                status: ToggleStatus.ACTIVE, // Default new tools to ACTIVE
-            };
-        });
-        await db.insert(toolsTable).values(toolsToInsert);
-    } else {
-        console.log(`[Action] No tools discovered for server: ${serverUuid}`);
+                // Ensure inputSchema is stored correctly as JSONB
+                toolSchema: tool.inputSchema as any, // Cast if necessary, Drizzle handles JSONB
+                status: ToggleStatus.ACTIVE,
+            }));
+            await db.insert(toolsTable).values(toolsToInsert);
+        }
+    } catch (error: any) {
+        console.error(`[Action Error] Failed to discover/store tools for ${serverConfig.name || serverUuid}:`, error);
+        toolError = error.message;
     }
 
-    // Revalidate relevant paths if needed (e.g., the page displaying tools)
-    // revalidatePath('/mcp-servers'); // Example path
+    // --- Discover Resource Templates ---
+    try {
+        console.log(`[Action] Discovering resource templates for ${serverConfig.name || serverUuid}...`);
+        discoveredTemplates = await listResourceTemplatesFromServer(serverConfig);
+        console.log(`[Action] Discovered ${discoveredTemplates.length} resource templates.`);
 
-    console.log(`[Action] Tool discovery completed for server: ${serverUuid}`);
-    return { success: true, message: `Successfully discovered ${discoveredTools.length} tools for ${serverConfig.name || serverUuid}.` };
+        // Delete existing templates
+        console.log(`[Action] Deleting old resource templates for server: ${serverUuid}`);
+        await db.delete(resourceTemplatesTable).where(eq(resourceTemplatesTable.mcp_server_uuid, serverUuid));
+
+        // Insert new templates
+        if (discoveredTemplates.length > 0) {
+            console.log(`[Action] Inserting ${discoveredTemplates.length} new resource templates...`);
+            const templatesToInsert = discoveredTemplates.map(template => {
+                // Extract variables from URI template (simple regex example)
+                const variables = template.uriTemplate.match(/\{([^}]+)\}/g)?.map((v: string) => v.slice(1, -1)) || []; // Add type for v
+                return {
+                    mcp_server_uuid: serverUuid,
+                    uri_template: template.uriTemplate,
+                    name: template.name,
+                    description: template.description,
+                    mime_type: template.mediaType, // Correct field name? Check schema.ts
+                    template_variables: variables, // Store extracted variables
+                };
+            });
+            await db.insert(resourceTemplatesTable).values(templatesToInsert);
+        }
+    } catch (error: any) {
+        console.error(`[Action Error] Failed to discover/store resource templates for ${serverConfig.name || serverUuid}:`, error);
+        templateError = error.message;
+    }
+
+    // --- Final Result ---
+    // Revalidate relevant paths if needed
+    // revalidatePath('/mcp-servers');
+
+    const success = !toolError && !templateError;
+    let message = '';
+    if (success) {
+        message = `Successfully discovered ${discoveredTools.length} tools and ${discoveredTemplates.length} templates for ${serverConfig.name || serverUuid}.`;
+    } else {
+        message = `Discovery partially failed for ${serverConfig.name || serverUuid}.`;
+        if (toolError) message += ` Tool error: ${toolError}`;
+        if (templateError) message += ` Template error: ${templateError}`;
+    }
+    console.log(`[Action] Discovery process finished for ${serverUuid}. Success: ${success}`);
+
+    return { success, message, error: success ? undefined : (toolError || templateError || 'Unknown discovery error') };
 
   } catch (error: any) {
     console.error(`[Action Error] Failed to discover tools for server ${serverUuid}:`, error);

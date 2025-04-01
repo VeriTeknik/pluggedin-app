@@ -32,6 +32,9 @@ importers:
       '@langchain/openai':
         specifier: ^0.4.7
         version: 0.4.9(@langchain/core@0.3.43(openai@4.90.0(ws@8.18.1)(zod@3.24.2)))(ws@8.18.1)
+      '@modelcontextprotocol/sdk':
+        specifier: ^1.8.0
+        version: 1.8.0
       '@monaco-editor/react':
         specifier: ^4.6.0
         version: 4.7.0(monaco-editor@0.52.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -179,6 +182,9 @@ importers:
       tailwindcss-animate:
         specifier: ^1.0.7
         version: 1.0.7(tailwindcss@3.4.17)
+      types:
+        specifier: link:@modelcontextprotocol/sdk/types
+        version: link:@modelcontextprotocol/sdk/types
       vitest:
         specifier: ^3.0.9
         version: 3.0.9(@types/debug@4.1.12)(@types/node@20.17.28)(jiti@1.21.7)(tsx@4.19.3)(yaml@2.7.1)
@@ -11968,7 +11974,7 @@ snapshots:
 
   send@1.2.0:
     dependencies:
-      debug: 4.3.6
+      debug: 4.4.0
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1

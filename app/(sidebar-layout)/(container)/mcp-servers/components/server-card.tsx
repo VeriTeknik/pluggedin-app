@@ -1,21 +1,21 @@
 'use client';
 
 import { CheckCircle, Globe, Terminal, Trash2, XCircle } from 'lucide-react';
+import { RefreshCw } from 'lucide-react'; // Import RefreshCw icon
 import Link from 'next/link';
+import { useState } from 'react'; // Import useState
 import { useTranslation } from 'react-i18next';
 
+import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Import the action
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { McpServerStatus, McpServerType } from '@/db/schema';
-import { McpServer } from '@/types/mcp-server';
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Import the action
 import { useProfiles } from '@/hooks/use-profiles'; // Import useProfiles
 import { useToast } from '@/hooks/use-toast'; // Import useToast
-import { useState } from 'react'; // Import useState
-import { RefreshCw } from 'lucide-react'; // Import RefreshCw icon
+import { McpServer } from '@/types/mcp-server';
 
 interface ServerCardProps {
   server: McpServer;
