@@ -38,6 +38,16 @@ export async function PATCH(
 
     // 1. Authorize: Verify the user owns the server via project/profile
     // We need to join through profiles and projects to check user_id
+    type ServerWithRelations = {
+      uuid: string;
+      profile: {
+        uuid: string;
+        project: {
+          user_id: string;
+        };
+      } | null;
+    };
+    
     const server = await db.query.mcpServersTable.findFirst({
       columns: { uuid: true }, // Only need uuid for verification
       where: eq(mcpServersTable.uuid, serverUuid),
@@ -51,7 +61,7 @@ export async function PATCH(
           },
         },
       },
-    });
+    }) as ServerWithRelations | null;
 
     if (!server || server.profile?.project?.user_id !== userId) {
       return NextResponse.json({ error: 'Server not found or unauthorized' }, { status: 404 });

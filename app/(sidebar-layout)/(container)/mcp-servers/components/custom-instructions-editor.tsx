@@ -32,22 +32,12 @@ const fetcher = (url: string) => fetch(url).then((res) => {
 // Define the expected type for data fetched from the API
 type CustomInstructionItem = InferSelectModel<typeof customInstructionsTable> | null;
 
-// Define the Zod schema for form validation
-const formSchema = z.object({
-  description: z.string().optional(),
-  messagesJson: z.string().refine((val) => {
-    try {
-      const parsed = JSON.parse(val);
-      // Basic validation: check if it's an array
-      // More specific validation based on McpMessage type could be added here
-      return Array.isArray(parsed);
-    } catch (e) {
-      return false;
-    }
-  }, { message: "Invalid JSON format or not an array of messages." }),
-});
-
-type FormData = z.infer<typeof formSchema>;
+// Define the expected type for form data based on the schema
+// We'll define the actual schema inside the component where 't' is available
+interface FormData {
+  description?: string;
+  messagesJson: string;
+}
 
 interface CustomInstructionsEditorProps {
   serverUuid: string;
@@ -59,6 +49,21 @@ export function CustomInstructionsEditor({ serverUuid, profileUuid }: CustomInst
   const { toast } = useToast();
   const { mutate } = useSWRConfig(); // To revalidate SWR cache after saving
   const apiUrl = `/api/mcp-servers/${serverUuid}/custom-instructions`;
+
+  // Define the Zod schema *inside* the component where 't' is available
+  const formSchema = z.object({
+    description: z.string().optional(),
+    messagesJson: z.string().refine((val) => {
+      try {
+        const parsed = JSON.parse(val);
+        // Basic validation: check if it's an array
+        // More specific validation based on McpMessage type could be added here
+        return Array.isArray(parsed);
+      } catch (e) {
+        return false;
+      }
+    }, { message: t('settings.validation.invalidJsonArray') }), // Now 't' is accessible
+  });
 
   const { data: instructions, error, isLoading } = useSWR<CustomInstructionItem>(apiUrl, fetcher, {
     revalidateOnFocus: false,
@@ -150,10 +155,10 @@ export function CustomInstructionsEditor({ serverUuid, profileUuid }: CustomInst
           name="messagesJson"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('mcpServers.instructions.messagesLabel', 'Messages (JSON Array)')}</FormLabel>
+              <FormLabel>{t('mcpServers.instructions.messagesLabel')}</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder={t('mcpServers.instructions.messagesPlaceholder', '[\n  {\n    "role": "system",\n    "content": { "type": "text", "text": "Your instruction here..." }\n  }\n]')}
+                  placeholder={t('mcpServers.instructions.messagesPlaceholder')}
                   className="min-h-[300px] font-mono text-sm"
                   {...field}
                 />
@@ -168,9 +173,9 @@ export function CustomInstructionsEditor({ serverUuid, profileUuid }: CustomInst
 
         <Alert variant="default" className="border-sky-500/50 dark:border-sky-500/30">
            <Info className="h-4 w-4" />
-           <AlertTitle>{t('mcpServers.instructions.infoTitle', 'How Clients Use Instructions')}</AlertTitle>
+           <AlertTitle>{t('mcpServers.instructions.infoTitle')}</AlertTitle>
            <AlertDescription>
-             {t('mcpServers.instructions.infoText', 'These instructions can potentially be used by MCP clients (like Cline) to provide context to the AI when using this server\'s tools. The exact usage depends on the client implementation.')}
+             {t('mcpServers.instructions.infoText')}
            </AlertDescription>
          </Alert>
 

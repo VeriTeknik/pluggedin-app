@@ -7,6 +7,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  serial, // Import serial
   text,
   timestamp,
   unique, // Import unique
@@ -739,6 +740,27 @@ export const customInstructionsRelations = relations(customInstructionsTable, ({
     references: [mcpServersTable.uuid],
   }),
 }));
+
+// Table for Release Notes
+export const releaseNotes = pgTable('release_notes', {
+  id: serial('id').primaryKey(),
+  repository: text('repository').notNull(), // e.g., 'pluggedin-app' or 'pluggedin-mcp'
+  version: text('version').notNull(), // e.g., 'v1.2.0'
+  releaseDate: timestamp('release_date', { withTimezone: true }).notNull(),
+  content: jsonb('content').notNull(), // Store structured content (features, fixes, etc.)
+  commitSha: text('commit_sha').notNull(), // SHA of the commit/tag associated with the release
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Relations for releaseNotes (optional, if needed later)
+// export const releaseNotesRelations = relations(releaseNotes, ({ one }) => ({
+//   // Example: If releases were linked to a user who published them
+//   // publisher: one(users, {
+//   //   fields: [releaseNotes.publisherId],
+//   //   references: [users.id],
+//   // }),
+// }));
 
 
 // Add other relations as needed for users, accounts, sessions etc. if complex queries are used elsewhere

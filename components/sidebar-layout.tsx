@@ -4,11 +4,11 @@ import {
   Bell,
   Blocks,
   Code2,
-  FileText,
+  // FileText, // Removed unused
   FlaskConical,
-  Key,
+  // Key, // Removed unused
   Plus,
-  Settings,
+  // Settings, // Removed unused
   Trash2,
   Unplug,
 } from 'lucide-react';
@@ -238,30 +238,7 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>*/}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('apiKeys.title')} className="group-data-[collapsible=icon]:justify-center">
-                      <Link href='/api-keys'>
-                        <Key className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('apiKeys.title')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('settings.title')} className="group-data-[collapsible=icon]:justify-center">
-                      <Link href='/settings'>
-                        <Settings className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('settings.title')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('legal.title')} className="group-data-[collapsible=icon]:justify-center">
-                      <Link href='/legal'>
-                        <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('legal.title')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  {/* Removed API Keys, Settings, Legal from main sidebar */}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip={t('notifications.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/notifications'>

@@ -57,8 +57,8 @@ export function PromptList({ serverUuid }: PromptListProps) {
     return (
       <Alert className="mt-4 border-blue-500/50 dark:border-blue-500/30">
         <MessageSquareText className="h-4 w-4" />
-        <AlertTitle>{t('mcpServers.prompts.noPromptsTitle', 'No Prompts Found')}</AlertTitle>
-        <AlertDescription>{t('mcpServers.prompts.noPrompts', 'No prompts have been discovered for this server yet. Try running discovery.')}</AlertDescription>
+        <AlertTitle>{t('mcpServers.prompts.noPromptsTitle')}</AlertTitle>
+        <AlertDescription>{t('mcpServers.prompts.noPrompts')}</AlertDescription>
       </Alert>
     );
   }
@@ -86,7 +86,7 @@ export function PromptList({ serverUuid }: PromptListProps) {
               <TableCell>
                  {prompt.arguments_schema && Array.isArray(prompt.arguments_schema) && prompt.arguments_schema.length > 0 ? ( // Added Array.isArray check
                    <details className="text-xs">
-                     <summary className="cursor-pointer text-muted-foreground hover:text-foreground">View Arguments ({prompt.arguments_schema.length})</summary>
+                     <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('mcpServers.prompts.viewArguments', { count: prompt.arguments_schema.length })}</summary>
                      <pre className="mt-1 p-2 bg-muted dark:bg-slate-800 rounded text-xs overflow-auto max-h-40">
                        {/* Escape quotes for HTML */}
                        <code dangerouslySetInnerHTML={{ __html: JSON.stringify(prompt.arguments_schema, null, 2).replace(/"/g, '"') }} />

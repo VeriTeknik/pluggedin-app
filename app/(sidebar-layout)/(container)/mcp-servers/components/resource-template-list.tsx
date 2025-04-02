@@ -57,8 +57,8 @@ export function ResourceTemplateList({ serverUuid }: ResourceTemplateListProps) 
     return (
       <Alert className="mt-4 border-blue-500/50 dark:border-blue-500/30">
         <FileCode className="h-4 w-4" />
-        <AlertTitle>{t('mcpServers.templates.noTemplatesTitle', 'No Resource Templates Found')}</AlertTitle>
-        <AlertDescription>{t('mcpServers.templates.noTemplates', 'No resource templates have been discovered for this server yet. Try running discovery.')}</AlertDescription>
+        <AlertTitle>{t('mcpServers.templates.noTemplatesTitle')}</AlertTitle>
+        <AlertDescription>{t('mcpServers.templates.noTemplates')}</AlertDescription>
       </Alert>
     );
   }

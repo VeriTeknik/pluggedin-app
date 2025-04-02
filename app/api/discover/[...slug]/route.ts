@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(
   request: Request,
-  { params }: { params: { slug: string[] } }
+  { params }: { params: Promise<{ slug: string[] }> }
 ) {
   try {
     // 1. Authenticate API Key and get active profile
@@ -27,7 +27,8 @@ export async function POST(
     const profileUuid = auth.activeProfile.uuid;
 
     // 2. Determine target (all or specific server)
-    const slugParam = params.slug ? params.slug.join('/') : null;
+    const { slug } = await params;
+    const slugParam = slug ? slug.join('/') : null;
     let targetServerUuid: string | null = null;
     let discoverAll = false;
 

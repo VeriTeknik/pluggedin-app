@@ -59,8 +59,8 @@ export function ResourceList({ serverUuid }: ResourceListProps) {
     return (
       <Alert className="mt-4 border-blue-500/50 dark:border-blue-500/30">
         <FileText className="h-4 w-4" /> {/* Use a relevant icon */}
-        <AlertTitle>{t('mcpServers.resources.noResourcesTitle', 'No Resources Found')}</AlertTitle> {/* Add a title key */}
-        <AlertDescription>{t('mcpServers.resources.noResources', 'No static resources have been discovered for this server yet. Try running discovery.')}</AlertDescription>
+        <AlertTitle>{t('mcpServers.resources.noResourcesTitle')}</AlertTitle> {/* Add a title key */}
+        <AlertDescription>{t('mcpServers.resources.noResources')}</AlertDescription>
       </Alert>
     );
   }
