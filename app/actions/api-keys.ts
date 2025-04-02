@@ -35,7 +35,7 @@ export async function createApiKey(projectUuid: string, name?: string) {
     throw new Error('Unauthorized - you do not have access to this project');
   }
 
-  const newApiKey = `sk_mt_${nanoid(64)}`;
+  const newApiKey = `pg_in_${nanoid(64)}`;
 
   const apiKey = await db
     .insert(apiKeysTable)
@@ -80,7 +80,7 @@ export async function getFirstApiKey(projectUuid: string) {
   });
 
   if (!apiKey) {
-    const newApiKey = `sk_mt_${nanoid(64)}`;
+    const newApiKey = `pg_in_${nanoid(64)}`;
     await db.insert(apiKeysTable).values({
       project_uuid: projectUuid,
       api_key: newApiKey,

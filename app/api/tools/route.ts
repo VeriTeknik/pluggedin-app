@@ -1,11 +1,31 @@
-import { and,eq, sql } from 'drizzle-orm'; // Import necessary drizzle functions
+import { and, eq, type InferSelectModel,sql } from 'drizzle-orm'; // Consolidated drizzle imports
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-// Import the correct table and enum names from your schema
-import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema'; // Import McpServerStatus
+import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema';
 
 import { authenticateApiKey } from '../auth';
+// Removed direct SDK type import
+
+// Infer Tool type from DB schema and define expected MCP Tool structure
+type DbTool = InferSelectModel<typeof toolsTable> & { serverName: string | null }; // Add serverName from join
+type McpTool = {
+  name: string;
+  description?: string;
+  inputSchema: any; // Keep as any for now, assuming DB stores valid JSON schema
+  // Add other fields from MCP spec if needed, e.g., annotations
+};
+
+
+/**
+ * Simple sanitization for creating a server name prefix.
+ */
+function sanitizeServerNameForPrefix(name: string | null | undefined): string {
+  if (!name) return 'unknown_server'; // Fallback prefix
+  // Basic sanitization: lowercase, replace non-alphanumeric with underscore, trim underscores
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+}
+
 
 /**
  * Validates the provided tool status string against the ToggleStatus enum.
@@ -88,24 +108,41 @@ export async function GET(request: Request) {
     }
 
     // Perform the query joining tools and servers tables
-    const results = await db
+    const results: DbTool[] = await db // Add DbTool type annotation
       .select({
-        mcp_server_uuid: toolsTable.mcp_server_uuid,
+        // Select ALL columns from toolsTable to match DbTool type
+        uuid: toolsTable.uuid,
         name: toolsTable.name,
+        description: toolsTable.description,
+        toolSchema: toolsTable.toolSchema,
+        created_at: toolsTable.created_at,
+        mcp_server_uuid: toolsTable.mcp_server_uuid,
         status: toolsTable.status,
-        // Add other tool fields if needed
-        description: toolsTable.description, // <-- UNCOMMENTED
-        toolSchema: toolsTable.toolSchema, // <-- UNCOMMENTED
-        // uuid: toolsTable.uuid,
+        // Select server name for prefix
+        serverName: mcpServersTable.name,
       })
       .from(toolsTable)
       .innerJoin(
         mcpServersTable,
         eq(toolsTable.mcp_server_uuid, mcpServersTable.uuid) // Correct join condition
       )
-      .where(and(...conditions)); // Use and() helper
+      .where(and(...conditions));
 
-    return NextResponse.json({ results });
+    // Map results to include prefixed names and _serverUuid
+    const formattedTools: (McpTool & { _serverUuid: string })[] = results.map((tool: DbTool) => { // Use DbTool type
+        const prefix = sanitizeServerNameForPrefix(tool.serverName);
+        const prefixedName = `${prefix}_${tool.name}`;
+        return {
+            name: prefixedName,
+            description: tool.description ?? undefined,
+            inputSchema: tool.toolSchema as any, // Assuming toolSchema is the correct JSON schema structure
+            _serverUuid: tool.mcp_server_uuid, // Add the original server UUID
+        };
+    });
+
+    // Return the flat array of tools, as expected by the proxy's list handler
+    return NextResponse.json(formattedTools);
+
   } catch (error) {
     console.error("Error fetching tools:", error);
     return NextResponse.json(

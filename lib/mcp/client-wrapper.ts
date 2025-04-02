@@ -5,11 +5,15 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport, StdioServerParameters } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import { 
+import {
+  ListPromptsResultSchema, // Added
+  ListResourcesResultSchema,
   ListResourceTemplatesResultSchema,
   ListToolsResultSchema,
+  Prompt, // Added
+  Resource,
   ResourceTemplate,
-  Tool
+  Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 
 // Internal application imports
@@ -203,4 +207,91 @@ export async function listResourceTemplatesFromServer(serverConfig: McpServer): 
     }
 }
 
-// TODO: Add functions for listResources, callTool, etc. as needed, reusing create/connect logic.
+/**
+ * Connects to a single MCP server and lists its static resources.
+ * Handles connection, listing, and cleanup.
+ * @param serverConfig Configuration of the MCP server.
+ * @returns A promise resolving to the list of resources or throwing an error.
+ */
+export async function listResourcesFromServer(serverConfig: McpServer): Promise<Resource[]> {
+    const clientData = createMcpClientAndTransport(serverConfig);
+    if (!clientData) {
+        throw new Error(`Failed to create client/transport for server ${serverConfig.name || serverConfig.uuid}`);
+    }
+
+    let connectedClient: ConnectedMcpClient | undefined;
+    try {
+        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+
+        // Check capabilities *after* connecting
+        const capabilities = connectedClient.client.getServerCapabilities();
+        if (!capabilities?.resources) {
+            // console.log(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not advertise resource support.`); // Removed console log
+            return []; // Return empty list if resources are not supported
+        }
+
+        // Server claims to support resources, attempt the request
+        const result = await connectedClient.client.request(
+            { method: 'resources/list', params: {} },
+            ListResourcesResultSchema // Use the correct schema
+        );
+        return result.resources || [];
+    } catch (error: any) { // Add type to error
+        // Specifically handle "Method not found" for resources list as non-critical
+        if (error?.code === -32601 && error?.message?.includes('Method not found')) {
+             console.warn(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not implement resources/list. Returning empty array.`);
+             return [];
+        }
+        // Log and re-throw other errors
+        console.error(`[MCP Wrapper] Error listing resources from ${serverConfig.name || serverConfig.uuid}:`, error);
+        throw error; // Re-throw the error to be handled by the caller
+    } finally {
+        await connectedClient?.cleanup();
+    }
+}
+
+/**
+ * Connects to a single MCP server and lists its prompts.
+ * Handles connection, listing, and cleanup.
+ * @param serverConfig Configuration of the MCP server.
+ * @returns A promise resolving to the list of prompts or throwing an error.
+ */
+export async function listPromptsFromServer(serverConfig: McpServer): Promise<Prompt[]> {
+    const clientData = createMcpClientAndTransport(serverConfig);
+    if (!clientData) {
+        throw new Error(`Failed to create client/transport for server ${serverConfig.name || serverConfig.uuid}`);
+    }
+
+    let connectedClient: ConnectedMcpClient | undefined;
+    try {
+        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+
+        // Check capabilities *after* connecting
+        const capabilities = connectedClient.client.getServerCapabilities();
+        if (!capabilities?.prompts) {
+            // console.log(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not advertise prompt support.`);
+            return []; // Return empty list if prompts are not supported
+        }
+
+        // Server claims to support prompts, attempt the request
+        const result = await connectedClient.client.request(
+            { method: 'prompts/list', params: {} },
+            ListPromptsResultSchema // Use the correct schema
+        );
+        return result.prompts || [];
+    } catch (error: any) {
+        // Specifically handle "Method not found" for prompts list as non-critical
+        if (error?.code === -32601 && error?.message?.includes('Method not found')) {
+             console.warn(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not implement prompts/list. Returning empty array.`);
+             return [];
+        }
+        // Log and re-throw other errors
+        console.error(`[MCP Wrapper] Error listing prompts from ${serverConfig.name || serverConfig.uuid}:`, error);
+        throw error; // Re-throw the error to be handled by the caller
+    } finally {
+        await connectedClient?.cleanup();
+    }
+}
+
+
+// TODO: Add functions for callTool, readResource, getPrompt etc. as needed, reusing create/connect logic.

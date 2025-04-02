@@ -1,7 +1,8 @@
 'use client';
 
-import { Info, LogOut, Settings, User } from 'lucide-react';
+import { FileText, Info, Key, LogOut, Newspaper, Settings, User } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next'; // Import useTranslation
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
@@ -16,6 +17,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 export function UserMenu() {
   const { session, isAuthenticated, signOut } = useAuth();
+  const { t } = useTranslation(); // Initialize useTranslation
 
   if (!isAuthenticated) {
     return (
@@ -61,13 +63,31 @@ export function UserMenu() {
         <DropdownMenuItem asChild>
           <Link href="/settings" className="flex items-center cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
-            <span>Settings</span>
+            <span>{t('settings.title', 'Settings')}</span>
+          </Link>
+        </DropdownMenuItem>
+         <DropdownMenuItem asChild>
+          <Link href="/api-keys" className="flex items-center cursor-pointer">
+            <Key className="mr-2 h-4 w-4" />
+            <span>{t('apiKeys.title', 'API Keys')}</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/release-notes" className="flex items-center cursor-pointer">
+            <Newspaper className="mr-2 h-4 w-4" />
+            <span>{t('releaseNotes.title', 'Release Notes')}</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/legal" className="flex items-center cursor-pointer">
+            <FileText className="mr-2 h-4 w-4" />
+            <span>{t('legal.title', 'Legal')}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/setup-guide" className="flex items-center cursor-pointer">
             <Info className="mr-2 h-4 w-4" />
-            <span>Setup Guide</span>
+            <span>{t('setupGuide.title', 'Setup Guide')}</span>
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
@@ -76,9 +96,9 @@ export function UserMenu() {
           className="text-red-600 cursor-pointer"
         >
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Sign Out</span>
+          <span>{t('auth.signOut', 'Sign Out')}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
-} 
+}

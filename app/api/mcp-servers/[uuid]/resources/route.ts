@@ -1,17 +1,17 @@
-import { and, asc,eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { and, asc, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server'; // External imports after internal
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable, projectsTable,resourceTemplatesTable } from '@/db/schema';
-import { getAuthSession } from '@/lib/auth';
+import { mcpServersTable, profilesTable, projectsTable, resourcesTable } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth'; // Internal imports first
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/mcp-servers/{uuid}/resource-templates
+ * GET /api/mcp-servers/{uuid}/resources
  *
- * Retrieves a list of discovered resource templates for a specific MCP server,
- * ensuring the server belongs to the authenticated user.
+ * Retrieves a list of discovered static resources for a specific MCP server,
+ * ensuring the server belongs to the authenticated user's active profile.
  */
 export async function GET(
   request: Request,
@@ -31,6 +31,7 @@ export async function GET(
     }
 
     // 2. Verify the server belongs to the authenticated user
+    // Join mcpServers -> profiles -> projects to check user_id
     const serverCheck = await db
         .select({ serverId: mcpServersTable.uuid })
         .from(mcpServersTable)
@@ -46,21 +47,21 @@ export async function GET(
         return NextResponse.json({ error: 'Server not found or user does not have access.' }, { status: 404 });
     }
 
-    // 3. Query the resource templates table for the specific server UUID
-    const templates = await db
-      .select() // Select all columns from resourceTemplatesTable
-      .from(resourceTemplatesTable)
-      .where(eq(resourceTemplatesTable.mcp_server_uuid, serverUuid))
-      .orderBy(asc(resourceTemplatesTable.name)); // Optional ordering
+    // 3. Query the resources table for the specific server UUID
+    const resources = await db
+      .select() // Select all columns from resourcesTable - assumes this matches expected output structure
+      .from(resourcesTable)
+      .where(eq(resourcesTable.mcp_server_uuid, serverUuid))
+      .orderBy(asc(resourcesTable.name)); // Optional ordering
 
-    // 4. Return the list of resource templates
-    return NextResponse.json(templates);
+    // 4. Return the list of resources
+    return NextResponse.json(resources);
 
   } catch (error) {
     // Log using the extracted serverUuid if available
     // Note: params might not be available in catch block if await failed
-    console.error(`[API /api/mcp-servers/[uuid]/resource-templates Error]`, error);
+    console.error(`[API /api/mcp-servers/[uuid]/resources Error]`, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: 'Internal Server Error fetching server resource templates', details: errorMessage }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error fetching server resources', details: errorMessage }, { status: 500 });
   }
 }

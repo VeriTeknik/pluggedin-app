@@ -1,19 +1,23 @@
 'use client';
 
-import { Activity, ArrowLeft, Clock, Database, Globe, Save, Server, Terminal, Trash2 } from 'lucide-react';
+// External imports
+import { Activity, ArrowLeft, Clock, Database, Globe, RefreshCw, Save, Server, Terminal, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+// Internal absolute imports (@/)
+import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
 import {
   deleteMcpServerByUuid,
   getMcpServerByUuid,
   toggleMcpServerStatus,
   updateMcpServer,
 } from '@/app/actions/mcp-servers';
-import { getToolsForServer } from '@/app/actions/tools'; // Import action to get tools
+import { getToolsForServer } from '@/app/actions/tools';
 import InlineEditText from '@/components/InlineEditText';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,15 +29,22 @@ import {
 } from '@/components/ui/card';
 import { Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton'; // Import Skeleton for loading state
+import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Textarea } from '@/components/ui/textarea'; // Import Textarea
-import { McpServerStatus, McpServerType } from '@/db/schema'; // Removed unused toolsTable import
+import { Textarea } from '@/components/ui/textarea';
+import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
+import { useToast } from '@/hooks/use-toast';
 import { McpServer } from '@/types/mcp-server';
-import { ResourceTemplate } from '@/types/resource-template'; // Assuming this type exists or will be created
-import type { Tool } from '@/types/tool'; // Use type import
+import { ResourceTemplate } from '@/types/resource-template';
+import type { Tool } from '@/types/tool';
+
+import { CustomInstructionsEditor } from '../components/custom-instructions-editor'; // Import the new component
+import { PromptList } from '../components/prompt-list';
+// Internal relative imports
+import { ResourceList } from '../components/resource-list';
+import { ResourceTemplateList } from '../components/resource-template-list';
 
 export default function McpServerDetailPage({
   params,
@@ -43,7 +54,10 @@ export default function McpServerDetailPage({
   const { currentProfile } = useProfiles();
   const { uuid } = use(params);
   const router = useRouter();
+  const { t } = useTranslation(); // Initialize useTranslation
+  const { toast } = useToast(); // Initialize useToast
   const [hasChanges, setHasChanges] = useState(false);
+  const [isDiscovering, setIsDiscovering] = useState(false); // Add state for discovery loading
 
   const form = useForm({
     defaultValues: {
@@ -190,6 +204,33 @@ export default function McpServerDetailPage({
     }
   };
 
+  // Add handleDiscover function (adapted from ServerCard)
+  const handleDiscover = async () => {
+    if (!currentProfile?.uuid || !uuid) { // Use uuid from params
+      toast({ title: t('common.error'), description: t('mcpServers.errors.missingInfo'), variant: 'destructive' });
+      return;
+    }
+    setIsDiscovering(true);
+    try {
+      // Use uuid from params directly
+      const result = await discoverSingleServerTools(currentProfile.uuid, uuid);
+      if (result.success) {
+        toast({ title: t('common.success'), description: result.message });
+        // Optionally revalidate SWR data for tools/resources/templates here if needed
+        // mutateTools(); // Assuming mutate functions exist for SWR hooks
+        // mutateTemplates();
+        // mutateResources();
+      } else {
+        throw new Error(result.error || t('mcpServers.errors.discoveryFailed'));
+      }
+    } catch (error: any) {
+      toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
+    } finally {
+      setIsDiscovering(false);
+    }
+  };
+
+
   if (error) return <div>Failed to load MCP server</div>;
   if (!mcpServer) return <div>Loading...</div>; // Keep simple loading state
 
@@ -207,7 +248,7 @@ export default function McpServerDetailPage({
           }}
           className='flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors'>
           <ArrowLeft size={16} />
-          Back to servers
+          {t('common.backToServerList')}
         </Button>
 
         <div className='flex gap-2'>
@@ -218,12 +259,23 @@ export default function McpServerDetailPage({
               onClick={form.handleSubmit(onSubmit)}
             >
               <Save className='h-4 w-4 mr-2' />
-              Save Changes
+              {t('common.saveChanges')}
             </Button>
           )}
+          {/* Add Discover Button */}
+          <Button
+            variant="secondary"
+            size="default" // Match size of other buttons potentially
+            onClick={handleDiscover}
+            disabled={isDiscovering}
+            className="shadow-sm"
+          >
+            <RefreshCw size={16} className={`mr-2 ${isDiscovering ? 'animate-spin' : ''}`} />
+            {isDiscovering ? t('mcpServers.actions.discovering') : t('mcpServers.actions.discover')}
+          </Button>
           <Button variant='destructive' className="shadow-sm" onClick={handleDelete}>
             <Trash2 className='mr-2' size={16} />
-            Delete
+            {t('mcpServers.actions.delete')}
           </Button>
         </div>
       </div>
@@ -233,9 +285,9 @@ export default function McpServerDetailPage({
           <div className="flex items-center justify-between">
             <div className="flex items-start gap-2">
               <Badge variant={mcpServer.status === McpServerStatus.ACTIVE ? "default" : "secondary"}>
-                {mcpServer.status === McpServerStatus.ACTIVE ? "Active" : "Inactive"}
+                {mcpServer.status === McpServerStatus.ACTIVE ? t('mcpServers.status.active') : t('mcpServers.status.inactive')}
               </Badge>
-              <Badge variant="outline">{mcpServer.type}</Badge>
+              <Badge variant="outline">{mcpServer.type === McpServerType.STDIO ? t('mcpServers.status.stdio') : t('mcpServers.status.sse')}</Badge>
             </div>
             <Switch
               checked={mcpServer.status === McpServerStatus.ACTIVE}
@@ -256,12 +308,12 @@ export default function McpServerDetailPage({
           <InlineEditText
             value={form.watch('name')}
             onSave={(newName: string) => form.setValue('name', newName)} // Add type
-            placeholder="Enter server name"
+            placeholder={t('mcpServers.placeholders.serverName')}
           />
           <InlineEditText
             value={form.watch('description')}
             onSave={(newDesc: string) => form.setValue('description', newDesc)} // Add type
-            placeholder="Click to add a description..."
+            placeholder={t('mcpServers.placeholders.description')}
           />
         </CardHeader>
       </Card>
@@ -269,11 +321,14 @@ export default function McpServerDetailPage({
       <Form {...form}>
         <Tabs defaultValue="details" className="w-full">
           <TabsList className="w-full justify-start mb-6">
-            <TabsTrigger value="details">Server Details</TabsTrigger>
-            <TabsTrigger value="config">Configuration</TabsTrigger>
-            <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="templates">Resource Templates</TabsTrigger>
-            <TabsTrigger value="tools">Tools</TabsTrigger> {/* Add Tools Tab */}
+            <TabsTrigger value="details">{t('mcpServers.tabs.details')}</TabsTrigger>
+            <TabsTrigger value="config">{t('mcpServers.tabs.config')}</TabsTrigger>
+            <TabsTrigger value="notes">{t('mcpServers.tabs.notes')}</TabsTrigger>
+            <TabsTrigger value="custom-instructions">{t('mcpServers.tabs.customInstructions')}</TabsTrigger>
+            <TabsTrigger value="resources">{t('mcpServers.tabs.resources')}</TabsTrigger>
+            <TabsTrigger value="templates">{t('mcpServers.tabs.templates')}</TabsTrigger>
+            <TabsTrigger value="prompts">{t('mcpServers.tabs.prompts')}</TabsTrigger>
+            <TabsTrigger value="tools">{t('mcpServers.tabs.tools')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="details">
@@ -282,43 +337,43 @@ export default function McpServerDetailPage({
                 <CardHeader className="pb-2">
                   <CardTitle className="text-md font-medium flex items-center">
                     <Server className="mr-2 h-4 w-4" />
-                    Server Info
+                    {t('mcpServers.details.serverInfo')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 pt-0">
                   <div className="flex items-start justify-between border-b pb-2">
-                    <span className="text-sm font-medium text-muted-foreground">UUID</span>
+                    <span className="text-sm font-medium text-muted-foreground">{t('mcpServers.details.uuid')}</span>
                     <span className="text-sm font-mono">{mcpServer.uuid}</span>
                   </div>
                   <div className="flex items-center justify-between border-b pb-2">
                     <span className="text-sm font-medium text-muted-foreground flex items-center">
                       <Activity className="mr-1 h-4 w-4" />
-                      Status
+                      {t('mcpServers.details.status')}
                     </span>
                     <Badge variant={mcpServer.status === McpServerStatus.ACTIVE ? "default" : "secondary"}>
-                      {mcpServer.status === McpServerStatus.ACTIVE ? "Active" : "Inactive"}
+                      {mcpServer.status === McpServerStatus.ACTIVE ? t('mcpServers.status.active') : t('mcpServers.status.inactive')}
                     </Badge>
                   </div>
                   <div className="flex items-center justify-between border-b pb-2">
                     <span className="text-sm font-medium text-muted-foreground flex items-center">
                       <Clock className="mr-1 h-4 w-4" />
-                      Created
+                      {t('mcpServers.details.created')}
                     </span>
                     <span className="text-sm">{new Date(mcpServer.created_at).toLocaleString()}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-muted-foreground">Type</span>
+                    <span className="text-sm font-medium text-muted-foreground">{t('mcpServers.details.type')}</span>
                     <div className="relative inline-block cursor-pointer group">
                       <select
                         value={form.watch('type')}
                         onChange={(e: React.ChangeEvent<HTMLSelectElement>) => form.setValue('type', e.target.value as McpServerType)} // Add type for e
                         className="absolute opacity-0 w-full h-full cursor-pointer"
                       >
-                        <option value={McpServerType.STDIO}>STDIO</option>
-                        <option value={McpServerType.SSE}>SSE</option>
+                        <option value={McpServerType.STDIO}>{t('mcpServers.status.stdio')}</option>
+                        <option value={McpServerType.SSE}>{t('mcpServers.status.sse')}</option>
                       </select>
                       <Badge variant="outline" className="group-hover:bg-muted">
-                        {form.watch('type') === McpServerType.STDIO ? "STDIO" : "SSE"}
+                        {form.watch('type') === McpServerType.STDIO ? t('mcpServers.status.stdio') : t('mcpServers.status.sse')}
                       </Badge>
                     </div>
                   </div>
@@ -338,30 +393,30 @@ export default function McpServerDetailPage({
                     <CardHeader className="pb-2">
                       <CardTitle className="text-md font-medium flex items-center">
                         <Terminal className="mr-2 h-4 w-4" />
-                        Command Configuration
+                        {t('mcpServers.config.commandConfig')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
                       <div className="mb-4">
-                        <h3 className="text-sm font-medium text-muted-foreground mb-2">Command</h3>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('mcpServers.config.command')}</h3>
                         <div className="relative group cursor-text">
                           <Input
                             value={form.watch('command')}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => form.setValue('command', e.target.value)} // Add type for e
                             className="bg-muted p-3 rounded-md font-mono text-sm"
-                            placeholder="e.g., npx or uvx"
+                            placeholder={t('mcpServers.form.commandPlaceholder')}
                           />
                         </div>
                       </div>
 
                       <div className="mb-4">
-                        <h3 className="text-sm font-medium text-muted-foreground mb-2">Arguments</h3>
+                        <h3 className="text-sm font-medium text-muted-foreground mb-2">{t('mcpServers.config.arguments')}</h3>
                         <div className="relative group cursor-text">
                           <Input
                             value={form.watch('args')}
                             onChange={(e: React.ChangeEvent<HTMLInputElement>) => form.setValue('args', e.target.value)} // Add type for e
                             className="bg-muted p-3 rounded-md font-mono text-sm"
-                            placeholder="e.g., mcp-server-time"
+                            placeholder={t('mcpServers.form.argumentsPlaceholder')}
                           />
                         </div>
                       </div>
@@ -372,7 +427,7 @@ export default function McpServerDetailPage({
                     <CardHeader className="pb-2">
                       <CardTitle className="text-md font-medium flex items-center">
                         <Database className="mr-2 h-4 w-4" />
-                        Environment Variables
+                        {t('mcpServers.config.envVars')}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
@@ -381,8 +436,7 @@ export default function McpServerDetailPage({
                           value={form.watch('env')}
                           onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => form.setValue('env', e.target.value)} // Add type for e
                           className="w-full bg-muted p-3 rounded-md font-mono text-sm min-h-[150px] border-none resize-y"
-                          placeholder="KEY=value
-ANOTHER_KEY=another_value"
+                          placeholder={t('mcpServers.form.envVarsPlaceholder')}
                         />
                       </div>
                     </CardContent>
@@ -390,19 +444,19 @@ ANOTHER_KEY=another_value"
                 </>
               ) : (
                 <Card className="shadow-sm">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-md font-medium flex items-center">
-                      <Globe className="mr-2 h-4 w-4" />
-                      Server URL
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="pt-0">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-md font-medium flex items-center">
+                        <Globe className="mr-2 h-4 w-4" />
+                        {t('mcpServers.config.serverUrl')}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
                     <div className="relative group cursor-text">
                       <Input
                         value={form.watch('url')}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => form.setValue('url', e.target.value)} // Add type for e
                         className="bg-muted p-3 rounded-md font-mono text-sm"
-                        placeholder="http://localhost:3000/sse"
+                        placeholder={t('mcpServers.form.serverUrlPlaceholder')}
                       />
                     </div>
                   </CardContent>
@@ -414,13 +468,13 @@ ANOTHER_KEY=another_value"
           <TabsContent value="notes">
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-md font-medium">Notes</CardTitle>
+                <CardTitle className="text-md font-medium">{t('mcpServers.notes.title')}</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <Textarea
                   value={form.watch('notes')}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => form.setValue('notes', e.target.value)} // Add type for e
-                  placeholder="Add any notes, usage instructions, or known quirks for this server..."
+                  placeholder={t('mcpServers.notes.placeholder')}
                   className="min-h-[200px] font-mono text-sm"
                 />
               </CardContent>
@@ -430,10 +484,13 @@ ANOTHER_KEY=another_value"
           <TabsContent value="templates">
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-md font-medium">Resource Templates</CardTitle>
+                <CardTitle className="text-md font-medium">{t('mcpServers.templates.title')}</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                {isLoadingTemplates && (
+                {/* Render ResourceTemplateList instead of manual rendering */}
+                <ResourceTemplateList serverUuid={uuid} />
+                {/* Remove manual rendering logic below */}
+                {/* {isLoadingTemplates && (
                   <div className="space-y-4">
                     <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
@@ -468,16 +525,56 @@ ANOTHER_KEY=another_value"
                       </div>
                     ))}
                   </div>
-                )}
+                )} */}
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Add Tools Tab Content */}
+          {/* Resources Tab Content */}
+          <TabsContent value="resources">
+             <Card className="shadow-sm">
+               <CardHeader className="pb-2">
+                 <CardTitle className="text-md font-medium">{t('mcpServers.resources.title')}</CardTitle>
+               </CardHeader>
+               <CardContent className="pt-0">
+                 {/* Render the ResourceList component */}
+                 <ResourceList serverUuid={uuid} />
+               </CardContent>
+             </Card>
+          </TabsContent>
+
+          {/* Add Custom Instructions Tab Content */}
+          <TabsContent value="custom-instructions">
+             <Card className="shadow-sm">
+               <CardHeader className="pb-2">
+                 <CardTitle className="text-md font-medium">{t('mcpServers.instructions.title')}</CardTitle>
+               </CardHeader>
+               <CardContent className="pt-0">
+                 {/* Render the CustomInstructionsEditor component */}
+                 {/* Need to pass profileUuid which is available via currentProfile */}
+                 {currentProfile?.uuid && <CustomInstructionsEditor serverUuid={uuid} profileUuid={currentProfile.uuid} />}
+               </CardContent>
+             </Card>
+          </TabsContent>
+
+          {/* Prompts Tab Content */}
+          <TabsContent value="prompts">
+             <Card className="shadow-sm">
+               <CardHeader className="pb-2">
+                 <CardTitle className="text-md font-medium">{t('mcpServers.prompts.title')}</CardTitle>
+               </CardHeader>
+               <CardContent className="pt-0">
+                 {/* Render the PromptList component */}
+                 <PromptList serverUuid={uuid} />
+               </CardContent>
+             </Card>
+          </TabsContent>
+
+          {/* Tools Tab Content */}
           <TabsContent value="tools">
             <Card className="shadow-sm">
               <CardHeader className="pb-2">
-                <CardTitle className="text-md font-medium">Discovered Tools</CardTitle>
+                <CardTitle className="text-md font-medium">{t('mcpServers.tools.title')}</CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 {isLoadingTools && (
@@ -489,12 +586,12 @@ ANOTHER_KEY=another_value"
                 )}
                 {toolsError && (
                   <p className="text-destructive text-sm">
-                    Failed to load tools.
+                    {t('mcpServers.errors.fetchToolsFailed')}
                   </p>
                 )}
                 {!isLoadingTools && !toolsError && (!serverTools || serverTools.length === 0) && (
                   <p className="text-muted-foreground text-sm">
-                    No tools discovered for this server yet. Try using the &quot;Discover Tools&quot; button on the server card.
+                    {t('mcpServers.tools.noTools')}
                   </p>
                 )}
                 {!isLoadingTools && !toolsError && serverTools && serverTools.length > 0 && (
@@ -506,10 +603,11 @@ ANOTHER_KEY=another_value"
                         {/* Optionally display schema preview */}
                         {tool.toolSchema && (
                           <details className="text-xs mt-2"> {/* Added margin top */}
-                            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">View Schema</summary> {/* Added hover effect */}
-                            {/* Use dangerouslySetInnerHTML to avoid quote escaping issues */}
+                            <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('common.viewSchema')}</summary> {/* Added hover effect */}
+                            {/* Use dangerouslySetInnerHTML to avoid quote escaping issues, escape quotes */}
                             <pre className="mt-1 p-2 bg-muted dark:bg-slate-800 rounded text-xs overflow-auto max-h-60">
-                              <code dangerouslySetInnerHTML={{ __html: JSON.stringify(tool.toolSchema, null, 2) }} />
+                              {/* Correctly escape quotes for HTML */}
+                              <code dangerouslySetInnerHTML={{ __html: JSON.stringify(tool.toolSchema, null, 2).replace(/"/g, '"') }} />
                             </pre>
                           </details>
                         )}

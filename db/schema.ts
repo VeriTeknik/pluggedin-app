@@ -7,6 +7,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  serial, // Import serial
   text,
   timestamp,
   unique, // Import unique
@@ -16,6 +17,20 @@ import {
 import { locales } from '@/i18n/config';
 
 import { enumToPgEnum } from './utils/enum-to-pg-enum';
+
+// Define MCP Message structure for typing JSONB columns
+// Based on @modelcontextprotocol/sdk/types PromptMessageContent
+type McpMessageContent =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string }
+  | { type: "audio"; data: string; mimeType: string }
+  | { type: "resource"; resource: { uri: string; mimeType?: string; text?: string; blob?: string } };
+
+type McpMessage = {
+  role: "user" | "assistant" | "system"; // Added system role
+  content: McpMessageContent | McpMessageContent[]; // Allow single or multiple content parts
+};
+
 
 export const languageEnum = pgEnum('language', locales);
 
@@ -652,13 +667,119 @@ export const toolsRelations = relations(toolsTable, ({ one }) => ({
   }),
 }));
 
+// Table for storing discovered prompts
+export const promptsTable = pgTable(
+  'prompts',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    mcp_server_uuid: uuid('mcp_server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    description: text('description'),
+    // Store arguments schema as JSONB. Matches MCP PromptArgument definition.
+    arguments_schema: jsonb('arguments_schema')
+      .$type<Array<{ name: string; description?: string; required?: boolean }>>() // Define expected structure
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    // Note: We don't store the 'messages' here, as those are retrieved dynamically via prompts/get
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('prompts_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+    unique('prompts_unique_prompt_name_per_server_idx').on( // Ensure prompt name is unique per server
+      table.mcp_server_uuid,
+      table.name
+    ),
+  ]
+);
+
+// Relations for promptsTable
+export const promptsRelations = relations(promptsTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [promptsTable.mcp_server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// Table for storing server-specific custom instructions (structured like prompts)
+// We'll store one instruction set per server for now, using a unique constraint
+export const customInstructionsTable = pgTable(
+  'custom_instructions',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    mcp_server_uuid: uuid('mcp_server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    // name: text('name').notNull().default('custom_instructions'), // Fixed name for now
+    description: text('description').default('Custom instructions for this server'),
+    // arguments: jsonb('arguments').$type<Array<{ name: string; description?: string; required?: boolean }>>().notNull().default(sql`'[]'::jsonb`), // Likely no arguments needed
+    messages: jsonb('messages')
+      .$type<McpMessage[]>() // Use the defined McpMessage type
+      .notNull()
+      .default(sql`'[]'::jsonb`), // Default to empty message array
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // Ensure only one set of instructions per server
+    unique('custom_instructions_unique_server_idx').on(table.mcp_server_uuid),
+  ]
+);
+
+// Relations for customInstructionsTable
+export const customInstructionsRelations = relations(customInstructionsTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [customInstructionsTable.mcp_server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// Table for Release Notes
+export const releaseNotes = pgTable('release_notes', {
+  id: serial('id').primaryKey(),
+  repository: text('repository').notNull(), // e.g., 'pluggedin-app' or 'pluggedin-mcp'
+  version: text('version').notNull(), // e.g., 'v1.2.0'
+  releaseDate: timestamp('release_date', { withTimezone: true }).notNull(),
+  content: jsonb('content').notNull(), // Store structured content (features, fixes, etc.)
+  commitSha: text('commit_sha').notNull(), // SHA of the commit/tag associated with the release
+  createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+});
+
+// Relations for releaseNotes (optional, if needed later)
+// export const releaseNotesRelations = relations(releaseNotes, ({ one }) => ({
+//   // Example: If releases were linked to a user who published them
+//   // publisher: one(users, {
+//   //   fields: [releaseNotes.publisherId],
+//   //   references: [users.id],
+//   // }),
+// }));
+
+
 // Add other relations as needed for users, accounts, sessions etc. if complex queries are used elsewhere
 export const usersRelations = relations(users, ({ many }) => ({
 	accounts: many(accounts),
   sessions: many(sessions),
   projects: many(projectsTable),
   codes: many(codesTable),
+  // Add relation from profiles to prompts if needed (e.g., profile.prompts)
+  // prompts: many(promptsTable), // This might require adjusting profile/server relations
 }));
+
+// Add relation from mcpServers to prompts
+export const mcpServersPromptsRelations = relations(mcpServersTable, ({ many }) => ({
+  prompts: many(promptsTable),
+  // Add relation from mcpServers to customInstructions
+  customInstructions: many(customInstructionsTable), // Changed from one to many, although constrained by unique index for now
+}));
+
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
 	user: one(users, {

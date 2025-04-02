@@ -12,12 +12,20 @@
       "passwordMatch": "Passwords must match"
     },
     "save": "Save",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}}",
     "saving": "Saving...",
     "remove": "Remove",
     "removing": "Removing...",
     "errors": {
       "unexpected": "An unexpected error occurred. Please try again."
-    }
+    },
+    "loading": "Loading...",
+    "notAvailable": "N/A",
+    "saveChanges": "Save Changes",
+    "backToServerList": "Back to servers",
+    "viewSchema": "View Schema"
   },
   "auth": {
     "common": {
@@ -129,7 +137,9 @@
       "close": "Close",
       "downloadJson": "Download JSON",
       "copy": "Copy",
-      "copied": "Copied!"
+      "copied": "Copied!",
+      "discover": "Discover",
+      "discovering": "Discovering..."
     },
     "form": {
       "success": "MCP server created successfully.",
@@ -154,7 +164,9 @@
       "serverUrl": "Server URL",
       "serverUrlPlaceholder": "http://localhost:3000/sse",
       "serverUrlHelp": "Must be a valid HTTP/HTTPS URL",
-      "created": "Created"
+      "created": "Created",
+      "notes": "Notes",
+      "notesPlaceholder": "Add any notes, usage instructions, or known quirks for this server..."
     },
     "import": {
       "title": "Import MCP Servers",
@@ -182,13 +194,130 @@
     },
     "status": {
       "active": "Active",
-      "inactive": "Inactive"
+      "inactive": "Inactive",
+      "stdio": "STDIO",
+      "sse": "SSE"
     },
     "empty": {
       "title": "No Servers Found",
       "noResults": "No servers match \"{{search}}\"",
       "noServers": "You haven't added any MCP servers yet",
       "addFirst": "Add Your First Server"
+    },
+    "errors": {
+        "missingInfo": "Missing profile or server information.",
+        "discoveryFailed": "Discovery failed.",
+        "fetchResourcesFailed": "Failed to load resources.",
+        "fetchTemplatesFailed": "Failed to load resource templates.",
+        "fetchPromptsFailed": "Failed to load prompts.",
+        "fetchToolsFailed": "Failed to load tools.",
+        "fetchInstructionsFailed": "Failed to fetch custom instructions."
+    },
+    "tabs": {
+        "details": "Server Details",
+        "config": "Configuration",
+        "notes": "Notes",
+        "customInstructions": "Custom Instructions",
+        "resources": "Resources",
+        "templates": "Resource Templates",
+        "prompts": "Prompts",
+        "tools": "Tools"
+    },
+    "details": {
+        "serverInfo": "Server Info",
+        "uuid": "UUID",
+        "status": "Status",
+        "created": "Created",
+        "type": "Type"
+    },
+    "config": {
+        "commandConfig": "Command Configuration",
+        "command": "Command",
+        "arguments": "Arguments",
+        "envVars": "Environment Variables",
+        "serverUrl": "Server URL"
+    },
+    "notes": {
+        "title": "Notes"
+    },
+    "resources": {
+        "title": "Discovered Resources",
+        "name": "Name",
+        "uri": "URI",
+        "description": "Description",
+        "mimeType": "MIME Type",
+        "noResourcesTitle": "No Resources Found",
+        "noResources": "No static resources have been discovered for this server yet. Try running discovery."
+    },
+    "templates": {
+        "title": "Resource Templates",
+        "name": "Name",
+        "uriTemplate": "URI Template",
+        "variables": "Variables",
+        "description": "Description",
+        "mimeType": "MIME Type",
+        "noTemplatesTitle": "No Resource Templates Found",
+        "noTemplates": "No resource templates have been discovered for this server yet. Try running discovery."
+    },
+    "prompts": {
+        "title": "Discovered Prompts",
+        "name": "Name",
+        "description": "Description",
+        "arguments": "Arguments Schema",
+        "noPromptsTitle": "No Prompts Found",
+        "noPrompts": "No prompts have been discovered for this server yet. Try running discovery.",
+        "viewArguments": "View Arguments ({{count}})"
+    },
+    "tools": {
+        "title": "Discovered Tools",
+        "noTools": "No tools discovered for this server yet. Try using the \"Discover Tools\" button on the server card."
+    },
+    "instructions": {
+        "title": "Custom Instructions",
+        "descriptionLabel": "Description (Optional)",
+        "descriptionPlaceholder": "Briefly describe the purpose of these instructions",
+        "descriptionHelp": "This description is for your reference only.",
+        "messagesLabel": "Messages (JSON Array)",
+        "messagesPlaceholder": "[\n  {\n    \"role\": \"system\",\n    \"content\": { \"type\": \"text\", \"text\": \"Your instruction here...\" }\n  }\n]",
+        "messagesHelp": "Enter an array of MCP Message objects in JSON format.",
+        "infoTitle": "How Clients Use Instructions",
+        "infoText": "These instructions can potentially be used by MCP clients (like Cline) to provide context to the AI when using this server's tools. The exact usage depends on the client implementation.",
+        "saveSuccess": "Custom instructions saved successfully.",
+        "saveError": "Failed to save custom instructions."
+    },
+    "placeholders": {
+        "serverName": "Enter server name",
+        "description": "Click to add a description..."
+    },
+    "releaseNotes": {
+        "title": "Release Notes",
+        "errors": {
+            "fetchFailed": "Failed to load release notes."
+        },
+        "noSearchResultsTitle": "No Results Found",
+        "noReleasesTitle": "No Release Notes Available",
+        "noSearchResultsText": "No release notes match your search criteria.",
+        "noReleasesText": "There are currently no release notes to display.",
+        "rssFeed": "Subscribe via RSS",
+        "changeTypes": {
+            "feature": "Features",
+            "bugfix": "Bug Fixes",
+            "performanceimprovement": "Performance Improvements",
+            "breakingchange": "Breaking Changes",
+            "other": "Other Changes"
+        },
+        "viewCommit": "View Commit",
+        "noDetails": "No specific changes listed for this release.",
+        "viewOnGitHub": "View release on GitHub",
+        "filters": {
+            "filterBy": "Filter by Repository:",
+            "all": "All Repositories",
+            "app": "pluggedin-app",
+            "mcp": "pluggedin-mcp"
+        },
+        "search": {
+            "placeholder": "Search release notes..."
+        }
     }
   },
   "search": {
@@ -367,7 +496,6 @@
       "name": "Name",
       "namePlaceholder": "Enter your name",
       "language": "Language",
-      "avatarRecommendation": "Recommended: Square image, max 1MB",
       "updateButton": "Update Profile",
       "success": "Profile updated successfully",
       "error": "Failed to update profile"
@@ -401,6 +529,9 @@
       "deletingButton": "Deleting...",
       "success": "Account deleted successfully",
       "error": "Failed to delete account"
+    },
+    "validation": {
+        "invalidJsonArray": "Invalid JSON format or not an array of messages."
     },
     "connectedAccounts": {
       "title": "Connected Accounts",

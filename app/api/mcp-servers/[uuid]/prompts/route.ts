@@ -2,15 +2,15 @@ import { and, asc,eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable, projectsTable,resourceTemplatesTable } from '@/db/schema';
-import { getAuthSession } from '@/lib/auth';
+import { mcpServersTable, profilesTable, projectsTable, promptsTable } from '@/db/schema'; // Import promptsTable
+import { getAuthSession } from '@/lib/auth'; // Internal imports first
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/mcp-servers/{uuid}/resource-templates
+ * GET /api/mcp-servers/{uuid}/prompts
  *
- * Retrieves a list of discovered resource templates for a specific MCP server,
+ * Retrieves a list of discovered prompts for a specific MCP server,
  * ensuring the server belongs to the authenticated user.
  */
 export async function GET(
@@ -46,21 +46,21 @@ export async function GET(
         return NextResponse.json({ error: 'Server not found or user does not have access.' }, { status: 404 });
     }
 
-    // 3. Query the resource templates table for the specific server UUID
-    const templates = await db
-      .select() // Select all columns from resourceTemplatesTable
-      .from(resourceTemplatesTable)
-      .where(eq(resourceTemplatesTable.mcp_server_uuid, serverUuid))
-      .orderBy(asc(resourceTemplatesTable.name)); // Optional ordering
+    // 3. Query the prompts table for the specific server UUID
+    const prompts = await db
+      .select() // Select all columns from promptsTable
+      .from(promptsTable)
+      .where(eq(promptsTable.mcp_server_uuid, serverUuid))
+      .orderBy(asc(promptsTable.name)); // Optional ordering
 
-    // 4. Return the list of resource templates
-    return NextResponse.json(templates);
+    // 4. Return the list of prompts
+    return NextResponse.json(prompts);
 
   } catch (error) {
     // Log using the extracted serverUuid if available
     // Note: params might not be available in catch block if await failed
-    console.error(`[API /api/mcp-servers/[uuid]/resource-templates Error]`, error);
+    console.error(`[API /api/mcp-servers/[uuid]/prompts Error]`, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: 'Internal Server Error fetching server resource templates', details: errorMessage }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error fetching server prompts', details: errorMessage }, { status: 500 });
   }
 }

@@ -1,16 +1,16 @@
-import { and, asc,eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { and, eq } from 'drizzle-orm'; // Then external
+import { NextResponse } from 'next/server'; // External first
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable, projectsTable,resourceTemplatesTable } from '@/db/schema';
-import { getAuthSession } from '@/lib/auth';
+import { customInstructionsTable, mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth'; // Then internal
 
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/mcp-servers/{uuid}/resource-templates
+ * GET /api/mcp-servers/{uuid}/custom-instructions
  *
- * Retrieves a list of discovered resource templates for a specific MCP server,
+ * Retrieves the custom instructions for a specific MCP server,
  * ensuring the server belongs to the authenticated user.
  */
 export async function GET(
@@ -46,21 +46,29 @@ export async function GET(
         return NextResponse.json({ error: 'Server not found or user does not have access.' }, { status: 404 });
     }
 
-    // 3. Query the resource templates table for the specific server UUID
-    const templates = await db
-      .select() // Select all columns from resourceTemplatesTable
-      .from(resourceTemplatesTable)
-      .where(eq(resourceTemplatesTable.mcp_server_uuid, serverUuid))
-      .orderBy(asc(resourceTemplatesTable.name)); // Optional ordering
+    // 3. Query the custom instructions table for the specific server UUID
+    const instructions = await db
+      .select() // Select all columns from customInstructionsTable
+      .from(customInstructionsTable)
+      .where(eq(customInstructionsTable.mcp_server_uuid, serverUuid))
+      .limit(1); // Expecting only one record per server due to unique constraint
 
-    // 4. Return the list of resource templates
-    return NextResponse.json(templates);
+    // 4. Return the instructions record (or null/empty object if none found)
+    // The findFirst method in the action might be better, but this works too
+    if (instructions.length === 0) {
+        // Return a default structure or null if no instructions are set
+        return NextResponse.json(null); // Or return an empty object {} or default structure
+    }
+    return NextResponse.json(instructions[0]);
 
   } catch (error) {
     // Log using the extracted serverUuid if available
     // Note: params might not be available in catch block if await failed
-    console.error(`[API /api/mcp-servers/[uuid]/resource-templates Error]`, error);
+    console.error(`[API /api/mcp-servers/[uuid]/custom-instructions Error]`, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: 'Internal Server Error fetching server resource templates', details: errorMessage }, { status: 500 });
+    return NextResponse.json({ error: 'Internal Server Error fetching custom instructions', details: errorMessage }, { status: 500 });
   }
 }
+
+// POST/PUT handler could be added here later for saving via API if needed,
+// but currently using server actions (upsertCustomInstructions).
