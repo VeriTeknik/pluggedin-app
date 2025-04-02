@@ -17,6 +17,20 @@ import { locales } from '@/i18n/config';
 
 import { enumToPgEnum } from './utils/enum-to-pg-enum';
 
+// Define MCP Message structure for typing JSONB columns
+// Based on @modelcontextprotocol/sdk/types PromptMessageContent
+type McpMessageContent =
+  | { type: "text"; text: string }
+  | { type: "image"; data: string; mimeType: string }
+  | { type: "audio"; data: string; mimeType: string }
+  | { type: "resource"; resource: { uri: string; mimeType?: string; text?: string; blob?: string } };
+
+type McpMessage = {
+  role: "user" | "assistant" | "system"; // Added system role
+  content: McpMessageContent | McpMessageContent[]; // Allow single or multiple content parts
+};
+
+
 export const languageEnum = pgEnum('language', locales);
 
 export enum McpServerStatus {
@@ -689,6 +703,43 @@ export const promptsRelations = relations(promptsTable, ({ one }) => ({
   }),
 }));
 
+// Table for storing server-specific custom instructions (structured like prompts)
+// We'll store one instruction set per server for now, using a unique constraint
+export const customInstructionsTable = pgTable(
+  'custom_instructions',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    mcp_server_uuid: uuid('mcp_server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    // name: text('name').notNull().default('custom_instructions'), // Fixed name for now
+    description: text('description').default('Custom instructions for this server'),
+    // arguments: jsonb('arguments').$type<Array<{ name: string; description?: string; required?: boolean }>>().notNull().default(sql`'[]'::jsonb`), // Likely no arguments needed
+    messages: jsonb('messages')
+      .$type<McpMessage[]>() // Use the defined McpMessage type
+      .notNull()
+      .default(sql`'[]'::jsonb`), // Default to empty message array
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    // Ensure only one set of instructions per server
+    unique('custom_instructions_unique_server_idx').on(table.mcp_server_uuid),
+  ]
+);
+
+// Relations for customInstructionsTable
+export const customInstructionsRelations = relations(customInstructionsTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [customInstructionsTable.mcp_server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
 
 // Add other relations as needed for users, accounts, sessions etc. if complex queries are used elsewhere
 export const usersRelations = relations(users, ({ many }) => ({
@@ -703,6 +754,8 @@ export const usersRelations = relations(users, ({ many }) => ({
 // Add relation from mcpServers to prompts
 export const mcpServersPromptsRelations = relations(mcpServersTable, ({ many }) => ({
   prompts: many(promptsTable),
+  // Add relation from mcpServers to customInstructions
+  customInstructions: many(customInstructionsTable), // Changed from one to many, although constrained by unique index for now
 }));
 
 

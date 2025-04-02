@@ -1,9 +1,9 @@
-import { and, eq, asc } from 'drizzle-orm';
+import { and, asc,eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
-import { getAuthSession } from '@/lib/auth'; // Internal imports first
 import { db } from '@/db';
 import { mcpServersTable, profilesTable, projectsTable, promptsTable } from '@/db/schema'; // Import promptsTable
+import { getAuthSession } from '@/lib/auth'; // Internal imports first
 
 export const dynamic = 'force-dynamic';
 

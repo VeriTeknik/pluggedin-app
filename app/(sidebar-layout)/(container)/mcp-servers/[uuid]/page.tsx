@@ -1,13 +1,13 @@
 'use client';
 
 // External imports
+import { Activity, ArrowLeft, Clock, Database, Globe, RefreshCw, Save, Server, Terminal, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
-import { Activity, ArrowLeft, Clock, Database, Globe, RefreshCw, Save, Server, Terminal, Trash2 } from 'lucide-react';
 
 // Internal absolute imports (@/)
 import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
@@ -39,10 +39,12 @@ import { useToast } from '@/hooks/use-toast';
 import { McpServer } from '@/types/mcp-server';
 import { ResourceTemplate } from '@/types/resource-template';
 import type { Tool } from '@/types/tool';
+
+import { CustomInstructionsEditor } from '../components/custom-instructions-editor'; // Import the new component
+import { PromptList } from '../components/prompt-list';
 // Internal relative imports
 import { ResourceList } from '../components/resource-list';
 import { ResourceTemplateList } from '../components/resource-template-list';
-import { PromptList } from '../components/prompt-list';
 
 export default function McpServerDetailPage({
   params,
@@ -322,9 +324,10 @@ export default function McpServerDetailPage({
             <TabsTrigger value="details">Server Details</TabsTrigger>
             <TabsTrigger value="config">Configuration</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
+            <TabsTrigger value="custom-instructions">Custom Instructions</TabsTrigger> {/* Add Custom Instructions Tab Trigger */}
             <TabsTrigger value="resources">Resources</TabsTrigger>
             <TabsTrigger value="templates">Resource Templates</TabsTrigger>
-            <TabsTrigger value="prompts">Prompts</TabsTrigger> {/* Add Prompts Tab Trigger */}
+            <TabsTrigger value="prompts">Prompts</TabsTrigger>
             <TabsTrigger value="tools">Tools</TabsTrigger>
           </TabsList>
 
@@ -541,7 +544,21 @@ ANOTHER_KEY=another_value"
              </Card>
           </TabsContent>
 
-          {/* Add Prompts Tab Content */}
+          {/* Add Custom Instructions Tab Content */}
+          <TabsContent value="custom-instructions">
+             <Card className="shadow-sm">
+               <CardHeader className="pb-2">
+                 <CardTitle className="text-md font-medium">Custom Instructions</CardTitle>
+               </CardHeader>
+               <CardContent className="pt-0">
+                 {/* Render the CustomInstructionsEditor component */}
+                 {/* Need to pass profileUuid which is available via currentProfile */}
+                 {currentProfile?.uuid && <CustomInstructionsEditor serverUuid={uuid} profileUuid={currentProfile.uuid} />}
+               </CardContent>
+             </Card>
+          </TabsContent>
+
+          {/* Prompts Tab Content */}
           <TabsContent value="prompts">
              <Card className="shadow-sm">
                <CardHeader className="pb-2">
