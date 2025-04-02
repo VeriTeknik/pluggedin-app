@@ -652,13 +652,59 @@ export const toolsRelations = relations(toolsTable, ({ one }) => ({
   }),
 }));
 
+// Table for storing discovered prompts
+export const promptsTable = pgTable(
+  'prompts',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    mcp_server_uuid: uuid('mcp_server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    description: text('description'),
+    // Store arguments schema as JSONB. Matches MCP PromptArgument definition.
+    arguments_schema: jsonb('arguments_schema')
+      .$type<Array<{ name: string; description?: string; required?: boolean }>>() // Define expected structure
+      .notNull()
+      .default(sql`'[]'::jsonb`),
+    // Note: We don't store the 'messages' here, as those are retrieved dynamically via prompts/get
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('prompts_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+    unique('prompts_unique_prompt_name_per_server_idx').on( // Ensure prompt name is unique per server
+      table.mcp_server_uuid,
+      table.name
+    ),
+  ]
+);
+
+// Relations for promptsTable
+export const promptsRelations = relations(promptsTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [promptsTable.mcp_server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+
 // Add other relations as needed for users, accounts, sessions etc. if complex queries are used elsewhere
 export const usersRelations = relations(users, ({ many }) => ({
 	accounts: many(accounts),
   sessions: many(sessions),
   projects: many(projectsTable),
   codes: many(codesTable),
+  // Add relation from profiles to prompts if needed (e.g., profile.prompts)
+  // prompts: many(promptsTable), // This might require adjusting profile/server relations
 }));
+
+// Add relation from mcpServers to prompts
+export const mcpServersPromptsRelations = relations(mcpServersTable, ({ many }) => ({
+  prompts: many(promptsTable),
+}));
+
 
 export const accountsRelations = relations(accounts, ({ one }) => ({
 	user: one(users, {

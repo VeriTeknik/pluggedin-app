@@ -2,19 +2,21 @@
 
 import { and, eq } from 'drizzle-orm';
 
-// import { revalidatePath } from 'next/cache'; // Removed unused import
+// import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
-import { mcpServersTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema'; // Sorted
-import { listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Sorted
-// Removed getUserData import - profileUuid will be passed as argument
-// Import the actual discovery logic using @h1deya/langchain-mcp-tools
-// Note: convertMcpToLangchainTools only handles tools. We need direct SDK usage for templates.
+// Import promptsTable and Prompt type
+import { mcpServersTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema'; // Sorted
+import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Sorted
+// Removed getUserData import
 // import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
-// Remove explicit SDK type imports - rely on inference from wrapper functions
+// Removed direct SDK type import
 
-// Infer Resource type from the imported function's return type
+// Infer Resource type
 type ResourcesArray = Awaited<ReturnType<typeof listResourcesFromServer>>;
 type InferredResource = ResourcesArray[number];
+// Infer Prompt type
+type PromptsArray = Awaited<ReturnType<typeof listPromptsFromServer>>;
+type InferredPrompt = PromptsArray[number];
 
 /**
  * Discovers tools for a single MCP server and updates the database.
@@ -53,10 +55,12 @@ export async function discoverSingleServerTools(
 
     let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = [];
     let discoveredTemplates: Awaited<ReturnType<typeof listResourceTemplatesFromServer>> = [];
-    let discoveredResources: Awaited<ReturnType<typeof listResourcesFromServer>> = []; // Added
+    let discoveredResources: Awaited<ReturnType<typeof listResourcesFromServer>> = [];
+    let discoveredPrompts: Awaited<ReturnType<typeof listPromptsFromServer>> = []; // Added
     let toolError: string | null = null;
     let templateError: string | null = null;
-    let resourceError: string | null = null; // Added
+    let resourceError: string | null = null;
+    let promptError: string | null = null; // Added
 
     // --- Discover Tools ---
     try {
@@ -146,23 +150,58 @@ export async function discoverSingleServerTools(
         resourceError = error.message;
     }
 
+    // --- Discover Prompts ---
+    try {
+        console.log(`[Action] Discovering prompts for ${serverConfig.name || serverUuid}...`);
+        discoveredPrompts = await listPromptsFromServer(serverConfig);
+        console.log(`[Action] Discovered ${discoveredPrompts.length} prompts.`);
+
+        // Delete existing prompts
+        console.log(`[Action] Deleting old prompts for server: ${serverUuid}`);
+        await db.delete(promptsTable).where(eq(promptsTable.mcp_server_uuid, serverUuid));
+
+        // Insert new prompts
+        if (discoveredPrompts.length > 0) {
+            console.log(`[Action] Inserting ${discoveredPrompts.length} new prompts...`);
+            const promptsToInsert = discoveredPrompts.map((prompt: InferredPrompt) => ({ // Use inferred type
+                mcp_server_uuid: serverUuid,
+                name: prompt.name,
+                description: prompt.description,
+                // Ensure arguments_schema is stored correctly as JSONB
+                arguments_schema: prompt.arguments as any, // Cast if necessary, Drizzle handles JSONB
+            }));
+            await db.insert(promptsTable).values(promptsToInsert);
+        }
+    } catch (error: any) {
+        console.error(`[Action Error] Failed to discover/store prompts for ${serverConfig.name || serverUuid}:`, error);
+        promptError = error.message;
+    }
+
+
     // --- Final Result ---
     // Revalidate relevant paths if needed
     // revalidatePath('/mcp-servers');
 
-    const success = !toolError && !templateError && !resourceError; // Include resourceError
+    const success = !toolError && !templateError && !resourceError && !promptError; // Include promptError
     let message = '';
+    const counts = [
+        `${discoveredTools.length} tools`,
+        `${discoveredTemplates.length} templates`,
+        `${discoveredResources.length} resources`,
+        `${discoveredPrompts.length} prompts` // Add prompts count
+    ];
     if (success) {
-        message = `Successfully discovered ${discoveredTools.length} tools, ${discoveredTemplates.length} templates, and ${discoveredResources.length} resources for ${serverConfig.name || serverUuid}.`;
+        message = `Successfully discovered ${counts.join(', ')} for ${serverConfig.name || serverUuid}.`;
     } else {
         message = `Discovery partially failed for ${serverConfig.name || serverUuid}.`;
         if (toolError) message += ` Tool error: ${toolError}`;
         if (templateError) message += ` Template error: ${templateError}`;
-        if (resourceError) message += ` Resource error: ${resourceError}`; // Add resource error
+        if (resourceError) message += ` Resource error: ${resourceError}`;
+        if (promptError) message += ` Prompt error: ${promptError}`; // Add prompt error
     }
     console.log(`[Action] Discovery process finished for ${serverUuid}. Success: ${success}`);
 
-    return { success, message, error: success ? undefined : (toolError || templateError || resourceError || 'Unknown discovery error') }; // Include resourceError
+    return { success, message, error: success ? undefined : (toolError || templateError || resourceError || promptError || 'Unknown discovery error') }; // Include promptError
 
   } catch (error: any) {
     console.error(`[Action Error] Failed to discover tools for server ${serverUuid}:`, error);

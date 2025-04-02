@@ -1,14 +1,16 @@
 'use client';
 
-import { Activity, ArrowLeft, Clock, Database, Globe, RefreshCw, Save, Server, Terminal, Trash2 } from 'lucide-react'; // Added RefreshCw
-import { useRouter } from 'next/navigation';
+// External imports
 import { use } from 'react';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
-import { useTranslation } from 'react-i18next'; // Added useTranslation
+import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
+import { Activity, ArrowLeft, Clock, Database, Globe, RefreshCw, Save, Server, Terminal, Trash2 } from 'lucide-react';
 
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Added action import
+// Internal absolute imports (@/)
+import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
 import {
   deleteMcpServerByUuid,
   getMcpServerByUuid,
@@ -33,13 +35,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
-import { useToast } from '@/hooks/use-toast'; // Added useToast
+import { useToast } from '@/hooks/use-toast';
 import { McpServer } from '@/types/mcp-server';
 import { ResourceTemplate } from '@/types/resource-template';
 import type { Tool } from '@/types/tool';
-
+// Internal relative imports
 import { ResourceList } from '../components/resource-list';
-import { ResourceTemplateList } from '../components/resource-template-list'; // Import the new component
+import { ResourceTemplateList } from '../components/resource-template-list';
+import { PromptList } from '../components/prompt-list';
 
 export default function McpServerDetailPage({
   params,
@@ -319,8 +322,9 @@ export default function McpServerDetailPage({
             <TabsTrigger value="details">Server Details</TabsTrigger>
             <TabsTrigger value="config">Configuration</TabsTrigger>
             <TabsTrigger value="notes">Notes</TabsTrigger>
-            <TabsTrigger value="resources">Resources</TabsTrigger> {/* Add Resources Tab Trigger */}
+            <TabsTrigger value="resources">Resources</TabsTrigger>
             <TabsTrigger value="templates">Resource Templates</TabsTrigger>
+            <TabsTrigger value="prompts">Prompts</TabsTrigger> {/* Add Prompts Tab Trigger */}
             <TabsTrigger value="tools">Tools</TabsTrigger>
           </TabsList>
 
@@ -533,6 +537,19 @@ ANOTHER_KEY=another_value"
                <CardContent className="pt-0">
                  {/* Render the ResourceList component */}
                  <ResourceList serverUuid={uuid} />
+               </CardContent>
+             </Card>
+          </TabsContent>
+
+          {/* Add Prompts Tab Content */}
+          <TabsContent value="prompts">
+             <Card className="shadow-sm">
+               <CardHeader className="pb-2">
+                 <CardTitle className="text-md font-medium">Discovered Prompts</CardTitle>
+               </CardHeader>
+               <CardContent className="pt-0">
+                 {/* Render the PromptList component */}
+                 <PromptList serverUuid={uuid} />
                </CardContent>
              </Card>
           </TabsContent>
