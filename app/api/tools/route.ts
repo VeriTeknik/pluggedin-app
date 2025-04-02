@@ -1,11 +1,10 @@
-import { and, eq, type InferSelectModel,sql } from 'drizzle-orm'; // Sorted
-import { NextResponse } from 'next/server'; // Sorted
+import { and, eq, type InferSelectModel,sql } from 'drizzle-orm'; // Consolidated drizzle imports
+import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-// Import the correct table and enum names from your schema
-import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema'; // Sorted
+import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema';
 
-import { authenticateApiKey } from '../auth'; // Sorted
+import { authenticateApiKey } from '../auth';
 // Removed direct SDK type import
 
 // Infer Tool type from DB schema and define expected MCP Tool structure

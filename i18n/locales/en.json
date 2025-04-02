@@ -367,7 +367,6 @@
       "name": "Name",
       "namePlaceholder": "Enter your name",
       "language": "Language",
-      "avatarRecommendation": "Recommended: Square image, max 1MB",
       "updateButton": "Update Profile",
       "success": "Profile updated successfully",
       "error": "Failed to update profile"

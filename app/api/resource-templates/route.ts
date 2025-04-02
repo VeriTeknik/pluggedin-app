@@ -1,10 +1,9 @@
-import { and, asc, eq } from 'drizzle-orm'; // Removed unused InferSelectModel
-import { NextResponse } from 'next/server';
+import { and, asc, eq } from 'drizzle-orm';
+import { NextResponse } from 'next/server'; // External after internal
 
-import { authenticateApiKey } from '@/app/api/auth';
+import { authenticateApiKey } from '@/app/api/auth'; // Internal first
 import { db } from '@/db';
-// Removed unused projectsTable import
-import { McpServerStatus, mcpServersTable, resourceTemplatesTable } from '@/db/schema';
+import { mcpServersTable, McpServerStatus, resourceTemplatesTable } from '@/db/schema';
 
 // Define the type expected by MCP spec for ResourceTemplate
 type McpResourceTemplate = {

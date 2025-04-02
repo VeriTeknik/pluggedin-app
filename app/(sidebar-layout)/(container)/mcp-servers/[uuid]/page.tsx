@@ -37,6 +37,7 @@ import { useToast } from '@/hooks/use-toast'; // Added useToast
 import { McpServer } from '@/types/mcp-server';
 import { ResourceTemplate } from '@/types/resource-template';
 import type { Tool } from '@/types/tool';
+
 import { ResourceList } from '../components/resource-list';
 import { ResourceTemplateList } from '../components/resource-template-list'; // Import the new component
 
