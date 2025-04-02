@@ -1,4 +1,4 @@
-CREATE TABLE "release_notes" (
+CREATE TABLE IF NOT EXISTS "release_notes" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"repository" text NOT NULL,
 	"version" text NOT NULL,
