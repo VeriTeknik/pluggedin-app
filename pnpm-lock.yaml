@@ -92,6 +92,9 @@ importers:
       '@tanstack/react-table':
         specifier: ^8.20.6
         version: 8.21.2(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@tanstack/react-virtual':
+        specifier: ^3.13.6
+        version: 3.13.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@types/bcrypt':
         specifier: ^5.0.2
         version: 5.0.2
@@ -2544,9 +2547,18 @@ packages:
       react: '>=16.8'
       react-dom: '>=16.8'
 
+  '@tanstack/react-virtual@3.13.6':
+    resolution: {integrity: sha512-WT7nWs8ximoQ0CDx/ngoFP7HbQF9Q2wQe4nh2NB+u2486eX3nZRE40P9g6ccCVq7ZfTSH5gFOuCoVH5DLNS/aA==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   '@tanstack/table-core@8.21.2':
     resolution: {integrity: sha512-uvXk/U4cBiFMxt+p9/G7yUWI/UbHYbyghLCjlpWZ3mLeIZiUBSKcUnw9UnKkdRz7Z/N4UBuFLWQdJCjUe7HjvA==}
     engines: {node: '>=12'}
+
+  '@tanstack/virtual-core@3.13.6':
+    resolution: {integrity: sha512-cnQUeWnhNP8tJ4WsGcYiX24Gjkc9ALstLbHcBj1t3E7EimN6n6kHH+DPV4PpDnuw00NApQp+ViojMj1GRdwYQg==}
 
   '@tokenizer/token@0.3.0':
     resolution: {integrity: sha512-OvjF+z51L3ov0OyAU0duzsYuvO01PH7x4t6DJx+guahgTnBHkhJdG7soQeTSFLWN3efnHyibZ4Z8l2EuWwJN3A==}
@@ -8658,7 +8670,15 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
+  '@tanstack/react-virtual@3.13.6(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      '@tanstack/virtual-core': 3.13.6
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+
   '@tanstack/table-core@8.21.2': {}
+
+  '@tanstack/virtual-core@3.13.6': {}
 
   '@tokenizer/token@0.3.0': {}
 
@@ -10674,7 +10694,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.2
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.8.4)
+      retry-axios: 2.6.0(axios@1.8.4(debug@4.4.0))
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -12075,7 +12095,7 @@ snapshots:
 
   ret@0.2.2: {}
 
-  retry-axios@2.6.0(axios@1.8.4):
+  retry-axios@2.6.0(axios@1.8.4(debug@4.4.0)):
     dependencies:
       axios: 1.8.4(debug@4.4.0)
 
