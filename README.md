@@ -1,7 +1,7 @@
 # plugged.in App
 
 <div align="center">
-  <img src="https://via.placeholder.com/200x200?text=plugged.in" alt="plugged.in Logo" width="200" height="200">
+  <img src="https://plugged.in/_next/image?url=%2Fpluggedin-wl.png&w=256&q=75" alt="plugged.in Logo" width="256" height="75">
   <h3>The Crossroads for AI Data Exchanges</h3>
   <p>A unified management interface for all your MCP servers</p>
 
@@ -22,10 +22,11 @@ This application enables seamless integration with any MCP client (Claude, Cline
 - **Multi-Workspace Support**: Switch between different sets of MCP configurations to prevent context pollution
 - **Interactive Playground**: Test and experiment with your MCP tools directly in the browser
 - **Tool Management**: Discover, organize, and manage AI tools from multiple sources
-- **Resource Template Discovery**: View available resource templates (including variables) for connected MCP servers
-- **Server Notes**: Add custom notes and instructions to each configured MCP server
+- **Resource & Template Discovery**: View available resources and resource templates for connected MCP servers
+- **Custom Instructions**: Add server-specific instructions that can be used as MCP prompts
+- **Server Notes**: Add custom notes to each configured MCP server
 - **Extensive Logging**: Detailed logging capabilities for MCP interactions in the Playground
-- **Model Agnostic**: Test MCP tools with various LLMs through Langchain integration
+- **Prompt Management**: Discover and manage prompts from connected MCP servers
 - **Expanded Discovery**: Search for MCP servers across GitHub, Smithery, and npmjs.com
 - **Self-Hostable**: Run your own instance with full control over your data
 
@@ -92,22 +93,30 @@ sequenceDiagram
     participant PluggedinApp as plugged.in App
     participant MCPServers as Installed MCP Servers
 
-    MCPClient ->> PluggedinMCP: Request list tools
-    PluggedinMCP ->> PluggedinApp: Get tools configuration & status
-    PluggedinApp ->> PluggedinMCP: Return tools configuration & status
+    MCPClient ->> PluggedinMCP: Request list tools/resources/prompts
+    PluggedinMCP ->> PluggedinApp: Get capabilities via API
+    PluggedinApp ->> PluggedinMCP: Return capabilities (prefixed)
 
-    loop For each listed MCP Server
-        PluggedinMCP ->> MCPServers: Request list_tools
-        MCPServers ->> PluggedinMCP: Return list of tools
+    MCPClient ->> PluggedinMCP: Call tool/read resource/get prompt
+    alt Standard capability
+        PluggedinMCP ->> PluggedinApp: Resolve capability to server
+        PluggedinApp ->> PluggedinMCP: Return server details
+        PluggedinMCP ->> MCPServers: Forward request to target server
+        MCPServers ->> PluggedinMCP: Return response
+    else Custom instruction
+        PluggedinMCP ->> PluggedinApp: Get custom instruction
+        PluggedinApp ->> PluggedinMCP: Return formatted messages
     end
+    PluggedinMCP ->> MCPClient: Return response
 
-    PluggedinMCP ->> PluggedinMCP: Aggregate tool lists
-    PluggedinMCP ->> MCPClient: Return aggregated list of tools
-
-    MCPClient ->> PluggedinMCP: Call tool
-    PluggedinMCP ->> MCPServers: call_tool to target MCP Server
-    MCPServers ->> PluggedinMCP: Return tool response
-    PluggedinMCP ->> MCPClient: Return tool response
+    alt Discovery tool
+        MCPClient ->> PluggedinMCP: Call pluggedin_discover_tools
+        PluggedinMCP ->> PluggedinApp: Trigger discovery action
+        PluggedinApp ->> MCPServers: Connect and discover capabilities
+        MCPServers ->> PluggedinApp: Return capabilities
+        PluggedinApp ->> PluggedinMCP: Confirm discovery complete
+        PluggedinMCP ->> MCPClient: Return discovery result
+    end
 ```
 
 ## 💻 Production Deployment
@@ -271,8 +280,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 The plugged.in project is actively developing several exciting features:
 
-- **Persistent Chat History**: Save and retrieve conversation logs across sessions
+- **Testing Infrastructure**: Comprehensive test coverage for core functionality
+- **Playground Optimizations**: Improved performance for log handling
+- **Embedded Chat (Phase 2)**: Generate revenue through embeddable AI chat interfaces
+- **AI Assistant Platform (Phase 3)**: Create a social network of specialized AI assistants
+- **Privacy-Focused Infrastructure (Phase 4)**: Dedicated RAG servers and distributed GPU services
 - **Retrieval-Augmented Generation (RAG)**: Integration with vector databases like Milvus
-- **Generative UI (GenUI)**: Dynamically generate UI elements based on LLM responses
-- **Independent LLM Support**: Integration with platforms like Kinesis Network
 - **Collaboration & Sharing**: Multi-user sessions and embeddable chat widgets
