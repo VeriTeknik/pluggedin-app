@@ -1,24 +1,22 @@
 'use client';
 
+import * as React from 'react'; // React first
+import { useEffect, useState } from 'react'; // React hooks
+import Image from 'next/image'; // Next.js
+import Link from 'next/link'; // Next.js
+import { usePathname } from 'next/navigation'; // Next.js
 import {
   Bell,
   Blocks,
   Code2,
-  // FileText, // Removed unused
   FlaskConical,
-  // Key, // Removed unused
   Plus,
-  // Settings, // Removed unused
   Trash2,
   Unplug,
-} from 'lucide-react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import * as React from 'react';
-import { useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
+} from 'lucide-react'; // External library
+import { useTranslation } from 'react-i18next'; // External library
 
+// Internal imports start here
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -44,6 +42,7 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
+  SidebarTrigger,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
@@ -51,7 +50,7 @@ import { useProjects } from '@/hooks/use-projects';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
 
-import { NotificationBell } from './notification-bell';
+import { NotificationBell } from './notification-bell'; // Local components last
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
 import { UserMenu } from './user-menu';
@@ -405,6 +404,13 @@ export default function SidebarLayout({
             marginLeft: sidebarExpanded ? '0' : '-2.5rem'
           }}
         >
+          {/* Mobile Header */}
+          <div className="md:hidden flex items-center justify-between p-2 border-b bg-background sticky top-0 z-10">
+            {/* Add Logo or Title if desired */}
+            <div className="flex-1"></div> {/* Spacer */}
+            <SidebarTrigger />
+          </div>
+          {/* End Mobile Header */}
           <main className='h-full overflow-auto'>{children}</main>
         </SidebarInset>
       </div>
