@@ -1,7 +1,8 @@
 'use client';
 
+import { useVirtualizer } from '@tanstack/react-virtual'; 
 import { Loader2, Send, Settings } from 'lucide-react';
-// Removed unused useEffect, useRef
+import { useEffect,useRef } from 'react'; 
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -13,7 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// Removed unused ScrollArea import
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -34,7 +35,7 @@ interface PlaygroundChatProps {
   isThinking: boolean;
   sendMessage: () => void;
   startSession: () => void;
-  messagesEndRef: React.RefObject<HTMLDivElement>;
+  messagesEndRef: React.RefObject<HTMLDivElement>; // Keep this for potential scroll-to-bottom logic
   mcpServers?: {
     status: string;
   }[];
@@ -53,7 +54,24 @@ export function PlaygroundChat({
   mcpServers,
 }: PlaygroundChatProps) {
   const { t } = useTranslation();
-  // Removed useEffect for scrolling - will be handled by parent
+  const parentRef = useRef<HTMLDivElement>(null); // Ref for the scrollable container
+
+  // Virtualizer setup
+  const rowVirtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 100, // Estimate row height (adjust as needed)
+    overscan: 5, // Render items outside the viewport for smoother scrolling
+  });
+
+  // Scroll to bottom when new messages arrive
+  useEffect(() => {
+    if (messages.length) {
+      // Corrected scroll behavior option
+      rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' }); 
+    }
+  }, [messages.length, rowVirtualizer]);
+
 
   return (
     <Card className='flex flex-col h-[calc(100vh-12rem)] shadow-sm w-full'>
@@ -63,17 +81,17 @@ export function PlaygroundChat({
           {t('playground.chat.subtitle')}
         </CardDescription>
       </CardHeader>
-      <CardContent className='flex-1 overflow-hidden p-0 px-4'>
-        <ScrollArea 
-          className='h-[calc(100vh-20rem)] pr-4'
-          onScroll={(e) => {
-            // Prevent any attempt to automatically scroll
-            e.stopPropagation();
+      <CardContent ref={parentRef} className='flex-1 overflow-y-auto p-0 px-4'> {/* Changed to overflow-y-auto and added ref */}
+        {/* Removed ScrollArea, using CardContent as the scroll container */}
+        <div 
+          style={{ 
+            height: `${rowVirtualizer.getTotalSize()}px`, // Total height for scrollbar
+            width: '100%', 
+            position: 'relative',
           }}
-          data-custom-scroll="true"
         >
           {messages.length === 0 ? (
-            <div className='flex flex-col items-center justify-center h-full text-center p-8'>
+            <div className='absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center text-center p-8'> {/* Added positioning */}
               <div className='bg-muted/30 rounded-full p-4 mb-4'>
                 <Settings className='h-10 w-10 text-primary/40' />
               </div>
@@ -102,15 +120,30 @@ export function PlaygroundChat({
               )}
             </div>
           ) : (
-            <div className='space-y-4 pb-1 pt-4'>
-              {messages.map((message, index) => (
+            // Map over virtual items instead of all messages
+            rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const message = messages[virtualRow.index];
+              const isLoader = !message; // Handle potential edge case if index is out of bounds during fast updates
+
+              if (isLoader) {
+                return null; // Or a loading placeholder if needed
+              }
+
+              return (
                 <div
-                  key={index}
-                  className={`flex ${
+                  key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  ref={rowVirtualizer.measureElement} // Measure element height
+                  className={`absolute top-0 left-0 w-full flex ${ // Added positioning
                     message.role === 'human'
                       ? 'justify-end'
                       : 'justify-start'
-                  }`}>
+                  }`}
+                  style={{
+                    transform: `translateY(${virtualRow.start}px)`, // Apply transform for positioning
+                    paddingBottom: '1rem', // Add padding equivalent to original space-y-4
+                  }}>
+                  {/* Removed duplicated justify-end/start className div */}
                   <div
                     className={`rounded-lg p-3 max-w-[90%] ${
                       message.role === 'human'
@@ -153,24 +186,28 @@ export function PlaygroundChat({
                     )}
                   </div>
                 </div>
-              ))}
+              );
+            })
+          )}
               
-              {isThinking && (
-                <div className="flex justify-start">
-                  <div className="bg-secondary rounded-lg p-3 animate-pulse flex items-center space-x-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+          {/* Keep the thinking indicator outside the virtualized list for now */}
+          {isThinking && (
+            <div className="absolute bottom-0 left-0 w-full flex justify-start p-4"> {/* Added positioning */}
+              <div className="bg-secondary rounded-lg p-3 animate-pulse flex items-center space-x-2">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
                     <span className="text-sm">{t('playground.chat.thinking')}</span>
                     <span className="text-sm animate-bounce delay-100">.</span>
                     <span className="text-sm animate-bounce delay-200">.</span>
                     <span className="text-sm animate-bounce delay-300">.</span>
                   </div>
-                </div>
-              )}
-              
-              <div ref={messagesEndRef} />
-            </div>
+              </div>
+            // Removed extra closing div from here
           )}
-        </ScrollArea>
+              
+          {/* messagesEndRef is likely not needed with virtualizer's scrollToIndex */}
+          {/* <div ref={messagesEndRef} /> */}
+        </div> 
+        {/* End of virtualizer container */}
       </CardContent>
       <Separator />
       <CardFooter className='p-4 flex-shrink-0 mt-auto'>
