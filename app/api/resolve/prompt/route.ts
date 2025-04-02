@@ -1,9 +1,9 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm'; // External first
 import { NextResponse } from 'next/server';
 
 import { authenticateApiKey } from '@/app/api/auth'; // Adjust path if needed
 import { db } from '@/db';
-import { mcpServersTable, promptsTable } from '@/db/schema';
+import { mcpServersTable, McpServerStatus, promptsTable } from '@/db/schema'; // Removed customInstructionsTable import
 
 export const dynamic = 'force-dynamic';
 
@@ -30,11 +30,9 @@ export async function GET(request: Request) {
     }
 
     // 3. Query the database to find the prompt and its associated server
-    // Note: This assumes prompt names are unique across active servers for a profile.
-    // If not, this logic might need refinement (e.g., require prefixed name).
-    const promptAndServer = await db
+    // This resolver now ONLY handles standard prompts. Custom instructions are handled by the proxy directly.
+    const serverDetailsResult = await db
       .select({
-        // Select necessary server details for the proxy to establish a session
         serverUuid: mcpServersTable.uuid,
         serverName: mcpServersTable.name,
         serverType: mcpServersTable.type,
@@ -42,24 +40,22 @@ export async function GET(request: Request) {
         serverArgs: mcpServersTable.args,
         serverEnv: mcpServersTable.env,
         serverUrl: mcpServersTable.url,
-        // Include prompt name for confirmation if needed
-        resolvedPromptName: promptsTable.name,
-      })
-      .from(promptsTable)
-      .innerJoin(mcpServersTable, eq(promptsTable.mcp_server_uuid, mcpServersTable.uuid))
-      .where(and(
-        eq(mcpServersTable.profile_uuid, profileUuid), // Belongs to the correct profile
-        eq(promptsTable.name, promptName) // Matches the requested prompt name
-        // eq(mcpServersTable.status, McpServerStatus.ACTIVE) // Ensure server is active
-      ))
-      .limit(1); // Expect only one match per profile (requires unique prompt names or prefixed names)
+        })
+        .from(promptsTable)
+        .innerJoin(mcpServersTable, eq(promptsTable.mcp_server_uuid, mcpServersTable.uuid))
+        .where(and(
+          eq(mcpServersTable.profile_uuid, profileUuid),
+          eq(promptsTable.name, promptName), // Matches the requested prompt name
+          eq(mcpServersTable.status, McpServerStatus.ACTIVE) // Ensure server is active
+        ))
+        .limit(1);
 
-    if (promptAndServer.length === 0) {
+    // 4. Check result and return server details or 404
+    if (serverDetailsResult.length === 0) {
       return NextResponse.json({ error: `Prompt name not found or not associated with the active profile: ${promptName}` }, { status: 404 });
     }
 
-    // 4. Return the server details needed by the proxy
-    const serverDetails = promptAndServer[0];
+    const serverDetails = serverDetailsResult[0];
     return NextResponse.json({
         // Reconstruct a partial ServerParameters object for the proxy
         uuid: serverDetails.serverUuid,

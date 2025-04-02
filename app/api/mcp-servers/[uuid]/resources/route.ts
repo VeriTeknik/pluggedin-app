@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: Request,
-  { params }: { params: { uuid: string } } // Route parameter for server UUID
+  { params }: { params: Promise<{ uuid: string }> } // Use Promise type and destructure
 ) {
   try {
     // 1. Authenticate user session
@@ -25,7 +25,7 @@ export async function GET(
     }
     const userId = session.user.id;
 
-    const serverUuid = params.uuid;
+    const { uuid: serverUuid } = await params; // Await params and destructure uuid
     if (!serverUuid) {
       return NextResponse.json({ error: 'Missing server UUID parameter' }, { status: 400 });
     }
@@ -58,7 +58,9 @@ export async function GET(
     return NextResponse.json(resources);
 
   } catch (error) {
-    console.error(`[API /api/mcp-servers/${params.uuid}/resources Error]`, error);
+    // Log using the extracted serverUuid if available
+    // Note: params might not be available in catch block if await failed
+    console.error(`[API /api/mcp-servers/[uuid]/resources Error]`, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: 'Internal Server Error fetching server resources', details: errorMessage }, { status: 500 });
   }

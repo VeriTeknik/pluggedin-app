@@ -1,8 +1,8 @@
-import { and, eq, asc } from 'drizzle-orm';
+import { and, asc,eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { resourceTemplatesTable, mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
+import { mcpServersTable, profilesTable, projectsTable,resourceTemplatesTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   request: Request,
-  { params }: { params: { uuid: string } } // Route parameter for server UUID
+  { params }: { params: Promise<{ uuid: string }> } // Use Promise type and destructure
 ) {
   try {
     // 1. Authenticate user session
@@ -25,7 +25,7 @@ export async function GET(
     }
     const userId = session.user.id;
 
-    const serverUuid = params.uuid;
+    const { uuid: serverUuid } = await params; // Await params and destructure uuid
     if (!serverUuid) {
       return NextResponse.json({ error: 'Missing server UUID parameter' }, { status: 400 });
     }
@@ -57,7 +57,9 @@ export async function GET(
     return NextResponse.json(templates);
 
   } catch (error) {
-    console.error(`[API /api/mcp-servers/${params.uuid}/resource-templates Error]`, error);
+    // Log using the extracted serverUuid if available
+    // Note: params might not be available in catch block if await failed
+    console.error(`[API /api/mcp-servers/[uuid]/resource-templates Error]`, error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json({ error: 'Internal Server Error fetching server resource templates', details: errorMessage }, { status: 500 });
   }
