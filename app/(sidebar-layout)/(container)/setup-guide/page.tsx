@@ -77,7 +77,7 @@ export default function SetupGuidePage() {
                       mcpServers: {
                         PluggedinMCP: {
                           command: 'npx',
-                          args: ['-y', '@VeriTeknik/pluggedin-mcp@latest'],
+                          args: ['-y', '@pluggedin/pluggedin-mcp-proxy'],
                           env: {
                             PLUGGEDIN_API_KEY:
                               apiKey?.api_key ?? '<create an api key first>',
@@ -103,7 +103,7 @@ export default function SetupGuidePage() {
   "mcpServers": {
     "PluggedinMCP": {
       "command": "npx",
-      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy@latest"],
+      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy"],
       "env": {
         "PLUGGEDIN_API_KEY": "${apiKey?.api_key ?? '<create an api key first>'}"
       }
@@ -144,7 +144,7 @@ export default function SetupGuidePage() {
         <div className='relative'>
           <button
             onClick={() => {
-              const command = `npx -y @VeriTeknik/pluggedin-mcp@latest --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
+              const command = `npx -y @VeriTeknik/pluggedin-mcp --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
               navigator.clipboard.writeText(command);
               toast({
                 description: 'Cursor command copied to clipboard',
@@ -156,7 +156,7 @@ export default function SetupGuidePage() {
           </button>
           <Highlight
             theme={theme === 'dark' ? themes.vsDark : themes.github}
-            code={`npx -y @VeriTeknik/pluggedin-mcp@latest --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`}
+            code={`npx -y @pluggedin/pluggedin-mcp-proxy --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`}
             language='bash'>
             {({ tokens, getLineProps, getTokenProps }) => (
               <pre className='bg-[#f6f8fa] dark:bg-[#1e1e1e] text-[#24292f] dark:text-[#d4d4d4] p-4 rounded-md overflow-x-auto'>
@@ -248,7 +248,7 @@ export default function SetupGuidePage() {
                         command: "smithery",
                         args: [
                           "run",
-                          "@VeriTeknik/pluggedin-mcp@latest",
+                          "@VeriTeknik/pluggedin-mcp",
                           "--config",
                           `{\"pluggedinApiKey\":\"${apiKey?.api_key ?? '<create an api key first>'} \"}`
                         ]
@@ -275,7 +275,7 @@ export default function SetupGuidePage() {
       "command": "smithery",
       "args": [
         "run",
-        "@VeriTeknik/pluggedin-mcp@latest",
+        "@VeriTeknik/pluggedin-mcp",
         "--config",
         "{\\"pluggedinApiKey\\":\\"${apiKey?.api_key ?? '<create an api key first>'}\\"}"
       ]
