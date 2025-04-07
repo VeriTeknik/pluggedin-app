@@ -1,10 +1,5 @@
 'use client';
 
-import * as React from 'react'; // React first
-import { useEffect, useState } from 'react'; // React hooks
-import Image from 'next/image'; // Next.js
-import Link from 'next/link'; // Next.js
-import { usePathname } from 'next/navigation'; // Next.js
 import {
   Bell,
   Blocks,
@@ -14,6 +9,11 @@ import {
   Trash2,
   Unplug,
 } from 'lucide-react'; // External library
+import Image from 'next/image'; // Next.js
+import Link from 'next/link'; // Next.js
+import { usePathname } from 'next/navigation'; // Next.js
+import * as React from 'react'; // React first
+import { useEffect, useState } from 'react'; // React hooks
 import { useTranslation } from 'react-i18next'; // External library
 
 // Internal imports start here
@@ -42,8 +42,8 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarRail,
-  SidebarTrigger,
   SidebarSeparator,
+  SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { useCodes } from '@/hooks/use-codes';
 import { useProjects } from '@/hooks/use-projects';
