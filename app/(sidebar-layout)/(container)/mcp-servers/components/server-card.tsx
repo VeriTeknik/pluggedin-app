@@ -84,6 +84,13 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
           <Link href={`/mcp-servers/${server.uuid}`} className="hover:text-primary transition-colors">
             {server.name}
           </Link>
+          {server.notes?.includes("Imported from") && (
+            <div className="mt-1">
+              <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400">
+                Forked
+              </Badge>
+            </div>
+          )}
         </CardTitle>
         <CardDescription>
           {server.description || t('mcpServers.form.descriptionPlaceholder')}

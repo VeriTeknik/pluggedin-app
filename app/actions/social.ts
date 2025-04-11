@@ -635,21 +635,47 @@ export async function shareMcpServer(
 }
 
 /**
- * Get a shared MCP server by its UUID
- * @param sharedServerUuid The UUID of the shared server
- * @returns The shared server or null if not found
+ * Get a single shared MCP server
+ * @param sharedServerUuid UUID of the shared server to get
+ * @returns The shared server (including its server data) or null if not found
  */
 export async function getSharedMcpServer(sharedServerUuid: string): Promise<SharedMcpServer | null> {
   try {
+    // Get the shared server with its server data
     const sharedServer = await db.query.sharedMcpServersTable.findFirst({
       where: eq(sharedMcpServersTable.uuid, sharedServerUuid),
       with: {
         server: true,
-        profile: true,
-      },
+        profile: {
+          columns: {
+            username: true,
+            name: true
+          }
+        }
+      }
     });
-
-    return sharedServer as unknown as SharedMcpServer;
+    
+    if (!sharedServer) {
+      return null;
+    }
+    
+    // Add the profile username to the shared server object
+    const sharedServerWithProfile = {
+      ...sharedServer,
+      profile_username: sharedServer.profile?.username || sharedServer.profile?.name || null,
+      server: sharedServer.server ? {
+        ...sharedServer.server,
+        // If template contains these properties, include them
+        originalServerUuid: sharedServer.template?.originalServerUuid,
+        sharedBy: sharedServer.template?.sharedBy,
+        customInstructions: sharedServer.template?.customInstructions,
+      } : undefined
+    };
+    
+    // Create a new object without the profile property instead of using delete
+    const { profile, ...sharedServerWithoutProfile } = sharedServerWithProfile;
+    
+    return sharedServerWithoutProfile as unknown as SharedMcpServer;
   } catch (error) {
     console.error('Error getting shared MCP server:', error);
     return null;

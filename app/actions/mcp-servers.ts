@@ -3,7 +3,7 @@
 import { and, desc, eq, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType } from '@/db/schema';
+import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType, customInstructionsTable, profilesTable } from '@/db/schema';
 import type { McpServer } from '@/types/mcp-server';
 
 import { discoverSingleServerTools } from './discover-mcp-tools'; // Import the discovery action
@@ -299,7 +299,7 @@ export async function importSharedServer(
     // Use the template values or the original server values with appropriate defaults
     const serverToImport = {
       name: serverName,
-      description: serverData.description,
+      description: serverData.description, // Ensure description is properly transferred
       type: serverData.type,
       command: serverData.command,
       args: serverData.args || [],
@@ -311,7 +311,7 @@ export async function importSharedServer(
       source: serverData.source || McpServerSource.PLUGGEDIN,
       external_id: null, // Don't copy external ID to avoid conflicts
       notes: isTemplate
-        ? `Imported from template shared by another user`
+        ? `Imported from template shared by ${serverData.sharedBy || 'another user'} (original server ID: ${serverData.originalServerUuid || 'unknown'})`
         : `Imported from shared server originally created by ${serverData.profile_uuid}`,
     };
 
@@ -325,6 +325,27 @@ export async function importSharedServer(
         success: false,
         error: 'Failed to import server',
       };
+    }
+    
+    // Import custom instructions if they exist in the shared server data
+    if (serverData.customInstructions && (Array.isArray(serverData.customInstructions) || typeof serverData.customInstructions === 'string')) {
+      try {
+        // Handle both string and array formats for custom instructions
+        const messages = typeof serverData.customInstructions === 'string' 
+          ? [serverData.customInstructions] 
+          : serverData.customInstructions;
+        
+        await db.insert(customInstructionsTable).values({
+          mcp_server_uuid: newServer.uuid,
+          description: 'Imported custom instructions',
+          messages: messages,
+        });
+        
+        console.log(`Imported custom instructions for server ${newServer.uuid}`);
+      } catch (error) {
+        console.error('Error importing custom instructions:', error);
+        // Continue without custom instructions if there's an error
+      }
     }
 
     return {
@@ -350,6 +371,27 @@ export async function importSharedServer(
 export async function createShareableTemplate(server: McpServer): Promise<any> {
   // Deep clone the server to avoid modifying the original
   const template = JSON.parse(JSON.stringify(server));
+  
+  // Add metadata about the source server
+  template.originalServerUuid = server.uuid;
+  
+  try {
+    // Get profile information for the sharedBy field
+    const profile = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, server.profile_uuid),
+      columns: {
+        username: true,
+        name: true
+      }
+    });
+    
+    if (profile) {
+      template.sharedBy = profile.username || profile.name || server.profile_uuid;
+    }
+  } catch (error) {
+    console.error("Error fetching profile information:", error);
+    // If there's an error, continue without the sharedBy information
+  }
   
   // Sanitize the database URL if present in command or args
   if (template.command) {
@@ -387,6 +429,20 @@ export async function createShareableTemplate(server: McpServer): Promise<any> {
   // Clear any API keys or tokens in the URL
   if (template.url) {
     template.url = sanitizeDatabaseUrl(template.url);
+  }
+  
+  // Fetch and include custom instructions if they exist
+  try {
+    const customInstructions = await db.query.customInstructionsTable.findFirst({
+      where: eq(customInstructionsTable.mcp_server_uuid, server.uuid),
+    });
+    
+    if (customInstructions) {
+      template.customInstructions = customInstructions.messages;
+    }
+  } catch (error) {
+    console.error("Error fetching custom instructions:", error);
+    // Continue without custom instructions if there's an error
   }
   
   return template;

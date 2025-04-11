@@ -6,8 +6,14 @@ export interface Follower {
   follower_profile_uuid: string;
   followed_profile_uuid: string;
   created_at: Date;
-  follower?: Profile;
-  followed?: Profile;
+  follower_profile?: {
+    username: string | null;
+    name: string;
+  };
+  followed_profile?: {
+    username: string | null;
+    name: string;
+  };
 }
 
 export interface SharedMcpServer {
@@ -15,38 +21,36 @@ export interface SharedMcpServer {
   profile_uuid: string;
   server_uuid: string;
   title: string;
-  description?: string;
+  description: string | null;
   is_public: boolean;
-  template?: any; // Sanitized template of the server with credentials removed
+  template: any;
   created_at: Date;
   updated_at: Date;
-  profile?: Profile;
   server?: McpServer;
+  profile_username?: string | null;
 }
 
 export interface SharedCollection {
   uuid: string;
   profile_uuid: string;
   title: string;
-  description?: string;
-  content: any; // The collection data as JSON
+  description: string | null;
+  content: any;
   is_public: boolean;
   created_at: Date;
   updated_at: Date;
-  profile?: Profile;
 }
 
 export interface EmbeddedChat {
   uuid: string;
   profile_uuid: string;
   title: string;
-  description?: string;
-  settings: Record<string, any>; // Chat settings as JSON
+  description: string | null;
+  settings: any;
   is_public: boolean;
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
-  profile?: Profile;
 }
 
 export interface UsernameAvailability {

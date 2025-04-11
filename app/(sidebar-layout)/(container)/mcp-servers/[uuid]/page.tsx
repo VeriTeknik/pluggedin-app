@@ -318,6 +318,20 @@ export default function McpServerDetailPage({
         </CardHeader>
       </Card>
 
+      {/* Add a section that displays the import information if the server was imported */}
+      {mcpServer.notes && mcpServer.notes.includes("Imported from") && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-base">Server Origin</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-muted-foreground">
+              {mcpServer.notes}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Form {...form}>
         <Tabs defaultValue="details" className="w-full">
           <TabsList className="w-full justify-start mb-6">
