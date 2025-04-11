@@ -217,20 +217,21 @@ function SearchContent() {
           placeholder={t('search.input.placeholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className='mb-4'
+          className='mb-6 h-10'
         />
         
-        <div className="flex items-center justify-between mb-4">
-          <Tabs defaultValue={source} onValueChange={handleSourceChange} className="flex-1">
-            <TabsList className="grid grid-cols-4">
-              <TabsTrigger value="all">All Sources</TabsTrigger>
-              <TabsTrigger value={McpServerSource.SMITHERY}>Smithery</TabsTrigger>
-              <TabsTrigger value={McpServerSource.NPM}>NPM</TabsTrigger>
-              <TabsTrigger value={McpServerSource.GITHUB}>GitHub</TabsTrigger>
+        <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
+          <Tabs defaultValue={source} onValueChange={handleSourceChange} className="w-full">
+            <TabsList className="w-full h-10 flex rounded-lg">
+              <TabsTrigger value="all" className="flex-1">All Sources</TabsTrigger>
+              <TabsTrigger value={McpServerSource.SMITHERY} className="flex-1">Smithery</TabsTrigger>
+              <TabsTrigger value={McpServerSource.NPM} className="flex-1">NPM</TabsTrigger>
+              <TabsTrigger value={McpServerSource.GITHUB} className="flex-1">GitHub</TabsTrigger>
+              <TabsTrigger value={McpServerSource.COMMUNITY} className="flex-1">Community</TabsTrigger>
             </TabsList>
           </Tabs>
           
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">

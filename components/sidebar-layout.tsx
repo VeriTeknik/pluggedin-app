@@ -8,6 +8,7 @@ import {
   Plus,
   Trash2,
   Unplug,
+  Users,
 } from 'lucide-react'; // External library
 import Image from 'next/image'; // Next.js
 import Link from 'next/link'; // Next.js
@@ -219,25 +220,17 @@ export default function SidebarLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   
-                  
-                  {/* TODO: Add custom MCP servers to the sidebar 
+                  {/* Add Discover Link */}
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/custom-mcp-servers'>
-                        <Wrench className='mr-2 h-4 w-4' />
-                        <span>Custom MCP Servers</span>
+                    <SidebarMenuButton asChild tooltip="Discover" className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/discover'>
+                        <Users className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">Discover</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/editor'>
-                        <Code2 className='mr-2 h-4 w-4' />
-                        <span>Python Code Editor</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>*/}
-                  {/* Removed API Keys, Settings, Legal from main sidebar */}
+                  
+                  {/* TODO: Add custom MCP servers to the sidebar */}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip={t('notifications.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/notifications'>

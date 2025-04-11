@@ -45,6 +45,7 @@ import { removeConnectedAccount } from '../actions';
 import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
+import { ProfileSocialSection } from './profile-social-section';
 
 interface SettingsFormProps {
   user: {
@@ -263,7 +264,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-12">
       {/* Profile Section */}
       <Card>
         <CardHeader>
@@ -344,6 +345,9 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Social Profile Section */}
+      <ProfileSocialSection />
 
       {/* Connected Accounts */}
       <Card>

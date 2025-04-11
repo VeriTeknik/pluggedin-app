@@ -51,6 +51,7 @@ export enum McpServerSource {
   SMITHERY = 'SMITHERY',
   NPM = 'NPM',
   GITHUB = 'GITHUB',
+  COMMUNITY = 'COMMUNITY',
 }
 
 export const mcpServerStatusEnum = pgEnum(
@@ -210,9 +211,15 @@ export const profilesTable = pgTable(
       .array()
       .notNull()
       .default(sql`'{}'::profile_capability[]`),
+    // New social fields
+    username: text('username').unique(),
+    bio: text('bio'),
+    is_public: boolean('is_public').default(false).notNull(),
+    avatar_url: text('avatar_url'),
   },
   (table) => [
-    index('profiles_project_uuid_idx').on(table.project_uuid)
+    index('profiles_project_uuid_idx').on(table.project_uuid),
+    index('profiles_username_idx').on(table.username)
   ]
 );
 
@@ -875,4 +882,187 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
     fields: [sessions.userId],
     references: [users.id],
   }),
+}));
+
+// ===== Social Feature Tables =====
+
+// Table for followers relationship
+export const followersTable = pgTable(
+  'followers',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    follower_profile_uuid: uuid('follower_profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    followed_profile_uuid: uuid('followed_profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('followers_follower_profile_uuid_idx').on(table.follower_profile_uuid),
+    index('followers_followed_profile_uuid_idx').on(table.followed_profile_uuid),
+    unique('followers_unique_relationship_idx').on(
+      table.follower_profile_uuid,
+      table.followed_profile_uuid
+    ),
+  ]
+);
+
+// Relations for followersTable
+export const followersRelations = relations(followersTable, ({ one }) => ({
+  follower: one(profilesTable, {
+    fields: [followersTable.follower_profile_uuid],
+    references: [profilesTable.uuid],
+    relationName: 'following'
+  }),
+  followed: one(profilesTable, {
+    fields: [followersTable.followed_profile_uuid],
+    references: [profilesTable.uuid],
+    relationName: 'followers'
+  }),
+}));
+
+// Table for shared MCP servers
+export const sharedMcpServersTable = pgTable(
+  'shared_mcp_servers',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    server_uuid: uuid('server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    is_public: boolean('is_public').default(true).notNull(),
+    template: jsonb('template')
+      .$type<any>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('shared_mcp_servers_profile_uuid_idx').on(table.profile_uuid),
+    index('shared_mcp_servers_server_uuid_idx').on(table.server_uuid),
+    index('shared_mcp_servers_is_public_idx').on(table.is_public),
+  ]
+);
+
+// Relations for sharedMcpServersTable
+export const sharedMcpServersRelations = relations(sharedMcpServersTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [sharedMcpServersTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  server: one(mcpServersTable, {
+    fields: [sharedMcpServersTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// Table for shared collections (workspace collections)
+export const sharedCollectionsTable = pgTable(
+  'shared_collections',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    content: jsonb('content').notNull(), // Store collection data as JSON
+    is_public: boolean('is_public').default(true).notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('shared_collections_profile_uuid_idx').on(table.profile_uuid),
+    index('shared_collections_is_public_idx').on(table.is_public),
+  ]
+);
+
+// Relations for sharedCollectionsTable
+export const sharedCollectionsRelations = relations(sharedCollectionsTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [sharedCollectionsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
+// Table for embedded chats (future feature)
+export const embeddedChatsTable = pgTable(
+  'embedded_chats',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    settings: jsonb('settings')
+      .$type<{ [key: string]: any }>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    is_public: boolean('is_public').default(true).notNull(),
+    is_active: boolean('is_active').default(true).notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index('embedded_chats_profile_uuid_idx').on(table.profile_uuid),
+    index('embedded_chats_is_public_idx').on(table.is_public),
+    index('embedded_chats_is_active_idx').on(table.is_active),
+  ]
+);
+
+// Relations for embeddedChatsTable
+export const embeddedChatsRelations = relations(embeddedChatsTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [embeddedChatsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
+// Update the profile relations to include the new social tables
+export const profilesRelationsWithSocial = relations(profilesTable, ({ one, many }) => ({
+  // ... existing relations
+  project: one(projectsTable, {
+    fields: [profilesTable.project_uuid],
+    references: [projectsTable.uuid],
+  }),
+  mcpServers: many(mcpServersTable),
+  customMcpServers: many(customMcpServersTable),
+  playgroundSettings: one(playgroundSettingsTable, {
+    fields: [profilesTable.uuid],
+    references: [playgroundSettingsTable.profile_uuid],
+  }),
+  serverInstallations: many(serverInstallationsTable),
+  serverRatings: many(serverRatingsTable),
+  auditLogs: many(auditLogsTable),
+  notifications: many(notificationsTable),
+  logRetentionPolicies: many(logRetentionPoliciesTable),
+  
+  // New social relations
+  followers: many(followersTable, { relationName: 'followers' }),
+  following: many(followersTable, { relationName: 'following' }),
+  sharedMcpServers: many(sharedMcpServersTable),
+  sharedCollections: many(sharedCollectionsTable),
+  embeddedChats: many(embeddedChatsTable),
 }));

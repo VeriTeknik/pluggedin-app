@@ -1,4 +1,4 @@
-import { Database, Download, Github, Package, Star, ThumbsUp, UserPlus } from 'lucide-react';
+import { Database, Download, Github, Package, Star, ThumbsUp, UserPlus, Users, MessageCircle } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -19,8 +19,7 @@ import { McpServerCategory, SearchIndex } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
 import { InstallDialog } from './InstallDialog';
-// Temporarily disable the rating dialog until we fix the import issue
-// import { RateServerDialog } from './RateServerDialog';
+import { RateServerDialog } from './RateServerDialog';
 
 // Helper function to get category badge
 function CategoryBadge({ category }: { category?: McpServerCategory }) {
@@ -67,6 +66,13 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
           GitHub
         </Badge>
       );
+    case McpServerSource.COMMUNITY:
+      return (
+        <Badge variant="outline" className="gap-1 bg-blue-100 dark:bg-blue-900">
+          <Users className="h-3 w-3" />
+          Community
+        </Badge>
+      );
     default:
       return (
         <Badge variant="outline" className="gap-1">
@@ -78,7 +84,7 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
 }
 
 export default function CardGrid({ items, installedServerMap }: { items: SearchIndex; installedServerMap: Map<string, string> }) {
-  const { t: _t } = useTranslation();
+  const { t } = useTranslation();
   const [selectedServer, setSelectedServer] = useState<{
     name: string;
     description: string;
@@ -93,12 +99,12 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // For rating dialog
-  const [_rateServer, setRateServer] = useState<{
+  const [rateServer, setRateServer] = useState<{
     name: string;
     source?: McpServerSource;
     external_id?: string;
   } | null>(null);
-  const [_rateDialogOpen, setRateDialogOpen] = useState(false);
+  const [rateDialogOpen, setRateDialogOpen] = useState(false);
 
   const handleInstallClick = (key: string, item: any) => {
     // Determine if this is a stdio or SSE server
@@ -144,6 +150,28 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
     );
   };
 
+  // Shows meta data for community cards
+  const renderCommunityInfo = (item: any) => {
+    if (item.source !== McpServerSource.COMMUNITY) return null;
+    
+    return (
+      <div className="text-xs text-muted-foreground mt-2 border-t pt-2">
+        {item.shared_by && (
+          <div className="flex items-center mt-1">
+            <Users className="h-3 w-3 mr-1" />
+            Shared by: {item.shared_by}
+          </div>
+        )}
+        {item.rating_count && item.rating_count > 0 && (
+          <div className="flex items-center mt-1">
+            <MessageCircle className="h-3 w-3 mr-1" />
+            {item.rating_count} {item.rating_count === 1 ? 'review' : 'reviews'}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <>
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
@@ -165,17 +193,17 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
             <CardContent className='flex-grow pb-2'>
               {item.package_name && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {_t('search.card.package')}: {item.package_name}
+                  {t('search.card.package')}: {item.package_name}
                 </p>
               )}
               {item.command && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {_t('search.card.command')}: {item.command}
+                  {t('search.card.command')}: {item.command}
                 </p>
               )}
               {item.args?.length > 0 && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {_t('search.card.exampleArgs')}: {item.args.join(' ')}
+                  {t('search.card.exampleArgs')}: {item.args.join(' ')}
                 </p>
               )}
               
@@ -201,7 +229,7 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                 {item.useCount !== undefined && (
                   <div className="flex items-center">
                     <Database className="h-3 w-3 mr-1" />
-                    {_t('search.card.usageCount')}: {item.useCount}
+                    {t('search.card.usageCount')}: {item.useCount}
                   </div>
                 )}
                 
@@ -228,6 +256,9 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                   </div>
                 )}
               </div>
+
+              {/* Add community-specific information */}
+              {renderCommunityInfo(item)}
             </CardContent>
             <CardFooter className='flex justify-between pt-2'>
               {item.githubUrl && (
@@ -259,7 +290,7 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                   <Button variant='secondary' size="sm" asChild>
                     <Link href={`/mcp-servers/${installedUuid}`}>
                       <LucideIcons.Edit className='w-4 h-4 mr-2' />
-                      {_t('search.card.edit')}
+                      {t('search.card.edit')}
                     </Link>
                   </Button>
                 ) : (
@@ -269,7 +300,7 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                     size="sm"
                     onClick={() => handleInstallClick(key, item)}>
                     <Download className='w-4 h-4 mr-2' />
-                    {_t('search.card.install')}
+                    {t('search.card.install')}
                   </Button>
                 )}
             </CardFooter>
@@ -286,14 +317,13 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
         />
       )}
       
-      {/* Temporarily disable the rating dialog until we fix the import issue 
-      {_rateServer && (
+      {rateServer && (
         <RateServerDialog
-          open={_rateDialogOpen}
+          open={rateDialogOpen}
           onOpenChange={setRateDialogOpen}
-          serverData={_rateServer}
+          serverData={rateServer}
         />
-      )} */}
+      )}
     </>
   );
 }

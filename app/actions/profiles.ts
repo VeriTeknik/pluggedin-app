@@ -308,3 +308,44 @@ export async function getActiveProfileLanguage(): Promise<Locale | null> {
     return null;
   }
 }
+
+export async function updateProfilePublicStatus(profileUuid: string, isPublic: boolean) {
+  const session = await getAuthSession();
+  
+  if (!session || !session.user.id) {
+    throw new Error('Unauthorized - you must be logged in to update profile visibility');
+  }
+
+  const profile = await db
+    .select()
+    .from(profilesTable)
+    .where(eq(profilesTable.uuid, profileUuid))
+    .limit(1);
+
+  if (profile.length === 0) {
+    throw new Error('Profile not found');
+  }
+
+  // Verify the profile belongs to the current user
+  const project = await db
+    .select()
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, profile[0].project_uuid))
+    .limit(1);
+
+  if (project.length === 0) {
+    throw new Error('Project not found');
+  }
+  
+  if (project[0].user_id !== session.user.id) {
+    throw new Error('Unauthorized - you do not have access to this profile');
+  }
+
+  const updatedProfile = await db
+    .update(profilesTable)
+    .set({ is_public: isPublic })
+    .where(eq(profilesTable.uuid, profileUuid))
+    .returning();
+
+  return updatedProfile[0];
+}

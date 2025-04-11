@@ -1,7 +1,7 @@
 'use client';
 
 import { CheckCircle, Globe, Terminal, Trash2, XCircle } from 'lucide-react';
-import { RefreshCw } from 'lucide-react'; // Import RefreshCw icon
+import { RefreshCw, Share2 } from 'lucide-react'; // Import RefreshCw and Share2 icons
 import Link from 'next/link';
 import { useState } from 'react'; // Import useState
 import { useTranslation } from 'react-i18next';
@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ShareServerDialog } from '@/components/server/share-server-dialog'; // Import the ShareServerDialog
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles'; // Import useProfiles
 import { useToast } from '@/hooks/use-toast'; // Import useToast
@@ -138,7 +139,18 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
             {t('mcpServers.actions.edit')}
           </Link>
         </Button>
-        {/* Add Discover Tools Button */}
+        
+        {/* Add Share Server Button */}
+        {currentProfile && (
+          <ShareServerDialog 
+            server={server} 
+            profileUuid={currentProfile.uuid}
+            variant="outline"
+            size="sm"
+          />
+        )}
+        
+        {/* Discover Tools Button */}
         <Button
           variant="secondary"
           size="sm"
@@ -149,6 +161,7 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
           <RefreshCw size={14} className={`mr-1 ${isDiscovering ? 'animate-spin' : ''}`} />
           {isDiscovering ? t('mcpServers.actions.discovering') : t('mcpServers.actions.discover')}
         </Button>
+        
         <Button
           variant="destructive"
           size="sm"
