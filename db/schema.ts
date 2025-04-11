@@ -264,6 +264,15 @@ export const codesTable = pgTable(
   ]
 );
 
+// Relations for codesTable
+export const codesRelations = relations(codesTable, ({ one }) => ({
+  user: one(users, {
+    fields: [codesTable.user_id],
+    references: [users.id],
+    relationName: 'codes', // Explicitly name the relation
+  }),
+}));
+
 export const apiKeysTable = pgTable(
   'api_keys',
   {
@@ -283,6 +292,15 @@ export const apiKeysTable = pgTable(
     unique('api_keys_key_unique_idx').on(table.api_key), // Add unique constraint if desired
   ]
 );
+
+// Relations for apiKeysTable
+export const apiKeysRelations = relations(apiKeysTable, ({ one }) => ({
+  project: one(projectsTable, {
+    fields: [apiKeysTable.project_uuid],
+    references: [projectsTable.uuid],
+    relationName: 'apiKeys', // Explicitly name the relation
+  }),
+}));
 
 export const mcpServersTable = pgTable(
   'mcp_servers',
@@ -373,6 +391,18 @@ export const customMcpServersTable = pgTable(
   ]
 );
 
+// Relations for customMcpServersTable
+export const customMcpServersRelations = relations(customMcpServersTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [customMcpServersTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  code: one(codesTable, { // Assuming relation to codesTable based on code_uuid
+    fields: [customMcpServersTable.code_uuid],
+    references: [codesTable.uuid],
+  }),
+}));
+
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   identifier: text("identifier").notNull(),
   token: text("token").notNull(),
@@ -447,6 +477,18 @@ export const serverInstallationsTable = pgTable(
   ]
 );
 
+// Relations for serverInstallationsTable
+export const serverInstallationsRelations = relations(serverInstallationsTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [serverInstallationsTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+  profile: one(profilesTable, {
+    fields: [serverInstallationsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
 // Table for tracking server ratings
 export const serverRatingsTable = pgTable(
   'server_ratings',
@@ -485,6 +527,18 @@ export const serverRatingsTable = pgTable(
   ]
 );
 
+// Relations for serverRatingsTable
+export const serverRatingsRelations = relations(serverRatingsTable, ({ one }) => ({
+  mcpServer: one(mcpServersTable, {
+    fields: [serverRatingsTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+  profile: one(profilesTable, {
+    fields: [serverRatingsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
 // Audit log tablosu
 export const auditLogsTable = pgTable("audit_logs", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -508,6 +562,18 @@ export const auditLogsTable = pgTable("audit_logs", {
   index('audit_logs_created_at_idx').on(table.created_at),
 ]);
 
+// Relations for auditLogsTable
+export const auditLogsRelations = relations(auditLogsTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [auditLogsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  mcpServer: one(mcpServersTable, {
+    fields: [auditLogsTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
 // Notification tablosu
 export const notificationsTable = pgTable("notifications", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -525,6 +591,14 @@ export const notificationsTable = pgTable("notifications", {
   index('notifications_read_idx').on(table.read),
   index('notifications_created_at_idx').on(table.created_at),
 ]);
+
+// Relations for notificationsTable
+export const notificationsRelations = relations(notificationsTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [notificationsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
 
 // Sistem loglama tablosu
 export const systemLogsTable = pgTable("system_logs", {
@@ -554,6 +628,14 @@ export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
 (table) => [
   index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
 ]);
+
+// Relations for logRetentionPoliciesTable
+export const logRetentionPoliciesRelations = relations(logRetentionPoliciesTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [logRetentionPoliciesTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
 
 // Table for storing discovered tools
 export const toolsTable = pgTable(

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
@@ -62,6 +62,21 @@ export function InstallDialog({
       type: serverData.type,
     },
   });
+
+  // Reset form when serverData changes
+  useEffect(() => {
+    if (serverData) {
+      form.reset({
+        name: serverData.name,
+        description: serverData.description,
+        command: serverData.command,
+        args: serverData.args,
+        env: serverData.env,
+        url: serverData.url,
+        type: serverData.type,
+      });
+    }
+  }, [serverData, form.reset]);
 
   const onSubmit = async (values: {
     name: string;
@@ -238,4 +253,4 @@ export function InstallDialog({
       </DialogContent>
     </Dialog>
   );
-} 
+}
