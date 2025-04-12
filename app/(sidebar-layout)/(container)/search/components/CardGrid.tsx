@@ -1,11 +1,11 @@
-import { Database, Download, Github, Package, Star, ThumbsUp, UserPlus, Users, MessageCircle } from 'lucide-react';
-import * as LucideIcons from 'lucide-react';
-import Link from 'next/link';
-import { useState } from 'react';
-import { useTranslation } from 'react-i18next';
+import { Database, Download, Github, MessageCircle, Package, Star, ThumbsUp, UserPlus, Users } from 'lucide-react'; // Sorted
+import * as LucideIcons from 'lucide-react'; // Sorted
+import Link from 'next/link'; // Sorted
+import { useState } from 'react'; // Sorted
+import { useTranslation } from 'react-i18next'; // Sorted
 
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge'; // Sorted
+import { Button } from '@/components/ui/button'; // Sorted
 import {
   Card,
   CardContent,
@@ -138,14 +138,23 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
 
   // Helper to format ratings
   const formatRating = (rating?: number, count?: number) => {
-    if (!rating || !count) {
+    // Use ratingCount (consistent with McpIndex type and renderCommunityInfo)
+    if (rating === undefined || rating === null || !count) { 
       return null;
+    }
+    
+    // Convert rating to number before using toFixed
+    const numericRating = typeof rating === 'string' ? parseFloat(rating) : rating;
+    
+    // Check if conversion was successful and it's a valid number
+    if (isNaN(numericRating)) {
+      return null; 
     }
     
     return (
       <div className="flex items-center">
         <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
-        {rating.toFixed(1)} ({count})
+        {numericRating.toFixed(1)} ({count})
       </div>
     );
   };
@@ -162,10 +171,10 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
             Shared by: {item.shared_by}
           </div>
         )}
-        {item.rating_count && item.rating_count > 0 && (
+        {item.ratingCount && item.ratingCount > 0 && (
           <div className="flex items-center mt-1">
             <MessageCircle className="h-3 w-3 mr-1" />
-            {item.rating_count} {item.rating_count === 1 ? 'review' : 'reviews'}
+            {item.ratingCount} {item.ratingCount === 1 ? 'review' : 'reviews'}
           </div>
         )}
       </div>
@@ -233,9 +242,9 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                   </div>
                 )}
                 
-                {formatRating(item.rating, item.rating_count)}
-                
-                {item.installation_count !== undefined && item.installation_count > 0 && (
+            {formatRating(item.rating, item.ratingCount)} 
+            
+            {item.installation_count !== undefined && item.installation_count > 0 && (
                   <div className="flex items-center">
                     <UserPlus className="h-3 w-3 mr-1" />
                     {item.installation_count}

@@ -4,6 +4,13 @@ import { ProfileStats } from './profile-stats';
 import { FollowButton } from './follow-button';
 
 interface ProfileHeaderProps {
+  user: {
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+    username: string | null;
+  };
   profile: Profile;
   currentUserProfile?: Profile | null;
   isFollowing: boolean;
@@ -12,6 +19,7 @@ interface ProfileHeaderProps {
 }
 
 export function ProfileHeader({
+  user,
   profile,
   currentUserProfile,
   isFollowing,
@@ -20,6 +28,7 @@ export function ProfileHeader({
 }: ProfileHeaderProps) {
   const isCurrentUser = currentUserProfile?.uuid === profile.uuid;
   const hasAvatar = !!profile.avatar_url;
+  const displayName = profile.name || user.name || user.username || 'Anonymous';
 
   return (
     <div className="bg-card rounded-lg shadow-md p-6">
@@ -27,10 +36,10 @@ export function ProfileHeader({
         {/* Avatar */}
         <Avatar className="h-24 w-24 border-2 border-border">
           {hasAvatar ? (
-            <AvatarImage src={profile.avatar_url!} alt={profile.name} />
+            <AvatarImage src={profile.avatar_url!} alt={displayName} />
           ) : (
             <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-              {profile.name[0].toUpperCase()}
+              {displayName[0].toUpperCase()}
             </AvatarFallback>
           )}
         </Avatar>
@@ -39,8 +48,8 @@ export function ProfileHeader({
         <div className="flex-1">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold">{profile.name}</h1>
-              <p className="text-muted-foreground">@{profile.username}</p>
+              <h1 className="text-2xl font-bold">{displayName}</h1>
+              <p className="text-muted-foreground">@{user.username}</p>
               {profile.bio && <p className="mt-2 text-sm">{profile.bio}</p>}
             </div>
             
@@ -62,7 +71,7 @@ export function ProfileHeader({
           
           {/* Follower stats */}
           <ProfileStats 
-            username={profile.username || ''} 
+            username={user.username || ''} 
             followerCount={followerCount} 
             followingCount={followingCount} 
           />

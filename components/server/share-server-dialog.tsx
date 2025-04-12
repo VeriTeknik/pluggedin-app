@@ -1,29 +1,29 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Share2, Check, Eye, AlertCircle, Info, ChevronRight, ChevronLeft } from 'lucide-react';
+import { AlertCircle, Check, ChevronLeft, ChevronRight, Info, Share2 } from 'lucide-react'; // Sorted, removed Eye
+import { useRouter } from 'next/navigation'; // Sorted
+import { useEffect, useState } from 'react'; // Sorted
 
-import { Button } from '@/components/ui/button';
+import { createShareableTemplate } from '@/app/actions/mcp-servers'; // Sorted
+import { isServerShared, shareMcpServer } from '@/app/actions/social'; // Removed unused unshareServer
+import { Badge } from '@/components/ui/badge'; // Sorted
+import { Button } from '@/components/ui/button'; // Sorted
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
+  DialogHeader, // Removed DialogFooter
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/components/ui/use-toast';
-import { McpServer } from '@/types/mcp-server';
-import { shareMcpServer, isServerShared, unshareServer } from '@/app/actions/social';
-import { createShareableTemplate } from '@/app/actions/mcp-servers';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+} from '@/components/ui/dialog'; // Sorted
+import { Input } from '@/components/ui/input'; // Sorted
+import { Label } from '@/components/ui/label'; // Sorted
+import { Separator } from '@/components/ui/separator'; // Sorted
+import { Switch } from '@/components/ui/switch'; // Sorted
+import { Textarea } from '@/components/ui/textarea'; // Sorted
+import { useToast } from '@/components/ui/use-toast'; // Sorted
+import { McpServer } from '@/types/mcp-server'; // Sorted
+
 
 // Define steps for the wizard
 enum ShareWizardStep {
@@ -60,13 +60,23 @@ export function ShareServerDialog({
   const [sharedUuid, setSharedUuid] = useState<string | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [serverData, setServerData] = useState<any>(null);
-  
+
   // Wizard state
   const [currentStep, setCurrentStep] = useState<ShareWizardStep>(ShareWizardStep.DETAILS);
 
   // Check if the server is already shared when component mounts
   useEffect(() => {
     async function checkIfShared() {
+      if (!profileUuid || !server.uuid) {
+         setIsChecking(false);
+         // Reset state if profile/server info is missing
+         setTitle(server.name);
+         setDescription(server.description || '');
+         setIsPublic(true);
+         setSharedUuid(null);
+         setIsShared(false);
+         return;
+      }
       try {
         setIsChecking(true);
         const result = await isServerShared(profileUuid, server.uuid);
@@ -76,27 +86,52 @@ export function ShareServerDialog({
           setDescription(result.server.description || '');
           setIsPublic(result.server.is_public);
           setSharedUuid(result.server.uuid);
+        } else {
+          // Reset if not shared or data missing
+          setTitle(server.name);
+          setDescription(server.description || '');
+          setIsPublic(true);
+          setSharedUuid(null);
         }
       } catch (error) {
         console.error('Error checking if server is shared:', error);
+        // Reset on error
+        setTitle(server.name);
+        setDescription(server.description || '');
+        setIsPublic(true);
+        setSharedUuid(null);
+        setIsShared(false);
       } finally {
         setIsChecking(false);
       }
     }
-    
-    checkIfShared();
-  }, [profileUuid, server.uuid, open]);
 
-  // Load template data when dialog opens
+    if (open) { // Only check when dialog opens
+       checkIfShared();
+    } else {
+       // Reset state when dialog closes
+       setTitle(server.name);
+       setDescription(server.description || '');
+       setIsPublic(true);
+       setSharedUuid(null);
+       setIsShared(false); // Ensure isShared is reset
+       setCurrentStep(ShareWizardStep.DETAILS);
+       setServerData(null);
+    }
+  }, [profileUuid, server.uuid, server.name, server.description, open]); // Added dependencies
+
+  // Load template data when dialog opens and isShared status is known
   useEffect(() => {
     async function loadTemplateData() {
-      if (!open) return;
-      
+      if (!open || isChecking) return; // Don't load if closed or still checking status
+
       setIsLoadingPreview(true);
       try {
+        // Always generate a fresh template when opening the dialog
         const templateData = await createShareableTemplate(server);
         setServerData(templateData);
       } catch (error) {
+        console.error("Error loading template data:", error);
         toast({
           title: 'Error',
           description: 'Failed to load server data. Please try again.',
@@ -106,11 +141,11 @@ export function ShareServerDialog({
         setIsLoadingPreview(false);
       }
     }
-    
-    loadTemplateData();
-  }, [open, server, toast]);
 
-  // Reset wizard state when dialog closes
+    loadTemplateData();
+  }, [open, server, toast, isChecking]); // Removed isShared, sharedUuid dependencies as we always generate fresh
+
+  // Reset wizard step when dialog closes
   useEffect(() => {
     if (!open) {
       setCurrentStep(ShareWizardStep.DETAILS);
@@ -118,18 +153,19 @@ export function ShareServerDialog({
     }
   }, [open]);
 
+
   const handleEditValue = (path: string[], value: string) => {
     if (!serverData) return;
-    
+
     // Deep clone to avoid mutating state directly
     const updatedData = JSON.parse(JSON.stringify(serverData));
-    
+
     // Navigate to the correct property using the path array
     let current = updatedData;
     for (let i = 0; i < path.length - 1; i++) {
       current = current[path[i]];
     }
-    
+
     // Update the value
     current[path[path.length - 1]] = value;
     setServerData(updatedData);
@@ -138,10 +174,10 @@ export function ShareServerDialog({
   const handleRedactValue = (path: string[]) => {
     handleEditValue(path, '<REDACTED>');
   };
-  
+
   const handleExcludeCustomInstructions = () => {
     if (!serverData) return;
-    
+
     const updatedData = JSON.parse(JSON.stringify(serverData));
     delete updatedData.customInstructions;
     setServerData(updatedData);
@@ -167,26 +203,27 @@ export function ShareServerDialog({
 
     setIsSubmitting(true);
     try {
+      // Use the potentially edited serverData for sharing/updating
       const result = await shareMcpServer(
         profileUuid,
         server.uuid,
         title,
         description,
         isPublic,
-        serverData // Pass the edited data
+        serverData // Pass the potentially edited data
       );
 
       if (result.success) {
         toast({
           title: 'Success',
-          description: 'Server shared successfully',
+          description: `Server ${isShared ? 'updated' : 'shared'} successfully`, // Dynamic message
         });
-        setIsShared(true);
+        setIsShared(true); // Ensure state reflects shared status
         setSharedUuid(result.sharedServer?.uuid || null);
         setOpen(false);
         router.refresh();
       } else {
-        throw new Error(result.error || 'Failed to share server');
+        throw new Error(result.error || `Failed to ${isShared ? 'update' : 'share'} server`);
       }
     } catch (error) {
       toast({
@@ -199,34 +236,7 @@ export function ShareServerDialog({
     }
   };
 
-  const handleUnshare = async () => {
-    if (!sharedUuid) return;
-    
-    setIsSubmitting(true);
-    try {
-      const result = await unshareServer(profileUuid, sharedUuid);
-      
-      if (result.success) {
-        toast({
-          title: 'Success',
-          description: 'Server unshared successfully',
-        });
-        setIsShared(false);
-        setSharedUuid(null);
-        router.refresh();
-      } else {
-        throw new Error(result.error || 'Failed to unshare server');
-      }
-    } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'An error occurred',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  // handleUnshare function removed
 
   // Render details step (title, description, visibility)
   const renderDetailsStep = () => (
@@ -299,13 +309,13 @@ export function ShareServerDialog({
               <div className="text-xs text-amber-800 dark:text-amber-300">
                 <p className="font-medium">Important:</p>
                 <p>
-                  Review and edit the information below. You can redact any sensitive 
+                  Review and edit the information below. You can redact any sensitive
                   data before sharing.
                 </p>
               </div>
             </div>
           </div>
-          
+
           {/* Command */}
           <div className="space-y-2">
             <Label className="text-base font-medium">Command</Label>
@@ -316,9 +326,9 @@ export function ShareServerDialog({
                   onChange={(e) => handleEditValue(['command'], e.target.value)}
                   className="font-mono text-sm"
                 />
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => handleRedactValue(['command'])}
                 >
                   Redact
@@ -328,7 +338,7 @@ export function ShareServerDialog({
               <p className="text-sm text-muted-foreground">No command specified</p>
             )}
           </div>
-          
+
           {/* Arguments */}
           <div className="space-y-3">
             <Label className="text-base font-medium">Arguments</Label>
@@ -341,9 +351,9 @@ export function ShareServerDialog({
                       onChange={(e) => handleEditValue(['args', i.toString()], e.target.value)}
                       className="font-mono text-sm"
                     />
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleRedactValue(['args', i.toString()])}
                     >
                       Redact
@@ -355,7 +365,7 @@ export function ShareServerDialog({
               <p className="text-sm text-muted-foreground">No arguments specified</p>
             )}
           </div>
-          
+
           {/* Environment Variables */}
           <div className="space-y-3">
             <Label className="text-base font-medium">Environment Variables</Label>
@@ -369,9 +379,9 @@ export function ShareServerDialog({
                       onChange={(e) => handleEditValue(['env', key], e.target.value)}
                       className="font-mono text-sm"
                     />
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
+                    <Button
+                      size="sm"
+                      variant="outline"
                       onClick={() => handleRedactValue(['env', key])}
                     >
                       Redact
@@ -383,7 +393,7 @@ export function ShareServerDialog({
               <p className="text-sm text-muted-foreground">No environment variables</p>
             )}
           </div>
-          
+
           {/* URL */}
           {serverData.url && (
             <div className="space-y-2">
@@ -394,9 +404,9 @@ export function ShareServerDialog({
                   onChange={(e) => handleEditValue(['url'], e.target.value)}
                   className="font-mono text-sm"
                 />
-                <Button 
-                  size="sm" 
-                  variant="outline" 
+                <Button
+                  size="sm"
+                  variant="outline"
                   onClick={() => handleRedactValue(['url'])}
                 >
                   Redact
@@ -428,13 +438,13 @@ export function ShareServerDialog({
               <div className="text-xs text-green-800 dark:text-green-300">
                 <p className="font-medium">Custom Instructions</p>
                 <p>
-                  These instructions will be shared as-is and visible to anyone who 
+                  These instructions will be shared as-is and visible to anyone who
                   imports this server. You can exclude them if needed.
                 </p>
               </div>
             </div>
           </div>
-          
+
           <div className="space-y-3">
             <Label className="text-base font-medium">Custom Instructions Content</Label>
             <div className="bg-muted rounded-md p-4 max-h-[300px] overflow-y-auto">
@@ -463,7 +473,7 @@ export function ShareServerDialog({
                 </div>
               ))}
             </div>
-            
+
             <Button
               size="sm"
               variant="outline"
@@ -477,9 +487,9 @@ export function ShareServerDialog({
       ) : (
         <div className="flex flex-col justify-center items-center gap-3 py-10">
           <p className="text-muted-foreground">No custom instructions configured for this server</p>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleNextStep}
           >
             Skip this step
@@ -503,29 +513,29 @@ export function ShareServerDialog({
           </div>
         </div>
       </div>
-      
+
       <div className="space-y-4">
         <div>
           <h3 className="text-sm font-medium mb-1">Title</h3>
           <p className="text-base">{title}</p>
         </div>
-        
+
         {description && (
           <div>
             <h3 className="text-sm font-medium mb-1">Description</h3>
             <p className="text-base">{description}</p>
           </div>
         )}
-        
+
         <div>
           <h3 className="text-sm font-medium mb-1">Visibility</h3>
           <Badge variant={isPublic ? "default" : "outline"}>
             {isPublic ? "Public" : "Private"}
           </Badge>
         </div>
-        
+
         <Separator />
-        
+
         <div>
           <h3 className="text-sm font-medium mb-1">Shared Content</h3>
           <ul className="text-sm list-disc pl-5 space-y-1">
@@ -584,17 +594,17 @@ export function ShareServerDialog({
 
   const renderStepIndicator = () => {
     const steps = ["Details", "Server Config", "Instructions", "Review"];
-    
+
     return (
       <div className="flex justify-between items-center mb-6 px-1">
         {steps.map((step, index) => (
           <div key={index} className="flex flex-col items-center w-1/4">
-            <div 
-              className={`rounded-full h-7 w-7 flex items-center justify-center mb-1 text-xs 
-                ${currentStep === index 
-                  ? "bg-primary text-primary-foreground" 
-                  : currentStep > index 
-                    ? "bg-primary/20 text-primary" 
+            <div
+              className={`rounded-full h-7 w-7 flex items-center justify-center mb-1 text-xs
+                ${currentStep === index
+                  ? "bg-primary text-primary-foreground"
+                  : currentStep > index
+                    ? "bg-primary/20 text-primary"
                     : "bg-muted text-muted-foreground"}`}
             >
               {index + 1}
@@ -611,52 +621,48 @@ export function ShareServerDialog({
   const renderNavButtons = () => {
     const isLastStep = currentStep === ShareWizardStep.REVIEW;
     const isFirstStep = currentStep === ShareWizardStep.DETAILS;
-    
-    const shouldSkipCustomInstructions = 
-      currentStep === ShareWizardStep.COMMAND_ARGS_ENV && 
+
+    const shouldSkipCustomInstructions =
+      currentStep === ShareWizardStep.COMMAND_ARGS_ENV &&
       (!serverData || !serverData.customInstructions);
-    
+
     const nextLabel = isLastStep ? (isShared ? "Update" : "Publish") : "Next";
     const nextAction = isLastStep ? handleShare : handleNextStep;
-    
+
     // Determine the next step when clicking Next
     const getNextStep = () => {
       if (currentStep === ShareWizardStep.COMMAND_ARGS_ENV) {
-        return shouldSkipCustomInstructions 
-          ? ShareWizardStep.REVIEW 
+        return shouldSkipCustomInstructions
+          ? ShareWizardStep.REVIEW
           : ShareWizardStep.CUSTOM_INSTRUCTIONS;
       }
       return currentStep + 1;
     };
-    
+
     const handleNextWithSkip = () => {
       setCurrentStep(getNextStep());
     };
-    
+
     return (
-      <div className="flex justify-between mt-6">
-        {!isFirstStep && (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handlePrevStep}
-            className="flex items-center"
-          >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-        )}
-        {isShared && isLastStep && (
-          <Button
-            type="button"
-            variant="destructive"
-            onClick={handleUnshare}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Processing...' : 'Unshare'}
-          </Button>
-        )}
-        <div className="ml-auto flex gap-2">
+      <div className={'flex justify-between items-center mt-6'}> {/* Use curly braces for className */}
+        {/* Left Buttons (Back) */}
+        <div className="flex gap-2">
+          {!isFirstStep && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handlePrevStep}
+              className="flex items-center"
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Back
+            </Button>
+          )}
+          {/* Unshare button removed from dialog */}
+        </div>
+
+        {/* Right Buttons (Cancel, Next/Publish/Update) */}
+        <div className="flex gap-2">
           <Button
             type="button"
             variant="outline"
@@ -683,8 +689,8 @@ export function ShareServerDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {children || (
-          <Button 
-            variant={isShared ? "outline" : variant} 
+          <Button
+            variant={isShared ? "outline" : variant}
             size={size}
             className={isShared ? "text-green-600" : ""}
           >
@@ -708,16 +714,16 @@ export function ShareServerDialog({
             {isShared ? 'Update Shared Server' : 'Share MCP Server'}
           </DialogTitle>
           <DialogDescription>
-            {isShared 
+            {isShared
               ? 'Update or remove this shared server from your profile'
               : 'Share this MCP server on your public profile'}
           </DialogDescription>
         </DialogHeader>
-        
+
         {renderStepIndicator()}
         {renderStep()}
         {renderNavButtons()}
       </DialogContent>
     </Dialog>
   );
-} 
+}

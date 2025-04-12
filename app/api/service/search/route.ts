@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { addDays } from 'date-fns';
-import { and, eq, ilike, or, desc } from 'drizzle-orm';
+import { and, desc, eq, ilike, or } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
 
-import { db } from '@/db';
-import { McpServerSource, searchCacheTable, sharedMcpServersTable } from '@/db/schema';
-import type { McpIndex, PaginatedSearchResult, SearchIndex } from '@/types/search';
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
+import { db } from '@/db';
+import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema'; // Added profilesTable, projectsTable, users
+import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
 import {
   fetchAwesomeMcpServersList,
   getGitHubRepoAsMcpServer,
@@ -230,7 +230,7 @@ async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
       if (metricsResult.success && metricsResult.metrics) {
         // Add metrics to server data
         server.rating = metricsResult.metrics.averageRating;
-        server.rating_count = metricsResult.metrics.ratingCount;
+        server.ratingCount = metricsResult.metrics.ratingCount; // Changed rating_count to ratingCount
         server.installation_count = metricsResult.metrics.installationCount;
       }
     } catch (_error) {
@@ -379,36 +379,69 @@ async function searchGitHub(query: string): Promise<SearchIndex> {
  */
 async function searchCommunity(query: string): Promise<SearchIndex> {
   try {
-    // Get shared MCP servers from profiles that are marked as public
-    const sharedServers = await db.query.sharedMcpServersTable.findMany({
-      where: query 
-        ? and(
-            eq(sharedMcpServersTable.is_public, true),
-            or(
-              ilike(sharedMcpServersTable.title, `%${query}%`),
-              ilike(sharedMcpServersTable.description || '', `%${query}%`)
+    // Get shared MCP servers, joining through profiles and projects to get user info
+    const sharedServersQuery = db
+      .select({
+        sharedServer: sharedMcpServersTable,
+        profile: profilesTable,
+        user: users, // Select user data
+      })
+      .from(sharedMcpServersTable)
+      .innerJoin(profilesTable, eq(sharedMcpServersTable.profile_uuid, profilesTable.uuid))
+      .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid)) // Join to projects
+      .innerJoin(users, eq(projectsTable.user_id, users.id)) // Join to users
+      .where(
+        query
+          ? and(
+              eq(sharedMcpServersTable.is_public, true),
+              or(
+                ilike(sharedMcpServersTable.title, `%${query}%`),
+                ilike(sharedMcpServersTable.description || '', `%${query}%`),
+                ilike(profilesTable.username, `%${query}%`), // Also search by username
+                ilike(users.email, `%${query}%`) // Also search by user email
+              )
             )
-          )
-        : eq(sharedMcpServersTable.is_public, true),
-      with: {
-        profile: true,
-      },
-      orderBy: [desc(sharedMcpServersTable.created_at)],
-      limit: 50, // Limit to 50 results
-    });
-    
+          : eq(sharedMcpServersTable.is_public, true)
+      )
+      .orderBy(desc(sharedMcpServersTable.created_at))
+      .limit(50); // Limit to 50 results
+
+    const resultsWithJoins = await sharedServersQuery;
+
     // Convert to our SearchIndex format
     const results: SearchIndex = {};
-    
-    for (const sharedServer of sharedServers) {
+
+    for (const { sharedServer, profile, user } of resultsWithJoins) {
       // We'll use the template field which contains the sanitized MCP server data
       const template = sharedServer.template as Record<string, any>;
-      
+
       if (!template) continue;
-      
+
       // Create an entry with metadata from the shared server
       const serverKey = `${sharedServer.uuid}`;
-      
+
+      // Fetch rating metrics for this shared server
+      let rating = 0;
+      let ratingCount = 0;
+      try {
+        // For community servers, metrics are linked via external_id (which is the sharedServer.uuid) and source, not server_uuid
+        const metricsResult = await getServerRatingMetrics(
+          undefined, // Pass undefined for serverUuid
+          sharedServer.uuid, // Pass sharedServer.uuid as externalId
+          McpServerSource.COMMUNITY // Pass the correct source
+        );
+        if (metricsResult.success && metricsResult.metrics) {
+          rating = metricsResult.metrics.averageRating;
+          ratingCount = metricsResult.metrics.ratingCount;
+          // Note: installationCount is also available if needed later
+        }
+      } catch (metricsError) {
+        console.error(`Failed to get metrics for community server ${serverKey}:`, metricsError);
+      }
+
+      // Determine the display name for 'shared_by' - Prioritize profile username, then user email, then profile name
+      const sharedByName = profile?.username || user?.email || profile?.name || 'Unknown User'; 
+
       results[serverKey] = {
         name: sharedServer.title,
         description: sharedServer.description || '',
@@ -428,12 +461,19 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
         tags: template.tags,
         qualifiedName: `community:${sharedServer.uuid}`,
         updated_at: sharedServer.updated_at.toISOString(),
+        // Add shared_by and rating info
+        shared_by: sharedByName, // Use the determined name
+        rating: rating,
+        ratingCount: ratingCount, // Use ratingCount to match metrics result
       };
     }
+
     
     console.log(`Found ${Object.keys(results).length} community servers`);
     
-    return results;
+    // Enriching with metrics is now done inside the loop for community servers
+    // return await enrichWithMetrics(results); 
+    return results; // Return directly as metrics are fetched inside
   } catch (error) {
     console.error('Community search error:', error);
     return {}; // Return empty results on error

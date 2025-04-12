@@ -7,7 +7,7 @@ import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType, custo
 import type { McpServer } from '@/types/mcp-server';
 
 import { discoverSingleServerTools } from './discover-mcp-tools'; // Import the discovery action
-import { trackServerInstallation } from './mcp-server-metrics';
+import { trackServerInstallation, getServerRatingMetrics } from './mcp-server-metrics';
 
 export async function getMcpServers(profileUuid: string) {
   const servers = await db
@@ -24,7 +24,19 @@ export async function getMcpServers(profileUuid: string) {
     )
     .orderBy(desc(mcpServersTable.created_at));
 
-  return servers as McpServer[];
+  // Fetch ratings and installation metrics for each server
+  for (const server of servers) {
+    const metrics = await getServerRatingMetrics(server.uuid);
+    server.averageRating = metrics.success && metrics.metrics ? metrics.metrics.averageRating : 0;
+    server.ratingCount = metrics.success && metrics.metrics ? metrics.metrics.ratingCount : 0;
+    server.installationCount = metrics.success && metrics.metrics ? metrics.metrics.installationCount : 0;
+  }
+
+  return servers as (McpServer & {
+    averageRating?: number;
+    ratingCount?: number;
+    installationCount?: number;
+  })[];
 }
 
 export async function getMcpServerByUuid(

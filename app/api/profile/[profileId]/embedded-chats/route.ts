@@ -7,11 +7,11 @@ import { getAuthSession } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { profileId: string } }
+  context: { params: Promise<{ profileId: string }> }
 ) {
   try {
     const session = await getAuthSession();
-    const { profileId } = params;
+    const { profileId } = await context.params;
     
     if (!profileId) {
       return NextResponse.json(
@@ -32,7 +32,8 @@ export async function GET(
           columns: {
             uuid: true,
             name: true,
-            username: true,
+            bio: true,
+            is_public: true,
             avatar_url: true,
           }
         }

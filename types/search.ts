@@ -36,8 +36,9 @@ export interface McpIndex {
   updated_at?: string; // Last update timestamp
   url?: string | null; // URL for SSE servers
   rating?: number; // Average user rating (1-5)
-  rating_count?: number; // Number of ratings
+  ratingCount?: number; // Number of ratings (Changed from rating_count)
   installation_count?: number; // Number of installations
+  shared_by?: string | null; // Username or name of the profile that shared the server
 }
 
 export interface SearchIndex {

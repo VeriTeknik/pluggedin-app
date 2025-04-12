@@ -1,22 +1,22 @@
 'use server';
 
+import { and, desc, eq, ilike, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { and, eq, ilike, sql, desc } from 'drizzle-orm';
 
+import { logAuditEvent } from '@/app/actions/audit-logger';
+import { createShareableTemplate } from '@/app/actions/mcp-servers';
 import { db } from '@/db';
-import { profilesTable, followersTable, sharedMcpServersTable, sharedCollectionsTable, embeddedChatsTable, mcpServersTable } from '@/db/schema';
+import { embeddedChatsTable, followersTable, mcpServersTable,profilesTable, projectsTable, sharedCollectionsTable, sharedMcpServersTable, users } from '@/db/schema';
 import { Profile } from '@/types/profile';
-import { Follower, SharedMcpServer, SharedCollection, EmbeddedChat, UsernameAvailability } from '@/types/social';
-import { logAuditEvent } from './audit-logger';
-import { createShareableTemplate } from './mcp-servers';
+import { EmbeddedChat, SharedCollection, SharedMcpServer, UsernameAvailability } from '@/types/social';
 
 // Validation schema for username
 const usernameSchema = z.string()
   .min(3, { message: 'Username must be at least 3 characters long' })
   .max(30, { message: 'Username must be at most 30 characters long' })
-  .regex(/^[a-zA-Z0-9_-]+$/, { 
-    message: 'Username can only contain letters, numbers, underscores, and hyphens' 
+  .regex(/^[a-zA-Z0-9_-]+$/, {
+    message: 'Username can only contain letters, numbers, underscores, and hyphens'
   });
 
 /**
@@ -26,89 +26,125 @@ const usernameSchema = z.string()
  */
 export async function checkUsernameAvailability(username: string): Promise<UsernameAvailability> {
   try {
-    // Validate username format
     const validationResult = usernameSchema.safeParse(username);
-    
     if (!validationResult.success) {
-      return { 
-        available: false, 
-        message: validationResult.error.errors[0].message 
+      return {
+        available: false,
+        message: validationResult.error.errors[0].message
       };
     }
-
-    // Check if username exists in the database
-    const existingProfile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.username, username),
+    // Check if username exists in the users table
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.username, username),
     });
-
     return {
-      available: !existingProfile,
-      message: existingProfile ? 'Username is already taken' : undefined
+      available: !existingUser,
+      message: existingUser ? 'Username is already taken' : undefined
     };
   } catch (error) {
     console.error('Error checking username availability:', error);
-    return { 
-      available: false, 
-      message: 'An error occurred while checking username availability' 
+    return {
+      available: false,
+      message: 'An error occurred while checking username availability'
     };
   }
 }
 
 /**
- * Reserve a username for a profile
- * @param profileUuid The UUID of the profile to update
+ * Reserve a username for a user
+ * @param userId The ID of the user to update
  * @param username The username to reserve
- * @returns The updated profile or error information
+ * @returns Success status or error information
  */
-export async function reserveUsername(profileUuid: string, username: string): Promise<{ success: boolean; profile?: Profile; error?: string }> {
+export async function reserveUsername(userId: string, username: string): Promise<{ success: boolean; user?: typeof users.$inferSelect; error?: string }> {
   try {
-    // Check username availability
-    const availability = await checkUsernameAvailability(username);
-    
-    if (!availability.available) {
-      return { 
-        success: false, 
-        error: availability.message || 'Username is not available' 
-      };
-    }
-
-    // Update profile with the new username
-    const [updatedProfile] = await db.update(profilesTable)
-      .set({ username })
-      .where(eq(profilesTable.uuid, profileUuid))
-      .returning();
-
-    if (!updatedProfile) {
-      return { 
-        success: false, 
-        error: 'Profile not found or could not be updated' 
-      };
-    }
-
-    // Log the action
-    await logAuditEvent({
-      profileUuid,
-      type: 'PROFILE',
-      action: 'RESERVE_USERNAME',
-      metadata: { username },
+    // First verify the user exists
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.id, userId),
     });
 
-    // Revalidate paths to update UI
-    revalidatePath('/settings');
-    revalidatePath(`/to/${username}`);
+    if (!existingUser) {
+      console.error(`User not found with ID: ${userId}`);
+      return {
+        success: false,
+        error: 'User not found'
+      };
+    }
 
-    return { 
-      success: true, 
-      profile: updatedProfile as unknown as Profile 
-    };
+    const availability = await checkUsernameAvailability(username);
+    if (!availability.available) {
+      return {
+        success: false,
+        error: availability.message || 'Username is not available'
+      };
+    }
+
+    // Update user with the new username
+    try {
+      const [updatedUser] = await db.update(users)
+        .set({ 
+          username,
+          updated_at: new Date() // Ensure updated_at is set
+        })
+        .where(eq(users.id, userId))
+        .returning();
+
+      if (!updatedUser) {
+        console.error(`Failed to update username for user ${userId}`);
+        return {
+          success: false,
+          error: 'Failed to update username'
+        };
+      }
+
+      // Log the action - Fetch profileUuid associated with userId for logging context
+      const project = await db.query.projectsTable.findFirst({ 
+        where: eq(projectsTable.user_id, userId) 
+      });
+      const profile = project ? await db.query.profilesTable.findFirst({ 
+        where: eq(profilesTable.project_uuid, project.uuid) 
+      }) : null;
+
+      await logAuditEvent({
+        profileUuid: profile?.uuid,
+        type: 'PROFILE',
+        action: 'RESERVE_USERNAME',
+        metadata: { username, userId }, // Add userId to metadata for better tracking
+      });
+
+      // Revalidate paths
+      revalidatePath('/settings');
+      revalidatePath(`/to/${username}`);
+
+      return {
+        success: true,
+        user: updatedUser
+      };
+    } catch (updateError) {
+      console.error('Error updating username:', updateError);
+      return {
+        success: false,
+        error: 'Database error while updating username'
+      };
+    }
   } catch (error) {
-    console.error('Error reserving username:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while reserving the username' 
+    console.error('Error in reserveUsername:', error);
+    return {
+      success: false,
+      error: 'An unexpected error occurred while reserving the username'
     };
   }
 }
+
+// Helper function to get username for revalidation
+async function getUsernameForProfile(profileUuid: string): Promise<string | null> {
+   const profileData = await db.query.profilesTable.findFirst({
+       where: eq(profilesTable.uuid, profileUuid),
+       with: { project: { with: { user: { columns: { username: true } } } } }
+   });
+   return profileData?.project?.user?.username || null;
+}
+
 
 /**
  * Update profile social information
@@ -117,68 +153,107 @@ export async function reserveUsername(profileUuid: string, username: string): Pr
  * @returns The updated profile or error information
  */
 export async function updateProfileSocial(
-  profileUuid: string, 
-  data: { 
-    bio?: string; 
-    is_public?: boolean; 
+  profileUuid: string,
+  data: {
+    bio?: string;
+    is_public?: boolean;
     avatar_url?: string;
   }
 ): Promise<{ success: boolean; profile?: Profile; error?: string }> {
   try {
-    // Update profile with the social data
     const [updatedProfile] = await db.update(profilesTable)
       .set(data)
       .where(eq(profilesTable.uuid, profileUuid))
       .returning();
-
     if (!updatedProfile) {
-      return { 
-        success: false, 
-        error: 'Profile not found or could not be updated' 
+      return {
+        success: false,
+        error: 'Profile not found or could not be updated'
       };
     }
-
     // Log the action
     await logAuditEvent({
       profileUuid,
-      type: 'PROFILE',
+      type: 'PROFILE', // Use string literal
       action: 'UPDATE_PROFILE_SOCIAL',
       metadata: data,
     });
-
-    // Revalidate paths to update UI
+    // Revalidate paths
     revalidatePath('/settings');
-    if (updatedProfile.username) {
-      revalidatePath(`/to/${updatedProfile.username}`);
+    const associatedUsername = await getUsernameForProfile(profileUuid);
+    if (associatedUsername) {
+      revalidatePath(`/to/${associatedUsername}`);
     }
-
-    return { 
-      success: true, 
-      profile: updatedProfile as unknown as Profile 
+    return {
+      success: true,
+      profile: updatedProfile as unknown as Profile
     };
   } catch (error) {
     console.error('Error updating profile social data:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while updating the profile' 
+    return {
+      success: false,
+      error: 'An error occurred while updating the profile'
     };
   }
 }
 
 /**
- * Get a profile by username
+ * Get a user and their profiles by username
  * @param username The username to look up
- * @returns The profile or null if not found
+ * @returns The user data along with their public profiles
  */
-export async function getProfileByUsername(username: string): Promise<Profile | null> {
+export async function getProfileByUsername(username: string): Promise<{ 
+  user: typeof users.$inferSelect, 
+  profiles: Profile[] 
+} | null> {
   try {
-    const profile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.username, username),
-    });
+    // Get the user and their public profiles in a single query
+    const userWithProfiles = await db
+      .select({
+        user: users,
+        profile: {
+          uuid: profilesTable.uuid,
+          name: profilesTable.name,
+          project_uuid: profilesTable.project_uuid,
+          created_at: profilesTable.created_at,
+          language: profilesTable.language,
+          enabled_capabilities: profilesTable.enabled_capabilities,
+          bio: profilesTable.bio,
+          is_public: profilesTable.is_public,
+          avatar_url: profilesTable.avatar_url,
+        }
+      })
+      .from(users)
+      .leftJoin(projectsTable, eq(users.id, projectsTable.user_id))
+      .leftJoin(profilesTable, and(
+        eq(projectsTable.uuid, profilesTable.project_uuid),
+        eq(profilesTable.is_public, true)
+      ))
+      .where(eq(users.username, username));
 
-    return profile as unknown as Profile;
+    if (!userWithProfiles.length) {
+      return null;
+    }
+
+    // Extract user and profiles
+    const user = userWithProfiles[0].user;
+    const profiles = userWithProfiles
+      .map(row => row.profile)
+      .filter((profile): profile is NonNullable<typeof profile> => 
+        profile !== null && profile.is_public === true
+      ) as Profile[];
+
+    // Only return data if there are public profiles
+    if (profiles.length === 0) {
+      return null;
+    }
+
+    return {
+      user,
+      profiles
+    };
   } catch (error) {
-    console.error('Error getting profile by username:', error);
+    console.error('Error getting user by username:', error);
     return null;
   }
 }
@@ -187,19 +262,44 @@ export async function getProfileByUsername(username: string): Promise<Profile | 
  * Search for profiles by username
  * @param query The search query
  * @param limit The maximum number of results to return
- * @returns An array of matching profiles
+ * @returns An array of matching public user profiles (returning user data now)
  */
-export async function searchProfiles(query: string, limit: number = 10): Promise<Profile[]> {
+export async function searchProfiles(query: string, limit: number = 10): Promise<Array<typeof users.$inferSelect & { profile: Profile | null }>> {
   try {
-    const profiles = await db.query.profilesTable.findMany({
-      where: and(
-        ilike(profilesTable.username, `%${query}%`),
-        eq(profilesTable.is_public, true)
-      ),
-      limit,
-    });
+    // Search users by username, join with profiles to check is_public and get profile data
+    const results = await db
+      .select({
+        user: users,
+        profile: {
+          uuid: profilesTable.uuid,
+          name: profilesTable.name,
+          project_uuid: profilesTable.project_uuid,
+          created_at: profilesTable.created_at,
+          language: profilesTable.language,
+          enabled_capabilities: profilesTable.enabled_capabilities,
+          bio: profilesTable.bio,
+          is_public: profilesTable.is_public,
+          avatar_url: profilesTable.avatar_url,
+        }
+      })
+      .from(users)
+      .leftJoin(projectsTable, eq(users.id, projectsTable.user_id))
+      .leftJoin(profilesTable, and(
+        eq(projectsTable.uuid, profilesTable.project_uuid),
+        eq(profilesTable.is_public, true) // Only join public profiles
+      ))
+      .where(
+        ilike(users.username, `%${query}%`) // Search only username on users table
+      )
+      .limit(limit);
 
-    return profiles as unknown as Profile[];
+    // Filter out users without public profiles
+    return results
+      .filter(r => r.profile !== null && r.profile.is_public === true)
+      .map(r => ({
+        ...r.user,
+        profile: r.profile as Profile | null
+      }));
   } catch (error) {
     console.error('Error searching profiles:', error);
     return [];
@@ -217,7 +317,6 @@ export async function getFollowerCount(profileUuid: string): Promise<number> {
       .select({ count: sql<number>`count(*)` })
       .from(followersTable)
       .where(eq(followersTable.followed_profile_uuid, profileUuid));
-
     return result[0]?.count || 0;
   } catch (error) {
     console.error('Error getting follower count:', error);
@@ -236,7 +335,6 @@ export async function getFollowingCount(profileUuid: string): Promise<number> {
       .select({ count: sql<number>`count(*)` })
       .from(followersTable)
       .where(eq(followersTable.follower_profile_uuid, profileUuid));
-
     return result[0]?.count || 0;
   } catch (error) {
     console.error('Error getting following count:', error);
@@ -255,41 +353,32 @@ export async function followProfile(
   followedUuid: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if already following
     const existingFollow = await db.query.followersTable.findFirst({
       where: and(
         eq(followersTable.follower_profile_uuid, followerUuid),
         eq(followersTable.followed_profile_uuid, followedUuid)
       ),
     });
-
     if (existingFollow) {
       return { success: false, error: 'Already following this profile' };
     }
-
-    // Create new follow relationship
     await db.insert(followersTable).values({
       follower_profile_uuid: followerUuid,
       followed_profile_uuid: followedUuid,
     });
-
-    // Log the action
     await logAuditEvent({
       profileUuid: followerUuid,
-      type: 'PROFILE',
+      type: 'PROFILE', // Use string literal
       action: 'FOLLOW_PROFILE',
       metadata: { followed_profile_uuid: followedUuid },
     });
-
-    // Revalidate paths
-    revalidatePath('/profile');
-
+    revalidatePath('/profile'); // Consider revalidating follower/following pages too
     return { success: true };
   } catch (error) {
     console.error('Error following profile:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while trying to follow the profile' 
+    return {
+      success: false,
+      error: 'An error occurred while trying to follow the profile'
     };
   }
 }
@@ -305,8 +394,7 @@ export async function unfollowProfile(
   followedUuid: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Delete follow relationship
-    const result = await db
+    await db
       .delete(followersTable)
       .where(
         and(
@@ -314,24 +402,19 @@ export async function unfollowProfile(
           eq(followersTable.followed_profile_uuid, followedUuid)
         )
       );
-
-    // Log the action
     await logAuditEvent({
       profileUuid: followerUuid,
-      type: 'PROFILE',
+      type: 'PROFILE', // Use string literal
       action: 'UNFOLLOW_PROFILE',
       metadata: { followed_profile_uuid: followedUuid },
     });
-
-    // Revalidate paths
-    revalidatePath('/profile');
-
+    revalidatePath('/profile'); // Consider revalidating follower/following pages too
     return { success: true };
   } catch (error) {
     console.error('Error unfollowing profile:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while trying to unfollow the profile' 
+    return {
+      success: false,
+      error: 'An error occurred while trying to unfollow the profile'
     };
   }
 }
@@ -353,7 +436,6 @@ export async function isFollowing(
         eq(followersTable.followed_profile_uuid, followedUuid)
       ),
     });
-
     return !!existingFollow;
   } catch (error) {
     console.error('Error checking follow status:', error);
@@ -374,22 +456,33 @@ export async function getSharedMcpServers(
   includePrivate: boolean = false
 ): Promise<SharedMcpServer[]> {
   try {
-    const whereClause = includePrivate 
+    const whereClause = includePrivate
       ? eq(sharedMcpServersTable.profile_uuid, profileUuid)
       : and(
           eq(sharedMcpServersTable.profile_uuid, profileUuid),
           eq(sharedMcpServersTable.is_public, true)
         );
-
     const sharedServers = await db.query.sharedMcpServersTable.findMany({
       where: whereClause,
       limit,
       with: {
-        server: true,
+        server: {
+          columns: {
+            uuid: true,
+            name: true,
+            description: true,
+            type: true,
+            command: true,
+            args: true,
+            url: true,
+            created_at: true,
+            status: true,
+            source: true,
+          }
+        },
       },
       orderBy: (servers) => [desc(servers.created_at)],
     });
-
     return sharedServers as unknown as SharedMcpServer[];
   } catch (error) {
     console.error('Error getting shared MCP servers:', error);
@@ -410,19 +503,17 @@ export async function getSharedCollections(
   includePrivate: boolean = false
 ): Promise<SharedCollection[]> {
   try {
-    const whereClause = includePrivate 
+    const whereClause = includePrivate
       ? eq(sharedCollectionsTable.profile_uuid, profileUuid)
       : and(
           eq(sharedCollectionsTable.profile_uuid, profileUuid),
           eq(sharedCollectionsTable.is_public, true)
         );
-
     const sharedCollections = await db.query.sharedCollectionsTable.findMany({
       where: whereClause,
       limit,
       orderBy: (collections) => [desc(collections.created_at)],
     });
-
     return sharedCollections as unknown as SharedCollection[];
   } catch (error) {
     console.error('Error getting shared collections:', error);
@@ -443,7 +534,7 @@ export async function getEmbeddedChats(
   includePrivate: boolean = false
 ): Promise<EmbeddedChat[]> {
   try {
-    const whereClause = includePrivate 
+    const whereClause = includePrivate
       ? and(
           eq(embeddedChatsTable.profile_uuid, profileUuid),
           eq(embeddedChatsTable.is_active, true)
@@ -453,13 +544,11 @@ export async function getEmbeddedChats(
           eq(embeddedChatsTable.is_public, true),
           eq(embeddedChatsTable.is_active, true)
         );
-
     const chats = await db.query.embeddedChatsTable.findMany({
       where: whereClause,
       limit,
       orderBy: (chats) => [desc(chats.created_at)],
     });
-
     return chats as unknown as EmbeddedChat[];
   } catch (error) {
     console.error('Error getting embedded chats:', error);
@@ -486,7 +575,6 @@ export async function getFollowers(
       },
       orderBy: (followers) => [desc(followers.created_at)],
     });
-
     return followers.map(f => f.follower) as unknown as Profile[];
   } catch (error) {
     console.error('Error getting followers:', error);
@@ -513,7 +601,6 @@ export async function getFollowing(
       },
       orderBy: (following) => [desc(following.created_at)],
     });
-
     return following.map(f => f.followed) as unknown as Profile[];
   } catch (error) {
     console.error('Error getting following:', error);
@@ -540,96 +627,50 @@ export async function shareMcpServer(
   customTemplate?: any
 ): Promise<{ success: boolean; sharedServer?: SharedMcpServer; error?: string }> {
   try {
-    // Check if the server exists and belongs to the profile
     const server = await db.query.mcpServersTable.findFirst({
       where: eq(mcpServersTable.uuid, serverUuid),
     });
-
     if (!server) {
-      return { 
-        success: false, 
-        error: 'Server not found' 
-      };
+      return { success: false, error: 'Server not found' };
     }
-
-    // Create a sanitized template of the server or use custom template if provided
     const serverTemplate = customTemplate || await createShareableTemplate(server);
-
-    // Check if the server is already shared by this profile
     const existingShare = await db.query.sharedMcpServersTable.findFirst({
       where: and(
         eq(sharedMcpServersTable.profile_uuid, profileUuid),
         eq(sharedMcpServersTable.server_uuid, serverUuid)
       ),
     });
-
+    let finalSharedServer;
     if (existingShare) {
-      // Update existing share
       const [updatedShare] = await db.update(sharedMcpServersTable)
-        .set({ 
-          title, 
-          description, 
-          is_public: isPublic,
-          updated_at: new Date(),
-          template: serverTemplate // Store sanitized or custom template
-        })
+        .set({ title, description, is_public: isPublic, updated_at: new Date(), template: serverTemplate })
         .where(eq(sharedMcpServersTable.uuid, existingShare.uuid))
         .returning();
-
-      // Log the action
-      await logAuditEvent({
-        profileUuid,
-        type: 'PROFILE',
-        action: 'UPDATE_SHARED_SERVER',
-        metadata: { server_uuid: serverUuid, title },
-      });
-
-      return { 
-        success: true, 
-        sharedServer: updatedShare as unknown as SharedMcpServer 
-      };
+      finalSharedServer = updatedShare;
+      await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'UPDATE_SHARED_SERVER', metadata: { server_uuid: serverUuid, title } });
+    } else {
+      const [newShare] = await db.insert(sharedMcpServersTable)
+        .values({ profile_uuid: profileUuid, server_uuid: serverUuid, title, description, is_public: isPublic, template: serverTemplate })
+        .returning();
+      finalSharedServer = newShare;
+      await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'SHARE_SERVER', metadata: { server_uuid: serverUuid, title } });
     }
-
-    // Create new shared server
-    const [sharedServer] = await db.insert(sharedMcpServersTable)
-      .values({
-        profile_uuid: profileUuid,
-        server_uuid: serverUuid,
-        title,
-        description,
-        is_public: isPublic,
-        template: serverTemplate // Store sanitized or custom template
-      })
-      .returning();
-
-    // Log the action
-    await logAuditEvent({
-      profileUuid,
-      type: 'PROFILE',
-      action: 'SHARE_SERVER',
-      metadata: { server_uuid: serverUuid, title },
-    });
-
     // Revalidate paths
     if (isPublic) {
-      const profile = await db.query.profilesTable.findFirst({
-        where: eq(profilesTable.uuid, profileUuid),
-      });
-      
-      if (profile?.username) {
-        revalidatePath(`/to/${profile.username}`);
-      }
+       const associatedUsername = await getUsernameForProfile(profileUuid);
+       if (associatedUsername) {
+         revalidatePath(`/to/${associatedUsername}`);
+       }
     }
-
-    return { 
-      success: true, 
-      sharedServer: sharedServer as unknown as SharedMcpServer 
+    return {
+      success: true,
+      sharedServer: finalSharedServer as unknown as SharedMcpServer
     };
   } catch (error) {
     console.error('Error sharing MCP server:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while sharing the server' 
+    return {
+      success: false,
+      error: 'An error occurred while sharing the server'
     };
   }
 }
@@ -641,46 +682,70 @@ export async function shareMcpServer(
  */
 export async function getSharedMcpServer(sharedServerUuid: string): Promise<SharedMcpServer | null> {
   try {
-    // Get the shared server with its server data
-    const sharedServer = await db.query.sharedMcpServersTable.findFirst({
+    // Get the shared server with its server data, profile, project, and user data
+    const sharedServerData = await db.query.sharedMcpServersTable.findFirst({
       where: eq(sharedMcpServersTable.uuid, sharedServerUuid),
       with: {
-        server: true,
+        server: true, // Keep server relation
         profile: {
-          columns: {
-            username: true,
-            name: true
+          columns: { name: true, uuid: true }, // Select necessary profile fields
+          with: {
+            project: {
+              with: {
+                user: { // Select necessary user fields
+                  columns: { username: true, email: true, name: true }
+                }
+              }
+            }
           }
         }
       }
     });
-    
-    if (!sharedServer) {
+
+
+    if (!sharedServerData) {
       return null;
     }
-    
-    // Add the profile username to the shared server object
-    const sharedServerWithProfile = {
-      ...sharedServer,
-      profile_username: sharedServer.profile?.username || sharedServer.profile?.name || null,
-      server: sharedServer.server ? {
-        ...sharedServer.server,
+
+    // Determine the display name
+    const user = sharedServerData.profile?.project?.user;
+    const profile = sharedServerData.profile;
+    const sharedByName = user?.username || user?.email || profile?.name || 'Unknown User';
+
+    // Construct the final object without nested profile/project/user
+    const result = {
+      uuid: sharedServerData.uuid,
+      profile_uuid: sharedServerData.profile_uuid,
+      server_uuid: sharedServerData.server_uuid,
+      title: sharedServerData.title,
+      description: sharedServerData.description,
+      is_public: sharedServerData.is_public,
+      template: sharedServerData.template,
+      created_at: sharedServerData.created_at,
+      updated_at: sharedServerData.updated_at,
+      profile_username: sharedByName, // Use determined name
+      server: sharedServerData.server ? {
+        ...sharedServerData.server,
         // If template contains these properties, include them
-        originalServerUuid: sharedServer.template?.originalServerUuid,
-        sharedBy: sharedServer.template?.sharedBy,
-        customInstructions: sharedServer.template?.customInstructions,
+        originalServerUuid: sharedServerData.template?.originalServerUuid,
+        sharedBy: sharedServerData.template?.sharedBy, // This might be redundant now
+        customInstructions: sharedServerData.template?.customInstructions,
       } : undefined
     };
-    
-    // Create a new object without the profile property instead of using delete
-    const { profile, ...sharedServerWithoutProfile } = sharedServerWithProfile;
-    
-    return sharedServerWithoutProfile as unknown as SharedMcpServer;
+
+    // Remove nested profile/project/user data before returning
+    // @ts-expect-error - Drizzle's type inference might struggle here, but structure is correct
+    delete result.profile;
+    // @ts-expect-error - Also remove project if it was included implicitly
+    delete result.project; 
+
+    return result as unknown as SharedMcpServer;
   } catch (error) {
     console.error('Error getting shared MCP server:', error);
     return null;
   }
 }
+
 
 /**
  * Unshare an MCP server from a profile
@@ -693,48 +758,37 @@ export async function unshareServer(
   sharedServerUuid: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if the shared server exists and belongs to the profile
     const sharedServer = await db.query.sharedMcpServersTable.findFirst({
       where: and(
         eq(sharedMcpServersTable.uuid, sharedServerUuid),
         eq(sharedMcpServersTable.profile_uuid, profileUuid)
       ),
     });
-
     if (!sharedServer) {
-      return { 
-        success: false, 
-        error: 'Shared server not found or you do not have permission to unshare it' 
+      return {
+        success: false,
+        error: 'Shared server not found or you do not have permission to unshare it'
       };
     }
-
-    // Delete the shared server
     await db.delete(sharedMcpServersTable)
       .where(eq(sharedMcpServersTable.uuid, sharedServerUuid));
-
-    // Log the action
     await logAuditEvent({
       profileUuid,
-      type: 'PROFILE',
+      type: 'PROFILE', // Use string literal
       action: 'UNSHARE_SERVER',
       metadata: { shared_server_uuid: sharedServerUuid },
     });
-
     // Revalidate paths
-    const profile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, profileUuid),
-    });
-    
-    if (profile?.username) {
-      revalidatePath(`/to/${profile.username}`);
+    const associatedUsername = await getUsernameForProfile(profileUuid);
+    if (associatedUsername) {
+      revalidatePath(`/to/${associatedUsername}`);
     }
-
     return { success: true };
   } catch (error) {
     console.error('Error unsharing server:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while unsharing the server' 
+    return {
+      success: false,
+      error: 'An error occurred while unsharing the server'
     };
   }
 }
@@ -756,45 +810,26 @@ export async function shareCollection(
   isPublic: boolean = true
 ): Promise<{ success: boolean; sharedCollection?: SharedCollection; error?: string }> {
   try {
-    // Create new shared collection
     const [sharedCollection] = await db.insert(sharedCollectionsTable)
-      .values({
-        profile_uuid: profileUuid,
-        title,
-        description,
-        content, // Content is a jsonb field
-        is_public: isPublic,
-      })
+      .values({ profile_uuid: profileUuid, title, description, content, is_public: isPublic })
       .returning();
-
-    // Log the action
-    await logAuditEvent({
-      profileUuid,
-      type: 'PROFILE',
-      action: 'SHARE_COLLECTION',
-      metadata: { title },
-    });
-
+    await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'SHARE_COLLECTION', metadata: { title } });
     // Revalidate paths
     if (isPublic) {
-      const profile = await db.query.profilesTable.findFirst({
-        where: eq(profilesTable.uuid, profileUuid),
-      });
-      
-      if (profile?.username) {
-        revalidatePath(`/to/${profile.username}`);
-      }
+       const associatedUsername = await getUsernameForProfile(profileUuid);
+       if (associatedUsername) {
+         revalidatePath(`/to/${associatedUsername}`);
+       }
     }
-
-    return { 
-      success: true, 
-      sharedCollection: sharedCollection as unknown as SharedCollection 
+    return {
+      success: true,
+      sharedCollection: sharedCollection as unknown as SharedCollection
     };
   } catch (error) {
     console.error('Error sharing collection:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while sharing the collection' 
+    return {
+      success: false,
+      error: 'An error occurred while sharing the collection'
     };
   }
 }
@@ -817,63 +852,42 @@ export async function updateSharedCollection(
   }
 ): Promise<{ success: boolean; sharedCollection?: SharedCollection; error?: string }> {
   try {
-    // Check if the shared collection exists and belongs to the profile
     const existingCollection = await db.query.sharedCollectionsTable.findFirst({
       where: and(
         eq(sharedCollectionsTable.uuid, sharedCollectionUuid),
         eq(sharedCollectionsTable.profile_uuid, profileUuid)
       ),
     });
-
     if (!existingCollection) {
-      return { 
-        success: false, 
-        error: 'Shared collection not found or you do not have permission to update it' 
+      return {
+        success: false,
+        error: 'Shared collection not found or you do not have permission to update it'
       };
     }
-
-    // Prepare update data
-    const updateData: any = {
-      updated_at: new Date(),
-    };
-    
+    const updateData: any = { updated_at: new Date() };
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.content !== undefined) updateData.content = updates.content;
     if (updates.isPublic !== undefined) updateData.is_public = updates.isPublic;
-
-    // Update the shared collection
     const [updatedCollection] = await db.update(sharedCollectionsTable)
       .set(updateData)
       .where(eq(sharedCollectionsTable.uuid, sharedCollectionUuid))
       .returning();
-
-    // Log the action
-    await logAuditEvent({
-      profileUuid,
-      type: 'PROFILE',
-      action: 'UPDATE_SHARED_COLLECTION',
-      metadata: { collection_uuid: sharedCollectionUuid },
-    });
-
+    await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'UPDATE_SHARED_COLLECTION', metadata: { collection_uuid: sharedCollectionUuid } });
     // Revalidate paths
-    const profile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, profileUuid),
-    });
-    
-    if (profile?.username) {
-      revalidatePath(`/to/${profile.username}`);
+    const associatedUsername = await getUsernameForProfile(profileUuid);
+    if (associatedUsername) {
+      revalidatePath(`/to/${associatedUsername}`);
     }
-
-    return { 
-      success: true, 
-      sharedCollection: updatedCollection as unknown as SharedCollection 
+    return {
+      success: true,
+      sharedCollection: updatedCollection as unknown as SharedCollection
     };
   } catch (error) {
     console.error('Error updating shared collection:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while updating the shared collection' 
+    return {
+      success: false,
+      error: 'An error occurred while updating the shared collection'
     };
   }
 }
@@ -888,10 +902,9 @@ export async function getSharedCollection(sharedCollectionUuid: string): Promise
     const sharedCollection = await db.query.sharedCollectionsTable.findFirst({
       where: eq(sharedCollectionsTable.uuid, sharedCollectionUuid),
       with: {
-        profile: true,
+        profile: true, // Keep profile relation if needed elsewhere
       },
     });
-
     return sharedCollection as unknown as SharedCollection;
   } catch (error) {
     console.error('Error getting shared collection:', error);
@@ -910,48 +923,32 @@ export async function unshareCollection(
   sharedCollectionUuid: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if the shared collection exists and belongs to the profile
     const sharedCollection = await db.query.sharedCollectionsTable.findFirst({
       where: and(
         eq(sharedCollectionsTable.uuid, sharedCollectionUuid),
         eq(sharedCollectionsTable.profile_uuid, profileUuid)
       ),
     });
-
     if (!sharedCollection) {
-      return { 
-        success: false, 
-        error: 'Shared collection not found or you do not have permission to unshare it' 
+      return {
+        success: false,
+        error: 'Shared collection not found or you do not have permission to unshare it'
       };
     }
-
-    // Delete the shared collection
     await db.delete(sharedCollectionsTable)
       .where(eq(sharedCollectionsTable.uuid, sharedCollectionUuid));
-
-    // Log the action
-    await logAuditEvent({
-      profileUuid,
-      type: 'PROFILE',
-      action: 'UNSHARE_COLLECTION',
-      metadata: { shared_collection_uuid: sharedCollectionUuid },
-    });
-
+    await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'UNSHARE_COLLECTION', metadata: { shared_collection_uuid: sharedCollectionUuid } });
     // Revalidate paths
-    const profile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, profileUuid),
-    });
-    
-    if (profile?.username) {
-      revalidatePath(`/to/${profile.username}`);
+    const associatedUsername = await getUsernameForProfile(profileUuid);
+    if (associatedUsername) {
+      revalidatePath(`/to/${associatedUsername}`);
     }
-
     return { success: true };
   } catch (error) {
     console.error('Error unsharing collection:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while unsharing the collection' 
+    return {
+      success: false,
+      error: 'An error occurred while unsharing the collection'
     };
   }
 }
@@ -973,46 +970,26 @@ export async function shareEmbeddedChat(
   isPublic: boolean = true
 ): Promise<{ success: boolean; embeddedChat?: EmbeddedChat; error?: string }> {
   try {
-    // Create new embedded chat
     const [embeddedChat] = await db.insert(embeddedChatsTable)
-      .values({
-        profile_uuid: profileUuid,
-        title,
-        description,
-        settings, // Settings is a jsonb field
-        is_public: isPublic,
-        is_active: true,
-      })
+      .values({ profile_uuid: profileUuid, title, description, settings, is_public: isPublic, is_active: true })
       .returning();
-
-    // Log the action
-    await logAuditEvent({
-      profileUuid,
-      type: 'PROFILE',
-      action: 'SHARE_EMBEDDED_CHAT',
-      metadata: { title },
-    });
-
+    await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'SHARE_EMBEDDED_CHAT', metadata: { title } });
     // Revalidate paths
     if (isPublic) {
-      const profile = await db.query.profilesTable.findFirst({
-        where: eq(profilesTable.uuid, profileUuid),
-      });
-      
-      if (profile?.username) {
-        revalidatePath(`/to/${profile.username}`);
-      }
+       const associatedUsername = await getUsernameForProfile(profileUuid);
+       if (associatedUsername) {
+         revalidatePath(`/to/${associatedUsername}`);
+       }
     }
-
-    return { 
-      success: true, 
-      embeddedChat: embeddedChat as unknown as EmbeddedChat 
+    return {
+      success: true,
+      embeddedChat: embeddedChat as unknown as EmbeddedChat
     };
   } catch (error) {
     console.error('Error sharing embedded chat:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while sharing the chat' 
+    return {
+      success: false,
+      error: 'An error occurred while sharing the chat'
     };
   }
 }
@@ -1036,64 +1013,43 @@ export async function updateEmbeddedChat(
   }
 ): Promise<{ success: boolean; embeddedChat?: EmbeddedChat; error?: string }> {
   try {
-    // Check if the embedded chat exists and belongs to the profile
     const existingChat = await db.query.embeddedChatsTable.findFirst({
       where: and(
         eq(embeddedChatsTable.uuid, embeddedChatUuid),
         eq(embeddedChatsTable.profile_uuid, profileUuid)
       ),
     });
-
     if (!existingChat) {
-      return { 
-        success: false, 
-        error: 'Embedded chat not found or you do not have permission to update it' 
+      return {
+        success: false,
+        error: 'Embedded chat not found or you do not have permission to update it'
       };
     }
-
-    // Prepare update data
-    const updateData: any = {
-      updated_at: new Date(),
-    };
-    
+    const updateData: any = { updated_at: new Date() };
     if (updates.title !== undefined) updateData.title = updates.title;
     if (updates.description !== undefined) updateData.description = updates.description;
     if (updates.settings !== undefined) updateData.settings = updates.settings;
     if (updates.isPublic !== undefined) updateData.is_public = updates.isPublic;
     if (updates.isActive !== undefined) updateData.is_active = updates.isActive;
-
-    // Update the embedded chat
     const [updatedChat] = await db.update(embeddedChatsTable)
       .set(updateData)
       .where(eq(embeddedChatsTable.uuid, embeddedChatUuid))
       .returning();
-
-    // Log the action
-    await logAuditEvent({
-      profileUuid,
-      type: 'PROFILE',
-      action: 'UPDATE_EMBEDDED_CHAT',
-      metadata: { embedded_chat_uuid: embeddedChatUuid },
-    });
-
+    await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'UPDATE_EMBEDDED_CHAT', metadata: { embedded_chat_uuid: embeddedChatUuid } });
     // Revalidate paths
-    const profile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, profileUuid),
-    });
-    
-    if (profile?.username) {
-      revalidatePath(`/to/${profile.username}`);
+    const associatedUsername = await getUsernameForProfile(profileUuid);
+    if (associatedUsername) {
+      revalidatePath(`/to/${associatedUsername}`);
     }
-
-    return { 
-      success: true, 
-      embeddedChat: updatedChat as unknown as EmbeddedChat 
+    return {
+      success: true,
+      embeddedChat: updatedChat as unknown as EmbeddedChat
     };
   } catch (error) {
     console.error('Error updating embedded chat:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while updating the embedded chat' 
+    return {
+      success: false,
+      error: 'An error occurred while updating the embedded chat'
     };
   }
 }
@@ -1108,10 +1064,9 @@ export async function getEmbeddedChat(embeddedChatUuid: string): Promise<Embedde
     const embeddedChat = await db.query.embeddedChatsTable.findFirst({
       where: eq(embeddedChatsTable.uuid, embeddedChatUuid),
       with: {
-        profile: true,
+        profile: true, // Keep profile relation if needed elsewhere
       },
     });
-
     return embeddedChat as unknown as EmbeddedChat;
   } catch (error) {
     console.error('Error getting embedded chat:', error);
@@ -1130,48 +1085,32 @@ export async function deleteEmbeddedChat(
   embeddedChatUuid: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Check if the embedded chat exists and belongs to the profile
     const embeddedChat = await db.query.embeddedChatsTable.findFirst({
       where: and(
         eq(embeddedChatsTable.uuid, embeddedChatUuid),
         eq(embeddedChatsTable.profile_uuid, profileUuid)
       ),
     });
-
     if (!embeddedChat) {
-      return { 
-        success: false, 
-        error: 'Embedded chat not found or you do not have permission to delete it' 
+      return {
+        success: false,
+        error: 'Embedded chat not found or you do not have permission to delete it'
       };
     }
-
-    // Delete the embedded chat
     await db.delete(embeddedChatsTable)
       .where(eq(embeddedChatsTable.uuid, embeddedChatUuid));
-
-    // Log the action
-    await logAuditEvent({
-      profileUuid,
-      type: 'PROFILE',
-      action: 'DELETE_EMBEDDED_CHAT',
-      metadata: { embedded_chat_uuid: embeddedChatUuid },
-    });
-
+    await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'DELETE_EMBEDDED_CHAT', metadata: { embedded_chat_uuid: embeddedChatUuid } });
     // Revalidate paths
-    const profile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, profileUuid),
-    });
-    
-    if (profile?.username) {
-      revalidatePath(`/to/${profile.username}`);
+    const associatedUsername = await getUsernameForProfile(profileUuid);
+    if (associatedUsername) {
+      revalidatePath(`/to/${associatedUsername}`);
     }
-
     return { success: true };
   } catch (error) {
     console.error('Error deleting embedded chat:', error);
-    return { 
-      success: false, 
-      error: 'An error occurred while deleting the embedded chat' 
+    return {
+      success: false,
+      error: 'An error occurred while deleting the embedded chat'
     };
   }
 }
@@ -1193,17 +1132,15 @@ export async function isServerShared(
         eq(sharedMcpServersTable.server_uuid, serverUuid)
       )
     });
-
     if (sharedServer) {
-      return { 
-        isShared: true, 
-        server: sharedServer as unknown as SharedMcpServer 
+      return {
+        isShared: true,
+        server: sharedServer as unknown as SharedMcpServer
       };
     }
-
     return { isShared: false };
   } catch (error) {
     console.error('Error checking if server is shared:', error);
     return { isShared: false };
   }
-} 
+}

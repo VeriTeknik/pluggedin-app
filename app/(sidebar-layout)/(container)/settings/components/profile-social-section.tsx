@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { updateProfilePublicStatus } from '@/app/actions/profiles';
-import { reserveUsername, checkUsernameAvailability } from '@/app/actions/social';
+import { checkUsernameAvailability } from '@/app/actions/social';
+import { updateProfileUsername } from '@/app/actions/profile';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -97,7 +98,7 @@ export function ProfileSocialSection() {
     
     setIsUpdatingUsername(true);
     try {
-      const result = await reserveUsername(currentProfile.uuid, username);
+      const result = await updateProfileUsername(currentProfile.uuid, username);
       
       if (result.success) {
         toast({

@@ -1,25 +1,28 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
+import { updateProfileSocial } from '@/app/actions/social';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { updateProfileSocial } from '@/app/actions/social';
+import { Textarea } from '@/components/ui/textarea';
 import { Profile } from '@/types/profile';
+// Removed useAuth import
 
 interface SocialSettingsProps {
   profile: Profile;
+  // Removed username prop
 }
 
 export function SocialSettings({ profile }: SocialSettingsProps) {
   const router = useRouter();
+  // Removed session usage
   const [bio, setBio] = useState(profile.bio || '');
   const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
   const [isPublic, setIsPublic] = useState(profile.is_public || false);
@@ -131,13 +134,14 @@ export function SocialSettings({ profile }: SocialSettingsProps) {
         </form>
       </CardContent>
       <CardFooter className="border-t pt-6 text-sm text-muted-foreground flex flex-col items-start">
+        {/* Reverted to original logic - This needs user data passed down */}
         <p>
           Your public profile is available at:{' '}
           <span className="font-medium text-foreground">
-            plugged.in/to/{profile.username || 'your-username'}
+            plugged.in/to/{profile.username || 'your-username'} 
           </span>
         </p>
-        {!profile.username && (
+        {!profile.username && ( // Check profile username (which doesn't exist anymore)
           <p className="mt-2 text-amber-500">
             You need to set a username in the Username settings to make your profile accessible.
           </p>
@@ -145,4 +149,4 @@ export function SocialSettings({ profile }: SocialSettingsProps) {
       </CardFooter>
     </Card>
   );
-} 
+}

@@ -3,7 +3,7 @@
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { profilesTable, projectsTable } from '@/db/schema';
+import { profilesTable, projectsTable, users } from '@/db/schema';
 import { type Locale } from '@/i18n/config';
 import { getAuthSession } from '@/lib/auth';
 import { Profile } from '@/types/profile';
@@ -77,10 +77,26 @@ export async function getProfiles(currentProjectUuid: string) {
     throw new Error('Unauthorized - you do not have access to this project');
   }
   
-  return await db
-      .select()
-      .from(profilesTable)
-      .where(eq(profilesTable.project_uuid, currentProjectUuid));
+  // Get profiles with username from users table
+  const profiles = await db
+    .select({
+      uuid: profilesTable.uuid,
+      name: profilesTable.name,
+      project_uuid: profilesTable.project_uuid,
+      created_at: profilesTable.created_at,
+      language: profilesTable.language,
+      enabled_capabilities: profilesTable.enabled_capabilities,
+      bio: profilesTable.bio,
+      is_public: profilesTable.is_public,
+      avatar_url: profilesTable.avatar_url,
+      username: users.username
+    })
+    .from(profilesTable)
+    .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+    .innerJoin(users, eq(projectsTable.user_id, users.id))
+    .where(eq(profilesTable.project_uuid, currentProjectUuid));
+
+  return profiles;
 }
 
 export async function getProjectActiveProfile(currentProjectUuid: string) {

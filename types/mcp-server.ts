@@ -22,4 +22,7 @@ export interface McpServer {
   originalServerUuid?: string;
   sharedBy?: string;
   customInstructions?: any[] | string | any;
+  averageRating?: number;
+  ratingCount?: number;
+  installationCount?: number;
 }

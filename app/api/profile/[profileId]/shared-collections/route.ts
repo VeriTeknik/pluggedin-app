@@ -7,11 +7,11 @@ import { getAuthSession } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { profileId: string } }
+  context: { params: Promise<{ profileId: string }> }
 ) {
   try {
     const session = await getAuthSession();
-    const { profileId } = params;
+    const { profileId } = await context.params;
     
     if (!profileId) {
       return NextResponse.json(
@@ -31,14 +31,15 @@ export async function GET(
           columns: {
             uuid: true,
             name: true,
-            username: true,
+            bio: true,
+            is_public: true,
             avatar_url: true,
           }
         }
-      }
+      },
     });
     
-    // Sort by created_at in memory
+    // Sort by created_at in memory since we're having issues with the orderBy syntax
     const sortedCollections = [...sharedCollections].sort(
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );

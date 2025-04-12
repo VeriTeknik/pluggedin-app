@@ -1,21 +1,33 @@
 'use client';
 
-import { CheckCircle, Globe, Terminal, Trash2, XCircle } from 'lucide-react';
-import { RefreshCw, Share2 } from 'lucide-react'; // Import RefreshCw and Share2 icons
-import Link from 'next/link';
-import { useState } from 'react'; // Import useState
-import { useTranslation } from 'react-i18next';
+import { Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, Trash2, XCircle } from 'lucide-react'; // Sorted
+import Link from 'next/link'; // Sorted
+import { useRouter } from 'next/navigation'; // Sorted
+import { useEffect, useState } from 'react'; // Sorted
+import { useTranslation } from 'react-i18next'; // Sorted
 
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Import the action
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { ShareServerDialog } from '@/components/server/share-server-dialog'; // Import the ShareServerDialog
+import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Sorted
+import { isServerShared, unshareServer } from '@/app/actions/social'; // Sorted
+import { ShareServerDialog } from '@/components/server/share-server-dialog'; // Sorted
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'; // Corrected import path again
+import { Badge } from '@/components/ui/badge'; // Sorted
+import { Button } from '@/components/ui/button'; // Sorted
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'; // Sorted
+import { Switch } from '@/components/ui/switch'; // Sorted
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // Sorted
 import { McpServerStatus, McpServerType } from '@/db/schema';
-import { useProfiles } from '@/hooks/use-profiles'; // Import useProfiles
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useProfiles } from '@/hooks/use-profiles';
+import { useToast } from '@/hooks/use-toast';
 import { McpServer } from '@/types/mcp-server';
 
 interface ServerCardProps {
@@ -33,9 +45,39 @@ const getServerIcon = (server: McpServer) => {
 
 export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps) {
   const { t } = useTranslation();
-  const { currentProfile } = useProfiles(); // Get current profile
+  const router = useRouter();
+  const { currentProfile } = useProfiles();
   const { toast } = useToast();
   const [isDiscovering, setIsDiscovering] = useState(false);
+  const [isShared, setIsShared] = useState(false);
+  const [sharedUuid, setSharedUuid] = useState<string | null>(null);
+  const [isCheckingShareStatus, setIsCheckingShareStatus] = useState(true);
+  const [isUnsharing, setIsUnsharing] = useState(false);
+
+  // Check shared status on mount
+  useEffect(() => {
+    async function checkSharedStatus() {
+      if (!currentProfile?.uuid || !server.uuid) {
+        setIsCheckingShareStatus(false);
+        return;
+      }
+      setIsCheckingShareStatus(true);
+      try {
+        const result = await isServerShared(currentProfile.uuid, server.uuid);
+        setIsShared(result.isShared);
+        setSharedUuid(result.server?.uuid || null);
+      } catch (error) {
+        console.error("Failed to check share status", error);
+        // Assume not shared on error
+        setIsShared(false);
+        setSharedUuid(null);
+      } finally {
+        setIsCheckingShareStatus(false);
+      }
+    }
+    checkSharedStatus();
+  }, [currentProfile?.uuid, server.uuid]);
+
 
   const handleDiscover = async () => {
     if (!currentProfile?.uuid || !server.uuid) {
@@ -54,6 +96,27 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
       toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
     } finally {
       setIsDiscovering(false);
+    }
+  };
+
+  const handleUnshare = async () => {
+    if (!currentProfile?.uuid || !sharedUuid) return;
+
+    setIsUnsharing(true);
+    try {
+      const result = await unshareServer(currentProfile.uuid, sharedUuid);
+      if (result.success) {
+        toast({ title: t('common.success'), description: t('mcpServers.actions.unsharedSuccess') });
+        setIsShared(false);
+        setSharedUuid(null);
+        router.refresh(); // Refresh page to update UI potentially elsewhere
+      } else {
+        throw new Error(result.error || t('mcpServers.errors.unshareFailed'));
+      }
+    } catch (error: any) {
+      toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
+    } finally {
+      setIsUnsharing(false);
     }
   };
 
@@ -146,17 +209,55 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
             {t('mcpServers.actions.edit')}
           </Link>
         </Button>
-        
-        {/* Add Share Server Button */}
-        {currentProfile && (
-          <ShareServerDialog 
-            server={server} 
-            profileUuid={currentProfile.uuid}
-            variant="outline"
-            size="sm"
-          />
+
+        {/* Share / Unshare Button */}
+        {currentProfile && !isCheckingShareStatus && (
+          isShared ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-green-600 dark:text-green-500 dark:border-slate-700 dark:hover:bg-slate-800">
+                  <Check className="h-4 w-4 mr-2" />
+                  {t('mcpServers.actions.shared')}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('mcpServers.actions.unshareConfirmTitle')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('mcpServers.actions.unshareConfirmDesc')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleUnshare}
+                    disabled={isUnsharing}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isUnsharing ? t('common.processing') : t('mcpServers.actions.unshare')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : (
+            <ShareServerDialog
+              server={server}
+              profileUuid={currentProfile.uuid}
+              variant="outline"
+              size="sm"
+            >
+              {/* Custom trigger button */}
+              <Button variant="outline" size="sm" className="dark:border-slate-700 dark:hover:bg-slate-800">
+                 <Share2 className="h-4 w-4 mr-2" />
+                 {t('mcpServers.actions.share')}
+              </Button>
+            </ShareServerDialog>
+          )
         )}
-        
+        {isCheckingShareStatus && (
+           <Button variant="outline" size="sm" disabled>...</Button> // Loading indicator
+        )}
+
         {/* Discover Tools Button */}
         <Button
           variant="secondary"
