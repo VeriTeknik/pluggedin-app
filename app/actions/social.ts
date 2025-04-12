@@ -16,6 +16,8 @@ type User = typeof users.$inferSelect;
 // Define the type for the language enum values explicitly
 type LanguageCode = typeof languageEnum.enumValues[number]; 
 
+import { getAuthSession } from '@/lib/auth';
+
 // Validation schema for username
 const usernameSchema = z.string()
   .min(3, { message: 'Username must be at least 3 characters long' })
@@ -228,19 +230,36 @@ export async function updateUserSocial(
 /**
  * Get a user by username (formerly getProfileByUsername)
  * @param username The username to look up
- * @returns The user data if the user is public, otherwise null
+ * @returns The user data if the user exists and visibility rules allow access
  */
 export async function getUserByUsername(username: string): Promise<User | null> {
   try {
-    // Get the user directly
+    // Get the session to check if the requester is authorized
+    const session = await getAuthSession();
+    const currentUserId = session?.user?.id;
+
+    // First, get the user without any visibility filters
     const user = await db.query.users.findFirst({
-      where: and(
-        eq(users.username, username),
-        eq(users.is_public, true) // Only return public users
-      ),
+      where: eq(users.username, username),
     });
 
-    return user || null;
+    // If no user exists with this username, return null
+    if (!user) {
+      console.log(`No user found with username: ${username}`);
+      return null;
+    }
+
+    // If the user exists, check visibility rules:
+    // 1. The profile is public, OR
+    // 2. The requester is the profile owner, OR
+    // 3. The requester is authenticated
+    if (user.is_public || currentUserId === user.id || currentUserId) {
+      return user;
+    }
+
+    // If none of the visibility rules pass, return null
+    console.log(`User ${username} found but not accessible due to visibility rules`);
+    return null;
   } catch (error) {
     console.error('Error getting user by username:', error);
     return null;

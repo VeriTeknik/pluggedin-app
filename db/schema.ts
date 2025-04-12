@@ -236,7 +236,7 @@ export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
     references: [playgroundSettingsTable.profile_uuid],
   }),
   serverInstallations: many(serverInstallationsTable),
-  serverRatings: many(serverRatingsTable),
+  // serverRatings: many(serverRatingsTable), // Removed relation
   auditLogs: many(auditLogsTable),
   notifications: many(notificationsTable),
   logRetentionPolicies: many(logRetentionPoliciesTable),
@@ -353,7 +353,7 @@ export const mcpServersRelations = relations(mcpServersTable, ({ one, many }) =>
   }),
   resourceTemplates: many(resourceTemplatesTable),
   serverInstallations: many(serverInstallationsTable),
-  serverRatings: many(serverRatingsTable),
+  // serverRatings: many(serverRatingsTable), // Removed relation
   auditLogs: many(auditLogsTable),
   tools: many(toolsTable),
   resources: many(resourcesTable),
@@ -492,18 +492,18 @@ export const serverInstallationsRelations = relations(serverInstallationsTable, 
   }),
 }));
 
-export const serverRatingsTable = pgTable(
-  'server_ratings',
+// --- Server Reviews Table ---
+// Removed serverRatingsTable definition and relations
+export const serverReviews = pgTable(
+  'server_reviews',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
-    server_uuid: uuid('server_uuid')
-       .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
-     external_id: text('external_id'),
-     source: mcpServerSourceEnum('source').notNull(),
-     profile_uuid: uuid('profile_uuid')
-       .notNull()
-       .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
-    rating: integer('rating').notNull(),
+    server_source: mcpServerSourceEnum('server_source').notNull(),
+    server_external_id: text('server_external_id').notNull(),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    rating: integer('rating').notNull(), // Assuming 1-5 rating
     comment: text('comment'),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -512,32 +512,27 @@ export const serverRatingsTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => ({ // Use object syntax for indexes
-    serverRatingsServerUuidIdx: index('server_ratings_server_uuid_idx').on(table.server_uuid),
-    serverRatingsExternalIdSourceIdx: index('server_ratings_external_id_source_idx').on(table.external_id, table.source),
-    serverRatingsProfileUuidIdx: index('server_ratings_profile_uuid_idx').on(table.profile_uuid),
-    serverRatingsUniqueIdx: unique('server_ratings_unique_idx').on(
-      table.profile_uuid, 
-      table.server_uuid
-    ),
-    serverRatingsUniqueExternalIdx: unique('server_ratings_unique_external_idx').on(
-      table.profile_uuid, 
-      table.external_id,
-      table.source
+  (table) => ({
+    serverReviewsSourceExternalIdIdx: index('server_reviews_source_external_id_idx').on(table.server_source, table.server_external_id),
+    serverReviewsUserIdIdx: index('server_reviews_user_id_idx').on(table.user_id),
+    // Unique constraint per user per server (identified by source+external_id)
+    serverReviewsUniqueUserServerIdx: unique('server_reviews_unique_user_server_idx').on(
+      table.user_id,
+      table.server_source,
+      table.server_external_id
     ),
   })
 );
 
-export const serverRatingsRelations = relations(serverRatingsTable, ({ one }) => ({
-  mcpServer: one(mcpServersTable, {
-    fields: [serverRatingsTable.server_uuid],
-    references: [mcpServersTable.uuid],
+export const serverReviewsRelations = relations(serverReviews, ({ one }) => ({
+  user: one(users, {
+    fields: [serverReviews.user_id],
+    references: [users.id],
   }),
-  profile: one(profilesTable, {
-    fields: [serverRatingsTable.profile_uuid],
-    references: [profilesTable.uuid],
-  }),
+  // Optional: Add relation back to mcpServers if needed, though linking via source/external_id might be sufficient
+  // mcpServer: one(mcpServersTable, { ... }) // This would require adding a server_uuid FK potentially
 }));
+
 
 export const auditLogsTable = pgTable("audit_logs", {
   id: uuid("id").defaultRandom().primaryKey(),

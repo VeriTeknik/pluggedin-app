@@ -83,7 +83,7 @@ function SearchContent() {
     ? `/api/service/search?query=${encodeURIComponent(query)}&pageSize=${PAGE_SIZE}&offset=${offset}`
     : `/api/service/search?query=${encodeURIComponent(query)}&source=${source}&pageSize=${PAGE_SIZE}&offset=${offset}`;
 
-  const { data, error } = useSWR<PaginatedSearchResult>(
+  const { data, error, mutate } = useSWR<PaginatedSearchResult>(
     apiUrl,
     async (url: string) => {
       const res = await fetch(url);
@@ -399,20 +399,13 @@ function SearchContent() {
         )}
       </div>
 
-      {getSortedResults() && Object.keys(getSortedResults() || {}).length > 0 ? (
-        <CardGrid items={getSortedResults() || {}} installedServerMap={installedServerMap} />
-      ) : (
-        <div className="text-center py-8">
-          {error ? (
-            <p className="text-destructive">{t('search.error')}</p>
-          ) : data && Object.keys(data.results || {}).length === 0 ? (
-            <p>{t('search.noResults')}</p>
-          ) : data && getFilteredResults() && Object.keys(getFilteredResults() || {}).length === 0 ? (
-            <p>{t('search.noMatchingFilters')}</p>
-          ) : (
-            <p>{t('search.loading')}</p>
-          )}
-        </div>
+      {data?.results && (
+        <CardGrid
+          items={getSortedResults() || {}}
+          installedServerMap={installedServerMap}
+          currentUsername={currentProfile?.name}
+          onRefreshNeeded={() => mutate()}
+        />
       )}
 
       {data && data.total > 0 && (

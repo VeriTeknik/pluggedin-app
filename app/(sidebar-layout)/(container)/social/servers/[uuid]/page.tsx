@@ -7,8 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { importSharedServer } from '@/app/actions/mcp-servers';
-import { McpServerType } from '@/db/schema';
 
 export const metadata: Metadata = {
   title: 'Shared Server',

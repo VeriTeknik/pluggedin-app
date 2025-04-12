@@ -33,12 +33,14 @@ interface RateServerDialogProps {
     source?: McpServerSource;
     external_id?: string;
   };
+  onRatingSubmitted?: () => void;
 }
 
 export function RateServerDialog({
   open,
   onOpenChange,
   serverData,
+  onRatingSubmitted,
 }: RateServerDialogProps) {
   const { t: _t } = useTranslation();
   const { currentProfile } = useProfiles();
@@ -86,6 +88,7 @@ export function RateServerDialog({
         });
         onOpenChange(false);
         form.reset();
+        onRatingSubmitted?.();
       } else {
         toast({
           title: 'Error',
