@@ -1,22 +1,20 @@
 'use client'; // Mark as Client Component
 
 import { useMemo, useState } from 'react';
-import useSWR from 'swr';
 import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 
-// Keep only necessary type imports
-import { SharedCollection, EmbeddedChat } from '@/types/social'; 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SharedCollections } from './shared-collections';
-import { EmbeddedChats } from './embedded-chats';
-import { getFormattedSharedServersForUser } from '@/app/actions/shared-content';
-import { getMcpServers } from '@/app/actions/mcp-servers';
 import CardGrid from '@/app/(sidebar-layout)/(container)/search/components/CardGrid';
 import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
+import { getMcpServers } from '@/app/actions/mcp-servers';
+import { getFormattedSharedServersForUser } from '@/app/actions/shared-content';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 import { SearchIndex } from '@/types/search';
+
+// Keep only necessary type imports
 
 const PAGE_SIZE = 6;
 

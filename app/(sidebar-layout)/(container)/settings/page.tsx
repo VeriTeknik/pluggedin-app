@@ -1,9 +1,9 @@
+import { eq } from 'drizzle-orm';
 import { redirect } from 'next/navigation';
 
-import { getAuthSession } from '@/lib/auth';
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { getAuthSession } from '@/lib/auth';
 
 import { getConnectedAccounts } from './actions';
 import { SettingsForm } from './components/settings-form';

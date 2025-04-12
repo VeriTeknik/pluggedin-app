@@ -1,20 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Star, User } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { Star, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
+import { getReviewsForServer } from '@/app/actions/reviews'; // Assuming this action exists
+// Removed unused Badge import
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
-// Removed unused Badge import
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getReviewsForServer } from '@/app/actions/reviews'; // Assuming this action exists
 import { McpServerSource } from '@/db/schema';
 import { ServerReview } from '@/types/review'; // Assuming this type exists
 

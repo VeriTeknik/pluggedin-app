@@ -1,7 +1,7 @@
-import { addDays, format } from 'date-fns';
-import { and, desc, eq, ilike, or, gt, PgTableWithColumns } from 'drizzle-orm';
+
+import { addDays } from 'date-fns';
+import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { type } from 'node:os';
 
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { db } from '@/db';
