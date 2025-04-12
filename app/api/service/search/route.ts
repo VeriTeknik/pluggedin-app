@@ -439,8 +439,9 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
         console.error(`Failed to get metrics for community server ${serverKey}:`, metricsError);
       }
 
-      // Determine the display name for 'shared_by' - Prioritize profile username, then user email, then profile name
-      const sharedByName = profile?.username || user?.email || profile?.name || 'Unknown User'; 
+      // Determine the display name for 'shared_by' - Use username from users table first, then profile username, then fallback
+      const sharedByName = user?.username || profile?.username || 'Unknown User';
+      const profileUrl = user?.username ? `/to/${user.username}` : (profile?.username ? `/to/${profile.username}` : null);
 
       results[serverKey] = {
         name: sharedServer.title,
@@ -461,18 +462,16 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
         tags: template.tags,
         qualifiedName: `community:${sharedServer.uuid}`,
         updated_at: sharedServer.updated_at.toISOString(),
-        // Add shared_by and rating info
-        shared_by: sharedByName, // Use the determined name
+        // Add shared_by and profile URL
+        shared_by: sharedByName,
+        shared_by_profile_url: profileUrl,
         rating: rating,
-        ratingCount: ratingCount, // Use ratingCount to match metrics result
+        ratingCount: ratingCount
       };
     }
 
-    
     console.log(`Found ${Object.keys(results).length} community servers`);
     
-    // Enriching with metrics is now done inside the loop for community servers
-    // return await enrichWithMetrics(results); 
     return results; // Return directly as metrics are fetched inside
   } catch (error) {
     console.error('Community search error:', error);

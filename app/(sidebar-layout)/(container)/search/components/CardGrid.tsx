@@ -163,12 +163,25 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
   const renderCommunityInfo = (item: any) => {
     if (item.source !== McpServerSource.COMMUNITY) return null;
     
+    // Don't show if there's no shared_by
+    if (!item.shared_by) return null;
+    
     return (
       <div className="text-xs text-muted-foreground mt-2 border-t pt-2">
         {item.shared_by && (
           <div className="flex items-center mt-1">
             <Users className="h-3 w-3 mr-1" />
-            Shared by: {item.shared_by}
+            Shared by:{' '}
+            {item.shared_by_profile_url ? (
+              <Link 
+                href={item.shared_by_profile_url}
+                className="hover:underline ml-1"
+              >
+                {item.shared_by}
+              </Link>
+            ) : (
+              <span className="ml-1">{item.shared_by}</span>
+            )}
           </div>
         )}
         {item.ratingCount && item.ratingCount > 0 && (

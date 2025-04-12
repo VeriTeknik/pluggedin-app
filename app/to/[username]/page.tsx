@@ -35,31 +35,27 @@ interface ProfilePageProps {
 export async function generateMetadata({
   params,
 }: ProfilePageProps): Promise<Metadata> {
-  const username = params.username; // No need for await
-  const user = await getUserByUsername(username); // Use new function
+  const username = await Promise.resolve(params.username);
+  const user = await getUserByUsername(username);
 
   if (!user) {
     return {
-      title: 'User Not Found', // Updated title
+      title: 'User Not Found',
     };
   }
 
-  // Use user fields directly
-  const displayName = user.name || user.username || 'Anonymous';
-
   return {
-    title: `${displayName} (@${username}) - Plugged.in`,
-    description: user.bio || `View ${displayName}'s profile on Plugged.in`, // Use user.bio
+    title: `${user.username}'s Profile - PluggedIn`,
+    description: `View ${user.username}'s profile on PluggedIn`,
   };
 }
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
-  const username = params.username; // No need for await
-  const user = await getUserByUsername(username); // Use new function
+  const username = await Promise.resolve(params.username);
+  const user = await getUserByUsername(username);
 
   if (!user) {
-    // User not found or not public
-    return notFound(); 
+    notFound();
   }
 
   // Get the current user session

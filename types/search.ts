@@ -39,6 +39,7 @@ export interface McpIndex {
   ratingCount?: number; // Number of ratings (Changed from rating_count)
   installation_count?: number; // Number of installations
   shared_by?: string | null; // Username or name of the profile that shared the server
+  shared_by_profile_url?: string | null; // URL to the profile of the user who shared the server
 }
 
 export interface SearchIndex {

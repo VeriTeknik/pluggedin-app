@@ -203,16 +203,20 @@ export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
                 Public Profile
               </Label>
               <p className="text-sm text-muted-foreground">
-                {isPublic
-                  ? 'Your profile and shared content will be visible to everyone'
-                  : 'Your profile will only be visible to you'}
+                {!username ? (
+                  'Set a username first to make your profile public'
+                ) : isPublic ? (
+                  'Your profile and shared content will be visible to everyone'
+                ) : (
+                  'Your profile will only be visible to you'
+                )}
               </p>
             </div>
             <Switch
               id="public-profile"
               checked={isPublic}
               onCheckedChange={handleTogglePublic}
-              disabled={isUpdatingPublic}
+              disabled={isUpdatingPublic || !username}
             />
           </div>
 
