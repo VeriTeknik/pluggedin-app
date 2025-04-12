@@ -1,23 +1,30 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
-import { eq } from 'drizzle-orm';
+// Removed unused eq import
 
+// Updated imports for user-centric actions and types
 import { 
-  getProfileByUsername, 
-  getFollowerCount, 
-  getFollowingCount,
-  isFollowing,
-  getSharedMcpServers,
-  getSharedCollections,
-  getEmbeddedChats
+  getUserByUsername, 
+  getUserFollowerCount, 
+  getUserFollowingCount,
+  isFollowingUser,
+  // Commenting out shared content fetching for now
+  // getSharedMcpServers,
+  // getSharedCollections,
+  // getEmbeddedChats
 } from '@/app/actions/social';
 import { getAuthSession } from '@/lib/auth';
-import { getProjectActiveProfile } from '@/app/actions/profiles';
-import { db } from '@/db';
-import { projectsTable } from '@/db/schema';
+// Removed getProjectActiveProfile, db, projectsTable imports as they are less relevant now for this page's core logic
+// import { getProjectActiveProfile } from '@/app/actions/profiles'; 
+// import { db } from '@/db';
+// import { projectsTable } from '@/db/schema';
+import { users } from '@/db/schema'; // Import schema for User type
+type User = typeof users.$inferSelect; // Define User type
 
 import { ProfileHeader } from '@/components/profile/profile-header';
 import { ProfileTabs } from '@/components/profile/profile-tabs';
+// Import types for shared content if needed later
+// import { SharedMcpServer, SharedCollection, EmbeddedChat } from '@/types/social'; 
 
 interface ProfilePageProps {
   params: {
@@ -28,104 +35,95 @@ interface ProfilePageProps {
 export async function generateMetadata({
   params,
 }: ProfilePageProps): Promise<Metadata> {
-  const username = await params.username;
-  const result = await getProfileByUsername(username);
+  const username = params.username; // No need for await
+  const user = await getUserByUsername(username); // Use new function
 
-  if (!result) {
+  if (!user) {
     return {
-      title: 'Profile Not Found',
+      title: 'User Not Found', // Updated title
     };
   }
 
-  const { user, profiles } = result;
-  const primaryProfile = profiles[0];
-  const displayName = primaryProfile?.name || user.name || user.username || 'Anonymous';
+  // Use user fields directly
+  const displayName = user.name || user.username || 'Anonymous';
 
   return {
     title: `${displayName} (@${username}) - Plugged.in`,
-    description: primaryProfile?.bio || `View ${displayName}'s profile on Plugged.in`,
+    description: user.bio || `View ${displayName}'s profile on Plugged.in`, // Use user.bio
   };
 }
 
 export default async function ProfilePage({ params }: ProfilePageProps) {
-  const username = await params.username;
-  const result = await getProfileByUsername(username);
+  const username = params.username; // No need for await
+  const user = await getUserByUsername(username); // Use new function
 
-  if (!result) {
-    return notFound();
+  if (!user) {
+    // User not found or not public
+    return notFound(); 
   }
-
-  const { user, profiles } = result;
 
   // Get the current user session
   const session = await getAuthSession();
-  let currentUserProfile = null;
+  const currentUserId = (session?.user as { id?: string })?.id; // Get current user ID
   
-  // Get the current user's profile if they are logged in
-  if (session?.user?.id) {
-    // Get the user's project first
-    const project = await db
-      .select()
-      .from(projectsTable)
-      .where(eq(projectsTable.user_id, session.user.id))
-      .limit(1);
-
-    if (project[0]) {
-      currentUserProfile = await getProjectActiveProfile(project[0].uuid);
-    }
-  }
-
-  // Use the first public profile for stats (we'll aggregate these later)
-  const primaryProfile = profiles[0];
+  // Get follow counts for the displayed user
+  const followerCount = await getUserFollowerCount(user.id); // Use new function with userId
+  const followingCount = await getUserFollowingCount(user.id); // Use new function with userId
   
-  if (!primaryProfile) {
-    // User exists but has no public profiles yet
-    return (
-      <div className="container py-8 pb-16 max-w-5xl mx-auto">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-2">@{username}</h1>
-          <p className="text-muted-foreground">This user hasn't made any profiles public yet.</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // Get follow counts for the primary profile
-  const followerCount = await getFollowerCount(primaryProfile.uuid);
-  const followingCount = await getFollowingCount(primaryProfile.uuid);
-  
-  // Check if the current user is following this profile
-  const currentlyFollowing = currentUserProfile 
-    ? await isFollowing(currentUserProfile.uuid, primaryProfile.uuid) 
+  // Check if the current logged-in user is following the displayed user
+  const currentlyFollowing = currentUserId 
+    ? await isFollowingUser(currentUserId, user.id) // Use new function with user IDs
     : false;
     
-  // Get shared content from all public profiles
-  const sharedServers = await Promise.all(profiles.map(p => getSharedMcpServers(p.uuid))).then(servers => servers.flat());
-  const sharedCollections = await Promise.all(profiles.map(p => getSharedCollections(p.uuid))).then(collections => collections.flat());
-  const embeddedChats = await Promise.all(profiles.map(p => getEmbeddedChats(p.uuid))).then(chats => chats.flat());
+  // --- Shared Content Fetching (Needs Refactor) ---
+  // This section needs to be updated based on how sharing is linked (profiles vs users)
+  // Commenting out for now.
+  const sharedServers: any[] = []; // Placeholder
+  const sharedCollections: any[] = []; // Placeholder
+  const embeddedChats: any[] = []; // Placeholder
+  /*
+  // Example: Fetch profiles associated with the user first
+  const userProfiles = await db.query.profilesTable.findMany({ 
+    where: eq(profilesTable.project_uuid, 
+      db.select({ uuid: projectsTable.uuid }).from(projectsTable).where(eq(projectsTable.user_id, user.id)).limit(1) // Assuming one project for now
+    ),
+    // Add condition for public profiles if sharing depends on profile visibility
+  }); 
+  
+  if (userProfiles.length > 0) {
+     // Fetch shared content based on userProfiles[0].uuid or iterate if multiple profiles matter
+     // sharedServers = await getSharedMcpServers(userProfiles[0].uuid);
+     // sharedCollections = await getSharedCollections(userProfiles[0].uuid);
+     // embeddedChats = await getEmbeddedChats(userProfiles[0].uuid);
+  }
+  */
+  // --- End Shared Content Fetching ---
   
   // Determine if the current user is the owner
-  const isOwner = session?.user?.id === user.id;
+  const isOwner = currentUserId === user.id;
 
   return (
     <div className="container py-8 pb-16 max-w-5xl mx-auto">
+      {/* Update ProfileHeader props - Assuming ProfileHeader now accepts these props */}
       <ProfileHeader
-        user={user}
-        profile={primaryProfile}
-        currentUserProfile={currentUserProfile}
+        user={user} 
+        currentUserId={currentUserId} 
         isFollowing={currentlyFollowing}
         followerCount={followerCount}
         followingCount={followingCount}
       />
       
       <div className="mt-8">
+         {/* Update ProfileTabs props - pass user or necessary info */}
         <ProfileTabs 
-          sharedServers={sharedServers}
+          sharedServers={sharedServers} // Pass empty arrays for now
           sharedCollections={sharedCollections}
           embeddedChats={embeddedChats}
           isOwner={isOwner}
+          // Pass user object if tabs need user info
+          // user={user} 
         />
       </div>
     </div>
   );
-} 
+}

@@ -1,12 +1,12 @@
 'use client';
 
-import { User, Globe, Check, X } from 'lucide-react';
+import { User as UserIcon, Globe, Check, X } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { updateProfilePublicStatus } from '@/app/actions/profiles';
-import { checkUsernameAvailability } from '@/app/actions/social';
-import { updateProfileUsername } from '@/app/actions/profile';
+import { checkUsernameAvailability, reserveUsername, updateUserSocial } from '@/app/actions/social';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -16,44 +16,53 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { useProfiles } from '@/hooks/use-profiles';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
+import { users } from '@/db/schema';
 
-export function ProfileSocialSection() {
+type User = typeof users.$inferSelect;
+
+interface ProfileSocialSectionProps {
+  user: User;
+}
+
+export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
   const { t } = useTranslation();
-  const { currentProfile, mutateProfiles } = useProfiles();
-  const [isPublic, setIsPublic] = useState(currentProfile?.is_public || false);
-  const [username, setUsername] = useState(currentProfile?.username || '');
+  const router = useRouter();
+  const { toast } = useToast();
+
+  // State initialized from the user prop
+  const [isPublic, setIsPublic] = useState(user?.is_public || false);
+  const [username, setUsername] = useState(user?.username || '');
+  const [initialUsername] = useState(user?.username || ''); // Store initial username for comparison
   const [usernameAvailable, setUsernameAvailable] = useState(false);
   const [usernameMessage, setUsernameMessage] = useState('');
   const [isUpdatingPublic, setIsUpdatingPublic] = useState(false);
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  const { toast } = useToast();
 
+  // Update state if the user prop changes (e.g., after parent refresh)
   useEffect(() => {
-    if (!currentProfile) return;
-    setIsPublic(currentProfile?.is_public || false);
-    setUsername(currentProfile?.username || '');
-  }, [currentProfile]);
-
-  if (!currentProfile) {
-    return <span>{t('settings.profile.loading', 'Loading Profile...')}</span>;
-  }
+    setIsPublic(user?.is_public || false);
+    setUsername(user?.username || '');
+  }, [user]);
 
   const handleTogglePublic = async (value: boolean) => {
     setIsUpdatingPublic(true);
     try {
-      await updateProfilePublicStatus(currentProfile.uuid, value);
-      setIsPublic(value);
-      await mutateProfiles();
-      toast({
-        title: t('common.success'),
-        description: t('settings.profile.publicStatusSuccess', 'Profile visibility updated successfully'),
-      });
+      // Call the correct action with userId and is_public update
+      const result = await updateUserSocial(user.id, { is_public: value });
+      if (result.success) {
+        setIsPublic(value);
+        toast({
+          title: t('common.success'),
+          description: t('settings.profile.publicStatusSuccess', 'Profile visibility updated successfully'),
+        });
+        router.refresh(); // Refresh page data
+      } else {
+        throw new Error(result.error || 'Failed to update visibility');
+      }
     } catch (error) {
       toast({
         title: t('common.error'),
@@ -63,25 +72,26 @@ export function ProfileSocialSection() {
             : t('settings.profile.publicStatusError', 'Failed to update profile visibility'),
         variant: 'destructive',
       });
-      // Reset the toggle if it fails
-      setIsPublic(currentProfile.is_public || false);
+      // Reset the toggle if it fails based on original prop value
+      setIsPublic(user?.is_public || false);
     } finally {
       setIsUpdatingPublic(false);
     }
   };
 
   const handleUsernameChange = async (value: string) => {
-    setUsername(value);
-    
-    if (!value.trim() || value === currentProfile.username) {
-      setUsernameAvailable(false);
-      setUsernameMessage('');
-      return;
+    const trimmedValue = value.trim();
+    setUsername(trimmedValue);
+    setUsernameAvailable(false); // Reset availability on change
+    setUsernameMessage('');
+
+    if (!trimmedValue || trimmedValue === initialUsername) {
+      return; // No need to check if empty or unchanged
     }
-    
+
     setIsCheckingUsername(true);
     try {
-      const result = await checkUsernameAvailability(value);
+      const result = await checkUsernameAvailability(trimmedValue);
       setUsernameAvailable(result.available);
       setUsernameMessage(result.message || '');
     } catch (error) {
@@ -94,18 +104,19 @@ export function ProfileSocialSection() {
   };
 
   const handleSetUsername = async () => {
-    if (!username.trim() || !usernameAvailable) return;
-    
+    const trimmedUsername = username.trim();
+    if (!trimmedUsername || !usernameAvailable || trimmedUsername === initialUsername) return;
+
     setIsUpdatingUsername(true);
     try {
-      const result = await updateProfileUsername(currentProfile.uuid, username);
-      
+      // Call the correct action with userId and the new username
+      const result = await reserveUsername(user.id, trimmedUsername);
       if (result.success) {
         toast({
           title: t('common.success'),
           description: t('settings.profile.usernameSuccess', 'Username updated successfully'),
         });
-        await mutateProfiles();
+        router.refresh(); // Refresh page data
       } else {
         throw new Error(result.error || 'Failed to update username');
       }
@@ -118,8 +129,10 @@ export function ProfileSocialSection() {
             : t('settings.profile.usernameError', 'Failed to update username'),
         variant: 'destructive',
       });
-      // Reset to current username
-      setUsername(currentProfile.username || '');
+      // Reset username state to the initial value from props if save fails
+      setUsername(initialUsername);
+      setUsernameAvailable(false);
+      setUsernameMessage('');
     } finally {
       setIsUpdatingUsername(false);
     }
@@ -129,7 +142,7 @@ export function ProfileSocialSection() {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <User className="h-5 w-5" />
+          <UserIcon className="h-5 w-5" />
           {t('settings.profile.socialTitle', 'Social Profile')}
         </CardTitle>
         <CardDescription>
@@ -149,31 +162,35 @@ export function ProfileSocialSection() {
                   value={username}
                   onChange={(e) => handleUsernameChange(e.target.value)}
                   className={`pr-10 ${
-                    usernameAvailable && username.trim() !== currentProfile.username
+                    usernameAvailable && username.trim() !== initialUsername
                       ? 'border-green-500 focus-visible:ring-green-500'
                       : ''
                   }`}
-                  disabled={isUpdatingUsername}
+                  disabled={isUpdatingUsername || isCheckingUsername}
                 />
-                {usernameAvailable && username.trim() !== currentProfile.username && (
+                {usernameAvailable && username.trim() !== initialUsername && (
                   <Check className="absolute right-3 top-2.5 h-5 w-5 text-green-500" />
+                )}
+                 {!usernameAvailable && usernameMessage && username.trim() !== initialUsername && (
+                  <X className="absolute right-3 top-2.5 h-5 w-5 text-red-500" />
                 )}
               </div>
               <Button
                 onClick={handleSetUsername}
-                disabled={!usernameAvailable || username.trim() === currentProfile.username || isUpdatingUsername}
+                disabled={!usernameAvailable || username.trim() === initialUsername || isUpdatingUsername || isCheckingUsername}
               >
-                {isUpdatingUsername ? 'Saving...' : 'Save'}
+                {isUpdatingUsername ? t('common.saving') : t('common.save')}
               </Button>
             </div>
-            <div className="h-5">
-              {usernameMessage && (
-                <p className={`text-xs ${usernameAvailable ? 'text-green-500' : 'text-red-500'}`}>
+            <div className="h-5 text-xs">
+              {isCheckingUsername ? (
+                 <span className="text-muted-foreground">Checking availability...</span>
+              ) : usernameMessage ? (
+                <span className={usernameAvailable ? 'text-green-500' : 'text-red-500'}>
                   {usernameMessage}
-                </p>
-              )}
-              {isCheckingUsername && (
-                <p className="text-xs text-muted-foreground">Checking availability...</p>
+                </span>
+              ) : (
+                <span>&nbsp;</span> // Placeholder to maintain height
               )}
             </div>
           </div>
@@ -202,14 +219,16 @@ export function ProfileSocialSection() {
           {/* Profile URL */}
           <div className="pt-4">
             <p className="text-sm font-medium">Your Profile URL</p>
-            {currentProfile.username ? (
+            {user.username ? (
               <div className="mt-2 flex items-center gap-2">
-                <Badge variant="outline" className="font-mono text-xs px-3 py-1 bg-primary/5">
-                  plugged.in/to/{currentProfile.username}
+                <Badge className="font-mono text-xs px-3 py-1 bg-primary/5">
+                  plugged.in/to/{user.username}
                 </Badge>
-                <Badge variant="secondary" className="text-xs">
-                  <Check className="h-3 w-3 mr-1" /> Active
-                </Badge>
+                {isPublic && (
+                  <Badge className="text-xs">
+                    <Check className="h-3 w-3 mr-1" /> Public
+                  </Badge>
+                )}
               </div>
             ) : (
               <div className="mt-2 p-3 bg-amber-100 dark:bg-amber-950/30 rounded-md text-sm text-amber-800 dark:text-amber-300">
@@ -221,4 +240,4 @@ export function ProfileSocialSection() {
       </CardContent>
     </Card>
   );
-} 
+}

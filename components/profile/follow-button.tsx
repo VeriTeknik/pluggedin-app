@@ -1,22 +1,24 @@
 'use client';
 
+// Re-sorted imports
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { UserPlus, UserMinus, Loader } from 'lucide-react';
+import { Loader, UserMinus, UserPlus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { followProfile, unfollowProfile } from '@/app/actions/social';
+import { followUser, unfollowUser } from '@/app/actions/social';
 
-interface FollowButtonProps {
-  followerUuid: string;
-  followedUuid: string;
+
+export interface FollowButtonProps { // Export interface
+  followerUserId: string; // Changed from followerUuid
+  followedUserId: string; // Changed from followedUuid
   isFollowing: boolean;
   className?: string;
 }
 
 export function FollowButton({
-  followerUuid,
-  followedUuid,
+  followerUserId, // Changed from followerUuid
+  followedUserId, // Changed from followedUuid
   isFollowing,
   className = '',
 }: FollowButtonProps) {
@@ -31,9 +33,10 @@ export function FollowButton({
     setError(null);
 
     try {
+      // Use new user-centric functions
       const result = followState
-        ? await unfollowProfile(followerUuid, followedUuid)
-        : await followProfile(followerUuid, followedUuid);
+        ? await unfollowUser(followerUserId, followedUserId) 
+        : await followUser(followerUserId, followedUserId);
 
       if (result.success) {
         setFollowState(!followState);
@@ -76,4 +79,4 @@ export function FollowButton({
       {error && <p className="text-sm text-red-500 mt-1">{error}</p>}
     </div>
   );
-} 
+}

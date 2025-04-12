@@ -1,19 +1,18 @@
-import { Profile } from './profile';
+// Removed unused Profile import
 import { McpServer } from './mcp-server';
 
-export interface Follower {
+// Import User type if needed, or assume it's globally available/imported where used
+// import { users } from '@/db/schema'; 
+// type User = typeof users.$inferSelect;
+
+export interface Follower { // Represents a row in the followersTable
   uuid: string;
-  follower_profile_uuid: string;
-  followed_profile_uuid: string;
+  follower_user_id: string; // Changed from follower_profile_uuid
+  followed_user_id: string; // Changed from followed_profile_uuid
   created_at: Date;
-  follower_profile?: {
-    username: string | null;
-    name: string;
-  };
-  followed_profile?: {
-    username: string | null;
-    name: string;
-  };
+  // Optional: Include related user data if needed by components using this type
+  // followerUser?: User; 
+  // followedUser?: User;
 }
 
 export interface SharedMcpServer {
@@ -56,4 +55,4 @@ export interface EmbeddedChat {
 export interface UsernameAvailability {
   available: boolean;
   message?: string;
-} 
+}

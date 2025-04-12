@@ -4,7 +4,7 @@ import { Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { updateProfileSocial } from '@/app/actions/social';
+import { updateUserSocial } from '@/app/actions/social'; // Changed import
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,20 +12,20 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Profile } from '@/types/profile';
-// Removed useAuth import
+// Assuming User type is defined elsewhere or we import it from schema
+import { users } from '@/db/schema'; // Import schema to get User type
+type User = typeof users.$inferSelect;
 
 interface SocialSettingsProps {
-  profile: Profile;
-  // Removed username prop
+  user: User; // Changed prop from profile to user
 }
 
-export function SocialSettings({ profile }: SocialSettingsProps) {
+export function SocialSettings({ user }: SocialSettingsProps) { // Destructure user
   const router = useRouter();
-  // Removed session usage
-  const [bio, setBio] = useState(profile.bio || '');
-  const [avatarUrl, setAvatarUrl] = useState(profile.avatar_url || '');
-  const [isPublic, setIsPublic] = useState(profile.is_public || false);
+  // Initialize state from user prop
+  const [bio, setBio] = useState(user.bio || '');
+  const [avatarUrl, setAvatarUrl] = useState(user.avatar_url || ''); // Use user.avatar_url
+  const [isPublic, setIsPublic] = useState(user.is_public || false); // Use user.is_public
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -37,17 +37,19 @@ export function SocialSettings({ profile }: SocialSettingsProps) {
     setSuccess(null);
 
     try {
-      const result = await updateProfileSocial(profile.uuid, {
+      // Call updateUserSocial with user.id
+      const result = await updateUserSocial(user.id, { 
         bio,
         avatar_url: avatarUrl,
         is_public: isPublic,
+        // Assuming language setting might be handled elsewhere or added here later
       });
 
       if (result.success) {
-        setSuccess('Profile social settings updated successfully!');
+        setSuccess('User social settings updated successfully!'); // Updated success message
         router.refresh();
       } else {
-        setError(result.error || 'Failed to update profile social settings');
+        setError(result.error || 'Failed to update user social settings'); // Updated error message
       }
     } catch (err) {
       setError('An unexpected error occurred');
@@ -134,14 +136,14 @@ export function SocialSettings({ profile }: SocialSettingsProps) {
         </form>
       </CardContent>
       <CardFooter className="border-t pt-6 text-sm text-muted-foreground flex flex-col items-start">
-        {/* Reverted to original logic - This needs user data passed down */}
+        {/* Use user.username */}
         <p>
           Your public profile is available at:{' '}
           <span className="font-medium text-foreground">
-            plugged.in/to/{profile.username || 'your-username'} 
+            plugged.in/to/{user.username || 'your-username'} 
           </span>
         </p>
-        {!profile.username && ( // Check profile username (which doesn't exist anymore)
+        {!user.username && ( // Check user.username
           <p className="mt-2 text-amber-500">
             You need to set a username in the Username settings to make your profile accessible.
           </p>

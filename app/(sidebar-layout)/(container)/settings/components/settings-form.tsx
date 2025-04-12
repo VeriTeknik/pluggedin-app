@@ -46,15 +46,11 @@ import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
 import { ProfileSocialSection } from './profile-social-section';
+import { users } from '@/db/schema';
+type User = typeof users.$inferSelect;
 
 interface SettingsFormProps {
-  user: {
-    id: string;
-    name: string;
-    email: string;
-    image?: string;
-    emailVerified?: Date | null;
-  };
+  user: User;
   connectedAccounts: string[];
 }
 
@@ -346,8 +342,8 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         </CardContent>
       </Card>
 
-      {/* Social Profile Section */}
-      <ProfileSocialSection />
+      {/* Social Profile Section - Pass user prop */}
+      <ProfileSocialSection user={user} /> 
 
       {/* Connected Accounts */}
       <Card>
@@ -375,7 +371,10 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
             </div>
             {connectedAccounts.includes('github') ? (
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
+                {/* Re-added children */}
+                <Badge variant="secondary" className="shrink-0"> 
+                  {t('settings.connectedAccounts.connected', 'Connected')}
+                </Badge>
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -412,7 +411,10 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
             </div>
             {connectedAccounts.includes('google') ? (
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
+                 {/* Re-added children */}
+                <Badge variant="secondary" className="shrink-0">
+                  {t('settings.connectedAccounts.connected', 'Connected')}
+                </Badge>
                 <Button 
                   variant="outline" 
                   size="sm"
@@ -446,7 +448,10 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
             </div>
             {connectedAccounts.includes('twitter') ? (
               <div className="flex items-center gap-2">
-                <Badge variant="secondary" className="shrink-0">{t('settings.connectedAccounts.connected', 'Connected')}</Badge>
+                 {/* Re-added children */}
+                <Badge variant="secondary" className="shrink-0">
+                  {t('settings.connectedAccounts.connected', 'Connected')}
+                </Badge>
                 <Button 
                   variant="outline" 
                   size="sm"

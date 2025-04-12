@@ -5,9 +5,6 @@ export interface Profile {
   name: string;
   created_at: Date;
   project_uuid: string;
-  language: Locale | null;
-  username?: string | null;
-  bio?: string | null;
-  is_public?: boolean;
-  avatar_url?: string | null;
+  language: Locale | null; // Language might still be profile-specific? Re-check schema.ts if needed. Let's keep it for now based on schema.ts edit.
+  // Removed user-specific social fields
 }

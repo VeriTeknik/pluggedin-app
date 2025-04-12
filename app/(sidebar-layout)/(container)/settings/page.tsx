@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
 
 import { getAuthSession } from '@/lib/auth';
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 import { getConnectedAccounts } from './actions';
 import { SettingsForm } from './components/settings-form';
@@ -12,6 +15,15 @@ export default async function SettingsPage() {
     redirect('/login');
   }
 
+  // Fetch complete user data including social fields
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, session.user.id),
+  });
+
+  if (!user) {
+    redirect('/login');
+  }
+
   // Fetch connected account providers
   const connectedAccounts = await getConnectedAccounts(session.user.id);
 
@@ -20,13 +32,7 @@ export default async function SettingsPage() {
       <div className="max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold mb-8">Settings</h1>
         <SettingsForm 
-          user={{
-            id: session.user.id,
-            name: session.user.name,
-            email: session.user.email,
-            image: session.user.image,
-            emailVerified: session.user.emailVerified,
-          }}
+          user={user}
           connectedAccounts={connectedAccounts}
         />
       </div>

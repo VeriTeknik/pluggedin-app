@@ -101,6 +101,11 @@ export const users = pgTable('users', {
     .notNull()
     .defaultNow(),
   username: text('username').unique(),
+  // Add social fields to users table
+  bio: text('bio'),
+  is_public: boolean('is_public').default(false).notNull(),
+  language: languageEnum('language').default('en'),
+  avatar_url: text('avatar_url'),
 },
 (table) => ({
   usersUsernameIdx: index('users_username_idx').on(table.username),
@@ -194,15 +199,12 @@ export const profilesTable = pgTable(
     language: languageEnum('language').default('en'),
     enabled_capabilities: profileCapabilityEnum('enabled_capabilities')
       .array()
-      .notNull()
-      .default(sql`'{}'::profile_capability[]`),
-    // username removed from here
-    bio: text('bio'),
-    is_public: boolean('is_public').default(false).notNull(),
-    avatar_url: text('avatar_url'),
-  },
-  (table) => ({ // Use object syntax for indexes
-    profilesProjectUuidIdx: index('profiles_project_uuid_idx').on(table.project_uuid),
+    .notNull()
+    .default(sql`'{}'::profile_capability[]`),
+  // Removed bio, is_public, avatar_url, language from profiles
+},
+(table) => ({ // Use object syntax for indexes
+  profilesProjectUuidIdx: index('profiles_project_uuid_idx').on(table.project_uuid),
   })
 );
 
@@ -238,11 +240,10 @@ export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
   auditLogs: many(auditLogsTable),
   notifications: many(notificationsTable),
   logRetentionPolicies: many(logRetentionPoliciesTable),
-  followers: many(followersTable, { relationName: 'followers' }), // Added social relations here
-  following: many(followersTable, { relationName: 'following' }), // Added social relations here
-  sharedMcpServers: many(sharedMcpServersTable), // Added social relations here
-  sharedCollections: many(sharedCollectionsTable), // Added social relations here
-  embeddedChats: many(embeddedChatsTable), // Added social relations here
+  // Removed followers/following relations from profiles
+  sharedMcpServers: many(sharedMcpServersTable),
+  sharedCollections: many(sharedCollectionsTable),
+  embeddedChats: many(embeddedChatsTable),
 }));
 
 
@@ -811,6 +812,9 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   projects: many(projectsTable),
   codes: many(codesTable),
+  // Add followers/following relations to users
+  followers: many(followersTable, { relationName: 'followers' }), 
+  following: many(followersTable, { relationName: 'following' }), 
 }));
 
 export const mcpServersPromptsRelations = relations(mcpServersTable, ({ one, many }) => ({
@@ -842,36 +846,38 @@ export const followersTable = pgTable(
   'followers',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
-    follower_profile_uuid: uuid('follower_profile_uuid')
+    // Change to reference users table
+    follower_user_id: text('follower_user_id') 
       .notNull()
-      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
-    followed_profile_uuid: uuid('followed_profile_uuid')
+      .references(() => users.id, { onDelete: 'cascade' }),
+    followed_user_id: text('followed_user_id')
       .notNull()
-      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+      .references(() => users.id, { onDelete: 'cascade' }),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (table) => ({ // Use object syntax for indexes
-    followersFollowerProfileUuidIdx: index('followers_follower_profile_uuid_idx').on(table.follower_profile_uuid),
-    followersFollowedProfileUuidIdx: index('followers_followed_profile_uuid_idx').on(table.followed_profile_uuid),
-    followersUniqueRelationshipIdx: unique('followers_unique_relationship_idx').on(
-      table.follower_profile_uuid,
-      table.followed_profile_uuid
+  (table) => ({ // Use object syntax for indexes and update names
+    followersFollowerUserIdIdx: index('followers_follower_user_id_idx').on(table.follower_user_id),
+    followersFollowedUserIdIdx: index('followers_followed_user_id_idx').on(table.followed_user_id),
+    followersUniqueUserRelationshipIdx: unique('followers_unique_user_relationship_idx').on(
+      table.follower_user_id,
+      table.followed_user_id
     ),
   })
 );
 
 export const followersRelations = relations(followersTable, ({ one }) => ({
-  follower: one(profilesTable, {
-    fields: [followersTable.follower_profile_uuid],
-    references: [profilesTable.uuid],
-    relationName: 'following'
+  // Update relations to point to users table
+  followerUser: one(users, { 
+    fields: [followersTable.follower_user_id],
+    references: [users.id],
+    relationName: 'following' // User is following others
   }),
-  followed: one(profilesTable, {
-    fields: [followersTable.followed_profile_uuid],
-    references: [profilesTable.uuid],
-    relationName: 'followers'
+  followedUser: one(users, { 
+    fields: [followersTable.followed_user_id],
+    references: [users.id],
+    relationName: 'followers' // User is followed by others
   }),
 }));
 
