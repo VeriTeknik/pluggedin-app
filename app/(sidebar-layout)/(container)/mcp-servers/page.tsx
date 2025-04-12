@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Database, Download, Settings, Upload } from 'lucide-react';
+import { Database, Download, Settings, Share,Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -46,6 +46,7 @@ import { ExportDialog, ImportDialog } from './components/server-dialogs';
 import { SseServerForm, StdioServerForm } from './components/server-forms';
 import { ServerHero } from './components/server-hero';
 import { ServerStats } from './components/server-stats';
+import { ShareCollectionDialog } from './components/share-collection-dialog';
 
 
 // Removed DiscoverToolsButton Component Definition
@@ -64,6 +65,8 @@ export default function MCPServersPage() {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportJson, setExportJson] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
+  const [shareCollectionOpen, setShareCollectionOpen] = useState(false);
+  const [selectedServers, setSelectedServers] = useState<McpServer[]>([]);
 
   const { data: servers = [], mutate } = useSWR<McpServer[]>(
     currentProfile?.uuid ? `${currentProfile.uuid}/mcp-servers` : null,
@@ -290,6 +293,15 @@ export default function MCPServersPage() {
               {t('mcpServers.actions.import')}
             </Button>
             
+            <Button 
+              variant="outline" 
+              onClick={() => setShareCollectionOpen(true)}
+              disabled={servers.length === 0}
+            >
+              <Share className="mr-2 h-4 w-4" />
+              {t('mcpServers.actions.shareCollection')}
+            </Button>
+            
             <Button variant="outline" onClick={exportServerConfig}>
               <Download className="mr-2 h-4 w-4" />
               {t('mcpServers.actions.export')}
@@ -306,6 +318,14 @@ export default function MCPServersPage() {
             <ServerCard
               key={row.original.uuid}
               server={row.original}
+              isSelected={selectedServers.some(s => s.uuid === row.original.uuid)}
+              onSelect={(checked) => {
+                setSelectedServers(prev => 
+                  checked 
+                    ? [...prev, row.original]
+                    : prev.filter(s => s.uuid !== row.original.uuid)
+                );
+              }}
               onStatusChange={async (checked) => {
                 if (!currentProfile?.uuid || !row.original.uuid) return;
                 await toggleMcpServerStatus(
@@ -426,6 +446,21 @@ export default function MCPServersPage() {
         open={exportOpen}
         onOpenChange={setExportOpen}
         exportJson={exportJson}
+      />
+
+      {/* Add Share Collection Dialog */}
+      <ShareCollectionDialog
+        open={shareCollectionOpen}
+        onOpenChange={setShareCollectionOpen}
+        servers={selectedServers.length > 0 ? selectedServers : servers}
+        profileUuid={currentProfile?.uuid || ''}
+        onSuccess={() => {
+          setShareCollectionOpen(false);
+          toast({
+            title: t('common.success'),
+            description: t('mcpServers.shareCollection.success'),
+          });
+        }}
       />
     </div>
   );

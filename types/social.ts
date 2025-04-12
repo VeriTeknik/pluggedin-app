@@ -38,6 +38,15 @@ export interface SharedCollection {
   is_public: boolean;
   created_at: Date;
   updated_at: Date;
+  profile?: {
+    project?: {
+      user?: {
+        id?: string;
+        name?: string;
+        username?: string;
+      };
+    };
+  };
 }
 
 export interface EmbeddedChat {

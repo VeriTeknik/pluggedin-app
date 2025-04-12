@@ -910,18 +910,41 @@ export async function updateSharedCollection(
  * @param sharedCollectionUuid The UUID of the shared collection
  * @returns The shared collection or null if not found
  */
-// Note: Sharing is still tied to profiles in this refactor. Adjust if needed.
 export async function getSharedCollection(sharedCollectionUuid: string): Promise<SharedCollection | null> {
   try {
-    const sharedCollection = await db.query.sharedCollectionsTable.findFirst({
+    if (!sharedCollectionUuid) {
+      console.error('No collection UUID provided');
+      return null;
+    }
+
+    const collection = await db.query.sharedCollectionsTable.findFirst({
       where: eq(sharedCollectionsTable.uuid, sharedCollectionUuid),
       with: {
-        profile: true, // Keep profile relation if needed elsewhere
-      },
+        profile: {
+          with: {
+            project: {
+              with: {
+                user: {
+                  columns: {
+                    name: true,
+                    username: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     });
-    return sharedCollection as unknown as SharedCollection;
+
+    if (!collection) {
+      console.error(`Collection not found with UUID: ${sharedCollectionUuid}`);
+      return null;
+    }
+
+    return collection;
   } catch (error) {
-    console.error('Error getting shared collection:', error);
+    console.error('Error fetching shared collection:', error);
     return null;
   }
 }

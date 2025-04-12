@@ -83,7 +83,7 @@ function SearchContent() {
     ? `/api/service/search?query=${encodeURIComponent(query)}&pageSize=${PAGE_SIZE}&offset=${offset}`
     : `/api/service/search?query=${encodeURIComponent(query)}&source=${source}&pageSize=${PAGE_SIZE}&offset=${offset}`;
 
-  const { data, error, mutate } = useSWR<PaginatedSearchResult>(
+  const { data, mutate } = useSWR<PaginatedSearchResult>(
     apiUrl,
     async (url: string) => {
       const res = await fetch(url);
@@ -223,11 +223,12 @@ function SearchContent() {
         <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
           <Tabs defaultValue={source} onValueChange={handleSourceChange} className="w-full">
             <TabsList className="w-full h-10 flex rounded-lg">
+            <TabsTrigger value={McpServerSource.COMMUNITY} className="flex-1">Community</TabsTrigger>
               <TabsTrigger value="all" className="flex-1">All Sources</TabsTrigger>
               <TabsTrigger value={McpServerSource.SMITHERY} className="flex-1">Smithery</TabsTrigger>
               <TabsTrigger value={McpServerSource.NPM} className="flex-1">NPM</TabsTrigger>
               <TabsTrigger value={McpServerSource.GITHUB} className="flex-1">GitHub</TabsTrigger>
-              <TabsTrigger value={McpServerSource.COMMUNITY} className="flex-1">Community</TabsTrigger>
+              
             </TabsList>
           </Tabs>
           

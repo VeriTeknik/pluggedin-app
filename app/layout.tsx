@@ -2,6 +2,7 @@ import './globals.css';
 
 import type { Metadata } from 'next';
 import { Geist, Geist_Mono, Quicksand } from 'next/font/google'; // Import Quicksand
+import { Toaster as SonnerToaster } from 'sonner';
 
 import { I18nProviderWrapper } from '@/components/providers/i18n-provider-wrapper';
 import { NotificationProvider } from '@/components/providers/notification-provider';
@@ -56,6 +57,7 @@ export default async function RootLayout({
               </NotificationProvider>
             </SessionProvider>
             <Toaster />
+            <SonnerToaster position="bottom-right" />
           </ThemeProvider>
         </I18nProviderWrapper>
       </body>

@@ -1,14 +1,15 @@
 'use client';
 
-import { Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, Trash2, XCircle } from 'lucide-react'; // Sorted
+import { Trash2 } from 'lucide-react';
+import { Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, XCircle } from 'lucide-react'; // Sorted
 import Link from 'next/link'; // Sorted
-import { useRouter } from 'next/navigation'; // Sorted
+import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react'; // Sorted
-import { useTranslation } from 'react-i18next'; // Sorted
+import { useTranslation } from 'react-i18next';
 
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Sorted
-import { isServerShared, unshareServer } from '@/app/actions/social'; // Sorted
-import { ShareServerDialog } from '@/components/server/share-server-dialog'; // Sorted
+import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
+import { isServerShared, unshareServer } from '@/app/actions/social';
+import { ShareServerDialog } from '@/components/server/share-server-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,9 +22,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'; // Corrected import path again
 import { Badge } from '@/components/ui/badge'; // Sorted
-import { Button } from '@/components/ui/button'; // Sorted
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'; // Sorted
-import { Switch } from '@/components/ui/switch'; // Sorted
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // Sorted
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
@@ -32,8 +34,10 @@ import { McpServer } from '@/types/mcp-server';
 
 interface ServerCardProps {
   server: McpServer;
-  onStatusChange: (checked: boolean) => Promise<void>;
-  onDelete: () => Promise<void>;
+  onStatusChange?: (checked: boolean) => void;
+  onDelete?: () => void;
+  isSelected?: boolean;
+  onSelect?: (checked: boolean) => void;
 }
 
 const getServerIcon = (server: McpServer) => {
@@ -43,7 +47,13 @@ const getServerIcon = (server: McpServer) => {
   return <Globe className="h-4 w-4 text-blue-500" />;
 };
 
-export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps) {
+export function ServerCard({
+  server,
+  onStatusChange,
+  onDelete,
+  isSelected,
+  onSelect,
+}: ServerCardProps) {
   const { t } = useTranslation();
   const router = useRouter();
   const { currentProfile } = useProfiles();
@@ -121,7 +131,29 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
   };
 
   return (
-    <Card className="group hover:shadow-md transition-all dark:bg-slate-900/70 dark:border-slate-800 dark:hover:bg-slate-900/90">
+    <Card className="relative group hover:shadow-md transition-all dark:bg-slate-900/70 dark:border-slate-800 dark:hover:bg-slate-900/90">
+      {/* Add selection checkbox */}
+      <div className="absolute top-2 left-2 z-10">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(checked) => onSelect?.(checked as boolean)}
+                  disabled={!isShared}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isShared 
+                ? t('mcpServers.actions.selectForCollection')
+                : t('mcpServers.errors.mustBeSharedForCollection')}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10 dark:bg-primary/20">

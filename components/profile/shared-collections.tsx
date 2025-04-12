@@ -1,9 +1,9 @@
-import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
-import { SharedCollection } from '@/types/social';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { SharedCollection } from '@/types/social';
 
 interface SharedCollectionsProps {
   collections: SharedCollection[];

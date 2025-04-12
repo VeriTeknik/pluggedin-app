@@ -127,17 +127,30 @@ export default function DiscoverPage() {
     }
   );
 
+  // Fetch collections
+  const {
+    data: collectionsData,
+    error: collectionsError,
+    isLoading: isLoadingCollections
+  } = useSWR<SharedCollection[]>(
+    '/api/collections',
+    async (url: string) => {
+      const res = await fetch(url);
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(
+          `Failed to fetch collections: ${res.status} ${res.statusText} - ${errorText}`
+        );
+      }
+      return res.json();
+    }
+  );
+
   // Handle server pagination change
   const handleServerPageChange = (page: number) => {
     const newOffset = (page - 1) * PAGE_SIZE;
     setServerOffset(newOffset);
-    // Optionally update URL search params if desired
-    // const params = new URLSearchParams(searchParams);
-    // params.set('serverOffset', newOffset.toString());
-    // router.push(`/discover?${params.toString()}`);
   };
-
-  // TODO: Add fetching for Collections and Chats if needed
 
   return (
     <div className="container py-8">
@@ -149,12 +162,15 @@ export default function DiscoverPage() {
       <Tabs defaultValue="people" className="space-y-4">
         <TabsList>
           <TabsTrigger value="people">People</TabsTrigger>
-          {/* Update server count display */}
           <TabsTrigger value="servers">
             MCP Servers ({communityServersData?.total ?? 0})
           </TabsTrigger>
-          <TabsTrigger value="collections">Collections ({sharedCollections.length})</TabsTrigger>
-          <TabsTrigger value="chats">Embedded Chats ({embeddedChats.length})</TabsTrigger>
+          <TabsTrigger value="collections">
+            Collections ({collectionsData?.length ?? 0})
+          </TabsTrigger>
+          <TabsTrigger value="chats">
+            Embedded Chats ({embeddedChats.length})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="people" className="space-y-8">
@@ -294,8 +310,21 @@ export default function DiscoverPage() {
         </TabsContent>
 
         <TabsContent value="collections">
-          {/* TODO: Implement fetching and display for shared collections */}
-          <SharedCollections collections={sharedCollections} />
+          {isLoadingCollections ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[...Array(PAGE_SIZE)].map((_, i) => (
+                <Skeleton key={i} className="h-64" />
+              ))}
+            </div>
+          ) : collectionsError ? (
+            <p className="text-destructive text-center py-8">
+              {t('search.error')}
+            </p>
+          ) : collectionsData && collectionsData.length > 0 ? (
+            <SharedCollections collections={collectionsData} />
+          ) : (
+            <p className="text-center py-12">{t('search.noResults')}</p>
+          )}
         </TabsContent>
 
         <TabsContent value="chats">

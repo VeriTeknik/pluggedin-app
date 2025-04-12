@@ -90,12 +90,18 @@ export default function CardGrid({
   items, 
   installedServerMap, 
   currentUsername,
-  onRefreshNeeded
+  onRefreshNeeded,
+  selectable = false,
+  selectedItems = [],
+  onItemSelect,
 }: { 
   items: SearchIndex; 
   installedServerMap: Map<string, string>;
   currentUsername?: string;
   onRefreshNeeded?: () => void;
+  selectable?: boolean;
+  selectedItems?: string[];
+  onItemSelect?: (serverId: string, selected: boolean) => void;
 }) {
   const { t } = useTranslation();
   const [selectedServer, setSelectedServer] = useState<{
@@ -253,13 +259,28 @@ export default function CardGrid({
             : undefined;
 
           const isOwned = isOwnServer(item);
+          const isSelected = selectedItems.includes(key);
+          const isInstalled = Boolean(installedUuid);
 
           return (
-          <Card key={key} className='flex flex-col'>
+          <Card 
+            key={key} 
+            className={`flex flex-col ${selectable && !isInstalled ? 'cursor-pointer hover:border-primary' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${isInstalled ? 'opacity-70' : ''}`}
+            onClick={() => {
+              if (selectable && !isInstalled && onItemSelect) {
+                onItemSelect(key, !isSelected);
+              }
+            }}
+          >
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
                 <CardTitle className="mr-2">{item.name}</CardTitle>
-                <SourceBadge source={item.source} />
+                <div className="flex items-center gap-2">
+                  {isInstalled && (
+                    <Badge variant="secondary" className="pointer-events-none">Installed</Badge>
+                  )}
+                  <SourceBadge source={item.source} />
+                </div>
               </div>
               <CardDescription>{item.description}</CardDescription>
             </CardHeader>
@@ -347,8 +368,8 @@ export default function CardGrid({
                 </Button>
               )}
               
-              {/* Only show rate button if not user's own server */}
-              {item.source && item.external_id && !isOwned && (
+              {/* Only show rate button if not user's own server and not installed */}
+              {item.source && item.external_id && !isOwned && !isInstalled && (
                 <Button 
                   variant='outline' 
                   size="sm"
@@ -370,7 +391,7 @@ export default function CardGrid({
                   <Trash2 className='w-4 h-4 mr-2' />
                   Unshare
                 </Button>
-              ) : installedUuid ? (
+              ) : isInstalled ? (
                 // Render Edit button if installed
                 <Button variant='secondary' size="sm" asChild>
                   <Link href={`/mcp-servers/${installedUuid}`}>
@@ -383,7 +404,8 @@ export default function CardGrid({
                 <Button
                   variant='default'
                   size="sm"
-                  onClick={() => handleInstallClick(key, item)}>
+                  onClick={() => handleInstallClick(key, item)}
+                >
                   <Download className='w-4 h-4 mr-2' />
                   {t('search.card.install')}
                 </Button>

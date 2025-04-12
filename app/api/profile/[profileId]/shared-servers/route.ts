@@ -1,5 +1,5 @@
+import { and,eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, and, desc } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { sharedMcpServersTable } from '@/db/schema';
