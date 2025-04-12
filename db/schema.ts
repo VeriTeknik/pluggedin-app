@@ -539,6 +539,47 @@ export const serverRatingsRelations = relations(serverRatingsTable, ({ one }) =>
   }),
 }));
 
+// --- Server Reviews Table ---
+export const serverReviews = pgTable(
+  'server_reviews',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    server_source: mcpServerSourceEnum('server_source').notNull(),
+    server_external_id: text('server_external_id').notNull(),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    rating: integer('rating').notNull(), // Assuming 1-5 rating
+    comment: text('comment'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    serverReviewsSourceExternalIdIdx: index('server_reviews_source_external_id_idx').on(table.server_source, table.server_external_id),
+    serverReviewsUserIdIdx: index('server_reviews_user_id_idx').on(table.user_id),
+    // Unique constraint per user per server (identified by source+external_id)
+    serverReviewsUniqueUserServerIdx: unique('server_reviews_unique_user_server_idx').on(
+      table.user_id,
+      table.server_source,
+      table.server_external_id
+    ),
+  })
+);
+
+export const serverReviewsRelations = relations(serverReviews, ({ one }) => ({
+  user: one(users, {
+    fields: [serverReviews.user_id],
+    references: [users.id],
+  }),
+  // Optional: Add relation back to mcpServers if needed, though linking via source/external_id might be sufficient
+  // mcpServer: one(mcpServersTable, { ... }) // This would require adding a server_uuid FK potentially
+}));
+
+
 export const auditLogsTable = pgTable("audit_logs", {
   id: uuid("id").defaultRandom().primaryKey(),
   profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),

@@ -1,6 +1,6 @@
 {
-  "id": "d11cedc8-d896-497d-b512-89ddfbdae837",
-  "prevId": "11d20cd3-3f54-43b7-b5b5-fbdaf5425e09",
+  "id": "42334837-de9c-4c49-a94c-c3ffddc378f5",
+  "prevId": "d11cedc8-d896-497d-b512-89ddfbdae837",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2330,6 +2330,132 @@
             "profile_uuid",
             "external_id",
             "source"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.server_reviews": {
+      "name": "server_reviews",
+      "schema": "",
+      "columns": {
+        "uuid": {
+          "name": "uuid",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "server_source": {
+          "name": "server_source",
+          "type": "mcp_server_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "server_external_id": {
+          "name": "server_external_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rating": {
+          "name": "rating",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "comment": {
+          "name": "comment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "server_reviews_source_external_id_idx": {
+          "name": "server_reviews_source_external_id_idx",
+          "columns": [
+            {
+              "expression": "server_source",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "server_external_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "server_reviews_user_id_idx": {
+          "name": "server_reviews_user_id_idx",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "server_reviews_user_id_users_id_fk": {
+          "name": "server_reviews_user_id_users_id_fk",
+          "tableFrom": "server_reviews",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "server_reviews_unique_user_server_idx": {
+          "name": "server_reviews_unique_user_server_idx",
+          "nullsNotDistinct": false,
+          "columns": [
+            "user_id",
+            "server_source",
+            "server_external_id"
           ]
         }
       },

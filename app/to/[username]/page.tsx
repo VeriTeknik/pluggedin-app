@@ -1,30 +1,52 @@
-import { notFound } from 'next/navigation';
+import { sql } from 'drizzle-orm';
 import { Metadata } from 'next';
-// Removed unused eq import
 
-// Updated imports for user-centric actions and types
-import { 
-  getUserByUsername, 
-  getUserFollowerCount, 
-  getUserFollowingCount,
-  isFollowingUser,
-  // Commenting out shared content fetching for now
-  // getSharedMcpServers,
-  // getSharedCollections,
-  // getEmbeddedChats
-} from '@/app/actions/social';
-import { getAuthSession } from '@/lib/auth';
-// Removed getProjectActiveProfile, db, projectsTable imports as they are less relevant now for this page's core logic
-// import { getProjectActiveProfile } from '@/app/actions/profiles'; 
-// import { db } from '@/db';
-// import { projectsTable } from '@/db/schema';
-import { users } from '@/db/schema'; // Import schema for User type
-type User = typeof users.$inferSelect; // Define User type
-
+import { getUserByUsername, getUserFollowerCount, getUserFollowingCount, isFollowingUser } from '@/app/actions/social';
 import { ProfileHeader } from '@/components/profile/profile-header';
 import { ProfileTabs } from '@/components/profile/profile-tabs';
-// Import types for shared content if needed later
-// import { SharedMcpServer, SharedCollection, EmbeddedChat } from '@/types/social'; 
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
+
+type User = typeof users.$inferSelect; // Define User type
+
+// --- Non-async Presentation Component ---
+function UserProfileDisplay({
+  user,
+  username,
+  currentUserId,
+  currentlyFollowing,
+  followerCount,
+  followingCount,
+  isOwner,
+}: {
+  user: User;
+  username: string;
+  currentUserId: string | undefined;
+  currentlyFollowing: boolean;
+  followerCount: number;
+  followingCount: number;
+  isOwner: boolean;
+}) {
+  return (
+    <div className="container py-8 pb-16 max-w-5xl mx-auto">
+      <ProfileHeader
+        user={user}
+        currentUserId={currentUserId}
+        isFollowing={currentlyFollowing}
+        followerCount={followerCount}
+        followingCount={followingCount}
+      />
+
+      <div className="mt-8">
+        <ProfileTabs
+          isOwner={isOwner}
+          username={username}
+        />
+      </div>
+    </div>
+  );
+}
 
 interface ProfilePageProps {
   params: {
@@ -32,12 +54,40 @@ interface ProfilePageProps {
   };
 }
 
+// --- Generate Static Params ---
+// Inform Next.js about possible usernames at build time
+export async function generateStaticParams() {
+  try {
+    const allUsers = await db
+      .select({ username: users.username })
+      .from(users)
+      .where(sql`${users.username} IS NOT NULL`);
+
+    // Filter out null/empty usernames just in case
+    return allUsers
+      .filter((u: { username: string | null }): u is { username: string } => Boolean(u.username))
+      .map((user: { username: string }) => ({
+        username: user.username,
+      }));
+  } catch (error) {
+    console.error("Error fetching usernames for generateStaticParams:", error);
+    return []; // Return empty array on error
+  }
+}
+
+// Allow rendering for usernames not generated at build time
+export const dynamicParams = true;
+
+// Explicitly type params and add searchParams
 export async function generateMetadata({
   params,
-}: ProfilePageProps): Promise<Metadata> {
-  const username = await Promise.resolve(params.username);
-  const user = await getUserByUsername(username);
-
+}: {
+  params: { username: string };
+}): Promise<Metadata> {
+  // Await params before using
+  const resolvedParams = await Promise.resolve(params);
+  const user = await getUserByUsername(resolvedParams.username);
+  
   if (!user) {
     return {
       title: 'User Not Found',
@@ -45,81 +95,43 @@ export async function generateMetadata({
   }
 
   return {
-    title: `${user.username}'s Profile - PluggedIn`,
-    description: `View ${user.username}'s profile on PluggedIn`,
+    title: `${user.name || user.username || 'Unknown'}'s Profile`,
   };
 }
 
-export default async function ProfilePage({ params }: ProfilePageProps) {
-  const username = await Promise.resolve(params.username);
-  const user = await getUserByUsername(username);
-
-  if (!user) {
-    notFound();
-  }
-
-  // Get the current user session
+// --- Async Page Component (Fetches data and renders presentation component) ---
+export default async function ProfilePage({
+  params,
+}: {
+  params: { username: string };
+}) {
+  // Await params before using
+  const resolvedParams = await Promise.resolve(params);
+  const user = await getUserByUsername(resolvedParams.username);
   const session = await getAuthSession();
-  const currentUserId = (session?.user as { id?: string })?.id; // Get current user ID
+  const currentUserId = session?.user?.id;
+  const isOwner = currentUserId === user?.id;
   
-  // Get follow counts for the displayed user
-  const followerCount = await getUserFollowerCount(user.id); // Use new function with userId
-  const followingCount = await getUserFollowingCount(user.id); // Use new function with userId
-  
-  // Check if the current logged-in user is following the displayed user
-  const currentlyFollowing = currentUserId 
-    ? await isFollowingUser(currentUserId, user.id) // Use new function with user IDs
-    : false;
-    
-  // --- Shared Content Fetching (Needs Refactor) ---
-  // This section needs to be updated based on how sharing is linked (profiles vs users)
-  // Commenting out for now.
-  const sharedServers: any[] = []; // Placeholder
-  const sharedCollections: any[] = []; // Placeholder
-  const embeddedChats: any[] = []; // Placeholder
-  /*
-  // Example: Fetch profiles associated with the user first
-  const userProfiles = await db.query.profilesTable.findMany({ 
-    where: eq(profilesTable.project_uuid, 
-      db.select({ uuid: projectsTable.uuid }).from(projectsTable).where(eq(projectsTable.user_id, user.id)).limit(1) // Assuming one project for now
-    ),
-    // Add condition for public profiles if sharing depends on profile visibility
-  }); 
-  
-  if (userProfiles.length > 0) {
-     // Fetch shared content based on userProfiles[0].uuid or iterate if multiple profiles matter
-     // sharedServers = await getSharedMcpServers(userProfiles[0].uuid);
-     // sharedCollections = await getSharedCollections(userProfiles[0].uuid);
-     // embeddedChats = await getEmbeddedChats(userProfiles[0].uuid);
+  if (!user || !user.username) {
+    return <div>User not found</div>;
   }
-  */
-  // --- End Shared Content Fetching ---
-  
-  // Determine if the current user is the owner
-  const isOwner = currentUserId === user.id;
+
+  // Get follower counts and following status
+  const followerCount = await getUserFollowerCount(user.id);
+  const followingCount = await getUserFollowingCount(user.id);
+  const currentlyFollowing = currentUserId ? await isFollowingUser(currentUserId, user.id) : false;
 
   return (
-    <div className="container py-8 pb-16 max-w-5xl mx-auto">
-      {/* Update ProfileHeader props - Assuming ProfileHeader now accepts these props */}
-      <ProfileHeader
-        user={user} 
-        currentUserId={currentUserId} 
-        isFollowing={currentlyFollowing}
+    <div className="space-y-8">
+      <UserProfileDisplay
+        user={user}
+        username={user.username}
+        currentUserId={currentUserId}
+        currentlyFollowing={currentlyFollowing}
         followerCount={followerCount}
         followingCount={followingCount}
+        isOwner={isOwner}
       />
-      
-      <div className="mt-8">
-         {/* Update ProfileTabs props - pass user or necessary info */}
-        <ProfileTabs 
-          sharedServers={sharedServers} // Pass empty arrays for now
-          sharedCollections={sharedCollections}
-          embeddedChats={embeddedChats}
-          isOwner={isOwner}
-          // Pass user object if tabs need user info
-          // user={user} 
-        />
-      </div>
     </div>
   );
 }

@@ -1,14 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
-import { getMcpServers } from '@/app/actions/mcp-servers';
-import { getFollowing, searchUsers } from '@/app/actions/social';
 import CardGrid from '@/app/(sidebar-layout)/(container)/search/components/CardGrid';
 import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
+import { getMcpServers } from '@/app/actions/mcp-servers';
+import { getFollowing, searchUsers } from '@/app/actions/social';
 import { EmbeddedChats } from '@/components/profile/embedded-chats';
 import { SharedCollections } from '@/components/profile/shared-collections';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,8 +21,8 @@ import { McpServerSource, users } from '@/db/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
-import { EmbeddedChat, SharedCollection } from '@/types/social';
 import { PaginatedSearchResult } from '@/types/search';
+import { EmbeddedChat, SharedCollection } from '@/types/social';
 
 
 type User = typeof users.$inferSelect;

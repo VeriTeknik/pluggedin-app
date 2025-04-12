@@ -1,3 +1,5 @@
+'use client';
+
 import { Database, Download, Github, MessageCircle, Package, Star, ThumbsUp, UserPlus, Users } from 'lucide-react'; // Sorted
 import * as LucideIcons from 'lucide-react'; // Sorted
 import Link from 'next/link'; // Sorted
@@ -20,6 +22,7 @@ import { getCategoryIcon } from '@/utils/categories';
 
 import { InstallDialog } from './InstallDialog';
 import { RateServerDialog } from './RateServerDialog';
+import { ReviewsDialog } from './ReviewsDialog'; // Import the new dialog
 
 // Helper function to get category badge
 function CategoryBadge({ category }: { category?: McpServerCategory }) {
@@ -106,6 +109,15 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
   } | null>(null);
   const [rateDialogOpen, setRateDialogOpen] = useState(false);
 
+  // State for reviews dialog
+  const [reviewServer, setReviewServer] = useState<{
+    name: string;
+    source?: McpServerSource;
+    external_id?: string;
+  } | null>(null);
+  const [reviewsDialogOpen, setReviewsDialogOpen] = useState(false);
+
+
   const handleInstallClick = (key: string, item: any) => {
     // Determine if this is a stdio or SSE server
     const isSSE = item.url || false;
@@ -135,6 +147,17 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
     
     setRateDialogOpen(true);
   };
+
+  // Handle clicking the reviews count
+  const handleReviewsClick = (item: any) => {
+    setReviewServer({
+      name: item.name,
+      source: item.source,
+      external_id: item.external_id,
+    });
+    setReviewsDialogOpen(true);
+  };
+
 
   // Helper to format ratings
   const formatRating = (rating?: number, count?: number) => {
@@ -184,11 +207,16 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
             )}
           </div>
         )}
+        {/* Make review count clickable */}
         {item.ratingCount && item.ratingCount > 0 && (
-          <div className="flex items-center mt-1">
+           <button
+             className="flex items-center mt-1 hover:underline cursor-pointer text-left"
+             onClick={() => handleReviewsClick(item)}
+             aria-label={`View ${item.ratingCount} reviews for ${item.name}`}
+           >
             <MessageCircle className="h-3 w-3 mr-1" />
             {item.ratingCount} {item.ratingCount === 1 ? 'review' : 'reviews'}
-          </div>
+          </button>
         )}
       </div>
     );
@@ -255,16 +283,17 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                   </div>
                 )}
                 
-            {formatRating(item.rating, item.ratingCount)} 
-            
+            {formatRating(item.rating, item.ratingCount)}
+
+            {/* Display Installation Count */}
             {item.installation_count !== undefined && item.installation_count > 0 && (
-                  <div className="flex items-center">
-                    <UserPlus className="h-3 w-3 mr-1" />
-                    {item.installation_count}
-                  </div>
-                )}
-                
-                {item.github_stars !== undefined && item.github_stars !== null && (
+              <div className="flex items-center">
+                <UserPlus className="h-3 w-3 mr-1" />
+                {item.installation_count}
+              </div>
+            )}
+
+            {item.github_stars !== undefined && item.github_stars !== null && (
                   <div className="flex items-center">
                     <Github className="h-3 w-3 mr-1" />
                     {item.github_stars}
@@ -344,6 +373,15 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
           open={rateDialogOpen}
           onOpenChange={setRateDialogOpen}
           serverData={rateServer}
+        />
+      )}
+
+      {/* Render the Reviews Dialog */}
+      {reviewServer && (
+        <ReviewsDialog
+          open={reviewsDialogOpen}
+          onOpenChange={setReviewsDialogOpen}
+          serverData={reviewServer}
         />
       )}
     </>
