@@ -6,7 +6,7 @@ type User = typeof users.$inferSelect;
 export interface ServerReview {
   uuid: string;
   server_source: string; // e.g., 'COMMUNITY', 'NPM'
-  server_external_id: string; // The ID within that source
+  server_external_id: string | null; // The ID within that source
   user_id: string;
   rating: number; // e.g., 1-5
   comment: string | null;

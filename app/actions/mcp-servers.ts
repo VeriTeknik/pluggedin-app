@@ -3,16 +3,44 @@
 import { and, desc, eq, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType, customInstructionsTable, profilesTable } from '@/db/schema';
+import { 
+  customInstructionsTable, 
+  McpServerSource, 
+  mcpServersTable, 
+  McpServerStatus, 
+  McpServerType, 
+  profilesTable, 
+  projectsTable, 
+  users 
+} from '@/db/schema';
 import type { McpServer } from '@/types/mcp-server';
 
-import { discoverSingleServerTools } from './discover-mcp-tools'; // Import the discovery action
-import { trackServerInstallation, getServerRatingMetrics } from './mcp-server-metrics';
+import { discoverSingleServerTools } from './discover-mcp-tools';
+import { getServerRatingMetrics, trackServerInstallation } from './mcp-server-metrics';
 
-export async function getMcpServers(profileUuid: string) {
-  const servers = await db
-    .select()
+type ServerWithUsername = {
+  server: typeof mcpServersTable.$inferSelect;
+  username: string | null;
+}
+
+type ServerWithMetrics = typeof mcpServersTable.$inferSelect & {
+  username: string | null;
+  averageRating?: number;
+  ratingCount?: number;
+  installationCount?: number;
+}
+
+export async function getMcpServers(profileUuid: string): Promise<ServerWithMetrics[]> {
+  // Get the servers without type assertion
+  const serversQuery = await db
+    .select({
+      server: mcpServersTable,
+      username: users.username
+    })
     .from(mcpServersTable)
+    .leftJoin(profilesTable, eq(mcpServersTable.profile_uuid, profilesTable.uuid))
+    .leftJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+    .leftJoin(users, eq(projectsTable.user_id, users.id))
     .where(
       and(
         eq(mcpServersTable.profile_uuid, profileUuid),
@@ -24,19 +52,39 @@ export async function getMcpServers(profileUuid: string) {
     )
     .orderBy(desc(mcpServersTable.created_at));
 
-  // Fetch ratings and installation metrics for each server
-  for (const server of servers) {
-    const metrics = await getServerRatingMetrics(server.uuid);
-    server.averageRating = metrics.success && metrics.metrics ? metrics.metrics.averageRating : 0;
-    server.ratingCount = metrics.success && metrics.metrics ? metrics.metrics.ratingCount : 0;
-    server.installationCount = metrics.success && metrics.metrics ? metrics.metrics.installationCount : 0;
-  }
+  // Type the result correctly
+  const servers: ServerWithUsername[] = serversQuery;
 
-  return servers as (McpServer & {
-    averageRating?: number;
-    ratingCount?: number;
-    installationCount?: number;
-  })[];
+  // Fetch ratings and installation metrics for each server
+  const serversWithMetrics = await Promise.all(
+    servers.map(async ({ server, username }) => {
+      try {
+        const metrics = await getServerRatingMetrics({
+          source: server.source || McpServerSource.PLUGGEDIN,
+          externalId: server.external_id || server.uuid
+        });
+
+        return {
+          ...server,
+          username,
+          averageRating: metrics?.metrics?.averageRating,
+          ratingCount: metrics?.metrics?.ratingCount,
+          installationCount: metrics?.metrics?.installationCount
+        };
+      } catch (error) {
+        console.error(`Error getting metrics for server ${server.uuid}:`, error);
+        return {
+          ...server,
+          username,
+          averageRating: undefined,
+          ratingCount: undefined,
+          installationCount: undefined
+        };
+      }
+    })
+  );
+
+  return serversWithMetrics;
 }
 
 export async function getMcpServerByUuid(
@@ -388,17 +436,25 @@ export async function createShareableTemplate(server: McpServer): Promise<any> {
   template.originalServerUuid = server.uuid;
   
   try {
-    // Get profile information for the sharedBy field
+    // Get profile information with user data
     const profile = await db.query.profilesTable.findFirst({
       where: eq(profilesTable.uuid, server.profile_uuid),
-      columns: {
-        username: true,
-        name: true
+      with: {
+        project: {
+          with: {
+            user: {
+              columns: {
+                username: true,
+                name: true
+              }
+            }
+          }
+        }
       }
     });
     
-    if (profile) {
-      template.sharedBy = profile.username || profile.name || server.profile_uuid;
+    if (profile?.project?.user) {
+      template.sharedBy = profile.project.user.username || profile.project.user.name || server.profile_uuid;
     }
   } catch (error) {
     console.error("Error fetching profile information:", error);

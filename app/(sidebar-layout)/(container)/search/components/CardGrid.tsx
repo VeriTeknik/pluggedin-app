@@ -1,10 +1,10 @@
 'use client';
 
-import { Database, Download, Github, MessageCircle, Package, Star, ThumbsUp, UserPlus, Users } from 'lucide-react'; // Sorted
-import * as LucideIcons from 'lucide-react'; // Sorted
-import Link from 'next/link'; // Sorted
-import { useState } from 'react'; // Sorted
-import { useTranslation } from 'react-i18next'; // Sorted
+import { Database, Download, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
+import * as LucideIcons from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge'; // Sorted
 import { Button } from '@/components/ui/button'; // Sorted
@@ -86,7 +86,17 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
   }
 }
 
-export default function CardGrid({ items, installedServerMap }: { items: SearchIndex; installedServerMap: Map<string, string> }) {
+export default function CardGrid({ 
+  items, 
+  installedServerMap, 
+  currentUsername,
+  onRefreshNeeded
+}: { 
+  items: SearchIndex; 
+  installedServerMap: Map<string, string>;
+  currentUsername?: string;
+  onRefreshNeeded?: () => void;
+}) {
   const { t } = useTranslation();
   const [selectedServer, setSelectedServer] = useState<{
     name: string;
@@ -222,6 +232,17 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
     );
   };
 
+  // Helper to check if server is owned by current user
+  const isOwnServer = (item: any) => {
+    return item.shared_by === currentUsername;
+  };
+
+  // Handle unshare click
+  const handleUnshareClick = async (item: any) => {
+    // TODO: Implement unshare functionality
+    console.log('Unshare clicked for:', item.name);
+  };
+
   return (
     <>
       <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
@@ -230,6 +251,8 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
           const installedUuid = item.source && item.external_id
             ? installedServerMap.get(`${item.source}:${item.external_id}`)
             : undefined;
+
+          const isOwned = isOwnServer(item);
 
           return (
           <Card key={key} className='flex flex-col'>
@@ -324,7 +347,8 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                 </Button>
               )}
               
-              {item.source && item.external_id && (
+              {/* Only show rate button if not user's own server */}
+              {item.source && item.external_id && !isOwned && (
                 <Button 
                   variant='outline' 
                   size="sm"
@@ -336,24 +360,34 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                 </Button>
               )}
               
-              {installedUuid ? (
-                  // Render Edit button if installed
-                  <Button variant='secondary' size="sm" asChild>
-                    <Link href={`/mcp-servers/${installedUuid}`}>
-                      <LucideIcons.Edit className='w-4 h-4 mr-2' />
-                      {t('search.card.edit')}
-                    </Link>
-                  </Button>
-                ) : (
-                  // Render Install button if not installed
-                  <Button
-                    variant='default'
-                    size="sm"
-                    onClick={() => handleInstallClick(key, item)}>
-                    <Download className='w-4 h-4 mr-2' />
-                    {t('search.card.install')}
-                  </Button>
-                )}
+              {isOwned ? (
+                // Show Unshare button for owned servers
+                <Button
+                  variant='destructive'
+                  size="sm"
+                  onClick={() => handleUnshareClick(item)}
+                >
+                  <Trash2 className='w-4 h-4 mr-2' />
+                  Unshare
+                </Button>
+              ) : installedUuid ? (
+                // Render Edit button if installed
+                <Button variant='secondary' size="sm" asChild>
+                  <Link href={`/mcp-servers/${installedUuid}`}>
+                    <LucideIcons.Edit className='w-4 h-4 mr-2' />
+                    {t('search.card.edit')}
+                  </Link>
+                </Button>
+              ) : (
+                // Render Install button if not installed and not owned
+                <Button
+                  variant='default'
+                  size="sm"
+                  onClick={() => handleInstallClick(key, item)}>
+                  <Download className='w-4 h-4 mr-2' />
+                  {t('search.card.install')}
+                </Button>
+              )}
             </CardFooter>
           </Card>
           );
@@ -373,6 +407,7 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
           open={rateDialogOpen}
           onOpenChange={setRateDialogOpen}
           serverData={rateServer}
+          onRatingSubmitted={onRefreshNeeded}
         />
       )}
 

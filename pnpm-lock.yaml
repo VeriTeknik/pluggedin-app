@@ -119,15 +119,9 @@ importers:
       cmdk:
         specifier: 1.0.0
         version: 1.0.0(@types/react-dom@18.3.6(@types/react@18.3.20))(@types/react@18.3.20)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      date-fns:
-        specifier: ^4.1.0
-        version: 4.1.0
       dotenv:
         specifier: ^16.4.7
         version: 16.5.0
-      drizzle-orm:
-        specifier: 0.38.2
-        version: 0.38.2(@types/pg@8.11.12)(@types/react@18.3.20)(pg@8.14.1)(postgres@3.4.5)(react@18.3.1)
       i18next:
         specifier: ^24.2.3
         version: 24.2.3(typescript@5.8.3)
@@ -137,9 +131,6 @@ importers:
       lodash:
         specifier: ^4.17.21
         version: 4.17.21
-      lucide-react:
-        specifier: ^0.469.0
-        version: 0.469.0(react@18.3.1)
       nanoid:
         specifier: ^5.0.9
         version: 5.1.5
@@ -167,12 +158,6 @@ importers:
       react-dom:
         specifier: ^18.3.1
         version: 18.3.1(react@18.3.1)
-      react-hook-form:
-        specifier: ^7.54.2
-        version: 7.55.0(react@18.3.1)
-      react-i18next:
-        specifier: ^15.4.1
-        version: 15.4.1(i18next@24.2.3(typescript@5.8.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-virtualized-auto-sizer:
         specifier: ^1.0.25
         version: 1.0.26(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -220,7 +205,7 @@ importers:
         specifier: ^15.1.2
         version: 15.3.0
       '@types/node':
-        specifier: ^20
+        specifier: ^20.17.30
         version: 20.17.30
       '@types/nodemailer':
         specifier: ^6.4.17
@@ -229,7 +214,7 @@ importers:
         specifier: ^8.11.10
         version: 8.11.12
       '@types/react':
-        specifier: ^18.2.64
+        specifier: ^18.3.20
         version: 18.3.20
       '@types/react-dom':
         specifier: ^18.2.21
@@ -249,6 +234,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.3.4
         version: 4.3.4(vite@6.2.6(@types/node@20.17.30)(jiti@1.21.7)(tsx@4.19.3)(yaml@2.7.1))
+      date-fns:
+        specifier: ^4.1.0
+        version: 4.1.0
       depcheck:
         specifier: ^1.4.7
         version: 1.4.7
@@ -258,6 +246,9 @@ importers:
       drizzle-kit:
         specifier: ^0.30.5
         version: 0.30.6
+      drizzle-orm:
+        specifier: 0.38.2
+        version: 0.38.2(@types/pg@8.11.12)(@types/react@18.3.20)(pg@8.14.1)(postgres@3.4.5)(react@18.3.1)
       eslint:
         specifier: ^9
         version: 9.24.0(jiti@1.21.7)
@@ -270,6 +261,9 @@ importers:
       eslint-plugin-unused-imports:
         specifier: ^4.1.4
         version: 4.1.4(@typescript-eslint/eslint-plugin@8.29.1(@typescript-eslint/parser@8.29.1(eslint@9.24.0(jiti@1.21.7))(typescript@5.8.3))(eslint@9.24.0(jiti@1.21.7))(typescript@5.8.3))(eslint@9.24.0(jiti@1.21.7))
+      lucide-react:
+        specifier: ^0.469.0
+        version: 0.469.0(react@18.3.1)
       next-swagger-doc:
         specifier: ^0.4.1
         version: 0.4.1(next@15.2.3(@babel/core@7.26.10)(@playwright/test@1.51.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(openapi-types@12.1.3)
@@ -282,6 +276,12 @@ importers:
       prettier:
         specifier: ^3.4.2
         version: 3.5.3
+      react-hook-form:
+        specifier: ^7.55.0
+        version: 7.55.0(react@18.3.1)
+      react-i18next:
+        specifier: ^15.4.1
+        version: 15.4.1(i18next@24.2.3(typescript@5.8.3))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       tailwindcss:
         specifier: ^3.4.1
         version: 3.4.17
@@ -10720,7 +10720,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.2
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.8.4(debug@4.4.0))
+      retry-axios: 2.6.0(axios@1.8.4)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -12113,7 +12113,7 @@ snapshots:
 
   ret@0.2.2: {}
 
-  retry-axios@2.6.0(axios@1.8.4(debug@4.4.0)):
+  retry-axios@2.6.0(axios@1.8.4):
     dependencies:
       axios: 1.8.4(debug@4.4.0)
 

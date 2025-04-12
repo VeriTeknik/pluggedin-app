@@ -7,7 +7,7 @@ import {
   McpServerSource,
   profilesTable,
   projectsTable,
-  serverRatingsTable,
+  serverReviews, // Use serverReviews instead of serverRatingsTable
   sharedMcpServersTable,
   users,
 } from '@/db/schema';
@@ -92,21 +92,19 @@ export async function getFormattedSharedServersForUser(
     // 4. Transform into SearchIndex format
     const formattedResults: SearchIndex = {};
     for (const sharedServer of sharedServers) {
-      // Get rating data
+      // Get rating data using the serverReviews table
       const ratingData = await db
         .select({
-          avgRating: sql<number>`avg(${serverRatingsTable.rating})`.mapWith(Number),
-          ratingCount: sql<number>`count(${serverRatingsTable.rating})`.mapWith(Number),
+          avgRating: sql<number>`COALESCE(AVG(${serverReviews.rating}), 0)`.mapWith(Number),
+          ratingCount: sql<number>`COUNT(${serverReviews.rating})`.mapWith(Number),
         })
-        .from(serverRatingsTable)
+        .from(serverReviews) // Query from serverReviews
         .where(
           and(
-            eq(serverRatingsTable.source, McpServerSource.COMMUNITY),
-            eq(serverRatingsTable.external_id, sharedServer.uuid)
+            eq(serverReviews.server_source, McpServerSource.COMMUNITY), // Use server_source
+            eq(serverReviews.server_external_id, sharedServer.uuid) // Use server_external_id
           )
-        )
-        .groupBy(serverRatingsTable.source, serverRatingsTable.external_id)
-        .limit(1);
+        );
 
       // Parse the template JSON
       const template = sharedServer.template as any;
@@ -120,8 +118,8 @@ export async function getFormattedSharedServersForUser(
         args: template.args || [],
         envs: template.env ? Object.keys(template.env) : [],
         url: template.url ?? undefined,
-        rating: ratingData[0]?.avgRating ?? undefined,
-        ratingCount: ratingData[0]?.ratingCount ?? undefined,
+        rating: ratingData[0]?.avgRating ?? 0,
+        ratingCount: ratingData[0]?.ratingCount ?? 0,
         shared_by: username,
         shared_by_profile_url: `/to/${username}`,
         // Required fields from McpIndex
