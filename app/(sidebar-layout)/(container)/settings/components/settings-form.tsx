@@ -38,6 +38,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
+import { users } from '@/db/schema';
 import { useLanguage } from '@/hooks/use-language';
 import { localeNames,locales } from '@/i18n/config'; // Import locales and names
 
@@ -46,7 +47,6 @@ import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
 import { ProfileSocialSection } from './profile-social-section';
-import { users } from '@/db/schema';
 type User = typeof users.$inferSelect;
 
 interface SettingsFormProps {
@@ -79,10 +79,10 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isRemovingAccount, setIsRemovingAccount] = useState<string | null>(null);
 
-  const profileForm = useForm({
+  const profileForm = useForm<z.infer<typeof profileSchema>>({ // Explicitly type useForm
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      name: user.name,
+      name: user.name || '', // Provide empty string fallback for null name
       language: currentLanguage,
     },
   });

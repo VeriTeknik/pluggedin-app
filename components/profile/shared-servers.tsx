@@ -1,12 +1,12 @@
-import Link from 'next/link';
 import { ExternalLink } from 'lucide-react';
+import Link from 'next/link';
 
-import { SharedMcpServer } from '@/types/social';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ImportServerDialog } from '@/components/server/import-server-dialog';
 import { importSharedServer } from '@/app/actions/mcp-servers';
+import { ImportServerDialog } from '@/components/server/import-server-dialog';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfiles } from '@/hooks/use-profiles';
+import { SharedMcpServer } from '@/types/social';
 
 interface SharedServersProps {
   servers: SharedMcpServer[];
