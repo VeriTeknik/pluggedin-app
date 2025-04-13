@@ -22,6 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { McpServerSource } from '@/db/schema';
+import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 import { McpIndex, McpServerCategory, PaginatedSearchResult } from '@/types/search';
@@ -57,6 +58,8 @@ function SearchContent() {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableCategories, setAvailableCategories] = useState<McpServerCategory[]>([]);
   const { currentProfile } = useProfiles();
+  const { session } = useAuth(); // Use the auth hook
+  const currentUsername = session?.user?.username; // Get username from session
   const profileUuid = currentProfile?.uuid;
 
   // Fetch installed servers for the current profile
@@ -404,7 +407,7 @@ function SearchContent() {
         <CardGrid
           items={getSortedResults() || {}}
           installedServerMap={installedServerMap}
-          currentUsername={currentProfile?.name}
+          currentUsername={currentUsername} // Pass the correct username
           onRefreshNeeded={() => mutate()}
         />
       )}

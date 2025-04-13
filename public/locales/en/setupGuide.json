@@ -1,0 +1,47 @@
+{
+  "setupGuide": {
+    "title": "Setup Guide",
+    "proxyBenefits": {
+      "title": "Benefits of Plugged.in MCP",
+      "description": "Plugged.in MCP acts as a unified proxy for all your MCP servers, providing several advantages:",
+      "benefits": [
+        "Single Configuration Point - Manage all your MCP servers through one central configuration",
+        "Automatic Updates - Get the latest features and security updates automatically",
+        "Simplified Authentication - Use a single API key for all your MCP servers",
+        "Enhanced Security - Built-in security features and best practices",
+        "Cross-Platform Compatibility - Works seamlessly across different operating systems"
+      ]
+    },
+    "installation": {
+      "title": "Installation Methods",
+      "apiKeysNotice": "Notice: you can manage your API Keys in the API Keys Page",
+      "manualConfig": {
+        "title": "Manual Configuration",
+        "description": "For Claude Desktop, locate the configuration file at:",
+        "paths": {
+          "macos": "macOS",
+          "windows": "Windows"
+        }
+      },
+      "cursorConfig": {
+        "title": "Cursor Configuration",
+        "description": "For Cursor, you can configure Plugged.in MCP directly in the settings:",
+        "steps": [
+          "Open Cursor and go to Cursor Settings",
+          "Navigate to the Features section",
+          "Find 'MCP Servers' and click 'Add new MCP Server'",
+          "Use the following command:"
+        ]
+      }
+    },
+    "smithery": {
+      "title": "Smithery Windows Configuration",
+      "description": "We recommend to use Smithery to run MCPs in docker on cloud for max compatibility.",
+      "setupLink": "To setup Smithery CLI on Windows check this out:",
+      "serverLink": "Visit Plugged.in MCP server listing directly on Smithery:",
+      "windowsNote": "For Smithery on Windows, you can also use the following configuration options:",
+      "terminalCommand": "You can run the Smithery command directly in your terminal:",
+      "desktopConfig": "Or configure it in your Claude Desktop configuration file:"
+    }
+  }
+}

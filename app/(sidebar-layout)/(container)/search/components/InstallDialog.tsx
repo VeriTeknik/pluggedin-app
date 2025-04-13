@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
+import { trackServerInstallation } from '@/app/actions/mcp-server-metrics'; // Import trackServerInstallation
 import { createMcpServer } from '@/app/actions/mcp-servers';
 import { Button } from '@/components/ui/button';
 import {
@@ -119,6 +120,31 @@ export function InstallDialog({
           title: 'Success',
           description: 'Server installed successfully',
         });
+
+        // Track the installation after successful creation
+        // Access the UUID via result.data.uuid
+        if (result.data?.uuid && serverData.external_id && serverData.source) {
+          await trackServerInstallation({
+            serverUuid: result.data.uuid, // Correct property access
+            externalId: serverData.external_id,
+            source: serverData.source,
+            profileUuid: currentProfile.uuid,
+          }).catch(trackError => {
+            console.error("Failed to track installation:", trackError);
+            // Non-critical, don't show error to user
+          });
+        } else if (result.data?.uuid && !serverData.external_id) {
+           // Handle case where it's a custom server (no external_id/source)
+           await trackServerInstallation({
+            serverUuid: result.data.uuid, // Correct property access
+            externalId: result.data.uuid, // Use serverUuid as externalId for custom
+            source: McpServerSource.PLUGGEDIN, // Mark as PLUGGEDIN source
+            profileUuid: currentProfile.uuid,
+          }).catch(trackError => {
+            console.error("Failed to track custom installation:", trackError);
+          });
+        }
+
         onOpenChange(false);
       } else {
         toast({

@@ -1,0 +1,36 @@
+{
+  "landing": {
+    "navigation": {
+      "enterApp": "Enter App"
+    },
+    "hero": {
+      "title": "The AI Crossroads",
+      "subtitle": "Connect, create, and extend your AI capabilities with a unified platform. Build and manage plugins that enhance your AI workflows."
+    },
+    "features": {
+      "pluginManagement": {
+        "title": "Plugin Management",
+        "description": "Browse, configure, and manage MCP servers and plugins",
+        "content": "Connect various AI tools and services through a unified interface. Configure and manage your plugins from a central dashboard.",
+        "action": "Browse Plugins"
+      },
+      "aiPlayground": {
+        "title": "AI Playground",
+        "description": "Test and experiment with your AI tools in an interactive environment",
+        "content": "Experience your plugins in action. The playground allows you to test different configurations and see real-time results.",
+        "action": "Open Playground"
+      },
+      "customDevelopment": {
+        "title": "Custom Development",
+        "description": "Create and customize your own MCP servers and tools",
+        "content": "Build custom capabilities using our Python editor and integrated development environment. Extend your AI with specialized functionalities.",
+        "action": "Create Custom Tools"
+      }
+    },
+    "gettingStarted": {
+      "title": "New to Plugged.in?",
+      "description": "Follow our setup guide to get your environment configured properly and start building with Plugged.in right away.",
+      "action": "View Setup Guide"
+    }
+  }
+}

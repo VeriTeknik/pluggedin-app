@@ -97,7 +97,7 @@ export default function CardGrid({
 }: { 
   items: SearchIndex; 
   installedServerMap: Map<string, string>;
-  currentUsername?: string;
+  currentUsername?: string | null; // Allow null to match session type
   onRefreshNeeded?: () => void;
   selectable?: boolean;
   selectedItems?: string[];
@@ -391,16 +391,13 @@ export default function CardGrid({
                   <Trash2 className='w-4 h-4 mr-2' />
                   Unshare
                 </Button>
-              ) : isInstalled ? (
-                // Render Edit button if installed
-                <Button variant='secondary' size="sm" asChild>
-                  <Link href={`/mcp-servers/${installedUuid}`}>
-                    <LucideIcons.Edit className='w-4 h-4 mr-2' />
-                    {t('search.card.edit')}
-                  </Link>
+              ) : isInstalled ? ( // Check if installed first
+                // Render disabled "Installed" button if installed
+                <Button variant='outline' size="sm" disabled className="pointer-events-none">
+                  {t('search.card.installed')}
                 </Button>
-              ) : (
-                // Render Install button if not installed and not owned
+              ) : ( 
+                // If not owned AND not installed, render Install button
                 <Button
                   variant='default'
                   size="sm"

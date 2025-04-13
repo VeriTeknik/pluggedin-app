@@ -1,48 +1,60 @@
+import { and, eq, sql } from 'drizzle-orm';
+
 import { db } from '@/db';
-import { mcpServerRatings as mcpServerRatingsTable, mcpServers as mcpServersTable, type McpServerSource } from '@/db/schema';
+import type { McpServerSource } from '@/db/schema';
+import { serverInstallationsTable, serverReviews } from '@/db/schema';
 import { MetricsResponse } from '@/types/reviews';
-import { eq, and, type SQL, type InferSelectModel } from 'drizzle-orm';
 
 export async function getServerRatingMetrics(
   source: McpServerSource,
   externalId: string,
-  page = 1,
+  page = 1, // Keep pagination params if needed for reviews
   limit = 10
 ): Promise<MetricsResponse> {
   try {
     const offset = (page - 1) * limit;
 
-    // Get aggregate metrics
-    const metricsResult = await db.query.mcpServerRatingsTable.findMany({
-      where: (ratings: InferSelectModel<typeof mcpServerRatingsTable>, { eq, and }: { eq: typeof eq, and: typeof and }) => 
-        and(eq(ratings.source, source), eq(ratings.external_id, externalId)),
-      columns: {
-        rating: true,
-      }
-    });
+    // Get aggregate rating metrics from serverReviews
+    const ratingQuery = db
+      .select({
+        averageRating: sql<number>`COALESCE(avg(${serverReviews.rating}), 0)`,
+        ratingCount: sql<number>`count(${serverReviews.rating})`,
+      })
+      .from(serverReviews)
+      .where(
+        and(
+          eq(serverReviews.server_external_id, externalId),
+          eq(serverReviews.server_source, source)
+        )
+      );
+    
+    const ratingResults = await ratingQuery;
+    const ratingMetrics = ratingResults[0] || { averageRating: 0, ratingCount: 0 }; // Default if no ratings
 
-    // Calculate metrics
-    const ratings = metricsResult.map(r => r.rating);
-    const ratingCount = ratings.length;
-    const averageRating = ratingCount > 0 
-      ? ratings.reduce((a: number, b: number) => a + b, 0) / ratingCount 
-      : 0;
+    // Get installation count from serverInstallationsTable
+    const installationQuery = db
+      .select({
+        installationCount: sql<number>`count(*)`,
+      })
+      .from(serverInstallationsTable)
+      .where(
+        and(
+          eq(serverInstallationsTable.external_id, externalId),
+          eq(serverInstallationsTable.source, source)
+        )
+      );
 
-    // Get installation count
-    const installCount = await db.query.mcpServersTable.findMany({
-      where: (servers: InferSelectModel<typeof mcpServersTable>, { eq, and }: { eq: typeof eq, and: typeof and }) =>
-        and(eq(servers.source, source), eq(servers.external_id, externalId)),
-      columns: {
-        uuid: true,
-      }
-    });
+    const installationResults = await installationQuery;
+    const installationMetrics = installationResults[0] || { installationCount: 0 }; // Default if no installations
 
-    // Get paginated reviews with usernames
-    const reviews = await db.query.mcpServerRatingsTable.findMany({
-      where: (ratings: InferSelectModel<typeof mcpServerRatingsTable>, { eq, and }: { eq: typeof eq, and: typeof and }) =>
-        and(eq(ratings.source, source), eq(ratings.external_id, externalId)),
+    // Get paginated reviews with usernames from serverReviews
+    const reviewsQuery = await db.query.serverReviews.findMany({
+      where: and(
+        eq(serverReviews.server_external_id, externalId),
+        eq(serverReviews.server_source, source)
+      ),
       with: {
-        user: {
+        user: { // Use the relation defined in schema
           columns: {
             username: true,
           }
@@ -50,21 +62,22 @@ export async function getServerRatingMetrics(
       },
       limit,
       offset,
-      orderBy: (ratings, { desc }) => [desc(ratings.created_at)]
+      orderBy: (reviews, { desc }) => [desc(reviews.created_at)] // Use correct table alias
     });
 
     return {
       success: true,
       metrics: {
-        averageRating,
-        ratingCount,
-        installationCount: installCount.length,
-        reviews: reviews.map(review => ({
-          id: review.id,
+        averageRating: ratingMetrics.averageRating,
+        ratingCount: ratingMetrics.ratingCount,
+        installationCount: installationMetrics.installationCount,
+        reviews: reviewsQuery.map(review => ({
+          id: review.uuid, // Use uuid from serverReviews
           rating: review.rating,
           comment: review.comment,
           created_at: review.created_at,
-          username: review.user.username
+          // Ensure username is accessed correctly, handle potential null user
+          username: review.user?.username || 'Unknown User' 
         }))
       }
     };
@@ -75,4 +88,4 @@ export async function getServerRatingMetrics(
       error: 'Failed to fetch server metrics'
     };
   }
-} 
+}

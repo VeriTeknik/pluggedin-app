@@ -418,16 +418,17 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
       // Fetch rating metrics for this shared server
       let rating = 0;
       let ratingCount = 0;
+      let installationCount = 0; // Declare installationCount here
       try {
-        // For community servers, metrics are linked via external_id (which is the sharedServer.uuid) and source, not server_uuid
-        const metricsResult = await getServerRatingMetrics(
-          McpServerSource.COMMUNITY,
-          sharedServer.uuid
-        );
+        // For community servers, metrics are linked via external_id (which is the sharedServer.uuid) and source
+        const metricsResult = await getServerRatingMetrics({ // Pass args as a single object
+          source: McpServerSource.COMMUNITY,
+          externalId: sharedServer.uuid
+        });
         if (metricsResult.success && metricsResult.metrics) {
           rating = metricsResult.metrics.averageRating;
           ratingCount = metricsResult.metrics.ratingCount;
-          // Note: installationCount is also available if needed later
+          installationCount = metricsResult.metrics.installationCount; // Assign value here
         }
       } catch (metricsError) {
         console.error(`Failed to get metrics for community server ${serverKey}:`, metricsError);
@@ -460,7 +461,8 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
         shared_by: sharedByName,
         shared_by_profile_url: profileUrl,
         rating: rating,
-        ratingCount: ratingCount
+        ratingCount: ratingCount,
+        installation_count: installationCount, // Use the declared variable
       };
     }
 

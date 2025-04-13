@@ -246,30 +246,52 @@ export const authOptions: NextAuthOptions = {
     async session({ token, session }) {
       if (token) {
         session.user.id = token.id as string;
-        session.user.name = token.name || '';
-        session.user.email = token.email || '';
-        session.user.image = token.picture;
-        session.user.emailVerified = token.emailVerified;
+        // Use nullish coalescing to ensure type compatibility (string | null)
+        session.user.name = token.name ?? null; 
+        session.user.email = token.email ?? null; 
+        session.user.image = token.picture ?? null; 
+        session.user.emailVerified = token.emailVerified; // This should be Date | null
+        session.user.username = token.username ?? null; 
       }
 
       return session;
     },
-    async jwt({ token, user }) {
-      const dbUser = user ? { 
-        id: user.id, 
-        name: user.name || '', 
-        email: user.email || '',
-        emailVerified: user.emailVerified
-      } : undefined;
+    async jwt({ token, user, trigger, session }) {
+      // Initial sign in or user object available
+      if (user) {
+        token.id = user.id;
+        token.name = user.name;
+        token.email = user.email;
+        token.picture = user.image;
+        token.emailVerified = user.emailVerified;
+        
+        // Fetch username from DB during initial sign-in
+        const dbUser = await db.query.users.findFirst({
+          where: eq(users.id, user.id),
+          columns: { username: true }
+         });
+         // Ensure null is assigned if dbUser or dbUser.username is null/undefined
+         token.username = dbUser?.username ?? null; 
+       }
+       
+       // If update triggered (e.g., user updates profile), refresh username
+       // Note: This requires manually triggering an update session call from the frontend
+       if (trigger === "update" && session?.username) {
+          // Ensure session.username is compatible with token.username (string | null)
+          token.username = session.username ?? null; 
+       }
+       
+       // If token exists but username is missing (e.g., old token), try fetching it
+       if (token.id && token.username === undefined) { // Check specifically for undefined or null if needed
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, token.id as string),
+            columns: { username: true }
+          });
+          // Ensure null is assigned if dbUser or dbUser.username is null/undefined
+          token.username = dbUser?.username ?? null; 
+       }
 
-      if (dbUser) {
-        token.id = dbUser.id;
-        token.name = dbUser.name;
-        token.email = dbUser.email;
-        token.emailVerified = dbUser.emailVerified;
-      }
-
-      return token;
+       return token;
     },
   },
 };
@@ -283,9 +305,10 @@ declare module 'next-auth' {
   interface Session {
     user: {
       id: string;
-      name: string;
-      email: string;
-      image?: string;
+      name: string | null; // Match JWT type
+      email: string | null; // Match JWT type
+      username: string | null; // Consistent type
+      image?: string | null; // Match JWT type
       emailVerified?: Date | null;
     };
   }
@@ -294,9 +317,10 @@ declare module 'next-auth' {
 declare module 'next-auth/jwt' {
   interface JWT {
     id: string;
-    name: string;
-    email: string;
-    picture?: string;
+    name: string | null;
+    email: string | null;
+    username: string | null; // Consistent type
+    picture?: string | null;
     emailVerified?: Date | null;
   }
 }

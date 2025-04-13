@@ -1,0 +1,50 @@
+{
+  "legal": {
+    "title": "Legal",
+    "subtitle": "Important Documents",
+    "description": "Important documents and legal information for Plugged.in",
+    "pages": {
+      "privacy": {
+        "title": "Privacy Policy",
+        "description": "How we collect, use, and protect your data",
+        "content": {
+          "intro": "Welcome to Plugged.in (\"we,\" \"our,\" or \"us\"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service. Please read this privacy policy carefully.",
+          "disclaimer": "If you do not agree with the terms of this privacy policy, please do not access the service.",
+          "note": "IMPORTANT NOTE: Plugged.in is currently in Release Candidate status. This privacy policy may be updated as the service matures and additional features are implemented.",
+          "thirdParty": "We have no control over and assume no responsibility for the content, privacy policies or practices of any third-party sites or services."
+        }
+      },
+      "terms": {
+        "title": "Terms of Service",
+        "description": "Terms and conditions for using our service",
+        "content": {
+          "intro": "By accessing or using Plugged.in, you agree to these Terms and any additional terms that may apply. If you do not agree to these Terms, you must not access or use Plugged.in.",
+          "responsibilities": {
+            "title": "Your Responsibilities",
+            "items": [
+              "Use MCP servers and tools in compliance with applicable laws and regulations",
+              "Not use MCP servers for any illegal or unauthorized purpose",
+              "Take responsibility for MCP servers you configure or deploy"
+            ]
+          }
+        }
+      },
+      "disclaimer": {
+        "title": "Disclaimer",
+        "description": "Important legal notices",
+        "content": {
+          "title": "Disclaimer and Limitation of Liability",
+          "thirdParty": "The service may contain links to third-party websites or services that are not owned or controlled by us. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party websites or services."
+        }
+      },
+      "contact": {
+        "title": "Contact",
+        "description": "How to reach us",
+        "content": {
+          "title": "Contact Information",
+          "description": "For any questions about these legal documents, please contact us"
+        }
+      }
+    }
+  }
+}
