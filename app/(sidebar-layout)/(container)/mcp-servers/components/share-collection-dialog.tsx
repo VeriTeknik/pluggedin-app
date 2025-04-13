@@ -232,8 +232,8 @@ export function ShareCollectionDialog({
           >
             <Share className="mr-2 h-4 w-4" />
             {isSubmitting
-              ? t('mcpServers.shareCollection.sharing')
-              : t('mcpServers.shareCollection.share')}
+              ? t('mcpServers.actions.shared')
+              : t('mcpServers.actions.share')}
           </Button>
         </DialogFooter>
       </DialogContent>

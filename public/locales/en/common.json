@@ -18,6 +18,9 @@
     "saving": "Saving...",
     "remove": "Remove",
     "removing": "Removing...",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "confirmDelete": "Are you sure you want to delete this?",
     "errors": {
       "unexpected": "An unexpected error occurred. Please try again."
     },
@@ -25,12 +28,6 @@
     "notAvailable": "N/A",
     "saveChanges": "Save Changes",
     "backToServerList": "Back to Server List",
-    "viewSchema": "View Schema",
-    "search": {
-      "card": {
-        "installed": "Installed" 
-      }
-    }
-  },
-  "cancel": "Cancel"
+    "viewSchema": "View Schema"
+  }
 }

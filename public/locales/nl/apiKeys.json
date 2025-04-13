@@ -1,0 +1,49 @@
+{
+  "apiKeys": {
+    "title": "",
+    "description": "",
+    "empty": "",
+    "actions": {
+      "create": "",
+      "creating": "",
+      "delete": "",
+      "deleting": "",
+      "show": "",
+      "hide": "",
+      "copy": "",
+      "cancel": ""
+    },
+    "dialog": {
+      "create": {
+        "title": "",
+        "description": "",
+        "nameLabel": "",
+        "namePlaceholder": ""
+      },
+      "delete": {
+        "title": "",
+        "description": "",
+        "namePrefix": ""
+      }
+    },
+    "toast": {
+      "copied": {
+        "title": "",
+        "description": ""
+      },
+      "created": {
+        "title": "",
+        "description": ""
+      },
+      "deleted": {
+        "title": "",
+        "description": ""
+      },
+      "error": {
+        "title": "",
+        "createFailed": "",
+        "deleteFailed": ""
+      }
+    }
+  }
+}

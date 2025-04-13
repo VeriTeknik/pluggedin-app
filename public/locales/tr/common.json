@@ -1,0 +1,31 @@
+{
+  "or": "VEYA",
+  "error": "Hata",
+  "success": "Başarılı",
+  "releaseCandidate": "Yayın Adayı v{{version}}",
+  "validation": {
+    "required": "Bu alan zorunludur",
+    "email": "Lütfen geçerli bir e-posta adresi girin",
+    "minLength": "En az {{count}} karakter olmalıdır",
+    "maxLength": "En fazla {{count}} karakter olmalıdır",
+    "passwordMatch": "Şifreler eşleşmelidir"
+  },
+  "save": "Kaydet",
+  "previous": "Önceki",
+  "next": "Sonraki",
+  "page": "Sayfa {{page}}",
+  "saving": "Kaydediliyor...",
+  "remove": "Kaldır",
+  "removing": "Kaldırılıyor...",
+  "cancel": "İptal",
+  "confirm": "Onayla",
+  "confirmDelete": "Bunu silmek istediğinizden emin misiniz?",
+  "errors": {
+    "unexpected": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+  },
+  "loading": "Yükleniyor...",
+  "notAvailable": "Mevcut Değil",
+  "saveChanges": "Değişiklikleri Kaydet",
+  "backToServerList": "Sunucu Listesine Dön",
+  "viewSchema": "Şemayı Görüntüle"
+}

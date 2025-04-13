@@ -1,0 +1,163 @@
+{
+  "landing": {
+    "navigation": {
+      "enterApp": "Uygulamaya Gir"
+    },
+    "hero": {
+      "title": "Yapay Zeka Kavşağı",
+      "subtitle": "Birleşik bir platformla yapay zeka yeteneklerinizi bağlayın, oluşturun ve genişletin. Yapay zeka iş akışlarınızı geliştiren eklentiler oluşturun ve yönetin.",
+      "headline": "MCP Sunucularını Bağlayın, Paylaşın ve Keşfedin",
+      "subheadline": "Makine Konuşma Protokolü için topluluk merkezi ve evrensel proxy",
+      "analogy": "\"Tüm MCP'lere hükmedecek tek bir MCP proxy'si\"",
+      "openSource": "Gururla Açık Kaynak",
+      "cta": {
+        "getStarted": "Başlayın",
+        "learnMore": "Daha Fazla Bilgi Edinin"
+      }
+    },
+    "features": {
+      "title": "Özellikler",
+      "subtitle": "MCP sunucularınızı yönetmek için ihtiyacınız olan her şey",
+      "sectionTitle": "MCP Yönetimi için Güçlü Özellikler",
+      "sectionSubtitle": "MCP sunucularını etkili bir şekilde bağlamak, paylaşmak ve keşfetmek için ihtiyacınız olan her şey.",
+      "communitySharing": {
+        "title": "Topluluk MCP Sunucu Paylaşımı",
+        "description": "MCP sunucularınızı paylaşın ve topluluğun oluşturduklarını keşfedin."
+      },
+      "collectionManagement": {
+        "title": "Koleksiyon Yönetimi",
+        "description": "Farklı istemciler veya projeler için sunucuları koleksiyonlar halinde düzenleyin."
+      },
+      "workspaceOrganization": {
+        "title": "Çalışma Alanı Organizasyonu",
+        "description": "Koleksiyonları geliştirme veya üretim gibi çalışma alanlarında gruplayın."
+      },
+      "advancedSearch": {
+        "title": "Gelişmiş Arama",
+        "description": "Güçlü filtreleme yetenekleriyle mükemmel MCP sunucusunu bulun."
+      },
+      "mcpPlayground": {
+        "title": "MCP Oyun Alanı",
+        "description": "MCP sunucularınızı etkileşimli bir ortamda test edin ve hatalarını ayıklayın."
+      },
+      "pluginManagement": {
+        "title": "Eklenti Yönetimi",
+        "description": "MCP sunucularına ve eklentilerine göz atın, yapılandırın ve yönetin",
+        "content": "Çeşitli yapay zeka araçlarını ve hizmetlerini birleşik bir arayüz üzerinden bağlayın. Eklentilerinizi merkezi bir kontrol panelinden yapılandırın ve yönetin.",
+        "action": "Eklentilere Göz Atın"
+      },
+      "aiPlayground": {
+        "title": "Yapay Zeka Oyun Alanı",
+        "description": "Yapay zeka araçlarınızı etkileşimli bir ortamda test edin ve deneyin",
+        "content": "Eklentilerinizi çalışırken deneyimleyin. Oyun alanı, farklı yapılandırmaları test etmenize ve gerçek zamanlı sonuçları görmenize olanak tanır.",
+        "action": "Oyun Alanını Aç"
+      },
+      "customDevelopment": {
+        "title": "Özel Geliştirme",
+        "description": "Kendi MCP sunucularınızı ve araçlarınızı oluşturun ve özelleştirin",
+        "benefit1": "Diğer geliştiricilerin yenilikçi sunucularını keşfedin.",
+        "benefit2": "Paylaşılan sunucularınız hakkında geri bildirim ve derecelendirme alın.",
+        "benefit3": "Topluluk eserleri üzerinde işbirliği yapın ve geliştirin.",
+        "benefit4": "En son MCP trendlerinden haberdar olun.",
+        "visualPlaceholder": "Sunucu paylaşımını/derecelendirmelerini gösteren görsel",
+        "content": "Python düzenleyicimizi ve entegre geliştirme ortamımızı kullanarak özel yetenekler oluşturun. Yapay zekanızı özel işlevlerle genişletin.",
+        "action": "Özel Araçlar Oluşturun"
+      }
+    },
+    "community": {
+      "title": "MCP Topluluğuna Katılın",
+      "subtitle": "Büyüyen MCP geliştiricileri topluluğuna katılın",
+      "description": "MCP sunucularınızı paylaşın, başkaları tarafından oluşturulan güçlü araçları keşfedin ve büyüyen bir ekosistem içinde işbirliği yapın. Sunucuları derecelendirin, yorum bırakın ve ihtiyaçlarınız için en iyi çözümleri bulun.",
+      "action": "Topluluğa Katılın",
+      "benefit1": "Diğer geliştiricilerin yenilikçi sunucularını keşfedin.",
+      "benefit2": "Paylaşılan sunucularınız hakkında geri bildirim ve derecelendirme alın.",
+      "benefit3": "Topluluk eserleri üzerinde işbirliği yapın ve geliştirin.",
+      "benefit4": "En son MCP trendlerinden haberdar olun.",
+      "visualPlaceholder": "Sunucu paylaşımını/derecelendirmelerini gösteren görsel"
+    },
+    "testimonials": {
+      "title": "Geliştiriciler Ne Diyor",
+      "subtitle": "Topluluktan dinleyin",
+      "sectionTitle": "Dünya Çapında Geliştiriciler Tarafından Güveniliyor",
+      "sectionSubtitle": "Kullanıcılarımızın Plugged.in hakkında söylediklerini dinleyin.",
+      "quote1": "\"Plugged.in, ekibimizin MCP sunucularını yönetme şeklini devrimleştirdi. Organizasyon özellikleri harika!\"",
+      "name1": "Jane Doe",
+      "title1": "Baş Yapay Zeka Mühendisi, TechCorp",
+      "quote2": "\"Topluluk paylaşım özelliği oyunun kurallarını değiştiriyor. Yeni araçlar keşfetmek hiç bu kadar kolay olmamıştı.\"",
+      "name2": "Alex Smith",
+      "title2": "Bağımsız Geliştirici",
+      "quote3": "\"MCP Oyun Alanı ile hata ayıklamak bize sayısız saat kazandırdı. Şiddetle tavsiye edilir!\"",
+      "name3": "Maria Kim",
+      "title3": "Kurucu, AI Solutions Inc."
+    },
+    "search": {
+      "title": "Doğru Araçları Anında Bulun",
+      "subtitle": "Güçlü arama ve filtreleme seçenekleriyle MCP sunucularını ve araçlarını keşfedin.",
+      "description": "Büyüyen MCP sunucuları ve araçları koleksiyonunda arama yapın.",
+      "action": "Araçları Keşfedin",
+      "imagePlaceholder": "Resim: Topluluk sunucularını gösteren arama sonuçları (CardGrid Mockup)",
+      "feature1Title": "Akıllı Arama",
+      "feature1Desc": "Akıllı arama algoritmamızı kullanarak sunucuları ada, açıklamaya veya yeteneklere göre hızla bulun.",
+      "feature2Title": "Gelişmiş Filtreleme",
+      "feature2Desc": "Kategoriler, etiketler, derecelendirmeler ve uyumluluk için filtrelerle sonuçları daraltın.",
+      "feature3Title": "Detaylı Önizlemeler",
+      "feature3Desc": "Sunucu ayrıntılarını, derecelendirmeleri ve topluluk yorumlarını doğrudan arama sonuçlarından görüntüleyin."
+    },
+    "playground": {
+      "title": "MCP Oyun Alanı ile Test Edin ve Hata Ayıklayın",
+      "subtitle": "MCP sunucularınızı oluşturmak, test etmek ve iyileştirmek için etkileşimli bir ortam.",
+      "feature1Title": "Etkileşimli Test",
+      "feature1Desc": "MCP sunucularınızla doğrudan etkileşim kurun, araçları çağırın ve kaynakları gerçek zamanlı olarak inceleyin.",
+      "feature2Title": "Verimli Hata Ayıklama",
+      "feature2Desc": "Ayrıntılı istek/yanıt günlükleri ve hata mesajlarıyla sorunları hızla belirleyin ve çözün.",
+      "feature3Title": "Hızlı Prototipleme",
+      "feature3Desc": "Dağıtımdan önce farklı sunucu yapılandırmaları ve araç uygulamalarıyla deney yapın.",
+      "visualPlaceholder": "Oyun alanı ortamının görsel temsili",
+      "imagePlaceholder": "Resim: Oyun Alanı/Hata Ayıklama Mockup"
+    },
+    "collections": {
+      "title": "MCP Ekosisteminizi Düzenleyin",
+      "subtitle": "Araçlarınızı düzenleyin",
+      "description": "Favori MCP sunucularınızın ve araçlarınızın koleksiyonlarını oluşturun ve paylaşın.",
+      "action": "Koleksiyonları Görüntüle",
+      "collectionsTitle": "Kolaylaştırılmış Koleksiyonlar",
+      "collectionsDesc": "İlgili MCP sunucularını belirli istemciler, uygulamalar veya ortamlar için mantıksal koleksiyonlar halinde gruplayın.",
+      "workspacesTitle": "Güçlü Çalışma Alanları",
+      "workspacesDesc": "Koleksiyonlarınızı geliştirme, hazırlık ve üretim kurulumlarını ayırmak gibi çalışma alanlarında daha fazla düzenleyin.",
+      "hierarchyPlaceholder": "Koleksiyon hiyerarşisinin görsel temsili",
+      "imagePlaceholder": "Resim: Koleksiyon/Çalışma Alanı Mockup"
+    },
+    "sharing": {
+      "title": "Topluluk Paylaşımı",
+      "subtitle": "Başkalarıyla paylaşın",
+      "description": "MCP sunucularınızı ve araçlarınızı toplulukla paylaşın.",
+      "action": "Paylaşmaya Başlayın"
+    },
+    "gettingStarted": {
+      "title": "Plugged.in'de Yeni misiniz?",
+      "description": "Ortamınızı doğru şekilde yapılandırmak ve hemen Plugged.in ile oluşturmaya başlamak için kurulum kılavuzumuzu takip edin.",
+      "action": "Kurulum Kılavuzunu Görüntüle"
+    },
+    "cta": {
+      "title": "MCP İş Akışınızı Güçlendirmeye Hazır mısınız?",
+      "subtitle": "Bugün Plugged.in topluluğuna katılın. MCP sunucularını daha önce hiç olmadığı gibi yönetin, paylaşın ve keşfedin.",
+      "description": "Topluluğa katılın ve bugün Plugged.in ile oluşturmaya başlayın.",
+      "primary": "Başlayın",
+      "secondary": "Daha Fazla Bilgi Edinin",
+      "primaryAction": "Ücretsiz Başlayın",
+      "secondaryAction": "Belgeleri Oku",
+      "step1": {
+        "title": "Kaydolun",
+        "description": "Ücretsiz hesabınızı saniyeler içinde oluşturun."
+      },
+      "step2": {
+        "title": "Sunucuları Bağlayın",
+        "description": "Mevcut MCP sunucularınızı ekleyin veya yenilerini keşfedin."
+      },
+      "step3": {
+        "title": "Keşfedin ve Paylaşın",
+        "description": "Ekosisteminizi yönetin ve toplulukla etkileşim kurun."
+      }
+    }
+  }
+}

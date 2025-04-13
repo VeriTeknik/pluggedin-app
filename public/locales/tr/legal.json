@@ -1,0 +1,50 @@
+{
+  "legal": {
+    "title": "Yasal",
+    "subtitle": "Önemli Belgeler",
+    "description": "Plugged.in için önemli belgeler ve yasal bilgiler",
+    "pages": {
+      "privacy": {
+        "title": "Gizlilik Politikası",
+        "description": "Verilerinizi nasıl topladığımız, kullandığımız ve koruduğumuz",
+        "content": {
+          "intro": "Plugged.in'e ('biz,' 'bizim,' veya 'bize') hoş geldiniz. Bu Gizlilik Politikası, hizmetimizi kullandığınızda bilgilerinizi nasıl topladığımızı, kullandığımızı, açıkladığımızı ve koruduğumuzu açıklar. Lütfen bu gizlilik politikasını dikkatlice okuyun.",
+          "disclaimer": "Bu gizlilik politikasının şartlarını kabul etmiyorsanız, lütfen hizmete erişmeyin.",
+          "note": "ÖNEMLİ NOT: Plugged.in şu anda Yayın Adayı durumundadır. Bu gizlilik politikası, hizmet olgunlaştıkça ve ek özellikler uygulandıkça güncellenebilir.",
+          "thirdParty": "Üçüncü taraf sitelerinin veya hizmetlerinin içeriği, gizlilik politikaları veya uygulamaları üzerinde hiçbir kontrolümüz yoktur ve sorumluluk kabul etmeyiz."
+        }
+      },
+      "terms": {
+        "title": "Kullanım Şartları",
+        "description": "Hizmetimizi kullanma şartları ve koşulları",
+        "content": {
+          "intro": "Plugged.in'e erişerek veya kullanarak, bu Şartları ve geçerli olabilecek ek şartları kabul etmiş olursunuz. Bu Şartları kabul etmiyorsanız, Plugged.in'e erişmemeli veya kullanmamalısınız.",
+          "responsibilities": {
+            "title": "Sorumluluklarınız",
+            "items": [
+              "MCP sunucularını ve araçlarını geçerli yasa ve yönetmeliklere uygun olarak kullanın",
+              "MCP sunucularını yasa dışı veya yetkisiz herhangi bir amaç için kullanmayın",
+              "Yapılandırdığınız veya dağıttığınız MCP sunucularının sorumluluğunu üstlenin"
+            ]
+          }
+        }
+      },
+      "disclaimer": {
+        "title": "Sorumluluk Reddi",
+        "description": "Önemli yasal bildirimler",
+        "content": {
+          "title": "Sorumluluk Reddi ve Sorumluluk Sınırlaması",
+          "thirdParty": "Hizmet, bizim sahip olmadığımız veya kontrol etmediğimiz üçüncü taraf web sitelerine veya hizmetlerine bağlantılar içerebilir. Üçüncü taraf web sitelerinin veya hizmetlerinin içeriği, gizlilik politikaları veya uygulamaları üzerinde hiçbir kontrolümüz yoktur ve sorumluluk kabul etmeyiz."
+        }
+      },
+      "contact": {
+        "title": "İletişim",
+        "description": "Bize nasıl ulaşabilirsiniz",
+        "content": {
+          "title": "İletişim Bilgileri",
+          "description": "Bu yasal belgelerle ilgili sorularınız için lütfen bizimle iletişime geçin"
+        }
+      }
+    }
+  }
+}

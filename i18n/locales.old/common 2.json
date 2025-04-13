@@ -25,7 +25,12 @@
     "notAvailable": "N/A",
     "saveChanges": "Save Changes",
     "backToServerList": "Back to Server List",
-    "viewSchema": "View Schema"
+    "viewSchema": "View Schema",
+    "search": {
+      "card": {
+        "installed": "Installed" 
+      }
+    }
   },
   "cancel": "Cancel"
 }

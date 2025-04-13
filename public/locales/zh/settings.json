@@ -1,0 +1,69 @@
+{
+  "settings": {
+    "title": "",
+    "profile": {
+      "title": "",
+      "description": "",
+      "avatar": "",
+      "avatarRecommendation": "",
+      "name": "",
+      "namePlaceholder": "",
+      "language": "",
+      "updateButton": "",
+      "success": "",
+      "error": ""
+    },
+    "password": {
+      "title": "",
+      "description": "",
+      "current": {
+        "label": "",
+        "placeholder": ""
+      },
+      "new": {
+        "label": "",
+        "placeholder": ""
+      },
+      "confirm": {
+        "label": "",
+        "placeholder": ""
+      },
+      "updateButton": "",
+      "success": "",
+      "error": ""
+    },
+    "account": {
+      "title": "",
+      "description": "",
+      "deleteButton": "",
+      "confirmTitle": "",
+      "confirmDescription": "",
+      "confirmButton": "",
+      "deletingButton": "",
+      "success": "",
+      "error": ""
+    },
+    "validation": {
+      "invalidJsonArray": ""
+    },
+    "connectedAccounts": {
+      "title": "",
+      "description": "",
+      "github": {
+        "connected": "",
+        "connect": ""
+      },
+      "google": {
+        "connected": "",
+        "connect": ""
+      },
+      "twitter": {
+        "connected": "",
+        "connect": ""
+      },
+      "connected": "",
+      "removed": "",
+      "error": ""
+    }
+  }
+}

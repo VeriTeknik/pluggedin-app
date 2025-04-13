@@ -1,0 +1,49 @@
+{
+  "apiKeys": {
+    "title": "API Anahtarları",
+    "description": "API anahtarlarınız Plugged.in API'sine yapılan isteklerin kimlik doğrulaması için kullanılır. Güvenli tutun ve başkalarıyla paylaşmayın.",
+    "empty": "Henüz API anahtarı yok. Başlamak için bir tane oluşturun.",
+    "actions": {
+      "create": "API Anahtarı Oluştur",
+      "creating": "Oluşturuluyor...",
+      "delete": "API Anahtarını Sil",
+      "deleting": "Siliniyor...",
+      "show": "API anahtarını göster",
+      "hide": "API anahtarını gizle",
+      "copy": "API anahtarını kopyala",
+      "cancel": "İptal"
+    },
+    "dialog": {
+      "create": {
+        "title": "API Anahtarı Oluştur",
+        "description": "Projeniz için yeni bir API anahtarı oluşturun. Amacını belirtmek için isteğe bağlı olarak bir isim verebilirsiniz.",
+        "nameLabel": "API Anahtarı İsmi (İsteğe Bağlı)",
+        "namePlaceholder": "örn. Üretim API Anahtarı"
+      },
+      "delete": {
+        "title": "API Anahtarını Sil",
+        "description": "Bu API anahtarını{{name}} silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+        "namePrefix": " \""
+      }
+    },
+    "toast": {
+      "copied": {
+        "title": "API Anahtarı kopyalandı",
+        "description": "API anahtarı panonuza kopyalandı."
+      },
+      "created": {
+        "title": "API Anahtarı oluşturuldu",
+        "description": "Yeni API anahtarınız başarıyla oluşturuldu."
+      },
+      "deleted": {
+        "title": "API Anahtarı silindi",
+        "description": "API anahtarınız başarıyla silindi."
+      },
+      "error": {
+        "title": "Hata",
+        "createFailed": "API anahtarı oluşturulamadı",
+        "deleteFailed": "API anahtarı silinemedi"
+      }
+    }
+  }
+}

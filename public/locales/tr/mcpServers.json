@@ -1,0 +1,205 @@
+{
+  "mcpServers": {
+    "title": "MCP Sunucuları",
+    "subtitle": "Eklenti Yönetimi",
+    "description": "MCP sunucularınızı yapılandırın ve yönetin. Komut satırı veya URL tabanlı arayüzler aracılığıyla harici araçlara ve hizmetlere bağlanın.",
+    "stats": {
+      "totalServers": "Toplam Sunucu",
+      "active": "Aktif",
+      "stdio": "STDIO",
+      "sse": "SSE"
+    },
+    "actions": {
+      "addServer": "Sunucu Ekle",
+      "import": "İçe Aktar",
+      "export": "Dışa Aktar",
+      "search": "Sunucularda ara...",
+      "edit": "Düzenle",
+      "delete": "Sil",
+      "deleteConfirm": "Bu MCP sunucusunu silmek istediğinizden emin misiniz?",
+      "cancel": "İptal",
+      "create": "Oluştur",
+      "creating": "Oluşturuluyor...",
+      "close": "Kapat",
+      "downloadJson": "JSON İndir",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı!",
+      "discover": "Keşfet",
+      "discovering": "Keşfediliyor...",
+      "shareCollection": "Koleksiyonu Paylaş",
+      "unshare": "Paylaşımı Kaldır",
+      "unshareConfirmTitle": "Sunucu Paylaşımını Kaldır",
+      "unshareConfirmDesc": "Bu sunucunun paylaşımını kaldırmak istediğinizden emin misiniz? Diğer kullanıcılar artık buna erişemeyecek.",
+      "shared": "Paylaşıldı",
+      "share": "Paylaş"
+    },
+    "form": {
+      "success": "MCP sunucusu başarıyla oluşturuldu.",
+      "error": {
+        "createFailed": "MCP sunucusu oluşturulamadı."
+      },
+      "addTitle": "MCP Sunucusu Ekle",
+      "addDescription": "Yeni bir MCP sunucusu yapılandırması oluşturun. STDIO (komut tabanlı) veya SSE (URL tabanlı) sunucu türü arasından seçim yapın.",
+      "commandBased": "Komut tabanlı (STDIO)",
+      "urlBased": "URL tabanlı (SSE)",
+      "name": "İsim",
+      "namePlaceholder": "örn., mcp-server-time",
+      "description": "Açıklama",
+      "descriptionPlaceholder": "(İsteğe bağlı) Sunucunun amacını kısaca açıklayın",
+      "command": "Komut",
+      "commandPlaceholder": "örn., npx veya uvx",
+      "arguments": "Argümanlar",
+      "argumentsPlaceholder": "örn., mcp-server-time, --local-timezone=America/Los_Angeles",
+      "envVars": "Ortam Değişkenleri",
+      "envVarsPlaceholder": "KEY=değer\nANOTHER_KEY=başka_değer",
+      "envVarsHelp": "Ortam değişkenlerini KEY=değer formatında, her satıra bir tane olacak şekilde girin",
+      "serverUrl": "Sunucu URL'si",
+      "serverUrlPlaceholder": "http://localhost:3000/sse",
+      "serverUrlHelp": "Geçerli bir HTTP/HTTPS URL'si olmalıdır",
+      "created": "Oluşturuldu",
+      "notes": "Notlar",
+      "notesPlaceholder": "Sunucu hakkında notlar, kullanım talimatları veya bilinen özellikler ekleyin..."
+    },
+    "empty": {
+      "title": "Sunucu Bulunamadı",
+      "noResults": "\"{{search}}\" ile eşleşen sunucu yok",
+      "noServers": "Henüz hiç MCP sunucusu eklemediniz",
+      "addFirst": "İlk Sunucunuzu Ekleyin"
+    },
+    "import": {
+      "title": "MCP Sunucularını İçe Aktar",
+      "description": "JSON'dan birden çok MCP sunucusu yapılandırmasını içe aktarın. Bu, mevcut sunucuları değiştirmeden yeni sunucular ekleyecektir.",
+      "jsonFormat": "JSON Formatı",
+      "jsonPlaceholder": "JSON'ınızı buraya yapıştırın",
+      "importing": "İçe aktarılıyor...",
+      "importServers": "Sunucuları İçe Aktar",
+      "success": "{{count}} MCP sunucusu başarıyla içe aktarıldı.",
+      "error": {
+        "invalidJson": "Geçersiz JSON formatı",
+        "missingMcpServers": "JSON bir \"mcpServers\" nesnesi içermelidir",
+        "importFailed": "Sunucular içe aktarılamadı. Detaylar için konsolu kontrol edin."
+      }
+    },
+    "export": {
+      "title": "MCP Sunucuları Yapılandırmasını Dışa Aktar",
+      "description": "MCP sunucusu yapılandırmalarınız JSON formatında, başka bir örnekte içe aktarmaya hazır.",
+      "copyTooltip": "JSON'ı panoya kopyala",
+      "downloadSuccess": "{{count}} MCP sunucusu yapılandırması indirildi.",
+      "error": {
+        "noServers": "Dışa aktarılacak sunucu yok.",
+        "copyFailed": "Panoya kopyalanamadı."
+      }
+    },
+    "shareCollection": {
+      "title": "Sunucu Koleksiyonunu Paylaş",
+      "description": "Seçili MCP sunucularınızı diğer kullanıcılarla paylaşın.",
+      "success": "Sunucu koleksiyonu başarıyla paylaşıldı.",
+      "error": "Sunucu koleksiyonu paylaşılamadı.",
+      "warning": {
+        "unsharedServers": "Paylaşılmamış Sunucular Tespit Edildi",
+        "unsharedServersDescription": "Seçili sunucuların bazıları şu anda paylaşılmıyor. Bu koleksiyonu paylaştığınızda otomatik olarak paylaşılacaklar."
+      },
+      "form": {
+        "servers": "Seçili Sunucular",
+        "title": "Koleksiyon Başlığı",
+        "titlePlaceholder": "Sunucu koleksiyonunuz için bir başlık girin",
+        "description": "Koleksiyon Açıklaması",
+        "descriptionPlaceholder": "Bu sunucuların ne için kullanıldığını ve nasıl birlikte çalıştıklarını açıklayın",
+        "public": "Koleksiyonu Herkese Açık Yap",
+        "share": "Koleksiyonu Paylaş"
+      }
+    },
+    "status": {
+      "active": "Aktif",
+      "inactive": "Pasif",
+      "stdio": "STDIO",
+      "sse": "SSE"
+    },
+    "errors": {
+      "missingInfo": "Profil veya sunucu bilgisi eksik.",
+      "discoveryFailed": "Keşif başarısız oldu.",
+      "fetchResourcesFailed": "Kaynaklar yüklenemedi.",
+      "fetchTemplatesFailed": "Kaynak şablonları yüklenemedi.",
+      "fetchPromptsFailed": "İstemler yüklenemedi.",
+      "fetchToolsFailed": "Araçlar yüklenemedi.",
+      "fetchInstructionsFailed": "Özel talimatlar alınamadı."
+    },
+    "tabs": {
+      "details": "Sunucu Detayları",
+      "config": "Yapılandırma",
+      "notes": "Notlar",
+      "customInstructions": "Özel Talimatlar",
+      "resources": "Kaynaklar",
+      "templates": "Kaynak Şablonları",
+      "prompts": "İstemler",
+      "tools": "Araçlar"
+    },
+    "details": {
+      "serverInfo": "Sunucu Bilgisi",
+      "uuid": "UUID",
+      "status": "Durum",
+      "created": "Oluşturuldu",
+      "type": "Tür"
+    },
+    "config": {
+      "commandConfig": "Komut Yapılandırması",
+      "command": "Komut",
+      "arguments": "Argümanlar",
+      "envVars": "Ortam Değişkenleri",
+      "serverUrl": "Sunucu URL'si"
+    },
+    "notes": {
+      "title": "Notlar",
+      "placeholder": "Bu sunucunun yapılandırması, kullanım talimatları veya diğer ilgili bilgiler hakkında notlar ekleyin..."
+    },
+    "resources": {
+      "title": "Keşfedilen Kaynaklar",
+      "name": "İsim",
+      "uri": "URI",
+      "description": "Açıklama",
+      "mimeType": "MIME Türü",
+      "noResourcesTitle": "Kaynak Bulunamadı",
+      "noResources": "Bu sunucu için henüz statik kaynak keşfedilmedi. Keşfi çalıştırmayı deneyin."
+    },
+    "templates": {
+      "title": "Kaynak Şablonları",
+      "name": "İsim",
+      "uriTemplate": "URI Şablonu",
+      "variables": "Değişkenler",
+      "description": "Açıklama",
+      "mimeType": "MIME Türü",
+      "noTemplatesTitle": "Kaynak Şablonu Bulunamadı",
+      "noTemplates": "Bu sunucu için henüz kaynak şablonu keşfedilmedi. Keşfi çalıştırmayı deneyin."
+    },
+    "prompts": {
+      "title": "Keşfedilen İstemler",
+      "name": "İsim",
+      "description": "Açıklama",
+      "arguments": "Argüman Şeması",
+      "noPromptsTitle": "İstem Bulunamadı",
+      "noPrompts": "Bu sunucu için henüz istem keşfedilmedi. Keşfi çalıştırmayı deneyin.",
+      "viewArguments": "Argümanları Görüntüle ({{count}})"
+    },
+    "tools": {
+      "title": "Keşfedilen Araçlar",
+      "noTools": "Bu sunucu için henüz araç keşfedilmedi. Sunucu kartındaki \"Araçları Keşfet\" düğmesini kullanmayı deneyin."
+    },
+    "instructions": {
+      "title": "Özel Talimatlar",
+      "descriptionLabel": "Açıklama (İsteğe Bağlı)",
+      "descriptionPlaceholder": "Bu talimatların amacını kısaca açıklayın",
+      "descriptionHelp": "Bu açıklama sadece sizin referansınız içindir.",
+      "messagesLabel": "Mesajlar (JSON Dizisi)",
+      "messagesPlaceholder": "[\n  {\n    \"role\": \"system\",\n    \"content\": { \"type\": \"text\", \"text\": \"Talimatınızı buraya yazın...\" }\n  }\n]",
+      "messagesHelp": "JSON formatında bir MCP Mesaj nesneleri dizisi girin.",
+      "infoTitle": "İstemciler Talimatları Nasıl Kullanır",
+      "infoText": "Bu talimatlar potansiyel olarak MCP istemcileri (Cline gibi) tarafından bu sunucunun araçlarını kullanırken yapay zekaya bağlam sağlamak için kullanılabilir. Tam kullanım istemci uygulamasına bağlıdır.",
+      "saveSuccess": "Özel talimatlar başarıyla kaydedildi.",
+      "saveError": "Özel talimatlar kaydedilemedi."
+    },
+    "placeholders": {
+      "serverName": "Sunucu adını girin",
+      "description": "Açıklama eklemek için tıklayın..."
+    }
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "setupGuide": {
+    "title": "Kurulum Kılavuzu",
+    "proxyBenefits": {
+      "title": "Plugged.in MCP'nin Faydaları",
+      "description": "Plugged.in MCP, tüm MCP sunucularınız için birleşik bir proxy olarak çalışır ve birçok avantaj sağlar:",
+      "benefits": [
+        "Tek Yapılandırma Noktası - Tüm MCP sunucularınızı tek bir merkezi yapılandırma üzerinden yönetin",
+        "Otomatik Güncellemeler - En son özellikleri ve güvenlik güncellemelerini otomatik olarak alın",
+        "Basitleştirilmiş Kimlik Doğrulama - Tüm MCP sunucularınız için tek bir API anahtarı kullanın",
+        "Gelişmiş Güvenlik - Yerleşik güvenlik özellikleri ve en iyi uygulamalar",
+        "Çapraz Platform Uyumluluğu - Farklı işletim sistemlerinde sorunsuz çalışır"
+      ]
+    },
+    "installation": {
+      "title": "Kurulum Yöntemleri",
+      "apiKeysNotice": "Not: API Anahtarlarınızı API Anahtarları Sayfasında yönetebilirsiniz",
+      "manualConfig": {
+        "title": "Manuel Yapılandırma",
+        "description": "Claude Desktop için, yapılandırma dosyasını şu konumda bulun:",
+        "paths": {
+          "macos": "macOS",
+          "windows": "Windows"
+        }
+      },
+      "cursorConfig": {
+        "title": "Cursor Yapılandırması",
+        "description": "Cursor için, Plugged.in MCP'yi doğrudan ayarlarda yapılandırabilirsiniz:",
+        "steps": [
+          "Cursor'u açın ve Cursor Ayarları'na gidin",
+          "Özellikler bölümüne gidin",
+          "'MCP Sunucuları'nı bulun ve 'Yeni MCP Sunucusu Ekle'ye tıklayın",
+          "Aşağıdaki komutu kullanın:"
+        ]
+      }
+    },
+    "smithery": {
+      "title": "Smithery Windows Yapılandırması",
+      "description": "Maksimum uyumluluk için MCP'leri bulutta docker üzerinde çalıştırmak için Smithery'yi kullanmanızı öneririz.",
+      "setupLink": "Windows'ta Smithery CLI kurulumu için buraya bakın:",
+      "serverLink": "Plugged.in MCP sunucu listesini doğrudan Smithery'de ziyaret edin:",
+      "windowsNote": "Windows'ta Smithery için aşağıdaki yapılandırma seçeneklerini de kullanabilirsiniz:",
+      "terminalCommand": "Smithery komutunu doğrudan terminalinizde çalıştırabilirsiniz:",
+      "desktopConfig": "Veya Claude Desktop yapılandırma dosyanızda yapılandırın:"
+    }
+  }
+}

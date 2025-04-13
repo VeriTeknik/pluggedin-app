@@ -1,11 +1,11 @@
-import { NextConfig } from 'next/types';
 import { WebpackConfigContext } from 'next/dist/server/config-shared';
+import { NextConfig } from 'next/types';
 import { Configuration as WebpackConfig } from 'webpack';
 
 import packageJson from './package.json';
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // output: 'standalone', // Temporarily commented out for testing
   allowedDevOrigins: ['plugged.in'],
   async rewrites() {
     return [];

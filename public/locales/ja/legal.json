@@ -1,0 +1,50 @@
+{
+  "legal": {
+    "title": "",
+    "subtitle": "",
+    "description": "",
+    "pages": {
+      "privacy": {
+        "title": "",
+        "description": "",
+        "content": {
+          "intro": "",
+          "disclaimer": "",
+          "note": "",
+          "thirdParty": ""
+        }
+      },
+      "terms": {
+        "title": "",
+        "description": "",
+        "content": {
+          "intro": "",
+          "responsibilities": {
+            "title": "",
+            "items": [
+              "",
+              "",
+              ""
+            ]
+          }
+        }
+      },
+      "disclaimer": {
+        "title": "",
+        "description": "",
+        "content": {
+          "title": "",
+          "thirdParty": ""
+        }
+      },
+      "contact": {
+        "title": "",
+        "description": "",
+        "content": {
+          "title": "",
+          "description": ""
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "landing": {
+    "nav": {
+      "features": "Features",
+      "community": "Community",
+      "collections": "Collections",
+      "playground": "Playground",
+      "getStarted": "Get Started"
+    },
+    "hero": {
+      "headline": "Connect, Share, and Discover MCP Servers",
+      "subheadline": "The community hub for Machine Conversation Protocol",
+      "cta": {
+        "getStarted": "Get Started",
+        "learnMore": "Learn More"
+      },
+      "title": "Connect, Share, and Discover MCP Servers",
+      "subtitle": "The community hub and universal proxy for the Machine Conversation Protocol",
+      "analogy": "\"One MCP proxy to rule all MCPs\"",
+      "openSource": "Proudly Open Source"
+    },
+    "features": {
+      "sectionTitle": "Powerful Features for MCP Management",
+      "sectionSubtitle": "Everything you need to connect, share, and discover MCP servers effectively.",
+      "communitySharing": {
+        "title": "Community MCP Server Sharing",
+        "description": "Share your MCP servers and discover creations from the community."
+      },
+      "collectionManagement": {
+        "title": "Collection Management",
+        "description": "Organize servers into collections for different clients or projects."
+      },
+      "workspaceOrganization": {
+        "title": "Workspace Organization",
+        "description": "Group collections into workspaces like development or production."
+      },
+      "advancedSearch": {
+        "title": "Advanced Search",
+        "description": "Find the perfect MCP server with powerful filtering capabilities."
+      },
+      "mcpPlayground": {
+        "title": "MCP Playground",
+        "description": "Test and debug your MCP servers in an interactive environment."
+      },
+      "pluginManagement": {
+        "title": "Plugin Management",
+        "description": "Browse, configure, and manage MCP servers and plugins",
+        "content": "Connect various AI tools and services through a unified interface. Configure and manage your plugins from a central dashboard.",
+        "action": "Browse Plugins"
+      },
+      "aiPlayground": {
+        "title": "AI Playground",
+        "description": "Test and experiment with your AI tools in an interactive environment",
+        "content": "Experience your plugins in action. The playground allows you to test different configurations and see real-time results.",
+        "action": "Open Playground"
+      },
+      "customDevelopment": {
+        "title": "Custom Development",
+        "description": "Create and customize your own MCP servers and tools",
+        "content": "Build custom capabilities using our Python editor and integrated development environment. Extend your AI with specialized functionalities.",
+        "action": "Create Custom Tools"
+      }
+    },
+    "community": {
+      "title": "Join the MCP Community",
+      "description": "Share your MCP servers, discover powerful tools built by others, and collaborate within a growing ecosystem. Rate servers, leave reviews, and find the best solutions for your needs.",
+      "benefit1": "Discover innovative servers from fellow developers.",
+      "benefit2": "Get feedback and ratings on your shared servers.",
+      "benefit3": "Collaborate and build upon community creations.",
+      "benefit4": "Stay updated with the latest MCP trends.",
+      "visualPlaceholder": "Visual showing server sharing/ratings"
+    },
+    "collections": {
+      "title": "Organize Your MCP Ecosystem",
+      "subtitle": "Effortlessly manage servers with collections and workspaces, tailored for your workflow.",
+      "collectionsTitle": "Streamlined Collections",
+      "collectionsDesc": "Group related MCP servers into logical collections for specific clients, applications, or environments.",
+      "workspacesTitle": "Powerful Workspaces",
+      "workspacesDesc": "Organize your collections further into workspaces, such as separating development, staging, and production setups.",
+      "hierarchyPlaceholder": "Visual representation of collection hierarchy",
+      "imagePlaceholder": "Image: Collection/Workspace Mockup"
+    },
+    "search": {
+      "title": "Find the Right Tools, Instantly",
+      "subtitle": "Discover MCP servers and tools with powerful search and filtering options.",
+      "feature1Title": "Intelligent Search",
+      "feature1Desc": "Quickly find servers by name, description, or capabilities using our smart search algorithm.",
+      "feature2Title": "Advanced Filtering",
+      "feature2Desc": "Narrow down results with filters for categories, tags, ratings, and compatibility.",
+      "feature3Title": "Detailed Previews",
+      "feature3Desc": "View server details, ratings, and community reviews directly from the search results.",
+      "searchPlaceholder": "Search for MCP servers...",
+      "searchButton": "Search",
+      "filter1": "Filter: Category",
+      "filter2": "Filter: Rating",
+      "result1Title": "Example Server 1",
+      "result1Desc": "A great server for testing...",
+      "result2Title": "Community Favorite Server",
+      "result2Desc": "Highly rated by the community...",
+      "imagePlaceholder": "Image: Search results showing community servers (CardGrid Mockup)"
+    },
+    "playground": {
+      "title": "Test & Debug with MCP Playground",
+      "subtitle": "An interactive environment to build, test, and refine your MCP servers.",
+      "feature1Title": "Interactive Testing",
+      "feature1Desc": "Directly interact with your MCP servers, call tools, and inspect resources in real-time.",
+      "feature2Title": "Efficient Debugging",
+      "feature2Desc": "Identify and resolve issues quickly with detailed request/response logs and error messages.",
+      "feature3Title": "Rapid Prototyping",
+      "feature3Desc": "Experiment with different server configurations and tool implementations before deployment.",
+      "visualPlaceholder": "Visual representation of playground environment",
+      "imagePlaceholder": "Image: Playground/Debugging Mockup"
+    },
+    "testimonials": {
+      "sectionTitle": "Trusted by Developers Worldwide",
+      "sectionSubtitle": "Hear what our users have to say about Plugged.in.",
+      "quote1": "\"Plugged.in revolutionized how our team manages MCP servers. The organization features are fantastic!\"",
+      "name1": "Jane Doe",
+      "title1": "Lead AI Engineer, TechCorp",
+      "quote2": "\"The community sharing aspect is a game-changer. Discovering new tools is easier than ever.\"",
+      "name2": "Alex Smith",
+      "title2": "Independent Developer",
+      "quote3": "\"Debugging with the MCP Playground saved us countless hours. Highly recommended!\"",
+      "name3": "Maria Kim",
+      "title3": "Founder, AI Solutions Inc."
+    },
+    "cta": {
+      "title": "Ready to Supercharge Your MCP Workflow?",
+      "subtitle": "Join the Plugged.in community today. Manage, share, and discover MCP servers like never before.",
+      "primaryAction": "Get Started for Free",
+      "secondaryAction": "Read Documentation"
+    },
+    "gettingStarted": {
+      "title": "New to Plugged.in?",
+      "description": "Follow our setup guide to get your environment configured properly and start building with Plugged.in right away.",
+      "action": "View Setup Guide"
+    }
+  }
+}

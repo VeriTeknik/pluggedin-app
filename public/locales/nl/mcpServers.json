@@ -1,0 +1,205 @@
+{
+  "mcpServers": {
+    "title": "",
+    "subtitle": "",
+    "description": "",
+    "stats": {
+      "totalServers": "",
+      "active": "",
+      "stdio": "",
+      "sse": ""
+    },
+    "actions": {
+      "addServer": "",
+      "import": "",
+      "export": "",
+      "search": "",
+      "edit": "",
+      "delete": "",
+      "deleteConfirm": "",
+      "cancel": "",
+      "create": "",
+      "creating": "",
+      "close": "",
+      "downloadJson": "",
+      "copy": "",
+      "copied": "",
+      "discover": "",
+      "discovering": "",
+      "shareCollection": "",
+      "unshare": "",
+      "unshareConfirmTitle": "",
+      "unshareConfirmDesc": "",
+      "shared": "",
+      "share": ""
+    },
+    "form": {
+      "success": "",
+      "error": {
+        "createFailed": ""
+      },
+      "addTitle": "",
+      "addDescription": "",
+      "commandBased": "",
+      "urlBased": "",
+      "name": "",
+      "namePlaceholder": "",
+      "description": "",
+      "descriptionPlaceholder": "",
+      "command": "",
+      "commandPlaceholder": "",
+      "arguments": "",
+      "argumentsPlaceholder": "",
+      "envVars": "",
+      "envVarsPlaceholder": "",
+      "envVarsHelp": "",
+      "serverUrl": "",
+      "serverUrlPlaceholder": "",
+      "serverUrlHelp": "",
+      "created": "",
+      "notes": "",
+      "notesPlaceholder": ""
+    },
+    "empty": {
+      "title": "",
+      "noResults": "",
+      "noServers": "",
+      "addFirst": ""
+    },
+    "import": {
+      "title": "",
+      "description": "",
+      "jsonFormat": "",
+      "jsonPlaceholder": "",
+      "importing": "",
+      "importServers": "",
+      "success": "",
+      "error": {
+        "invalidJson": "",
+        "missingMcpServers": "",
+        "importFailed": ""
+      }
+    },
+    "export": {
+      "title": "",
+      "description": "",
+      "copyTooltip": "",
+      "downloadSuccess": "",
+      "error": {
+        "noServers": "",
+        "copyFailed": ""
+      }
+    },
+    "shareCollection": {
+      "title": "",
+      "description": "",
+      "success": "",
+      "error": "",
+      "warning": {
+        "unsharedServers": "",
+        "unsharedServersDescription": ""
+      },
+      "form": {
+        "servers": "",
+        "title": "",
+        "titlePlaceholder": "",
+        "description": "",
+        "descriptionPlaceholder": "",
+        "public": "",
+        "share": ""
+      }
+    },
+    "status": {
+      "active": "",
+      "inactive": "",
+      "stdio": "",
+      "sse": ""
+    },
+    "errors": {
+      "missingInfo": "",
+      "discoveryFailed": "",
+      "fetchResourcesFailed": "",
+      "fetchTemplatesFailed": "",
+      "fetchPromptsFailed": "",
+      "fetchToolsFailed": "",
+      "fetchInstructionsFailed": ""
+    },
+    "tabs": {
+      "details": "",
+      "config": "",
+      "notes": "",
+      "customInstructions": "",
+      "resources": "",
+      "templates": "",
+      "prompts": "",
+      "tools": ""
+    },
+    "details": {
+      "serverInfo": "",
+      "uuid": "",
+      "status": "",
+      "created": "",
+      "type": ""
+    },
+    "config": {
+      "commandConfig": "",
+      "command": "",
+      "arguments": "",
+      "envVars": "",
+      "serverUrl": ""
+    },
+    "notes": {
+      "title": "",
+      "placeholder": ""
+    },
+    "resources": {
+      "title": "",
+      "name": "",
+      "uri": "",
+      "description": "",
+      "mimeType": "",
+      "noResourcesTitle": "",
+      "noResources": ""
+    },
+    "templates": {
+      "title": "",
+      "name": "",
+      "uriTemplate": "",
+      "variables": "",
+      "description": "",
+      "mimeType": "",
+      "noTemplatesTitle": "",
+      "noTemplates": ""
+    },
+    "prompts": {
+      "title": "",
+      "name": "",
+      "description": "",
+      "arguments": "",
+      "noPromptsTitle": "",
+      "noPrompts": "",
+      "viewArguments": ""
+    },
+    "tools": {
+      "title": "",
+      "noTools": ""
+    },
+    "instructions": {
+      "title": "",
+      "descriptionLabel": "",
+      "descriptionPlaceholder": "",
+      "descriptionHelp": "",
+      "messagesLabel": "",
+      "messagesPlaceholder": "",
+      "messagesHelp": "",
+      "infoTitle": "",
+      "infoText": "",
+      "saveSuccess": "",
+      "saveError": ""
+    },
+    "placeholders": {
+      "serverName": "",
+      "description": ""
+    }
+  }
+}

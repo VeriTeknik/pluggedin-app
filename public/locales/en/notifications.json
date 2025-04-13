@@ -1,5 +1,29 @@
 {
   "notifications": {
-    "title": "Notifications"
+    "title": "Notifications",
+    "description": "You can see all system notifications here",
+    "actions": {
+      "markAllAsRead": "Mark All as Read",
+      "actions": "Actions",
+      "deleteAll": "Delete All Notifications"
+    },
+    "tabs": {
+      "all": "All",
+      "unread": "Unread",
+      "alerts": "Alerts",
+      "info": "Information",
+      "success": "Success"
+    },
+    "empty": {
+      "title": "No Notifications",
+      "description": "You don't have any notifications in this category."
+    },
+    "toast": {
+      "markReadError": "Failed to mark notification as read",
+      "deleteSuccess": "Notification deleted",
+      "deleteError": "Failed to delete notification",
+      "deleteAllSuccess": "All notifications deleted",
+      "deleteAllError": "Failed to delete all notifications"
+    }
   }
 }

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { I18nextProvider } from 'react-i18next';
 
 import i18n from '@/i18n/client';
-import { defaultLocale, Locale, locales } from '@/i18n/config'; // Import config
+import { Locale, locales } from '@/i18n/config'; // Import config (removed defaultLocale)
 
 export function I18nProvider({
   children,
@@ -14,30 +14,42 @@ export function I18nProvider({
   initialLocale?: string;
 }) {
   useEffect(() => {
-    // Set initial locale synchronously to match server
+    // If an initial locale is provided by the server, use it and stop.
     if (initialLocale) {
-      i18n.changeLanguage(initialLocale);
+      if (i18n.language !== initialLocale) {
+        i18n.changeLanguage(initialLocale);
+      }
+      // Ensure localStorage matches the server-provided locale
       localStorage.setItem('pluggedin_language', initialLocale);
+      return; // Don't proceed with client-side detection if server provided locale
     }
 
-    // After initial render, check localStorage
+    // --- Client-side detection (only if initialLocale was NOT provided) ---
+
+    // Check localStorage first
     const storedLang = localStorage.getItem('pluggedin_language');
-    if (storedLang && storedLang !== initialLocale) {
-      i18n.changeLanguage(storedLang);
-    } else if (!storedLang && i18n.language === defaultLocale) {
-      // If no stored lang and current lang is default, try browser detection
-      const browserLang = navigator.language.split('-')[0]; // Get base language (e.g., 'en' from 'en-US')
-      if (locales.includes(browserLang as Locale) && browserLang !== defaultLocale) {
-        if (process.env.NODE_ENV !== 'production') {
-          console.debug(`Detected browser language: ${browserLang}, setting language.`);
-        }
-        i18n.changeLanguage(browserLang);
-        localStorage.setItem('pluggedin_language', browserLang);
-      }
+    if (storedLang && locales.includes(storedLang as Locale)) {
+       if (i18n.language !== storedLang) {
+         i18n.changeLanguage(storedLang);
+       }
+       return; // Stop if found in localStorage
     }
-  }, [initialLocale]); // Dependency array remains the same, effect runs once on mount/initialLocale change
+
+    // If no stored lang, try browser detection
+    const browserLang = navigator.language.split('-')[0]; // Get base language
+    if (locales.includes(browserLang as Locale) && browserLang !== i18n.language) {
+       if (process.env.NODE_ENV !== 'production') {
+         console.debug(`Detected browser language: ${browserLang}, setting language.`);
+       }
+       i18n.changeLanguage(browserLang);
+       localStorage.setItem('pluggedin_language', browserLang); // Store detected language
+    }
+
+    // If still no language set, i18next will use the fallbackLng (defaultLocale)
+  }, [initialLocale]); // Rerun if initialLocale changes
 
   return (
+    // Explicitly pass the imported i18n instance
     <I18nextProvider i18n={i18n}>
       {children}
     </I18nextProvider>

@@ -1,0 +1,69 @@
+{
+  "settings": {
+    "title": "Ayarlar",
+    "profile": {
+      "title": "Profil",
+      "description": "Profil bilgilerinizi yönetin",
+      "avatar": "Profil Resmi Yükle",
+      "avatarRecommendation": "Önerilen: Kare resim, maksimum 1MB",
+      "name": "İsim",
+      "namePlaceholder": "İsminizi girin",
+      "language": "Dil",
+      "updateButton": "Profili Güncelle",
+      "success": "Profil başarıyla güncellendi",
+      "error": "Profil güncellenirken hata oluştu"
+    },
+    "password": {
+      "title": "Şifre",
+      "description": "Şifrenizi değiştirin",
+      "current": {
+        "label": "Mevcut Şifre",
+        "placeholder": "Mevcut şifrenizi girin"
+      },
+      "new": {
+        "label": "Yeni Şifre",
+        "placeholder": "Yeni şifrenizi girin"
+      },
+      "confirm": {
+        "label": "Yeni Şifreyi Onayla",
+        "placeholder": "Yeni şifrenizi tekrar girin"
+      },
+      "updateButton": "Şifreyi Değiştir",
+      "success": "Şifre başarıyla güncellendi",
+      "error": "Şifre güncellenirken hata oluştu"
+    },
+    "account": {
+      "title": "Hesabı Sil",
+      "description": "Hesabınızı ve ilişkili tüm verileri kalıcı olarak silin",
+      "deleteButton": "Hesabı Sil",
+      "confirmTitle": "Emin misiniz?",
+      "confirmDescription": "Bu işlem geri alınamaz. Hesabınız ve ilişkili tüm veriler sunucularımızdan kalıcı olarak silinecektir.",
+      "confirmButton": "Evet, hesabımı sil",
+      "deletingButton": "Siliniyor...",
+      "success": "Hesap başarıyla silindi",
+      "error": "Hesap silinirken hata oluştu"
+    },
+    "validation": {
+      "invalidJsonArray": "Geçersiz JSON formatı veya mesaj dizisi değil."
+    },
+    "connectedAccounts": {
+      "title": "Bağlı Hesaplar",
+      "description": "Bağlı sosyal medya hesaplarınızı yönetin",
+      "github": {
+        "connected": "GitHub'a bağlı",
+        "connect": "GitHub hesabınızı bağlayın"
+      },
+      "google": {
+        "connected": "Google'a bağlı",
+        "connect": "Google hesabınızı bağlayın"
+      },
+      "twitter": {
+        "connected": "Twitter'a bağlı",
+        "connect": "Twitter hesabınızı bağlayın"
+      },
+      "connected": "Bağlı",
+      "removed": "{{provider}} hesabı başarıyla kaldırıldı",
+      "error": "Hesap bağlantısı kesilirken hata oluştu"
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "playground": {
+    "title": "MCP Oyun Alanı",
+    "subtitle": "MCP sunucularınızı etkileşimli bir ortamda test edin ve deneyin.",
+    "description": "MCP araçlarıyla YDM yapay zeka için deneysel bir ortam.",
+    "actions": {
+      "start": "Oturumu Başlat",
+      "starting": "Başlatılıyor...",
+      "end": "Oturumu Sonlandır",
+      "ending": "Sonlandırılıyor...",
+      "save": "Ayarları Kaydet",
+      "dismiss": "Kapat",
+      "clearLogs": "Günlükleri Temizle"
+    },
+    "status": {
+      "active": "Aktif",
+      "inactive": "Pasif",
+      "sessionActive": "Oturum Aktif",
+      "serversConnected": "{{count}} sunucu bağlı"
+    },
+    "config": {
+      "title": "Yapılandırma",
+      "subtitle": "MCP oyun alanı oturumunuzu yapılandırın.",
+      "tabs": {
+        "servers": "Sunucular",
+        "llm": "YDM",
+        "logs": "Günlükler"
+      },
+      "noServers": {
+        "title": "MCP Sunucusu Bulunamadı",
+        "action": "MCP Sunucusu Ekle"
+      },
+      "sessionError": {
+        "title": "Oturum Hatası"
+      },
+      "model": {
+        "title": "Model Yapılandırması",
+        "provider": "Sağlayıcı",
+        "model": "Model",
+        "temperature": "Sıcaklık",
+        "maxTokens": "Maksimum Token",
+        "logLevel": "Günlük Seviyesi",
+        "temperatureHints": {
+          "precise": "Hassas",
+          "creative": "Yaratıcı"
+        }
+      },
+      "logs": {
+        "title": "MCP İstemci Günlükleri",
+        "showingLevel": "{{level}} ve üstü günlükler gösteriliyor",
+        "levels": "Günlük seviyeleri: hata < uyarı < bilgi < hata ayıklama",
+        "levelsHint": "Yüksek seviyeler tüm alt seviyeleri içerir",
+        "empty": "Gösterilecek günlük yok. Günlükleri burada görmek için bir oturum başlatın."
+      }
+    },
+    "chat": {
+      "title": "Sohbet",
+      "subtitle": "MCP sunucularınızla doğal dil üzerinden etkileşime geçin.",
+      "empty": {
+        "title": "MCP Oyun Alanına Hoş Geldiniz",
+        "activeDescription": "MCP sunucularınızla etkileşime başlamak için bir mesaj gönderin.",
+        "inactiveDescription": "MCP sunucularınızla etkileşime başlamak için bir oturum başlatın."
+      },
+      "input": {
+        "activePlaceholder": "Mesajınızı yazın...",
+        "inactivePlaceholder": "Sohbete başlamak için bir oturum başlatın..."
+      },
+      "thinking": "Düşünüyor",
+      "tool": {
+        "title": "Araç Yürütme",
+        "debugInfo": "Hata Ayıklama Bilgisi"
+      }
+    },
+    "provider": {
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
+    },
+    "logLevels": {
+      "error": "Hata",
+      "warn": "Uyarı",
+      "info": "Bilgi",
+      "debug": "Hata Ayıklama"
+    }
+  }
+}
