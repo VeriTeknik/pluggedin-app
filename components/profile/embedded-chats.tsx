@@ -1,10 +1,10 @@
+import { ExternalLink,MessageSquare } from 'lucide-react';
 import Link from 'next/link';
-import { MessageSquare, ExternalLink } from 'lucide-react';
 
-import { EmbeddedChat } from '@/types/social';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { EmbeddedChat } from '@/types/social';
 
 interface EmbeddedChatsProps {
   chats: EmbeddedChat[];

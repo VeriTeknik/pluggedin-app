@@ -1,11 +1,11 @@
 import { Database, Users } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Card,
   CardContent,
@@ -14,6 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { SharedCollection } from '@/types/social';
 
 interface CollectionCardGridProps {
@@ -28,6 +29,7 @@ export function CollectionCardGrid({
   selectedIds = []
 }: CollectionCardGridProps) {
   const { t } = useTranslation();
+  const pathname = usePathname();
   const [selected, setSelected] = useState<Set<string>>(new Set(selectedIds));
 
   const handleSelect = (id: string) => {
@@ -94,7 +96,7 @@ export function CollectionCardGrid({
               size="sm"
               asChild
             >
-              <Link href={`/collections/${collection.uuid}`}>
+              <Link href={`/collections/${collection.uuid}?from=${encodeURIComponent(pathname)}`}>
                 View Details
               </Link>
             </Button>

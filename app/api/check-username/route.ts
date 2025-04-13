@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { checkUsernameAvailability } from '@/app/actions/social';
 
 export async function GET(request: NextRequest) {

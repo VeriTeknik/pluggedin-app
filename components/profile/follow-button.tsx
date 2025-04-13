@@ -1,12 +1,12 @@
 'use client';
 
 // Re-sorted imports
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Loader, UserMinus, UserPlus } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
 import { followUser, unfollowUser } from '@/app/actions/social';
+import { Button } from '@/components/ui/button';
 
 
 export interface FollowButtonProps { // Export interface

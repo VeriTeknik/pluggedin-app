@@ -5,7 +5,7 @@ export default function ProfileNotFound() {
     <div className="container mx-auto py-16 text-center">
       <h1 className="text-4xl font-bold mb-4">Profile Not Found</h1>
       <p className="text-muted-foreground mb-8">
-        The user profile you're looking for doesn't exist or isn't public.
+        The user profile you&apos;re looking for doesn&apos;t exist or isn&apos;t public.
       </p>
       <Link
         href="/"

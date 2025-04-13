@@ -1,9 +1,10 @@
-import { db } from '@/db';
-import { McpServerSource, McpServerStatus, McpServerType, mcpServersTable } from '@/db/schema';
-import { getSharedCollection } from '@/app/actions/social';
-import { getAuthSession } from '@/lib/auth';
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+
+import { getSharedCollection } from '@/app/actions/social';
+import { db } from '@/db';
+import { McpServerSource, mcpServersTable,McpServerStatus, McpServerType } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 
 export async function POST(request: Request) {
   try {

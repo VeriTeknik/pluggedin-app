@@ -1,6 +1,6 @@
+import { ChevronLeft, Shield } from 'lucide-react';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ChevronLeft, Shield } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 
@@ -72,7 +72,7 @@ export default function SharingMcpServersPage() {
         <pre><code>postgresql://postgres:&lt;YOUR_PASSWORD&gt;@database.example.com:5432/my_database</code></pre>
         
         <h2>When Importing Shared Servers</h2>
-        <p>When someone imports a server you've shared:</p>
+        <p>When someone imports a server you&apos;ve shared:</p>
         <ol>
           <li>They receive the sanitized template with placeholders</li>
           <li>They must provide their own credentials to make the server work</li>
@@ -81,9 +81,9 @@ export default function SharingMcpServersPage() {
         </ol>
         
         <h2>Best Practices</h2>
-        <p>Even with these protections in place, it's good practice to:</p>
+        <p>Even with these protections in place, its good practice to:</p>
         <ol>
-          <li>Review what you're sharing before sharing it</li>
+          <li>Review what you&apos;re sharing before sharing it</li>
           <li>Use descriptive titles and descriptions to help others understand the purpose of the server</li>
           <li>Consider adding setup instructions in the description if there are specific requirements</li>
         </ol>

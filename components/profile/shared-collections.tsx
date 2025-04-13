@@ -1,5 +1,6 @@
 import { ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,6 +12,8 @@ interface SharedCollectionsProps {
 }
 
 export function SharedCollections({ collections, isLoading = false }: SharedCollectionsProps) {
+  const pathname = usePathname();
+
   if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -67,7 +70,7 @@ export function SharedCollections({ collections, isLoading = false }: SharedColl
           </CardContent>
           <CardFooter>
             <Button variant="outline" size="sm" asChild>
-              <Link href={`/collections/${collection.uuid}`}>
+              <Link href={`/collections/${collection.uuid}?from=${encodeURIComponent(pathname)}`}>
                 <ExternalLink className="h-4 w-4 mr-2" />
                 View Collection
               </Link>

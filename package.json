@@ -24,7 +24,7 @@
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.8.0",
-    "@h1deya/langchain-mcp-tools": "^0.1.19",
+    "@h1deya/langchain-mcp-tools": "^0.2.1",
     "@hookform/resolvers": "^3.10.0",
     "@langchain/anthropic": "^0.3.15",
     "@langchain/community": "^0.3.24",
@@ -38,7 +38,7 @@
     "@radix-ui/react-alert-dialog": "^1.1.7",
     "@radix-ui/react-avatar": "^1.1.2",
     "@radix-ui/react-checkbox": "^1.1.4",
-    "@radix-ui/react-dialog": "^1.1.4",
+    "@radix-ui/react-dialog": "^1.1.7",
     "@radix-ui/react-dropdown-menu": "^2.1.4",
     "@radix-ui/react-label": "^2.1.1",
     "@radix-ui/react-popover": "^1.1.4",
@@ -59,7 +59,7 @@
     "bcrypt": "^5.1.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cmdk": "^0.2.1",
+    "cmdk": "^1.1.1",
     "dotenv": "^16.4.7",
     "i18next": "^24.2.3",
     "i18next-browser-languagedetector": "^8.0.4",
@@ -77,7 +77,7 @@
     "react-window": "^1.8.11",
     "sd-notify": "^2.8.0",
     "sonner": "^2.0.3",
-    "swagger-ui-react": "^5.11.0",
+    "swagger-ui-react": "^5.20.8",
     "swr": "^2.3.0",
     "tailwind-merge": "^2.5.5",
     "tailwindcss-animate": "^1.0.7",
@@ -133,6 +133,15 @@
       "bcrypt",
       "esbuild",
       "sharp"
-    ]
+    ],
+    "peerDependencyRules": {
+      "allowedVersions": {
+        "react": "19",
+        "react-dom": "19"
+      },
+      "ignoreMissing": [
+        "tree-sitter"
+      ]
+    }
   }
 }

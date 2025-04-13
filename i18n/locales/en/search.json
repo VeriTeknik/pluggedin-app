@@ -40,6 +40,9 @@
       "AUDIO": "Audio",
       "VIDEO": "Video",
       "OTHER": "Other"
+    },
+    "card": {
+      "install": "Install"
     }
   }
 }

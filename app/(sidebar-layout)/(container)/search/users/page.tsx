@@ -1,18 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { UserSearch } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
-import { Input } from '@/components/ui/input';
+import { followProfile, isFollowing } from '@/app/actions/social';
+import { Avatar, AvatarFallback,AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { followProfile, isFollowing } from '@/app/actions/social';
-import { useProfiles } from '@/hooks/use-profiles';
-import { useToast } from '@/components/ui/use-toast';
-import { Profile } from '@/types/profile';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useToast } from '@/components/ui/use-toast';
+import { useProfiles } from '@/hooks/use-profiles';
+import { Profile } from '@/types/profile';
 
 export default function SearchUsersPage() {
   const router = useRouter();

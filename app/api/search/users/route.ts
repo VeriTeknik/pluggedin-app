@@ -1,5 +1,5 @@
+import { and, eq,like, or } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { like, or, and, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { profilesTable } from '@/db/schema';

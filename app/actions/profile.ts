@@ -1,8 +1,10 @@
 'use server';
 
 import { eq } from 'drizzle-orm';
+
 import { db } from '@/db';
-import { projectsTable, profilesTable } from '@/db/schema';
+import { profilesTable,projectsTable } from '@/db/schema';
+
 import { reserveUsername } from './social';
 
 export async function updateProfileUsername(profileUuid: string, username: string) {

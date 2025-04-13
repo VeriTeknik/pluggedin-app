@@ -8,11 +8,13 @@ import CardGrid from '@/app/(sidebar-layout)/(container)/search/components/CardG
 import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
 import { getMcpServers } from '@/app/actions/mcp-servers';
 import { getFormattedSharedServersForUser } from '@/app/actions/shared-content';
+import { SharedCollections } from '@/components/profile/shared-collections';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 import { SearchIndex } from '@/types/search';
+import { SharedCollection } from '@/types/social';
 
 // Keep only necessary type imports
 
@@ -43,6 +45,22 @@ export function ProfileTabs({
   } = useSWR<SearchIndex>(
     username ? `/user/${username}/shared-servers` : null,
     () => getFormattedSharedServersForUser(username)
+  );
+
+  // Fetch collections for the displayed user
+  const {
+    data: collections,
+    error: collectionsError,
+    isLoading: isLoadingCollections
+  } = useSWR<SharedCollection[]>(
+    username ? `/api/user/${username}/collections` : null,
+    async (url: string) => {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to fetch collections');
+      }
+      return response.json();
+    }
   );
 
   // Fetch installed servers for the *logged-in* user
@@ -95,8 +113,7 @@ export function ProfileTabs({
           MCP Servers ({totalSharedServers}) 
         </TabsTrigger>
         <TabsTrigger value="collections">
-          {/* Update count when collections data is fetched */}
-          Collections (0) 
+          Collections ({collections?.length ?? 0})
         </TabsTrigger>
         <TabsTrigger value="chats">
            {/* Update count when chats data is fetched */}
@@ -137,9 +154,10 @@ export function ProfileTabs({
       </TabsContent>
       
       <TabsContent value="collections" className="pt-6">
-        {/* Placeholder - Fetch and render SharedCollections here */}
-        <p className="text-center text-muted-foreground py-12">Collections coming soon.</p>
-        {/* <SharedCollections collections={fetchedCollections} isLoading={isLoadingCollections} /> */}
+        <SharedCollections 
+          collections={collections ?? []} 
+          isLoading={isLoadingCollections} 
+        />
       </TabsContent>
       
       <TabsContent value="chats" className="pt-6">

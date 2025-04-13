@@ -1,12 +1,11 @@
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { getEmbeddedChat } from '@/app/actions/social';
-import { getAuthSession } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
+import { getAuthSession } from '@/lib/auth';
 
 interface ChatPageProps {
   params: {
@@ -59,7 +58,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
               </div>
               <div className="flex-1 bg-muted p-4 rounded-lg">
                 <p>
-                  Hello! I'm an AI assistant created by {chat.profile?.name || 'the profile owner'}. 
+                  Hello! I am an AI assistant created by {chat.profile?.name || 'the profile owner'}. 
                   How can I help you today?
                 </p>
               </div>

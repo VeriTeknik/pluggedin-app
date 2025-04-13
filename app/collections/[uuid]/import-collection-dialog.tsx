@@ -1,6 +1,9 @@
 'use client';
 
+import { Download } from 'lucide-react';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,8 +15,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 import { useToast } from '@/hooks/use-toast';
 import { SharedCollection } from '@/types/social';
 

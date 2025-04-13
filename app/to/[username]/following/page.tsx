@@ -1,16 +1,14 @@
-import { notFound } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { Metadata } from 'next';
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { notFound } from 'next/navigation';
 
 import { 
-  getProfileByUsername, 
-  getFollowing
-} from '@/app/actions/social';
-import { getAuthSession } from '@/lib/auth';
-
-import { Button } from '@/components/ui/button';
+  getFollowing,
+  getProfileByUsername} from '@/app/actions/social';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { getAuthSession } from '@/lib/auth';
 
 interface FollowingPageProps {
   params: {

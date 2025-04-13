@@ -508,7 +508,7 @@ export function ShareServerDialog({
           <div className="text-xs text-green-800 dark:text-green-300">
             <p className="font-medium">Ready to share!</p>
             <p>
-              Review your sharing settings below and click "Publish" when ready.
+              Review your sharing settings below and click &quot;Publish&quot; when ready.
             </p>
           </div>
         </div>

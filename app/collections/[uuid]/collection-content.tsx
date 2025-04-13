@@ -1,12 +1,12 @@
 'use client';
 
 import { ChevronLeft } from 'lucide-react';
-import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { createMcpServer } from '@/app/actions/mcp-servers';
 import CardGrid from '@/app/(sidebar-layout)/(container)/search/components/CardGrid';
+import { createMcpServer } from '@/app/actions/mcp-servers';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfiles } from '@/hooks/use-profiles';
@@ -23,8 +23,21 @@ interface CollectionContentProps {
 export function CollectionContent({ items, title, description }: CollectionContentProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { currentProfile } = useProfiles();
   const [selectedServers, setSelectedServers] = useState<string[]>([]);
+
+  const handleBack = () => {
+    const from = searchParams.get('from');
+    if (from) {
+      router.push(from);
+    } else if (window.history.length > 1) {
+      router.back();
+    } else {
+      router.push('/discover');
+    }
+  };
 
   // Convert servers to search index format
   const searchIndex = items.reduce<Record<string, McpIndex>>((acc, server) => {
@@ -98,64 +111,73 @@ export function CollectionContent({ items, title, description }: CollectionConte
   };
 
   return (
-    <div className="space-y-8">
-      {/* Back button */}
-      <div>
-        <Button variant="ghost" asChild className="-ml-2">
-          <Link href="/collections">
+    <div className="container py-8 max-w-7xl mx-auto">
+      <div className="flex flex-col gap-8">
+        {/* Header section with back button and title */}
+        <div className="flex flex-col gap-6">
+          <Button 
+            variant="ghost" 
+            onClick={handleBack} 
+            className="-ml-2 w-fit"
+          >
             <ChevronLeft className="h-4 w-4 mr-2" />
             {t('collections.back')}
-          </Link>
-        </Button>
-      </div>
-
-      {/* Collection header */}
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-          {description && <CardDescription>{description}</CardDescription>}
-        </CardHeader>
-      </Card>
-
-      {/* Selected servers actions */}
-      {selectedServers.length > 0 && (
-        <div className="flex justify-end">
-          <Button
-            onClick={() => {
-              selectedServers.forEach(serverId => {
-                const server = items.find(s => s.uuid === serverId);
-                if (server) {
-                  handleInstall(server);
-                }
-              });
-              setSelectedServers([]);
-            }}
-          >
-            {t('collections.installSelected', { count: selectedServers.length })}
           </Button>
-        </div>
-      )}
 
-      {/* Server grid */}
-      {items.length > 0 ? (
-        <CardGrid 
-          items={searchIndex}
-          installedServerMap={new Map()}
-          selectable={true}
-          onItemSelect={(serverId: string, selected: boolean) => {
-            if (selected) {
-              setSelectedServers(prev => [...prev, serverId]);
-            } else {
-              setSelectedServers(prev => prev.filter(id => id !== serverId));
-            }
-          }}
-          selectedItems={selectedServers}
-        />
-      ) : (
-        <div className="text-center text-muted-foreground">
-          {t('collections.noServers')}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-2xl">{title}</CardTitle>
+              {description && (
+                <CardDescription className="text-base">
+                  {description}
+                </CardDescription>
+              )}
+            </CardHeader>
+          </Card>
         </div>
-      )}
+
+        {/* Selected servers actions */}
+        {selectedServers.length > 0 && (
+          <div className="flex justify-end">
+            <Button
+              onClick={() => {
+                selectedServers.forEach(serverId => {
+                  const server = items.find(s => s.uuid === serverId);
+                  if (server) {
+                    handleInstall(server);
+                  }
+                });
+                setSelectedServers([]);
+              }}
+            >
+              {t('collections.installSelected', { count: selectedServers.length })}
+            </Button>
+          </div>
+        )}
+
+        {/* Server grid */}
+        <div className="space-y-4">
+          {items.length > 0 ? (
+            <CardGrid 
+              items={searchIndex}
+              installedServerMap={new Map()}
+              selectable={true}
+              onItemSelect={(serverId: string, selected: boolean) => {
+                if (selected) {
+                  setSelectedServers(prev => [...prev, serverId]);
+                } else {
+                  setSelectedServers(prev => prev.filter(id => id !== serverId));
+                }
+              }}
+              selectedItems={selectedServers}
+            />
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              {t('collections.noServers')}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

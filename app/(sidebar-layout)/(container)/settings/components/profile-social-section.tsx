@@ -1,6 +1,6 @@
 'use client';
 
-import { User as UserIcon, Globe, Check, X } from 'lucide-react';
+import { Check, Globe, User as UserIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,8 +18,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
 import { users } from '@/db/schema';
+import { useToast } from '@/hooks/use-toast';
 
 type User = typeof users.$inferSelect;
 

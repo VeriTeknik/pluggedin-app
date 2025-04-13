@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Share2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
 
+import { shareEmbeddedChat } from '@/app/actions/social';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -19,7 +20,6 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { shareEmbeddedChat } from '@/app/actions/social';
 
 interface ShareChatDialogProps {
   chat: any; // The chat data
@@ -149,7 +149,7 @@ export function ShareChatDialog({
           
           <div className="bg-amber-50 dark:bg-amber-950 p-2 rounded-md mt-2">
             <p className="text-xs text-amber-800 dark:text-amber-300">
-              Note: Others will be able to chat with your AI assistant, but won't see your past conversations.
+              Note: Others will be able to chat with your AI assistant, but won&apos;t see your past conversations.
             </p>
           </div>
         </div>

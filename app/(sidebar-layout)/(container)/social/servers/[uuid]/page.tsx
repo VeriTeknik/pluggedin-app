@@ -1,4 +1,4 @@
-import { Metadata } from 'next';
+import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -13,7 +13,15 @@ export const metadata: Metadata = {
   description: 'View details of a shared MCP server',
 };
 
-export default async function SharedServerPage({ params }: { params: { uuid: string } }) {
+interface PageParams {
+  uuid: string;
+}
+
+export default async function Page({
+  params,
+}: {
+  params: PageParams;
+}) {
   const { uuid } = params;
   const sharedServer = await getSharedMcpServer(uuid);
 
