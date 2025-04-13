@@ -17,5 +17,31 @@ export const isRTL = (locale: string): boolean => {
   return rtlLocales.includes(locale);
 };
 
-export type Messages = typeof import('./locales/en.json');
+// Import chunk types
+import enApiKeys from './locales/en/apiKeys.json';
+import enAuth from './locales/en/auth.json';
+import enCommon from './locales/en/common.json';
+import enLanding from './locales/en/landing.json';
+import enLegal from './locales/en/legal.json';
+import enMcpServers from './locales/en/mcpServers.json';
+import enNotifications from './locales/en/notifications.json';
+import enPlayground from './locales/en/playground.json';
+import enSearch from './locales/en/search.json';
+import enSettings from './locales/en/settings.json';
+import enSetupGuide from './locales/en/setupGuide.json';
+import enSidebar from './locales/en/sidebar.json';
+
+export type Messages = typeof enCommon &
+  typeof enAuth &
+  typeof enLanding &
+  typeof enMcpServers &
+  typeof enSearch &
+  typeof enApiKeys &
+  typeof enLegal &
+  typeof enSidebar &
+  typeof enSettings &
+  typeof enSetupGuide &
+  typeof enPlayground &
+  typeof enNotifications;
+
 export type MessageKey = keyof Messages;

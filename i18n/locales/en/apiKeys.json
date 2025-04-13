@@ -1,0 +1,49 @@
+{
+  "apiKeys": {
+    "title": "API Keys",
+    "description": "Your API keys are used to authenticate requests to the Plugged.in API. Keep them secure and do not share them with others.",
+    "empty": "No API keys yet. Create one to get started.",
+    "actions": {
+      "create": "Create API Key",
+      "creating": "Creating...",
+      "delete": "Delete API Key",
+      "deleting": "Deleting...",
+      "show": "Show API key",
+      "hide": "Hide API key",
+      "copy": "Copy API key",
+      "cancel": "Cancel"
+    },
+    "dialog": {
+      "create": {
+        "title": "Create API Key",
+        "description": "Create a new API key for your project. You can optionally give it a name to help identify its purpose.",
+        "nameLabel": "API Key Name (Optional)",
+        "namePlaceholder": "e.g., Production API Key"
+      },
+      "delete": {
+        "title": "Delete API Key",
+        "description": "Are you sure you want to delete this API key{{name}}? This action cannot be undone.",
+        "namePrefix": " \""
+      }
+    },
+    "toast": {
+      "copied": {
+        "title": "API Key copied",
+        "description": "The API key has been copied to your clipboard."
+      },
+      "created": {
+        "title": "API Key created",
+        "description": "Your new API key has been created successfully."
+      },
+      "deleted": {
+        "title": "API Key deleted",
+        "description": "Your API key has been deleted successfully."
+      },
+      "error": {
+        "title": "Error",
+        "createFailed": "Failed to create API key",
+        "deleteFailed": "Failed to delete API key"
+      }
+    }
+  }
+}

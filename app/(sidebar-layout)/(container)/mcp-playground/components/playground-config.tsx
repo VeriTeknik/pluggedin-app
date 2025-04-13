@@ -155,7 +155,7 @@ export function PlaygroundConfig({
         </CardDescription>
       </CardHeader>
       <CardContent className='flex-1 overflow-hidden'>
-        <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab}>
+        <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
           <TabsList className='grid w-full grid-cols-3'>
             <TabsTrigger value='servers'>{t('playground.config.tabs.servers')}</TabsTrigger>
             <TabsTrigger value='llm'>{t('playground.config.tabs.llm')}</TabsTrigger>
@@ -168,7 +168,7 @@ export function PlaygroundConfig({
           </TabsList>
 
           {/* Servers Tab */}
-          <TabsContent value='servers' className='space-y-4 mt-4'>
+          <TabsContent value='servers' className='flex-1 mt-4 overflow-y-auto pr-2'>
             {isLoading ? (
               <div className='flex items-center justify-center py-8'>
                 <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary'></div>
@@ -298,29 +298,29 @@ export function PlaygroundConfig({
           </TabsContent>
 
           {/* LLM Tab */}
-          <TabsContent value='llm' className='space-y-4 mt-4'>
-            <div className='flex items-center justify-between mb-4'>
-              <div className='bg-muted/30 p-4 rounded-lg flex-1'>
-                <div className='text-sm font-medium mb-2'>{t('playground.config.model.title')}</div>
-                <div className='flex items-center'>
-                  <Badge className='bg-primary/10 text-primary border-primary/20 py-1.5 px-3'>
-                    {llmConfig.provider === 'anthropic' ? 'Anthropic' : 'OpenAI'}
-                  </Badge>
-                  <Separator orientation='vertical' className='mx-3 h-5' />
-                  <div className='text-sm font-medium'>{llmConfig.model}</div>
-                </div>
-              </div>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={saveSettings}
-                disabled={isSessionActive}>
-                <Save className='mr-2 h-4 w-4' />
-                {t('playground.actions.save')}
-              </Button>
-            </div>
-
+          <TabsContent value='llm' className='flex-1 mt-4 overflow-y-auto pr-2'>
             <div className='space-y-4'>
+              <div className='flex items-center justify-between mb-4'>
+                <div className='bg-muted/30 p-4 rounded-lg flex-1'>
+                  <div className='text-sm font-medium mb-2'>{t('playground.config.model.title')}</div>
+                  <div className='flex items-center'>
+                    <Badge className='bg-primary/10 text-primary border-primary/20 py-1.5 px-3'>
+                      {llmConfig.provider === 'anthropic' ? 'Anthropic' : 'OpenAI'}
+                    </Badge>
+                    <Separator orientation='vertical' className='mx-3 h-5' />
+                    <div className='text-sm font-medium'>{llmConfig.model}</div>
+                  </div>
+                </div>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={saveSettings}
+                  disabled={isSessionActive}>
+                  <Save className='mr-2 h-4 w-4' />
+                  {t('playground.actions.save')}
+                </Button>
+              </div>
+
               <div>
                 <Label htmlFor='provider' className='text-sm font-medium'>
                   {t('playground.config.model.provider')}
@@ -481,152 +481,140 @@ export function PlaygroundConfig({
           </TabsContent>
 
           {/* Logs Tab */}
-          <TabsContent value='logs' className='space-y-4 mt-4'>
-            {/* Reverted Layout: Side-by-side */}
-            <div className='flex items-center justify-between mb-2'>
-              <div>
-                {/* Ensure correct key is used here */}
-                <Label className='text-sm font-medium mb-1 block sr-only'> {/* Hide label visually, keep for accessibility */}
-                  {t('playground.config.model.logLevel')}
-                </Label>
-                <Select
-                  value={logLevel}
-                  onValueChange={handleLogLevelChange}
-                  disabled={isSessionActive}>
-                  <SelectTrigger className='w-40'> {/* Restored width */}
-                    {/* Ensure correct key is used here */}
-                    <SelectValue placeholder={t('playground.config.model.logLevel')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Use corrected keys */}
-                    <SelectItem value='error'>{t('playground.logLevels.error')}</SelectItem>
-                    <SelectItem value='warn'>{t('playground.logLevels.warn')}</SelectItem>
-                    <SelectItem value='info'>{t('playground.logLevels.info')}</SelectItem>
-                    <SelectItem value='debug'>{t('playground.logLevels.debug')}</SelectItem>
-                  </SelectContent>
-                </Select>
+          <TabsContent value='logs' className='flex-1 mt-4 overflow-y-auto pr-2'>
+            <div className='space-y-4'>
+              <div className='flex items-center justify-between mb-2'>
+                <div>
+                  <Label className='text-sm font-medium mb-1 block sr-only'> {/* Hide label visually, keep for accessibility */}
+                    {t('playground.config.model.logLevel')}
+                  </Label>
+                  <Select
+                    value={logLevel}
+                    onValueChange={handleLogLevelChange}
+                    disabled={isSessionActive}>
+                    <SelectTrigger className='w-40'> {/* Restored width */}
+                      <SelectValue placeholder={t('playground.config.model.logLevel')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {/* Use corrected keys */}
+                      <SelectItem value='error'>{t('playground.logLevels.error')}</SelectItem>
+                      <SelectItem value='warn'>{t('playground.logLevels.warn')}</SelectItem>
+                      <SelectItem value='info'>{t('playground.logLevels.info')}</SelectItem>
+                      <SelectItem value='debug'>{t('playground.logLevels.debug')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    onClick={clearLogs}
+                  >
+                    <Trash2 className='mr-2 h-4 w-4' />
+                    {t('playground.actions.clearLogs')}
+                  </Button>
+                </div>
               </div>
-              <div>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={clearLogs}
-                >
-                  <Trash2 className='mr-2 h-4 w-4' />
-                  {t('playground.actions.clearLogs')}
-                </Button>
-              </div>
-            </div>
 
-            {/* Restored original height calculation */}
-            <div className="h-[calc(100vh-25rem)] rounded-md border">
-              {serverLogs.length === 0 && clientLogs.length === 0 ? (
-                <div className="text-center text-muted-foreground py-8">
-                  {t('playground.logs.empty')}
-                </div>
-              ) : (
-                <div 
-                  className="h-full overflow-auto" 
-                  onScroll={(e) => {
-                    // Prevent any attempt to automatically scroll
-                    e.stopPropagation();
-                  }}
-                  data-user-scroll="true"
-                >
-                  {/* Simplified logs display for better performance and readability */}
-                  <div className="space-y-0.5 p-2">
-                    {(() => {
-                      // Combine and sort logs
-                      const allLogs = [
-                        ...clientLogs.map(log => ({
-                          type: 'client' as const,
-                          timestamp: log.timestamp,
-                          level: log.type,
-                          message: log.message
-                        })),
-                        ...serverLogs.map(log => ({
-                          type: 'server' as const,
-                          timestamp: new Date(log.timestamp),
-                          level: log.level,
-                          message: log.message
-                        }))
-                      ].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
-                      
-                      // Truncate very long messages
-                      const truncateText = (text: string, maxLength = 200) => {
-                        if (!text) return '';
-                        if (text.length <= maxLength) return text;
-                        return text.substring(0, maxLength) + '...';
-                      };
-                      
-                      // Filter for giant messages (potential issues)
-                      const isLikelyBinary = (text: string) => {
-                        // Check for signs of binary data or very long single-line content
-                        return text.length > 500 && !text.includes('\n') && /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/.test(text);
-                      };
-                      
-                      return allLogs.map((log, index) => {
-                        // Format timestamp
-                        const time = log.timestamp.toLocaleTimeString([], { 
-                          hour: '2-digit', 
-                          minute: '2-digit', 
-                          second: '2-digit' 
-                        });
-                        
-                        // Get appropriate style
-                        let levelStyle = '';
-                        if (log.type === 'client') {
-                          levelStyle = log.level === 'error' 
-                            ? 'text-red-500 font-bold'
-                            : log.level === 'info'
-                              ? 'text-blue-500'
-                              : log.level === 'execution'
-                                ? 'text-yellow-500'
-                                : log.level === 'connection'
-                                  ? 'text-green-500'
-                                  : 'text-purple-500';
-                        } else {
-                          levelStyle = {
-                            error: 'text-red-500 font-semibold',
-                            warn: 'text-yellow-500 font-semibold',
-                            info: 'text-blue-500',
-                            debug: 'text-green-500',
-                            streaming: 'text-purple-500 italic'
-                          }[log.level as string] || '';
-                        }
-                        
-                        // Handle special message formats
-                        let cleanedMessage = log.message;
-                        
-                        // Check for binary-looking data
-                        if (isLikelyBinary(cleanedMessage)) {
-                          cleanedMessage = '[Binary data or invalid text content - hidden for display]';
-                        }
-                        
-                        return (
-                          <div 
-                            key={`log-${log.type}-${index}`} 
-                            className="py-1 border-b border-border/10 text-xs last:border-0 hover:bg-muted/40 transition-colors"
-                          >
-                            <div className="grid grid-cols-[auto_auto_1fr] gap-2">
-                              <span className="text-muted-foreground whitespace-nowrap">
-                                [{time}]
-                              </span>
-                              <span className={`${levelStyle} uppercase whitespace-nowrap`}>
-                                [{log.level}]
-                              </span>
-                              <span className="whitespace-pre-wrap break-words overflow-hidden">
-                                {truncateText(cleanedMessage)}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      });
-                    })()}
-                    <div ref={logsEndRef} />
+              <div className="h-[calc(100vh-25rem)] rounded-md border">
+                {serverLogs.length === 0 && clientLogs.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    {t('playground.logs.empty')}
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div 
+                    className="h-full overflow-auto" 
+                    onScroll={(e) => {
+                      e.stopPropagation();
+                    }}
+                    data-user-scroll="true"
+                  >
+                    <div className="space-y-0.5 p-2">
+                      {(() => {
+                        const allLogs = [
+                          ...clientLogs.map(log => ({
+                            type: 'client' as const,
+                            timestamp: log.timestamp,
+                            level: log.type,
+                            message: log.message
+                          })),
+                          ...serverLogs.map(log => ({
+                            type: 'server' as const,
+                            timestamp: new Date(log.timestamp),
+                            level: log.level,
+                            message: log.message
+                          }))
+                        ].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+                        
+                        const truncateText = (text: string, maxLength = 200) => {
+                          if (!text) return '';
+                          if (text.length <= maxLength) return text;
+                          return text.substring(0, maxLength) + '...';
+                        };
+                        
+                        const isLikelyBinary = (text: string) => {
+                          return text.length > 500 && !text.includes('\n') && /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\xFF]/.test(text);
+                        };
+                        
+                        return allLogs.map((log, index) => {
+                          const time = log.timestamp.toLocaleTimeString([], { 
+                            hour: '2-digit', 
+                            minute: '2-digit', 
+                            second: '2-digit' 
+                          });
+                          
+                          let levelStyle = '';
+                          if (log.type === 'client') {
+                            levelStyle = log.level === 'error' 
+                              ? 'text-red-500 font-bold'
+                              : log.level === 'info'
+                                ? 'text-blue-500'
+                                : log.level === 'execution'
+                                  ? 'text-yellow-500'
+                                  : log.level === 'connection'
+                                    ? 'text-green-500'
+                                    : 'text-purple-500';
+                          } else {
+                            levelStyle = {
+                              error: 'text-red-500 font-semibold',
+                              warn: 'text-yellow-500 font-semibold',
+                              info: 'text-blue-500',
+                              debug: 'text-green-500',
+                              streaming: 'text-purple-500 italic'
+                            }[log.level as string] || '';
+                          }
+                          
+                          let cleanedMessage = log.message;
+                          
+                          if (isLikelyBinary(cleanedMessage)) {
+                            cleanedMessage = '[Binary data or invalid text content - hidden for display]';
+                          }
+                          
+                          return (
+                            <div 
+                              key={`log-${log.type}-${index}`} 
+                              className="py-1 border-b border-border/10 text-xs last:border-0 hover:bg-muted/40 transition-colors"
+                            >
+                              <div className="grid grid-cols-[auto_auto_1fr] gap-2">
+                                <span className="text-muted-foreground whitespace-nowrap">
+                                  [{time}]
+                                </span>
+                                <span className={`${levelStyle} uppercase whitespace-nowrap`}>
+                                  [{log.level}]
+                                </span>
+                                <span className="whitespace-pre-wrap break-words overflow-hidden">
+                                  {truncateText(cleanedMessage)}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                      <div ref={logsEndRef} />
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </TabsContent>
         </Tabs>

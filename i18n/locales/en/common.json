@@ -1,0 +1,31 @@
+{
+  "common": {
+    "or": "OR",
+    "error": "Error",
+    "success": "Success",
+    "releaseCandidate": "Release Candidate v{{version}}",
+    "validation": {
+      "required": "This field is required",
+      "email": "Please enter a valid email address",
+      "minLength": "Must be at least {{count}} characters",
+      "maxLength": "Must be at most {{count}} characters",
+      "passwordMatch": "Passwords must match"
+    },
+    "save": "Save",
+    "previous": "Previous",
+    "next": "Next",
+    "page": "Page {{page}}",
+    "saving": "Saving...",
+    "remove": "Remove",
+    "removing": "Removing...",
+    "errors": {
+      "unexpected": "An unexpected error occurred. Please try again."
+    },
+    "loading": "Loading...",
+    "notAvailable": "N/A",
+    "saveChanges": "Save Changes",
+    "backToServerList": "Back to Server List",
+    "viewSchema": "View Schema"
+  },
+  "cancel": "Cancel"
+}
