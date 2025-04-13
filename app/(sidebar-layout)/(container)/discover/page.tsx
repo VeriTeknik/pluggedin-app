@@ -23,6 +23,9 @@ import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 import { PaginatedSearchResult } from '@/types/search';
 import { EmbeddedChat, SharedCollection } from '@/types/social';
+import { ServerCard } from '@/components/server/ServerCard';
+import { CollectionCard } from '@/components/collection/CollectionCard';
+import { ChatCard } from '@/components/chat/ChatCard';
 
 
 type User = typeof users.$inferSelect;
@@ -33,9 +36,9 @@ export default function DiscoverPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { session } = useAuth();
-  const { t } = useTranslation(); // Added translation hook
-  const { currentProfile } = useProfiles(); // Added profiles hook
-  const searchParams = useSearchParams(); // Added search params hook
+  const { t } = useTranslation('discover'); // Updated to use discover namespace
+  const { currentProfile } = useProfiles();
+  const searchParams = useSearchParams();
   const profileUuid = currentProfile?.uuid;
   // Safely access user ID - Check if session and user exist, then access id.
   // The type from next-auth might be { name, email, image }, so we cast to access id.
@@ -155,27 +158,27 @@ export default function DiscoverPage() {
 
   return (
     <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-2">Discover</h1>
+      <h1 className="text-3xl font-bold mb-2">{t('title')}</h1>
       <p className="text-muted-foreground mb-8">
-        Explore content and connect with others
+        {t('subtitle')}
       </p>
 
       <Tabs defaultValue="people" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="people">People</TabsTrigger>
+          <TabsTrigger value="people">{t('tabs.people')}</TabsTrigger>
           <TabsTrigger value="servers">
-            MCP Servers ({communityServersData?.total ?? 0})
+            {t('tabs.servers', { count: communityServersData?.total ?? 0 })}
           </TabsTrigger>
           <TabsTrigger value="collections">
-            Collections ({collectionsData?.length ?? 0})
+            {t('tabs.collections', { count: collectionsData?.length ?? 0 })}
           </TabsTrigger>
           <TabsTrigger value="chats">
-            Embedded Chats ({embeddedChats.length})
+            {t('tabs.chats', { count: embeddedChats.length })}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="people" className="space-y-8">
-          {/* Following Section - Updated to use followingUsers */}
+          {/* Following Section */}
           {isLoadingPeople ? (
              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(3)].map((_, i) => (
@@ -184,7 +187,7 @@ export default function DiscoverPage() {
               </div>
           ) : followingUsers.length > 0 ? (
             <div>
-              <h2 className="text-xl font-semibold mb-4">Following</h2>
+              <h2 className="text-xl font-semibold mb-4">{t('following.title')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {followingUsers.map((user) => (
                   <Card key={user.id} className="hover:bg-accent/50 transition-colors">
@@ -195,46 +198,23 @@ export default function DiscoverPage() {
                       </Avatar>
                       <div className="flex-1">
                         <h3 className="font-semibold">{user.name || user.username}</h3>
-                        {user.username && (
-                          <p className="text-sm text-muted-foreground">@{user.username}</p>
-                        )}
+                        <Button variant="link" className="p-0 h-auto font-normal">
+                          {t('following.viewProfile')}
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        onClick={() => router.push(`/to/${user.username}`)}
-                        disabled={!user.username}
-                      >
-                        View Profile
-                      </Button>
                     </CardHeader>
-                    {user.bio && (
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground line-clamp-2">{user.bio}</p>
-                      </CardContent>
-                    )}
                   </Card>
                 ))}
               </div>
             </div>
-          ) : !isLoadingPeople ? (
-             <div className="text-center py-12">
-                <h2 className="text-xl font-semibold mb-2">Not Following Anyone Yet</h2>
-                <p className="text-muted-foreground mb-4">
-                  Find users to follow below or search for specific people.
-                </p>
-              </div>
-          ) : null}
+          ) : (
+            <p className="text-muted-foreground">{t('following.empty')}</p>
+          )}
 
           {/* Suggested Users Section */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">Suggested Users</h2>
-            {isLoadingPeople ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[...Array(6)].map((_, i) => (
-                  <Skeleton key={i} className="h-32" />
-                ))}
-              </div>
-            ) : suggestedUsers.length > 0 ? (
+            <h2 className="text-xl font-semibold mb-4">{t('suggested.title')}</h2>
+            {suggestedUsers.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {suggestedUsers.map((user) => (
                   <Card key={user.id} className="hover:bg-accent/50 transition-colors">
@@ -266,15 +246,7 @@ export default function DiscoverPage() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-12">
-                <h2 className="text-xl font-semibold mb-2">No Suggested Users Found</h2>
-                <p className="text-muted-foreground mb-4">
-                  Check back later or search for specific users.
-                </p>
-                <Button onClick={() => router.push('/search/users')}>
-                  Search for Users
-                </Button>
-              </div>
+              <p className="text-muted-foreground">{t('suggested.empty')}</p>
             )}
           </div>
         </TabsContent>

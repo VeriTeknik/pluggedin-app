@@ -1,0 +1,19 @@
+{
+  "title": "Discover",
+  "subtitle": "Explore content and connect with others",
+  "tabs": {
+    "people": "People",
+    "servers": "MCP Servers ({{count}})",
+    "collections": "Collections ({{count}})",
+    "chats": "Embedded Chats ({{count}})"
+  },
+  "following": {
+    "title": "Following",
+    "empty": "You are not following anyone yet",
+    "viewProfile": "View Profile"
+  },
+  "suggested": {
+    "title": "Suggested Users",
+    "empty": "No suggested users found"
+  }
+}

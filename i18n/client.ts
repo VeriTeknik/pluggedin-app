@@ -6,6 +6,7 @@ import { initReactI18next } from 'react-i18next';
 import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
 import enCommon from '../public/locales/en/common.json';
+import enDiscover from '../public/locales/en/discover.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
 import enMcpServers from '../public/locales/en/mcpServers.json';
@@ -19,6 +20,7 @@ import enSidebar from '../public/locales/en/sidebar.json';
 import trApiKeys from '../public/locales/tr/apiKeys.json';
 import trAuth from '../public/locales/tr/auth.json';
 import trCommon from '../public/locales/tr/common.json';
+import trDiscover from '../public/locales/tr/discover.json';
 import trLanding from '../public/locales/tr/landing.json';
 import trLegal from '../public/locales/tr/legal.json';
 import trMcpServers from '../public/locales/tr/mcpServers.json';
@@ -38,6 +40,7 @@ const resources = {
     translation: {
       ...enCommon,
       ...enAuth,
+      ...enDiscover,
       ...enLanding,
       ...enMcpServers,
       ...enSearch,
@@ -52,6 +55,7 @@ const resources = {
     apiKeys: enApiKeys,
     auth: enAuth,
     common: enCommon,
+    discover: enDiscover,
     landing: enLanding,
     legal: enLegal,
     mcpServers: enMcpServers,
@@ -66,6 +70,7 @@ const resources = {
     translation: {
       ...trCommon,
       ...trAuth,
+      ...trDiscover,
       ...trLanding,
       ...trMcpServers,
       ...trSearch,
@@ -80,6 +85,7 @@ const resources = {
     apiKeys: trApiKeys,
     auth: trAuth,
     common: trCommon,
+    discover: trDiscover,
     landing: trLanding,
     legal: trLegal,
     mcpServers: trMcpServers,

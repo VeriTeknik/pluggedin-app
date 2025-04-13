@@ -21,6 +21,7 @@ export const isRTL = (locale: string): boolean => {
 import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
 import enCommon from '../public/locales/en/common.json';
+import enDiscover from '../public/locales/en/discover.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
 import enMcpServers from '../public/locales/en/mcpServers.json';
@@ -36,6 +37,7 @@ export const namespaces = [
   'apiKeys',
   'auth',
   'common',
+  'discover',
   'landing',
   'legal',
   'mcpServers',
@@ -54,6 +56,7 @@ export type Messages = {
   apiKeys: typeof enApiKeys;
   auth: typeof enAuth;
   common: typeof enCommon;
+  discover: typeof enDiscover;
   landing: typeof enLanding;
   legal: typeof enLegal;
   mcpServers: typeof enMcpServers;

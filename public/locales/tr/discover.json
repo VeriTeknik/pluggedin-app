@@ -1,0 +1,19 @@
+{
+  "title": "Keşfet",
+  "subtitle": "İçerikleri keşfet ve diğerleriyle bağlantı kur",
+  "tabs": {
+    "people": "Kişiler",
+    "servers": "MCP Sunucuları ({{count}})",
+    "collections": "Koleksiyonlar ({{count}})",
+    "chats": "Gömülü Sohbetler ({{count}})"
+  },
+  "following": {
+    "title": "Takip Edilenler",
+    "empty": "Henüz kimseyi takip etmiyorsunuz",
+    "viewProfile": "Profili Görüntüle"
+  },
+  "suggested": {
+    "title": "Önerilen Kullanıcılar",
+    "empty": "Önerilen kullanıcı bulunamadı"
+  }
+}
