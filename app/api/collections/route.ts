@@ -6,18 +6,23 @@ import { sharedCollectionsTable } from '@/db/schema';
 
 export async function GET() {
   try {
-    // Fetch all public collections
+    // Fetch all public collections with profile, project, and user info
     const collections = await db.query.sharedCollectionsTable.findMany({
       where: eq(sharedCollectionsTable.is_public, true),
       with: {
         profile: {
-          columns: {
-            uuid: true,
-            name: true,
-            bio: true,
-            is_public: true,
-            avatar_url: true,
-            username: true,
+          with: {
+            project: {
+              with: {
+                user: {
+                  columns: {
+                    id: true,
+                    name: true,
+                    username: true
+                  }
+                }
+              }
+            }
           }
         }
       },

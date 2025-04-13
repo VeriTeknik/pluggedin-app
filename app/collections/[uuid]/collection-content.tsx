@@ -1,12 +1,24 @@
 'use client';
 
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Trash2 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import CardGrid from '@/app/(sidebar-layout)/(container)/search/components/CardGrid';
 import { createMcpServer } from '@/app/actions/mcp-servers';
+import { unshareCollection } from '@/app/actions/social';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useProfiles } from '@/hooks/use-profiles';
@@ -18,15 +30,26 @@ interface CollectionContentProps {
   items: McpServer[];
   title: string;
   description?: string;
+  collectionUuid: string;
+  profileUuid: string;
+  isOwner: boolean;
 }
 
-export function CollectionContent({ items, title, description }: CollectionContentProps) {
+export function CollectionContent({ 
+  items, 
+  title, 
+  description, 
+  collectionUuid,
+  profileUuid,
+  isOwner 
+}: CollectionContentProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { currentProfile } = useProfiles();
   const [selectedServers, setSelectedServers] = useState<string[]>([]);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleBack = () => {
     const from = searchParams.get('from');
@@ -36,6 +59,32 @@ export function CollectionContent({ items, title, description }: CollectionConte
       router.back();
     } else {
       router.push('/discover');
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!profileUuid) return;
+    
+    setIsDeleting(true);
+    try {
+      const result = await unshareCollection(profileUuid, collectionUuid);
+      if (result.success) {
+        toast({
+          title: t('collections.deleteSuccess'),
+          description: t('collections.deleteSuccessDesc'),
+        });
+        router.push('/discover');
+      } else {
+        throw new Error(result.error || t('collections.deleteError'));
+      }
+    } catch (error) {
+      toast({
+        title: t('collections.error'),
+        description: error instanceof Error ? error.message : t('collections.deleteError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -115,14 +164,41 @@ export function CollectionContent({ items, title, description }: CollectionConte
       <div className="flex flex-col gap-8">
         {/* Header section with back button and title */}
         <div className="flex flex-col gap-6">
-          <Button 
-            variant="ghost" 
-            onClick={handleBack} 
-            className="-ml-2 w-fit"
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            {t('collections.back')}
-          </Button>
+          <div className="flex justify-between items-center">
+            <Button 
+              variant="ghost" 
+              onClick={handleBack} 
+              className="-ml-2 w-fit"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              {t('collections.back')}
+            </Button>
+
+            {isOwner && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" size="sm" disabled={isDeleting}>
+                    <Trash2 className="h-4 w-4 mr-2" />
+                    {t('collections.delete')}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>{t('collections.deleteConfirmTitle')}</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t('collections.deleteConfirmDesc')}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete} disabled={isDeleting}>
+                      {isDeleting ? t('common.deleting') : t('common.delete')}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
+          </div>
 
           <Card>
             <CardHeader>

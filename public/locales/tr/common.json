@@ -27,5 +27,7 @@
   "notAvailable": "Mevcut Değil",
   "saveChanges": "Değişiklikleri Kaydet",
   "backToServerList": "Sunucu Listesine Dön",
-  "viewSchema": "Şemayı Görüntüle"
+  "viewSchema": "Şemayı Görüntüle",
+  "delete": "Sil",
+  "deleting": "Siliniyor..."
 }

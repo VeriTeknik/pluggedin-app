@@ -6,6 +6,13 @@
     "edit": "Koleksiyonu Düzenle",
     "delete": "Koleksiyonu Sil",
     "share": "Koleksiyonu Paylaş",
+    "back": "Geri",
+    "error": "Hata",
+    "deleteSuccess": "Koleksiyon Silindi",
+    "deleteSuccessDesc": "Koleksiyon başarıyla silindi",
+    "deleteError": "Koleksiyon silinemedi",
+    "deleteConfirmTitle": "Koleksiyon Silinsin mi?",
+    "deleteConfirmDesc": "Bu işlem geri alınamaz. Bu koleksiyon kalıcı olarak silinecektir.",
     "visibility": {
       "public": "Herkese Açık",
       "private": "Özel"

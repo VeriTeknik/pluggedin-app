@@ -91,14 +91,14 @@ export default function DiscoverPage() {
   // Fetch Installed Servers for the current profile
   const { data: installedServersData, isLoading: isLoadingInstalled } = useSWR<McpServer[]>(
     profileUuid ? `${profileUuid}/installed-mcp-servers` : null,
-    () => (profileUuid ? getMcpServers(profileUuid) : Promise.resolve([]))
+    async () => (profileUuid ? getMcpServers(profileUuid) : Promise.resolve([]))
   );
 
   // Create a memoized map for quick lookup: 'source:external_id' -> uuid
   const installedServerMap = useMemo(() => {
     const map = new Map<string, string>();
     if (installedServersData) {
-      installedServersData.forEach(server => {
+      installedServersData.forEach((server: McpServer) => {
         if (server.source && server.external_id) {
           map.set(`${server.source}:${server.external_id}`, server.uuid);
         }
@@ -123,7 +123,7 @@ export default function DiscoverPage() {
           `Failed to fetch community servers: ${res.status} ${res.statusText} - ${errorText}`
         );
       }
-      return res.json();
+      return res.json() as Promise<PaginatedSearchResult>;
     }
   );
 
@@ -131,7 +131,8 @@ export default function DiscoverPage() {
   const {
     data: collectionsData,
     error: collectionsError,
-    isLoading: isLoadingCollections
+    isLoading: isLoadingCollections,
+    mutate: mutateCollections
   } = useSWR<SharedCollection[]>(
     '/api/collections',
     async (url: string) => {
@@ -142,7 +143,7 @@ export default function DiscoverPage() {
           `Failed to fetch collections: ${res.status} ${res.statusText} - ${errorText}`
         );
       }
-      return res.json();
+      return res.json() as Promise<SharedCollection[]>;
     }
   );
 
@@ -310,21 +311,12 @@ export default function DiscoverPage() {
         </TabsContent>
 
         <TabsContent value="collections">
-          {isLoadingCollections ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(PAGE_SIZE)].map((_, i) => (
-                <Skeleton key={i} className="h-64" />
-              ))}
-            </div>
-          ) : collectionsError ? (
-            <p className="text-destructive text-center py-8">
-              {t('search.error')}
-            </p>
-          ) : collectionsData && collectionsData.length > 0 ? (
-            <SharedCollections collections={collectionsData} />
-          ) : (
-            <p className="text-center py-12">{t('search.noResults')}</p>
-          )}
+          <SharedCollections
+            collections={collectionsData || []}
+            isLoading={isLoadingCollections}
+            currentUserId={currentUserId}
+            onCollectionDeleted={() => mutateCollections()}
+          />
         </TabsContent>
 
         <TabsContent value="chats">

@@ -27,11 +27,17 @@ export default async function CollectionPage({ params }: CollectionPageProps) {
     profile_username: collection.profile?.project?.user?.name || 'Unknown'
   })) || [];
 
+  // Check if the current user is the owner of the collection
+  const isOwner = session?.user?.id === collection.profile?.project?.user?.id;
+
   return (
     <CollectionContent 
       items={items} 
       title={collection.title || 'Untitled Collection'} 
       description={collection.description || undefined}
+      collectionUuid={uuid}
+      profileUuid={collection.profile_uuid}
+      isOwner={isOwner}
     />
   );
 } 
