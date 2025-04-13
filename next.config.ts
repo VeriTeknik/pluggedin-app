@@ -1,6 +1,6 @@
-import type { NextConfig } from 'next';
-import type { WebpackConfigContext } from 'next/dist/server/config-shared';
-import type { Configuration as WebpackConfig } from 'webpack';
+import { NextConfig } from 'next/types';
+import { WebpackConfigContext } from 'next/dist/server/config-shared';
+import { Configuration as WebpackConfig } from 'webpack';
 
 import packageJson from './package.json';
 
@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ['plugged.in'],
+    },
+    staleTimes: {
+      dynamic: 30,  // 30 seconds for dynamic content
+      static: 180,  // 3 minutes for static content
     },
   },
   webpack: (config: WebpackConfig, { isServer }: WebpackConfigContext) => {
