@@ -1,7 +1,9 @@
 'use client';
 
-import { AlertTriangle, BookText, Bug, GitCommit, GitPullRequest, Rocket, Zap } from 'lucide-react'; // Import icons & AlertTriangle
+import { AlertTriangle, BookText, Bug, GitCommit, GitPullRequest, Rocket, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Badge } from '@/components/ui/badge';
@@ -113,7 +115,19 @@ export function ReleaseCard({ release }: ReleaseCardProps) {
         <AccordionContent className="px-4 pt-3 pb-4 border-t dark:border-slate-800">
           {bodyContent && (
             <div className="mb-6 prose dark:prose-invert max-w-none">
-              <div dangerouslySetInnerHTML={{ __html: bodyContent }} />
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  // Add wrapper div with proper styling
+                  div: ({node, ...props}) => <div className="prose dark:prose-invert" {...props} />,
+                  // Style links
+                  a: ({node, ...props}) => <a className="text-blue-600 hover:underline dark:text-blue-400" {...props} />,
+                  // Style code blocks
+                  code: ({node, ...props}) => <code className="bg-muted rounded px-1 py-0.5" {...props} />,
+                }}
+              >
+                {bodyContent}
+              </ReactMarkdown>
             </div>
           )}
           
