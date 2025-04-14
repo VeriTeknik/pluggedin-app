@@ -112,18 +112,28 @@ export default function DiscoverPage() {
   const {
     data: communityServersData,
     error: communityServersError,
-    isLoading: isLoadingCommunityServers
+    isLoading: isLoadingCommunityServers,
+    mutate: mutateCommunityServers
   } = useSWR(
-    communityServersApiUrl,
+    session?.user ? communityServersApiUrl : null, // Only fetch if user is authenticated
     async (url: string) => {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(
-          `Failed to fetch community servers: ${res.status} ${res.statusText} - ${errorText}`
-        );
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(
+            `Failed to fetch community servers: ${res.status} ${res.statusText} - ${errorText}`
+          );
+        }
+        return res.json() as Promise<PaginatedSearchResult>;
+      } catch (error) {
+        console.error('Error fetching community servers:', error);
+        throw error;
       }
-      return res.json() as Promise<PaginatedSearchResult>;
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000 // Cache for 10 seconds
     }
   );
 
@@ -134,16 +144,25 @@ export default function DiscoverPage() {
     isLoading: isLoadingCollections,
     mutate: mutateCollections
   } = useSWR(
-    '/api/collections',
+    session?.user ? '/api/collections' : null, // Only fetch if user is authenticated
     async (url: string) => {
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errorText = await res.text();
-        throw new Error(
-          `Failed to fetch collections: ${res.status} ${res.statusText} - ${errorText}`
-        );
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          const errorText = await res.text();
+          throw new Error(
+            `Failed to fetch collections: ${res.status} ${res.statusText} - ${errorText}`
+          );
+        }
+        return res.json() as Promise<SharedCollection[]>;
+      } catch (error) {
+        console.error('Error fetching collections:', error);
+        throw error;
       }
-      return res.json() as Promise<SharedCollection[]>;
+    },
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 10000 // Cache for 10 seconds
     }
   );
 
@@ -153,49 +172,71 @@ export default function DiscoverPage() {
     setServerOffset(newOffset);
   };
 
+  // If not authenticated, show login message
+  if (!session?.user) {
+    return (
+      <div className="container px-4 md:px-8 py-4 md:py-8">
+        <h1 className="text-2xl md:text-3xl font-bold mb-2">{t('title')}</h1>
+        <p className="text-sm md:text-base text-muted-foreground mb-6 md:mb-8">
+          {t('subtitle')}
+        </p>
+        <Card className="p-6">
+          <p className="text-center text-muted-foreground">
+            {t('auth.required')}
+          </p>
+          <div className="mt-4 flex justify-center">
+            <Button onClick={() => router.push('/login')}>
+              {t('auth.login')}
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-2">{t('title')}</h1>
-      <p className="text-muted-foreground mb-8">
+    <div className="container px-4 md:px-8 py-4 md:py-8">
+      <h1 className="text-2xl md:text-3xl font-bold mb-2">{t('title')}</h1>
+      <p className="text-sm md:text-base text-muted-foreground mb-6 md:mb-8">
         {t('subtitle')}
       </p>
 
       <Tabs defaultValue="people" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="people">{t('tabs.people')}</TabsTrigger>
-          <TabsTrigger value="servers">
+        <TabsList className="w-full overflow-x-auto flex-nowrap">
+          <TabsTrigger value="people" className="flex-shrink-0">{t('tabs.people')}</TabsTrigger>
+          <TabsTrigger value="servers" className="flex-shrink-0">
             {t('tabs.servers', { count: communityServersData?.total ?? 0 })}
           </TabsTrigger>
-          <TabsTrigger value="collections">
+          <TabsTrigger value="collections" className="flex-shrink-0">
             {t('tabs.collections', { count: collectionsData?.length ?? 0 })}
           </TabsTrigger>
-          <TabsTrigger value="chats">
+          <TabsTrigger value="chats" className="flex-shrink-0">
             {t('tabs.chats', { count: embeddedChats.length })}
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="people" className="space-y-8">
+        <TabsContent value="people" className="space-y-6 md:space-y-8">
           {/* Following Section */}
           {isLoadingPeople ? (
-             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {[...Array(3)].map((_, i) => (
                   <Skeleton key={i} className="h-24" />
                 ))}
               </div>
           ) : followingUsers.length > 0 ? (
             <div>
-              <h2 className="text-xl font-semibold mb-4">{t('following.title')}</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">{t('following.title')}</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
                 {followingUsers.map((user) => (
                   <Card key={user.id} className="hover:bg-accent/50 transition-colors">
-                    <CardHeader className="flex flex-row items-center gap-4">
-                      <Avatar className="h-12 w-12">
+                    <CardHeader className="flex flex-row items-center gap-3 md:gap-4 p-4">
+                      <Avatar className="h-10 w-10 md:h-12 md:w-12">
                         <AvatarImage src={user.avatar_url || user.image || ''} />
                         <AvatarFallback>{user.name?.[0] || user.email?.[0] || 'U'}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{user.name || user.username}</h3>
-                        <Button variant="link" className="p-0 h-auto font-normal">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold truncate">{user.name || user.username}</h3>
+                        <Button variant="link" className="p-0 h-auto font-normal text-sm">
                           {t('following.viewProfile')}
                         </Button>
                       </div>
@@ -205,37 +246,39 @@ export default function DiscoverPage() {
               </div>
             </div>
           ) : (
-            <p className="text-muted-foreground">{t('following.empty')}</p>
+            <p className="text-muted-foreground text-sm md:text-base">{t('following.empty')}</p>
           )}
 
           {/* Suggested Users Section */}
           <div>
-            <h2 className="text-xl font-semibold mb-4">{t('suggested.title')}</h2>
+            <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">{t('suggested.title')}</h2>
             {suggestedUsers.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                 {suggestedUsers.map((user) => (
                   <Card key={user.id} className="hover:bg-accent/50 transition-colors">
-                    <CardHeader className="flex flex-row items-center gap-4">
-                      <Avatar className="h-12 w-12">
+                    <CardHeader className="flex flex-row items-center gap-3 md:gap-4 p-4">
+                      <Avatar className="h-10 w-10 md:h-12 md:w-12">
                         <AvatarImage src={user.avatar_url || user.image || ''} />
                         <AvatarFallback>{user.name?.[0] || user.email?.[0] || 'U'}</AvatarFallback>
                       </Avatar>
-                      <div className="flex-1">
-                        <h3 className="font-semibold">{user.name || user.username}</h3>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold truncate">{user.name || user.username}</h3>
                         {user.username && (
-                          <p className="text-sm text-muted-foreground">@{user.username}</p>
+                          <p className="text-sm text-muted-foreground truncate">@{user.username}</p>
                         )}
                       </div>
                       <Button
                         variant="ghost"
+                        size="sm"
+                        className="ml-2"
                         onClick={() => router.push(`/to/${user.username}`)}
                         disabled={!user.username}
                       >
-                        View Profile
+                        View
                       </Button>
                     </CardHeader>
                     {user.bio && (
-                      <CardContent>
+                      <CardContent className="pt-0 px-4 pb-4">
                         <p className="text-sm text-muted-foreground line-clamp-2">{user.bio}</p>
                       </CardContent>
                     )}
@@ -243,54 +286,70 @@ export default function DiscoverPage() {
                 ))}
               </div>
             ) : (
-              <p className="text-muted-foreground">{t('suggested.empty')}</p>
+              <p className="text-muted-foreground text-sm md:text-base">{t('suggested.empty')}</p>
             )}
           </div>
         </TabsContent>
 
         {/* MCP Servers Tab Content */}
-        <TabsContent value="servers" className="space-y-4">
-          {isLoadingCommunityServers || isLoadingInstalled ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[...Array(PAGE_SIZE)].map((_, i) => (
-                <Skeleton key={i} className="h-64" />
+        <TabsContent value="servers" className="space-y-6 md:space-y-8">
+          {isLoadingCommunityServers ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+              {[...Array(6)].map((_, i) => (
+                <Skeleton key={i} className="h-48" />
               ))}
             </div>
           ) : communityServersError ? (
-            <p className="text-destructive text-center py-8">
-              {t('search.error')} {/* Reusing search translation */}
+            <p className="text-destructive text-sm md:text-base">
+              {t('servers.error')}
             </p>
           ) : communityServersData?.results && Object.keys(communityServersData.results).length > 0 ? (
             <>
               <CardGrid
                 items={communityServersData.results}
                 installedServerMap={installedServerMap}
+                currentUsername={session?.user?.name || null}
               />
-              {communityServersData.total > PAGE_SIZE && (
+              <div className="mt-6">
                 <PaginationUi
                   currentPage={Math.floor(serverOffset / PAGE_SIZE) + 1}
-                  totalPages={Math.ceil(communityServersData.total / PAGE_SIZE)}
+                  totalPages={Math.ceil((communityServersData?.total || 0) / PAGE_SIZE)}
                   onPageChange={handleServerPageChange}
                 />
-              )}
+              </div>
             </>
           ) : (
-            <p className="text-center py-12">{t('search.noResults')}</p> // Reusing search translation
+            <p className="text-muted-foreground text-sm md:text-base">
+              {t('servers.empty')}
+            </p>
           )}
         </TabsContent>
 
-        <TabsContent value="collections">
-          <SharedCollections
-            collections={collectionsData || []}
-            isLoading={isLoadingCollections}
-            currentUserId={currentUserId}
-            onCollectionDeleted={() => mutateCollections()}
-          />
+        <TabsContent value="collections" className="space-y-6 md:space-y-8">
+          {collectionsError ? (
+            <p className="text-destructive text-sm md:text-base">
+              {t('collections.error')}
+            </p>
+          ) : (
+            <SharedCollections 
+              collections={collectionsData || []}
+              isLoading={isLoadingCollections}
+              currentUserId={currentUserId}
+              onCollectionDeleted={() => mutateCollections()}
+            />
+          )}
         </TabsContent>
 
-        <TabsContent value="chats">
-          {/* TODO: Implement fetching and display for embedded chats */}
-          <EmbeddedChats chats={embeddedChats} />
+        <TabsContent value="chats" className="space-y-6 md:space-y-8">
+          {embeddedChats.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+              <EmbeddedChats chats={embeddedChats} />
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm md:text-base">
+              {t('chats.empty')}
+            </p>
+          )}
         </TabsContent>
       </Tabs>
     </div>
