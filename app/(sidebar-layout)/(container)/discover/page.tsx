@@ -33,7 +33,8 @@ export default function DiscoverPage() {
   const router = useRouter();
   const { toast } = useToast();
   const { session } = useAuth();
-  const { t } = useTranslation('discover'); // Updated to use discover namespace
+  // Load discover, common, and auth namespaces
+  const { t } = useTranslation(['discover', 'common', 'auth']);
   const { currentProfile } = useProfiles();
   const searchParams = useSearchParams();
   const profileUuid = currentProfile?.uuid;
@@ -182,11 +183,11 @@ export default function DiscoverPage() {
         </p>
         <Card className="p-6">
           <p className="text-center text-muted-foreground">
-            {t('auth.required')}
+            {t('common:validation.required')} {/* Use correct key from common namespace */}
           </p>
           <div className="mt-4 flex justify-center">
             <Button onClick={() => router.push('/login')}>
-              {t('auth.login')}
+              {t('auth:login.submitButton')} {/* Use key from auth namespace */}
             </Button>
           </div>
         </Card>
