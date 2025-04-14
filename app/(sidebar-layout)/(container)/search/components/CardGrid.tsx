@@ -6,8 +6,9 @@ import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge'; // Sorted
-import { Button } from '@/components/ui/button'; // Sorted
+import { unshareServer } from '@/app/actions/social'; // Import unshare action
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -17,6 +18,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { McpServerSource, McpServerType } from '@/db/schema';
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { McpServerCategory, SearchIndex } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
@@ -88,22 +90,25 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
 
 export default function CardGrid({ 
   items, 
-  installedServerMap, 
+  installedServerMap,
   currentUsername,
   onRefreshNeeded,
+  profileUuid, // Add profileUuid prop
   selectable = false,
   selectedItems = [],
   onItemSelect,
-}: { 
-  items: SearchIndex; 
+}: {
+  items: SearchIndex;
   installedServerMap: Map<string, string>;
   currentUsername?: string | null; // Allow null to match session type
   onRefreshNeeded?: () => void;
+  profileUuid?: string; // Define the prop type
   selectable?: boolean;
   selectedItems?: string[];
   onItemSelect?: (serverId: string, selected: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const { toast } = useToast(); // Initialize toast
   const [selectedServer, setSelectedServer] = useState<{
     name: string;
     description: string;
@@ -245,8 +250,43 @@ export default function CardGrid({
 
   // Handle unshare click
   const handleUnshareClick = async (item: any) => {
-    // TODO: Implement unshare functionality
-    console.log('Unshare clicked for:', item.name);
+    if (!profileUuid) {
+      toast({
+        title: t('common.error'),
+        description: t('search.error.profileNotFound'), // Need this translation key
+        variant: 'destructive',
+      });
+      return;
+    }
+    // Assuming the item contains the shared_uuid from the search index
+    const sharedServerUuid = item.shared_uuid; 
+    if (!sharedServerUuid) {
+       toast({
+         title: t('common.error'),
+         description: t('search.error.missingShareId'), // Need this translation key
+         variant: 'destructive',
+       });
+       return;
+    }
+
+    try {
+      const result = await unshareServer(profileUuid, sharedServerUuid);
+      if (result.success) {
+        toast({
+          title: t('common.success'),
+          description: t('search.unshareSuccess', { name: item.name }), // Need this translation key
+        });
+        onRefreshNeeded?.(); // Refresh the search results
+      } else {
+        throw new Error(result.error || t('search.error.unshareFailed')); // Need this translation key
+      }
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('search.error.unshareFailed'),
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
