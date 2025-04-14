@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/popover';
 import { useProjects } from '@/hooks/use-projects';
 import { cn } from '@/lib/utils';
+import { Project } from '@/types/project';
 
 export function ProjectSwitcher() {
   const { projects, currentProject, setCurrentProject, mutate, isAuthenticated } = useProjects();
@@ -85,7 +86,7 @@ export function ProjectSwitcher() {
                 <CommandInput placeholder='Search hubs...' />
                 <CommandEmpty>No hub found.</CommandEmpty>
                 <CommandGroup heading='Hubs'>
-                  {projects.map((project) => (
+                  {projects.map((project: Project) => (
                     <CommandItem
                       key={project.uuid}
                       onSelect={() => {

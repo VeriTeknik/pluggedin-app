@@ -260,9 +260,9 @@ export const authOptions: NextAuthOptions = {
       // Initial sign in or user object available
       if (user) {
         token.id = user.id;
-        token.name = user.name;
-        token.email = user.email;
-        token.picture = user.image;
+        token.name = user.name ?? null;
+        token.email = user.email ?? null;
+        token.picture = user.image ?? null;
         token.emailVerified = user.emailVerified;
         
         // Fetch username from DB during initial sign-in

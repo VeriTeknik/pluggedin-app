@@ -942,7 +942,22 @@ export async function getSharedCollection(sharedCollectionUuid: string): Promise
       return null;
     }
 
-    return collection;
+    // Convert null to undefined for name field
+    const modifiedCollection = {
+      ...collection,
+      profile: {
+        ...collection.profile,
+        project: {
+          ...collection.profile.project,
+          user: {
+            ...collection.profile.project.user,
+            name: collection.profile.project.user.name || undefined
+          }
+        }
+      }
+    };
+
+    return modifiedCollection as SharedCollection;
   } catch (error) {
     console.error('Error fetching shared collection:', error);
     return null;

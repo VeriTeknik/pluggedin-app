@@ -129,7 +129,7 @@ export function ImportServerDialog({
                   {sharedServer.server?.type}
                 </p>
                 <p className="text-xs px-2 py-1 bg-primary/10 rounded-sm inline-block">
-                  Shared by {sharedServer.profile?.name || 'Unknown'}
+                  Shared by {sharedServer.profile_username || 'Unknown'}
                 </p>
               </div>
             </div>

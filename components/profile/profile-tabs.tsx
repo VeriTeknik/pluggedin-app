@@ -38,42 +38,52 @@ export function ProfileTabs({
   const [serverOffset, setServerOffset] = useState(0);
 
   // Fetch shared servers for the displayed user (username)
+  const fetchSharedServers = async (): Promise<SearchIndex> => {
+    return getFormattedSharedServersForUser(username);
+  };
+
   const { 
     data: sharedServersData, 
     error: sharedServersError, 
     isLoading: isLoadingSharedServers 
-  } = useSWR<SearchIndex>(
+  } = useSWR(
     username ? `/user/${username}/shared-servers` : null,
-    () => getFormattedSharedServersForUser(username)
+    fetchSharedServers
   );
 
   // Fetch collections for the displayed user
+  const fetchCollections = async (url: string): Promise<SharedCollection[]> => {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch collections');
+    }
+    return response.json();
+  };
+
   const {
     data: collections,
     error: collectionsError,
     isLoading: isLoadingCollections
-  } = useSWR<SharedCollection[]>(
+  } = useSWR(
     username ? `/api/user/${username}/collections` : null,
-    async (url: string) => {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Failed to fetch collections');
-      }
-      return response.json();
-    }
+    fetchCollections
   );
 
   // Fetch installed servers for the *logged-in* user
-  const { data: installedServersData, isLoading: isLoadingInstalled } = useSWR<McpServer[]>(
+  const fetchInstalledServers = async (): Promise<McpServer[]> => {
+    return loggedInProfileUuid ? getMcpServers(loggedInProfileUuid) : [];
+  };
+
+  const { data: installedServersData, isLoading: isLoadingInstalled } = useSWR(
     loggedInProfileUuid ? `${loggedInProfileUuid}/installed-mcp-servers` : null,
-    () => (loggedInProfileUuid ? getMcpServers(loggedInProfileUuid) : Promise.resolve([]))
+    fetchInstalledServers
   );
 
   // Create the installed server map for the logged-in user
   const installedServerMap = useMemo(() => {
     const map = new Map<string, string>();
     if (installedServersData) {
-      installedServersData.forEach(server => {
+      installedServersData.forEach((server: McpServer) => {
         if (server.source && server.external_id) {
           map.set(`${server.source}:${server.external_id}`, server.uuid);
         }

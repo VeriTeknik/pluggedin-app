@@ -50,6 +50,7 @@ import { useCodes } from '@/hooks/use-codes';
 import { useProjects } from '@/hooks/use-projects';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
+import { Code } from '@/types/code';
 
 import { NotificationBell } from './notification-bell'; // Local components last
 import { ProfileSwitcher } from './profile-switcher';
@@ -316,7 +317,7 @@ export default function SidebarLayout({
                         </DialogContent>
                       </Dialog>
                     </SidebarMenuItem>
-                    {codes.map((code) => (
+                    {codes.map((code: Code) => (
                       <SidebarMenuItem key={code.uuid}>
                         <SidebarMenuButton asChild className='w-full group-data-[collapsible=icon]:justify-center' tooltip={code.fileName}>
                           <Link

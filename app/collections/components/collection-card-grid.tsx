@@ -86,7 +86,7 @@ export function CollectionCardGrid({
               </div>
               <div className="flex items-center mt-1">
                 <Database className="h-3 w-3 mr-1" />
-                Created: {formatDate(collection.created_at)}
+                Created: {formatDate(collection.created_at.toISOString())}
               </div>
             </div>
           </CardContent>

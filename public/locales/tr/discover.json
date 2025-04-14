@@ -15,5 +15,23 @@
   "suggested": {
     "title": "Önerilen Kullanıcılar",
     "empty": "Önerilen kullanıcı bulunamadı"
+  },
+  "search": {
+    "placeholder": "Ara...",
+    "noResults": "Sonuç bulunamadı",
+    "card": {
+      "dialog": {
+        "title": "MCP Sunucusu Ekle",
+        "description": "Çalışma alanınıza yeni bir sunucu ekleyin",
+        "name": "Sunucu Adı",
+        "command": "Komut",
+        "args": "Argümanlar",
+        "env": "Ortam Değişkenleri",
+        "url": "Sunucu URL'si",
+        "cancel": "İptal",
+        "add": "Sunucu Ekle",
+        "installing": "Yükleniyor..."
+      }
+    }
   }
 }

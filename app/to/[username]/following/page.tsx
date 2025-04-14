@@ -5,22 +5,22 @@ import { notFound } from 'next/navigation';
 
 import { 
   getFollowing,
-  getProfileByUsername} from '@/app/actions/social';
+  getUserByUsername } from '@/app/actions/social';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { getAuthSession } from '@/lib/auth';
 
 interface FollowingPageProps {
-  params: {
+  params: Promise<{
     username: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({
   params,
 }: FollowingPageProps): Promise<Metadata> {
-  const { username } = params;
-  const profile = await getProfileByUsername(username);
+  const { username } = await params;
+  const profile = await getUserByUsername(username);
 
   if (!profile) {
     return {
@@ -29,14 +29,14 @@ export async function generateMetadata({
   }
 
   return {
-    title: `Profiles ${profile.name} (@${username}) follows - Plugged.in`,
-    description: `People that ${profile.name} follows on Plugged.in`,
+    title: `Profiles ${profile.name || profile.username} (@${username}) follows - Plugged.in`,
+    description: `People that ${profile.name || profile.username} follows on Plugged.in`,
   };
 }
 
 export default async function FollowingPage({ params }: FollowingPageProps) {
-  const { username } = params;
-  const profile = await getProfileByUsername(username);
+  const { username } = await params;
+  const profile = await getUserByUsername(username);
 
   if (!profile) {
     notFound();
@@ -51,7 +51,7 @@ export default async function FollowingPage({ params }: FollowingPageProps) {
   }
 
   // Get following
-  const following = await getFollowing(profile.uuid);
+  const following = await getFollowing(profile.id);
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-3xl">
@@ -73,21 +73,20 @@ export default async function FollowingPage({ params }: FollowingPageProps) {
         <div className="space-y-4">
           {following.map((followedProfile) => (
             <div 
-              key={followedProfile.uuid} 
+              key={followedProfile.id} 
               className="flex items-center justify-between p-4 rounded-lg border"
             >
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10">
-                  {followedProfile.avatar_url ? (
-                    <AvatarImage src={followedProfile.avatar_url} alt={followedProfile.name} />
-                  ) : (
-                    <AvatarFallback>
-                      {followedProfile.name[0].toUpperCase()}
-                    </AvatarFallback>
+                  {followedProfile.avatar_url && (
+                    <AvatarImage src={followedProfile.avatar_url} alt={followedProfile.name || followedProfile.username || ''} />
                   )}
+                  <AvatarFallback>
+                    {(followedProfile.name?.[0] || followedProfile.username?.[0] || '?').toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
                 <div>
-                  <h3 className="font-medium">{followedProfile.name}</h3>
+                  <h3 className="font-medium">{followedProfile.name || followedProfile.username}</h3>
                   {followedProfile.username && (
                     <Link 
                       href={`/to/${followedProfile.username}`}

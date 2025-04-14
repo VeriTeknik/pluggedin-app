@@ -59,6 +59,14 @@ export interface EmbeddedChat {
   is_active: boolean;
   created_at: Date;
   updated_at: Date;
+  profile?: {
+    uuid: string;
+    name: string;
+    username: string;
+    bio: string | null;
+    is_public: boolean;
+    avatar_url: string | null;
+  };
 }
 
 export interface UsernameAvailability {

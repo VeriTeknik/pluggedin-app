@@ -47,7 +47,7 @@ export function InstallDialog({
   onOpenChange,
   serverData,
 }: InstallDialogProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('discover');
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -271,7 +271,7 @@ export function InstallDialog({
                 {t('search.card.dialog.cancel')}
               </Button>
               <Button type='submit' disabled={isSubmitting}>
-                {isSubmitting ? 'Installing...' : t('search.card.dialog.add')}
+                {isSubmitting ? t('search.card.dialog.installing') : t('search.card.dialog.add')}
               </Button>
             </div>
           </form>

@@ -16,7 +16,10 @@ import { ReleaseFilter } from './components/ReleaseFilter';
 import { SearchBar } from './components/SearchBar';
 // import { ReleaseTimeline } from './components/ReleaseTimeline'; // Optional timeline
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = async (url: string): Promise<ReleaseNote[]> => {
+  const res = await fetch(url);
+  return res.json();
+};
 
 export default function ReleaseNotesPage() {
   const { t } = useTranslation();
@@ -44,7 +47,7 @@ export default function ReleaseNotesPage() {
   }, [filter, searchTerm, page, limit]);
 
 
-  const { data: releaseNotes, error, isLoading, mutate: revalidateNotes } = useSWR<ReleaseNote[]>(apiUrl, fetcher, {
+  const { data: releaseNotes, error, isLoading, mutate: revalidateNotes } = useSWR(apiUrl, fetcher, {
     keepPreviousData: true, // Keep previous data while loading new page/filter
   });
 
@@ -110,7 +113,7 @@ export default function ReleaseNotesPage() {
 
       {!isLoading && !error && releaseNotes && releaseNotes.length > 0 && (
         <div className="space-y-6">
-          {releaseNotes.map((note) => (
+          {releaseNotes.map((note: ReleaseNote) => (
             <ReleaseCard key={`${note.repository}-${note.version}`} release={note} />
           ))}
         </div>

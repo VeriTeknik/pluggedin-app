@@ -15,5 +15,23 @@
   "suggested": {
     "title": "Suggested Users",
     "empty": "No suggested users found"
+  },
+  "search": {
+    "placeholder": "Search...",
+    "noResults": "No results found",
+    "card": {
+      "dialog": {
+        "title": "Add MCP Server",
+        "description": "Add a new server to your workspace",
+        "name": "Server Name",
+        "command": "Command",
+        "args": "Arguments",
+        "env": "Environment Variables",
+        "url": "Server URL",
+        "cancel": "Cancel",
+        "add": "Add Server",
+        "installing": "Installing..."
+      }
+    }
   }
 }

@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { mcpServersTable } from '@/db/schema';
+import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 // Define schema for PATCH request body
@@ -37,33 +37,19 @@ export async function PATCH(
     const { notes } = parseResult.data;
 
     // 1. Authorize: Verify the user owns the server via project/profile
-    // We need to join through profiles and projects to check user_id
-    type ServerWithRelations = {
-      uuid: string;
-      profile: {
-        uuid: string;
-        project: {
-          user_id: string;
-        };
-      } | null;
-    };
-    
-    const server = await db.query.mcpServersTable.findFirst({
-      columns: { uuid: true }, // Only need uuid for verification
-      where: eq(mcpServersTable.uuid, serverUuid),
-      with: {
-        profile: {
-          columns: { uuid: true },
-          with: {
-            project: {
-              columns: { user_id: true },
-            },
-          },
-        },
-      },
-    }) as ServerWithRelations | null;
+    const server = await db
+      .select({
+        uuid: mcpServersTable.uuid,
+        profile_uuid: mcpServersTable.profile_uuid,
+        user_id: projectsTable.user_id
+      })
+      .from(mcpServersTable)
+      .leftJoin(profilesTable, eq(mcpServersTable.profile_uuid, profilesTable.uuid))
+      .leftJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+      .where(eq(mcpServersTable.uuid, serverUuid))
+      .then(rows => rows[0]);
 
-    if (!server || server.profile?.project?.user_id !== userId) {
+    if (!server?.user_id || server.user_id !== userId) {
       return NextResponse.json({ error: 'Server not found or unauthorized' }, { status: 404 });
     }
 

@@ -23,9 +23,6 @@ import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 import { PaginatedSearchResult } from '@/types/search';
 import { EmbeddedChat, SharedCollection } from '@/types/social';
-import { ServerCard } from '@/components/server/ServerCard';
-import { CollectionCard } from '@/components/collection/CollectionCard';
-import { ChatCard } from '@/components/chat/ChatCard';
 
 
 type User = typeof users.$inferSelect;
@@ -92,7 +89,7 @@ export default function DiscoverPage() {
   }, [currentUserId, toast]); // Depend on currentUserId
 
   // Fetch Installed Servers for the current profile
-  const { data: installedServersData, isLoading: isLoadingInstalled } = useSWR<McpServer[]>(
+  const { data: installedServersData, isLoading: isLoadingInstalled } = useSWR(
     profileUuid ? `${profileUuid}/installed-mcp-servers` : null,
     async () => (profileUuid ? getMcpServers(profileUuid) : Promise.resolve([]))
   );
@@ -116,7 +113,7 @@ export default function DiscoverPage() {
     data: communityServersData,
     error: communityServersError,
     isLoading: isLoadingCommunityServers
-  } = useSWR<PaginatedSearchResult>(
+  } = useSWR(
     communityServersApiUrl,
     async (url: string) => {
       const res = await fetch(url);
@@ -136,7 +133,7 @@ export default function DiscoverPage() {
     error: collectionsError,
     isLoading: isLoadingCollections,
     mutate: mutateCollections
-  } = useSWR<SharedCollection[]>(
+  } = useSWR(
     '/api/collections',
     async (url: string) => {
       const res = await fetch(url);

@@ -63,16 +63,16 @@ function SearchContent() {
   const profileUuid = currentProfile?.uuid;
 
   // Fetch installed servers for the current profile
-  const { data: installedServersData } = useSWR<McpServer[]>(
+  const { data: installedServersData } = useSWR(
     profileUuid ? `${profileUuid}/installed-mcp-servers` : null,
-    () => (profileUuid ? getMcpServers(profileUuid) : Promise.resolve([]))
+    async () => profileUuid ? getMcpServers(profileUuid) : []
   );
 
   // Create a memoized map for quick lookup: 'source:external_id' -> uuid
   const installedServerMap = useMemo(() => {
     const map = new Map<string, string>();
     if (installedServersData) {
-      installedServersData.forEach(server => {
+      installedServersData.forEach((server: McpServer) => {
         if (server.source && server.external_id) {
           map.set(`${server.source}:${server.external_id}`, server.uuid);
         }
@@ -86,7 +86,7 @@ function SearchContent() {
     ? `/api/service/search?query=${encodeURIComponent(query)}&pageSize=${PAGE_SIZE}&offset=${offset}`
     : `/api/service/search?query=${encodeURIComponent(query)}&source=${source}&pageSize=${PAGE_SIZE}&offset=${offset}`;
 
-  const { data, mutate } = useSWR<PaginatedSearchResult>(
+  const { data, mutate } = useSWR(
     apiUrl,
     async (url: string) => {
       const res = await fetch(url);
@@ -96,7 +96,7 @@ function SearchContent() {
           `Failed to fetch: ${res.status} ${res.statusText} - ${errorText}`
         );
       }
-      return res.json();
+      return res.json() as Promise<PaginatedSearchResult>;
     }
   );
 
@@ -106,7 +106,7 @@ function SearchContent() {
       const tagSet = new Set<string>();
       const categorySet = new Set<McpServerCategory>();
       
-      Object.values(data.results).forEach((item: McpIndex) => {
+      Object.values(data.results as Record<string, McpIndex>).forEach((item) => {
         if (item.tags && item.tags.length) {
           item.tags.forEach(tag => tagSet.add(tag));
         }

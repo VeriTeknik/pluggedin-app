@@ -1,94 +1,104 @@
 'use client';
 
-import { Download } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { Button } from '@/components/ui/button';
-import { SharedCollection } from '@/types/social';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/components/ui/use-toast';
 
-import { CollectionCardGrid } from './components/collection-card-grid';
-import { ImportCollectionsDialog } from './components/import-collections-dialog';
+interface Collection {
+  id: string;
+  name: string;
+  description: string;
+  createdAt: string;
+}
 
-export default function CollectionsPage() {
+function CollectionsContent() {
   const { t } = useTranslation();
+  const router = useRouter();
   const searchParams = useSearchParams();
-  const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
-  const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const { toast } = useToast();
+  const query = searchParams.get('q') || '';
 
-  // Fetch collections
-  const { data: collections, error, isLoading } = useSWR<SharedCollection[]>(
-    '/api/collections',
-    async (url: string) => {
-      const response = await fetch(url);
-      if (!response.ok) {
-        throw new Error('Failed to fetch collections');
-      }
-      return response.json();
+  const { data: collections, error, isLoading } = useSWR(
+    `/api/collections${query ? `?q=${encodeURIComponent(query)}` : ''}`,
+    async (url: string): Promise<Collection[]> => {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error('Failed to fetch collections');
+      return res.json();
     }
   );
 
-  const handleSelectionChange = (selectedIds: string[]) => {
-    setSelectedCollections(selectedIds);
+  const handleSearch = (value: string) => {
+    const params = new URLSearchParams(searchParams);
+    if (value) {
+      params.set('q', value);
+    } else {
+      params.delete('q');
+    }
+    router.push(`/collections?${params.toString()}`);
   };
 
-  const handleImportSuccess = () => {
-    // Clear selection after successful import
-    setSelectedCollections([]);
+  const handleCreateCollection = () => {
+    router.push('/collections/new');
   };
-
-  const selectedCollectionObjects = collections?.filter(c => 
-    selectedCollections.includes(c.uuid)
-  ) ?? [];
 
   return (
-    <div className="container py-8 max-w-7xl mx-auto">
-      <div className="flex justify-between items-center mb-8">
-        <div>
+    <div className="container py-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between">
           <h1 className="text-3xl font-bold">{t('collections.title')}</h1>
-          <p className="text-muted-foreground mt-2">
-            {t('collections.description')}
-          </p>
-        </div>
-        {selectedCollections.length > 0 && (
-          <Button
-            onClick={() => setImportDialogOpen(true)}
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            {t('collections.import.button', { count: selectedCollections.length })}
+          <Button onClick={handleCreateCollection}>
+            {t('collections.create')}
           </Button>
-        )}
-      </div>
+        </div>
 
-      {isLoading ? (
-        <div className="text-center py-8">
-          {t('common.loading')}...
-        </div>
-      ) : error ? (
-        <div className="text-center py-8 text-destructive">
-          {t('collections.error.loadFailed')}
-        </div>
-      ) : collections?.length === 0 ? (
-        <div className="text-center py-8 text-muted-foreground">
-          {t('collections.empty')}
-        </div>
-      ) : (
-        <CollectionCardGrid
-          collections={collections ?? []}
-          selectedIds={selectedCollections}
-          onSelectionChange={handleSelectionChange}
+        <Input
+          value={query}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder={t('collections.searchPlaceholder')}
         />
-      )}
 
-      <ImportCollectionsDialog
-        open={importDialogOpen}
-        onOpenChange={setImportDialogOpen}
-        selectedCollections={selectedCollectionObjects}
-        onSuccess={handleImportSuccess}
-      />
+        {isLoading && <div>{t('common.loading')}</div>}
+        {error && <div className="text-red-500">{t('common.error')}</div>}
+        {collections?.length === 0 && (
+          <div>{t('collections.noResults')}</div>
+        )}
+
+        <div className="grid gap-4 md:grid-cols-2">
+          {collections?.map((collection: Collection) => (
+            <Card
+              key={collection.id}
+              className="cursor-pointer hover:bg-accent/50 transition-colors"
+              onClick={() => router.push(`/collections/${collection.id}`)}
+            >
+              <CardHeader>
+                <CardTitle>{collection.name}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground">
+                  {collection.description}
+                </p>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {new Date(collection.createdAt).toLocaleDateString()}
+                </p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
+  );
+}
+
+export default function CollectionsPage() {
+  return (
+    <Suspense fallback={<div className="container py-8">Loading...</div>}>
+      <CollectionsContent />
+    </Suspense>
   );
 } 

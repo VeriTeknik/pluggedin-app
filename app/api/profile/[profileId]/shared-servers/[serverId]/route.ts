@@ -1,17 +1,18 @@
 import { and, eq } from 'drizzle-orm';
-import { NextRequest, NextResponse } from 'next/server';
+import { type NextRequest } from 'next/server';
+import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { sharedMcpServersTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 export async function DELETE(
-  request: NextRequest,
-  context: { params: { profileId: string; serverId: string } }
-) {
+  req: NextRequest,
+  { params }: { params: Promise<{ profileId: string; serverId: string }> }
+): Promise<NextResponse> {
   try {
     const session = await getAuthSession();
-    const { profileId, serverId } = context.params;
+    const { profileId, serverId } = await params;
 
     if (!session?.user?.id) {
       return NextResponse.json(

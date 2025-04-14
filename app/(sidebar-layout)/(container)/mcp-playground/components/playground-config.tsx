@@ -4,6 +4,7 @@ import { Save, Server, Trash2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { PlaygroundSettings } from '@/app/actions/playground-settings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -47,32 +48,32 @@ interface ServerLogEntry {
   timestamp: Date;
 }
 
-interface PlaygroundConfigProps {
+export type PlaygroundConfigFormValues = PlaygroundSettings & {
+  serverUuid?: string;
+};
+
+export interface PlaygroundConfigProps {
+  logsEndRef?: React.RefObject<HTMLDivElement | null>;
+  onSubmit?: (values: PlaygroundConfigFormValues) => void;
+  defaultValues?: PlaygroundConfigFormValues;
   isLoading: boolean;
   mcpServers?: McpServer[];
+  clearLogs: () => void;
+  saveSettings: () => Promise<void>;
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
   isSessionActive: boolean;
   isProcessing: boolean;
   isUpdatingServer: string | null;
   sessionError: string | null;
   setSessionError: (error: string | null) => void;
   toggleServerStatus: (serverUuid: string, status: boolean) => Promise<void>;
-  llmConfig: {
-    provider: string;
-    model: string;
-    temperature: number;
-    maxTokens: number;
-    logLevel: LogLevel;
-  };
-  setLlmConfig: (config: any) => void;
+  llmConfig: PlaygroundConfigFormValues;
+  setLlmConfig: (config: PlaygroundConfigFormValues | ((prev: PlaygroundConfigFormValues) => PlaygroundConfigFormValues)) => void;
   logLevel: LogLevel;
   setLogLevel: (level: LogLevel) => void;
   clientLogs: LogEntry[];
   serverLogs: ServerLogEntry[];
-  clearLogs: () => void;
-  saveSettings: () => Promise<void>;
-  logsEndRef: React.RefObject<HTMLDivElement>;
-  activeTab: string;
-  setActiveTab: (tab: string) => void;
 }
 
 export function PlaygroundConfig({
@@ -94,6 +95,8 @@ export function PlaygroundConfig({
   logsEndRef,
   activeTab,
   setActiveTab,
+  onSubmit,
+  defaultValues,
 }: PlaygroundConfigProps) {
   const { t } = useTranslation();
   

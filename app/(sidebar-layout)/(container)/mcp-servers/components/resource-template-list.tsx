@@ -30,9 +30,9 @@ export function ResourceTemplateList({ serverUuid }: ResourceTemplateListProps) 
   const { t } = useTranslation();
   const apiUrl = `/api/mcp-servers/${serverUuid}/resource-templates`;
 
-  const { data: templates, error, isLoading } = useSWR<ResourceTemplateItem[]>(apiUrl, fetcher, {
+  const { data: templates, error, isLoading } = useSWR(apiUrl, fetcher, {
     revalidateOnFocus: false,
-  });
+  }) as { data: ResourceTemplateItem[]; error: Error | undefined; isLoading: boolean };
 
   if (isLoading) {
     return (
@@ -76,7 +76,7 @@ export function ResourceTemplateList({ serverUuid }: ResourceTemplateListProps) 
           </TableRow>
         </TableHeader>
         <TableBody>
-          {templates.map((template) => (
+          {templates.map((template: ResourceTemplateItem) => (
             <TableRow key={template.uuid} className="dark:border-slate-800">
               <TableCell className="font-medium flex items-center">
                  <FileCode className="h-4 w-4 mr-2 text-muted-foreground" />

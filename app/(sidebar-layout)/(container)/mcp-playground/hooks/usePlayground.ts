@@ -21,6 +21,7 @@ import {
 import { McpServerStatus } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
+import { McpServer } from '@/types/mcp-server';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
@@ -119,7 +120,7 @@ export function usePlayground() {
     profileUuid ? `${profileUuid}/playground-settings` : null,
     () => getPlaygroundSettings(profileUuid),
     {
-      onSuccess: (data) => {
+      onSuccess: (data: { success: boolean; settings?: PlaygroundSettings }) => {
         if (data?.success && data.settings) {
           const newSettings = {
             provider: data.settings.provider,
@@ -132,7 +133,7 @@ export function usePlayground() {
           setLogLevel(data.settings.logLevel);
         }
       },
-      onError: (error) => {
+      onError: (error: unknown) => {
         console.error('Error loading settings:', error);
         addLog(
           'error',
@@ -318,8 +319,8 @@ export function usePlayground() {
     setClientLogs([]); // Clear client logs too
 
     const activeServerUuids = mcpServers
-      .filter((server) => server.status === McpServerStatus.ACTIVE)
-      .map((server) => server.uuid);
+      .filter((server: McpServer) => server.status === McpServerStatus.ACTIVE)
+      .map((server: McpServer) => server.uuid);
 
     if (activeServerUuids.length === 0) {
       toast({

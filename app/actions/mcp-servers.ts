@@ -248,12 +248,14 @@ export async function createMcpServer({
 
     // Track server installation
     try {
-      await trackServerInstallation(
-        profileUuid,
-        newServer.uuid,
-        external_id || null,
-        source
-      );
+      if (source) {
+        await trackServerInstallation({
+          profileUuid,
+          serverUuid: newServer.uuid,
+          externalId: external_id || '',
+          source
+        });
+      }
     } catch (trackingError) {
       console.error('Error tracking installation:', trackingError);
       // Continue even if tracking fails

@@ -13,16 +13,14 @@ export const metadata: Metadata = {
   description: 'View details of a shared MCP server',
 };
 
-interface PageParams {
-  uuid: string;
+type PageProps = {
+  params: Promise<{ uuid: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-export default async function Page({
-  params,
-}: {
-  params: PageParams;
-}) {
-  const { uuid } = params;
+export default async function Page({ params, searchParams }: PageProps) {
+  const { uuid } = await params;
+  const searchParamsResolved = await searchParams;
   const sharedServer = await getSharedMcpServer(uuid);
 
   if (!sharedServer || !sharedServer.server) {

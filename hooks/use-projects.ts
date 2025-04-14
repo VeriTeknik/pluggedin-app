@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -20,14 +20,14 @@ export const useProjects = () => {
     sessionStatus === 'authenticated' ? 'projects' : null,
     getProjects,
     {
-      onError: (error) => {
+      onError: (_error: Error) => {
         // Log the error but don't automatically redirect
-        console.error('Projects error:', error);
+        console.error('Projects error:', _error);
         
         // Show toast notification for user feedback
         toast({
           title: t('common.error'),
-          description: error?.message || t('common.errors.unexpected'),
+          description: _error?.message || t('common.errors.unexpected'),
           variant: 'destructive',
         });
         
@@ -43,12 +43,12 @@ export const useProjects = () => {
         return [];
       },
       // Add retry configuration
-      shouldRetryOnError: (err) => {
+      shouldRetryOnError: (_err: Error) => {
         // Don't retry on auth errors or server component render errors
         if (
-          err?.message?.includes('Unauthorized') ||
-          err?.message?.includes('Session expired') ||
-          err?.message?.includes('Server Components render')
+          _err?.message?.includes('Unauthorized') ||
+          _err?.message?.includes('Session expired') ||
+          _err?.message?.includes('Server Components render')
         ) {
           return false;
         }
@@ -72,7 +72,7 @@ export const useProjects = () => {
       const savedProjectUuid = localStorage.getItem(CURRENT_PROJECT_KEY);
       if (data?.length) {
         if (savedProjectUuid) {
-          const savedProject = data.find((p) => p.uuid === savedProjectUuid);
+          const savedProject = data.find((p: Project) => p.uuid === savedProjectUuid);
           if (savedProject) {
             setCurrentProject(savedProject);
             return;

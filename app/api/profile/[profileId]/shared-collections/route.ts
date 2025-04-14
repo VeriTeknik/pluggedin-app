@@ -31,9 +31,7 @@ export async function GET(
           columns: {
             uuid: true,
             name: true,
-            bio: true,
-            is_public: true,
-            avatar_url: true,
+            project_uuid: true
           }
         }
       },

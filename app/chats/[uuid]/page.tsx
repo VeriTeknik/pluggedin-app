@@ -8,13 +8,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { getAuthSession } from '@/lib/auth';
 
 interface ChatPageProps {
-  params: {
+  params: Promise<{
     uuid: string;
-  };
+  }>;
 }
 
 export default async function ChatPage({ params }: ChatPageProps) {
-  const { uuid } = params;
+  const { uuid } = await params;
   const chat = await getEmbeddedChat(uuid);
 
   if (!chat || !chat.is_active || !chat.is_public) {

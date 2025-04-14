@@ -1,8 +1,8 @@
-import { and, eq,like, or } from 'drizzle-orm';
+import { and, eq, like, or } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { profilesTable } from '@/db/schema';
+import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
@@ -22,30 +22,18 @@ export async function GET(request: NextRequest) {
     
     // Search for profiles by name or username
     const searchTerm = `%${query}%`;
-    const profiles = await db.query.profilesTable.findMany({
+    const results = await db.query.users.findMany({
       where: and(
         or(
-          like(profilesTable.name, searchTerm),
-          like(profilesTable.username, searchTerm)
+          like(users.name, searchTerm),
+          like(users.username, searchTerm)
         ),
-        eq(profilesTable.is_public, true)
+        eq(users.is_public, true)
       ),
-      limit: 20,
-      columns: {
-        uuid: true,
-        name: true,
-        username: true,
-        avatar_url: true,
-        bio: true,
-        created_at: true,
-        is_public: true,
-      }
+      limit: 20
     });
     
-    // Don't include private profiles in results
-    const publicProfiles = profiles.filter(profile => profile.is_public);
-    
-    return NextResponse.json(publicProfiles);
+    return NextResponse.json(results);
   } catch (error) {
     console.error('Error searching users:', error);
     return NextResponse.json(

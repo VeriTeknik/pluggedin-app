@@ -19,6 +19,7 @@ export async function createEnhancedMcpLogger(
     // --- DISABLED FILE LOGGING ---
     // private serverLogHandles: Map<string, fs.FileHandle> = new Map();
     // private serverLogDescriptors: Map<string, number> = new Map();
+    private isCleaningUp = false;
     private mcpServerLogDir: string;
     private isInitialized: Promise<void>; // Promise to track initialization
 
@@ -196,22 +197,28 @@ export async function createEnhancedMcpLogger(
 
     // Cleanup function - close all open file handles
     async cleanup() {
-        await this.ensureInitialized(); // Ensure init is done before cleanup
-        // --- DISABLED FILE LOGGING ---
-        // // Close handles using the stored handles map
-        // const closePromises = Array.from(this.serverLogHandles.entries()).map(async ([serverName, fileHandle]) => {
-        //     try {
-        //         await fileHandle.close(); // Use async close on the handle
-        //         // Use internal log to avoid ensureInitialized deadlock during cleanup
-        //         await this._internalAddLog('info', `Closed log file handle for ${serverName}`);
-        //     } catch (error) {
-        //         console.error(`Error closing log file: ${serverName}`, error);
-        //     }
-        // });
-        // await Promise.all(closePromises);
-        // this.serverLogHandles.clear();
-        // this.serverLogDescriptors.clear(); // Also clear descriptors map
-        await this._internalAddLog('info', `File logging was disabled, no files to close.`);
+      if (this.isCleaningUp) {
+        console.log('[MCP] Cleanup already in progress, skipping duplicate call');
+        return;
+      }
+      this.isCleaningUp = true;
+
+      try {
+        await Promise.race([
+          this._internalAddLog('info', '[MCP] Starting logger cleanup...'),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Log cleanup timeout')), 5000))
+        ]);
+      } catch (error) {
+        console.error('[MCP] Error during logger cleanup:', error);
+        // Continue with cleanup even if logging fails
+      }
+
+      try {
+        // Any additional cleanup steps would go here
+        await this._internalAddLog('info', '[MCP] Logger cleanup completed');
+      } catch (error) {
+        console.error('[MCP] Error during final cleanup steps:', error);
+      }
     }
 
     // Get log files for this profile (Asynchronous version)

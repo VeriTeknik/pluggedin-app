@@ -8,7 +8,7 @@ import { db } from '@/db';
 import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
-type User = typeof users.$inferSelect; // Define User type
+type User = typeof users.$inferSelect;
 
 // --- Non-async Presentation Component ---
 function UserProfileDisplay({
@@ -48,14 +48,12 @@ function UserProfileDisplay({
   );
 }
 
-interface ProfilePageProps {
-  params: {
-    username: string;
-  };
-}
+type PageProps = {
+  params: Promise<{ username: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+};
 
 // --- Generate Static Params ---
-// Inform Next.js about possible usernames at build time
 export async function generateStaticParams() {
   try {
     const allUsers = await db
@@ -63,7 +61,6 @@ export async function generateStaticParams() {
       .from(users)
       .where(sql`${users.username} IS NOT NULL`);
 
-    // Filter out null/empty usernames just in case
     return allUsers
       .filter((u: { username: string | null }): u is { username: string } => Boolean(u.username))
       .map((user: { username: string }) => ({
@@ -71,21 +68,18 @@ export async function generateStaticParams() {
       }));
   } catch (error) {
     console.error("Error fetching usernames for generateStaticParams:", error);
-    return []; // Return empty array on error
+    return [];
   }
 }
 
-// Allow rendering for usernames not generated at build time
 export const dynamicParams = true;
 
-// Explicitly type params and add searchParams
 export async function generateMetadata({
   params,
 }: {
-  params: { username: string };
+  params: Promise<{ username: string }>;
 }): Promise<Metadata> {
-  // Await params before using
-  const resolvedParams = await Promise.resolve(params);
+  const resolvedParams = await params;
   const user = await getUserByUsername(resolvedParams.username);
   
   if (!user) {
@@ -99,15 +93,10 @@ export async function generateMetadata({
   };
 }
 
-// --- Async Page Component (Fetches data and renders presentation component) ---
-export default async function ProfilePage({
-  params,
-}: {
-  params: { username: string };
-}) {
-  // Await params before using
-  const resolvedParams = await Promise.resolve(params);
-  const user = await getUserByUsername(resolvedParams.username);
+// --- Async Page Component ---
+export default async function ProfilePage({ params, searchParams }: PageProps) {
+  const { username } = await params;
+  const user = await getUserByUsername(username);
   const session = await getAuthSession();
   const currentUserId = session?.user?.id;
   const isOwner = currentUserId === user?.id;
@@ -116,7 +105,6 @@ export default async function ProfilePage({
     return <div>User not found</div>;
   }
 
-  // Get follower counts and following status
   const followerCount = await getUserFollowerCount(user.id);
   const followingCount = await getUserFollowingCount(user.id);
   const currentlyFollowing = currentUserId ? await isFollowingUser(currentUserId, user.id) : false;

@@ -17,10 +17,10 @@ async function enrichServerWithMetrics(server: McpIndex): Promise<McpIndex> {
   
   try {
     // Get metrics for this server
-    const metricsResult = await getServerRatingMetrics(
-      server.source,
-      server.external_id
-    );
+    const metricsResult = await getServerRatingMetrics({
+      source: server.source,
+      externalId: server.external_id
+    });
     
     if (metricsResult.success && metricsResult.metrics) {
       // Add metrics to server data

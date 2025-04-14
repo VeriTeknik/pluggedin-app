@@ -1,203 +1,131 @@
 'use client';
 
-import { UserSearch } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import useSWR from 'swr';
 
-import { followProfile, isFollowing } from '@/app/actions/social';
-import { Avatar, AvatarFallback,AvatarImage } from '@/components/ui/avatar';
+import { followUser, unfollowUser } from '@/app/actions/social';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useToast } from '@/components/ui/use-toast';
-import { useProfiles } from '@/hooks/use-profiles';
-import { Profile } from '@/types/profile';
 
-export default function SearchUsersPage() {
+interface User {
+  id: string;
+  name: string;
+  username: string;
+  isFollowing: boolean;
+}
+
+function SearchUsersContent() {
+  const { t } = useTranslation();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
-  const { currentProfile } = useProfiles();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
-  const [searchResults, setSearchResults] = useState<Profile[]>([]);
-  const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({});
+  const [query, setQuery] = useState(searchParams.get('q') || '');
 
-  const handleSearch = async () => {
-    if (!searchQuery.trim()) return;
-    
-    setIsSearching(true);
-    try {
-      const response = await fetch(`/api/search/users?q=${encodeURIComponent(searchQuery)}`);
-      if (!response.ok) throw new Error('Failed to search users');
-      
-      const results = await response.json();
-      setSearchResults(results);
-      
-      // Check following status for each profile
-      if (currentProfile) {
-        const followStatusMap: Record<string, boolean> = {};
-        for (const profile of results) {
-          const following = await isFollowing(currentProfile.uuid, profile.uuid);
-          followStatusMap[profile.uuid] = following;
-        }
-        setFollowingStatus(followStatusMap);
-      }
-    } catch (error) {
-      console.error('Error searching users:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to search for users',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSearching(false);
+  const fetcher = async (url: string): Promise<User[]> => {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch users');
+    return res.json();
+  };
+
+  const { data: users, error, isLoading } = useSWR(
+    query.length >= 2 ? `/api/search/users?q=${encodeURIComponent(query)}` : null,
+    fetcher
+  );
+
+  const handleSearch = (value: string) => {
+    setQuery(value);
+    if (value.length >= 2) {
+      const params = new URLSearchParams(searchParams);
+      params.set('q', value);
+      router.push(`/search/users?${params.toString()}`);
     }
   };
 
-  const handleFollow = async (profileUuid: string) => {
-    if (!currentProfile) {
-      toast({
-        title: 'Error',
-        description: 'You need to be logged in to follow users',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const handleFollow = async (userId: string) => {
     try {
-      const result = await followProfile(currentProfile.uuid, profileUuid);
-      if (result.success) {
-        setFollowingStatus(prev => ({
-          ...prev,
-          [profileUuid]: true
-        }));
-        toast({
-          title: 'Success',
-          description: 'User followed successfully',
-        });
-      } else {
-        throw new Error(result.error || 'Failed to follow user');
-      }
-    } catch (error) {
-      console.error('Error following user:', error);
+      await followUser(userId, userId);
       toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'An error occurred',
+        title: t('social.follow.success'),
+        description: t('social.follow.successDescription'),
+      });
+    } catch (error) {
+      toast({
+        title: t('social.follow.error'),
+        description: t('social.follow.errorDescription'),
         variant: 'destructive',
       });
     }
   };
 
-  const handleVisitProfile = (username: string) => {
-    router.push(`/to/${username}`);
+  const handleUnfollow = async (userId: string) => {
+    try {
+      await unfollowUser(userId, userId);
+      toast({
+        title: t('social.unfollow.success'),
+        description: t('social.unfollow.successDescription'),
+      });
+    } catch (error) {
+      toast({
+        title: t('social.unfollow.error'),
+        description: t('social.unfollow.errorDescription'),
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
     <div className="container py-8">
-      <h1 className="text-3xl font-bold mb-2">Find People to Follow</h1>
-      <p className="text-muted-foreground mb-8">
-        Search for users by name or username and follow them to see their shared content
-      </p>
-      
-      <div className="flex gap-2 mb-8">
+      <div className="max-w-2xl mx-auto space-y-6">
+        <h1 className="text-3xl font-bold">{t('search.users.title')}</h1>
         <Input
-          placeholder="Search users..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          className="max-w-md"
+          value={query}
+          onChange={(e) => handleSearch(e.target.value)}
+          placeholder={t('search.users.searchPlaceholder')}
         />
-        <Button onClick={handleSearch} disabled={isSearching}>
-          {isSearching ? 'Searching...' : 'Search'}
-        </Button>
+
+        {isLoading && <div>{t('common.loading')}</div>}
+        {error && <div className="text-red-500">{t('common.error')}</div>}
+        {users?.length === 0 && query.length >= 2 && (
+          <div>{t('search.users.noResults')}</div>
+        )}
+
+        <div className="space-y-4">
+          {users?.map((user: User) => (
+            <div
+              key={user.id}
+              className="flex items-center justify-between p-4 border rounded-lg"
+            >
+              <div>
+                <h3 className="font-medium">{user.name}</h3>
+                <p className="text-sm text-gray-500">@{user.username}</p>
+              </div>
+              <Button
+                onClick={() =>
+                  user.isFollowing ? handleUnfollow(user.id) : handleFollow(user.id)
+                }
+                variant={user.isFollowing ? 'outline' : 'default'}
+              >
+                {user.isFollowing
+                  ? t('social.unfollow.button')
+                  : t('social.follow.button')}
+              </Button>
+            </div>
+          ))}
+        </div>
       </div>
-      
-      {isSearching ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[...Array(3)].map((_, index) => (
-            <Card key={index} className="animate-pulse">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-12" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Skeleton className="h-4 w-full mb-2" />
-                <Skeleton className="h-4 w-2/3" />
-              </CardContent>
-              <CardFooter>
-                <Skeleton className="h-10 w-24" />
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : searchResults.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {searchResults.map((profile) => (
-            <Card key={profile.uuid}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-4">
-                  <Avatar>
-                    <AvatarImage src={profile.avatar_url || ''} alt={profile.name || 'User'} />
-                    <AvatarFallback>{(profile.name || 'U').charAt(0).toUpperCase()}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">{profile.name}</CardTitle>
-                    {profile.username && (
-                      <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm line-clamp-2">
-                  {profile.bio || 'No bio provided'}
-                </p>
-              </CardContent>
-              <CardFooter className="flex gap-2">
-                <Button
-                  variant={followingStatus[profile.uuid] ? "outline" : "default"}
-                  onClick={() => !followingStatus[profile.uuid] && handleFollow(profile.uuid)}
-                  disabled={followingStatus[profile.uuid]}
-                  size="sm"
-                >
-                  {followingStatus[profile.uuid] ? 'Following' : 'Follow'}
-                </Button>
-                {profile.username && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleVisitProfile(profile.username!)}
-                  >
-                    Visit Profile
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
-      ) : searchQuery.trim() !== '' ? (
-        <div className="text-center py-12">
-          <UserSearch className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h2 className="text-xl font-semibold mt-4 mb-2">No users found</h2>
-          <p className="text-muted-foreground">
-            Try a different search term or check your spelling
-          </p>
-        </div>
-      ) : (
-        <div className="text-center py-12">
-          <UserSearch className="h-12 w-12 mx-auto text-muted-foreground" />
-          <h2 className="text-xl font-semibold mt-4 mb-2">Search for users</h2>
-          <p className="text-muted-foreground">
-            Enter a name or username to find people to follow
-          </p>
-        </div>
-      )}
     </div>
   );
-} 
+}
+
+export default function SearchUsersPage() {
+  return (
+    <Suspense fallback={<div className="container py-8">Loading...</div>}>
+      <SearchUsersContent />
+    </Suspense>
+  );
+}
+
+export const dynamic = 'force-dynamic'; 

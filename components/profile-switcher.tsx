@@ -33,6 +33,7 @@ import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { Profile } from '@/types/profile';
 
 export function ProfileSwitcher() {
   const { currentProject, isAuthenticated } = useProjects();
@@ -118,7 +119,7 @@ export function ProfileSwitcher() {
                 <CommandInput placeholder='Search workspaces...' />
                 <CommandEmpty>No workspace found.</CommandEmpty>
                 <CommandGroup heading='Workspaces'>
-                  {profiles?.map((profile) => (
+                  {profiles?.map((profile: Profile) => (
                     <CommandItem
                       key={profile.uuid}
                       onSelect={() => {

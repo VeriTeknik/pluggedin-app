@@ -68,7 +68,7 @@ export default function MCPServersPage() {
   const [shareCollectionOpen, setShareCollectionOpen] = useState(false);
   const [selectedServers, setSelectedServers] = useState<McpServer[]>([]);
 
-  const { data: servers = [], mutate } = useSWR<McpServer[]>(
+  const { data: servers = [], mutate } = useSWR(
     currentProfile?.uuid ? `${currentProfile.uuid}/mcp-servers` : null,
     () => getMcpServers(currentProfile?.uuid || '')
   );
@@ -230,7 +230,7 @@ export default function MCPServersPage() {
     }
 
     // Transform servers array to the required JSON format
-    const mcpServers = servers.reduce((acc, server) => {
+    const mcpServers = servers.reduce((acc: Record<string, any>, server: McpServer) => {
       const serverConfig: any = {
         description: server.description || '',
         type: server.type.toLowerCase(),
