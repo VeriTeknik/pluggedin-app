@@ -1,15 +1,15 @@
 // Font families map for easy access
 export const fontFamilies = {
   geist: 'var(--font-geist-sans)',
-  quicksand: 'Quicksand, sans-serif',
-  nunito: 'Nunito, sans-serif',
-  poppins: 'Poppins, sans-serif',
-  roboto: 'Roboto, sans-serif',
-  ubuntu: 'Ubuntu, sans-serif',
+  quicksand: 'var(--font-quicksand)',
+  nunito: 'var(--font-nunito)',
+  poppins: 'var(--font-poppins)',
+  roboto: 'var(--font-roboto)',
+  ubuntu: 'var(--font-ubuntu)',
   'varela-round': 'Varela Round, sans-serif',
-  'work-sans': 'Work Sans, sans-serif',
-  'zilla-slab': 'Zilla Slab, serif',
-  comfortaa: 'Comfortaa, cursive',
+  'work-sans': 'var(--font-work-sans)',
+  'zilla-slab': 'var(--font-zilla-slab)',
+  comfortaa: 'var(--font-comfortaa)',
 };
 
 export type FontFamily = keyof typeof fontFamilies;

@@ -87,6 +87,56 @@
       "connected": "Bağlı",
       "removed": "{{provider}} hesabı başarıyla kaldırıldı",
       "error": "Hesap bağlantısı kesilirken hata oluştu"
+    },
+    "project": {
+      "title": "Mevcut Hub",
+      "description": "Mevcut hub ayarlarınızı yönetin",
+      "loading": "Proje Yükleniyor...",
+      "namePlaceholder": "Proje adı",
+      "updateSuccess": "Proje adı başarıyla güncellendi",
+      "updateError": "Proje adı güncellenirken hata oluştu",
+      "deleteConfirm": "Bu projeyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "deleteSuccess": "Proje başarıyla silindi",
+      "deleteError": "Proje silinirken hata oluştu",
+      "dangerZone": "Tehlikeli Bölge",
+      "deleteWarning": "Bir projeyi sildikten sonra geri dönüş yoktur. Lütfen dikkatli olun.",
+      "deleteButton": "Projeyi Sil"
+    },
+    "workspace": {
+      "title": "Mevcut Çalışma Alanı",
+      "description": "Mevcut çalışma alanı ayarlarınızı yönetin",
+      "loading": "Profil Yükleniyor...",
+      "namePlaceholder": "Profil adı",
+      "updateSuccess": "Profil adı başarıyla güncellendi",
+      "updateError": "Profil adı güncellenirken hata oluştu",
+      "deleteConfirm": "Bu profili silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "deleteSuccess": "Profil başarıyla silindi",
+      "deleteError": "Çalışma alanı silinirken hata oluştu",
+      "dangerZone": "Tehlikeli Bölge",
+      "deleteWarning": "Bir çalışma alanını sildikten sonra geri dönüş yoktur. Lütfen dikkatli olun.",
+      "deleteButton": "Çalışma Alanını Sil"
+    },
+    "appearance": {
+      "title": "Görünüm",
+      "description": "Uygulama görünümünü özelleştirin",
+      "colorTheme": "Renk Teması",
+      "light": "Açık",
+      "dark": "Koyu",
+      "system": "Sistem",
+      "font": "Yazı Tipi",
+      "selectFont": "Yazı tipi seçin",
+      "fonts": {
+        "geist": "Geist Sans (Varsayılan)",
+        "quicksand": "Quicksand",
+        "nunito": "Nunito",
+        "poppins": "Poppins",
+        "roboto": "Roboto",
+        "ubuntu": "Ubuntu",
+        "varelaRound": "Varela Round",
+        "workSans": "Work Sans",
+        "zillaSlab": "Zilla Slab",
+        "comfortaa": "Comfortaa"
+      }
     }
   }
 }
