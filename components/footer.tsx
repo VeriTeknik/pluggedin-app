@@ -1,5 +1,6 @@
 'use client';
 
+import { MessageSquare } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -20,7 +21,7 @@ export function Footer({ className }: { className?: string }) {
             <div className="flex items-center justify-center space-x-2">
               <a href="https://veritech.net" className="text-muted-foreground hover:text-foreground transition-colors flex items-center">
                 {/* Use logoSrc from useThemeLogo hook */}
-                <Image src={logoSrc} alt="Plugged.in Logo" width={210} height={50} /> 
+                <Image src="/vtlogo.png" alt="VeriTeknik Logo" width={210} height={50} /> 
               </a>
             </div>
             <p className="text-sm text-muted-foreground">
@@ -84,6 +85,16 @@ export function Footer({ className }: { className?: string }) {
                   className="text-muted-foreground hover:text-foreground transition-colors"
                 >
                   GitHub
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://discord.gg/pluggedin" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
+                >
+                  Discord <MessageSquare className="h-3 w-3" />
                 </a>
               </li>
             </ul>

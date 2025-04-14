@@ -42,7 +42,9 @@
       "OTHER": "Other"
     },
     "card": {
-      "install": "Install"
+      "install": "Install",
+      "installed": "Installed",
+      "rate": "Rate"
     }
   }
 }

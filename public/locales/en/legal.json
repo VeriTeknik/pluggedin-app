@@ -3,6 +3,8 @@
     "title": "Legal",
     "subtitle": "Important Documents",
     "description": "Important documents and legal information for Plugged.in",
+    "backToLegal": "Back to Legal",
+    "lastUpdated": "Last Updated",
     "pages": {
       "privacy": {
         "title": "Privacy Policy",
@@ -42,7 +44,40 @@
         "description": "How to reach us",
         "content": {
           "title": "Contact Information",
-          "description": "For any questions about these legal documents, please contact us"
+          "description": "For any questions about these legal documents, please contact us",
+          "form": {
+            "title": "Send us a Message",
+            "description": "Fill out the form below to send us a message",
+            "name": "Name",
+            "namePlaceholder": "Your name",
+            "email": "Email",
+            "emailPlaceholder": "Your email address",
+            "subject": "Subject",
+            "subjectPlaceholder": "Message subject",
+            "message": "Message",
+            "messagePlaceholder": "Your message",
+            "submit": "Send Message",
+            "sending": "Sending...",
+            "success": "Your message has been sent successfully",
+            "error": "An error occurred while sending your message",
+            "demoNotice": "This form is for demonstration purposes only. During the Release Candidate phase, please use the email address provided."
+          },
+          "faq": {
+            "title": "Frequently Asked Questions",
+            "status": {
+              "question": "What is the current status of Plugged.in?",
+              "answer": "Plugged.in is currently in Release Candidate status. This means that while the core functionality is complete, there may still be bugs or issues that need to be addressed before the final release."
+            },
+            "bugs": {
+              "question": "How can I report a bug?",
+              "answer": "You can report bugs by sending an email to support@plugged.in or by opening an issue on our GitHub repository. Please include detailed steps to reproduce the bug, along with any relevant error messages."
+            },
+            "security": {
+              "question": "Is my data secure during the Release Candidate phase?",
+              "answer": "While we implement standard security practices, during the Release Candidate phase, we recommend not storing sensitive information within the service. Please review our Privacy Policy for more information."
+            }
+          },
+          "note": "Note: During the Release Candidate phase, our support capabilities may be limited. We will do our best to respond to all inquiries in a timely manner."
         }
       }
     }

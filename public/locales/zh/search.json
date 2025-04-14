@@ -42,7 +42,9 @@
       "OTHER": ""
     },
     "card": {
-      "install": ""
+      "install": "",
+      "installed": "已安装",
+      "rate": "评分"
     }
   }
 }

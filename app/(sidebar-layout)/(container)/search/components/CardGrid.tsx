@@ -417,7 +417,7 @@ export default function CardGrid({
                   onClick={() => handleRateClick(key, item)}
                 >
                   <ThumbsUp className='w-4 h-4' />
-                  Rate
+                  {t('search.card.rate')}
                 </Button>
               )}
               

@@ -42,7 +42,9 @@
       "OTHER": ""
     },
     "card": {
-      "install": ""
+      "install": "",
+      "installed": "インストール済み",
+      "rate": "評価する"
     }
   }
 }

@@ -3,6 +3,8 @@
     "title": "Yasal",
     "subtitle": "Önemli Belgeler",
     "description": "Plugged.in için önemli belgeler ve yasal bilgiler",
+    "backToLegal": "Yasal Sayfasına Dön",
+    "lastUpdated": "Son Güncelleme",
     "pages": {
       "privacy": {
         "title": "Gizlilik Politikası",
@@ -42,7 +44,39 @@
         "description": "Bize nasıl ulaşabilirsiniz",
         "content": {
           "title": "İletişim Bilgileri",
-          "description": "Bu yasal belgelerle ilgili sorularınız için lütfen bizimle iletişime geçin"
+          "description": "Bu yasal belgelerle ilgili sorularınız için lütfen bizimle iletişime geçin",
+          "form": {
+            "title": "Bize Mesaj Gönderin",
+            "description": "Bize mesaj göndermek için aşağıdaki formu doldurun",
+            "name": "İsim",
+            "namePlaceholder": "İsminiz",
+            "email": "E-posta",
+            "emailPlaceholder": "E-posta adresiniz",
+            "subject": "Konu",
+            "subjectPlaceholder": "Mesaj konusu",
+            "message": "Mesaj",
+            "messagePlaceholder": "Mesajınız",
+            "submit": "Mesaj Gönder",
+            "sending": "Gönderiliyor...",
+            "success": "Mesajınız başarıyla gönderildi",
+            "error": "Mesaj gönderilirken bir hata oluştu"
+          },
+          "faq": {
+            "title": "Sıkça Sorulan Sorular",
+            "status": {
+              "question": "Plugged.in'in mevcut durumu nedir?",
+              "answer": "Plugged.in şu anda Yayın Adayı durumundadır. Bu, temel işlevselliğin tamamlandığı ancak final sürümünden önce düzeltilmesi gereken hatalar veya sorunlar olabileceği anlamına gelir."
+            },
+            "bugs": {
+              "question": "Bir hatayı nasıl bildirebilirim?",
+              "answer": "Hataları support@plugged.in adresine e-posta göndererek veya GitHub deposunda bir sorun açarak bildirebilirsiniz. Lütfen hatayı yeniden oluşturmak için detaylı adımları ve ilgili hata mesajlarını ekleyin."
+            },
+            "security": {
+              "question": "Yayın Adayı aşamasında verilerim güvende mi?",
+              "answer": "Standart güvenlik uygulamalarını uygulamamıza rağmen, Yayın Adayı aşamasında hizmet içinde hassas bilgiler saklamanızı önermiyoruz. Daha fazla bilgi için lütfen Gizlilik Politikamızı inceleyin."
+            }
+          },
+          "note": "Not: Yayın Adayı aşamasında, destek kapasitemiz sınırlı olabilir. Tüm sorguları zamanında yanıtlamak için elimizden geleni yapacağız."
         }
       }
     }

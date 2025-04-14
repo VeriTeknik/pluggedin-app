@@ -42,7 +42,9 @@
       "OTHER": "Diğer"
     },
     "card": {
-      "install": "Yükle"
+      "install": "Yükle",
+      "installed": "Yüklendi",
+      "rate": "Değerlendir"
     }
   }
 }

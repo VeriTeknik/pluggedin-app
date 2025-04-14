@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
+import { mutate } from 'swr';
 
 import { trackServerInstallation } from '@/app/actions/mcp-server-metrics'; // Import trackServerInstallation
 import { createMcpServer } from '@/app/actions/mcp-servers';
@@ -64,9 +65,8 @@ export function InstallDialog({
     },
   });
 
-  // Reset form when serverData changes
   useEffect(() => {
-    if (serverData) {
+    if (open) {
       form.reset({
         name: serverData.name,
         description: serverData.description,
@@ -77,7 +77,7 @@ export function InstallDialog({
         type: serverData.type,
       });
     }
-  }, [serverData, form.reset]);
+  }, [open, serverData, form]);
 
   const onSubmit = async (values: {
     name: string;
@@ -122,28 +122,28 @@ export function InstallDialog({
         });
 
         // Track the installation after successful creation
-        // Access the UUID via result.data.uuid
         if (result.data?.uuid && serverData.external_id && serverData.source) {
           await trackServerInstallation({
-            serverUuid: result.data.uuid, // Correct property access
+            serverUuid: result.data.uuid,
             externalId: serverData.external_id,
             source: serverData.source,
             profileUuid: currentProfile.uuid,
           }).catch(trackError => {
             console.error("Failed to track installation:", trackError);
-            // Non-critical, don't show error to user
           });
         } else if (result.data?.uuid && !serverData.external_id) {
-           // Handle case where it's a custom server (no external_id/source)
            await trackServerInstallation({
-            serverUuid: result.data.uuid, // Correct property access
-            externalId: result.data.uuid, // Use serverUuid as externalId for custom
-            source: McpServerSource.PLUGGEDIN, // Mark as PLUGGEDIN source
+            serverUuid: result.data.uuid,
+            externalId: result.data.uuid,
+            source: McpServerSource.PLUGGEDIN,
             profileUuid: currentProfile.uuid,
           }).catch(trackError => {
             console.error("Failed to track custom installation:", trackError);
           });
         }
+
+        // Refresh the installed servers data
+        await mutate(`${currentProfile.uuid}/installed-mcp-servers`);
 
         onOpenChange(false);
       } else {
@@ -169,19 +169,18 @@ export function InstallDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('search.card.dialog.title')}</DialogTitle>
-          <DialogDescription>
-            {t('search.card.dialog.description')}
-          </DialogDescription>
+          <DialogTitle>{t('install.title')}</DialogTitle>
+          <DialogDescription>{t('install.description')}</DialogDescription>
         </DialogHeader>
+
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
               control={form.control}
-              name='name'
+              name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('search.card.dialog.name')}</FormLabel>
+                  <FormLabel>{t('install.name')}</FormLabel>
                   <FormControl>
                     <Input {...field} />
                   </FormControl>
@@ -189,12 +188,13 @@ export function InstallDialog({
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
-              name='description'
+              name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('search.card.dialog.description')}</FormLabel>
+                  <FormLabel>{t('install.description')}</FormLabel>
                   <FormControl>
                     <Textarea {...field} />
                   </FormControl>
@@ -202,14 +202,15 @@ export function InstallDialog({
                 </FormItem>
               )}
             />
-            {form.getValues('type') === McpServerType.STDIO ? (
+
+            {serverData.type === McpServerType.STDIO ? (
               <>
                 <FormField
                   control={form.control}
-                  name='command'
+                  name="command"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('search.card.dialog.command')}</FormLabel>
+                      <FormLabel>{t('install.command')}</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -217,12 +218,13 @@ export function InstallDialog({
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
-                  name='args'
+                  name="args"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('search.card.dialog.args')}</FormLabel>
+                      <FormLabel>{t('install.args')}</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -230,12 +232,13 @@ export function InstallDialog({
                     </FormItem>
                   )}
                 />
+
                 <FormField
                   control={form.control}
-                  name='env'
+                  name="env"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>{t('search.card.dialog.env')}</FormLabel>
+                      <FormLabel>{t('install.env')}</FormLabel>
                       <FormControl>
                         <Textarea {...field} />
                       </FormControl>
@@ -247,31 +250,29 @@ export function InstallDialog({
             ) : (
               <FormField
                 control={form.control}
-                name='url'
+                name="url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('search.card.dialog.url')}</FormLabel>
+                    <FormLabel>{t('install.url')}</FormLabel>
                     <FormControl>
-                      <Input
-                        {...field}
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value)}
-                      />
+                      <Input {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             )}
-            <div className='flex justify-end gap-4'>
+
+            <div className="flex justify-end space-x-2">
               <Button
-                variant='outline'
-                type='button'
-                onClick={() => onOpenChange(false)}>
-                {t('search.card.dialog.cancel')}
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+              >
+                {t('common.cancel')}
               </Button>
-              <Button type='submit' disabled={isSubmitting}>
-                {isSubmitting ? t('search.card.dialog.installing') : t('search.card.dialog.add')}
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? t('common.installing') : t('common.install')}
               </Button>
             </div>
           </form>

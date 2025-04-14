@@ -42,7 +42,9 @@
       "OTHER": ""
     },
     "card": {
-      "install": ""
+      "install": "",
+      "installed": "Geïnstalleerd",
+      "rate": "Beoordelen"
     }
   }
 }
