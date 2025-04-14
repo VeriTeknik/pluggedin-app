@@ -2,7 +2,9 @@
 
 import { motion } from 'framer-motion';
 import { FolderKanban, Layers } from 'lucide-react'; // Example icons
+import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
+
 
 // TODO: Integrate MagicUI components when available:
 // - Terminal component
@@ -61,11 +63,14 @@ pluggedin workspace add-collection --workspace development --collection my-proje
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center">
           {/* Image Placeholder */}
           <motion.div variants={terminalVariants} className="flex items-center justify-center">
-            {/* TODO: Replace with actual Image component */}
-            <div className="aspect-video w-full max-w-lg rounded-lg border border-border/40 bg-muted flex items-center justify-center shadow-xl">
-              <p className="text-muted-foreground italic text-sm">
-                {t('collections.imagePlaceholder', 'Image: Collection/Workspace Mockup')} {/* Use relative key */}
-              </p>
+            <div className="aspect-video w-full max-w-lg rounded-lg border border-border/40 relative overflow-hidden shadow-xl">
+              <Image 
+                src="/screenshot1.png" 
+                alt="Collection Management Visual" 
+                fill
+                className="object-cover"
+                priority
+              />
             </div>
           </motion.div>
 
@@ -97,10 +102,7 @@ pluggedin workspace add-collection --workspace development --collection my-proje
                     </p>
                 </div>
              </div>
-             {/* Placeholder for visual hierarchy */}
-             <div className="mt-6 p-4 border rounded-md bg-background/50 text-center text-muted-foreground italic text-sm">
-                {t('collections.hierarchyPlaceholder', 'Visual representation of collection hierarchy')} {/* Use relative key */}
-             </div>
+             
           </motion.div>
         </div>
       </div>

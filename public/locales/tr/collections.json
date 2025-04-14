@@ -30,6 +30,8 @@
     },
     "card": {
       "install": "Yükle"
-    }
+    },
+    "installSelected": "Seçilenleri Yükle ({{count}})",
+    "noServers": "Bu koleksiyonda sunucu bulunmuyor"
   }
 }

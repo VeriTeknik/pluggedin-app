@@ -408,8 +408,8 @@ export default function CardGrid({
                 </Button>
               )}
               
-              {/* Only show rate button if not user's own server and not installed */}
-              {item.source && item.external_id && !isOwned && !isInstalled && (
+              {/* Only show rate button if not user's own server */}
+              {item.source && item.external_id && !isOwned && (
                 <Button 
                   variant='outline' 
                   size="sm"

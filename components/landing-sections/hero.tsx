@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils';
 
 export function LandingHeroSection() {
   const mounted = useMounted();
-  const { t, ready } = useTranslation(['landing', 'common']); // Add ready check
+  const { t, ready } = useTranslation('landing');
 
   // Don't render until translations are ready and component is mounted
   if (!mounted || !ready) {
@@ -38,7 +38,7 @@ export function LandingHeroSection() {
             'bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent pb-2' // Basic gradient as fallback
           )}
         >
-          {t('landing:hero.headline', 'Connect, Share, and Discover MCP Servers')} {/* Use relative key */}
+          {t('hero.headline')}
         </h1>
 
         {/* Subheadline */}
@@ -49,7 +49,7 @@ export function LandingHeroSection() {
             // TODO: Apply Aurora-text here if desired
           )}
         >
-          {t('landing:hero.subheadline', 'The community hub and universal proxy for the Machine Conversation Protocol')} {/* Use relative key */}
+          {t('hero.subheadline')}
         </p>
 
         {/* Analogy */}
@@ -59,7 +59,7 @@ export function LandingHeroSection() {
              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           )}
         >
-          {t('landing:hero.analogy', '"One MCP proxy to rule all MCPs"')} {/* Use relative key */}
+          {t('hero.analogy')}
         </p>
 
         {/* Actions */}
@@ -72,14 +72,14 @@ export function LandingHeroSection() {
           <Button asChild size="lg">
             {/* TODO: Update href to actual signup/app page */}
             <Link href="/login">
-              {t('landing:hero.cta.getStarted', 'Get Started')} {/* Use relative key */}
+              {t('hero.cta.getStarted')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg">
              {/* TODO: Update href to a relevant section or docs page */}
             <Link href="#features">
-              {t('landing:hero.cta.learnMore', 'Learn More')} {/* Use relative key */}
+              {t('hero.cta.learnMore')}
             </Link>
           </Button>
         </div>
@@ -91,7 +91,7 @@ export function LandingHeroSection() {
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           )}
         >
-          {t('landing:hero.openSource', 'Proudly Open Source')} {/* Use relative key */}
+          {t('hero.openSource')}
         </p>
       </div>
     </section>

@@ -11,48 +11,35 @@ interface Feature {
   icon: React.ElementType;
   titleKey: string;
   descriptionKey: string;
-  defaultTitle: string;
-  defaultDescription: string;
 }
 
 // Placeholder feature data - update with actual keys and content
 const features: Feature[] = [
   {
     icon: Share2,
-    titleKey: 'landing.features.communitySharing.title',
-    descriptionKey: 'landing.features.communitySharing.description',
-    defaultTitle: 'Community MCP Server Sharing',
-    defaultDescription: 'Share your MCP servers and discover creations from the community.',
+    titleKey: 'features.communitySharing.title',
+    descriptionKey: 'features.communitySharing.description'
   },
   {
     icon: Blocks,
-    titleKey: 'landing.features.collectionManagement.title',
-    descriptionKey: 'landing.features.collectionManagement.description',
-    defaultTitle: 'Collection Management',
-    defaultDescription: 'Organize servers into collections for different clients or projects.',
+    titleKey: 'features.collectionManagement.title',
+    descriptionKey: 'features.collectionManagement.description'
   },
   {
     icon: Box,
-    titleKey: 'landing.features.workspaceOrganization.title',
-    descriptionKey: 'landing.features.workspaceOrganization.description',
-    defaultTitle: 'Workspace Organization',
-    defaultDescription: 'Group collections into workspaces like development or production.',
+    titleKey: 'features.workspaceOrganization.title',
+    descriptionKey: 'features.workspaceOrganization.description'
   },
   {
     icon: Search,
-    titleKey: 'landing.features.advancedSearch.title',
-    descriptionKey: 'landing.features.advancedSearch.description',
-    defaultTitle: 'Advanced Search',
-    defaultDescription: 'Find the perfect MCP server with powerful filtering capabilities.',
+    titleKey: 'features.advancedSearch.title',
+    descriptionKey: 'features.advancedSearch.description'
   },
   {
     icon: TerminalSquare,
-    titleKey: 'landing.features.mcpPlayground.title',
-    descriptionKey: 'landing.features.mcpPlayground.description',
-    defaultTitle: 'MCP Playground',
-    defaultDescription: 'Test and debug your MCP servers in an interactive environment.',
-  },
-  // Add more features if needed
+    titleKey: 'features.mcpPlayground.title',
+    descriptionKey: 'features.mcpPlayground.description'
+  }
 ];
 
 // Animation variants for staggering
@@ -78,8 +65,8 @@ const itemVariants = {
 };
 
 // Feature Card Component
-function FeatureCard({ icon: Icon, titleKey, descriptionKey, defaultTitle, defaultDescription }: Feature) {
-  const { t } = useTranslation(); // Use default hook
+function FeatureCard({ icon: Icon, titleKey, descriptionKey }: Feature) {
+  const { t } = useTranslation('landing');
   return (
     <motion.div variants={itemVariants}>
       <Card className="h-full hover:shadow-lg transition-shadow duration-300 border border-border/40">
@@ -87,11 +74,11 @@ function FeatureCard({ icon: Icon, titleKey, descriptionKey, defaultTitle, defau
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Icon className="h-6 w-6" />
           </div>
-          <CardTitle>{t(titleKey.replace('landing.', ''), defaultTitle)}</CardTitle> {/* Use relative key */}
+          <CardTitle>{t(titleKey)}</CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground">
-            {t(descriptionKey.replace('landing.', ''), defaultDescription)} {/* Use relative key */}
+            {t(descriptionKey)}
           </p>
         </CardContent>
       </Card>
@@ -101,17 +88,17 @@ function FeatureCard({ icon: Icon, titleKey, descriptionKey, defaultTitle, defau
 
 // Main Features Overview Section Component
 export function LandingFeaturesOverview() {
-  const { t } = useTranslation(); // Use default hook
+  const { t } = useTranslation('landing');
 
   return (
     <section id="features" className="py-16 md:py-24 lg:py-32 bg-muted/30">
       <div className="container mx-auto px-4">
         <div className="mb-12 text-center max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            {t('features.sectionTitle', 'Powerful Features for MCP Management')} {/* Use relative key */}
+            {t('features.sectionTitle')}
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            {t('features.sectionSubtitle', 'Everything you need to connect, share, and discover MCP servers effectively.')} {/* Use relative key */}
+            {t('features.sectionSubtitle')}
           </p>
         </div>
 

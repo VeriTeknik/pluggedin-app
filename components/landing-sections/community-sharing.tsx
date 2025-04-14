@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { CheckCircle, Star } from 'lucide-react'; // Example icons
-// Removed unused Image import
+import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 
 // TODO: Replace placeholder image with actual visual
@@ -35,14 +35,14 @@ const imageVariants = {
 };
 
 export function LandingCommunitySharing() {
-  const { t } = useTranslation(); // Use default hook
+  const { t } = useTranslation('landing');
 
   // Placeholder benefits - update keys and content
   const benefits = [
-    { key: 'landing.community.benefit1', default: 'Discover innovative servers from fellow developers.' },
-    { key: 'landing.community.benefit2', default: 'Get feedback and ratings on your shared servers.' },
-    { key: 'landing.community.benefit3', default: 'Collaborate and build upon community creations.' },
-    { key: 'landing.community.benefit4', default: 'Stay updated with the latest MCP trends.' },
+    { key: 'features.customDevelopment.benefit1' },
+    { key: 'features.customDevelopment.benefit2' },
+    { key: 'features.customDevelopment.benefit3' },
+    { key: 'features.customDevelopment.benefit4' },
   ];
 
   return (
@@ -59,16 +59,16 @@ export function LandingCommunitySharing() {
           {/* Text Content */}
           <motion.div variants={textVariants}>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-              {t('community.title', 'Join the MCP Community')} {/* Use relative key */}
+              {t('features.communitySharing.title')}
             </h2>
             <p className="text-lg text-muted-foreground mb-6">
-              {t('community.description', 'Share your MCP servers, discover powerful tools built by others, and collaborate within a growing ecosystem. Rate servers, leave reviews, and find the best solutions for your needs.')} {/* Use relative key */}
+              {t('features.communitySharing.description')}
             </p>
             <motion.ul className="space-y-3" variants={listVariants}>
               {benefits.map((benefit) => (
                 <motion.li key={benefit.key} className="flex items-start" variants={listItemVariants}>
                   <CheckCircle className="h-5 w-5 text-primary mr-3 mt-1 flex-shrink-0" />
-                  <span className="text-muted-foreground">{t(benefit.key.replace('landing.', ''), benefit.default)}</span> {/* Use relative key */}
+                  <span className="text-muted-foreground">{t(benefit.key)}</span>
                 </motion.li>
               ))}
             </motion.ul>
@@ -81,7 +81,7 @@ export function LandingCommunitySharing() {
              {/* Replace with an actual Image component or interactive demo */}
              <div className="absolute inset-0 flex items-center justify-center">
                 <p className="text-muted-foreground italic">
-                  {t('community.visualPlaceholder', 'Visual showing server sharing/ratings')} {/* Use relative key */}
+                  {t('community.visualPlaceholder')}
                 </p>
                 {/* Example: Mockup of ratings */}
                 <div className="absolute bottom-4 left-4 bg-background/80 p-2 rounded shadow flex items-center text-xs">
@@ -89,6 +89,7 @@ export function LandingCommunitySharing() {
                 </div>
              </div>
              {/* <Image src={placeholderImageUrl} alt="Community Sharing Visual" layout="fill" objectFit="cover" /> */}
+             <Image src="/screenshot.png" alt="Community Sharing Visual" layout="fill" objectFit="cover" />
              {/* TODO: Consider Animated-beam here later */}
           </motion.div>
         </div>

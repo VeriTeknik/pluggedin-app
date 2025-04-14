@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Filter, ListChecks, SearchCode } from 'lucide-react'; // Example icons
+import Image from 'next/image';
 import { useTranslation } from 'react-i18next'; // Correct import
 
 // TODO: Integrate MagicUI components when available:
@@ -92,11 +93,14 @@ export function LandingSearchFunctionality() {
 
           {/* Image Placeholder (representing CardGrid) */}
           <motion.div variants={safariVariants} className="flex items-center justify-center">
-            {/* TODO: Replace with actual Image component */}
-            <div className="aspect-video w-full max-w-lg rounded-lg border border-border/40 bg-muted flex items-center justify-center shadow-xl">
-              <p className="text-muted-foreground italic text-sm text-center p-4">
-                {t('search.imagePlaceholder', 'Image: Search results showing community servers (CardGrid Mockup)')} {/* Use key relative to 'landing' namespace */}
-              </p>
+            <div className="aspect-video w-full max-w-lg rounded-lg border border-border/40 relative overflow-hidden shadow-xl">
+              <Image 
+                src="/screenshot2.png" 
+                alt="Search Functionality Visual"
+                fill
+                className="object-cover"
+                priority
+              />
             </div>
           </motion.div>
         </div>

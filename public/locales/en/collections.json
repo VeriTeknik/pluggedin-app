@@ -30,6 +30,8 @@
     },
     "card": {
       "install": "Install"
-    }
+    },
+    "installSelected": "Install Selected ({{count}})",
+    "noServers": "No servers in this collection"
   }
 }

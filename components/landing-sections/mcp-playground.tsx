@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { Beaker, Bug, Terminal } from 'lucide-react'; // Example icons
+import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 
 // TODO: Integrate MagicUI components when available:
@@ -104,19 +105,19 @@ mcp read-resource weather://london/current
                     </p>
                 </div>
              </div>
-             {/* Placeholder for visual representation */}
-             <div className="mt-6 p-4 border rounded-md bg-background/50 text-center text-muted-foreground italic text-sm">
-                {t('playground.visualPlaceholder', 'Visual representation of playground environment')} {/* Use key relative to 'landing' namespace */}
-             </div>
+             
           </motion.div>
 
            {/* Image Placeholder */}
            <motion.div variants={terminalVariants} className="flex items-center justify-center order-first lg:order-last">
-             {/* TODO: Replace with actual Image component */}
-             <div className="aspect-video w-full max-w-lg rounded-lg border border-border/40 bg-muted flex items-center justify-center shadow-xl">
-               <p className="text-muted-foreground italic text-sm">
-                 {t('playground.imagePlaceholder', 'Image: Playground/Debugging Mockup')} {/* Use key relative to 'landing' namespace */}
-               </p>
+             <div className="aspect-video w-full max-w-lg rounded-lg border border-border/40 relative overflow-hidden shadow-xl">
+               <Image 
+                 src="/screenshot3.png" 
+                 alt="MCP Playground Interface"
+                 fill
+                 className="object-cover"
+                 priority
+               />
              </div>
            </motion.div>
 
