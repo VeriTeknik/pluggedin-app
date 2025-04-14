@@ -14,7 +14,12 @@ CREATE TABLE IF NOT EXISTS "users" (
     "email_verified" timestamp,
     "image" text,
     "created_at" timestamp with time zone DEFAULT now() NOT NULL,
-    "updated_at" timestamp with time zone DEFAULT now() NOT NULL
+    "updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+    "username" text UNIQUE,
+    "bio" text,
+    "is_public" boolean DEFAULT false NOT NULL,
+    "language" text DEFAULT 'en',
+    "avatar_url" text
 );
 
 -- Create accounts table if it doesn't exist
@@ -70,6 +75,49 @@ BEGIN
     END IF;
 END $$;
 
+-- Add username column to users table if it doesn't exist
+DO $$ 
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' 
+        AND column_name = 'username'
+    ) THEN
+        ALTER TABLE users ADD COLUMN username TEXT;
+    END IF;
+END $$;
+
 -- Create indices if they don't exist
 CREATE INDEX IF NOT EXISTS "accounts_user_id_idx" ON "accounts" USING btree ("user_id");
-CREATE INDEX IF NOT EXISTS "sessions_user_id_idx" ON "sessions" USING btree ("user_id"); 
+CREATE INDEX IF NOT EXISTS "sessions_user_id_idx" ON "sessions" USING btree ("user_id");
+CREATE INDEX IF NOT EXISTS "users_email_idx" ON "users" USING btree ("email");
+
+-- Add unique constraint and index for username after ensuring column exists
+DO $$ 
+BEGIN
+    IF EXISTS (
+        SELECT 1 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' 
+        AND column_name = 'username'
+    ) THEN
+        -- Check if constraint already exists before adding it
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM pg_constraint 
+            WHERE conname = 'users_username_unique'
+        ) THEN
+            ALTER TABLE users ADD CONSTRAINT users_username_unique UNIQUE (username);
+        END IF;
+        
+        -- Create index if it doesn't exist
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM pg_indexes 
+            WHERE indexname = 'users_username_idx'
+        ) THEN
+            CREATE INDEX users_username_idx ON users(username);
+        END IF;
+    END IF;
+END $$;

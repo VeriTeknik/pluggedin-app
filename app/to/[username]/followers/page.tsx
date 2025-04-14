@@ -16,6 +16,9 @@ interface FollowersPageProps {
   }>;
 }
 
+// Force dynamic rendering for this page since it uses headers() via getAuthSession()
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata({
   params,
 }: FollowersPageProps): Promise<Metadata> {
@@ -111,4 +114,4 @@ export default async function FollowersPage({ params }: FollowersPageProps) {
       )}
     </div>
   );
-} 
+}

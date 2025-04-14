@@ -5,7 +5,7 @@ import { Configuration as WebpackConfig } from 'webpack';
 import packageJson from './package.json';
 
 const nextConfig: NextConfig = {
-  // output: 'standalone', // Temporarily commented out for testing
+  output: 'standalone',
   allowedDevOrigins: ['plugged.in'],
   async rewrites() {
     return [];
@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
       static: 180,  // 3 minutes for static content
     },
   },
+  // Fix for dynamic server usage error
+  staticPageGenerationTimeout: 120, // Increase timeout for static page generation
+  // Configure dynamic routes
+  dynamicParams: true, // Allow dynamic parameters in routes
   webpack: (config: WebpackConfig, { isServer }: WebpackConfigContext) => {
     // Force Next.js to use the native Node.js fetch
     if (!isServer) {

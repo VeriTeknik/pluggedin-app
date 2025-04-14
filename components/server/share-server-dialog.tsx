@@ -25,6 +25,8 @@ import { Textarea } from '@/components/ui/textarea'; // Sorted
 import { useToast } from '@/components/ui/use-toast'; // Sorted
 import { useUser } from '@/hooks/use-user'; // Added for user context
 import { McpServer } from '@/types/mcp-server'; // Sorted
+// users type import removed as it's inferred from useUser hook return type now
+// getAuthSession import removed as it's not used directly here
 
 
 // Define steps for the wizard
@@ -54,7 +56,8 @@ export function ShareServerDialog({
 }: ShareServerDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
-  const { user } = useUser(); // Get user context
+  // Directly use user and isLoading from the hook. Renamed 'user' to 'currentUser' for clarity.
+  const { user: currentUser, isLoading: isFetchingUser, isError: isUserError } = useUser();
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(server.name);
   const [description, setDescription] = useState(server.description || '');
@@ -68,6 +71,21 @@ export function ShareServerDialog({
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState<ShareWizardStep>(ShareWizardStep.DETAILS);
+
+  // Removed the redundant useEffect hook that fetched user data again.
+  // We now rely on the `currentUser` and `isFetchingUser` provided by the `useUser` hook.
+
+  // Log user data from hook when dialog opens or data changes
+  useEffect(() => {
+    if (open) {
+      console.log('ShareServerDialog: Dialog opened. User data from useUser hook:', {
+        currentUser,
+        isFetchingUser,
+        isUserError,
+      });
+    }
+  }, [open, currentUser, isFetchingUser, isUserError]);
+
 
   // Check if the server is already shared when component mounts
   useEffect(() => {
@@ -744,8 +762,24 @@ export function ShareServerDialog({
           </Button>
         )}
       </DialogTrigger>
-      {/* Show username prompt if no username is set */}
-      {!user?.username ? renderUsernamePrompt() : (
+      {/* Log the state right before rendering */}
+      {(() => {
+        console.log(`ShareServerDialog: Rendering check - isFetchingUser: ${isFetchingUser}, currentUser:`, currentUser);
+        if (!isFetchingUser && !currentUser?.username) {
+          console.log(`ShareServerDialog: Rendering username prompt because !currentUser?.username is true. currentUser:`, currentUser);
+        } else if (!isFetchingUser && currentUser?.username) {
+          console.log(`ShareServerDialog: Rendering main dialog content because currentUser?.username is truthy. Username: ${currentUser.username}`);
+        }
+        return null; // Return null so it doesn't render anything
+      })()}
+      {/* Show username prompt if loading or no username is set on fetched user from useUser hook */}
+      {isFetchingUser ? (
+         <DialogContent><div className="flex justify-center items-center p-8">Loading user data...</div></DialogContent> // Show loading state
+      ) : isUserError ? (
+         <DialogContent><div className="flex justify-center items-center p-8 text-destructive">Error loading user data.</div></DialogContent> // Show error state
+      ) : !currentUser?.username ? (
+         renderUsernamePrompt()
+      ) : (
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>

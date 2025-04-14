@@ -72,6 +72,8 @@ export async function generateStaticParams() {
   }
 }
 
+// Force dynamic rendering for this page since it uses headers() via getAuthSession()
+export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 
 export async function generateMetadata({

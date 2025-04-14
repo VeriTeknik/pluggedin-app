@@ -244,16 +244,28 @@ export const authOptions: NextAuthOptions = {
       }
     },
     async session({ token, session }) {
+      // Ensure session.user exists before assigning properties
+      if (!session.user) {
+        session.user = {} as any; // Initialize if it doesn't exist (shouldn't happen with JWT strategy)
+      }
+      
       if (token) {
-        session.user.id = token.id as string;
+        // Explicitly assign ID from token, even if session object might already have it
+        session.user.id = token.id as string; 
+        console.log(`Session callback: Assigning ID: ${session.user.id}`); // Add logging
+        
         // Use nullish coalescing to ensure type compatibility (string | null)
         session.user.name = token.name ?? null; 
-        session.user.email = token.email ?? null; 
-        session.user.image = token.picture ?? null; 
+        session.user.email = token.email ?? null;
+        session.user.image = token.picture ?? null;
         session.user.emailVerified = token.emailVerified; // This should be Date | null
-        session.user.username = token.username ?? null; 
+        session.user.username = token.username ?? null;
+        console.log(`Session callback: Assigning username: ${session.user.username}`); // Add logging
+      } else {
+         console.warn('Session callback: Token is missing!'); // Log if token is missing
       }
 
+      console.log('Session callback: Returning session:', session); // Log the final session object
       return session;
     },
     async jwt({ token, user, trigger, session }) {
@@ -265,13 +277,19 @@ export const authOptions: NextAuthOptions = {
         token.picture = user.image ?? null;
         token.emailVerified = user.emailVerified;
         
-        // Fetch username from DB during initial sign-in
-        const dbUser = await db.query.users.findFirst({
-          where: eq(users.id, user.id),
-          columns: { username: true }
-         });
-         // Ensure null is assigned if dbUser or dbUser.username is null/undefined
-         token.username = dbUser?.username ?? null; 
+       // Fetch username from DB during initial sign-in
+       try {
+          const dbUser = await db.query.users.findFirst({
+            where: eq(users.id, user.id),
+            columns: { username: true }
+          });
+          // Ensure null is assigned if dbUser or dbUser.username is null/undefined
+          token.username = dbUser?.username ?? null;
+          console.log('JWT callback - username fetched:', token.username);
+       } catch (error) {
+          console.error('Error fetching username in JWT callback:', error);
+          token.username = null; // Fallback to null on error
+       }
        }
        
        // If update triggered (e.g., user updates profile), refresh username
@@ -283,12 +301,18 @@ export const authOptions: NextAuthOptions = {
        
        // If token exists but username is missing (e.g., old token), try fetching it
        if (token.id && token.username === undefined) { // Check specifically for undefined or null if needed
-          const dbUser = await db.query.users.findFirst({
-            where: eq(users.id, token.id as string),
-            columns: { username: true }
-          });
-          // Ensure null is assigned if dbUser or dbUser.username is null/undefined
-          token.username = dbUser?.username ?? null; 
+          try {
+            const dbUser = await db.query.users.findFirst({
+              where: eq(users.id, token.id as string),
+              columns: { username: true }
+            });
+            // Ensure null is assigned if dbUser or dbUser.username is null/undefined
+            token.username = dbUser?.username ?? null;
+            console.log('JWT callback - username fetched (fallback):', token.username);
+          } catch (error) {
+            console.error('Error fetching username in JWT callback (fallback):', error);
+            token.username = null; // Fallback to null on error
+          }
        }
 
        return token;
