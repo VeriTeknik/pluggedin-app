@@ -7,6 +7,7 @@ import { getAuthSession } from '@/lib/auth';
 
 import { getConnectedAccounts } from './actions';
 import { SettingsForm } from './components/settings-form';
+import { SettingsTitle } from './components/settings-title';
 
 export default async function SettingsPage() {
   const session = await getAuthSession();
@@ -30,7 +31,7 @@ export default async function SettingsPage() {
   return (
     <div className="container mx-auto py-10">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold mb-8">Settings</h1>
+        <SettingsTitle />
         <SettingsForm 
           user={user}
           connectedAccounts={connectedAccounts}

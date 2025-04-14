@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Info, Share2 } from 'lucide-react'; // Sorted, removed Eye
+import Link from 'next/link'; // Added for settings link
 import { useRouter } from 'next/navigation'; // Sorted
 import { useEffect, useState } from 'react'; // Sorted
 
@@ -22,9 +23,8 @@ import { Separator } from '@/components/ui/separator'; // Sorted
 import { Switch } from '@/components/ui/switch'; // Sorted
 import { Textarea } from '@/components/ui/textarea'; // Sorted
 import { useToast } from '@/components/ui/use-toast'; // Sorted
-import { McpServer } from '@/types/mcp-server'; // Sorted
 import { useUser } from '@/hooks/use-user'; // Added for user context
-import Link from 'next/link'; // Added for settings link
+import { McpServer } from '@/types/mcp-server'; // Sorted
 
 
 // Define steps for the wizard

@@ -27,7 +27,15 @@ export function initializeFont() {
 // Apply font to document root
 export function setFont(fontFamily: FontFamily) {
   if (typeof window !== 'undefined' && fontFamily in fontFamilies) {
-    document.documentElement.style.fontFamily = fontFamilies[fontFamily];
+    // Remove all existing font classes
+    document.documentElement.classList.forEach((className) => {
+      if (className.startsWith('font-')) {
+        document.documentElement.classList.remove(className);
+      }
+    });
+    
+    // Add the new font class
+    document.documentElement.classList.add(`font-${fontFamily}`);
     localStorage.setItem('pluggedin-font', fontFamily);
   }
 } 

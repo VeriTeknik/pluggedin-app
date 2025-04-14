@@ -31,5 +31,42 @@
     "viewSchema": "View Schema",
     "delete": "Delete",
     "deleting": "Deleting..."
+  },
+  "navigation": {
+    "aiSocial": "AI Social"
+  },
+  "releaseNotes": {
+    "title": "Release Notes",
+    "description": "Track the latest updates and changes across our repositories",
+    "filters": {
+      "filterBy": "Filter by Repository:",
+      "all": "All Repositories",
+      "app": "pluggedin-app",
+      "mcp": "pluggedin-mcp"
+    },
+    "changeTypes": {
+      "feature": "Features",
+      "bugfix": "Bug Fixes",
+      "performanceimprovement": "Performance Improvements",
+      "breakingchange": "Breaking Changes",
+      "other": "Other Changes"
+    },
+    "viewCommit": "View Commit",
+    "noDetails": "No specific changes listed for this release.",
+    "viewOnGitHub": "View on GitHub",
+    "loadMore": "Load More",
+    "loading": "Loading releases...",
+    "error": "Failed to load release notes",
+    "retry": "Retry",
+    "noReleases": "No releases found",
+    "noReleasesTitle": "No Release Notes Available",
+    "noReleasesText": "There are currently no release notes to display.",
+    "noSearchResultsTitle": "No Results Found",
+    "noSearchResultsText": "No release notes match your search criteria.",
+    "rssFeed": "Subscribe via RSS",
+    "search": {
+      "placeholder": "Search release notes..."
+    },
+    "refresh": "Refresh Releases"
   }
 }

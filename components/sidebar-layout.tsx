@@ -221,12 +221,12 @@ export default function SidebarLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   
-                  {/* Add Discover Link */}
+                  {/* Update Discover Link to AI Social */}
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Discover" className="group-data-[collapsible=icon]:justify-center">
+                    <SidebarMenuButton asChild tooltip={t('navigation.aiSocial')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/discover'>
                         <Users className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">Discover</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{t('navigation.aiSocial')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

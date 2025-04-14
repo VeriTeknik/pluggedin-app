@@ -52,15 +52,16 @@ export function ReleaseCard({ release }: ReleaseCardProps) {
                   target="_blank"
                   rel="noopener noreferrer"
                   className="ml-2 text-blue-600 hover:underline dark:text-blue-400"
-                  title={t('releaseNotes.viewCommit', 'View Commit')}
+                  title={t('releaseNotes.viewCommit')}
                 >
                   <GitCommit className="inline h-3.5 w-3.5" />
                 </a>
               )}
-               {/* TODO: Display contributors if available */}
-               {/* {change.contributors && change.contributors.length > 0 && (
-                 <span className="text-xs ml-2">(by {change.contributors.join(', ')})</span>
-               )} */}
+              {change.contributors && change.contributors.length > 0 && (
+                <span className="text-xs ml-2 text-muted-foreground">
+                  by {change.contributors.join(', ')}
+                </span>
+              )}
             </li>
           ))}
         </ul>
@@ -68,7 +69,29 @@ export function ReleaseCard({ release }: ReleaseCardProps) {
     );
   };
 
-  const hasContent = release.content && Object.values(release.content).some(arr => arr && arr.length > 0);
+  const formatDate = (dateString: string) => {
+    try {
+      const date = new Date(dateString);
+      return new Intl.DateTimeFormat(undefined, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(date);
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return dateString;
+    }
+  };
+
+  // Check if content exists and has any changes
+  const hasContent = release.content && Object.entries(release.content).some(([_, changes]) => 
+    Array.isArray(changes) && changes.length > 0
+  );
+
+  // Get the body content if available
+  const bodyContent = release.content?.body as string | undefined;
 
   return (
     <Accordion type="single" collapsible className="w-full border rounded-lg shadow-sm dark:border-slate-800 bg-card">
@@ -78,7 +101,7 @@ export function ReleaseCard({ release }: ReleaseCardProps) {
             <div className="flex items-center gap-3">
               <Badge variant="secondary">{release.version}</Badge>
               <span className="text-sm font-medium text-muted-foreground">
-                {new Date(release.releaseDate).toLocaleDateString()}
+                {formatDate(release.releaseDate)}
               </span>
               <Badge variant="outline" className="text-xs capitalize">
                 {release.repository.replace('pluggedin-', '')} {/* Simple display */}
@@ -88,6 +111,12 @@ export function ReleaseCard({ release }: ReleaseCardProps) {
           </div>
         </AccordionTrigger>
         <AccordionContent className="px-4 pt-3 pb-4 border-t dark:border-slate-800">
+          {bodyContent && (
+            <div className="mb-6 prose dark:prose-invert max-w-none">
+              <div dangerouslySetInnerHTML={{ __html: bodyContent }} />
+            </div>
+          )}
+          
           {hasContent ? (
             <>
               {renderChanges(release.content.features, 'Feature')}
@@ -98,21 +127,21 @@ export function ReleaseCard({ release }: ReleaseCardProps) {
             </>
           ) : (
             <p className="text-sm text-muted-foreground italic">
-              {t('releaseNotes.noDetails', 'No specific changes listed for this release.')}
+              {t('releaseNotes.noDetails')}
             </p>
           )}
-          {/* Link to the release tag/commit on GitHub */}
-           <div className="mt-4 text-xs text-muted-foreground">
-             <a
-               href={`https://github.com/${REPO_OWNER}/${release.repository}/releases/tag/${release.version}`} // Adjust if URL structure differs
-               target="_blank"
-               rel="noopener noreferrer"
-               className="hover:underline flex items-center"
-             >
-               <GitPullRequest className="h-3 w-3 mr-1" />
-               {t('releaseNotes.viewOnGitHub', 'View release on GitHub')} ({release.commitSha.substring(0, 7)})
-             </a>
-           </div>
+          
+          <div className="mt-4 text-xs text-muted-foreground">
+            <a
+              href={`https://github.com/VeriTeknik/${release.repository}/releases/tag/${release.version}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:underline flex items-center"
+            >
+              <GitPullRequest className="h-3 w-3 mr-1" />
+              {t('releaseNotes.viewOnGitHub')} ({release.commitSha.substring(0, 7)})
+            </a>
+          </div>
         </AccordionContent>
       </AccordionItem>
     </Accordion>

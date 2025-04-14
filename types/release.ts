@@ -14,6 +14,7 @@ export interface ReleaseNote {
   releaseDate: string; // ISO date string
   commitSha: string; // SHA of the release commit/tag
   content: {
+    body?: string; // Release body content in markdown/html format
     features?: ReleaseChange[];
     bugFixes?: ReleaseChange[];
     performanceImprovements?: ReleaseChange[];

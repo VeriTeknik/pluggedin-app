@@ -1,7 +1,7 @@
 import './globals.css';
+import '@/styles/fonts.css';
 
 import type { Metadata } from 'next';
-import { Toaster as SonnerToaster } from 'sonner';
 import { 
   Comfortaa,
   Geist, 
@@ -14,6 +14,7 @@ import {
   Work_Sans,
   Zilla_Slab,
 } from 'next/font/google';
+import { Toaster as SonnerToaster } from 'sonner';
 
 import { I18nProviderWrapper } from '@/components/providers/i18n-provider-wrapper';
 import { NotificationProvider } from '@/components/providers/notification-provider';
@@ -21,6 +22,7 @@ import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Toaster } from '@/components/ui/toaster';
+import { initializeFont } from '@/lib/font-utils';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -98,6 +100,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Initialize font on the client side
+  if (typeof window !== 'undefined') {
+    initializeFont();
+  }
+
   return (
     <html lang='en' suppressHydrationWarning>
       <head>

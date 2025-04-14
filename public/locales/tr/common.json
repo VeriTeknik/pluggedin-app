@@ -29,5 +29,42 @@
   "backToServerList": "Sunucu Listesine Dön",
   "viewSchema": "Şemayı Görüntüle",
   "delete": "Sil",
-  "deleting": "Siliniyor..."
+  "deleting": "Siliniyor...",
+  "navigation": {
+    "aiSocial": "Yapay Zeka Sosyal"
+  },
+  "releaseNotes": {
+    "title": "Sürüm Notları",
+    "description": "Depolarımızdaki en son güncellemeleri ve değişiklikleri takip edin",
+    "filters": {
+      "filterBy": "Depoya Göre Filtrele:",
+      "all": "Tüm Depolar",
+      "app": "pluggedin-app",
+      "mcp": "pluggedin-mcp"
+    },
+    "changeTypes": {
+      "feature": "Özellikler",
+      "bugfix": "Hata Düzeltmeleri",
+      "performanceimprovement": "Performans İyileştirmeleri",
+      "breakingchange": "Yıkıcı Değişiklikler",
+      "other": "Diğer Değişiklikler"
+    },
+    "viewCommit": "Commit'i Görüntüle",
+    "noDetails": "Bu sürüm için belirtilen değişiklik yok.",
+    "viewOnGitHub": "GitHub'da görüntüle",
+    "loadMore": "Daha Fazla Yükle",
+    "loading": "Sürümler yükleniyor...",
+    "error": "Sürüm notları yüklenemedi",
+    "retry": "Tekrar Dene",
+    "noReleases": "Sürüm bulunamadı",
+    "noReleasesTitle": "Sürüm Notu Bulunamadı",
+    "noReleasesText": "Şu anda görüntülenecek sürüm notu bulunmuyor.",
+    "noSearchResultsTitle": "Sonuç Bulunamadı",
+    "noSearchResultsText": "Arama kriterlerinize uygun sürüm notu bulunamadı.",
+    "rssFeed": "RSS ile Takip Et",
+    "search": {
+      "placeholder": "Sürüm notlarında ara..."
+    },
+    "refresh": "Sürümleri Yenile"
+  }
 }

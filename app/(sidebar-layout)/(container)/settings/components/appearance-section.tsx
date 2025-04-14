@@ -49,12 +49,14 @@ export function AppearanceSection() {
     const savedFont = localStorage.getItem('pluggedin-font') as FontFamily;
     if (savedFont && savedFont in fontFamilies) {
       setCurrentFont(savedFont);
+      setFont(savedFont);
     }
   }, []);
 
   const handleFontChange = (fontName: string) => {
-    setFont(fontName as FontFamily);
-    setCurrentFont(fontName as FontFamily);
+    const newFont = fontName as FontFamily;
+    setFont(newFont);
+    setCurrentFont(newFont);
   };
 
   if (!mounted) {
@@ -99,12 +101,12 @@ export function AppearanceSection() {
         <div className="space-y-2">
           <Label>{t('settings.appearance.font')}</Label>
           <Select value={currentFont} onValueChange={handleFontChange}>
-            <SelectTrigger>
+            <SelectTrigger className="w-[250px]">
               <SelectValue placeholder={t('settings.appearance.selectFont')} />
             </SelectTrigger>
             <SelectContent>
               {fonts.map((font) => (
-                <SelectItem key={font.value} value={font.value}>
+                <SelectItem key={font.value} value={font.value} className={`font-${font.value}`}>
                   {t(font.label)}
                 </SelectItem>
               ))}
