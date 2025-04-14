@@ -17,10 +17,67 @@ type McpResourceTemplate = {
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/resource-templates
- * Retrieves a list of discovered resource templates for the profile associated
- * with the provided API key. Only templates from active MCP servers are returned.
- * Expects 'Authorization: Bearer <API_KEY>' header.
+ * @swagger
+ * /api/resource-templates:
+ *   get:
+ *     summary: Get discovered resource templates for the active profile
+ *     description: |
+ *       Retrieves a list of discovered resource templates associated with the authenticated user's active profile.
+ *       Only templates linked to **active** MCP servers within that profile are included.
+ *       The response is formatted to mimic the MCP ResourceTemplate list structure (`ListResourceTemplatesResult`) for compatibility with the pluggedin-mcp proxy.
+ *       Requires API key authentication.
+ *     tags:
+ *       - Resource Templates
+ *       - MCP Servers
+ *     security:
+ *       - apiKey: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved discovered resource templates, ordered by name.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   uriTemplate:
+ *                     type: string
+ *                     description: The URI template string.
+ *                   name:
+ *                     type: string
+ *                     description: The name of the resource template.
+ *                     nullable: true
+ *                   description:
+ *                     type: string
+ *                     description: The description of the resource template.
+ *                     nullable: true
+ *                   mediaType:
+ *                     type: string
+ *                     description: The media type (MIME type) of the resource.
+ *                     nullable: true
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or active profile not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Authorization header with Bearer token is required | Invalid API key | Active profile not found
+ *       500:
+ *         description: Internal Server Error fetching resource templates.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal Server Error fetching resource templates
+ *                 details:
+ *                   type: string
  */
 export async function GET(request: Request) {
   try {

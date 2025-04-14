@@ -4,6 +4,93 @@ import { NextResponse } from 'next/server';
 import { getMcpServers } from '@/app/actions/mcp-servers'; // Use path alias relative to app root
 import { authenticateApiKey } from '@/app/api/auth'; // Use path alias relative to app root
 
+/**
+ * @swagger
+ * /api/mcp-servers/health:
+ *   get:
+ *     summary: Check the health status of a specific MCP server
+ *     description: Checks the health/reachability of a specific MCP server associated with the authenticated user's active profile. Requires API key authentication and the server's UUID as a query parameter. For SSE servers, it attempts a HEAD request; for STDIO servers, it returns 'unknown'.
+ *     tags:
+ *       - MCP Servers
+ *       - Health
+ *     security:
+ *       - apiKey: []
+ *     parameters:
+ *       - in: query
+ *         name: uuid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The UUID of the MCP server to check the health of.
+ *     responses:
+ *       200:
+ *         description: Health status retrieved successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   enum: [ok, error, unknown]
+ *                   description: The health status ('ok' if reachable, 'error' if fetch failed, 'unknown' otherwise).
+ *                 reachable:
+ *                   type: boolean
+ *                   description: Indicates if the server endpoint was reachable (true/false). Only relevant for 'ok' or 'error' status.
+ *                 statusCode:
+ *                   type: integer
+ *                   description: The HTTP status code received from the server (only for 'ok' status).
+ *                   nullable: true
+ *                 error:
+ *                   type: string
+ *                   description: Error message if the status is 'error'.
+ *                   nullable: true
+ *                 message:
+ *                   type: string
+ *                   description: Additional information, e.g., for 'unknown' status.
+ *                   nullable: true
+ *       400:
+ *         description: Bad Request - Server UUID query parameter is missing.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Server UUID query parameter is required
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or active profile not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Authorization header with Bearer token is required | Invalid API key | Active profile not found
+ *       404:
+ *         description: Not Found - Server not found or not associated with the authenticated profile.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Server not found or not associated with this profile
+ *       500:
+ *         description: Internal Server Error.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal server error
+ */
 export async function GET(request: Request) {
   try {
     const auth = await authenticateApiKey(request);

@@ -11,6 +11,79 @@ const resetPasswordSchema = z.object({
   password: z.string().min(8),
 });
 
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset user password
+ *     description: Sets a new password for a user using a valid password reset token.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - password
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: The password reset token received via email.
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *                 description: The new password for the user account (at least 8 characters).
+ *     responses:
+ *       200:
+ *         description: Password has been reset successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Password has been reset successfully
+ *       400:
+ *         description: Bad Request - Invalid input data (e.g., missing fields, password too short) or token is invalid/expired.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid input | Invalid or expired reset token | Reset token has expired
+ *                 errors:
+ *                   type: array # Zod error details (only for invalid input)
+ *                   items:
+ *                     type: object
+ *                   nullable: true
+ *       404:
+ *         description: Not Found - User associated with the token was not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Internal Server Error - Failed to reset the password.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Something went wrong
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -89,4 +162,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

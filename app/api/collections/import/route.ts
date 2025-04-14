@@ -6,6 +6,89 @@ import { db } from '@/db';
 import { McpServerSource, mcpServersTable,McpServerStatus, McpServerType } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
+/**
+ * @swagger
+ * /api/collections/import:
+ *   post:
+ *     summary: Import servers from a shared collection
+ *     description: Imports the MCP server configurations defined within a specified shared collection into the authenticated user's current active profile. If a server with the same name already exists in the profile, it is skipped. Requires user session authentication. Note The global API key security definition does not apply here; this endpoint uses session cookies.
+ *     tags:
+ *       - Collections
+ *       - MCP Servers
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - collectionUuid
+ *             properties:
+ *               collectionUuid:
+ *                 type: string
+ *                 format: uuid
+ *                 description: The UUID of the shared collection to import servers from.
+ *               importType:
+ *                 type: string
+ *                 enum: [current, new]
+ *                 description: Specifies where to import the servers (currently only 'current' profile is implemented, 'new' might create a new profile/workspace in the future).
+ *                 default: current
+ *     responses:
+ *       200:
+ *         description: Collection imported successfully. Returns a list of newly created server records.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Collection imported successfully
+ *                 servers:
+ *                   type: array
+ *                   items:
+ *                     $ref: '#/components/schemas/McpServer' # Assuming McpServer schema is defined
+ *       400:
+ *         description: Bad Request - Collection UUID is missing in the request body.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Collection UUID is required
+ *       401:
+ *         description: Unauthorized - User session is invalid or missing.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized
+ *       404:
+ *         description: Not Found - The specified collection UUID does not exist or is not shared.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Collection not found
+ *       500:
+ *         description: Internal Server Error - Failed to import the collection.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Failed to import collection
+ */
 export async function POST(request: Request) {
   try {
     const session = await getAuthSession();
@@ -67,4 +150,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-} 
+}

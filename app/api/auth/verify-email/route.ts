@@ -9,6 +9,73 @@ const verifyEmailSchema = z.object({
   token: z.string(),
 });
 
+/**
+ * @swagger
+ * /api/auth/verify-email:
+ *   post:
+ *     summary: Verify user email address
+ *     description: Verifies a user's email address using a verification token received via email. It updates the user's status, deletes the token, and attempts to create a default project/profile.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: The email verification token received via email.
+ *     responses:
+ *       200:
+ *         description: Email verified successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Email verified successfully
+ *       400:
+ *         description: Bad Request - Invalid input data or token is invalid/expired.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid verification data | Invalid or expired verification token | Verification token has expired
+ *                 errors:
+ *                   type: array # Zod error details (only for invalid input)
+ *                   items:
+ *                     type: object
+ *                   nullable: true
+ *       404:
+ *         description: Not Found - User associated with the token was not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User not found
+ *       500:
+ *         description: Internal Server Error - Failed to verify email or create default project.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Something went wrong
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -119,4 +186,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

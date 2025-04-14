@@ -1,14 +1,6 @@
 'use client';
 
 // React imports
-import * as React from 'react';
-import { useEffect, useState } from 'react';
-
-// Next.js imports
-import Image from 'next/image';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-
 // External library imports
 import {
   Bell,
@@ -20,6 +12,12 @@ import {
   Unplug,
   Users,
 } from 'lucide-react';
+// Next.js imports
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Internal imports (@/)

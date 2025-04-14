@@ -12,8 +12,77 @@ const testEmailSchema = z.object({
 });
 
 /**
- * Test endpoint for sending emails
- * WARNING: This should be removed in production
+ * @swagger
+ * /api/auth/test-email:
+ *   post:
+ *     summary: Send a test email (Admin Only)
+ *     description: |
+ *       Sends a pre-formatted test email to the specified address to verify email configuration.
+ *       **Requires admin authentication** via a Bearer token matching the `ADMIN_SECRET` environment variable.
+ *       **WARNING:** This endpoint is intended for development and testing only and should ideally be disabled or heavily secured in production environments.
+ *     tags:
+ *       - Authentication
+ *       - Admin
+ *     security:
+ *       - bearerAuth: [] # Define bearerAuth globally or locally if needed
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: The email address to send the test email to.
+ *     responses:
+ *       200:
+ *         description: Test email sent successfully.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Test email sent successfully
+ *       400:
+ *         description: Bad Request - Invalid email address format.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid email address
+ *                 errors:
+ *                   type: array # Zod error details
+ *                   items:
+ *                     type: object
+ *       401:
+ *         description: Unauthorized - Missing or invalid admin secret token.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized. This endpoint requires admin authentication.
+ *       500:
+ *         description: Internal Server Error - Failed to send the test email (check server logs).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Failed to send test email. Check server logs for details. | Something went wrong
  */
 export async function POST(req: NextRequest) {
   try {
@@ -107,4 +176,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}
