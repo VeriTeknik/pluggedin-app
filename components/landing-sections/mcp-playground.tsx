@@ -29,20 +29,6 @@ export function LandingMcpPlayground() {
   // Explicitly use the 'landing' namespace
   const { t } = useTranslation('landing');
 
-  // Placeholder command examples for debugging
-  const exampleCommands = `
-# Connect to your local MCP server
-pluggedin playground connect http://localhost:8080
-
-# List available tools
-mcp list-tools
-
-# Call a specific tool with arguments
-mcp call-tool --name get_weather --args '{"city": "London"}'
-
-# Inspect resource contents
-mcp read-resource weather://london/current
-  `.trim();
 
   return (
     <motion.section

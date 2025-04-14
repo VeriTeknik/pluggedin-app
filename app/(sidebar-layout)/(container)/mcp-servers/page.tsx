@@ -266,13 +266,15 @@ export default function MCPServersPage() {
 
       {/* Main content */}
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center space-x-2">
+        {/* Mobile-optimized header */}
+        <div className="flex flex-col space-y-4 sm:flex-row sm:justify-between sm:items-center sm:space-y-0">
+          {/* Search and view toggle */}
+          <div className="flex items-center space-x-2 w-full sm:w-auto">
             <Input
               placeholder={t('mcpServers.actions.search')}
               value={globalFilter ?? ''}
               onChange={(e) => setGlobalFilter(String(e.target.value))}
-              className="max-w-sm"
+              className="flex-1 sm:max-w-sm"
             />
             
             <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'grid' | 'table')} className="ml-2">
@@ -287,8 +289,9 @@ export default function MCPServersPage() {
             </Tabs>
           </div>
           
-          <div className="flex space-x-2">
-            <Button variant="outline" onClick={() => setImportOpen(true)}>
+          {/* Action buttons */}
+          <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+            <Button variant="outline" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none">
               <Upload className="mr-2 h-4 w-4" />
               {t('mcpServers.actions.import')}
             </Button>
@@ -297,23 +300,23 @@ export default function MCPServersPage() {
               variant="outline" 
               onClick={() => setShareCollectionOpen(true)}
               disabled={servers.length === 0}
+              className="flex-1 sm:flex-none"
             >
               <Share className="mr-2 h-4 w-4" />
               {t('mcpServers.actions.shareCollection')}
             </Button>
             
-            <Button variant="outline" onClick={exportServerConfig}>
+            <Button variant="outline" onClick={exportServerConfig} className="flex-1 sm:flex-none">
               <Download className="mr-2 h-4 w-4" />
               {t('mcpServers.actions.export')}
             </Button>
-            {/* Removed global DiscoverToolsButton */}
           </div>
         </div>
       </div>
 
       {/* Server list */}
       {viewMode === 'grid' ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {table.getRowModel().rows.map((row) => (
             <ServerCard
               key={row.original.uuid}
@@ -350,10 +353,10 @@ export default function MCPServersPage() {
           
           {/* Empty state */}
           {table.getRowModel().rows.length === 0 && (
-            <div className="col-span-3 flex flex-col items-center justify-center p-12 border rounded-lg border-dashed dark:border-slate-800">
-              <Database className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium">{t('mcpServers.empty.title')}</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+            <div className="col-span-1 sm:col-span-2 lg:col-span-3 flex flex-col items-center justify-center p-6 sm:p-12 border rounded-lg border-dashed dark:border-slate-800">
+              <Database className="h-8 sm:h-12 w-8 sm:w-12 text-muted-foreground/50 mb-4" />
+              <h3 className="text-base sm:text-lg font-medium text-center">{t('mcpServers.empty.title')}</h3>
+              <p className="text-sm text-muted-foreground mb-4 text-center">
                 {globalFilter 
                   ? t('mcpServers.empty.noResults', { search: globalFilter })
                   : t('mcpServers.empty.noServers')
@@ -366,53 +369,55 @@ export default function MCPServersPage() {
           )}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 rounded-md">
-            <thead>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className="py-2 px-4 border-b dark:border-slate-800 text-left font-semibold bg-gray-100 dark:bg-slate-800"
-                      onClick={header.column.getToggleSortingHandler()}>
-                      {flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                      {{
-                        asc: ' 🔼',
-                        desc: ' 🔽',
-                      }[header.column.getIsSorted() as string] ?? null}
-                    </th>
-                  ))}
-                </tr>
-              ))}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-slate-800">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="py-2 px-4 border-b dark:border-slate-800">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="overflow-x-auto -mx-4 sm:mx-0">
+          <div className="min-w-full px-4 sm:px-0">
+            <table className="min-w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-800 rounded-md">
+              <thead>
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        className="py-2 px-3 sm:px-4 border-b dark:border-slate-800 text-left font-semibold bg-gray-100 dark:bg-slate-800 text-sm whitespace-nowrap"
+                        onClick={header.column.getToggleSortingHandler()}>
+                        {flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                        {{
+                          asc: ' 🔼',
+                          desc: ' 🔽',
+                        }[header.column.getIsSorted() as string] ?? null}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody>
+                {table.getRowModel().rows.map((row) => (
+                  <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-slate-800">
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="py-2 px-3 sm:px-4 border-b dark:border-slate-800 text-sm">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* Add Server Dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] p-4 sm:p-6">
           <Tabs defaultValue={McpServerType.STDIO} className="w-full">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value={McpServerType.STDIO}>
+              <TabsTrigger value={McpServerType.STDIO} className="text-sm">
                 {t('mcpServers.form.commandBased')}
               </TabsTrigger>
-              <TabsTrigger value={McpServerType.SSE}>
+              <TabsTrigger value={McpServerType.SSE} className="text-sm">
                 {t('mcpServers.form.urlBased')}
               </TabsTrigger>
             </TabsList>

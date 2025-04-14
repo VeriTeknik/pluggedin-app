@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
 
 import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
 import { isServerShared, unshareServer } from '@/app/actions/social';
@@ -27,9 +26,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/components/ui/use-toast';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
-import { useToast } from '@/components/ui/use-toast';
+import { cn } from '@/lib/utils';
 import { McpServer } from '@/types/mcp-server';
 
 interface ServerCardProps {
@@ -175,8 +175,8 @@ export function ServerCard({
             </Tooltip>
           </TooltipProvider>
         </div>
-        <CardTitle className="mt-3 text-xl">
-          <Link href={`/mcp-servers/${server.uuid}`} className="hover:text-primary transition-colors">
+        <CardTitle className="mt-3 text-base sm:text-xl">
+          <Link href={`/mcp-servers/${server.uuid}`} className="hover:text-primary transition-colors line-clamp-1">
             {server.name}
           </Link>
           {server.notes?.includes("Imported from") && (
@@ -187,7 +187,7 @@ export function ServerCard({
             </div>
           )}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="line-clamp-2">
           {server.description || t('mcpServers.form.descriptionPlaceholder')}
         </CardDescription>
       </CardHeader>
@@ -203,12 +203,12 @@ export function ServerCard({
             {server.status === McpServerStatus.ACTIVE ? (
               <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900">
                 <CheckCircle className="mr-1 h-3 w-3" />
-                {t('mcpServers.status.active')}
+                <span className="hidden sm:inline">{t('mcpServers.status.active')}</span>
               </Badge>
             ) : (
               <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900">
                 <XCircle className="mr-1 h-3 w-3" />
-                {t('mcpServers.status.inactive')}
+                <span className="hidden sm:inline">{t('mcpServers.status.inactive')}</span>
               </Badge>
             )}
           </div>
@@ -235,8 +235,8 @@ export function ServerCard({
         </div>
       </CardContent>
       
-      <CardFooter className="flex justify-between pt-2">
-        <Button variant="outline" size="sm" asChild className="dark:border-slate-700 dark:hover:bg-slate-800">
+      <CardFooter className="flex flex-wrap gap-2 pt-2">
+        <Button variant="outline" size="sm" asChild className="dark:border-slate-700 dark:hover:bg-slate-800 flex-1 sm:flex-none">
           <Link href={`/mcp-servers/${server.uuid}`}>
             {t('mcpServers.actions.edit')}
           </Link>
@@ -247,12 +247,13 @@ export function ServerCard({
           isShared ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-green-600 dark:text-green-500 dark:border-slate-700 dark:hover:bg-slate-800">
+                <Button variant="outline" size="sm" className="text-green-600 dark:text-green-500 dark:border-slate-700 dark:hover:bg-slate-800 flex-1 sm:flex-none">
                   <Check className="h-4 w-4 mr-2" />
-                  {t('mcpServers.actions.shared')}
+                  <span className="hidden sm:inline">{t('mcpServers.actions.shared')}</span>
+                  <span className="sm:hidden">Shared</span>
                 </Button>
               </AlertDialogTrigger>
-              <AlertDialogContent>
+              <AlertDialogContent className="w-[calc(100%-2rem)] sm:w-full sm:max-w-lg">
                 <AlertDialogHeader>
                   <AlertDialogTitle>{t('mcpServers.actions.unshareConfirmTitle')}</AlertDialogTitle>
                   <AlertDialogDescription>
@@ -280,15 +281,16 @@ export function ServerCard({
               onShareStatusChange={handleShareStatusChange}
             >
               {/* Custom trigger button */}
-              <Button variant="outline" size="sm" className="dark:border-slate-700 dark:hover:bg-slate-800">
+              <Button variant="outline" size="sm" className="dark:border-slate-700 dark:hover:bg-slate-800 flex-1 sm:flex-none">
                 <Share2 className="h-4 w-4 mr-2" />
-                {t('mcpServers.actions.share')}
+                <span className="hidden sm:inline">{t('mcpServers.actions.share')}</span>
+                <span className="sm:hidden">Share</span>
               </Button>
             </ShareServerDialog>
           )
         )}
         {isCheckingShareStatus && (
-           <Button variant="outline" size="sm" disabled>...</Button> // Loading indicator
+           <Button variant="outline" size="sm" disabled className="flex-1 sm:flex-none">...</Button> // Loading indicator
         )}
 
         {/* Discover Tools Button */}
@@ -297,19 +299,22 @@ export function ServerCard({
           size="sm"
           onClick={handleDiscover}
           disabled={isDiscovering}
-          className="dark:border-slate-700 dark:hover:bg-slate-800"
+          className="dark:border-slate-700 dark:hover:bg-slate-800 flex-1 sm:flex-none"
         >
           <RefreshCw size={14} className={`mr-1 ${isDiscovering ? 'animate-spin' : ''}`} />
-          {isDiscovering ? t('mcpServers.actions.discovering') : t('mcpServers.actions.discover')}
+          <span className="hidden sm:inline">{isDiscovering ? t('mcpServers.actions.discovering') : t('mcpServers.actions.discover')}</span>
+          <span className="sm:hidden">{isDiscovering ? 'Discovering' : 'Discover'}</span>
         </Button>
         
         <Button
           variant="destructive"
           size="sm"
           onClick={onDelete}
+          className="flex-1 sm:flex-none"
         >
           <Trash2 size={14} className="mr-1" />
-          {t('mcpServers.actions.delete')}
+          <span className="hidden sm:inline">{t('mcpServers.actions.delete')}</span>
+          <span className="sm:hidden">Delete</span>
         </Button>
       </CardFooter>
     </Card>
