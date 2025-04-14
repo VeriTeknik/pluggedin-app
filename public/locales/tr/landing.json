@@ -1,6 +1,11 @@
 {
   "navigation": {
-    "enterApp": "Uygulamaya Gir"
+    "enterApp": "Uygulamaya Gir",
+    "features": "Özellikler",
+    "community": "Topluluk",
+    "collections": "Koleksiyonlar",
+    "playground": "Oyun Alanı",
+    "getStarted": "Başlayın"
   },
   "hero": {
     "title": "Yapay Zeka Kavşağı",

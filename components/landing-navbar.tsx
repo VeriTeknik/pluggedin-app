@@ -13,17 +13,16 @@ import { useThemeLogo } from '@/hooks/use-theme-logo';
 
 // Placeholder links - update later
 const navLinks = [
-  // Use relative keys now
-  { href: '#features', labelKey: 'nav.features', default: 'Features' },
-  { href: '#community', labelKey: 'nav.community', default: 'Community' },
-  { href: '#collections', labelKey: 'nav.collections', default: 'Collections' },
-  { href: '#playground', labelKey: 'nav.playground', default: 'Playground' },
+  { href: '#features', labelKey: 'navigation.features' },
+  { href: '#community', labelKey: 'navigation.community' },
+  { href: '#collections', labelKey: 'navigation.collections' },
+  { href: '#playground', labelKey: 'navigation.playground' },
 ];
 
 export function LandingNavbar() {
   const mounted = useMounted();
   const { logoSrc } = useThemeLogo();
-  const { t } = useTranslation(); // Use default hook
+  const { t } = useTranslation('landing'); // Explicitly use landing namespace
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -53,13 +52,13 @@ export function LandingNavbar() {
               href={link.href}
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
-              {t(link.labelKey, link.default)} {/* Use relative key + default */}
+              {t(link.labelKey)}
             </Link>
           ))}
           <ThemeToggle />
           <Button asChild size="sm">
-            <Link href="/login"> {/* Update href to actual login/signup page */}
-              {t('nav.getStarted', 'Get Started')} {/* Use relative key + default */}
+            <Link href="/login">
+              {t('navigation.getStarted')}
             </Link>
           </Button>
         </div>
@@ -85,12 +84,12 @@ export function LandingNavbar() {
                 className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                 onClick={toggleMobileMenu} // Close menu on link click
               >
-                {t(link.labelKey, link.default)} {/* Use relative key + default */}
+                {t(link.labelKey)}
               </Link>
             ))}
             <Button asChild className="w-full">
               <Link href="/login" onClick={toggleMobileMenu}> {/* Update href */}
-                {t('nav.getStarted', 'Get Started')} {/* Use relative key + default */}
+                {t('navigation.getStarted')} {/* Use relative key + default */}
               </Link>
             </Button>
           </div>

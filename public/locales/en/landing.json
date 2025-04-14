@@ -1,6 +1,11 @@
 {
   "navigation": {
-    "enterApp": "Enter App"
+    "enterApp": "Enter App",
+    "features": "Features",
+    "community": "Community",
+    "collections": "Collections",
+    "playground": "Playground",
+    "getStarted": "Get Started"
   },
   "hero": {
     "title": "The AI Crossroads",
