@@ -11,7 +11,30 @@
       "language": "Language",
       "updateButton": "Update Profile",
       "success": "Profile updated successfully",
-      "error": "Failed to update profile"
+      "error": "Failed to update profile",
+      "profileUrl": {
+        "title": "Your Profile URL",
+        "setUsername": "Set a username above to create your custom public profile URL",
+        "copyTooltip": "Click to copy URL"
+      },
+      "social": {
+        "title": "Social Profile",
+        "description": "Manage your public profile and social settings",
+        "username": {
+          "label": "Username",
+          "placeholder": "Choose a username",
+          "checking": "Checking availability...",
+          "save": "Save"
+        },
+        "publicProfile": {
+          "title": "Public Profile",
+          "description": {
+            "noUsername": "Set a username first to make your profile public",
+            "public": "Your profile and shared content will be visible to everyone",
+            "private": "Your profile will only be visible to you"
+          }
+        }
+      }
     },
     "password": {
       "title": "Password",

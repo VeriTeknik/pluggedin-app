@@ -11,7 +11,30 @@
       "language": "Dil",
       "updateButton": "Profili Güncelle",
       "success": "Profil başarıyla güncellendi",
-      "error": "Profil güncellenirken hata oluştu"
+      "error": "Profil güncellenirken hata oluştu",
+      "profileUrl": {
+        "title": "Profil URL'niz",
+        "setUsername": "Özel profil URL'nizi oluşturmak için yukarıdan bir kullanıcı adı belirleyin",
+        "copyTooltip": "URL'yi kopyalamak için tıklayın"
+      },
+      "social": {
+        "title": "Sosyal Profil",
+        "description": "Herkese açık profilinizi ve sosyal ayarlarınızı yönetin",
+        "username": {
+          "label": "Kullanıcı Adı",
+          "placeholder": "Bir kullanıcı adı seçin",
+          "checking": "Kullanılabilirlik kontrol ediliyor...",
+          "save": "Kaydet"
+        },
+        "publicProfile": {
+          "title": "Herkese Açık Profil",
+          "description": {
+            "noUsername": "Profilinizi herkese açık yapmak için önce bir kullanıcı adı belirleyin",
+            "public": "Profiliniz ve paylaştığınız içerikler herkese görünür olacak",
+            "private": "Profiliniz sadece size görünür olacak"
+          }
+        }
+      }
     },
     "password": {
       "title": "Şifre",

@@ -1,11 +1,11 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
-import { Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, XCircle } from 'lucide-react'; // Sorted
-import Link from 'next/link'; // Sorted
+import { Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, Trash2, XCircle } from 'lucide-react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react'; // Sorted
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/utils';
 
 import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
 import { isServerShared, unshareServer } from '@/app/actions/social';
@@ -20,16 +20,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog'; // Corrected import path again
-import { Badge } from '@/components/ui/badge'; // Sorted
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'; // Sorted
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { McpServer } from '@/types/mcp-server';
 
 interface ServerCardProps {
@@ -64,30 +64,30 @@ export function ServerCard({
   const [isCheckingShareStatus, setIsCheckingShareStatus] = useState(true);
   const [isUnsharing, setIsUnsharing] = useState(false);
 
-  // Check shared status on mount
+  // Check if server is shared on mount
   useEffect(() => {
-    async function checkSharedStatus() {
+    async function checkIfShared() {
       if (!currentProfile?.uuid || !server.uuid) {
         setIsCheckingShareStatus(false);
         return;
       }
-      setIsCheckingShareStatus(true);
       try {
         const result = await isServerShared(currentProfile.uuid, server.uuid);
         setIsShared(result.isShared);
         setSharedUuid(result.server?.uuid || null);
       } catch (error) {
-        console.error("Failed to check share status", error);
-        // Assume not shared on error
-        setIsShared(false);
-        setSharedUuid(null);
+        console.error('Error checking if server is shared:', error);
       } finally {
         setIsCheckingShareStatus(false);
       }
     }
-    checkSharedStatus();
+    checkIfShared();
   }, [currentProfile?.uuid, server.uuid]);
 
+  const handleShareStatusChange = (newIsShared: boolean, newSharedUuid: string | null) => {
+    setIsShared(newIsShared);
+    setSharedUuid(newSharedUuid);
+  };
 
   const handleDiscover = async () => {
     if (!currentProfile?.uuid || !server.uuid) {
@@ -131,7 +131,7 @@ export function ServerCard({
   };
 
   return (
-    <Card className="relative group hover:shadow-md transition-all dark:bg-slate-900/70 dark:border-slate-800 dark:hover:bg-slate-900/90">
+    <Card className={cn("relative", isSelected && "ring-2 ring-primary")}>
       {/* Add selection checkbox */}
       <div className="absolute top-2 left-2 z-10">
         <TooltipProvider>
@@ -277,11 +277,12 @@ export function ServerCard({
               profileUuid={currentProfile.uuid}
               variant="outline"
               size="sm"
+              onShareStatusChange={handleShareStatusChange}
             >
               {/* Custom trigger button */}
               <Button variant="outline" size="sm" className="dark:border-slate-700 dark:hover:bg-slate-800">
-                 <Share2 className="h-4 w-4 mr-2" />
-                 {t('mcpServers.actions.share')}
+                <Share2 className="h-4 w-4 mr-2" />
+                {t('mcpServers.actions.share')}
               </Button>
             </ShareServerDialog>
           )

@@ -23,6 +23,8 @@ import { Switch } from '@/components/ui/switch'; // Sorted
 import { Textarea } from '@/components/ui/textarea'; // Sorted
 import { useToast } from '@/components/ui/use-toast'; // Sorted
 import { McpServer } from '@/types/mcp-server'; // Sorted
+import { useUser } from '@/hooks/use-user'; // Added for user context
+import Link from 'next/link'; // Added for settings link
 
 
 // Define steps for the wizard
@@ -39,6 +41,7 @@ interface ShareServerDialogProps {
   variant?: 'default' | 'outline' | 'secondary' | 'ghost';
   size?: 'default' | 'sm' | 'lg' | 'icon';
   children?: React.ReactNode;
+  onShareStatusChange?: (isShared: boolean, sharedUuid: string | null) => void;
 }
 
 export function ShareServerDialog({
@@ -47,9 +50,11 @@ export function ShareServerDialog({
   variant = 'default',
   size = 'sm',
   children,
+  onShareStatusChange,
 }: ShareServerDialogProps) {
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useUser(); // Get user context
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState(server.name);
   const [description, setDescription] = useState(server.description || '');
@@ -218,10 +223,12 @@ export function ShareServerDialog({
           title: 'Success',
           description: `Server ${isShared ? 'updated' : 'shared'} successfully`, // Dynamic message
         });
+        const newSharedUuid = result.sharedServer?.uuid || null;
         setIsShared(true); // Ensure state reflects shared status
-        setSharedUuid(result.sharedServer?.uuid || null);
+        setSharedUuid(newSharedUuid);
+        onShareStatusChange?.(true, newSharedUuid);
         setOpen(false);
-        router.refresh();
+        router.refresh(); // Keep the router refresh for other components that might need it
       } else {
         throw new Error(result.error || `Failed to ${isShared ? 'update' : 'share'} server`);
       }
@@ -685,6 +692,35 @@ export function ShareServerDialog({
     );
   };
 
+  // Add username check dialog content
+  const renderUsernamePrompt = () => (
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>Set Up Your Username First</DialogTitle>
+        <DialogDescription>
+          To share MCP servers, you need to set up your username. This will create your public profile where your shared servers will be displayed.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="flex flex-col gap-4 py-4">
+        <div className="bg-amber-50 dark:bg-amber-950 p-3 rounded-md">
+          <div className="flex items-start space-x-2">
+            <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+            <div className="text-sm text-amber-800 dark:text-amber-300">
+              Your username will be used to create your public profile URL:
+              <br />
+              <code className="text-xs">plugged.in/to/your-username</code>
+            </div>
+          </div>
+        </div>
+        <Button asChild>
+          <Link href="/settings">
+            Set Up Username
+          </Link>
+        </Button>
+      </div>
+    </DialogContent>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
@@ -708,22 +744,25 @@ export function ShareServerDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>
-            {isShared ? 'Update Shared Server' : 'Share MCP Server'}
-          </DialogTitle>
-          <DialogDescription>
-            {isShared
-              ? 'Update or remove this shared server from your profile'
-              : 'Share this MCP server on your public profile'}
-          </DialogDescription>
-        </DialogHeader>
+      {/* Show username prompt if no username is set */}
+      {!user?.username ? renderUsernamePrompt() : (
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {isShared ? 'Update Shared Server' : 'Share MCP Server'}
+            </DialogTitle>
+            <DialogDescription>
+              {isShared
+                ? 'Update or remove this shared server from your profile'
+                : 'Share this MCP server on your public profile'}
+            </DialogDescription>
+          </DialogHeader>
 
-        {renderStepIndicator()}
-        {renderStep()}
-        {renderNavButtons()}
-      </DialogContent>
+          {renderStepIndicator()}
+          {renderStep()}
+          {renderNavButtons()}
+        </DialogContent>
+      )}
     </Dialog>
   );
 }

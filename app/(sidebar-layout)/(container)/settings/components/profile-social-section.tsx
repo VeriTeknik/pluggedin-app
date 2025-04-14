@@ -2,24 +2,18 @@
 
 import { Check, Globe, User as UserIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { checkUsernameAvailability, reserveUsername, updateUserSocial } from '@/app/actions/social';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { useToast } from '@/components/ui/use-toast';
 import { users } from '@/db/schema';
-import { useToast } from '@/hooks/use-toast';
 
 type User = typeof users.$inferSelect;
 
@@ -47,6 +41,43 @@ export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
     setIsPublic(user?.is_public || false);
     setUsername(user?.username || '');
   }, [user]);
+
+  // Debounced username availability check
+  const checkUsernameDebounced = useCallback(
+    async (value: string) => {
+      if (!value || value === initialUsername) {
+        setUsernameAvailable(false);
+        setUsernameMessage('');
+        return;
+      }
+
+      setIsCheckingUsername(true);
+      try {
+        const result = await checkUsernameAvailability(value);
+        setUsernameAvailable(result.available);
+        setUsernameMessage(result.message || '');
+      } catch (error) {
+        console.error('Error checking username:', error);
+        setUsernameAvailable(false);
+        setUsernameMessage('Error checking username availability');
+      } finally {
+        setIsCheckingUsername(false);
+      }
+    },
+    [initialUsername]
+  );
+
+  // Set up debounce effect
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const trimmedValue = username.trim();
+      if (trimmedValue) {
+        checkUsernameDebounced(trimmedValue);
+      }
+    }, 500); // 500ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [username, checkUsernameDebounced]);
 
   const handleTogglePublic = async (value: boolean) => {
     setIsUpdatingPublic(true);
@@ -79,28 +110,10 @@ export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
     }
   };
 
-  const handleUsernameChange = async (value: string) => {
-    const trimmedValue = value.trim();
-    setUsername(trimmedValue);
-    setUsernameAvailable(false); // Reset availability on change
+  const handleUsernameChange = (value: string) => {
+    setUsername(value);
+    setUsernameAvailable(false);
     setUsernameMessage('');
-
-    if (!trimmedValue || trimmedValue === initialUsername) {
-      return; // No need to check if empty or unchanged
-    }
-
-    setIsCheckingUsername(true);
-    try {
-      const result = await checkUsernameAvailability(trimmedValue);
-      setUsernameAvailable(result.available);
-      setUsernameMessage(result.message || '');
-    } catch (error) {
-      console.error('Error checking username:', error);
-      setUsernameAvailable(false);
-      setUsernameMessage('Error checking username availability');
-    } finally {
-      setIsCheckingUsername(false);
-    }
   };
 
   const handleSetUsername = async () => {
@@ -143,22 +156,22 @@ export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <UserIcon className="h-5 w-5" />
-          {t('settings.profile.socialTitle', 'Social Profile')}
+          {t('settings.profile.social.title')}
         </CardTitle>
         <CardDescription>
-          {t('settings.profile.socialDescription', 'Manage your public profile and social settings')}
+          {t('settings.profile.social.description')}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {/* Username Field */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username">{t('settings.profile.social.username.label')}</Label>
             <div className="flex items-center gap-2">
               <div className="relative flex-grow">
                 <Input
                   id="username"
-                  placeholder="Choose a username"
+                  placeholder={t('settings.profile.social.username.placeholder')}
                   value={username}
                   onChange={(e) => handleUsernameChange(e.target.value)}
                   className={`pr-10 ${
@@ -171,7 +184,7 @@ export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
                 {usernameAvailable && username.trim() !== initialUsername && (
                   <Check className="absolute right-3 top-2.5 h-5 w-5 text-green-500" />
                 )}
-                 {!usernameAvailable && usernameMessage && username.trim() !== initialUsername && (
+                {!usernameAvailable && usernameMessage && username.trim() !== initialUsername && (
                   <X className="absolute right-3 top-2.5 h-5 w-5 text-red-500" />
                 )}
               </div>
@@ -179,18 +192,18 @@ export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
                 onClick={handleSetUsername}
                 disabled={!usernameAvailable || username.trim() === initialUsername || isUpdatingUsername || isCheckingUsername}
               >
-                {isUpdatingUsername ? t('common.saving') : t('common.save')}
+                {isUpdatingUsername ? t('common.saving') : t('settings.profile.social.username.save')}
               </Button>
             </div>
             <div className="h-5 text-xs">
               {isCheckingUsername ? (
-                 <span className="text-muted-foreground">Checking availability...</span>
+                <span className="text-muted-foreground">{t('settings.profile.social.username.checking')}</span>
               ) : usernameMessage ? (
                 <span className={usernameAvailable ? 'text-green-500' : 'text-red-500'}>
                   {usernameMessage}
                 </span>
               ) : (
-                <span>&nbsp;</span> // Placeholder to maintain height
+                <span>&nbsp;</span>
               )}
             </div>
           </div>
@@ -200,16 +213,14 @@ export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
             <div className="space-y-0.5">
               <Label htmlFor="public-profile" className="flex items-center gap-2">
                 <Globe className="h-4 w-4" />
-                Public Profile
+                {t('settings.profile.social.publicProfile.title')}
               </Label>
               <p className="text-sm text-muted-foreground">
-                {!username ? (
-                  'Set a username first to make your profile public'
-                ) : isPublic ? (
-                  'Your profile and shared content will be visible to everyone'
-                ) : (
-                  'Your profile will only be visible to you'
-                )}
+                {!username
+                  ? t('settings.profile.social.publicProfile.description.noUsername')
+                  : isPublic
+                  ? t('settings.profile.social.publicProfile.description.public')
+                  : t('settings.profile.social.publicProfile.description.private')}
               </p>
             </div>
             <Switch
@@ -222,21 +233,29 @@ export function ProfileSocialSection({ user }: ProfileSocialSectionProps) {
 
           {/* Profile URL */}
           <div className="pt-4">
-            <p className="text-sm font-medium">Your Profile URL</p>
+            <Label className="text-sm">{t('settings.profile.profileUrl.title')}</Label>
             {user.username ? (
               <div className="mt-2 flex items-center gap-2">
-                <Badge className="font-mono text-xs px-3 py-1 bg-primary/5">
-                  plugged.in/to/{user.username}
-                </Badge>
+                <a
+                  href={`/to/${user.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center hover:opacity-80 transition-opacity"
+                  title={t('settings.profile.profileUrl.copyTooltip')}
+                >
+                  <div className="flex items-center gap-1 px-3 py-1.5 bg-muted rounded-md text-sm text-foreground font-mono">
+                    plugged.in/to/{user.username}
+                  </div>
+                </a>
                 {isPublic && (
-                  <Badge className="text-xs">
-                    <Check className="h-3 w-3 mr-1" /> Public
+                  <Badge variant="secondary" className="text-xs">
+                    <Check className="h-3 w-3 mr-1" /> {t('settings.connectedAccounts.connected')}
                   </Badge>
                 )}
               </div>
             ) : (
               <div className="mt-2 p-3 bg-amber-100 dark:bg-amber-950/30 rounded-md text-sm text-amber-800 dark:text-amber-300">
-                Set a username above to create your custom public profile URL
+                {t('settings.profile.profileUrl.setUsername')}
               </div>
             )}
           </div>
