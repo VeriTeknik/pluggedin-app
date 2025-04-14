@@ -1,0 +1,85 @@
+{
+  "playground": {
+    "title": "",
+    "subtitle": "",
+    "description": "",
+    "actions": {
+      "start": "",
+      "starting": "",
+      "end": "",
+      "ending": "",
+      "save": "",
+      "dismiss": "",
+      "clearLogs": ""
+    },
+    "status": {
+      "active": "",
+      "inactive": "",
+      "sessionActive": "",
+      "serversConnected": ""
+    },
+    "config": {
+      "title": "",
+      "subtitle": "",
+      "tabs": {
+        "servers": "",
+        "llm": "",
+        "logs": ""
+      },
+      "noServers": {
+        "title": "",
+        "action": ""
+      },
+      "sessionError": {
+        "title": ""
+      },
+      "model": {
+        "title": "",
+        "provider": "",
+        "model": "",
+        "temperature": "",
+        "maxTokens": "",
+        "logLevel": "",
+        "temperatureHints": {
+          "precise": "",
+          "creative": ""
+        }
+      },
+      "logs": {
+        "title": "",
+        "showingLevel": "",
+        "levels": "",
+        "levelsHint": "",
+        "empty": ""
+      }
+    },
+    "chat": {
+      "title": "",
+      "subtitle": "",
+      "empty": {
+        "title": "",
+        "activeDescription": "",
+        "inactiveDescription": ""
+      },
+      "input": {
+        "activePlaceholder": "",
+        "inactivePlaceholder": ""
+      },
+      "thinking": "",
+      "tool": {
+        "title": "",
+        "debugInfo": ""
+      }
+    },
+    "provider": {
+      "anthropic": "",
+      "openai": ""
+    },
+    "logLevels": {
+      "error": "",
+      "warn": "",
+      "info": "",
+      "debug": ""
+    }
+  }
+}

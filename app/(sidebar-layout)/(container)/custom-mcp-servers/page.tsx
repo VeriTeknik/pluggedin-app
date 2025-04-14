@@ -64,6 +64,11 @@ import { CreateCustomMcpServerData } from '@/types/custom-mcp-server';
 
 const columnHelper = createColumnHelper<CustomMcpServer>();
 
+interface Code {
+  uuid: string;
+  fileName: string;
+}
+
 export default function CustomMCPServersPage() {
   const { currentProfile } = useProfiles();
   const profileUuid = currentProfile?.uuid;
@@ -83,7 +88,7 @@ export default function CustomMCPServersPage() {
     },
   });
 
-  const { data: servers = [], mutate } = useSWR<CustomMcpServer[]>(
+  const { data: servers = [], mutate } = useSWR(
     profileUuid ? `${profileUuid}/custom-mcp-servers` : null,
     () => getCustomMcpServers(profileUuid || '')
   );
@@ -288,7 +293,7 @@ export default function CustomMCPServersPage() {
                               )}>
                               {field.value
                                 ? codes?.find(
-                                    (code) => code.uuid === field.value
+                                    (code: Code) => code.uuid === field.value
                                   )?.fileName
                                 : 'Select code...'}
                               <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
@@ -301,7 +306,7 @@ export default function CustomMCPServersPage() {
                               <CommandInput placeholder='Search code...' />
                               <CommandEmpty>No code found.</CommandEmpty>
                               <CommandGroup>
-                                {codes?.map((code) => {
+                                {codes?.map((code: Code) => {
                                   return (
                                     <CommandItem
                                       key={code.uuid}

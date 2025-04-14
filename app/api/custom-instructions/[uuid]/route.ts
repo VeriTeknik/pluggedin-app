@@ -16,12 +16,95 @@ type PromptMessage = {
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/custom-instructions/[uuid]
- *
- * Retrieves the custom instruction messages for a specific MCP server,
- * identified by its UUID. Used by the proxy to fulfill `prompts/get`
- * requests for custom instructions.
- * Expects 'Authorization: Bearer <API_KEY>' header and UUID in the path.
+ * @swagger
+ * /api/custom-instructions/{uuid}:
+ *   get:
+ *     summary: Get specific custom instruction messages (formatted as MCP Prompt)
+ *     description: |
+ *       Retrieves the messages array for a specific custom instruction, identified by the associated MCP server's UUID.
+ *       Requires API key authentication and ensures the server belongs to the authenticated user's active profile.
+ *       The response is formatted to mimic the MCP `GetPromptResult` structure (specifically the `messages` array) for compatibility with the pluggedin-mcp proxy, which uses this endpoint to fulfill `prompts/get` requests for custom instructions.
+ *       Note: Custom instructions are stored as an array of strings but returned formatted as `[{ role: 'user', content: { type: 'text', text: '...' } }]`.
+ *     tags:
+ *       - Custom Instructions
+ *       - Prompts
+ *     security:
+ *       - apiKey: []
+ *     parameters:
+ *       - in: path
+ *         name: uuid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The UUID of the MCP server whose custom instruction messages are to be fetched.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the custom instruction messages, formatted as an MCP prompt message array.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 messages:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       role:
+ *                         type: string
+ *                         enum: [user] # Currently always returns 'user'
+ *                       content:
+ *                         type: object
+ *                         properties:
+ *                           type:
+ *                             type: string
+ *                             enum: [text] # Currently always 'text'
+ *                           text:
+ *                             type: string
+ *                             description: The content of the instruction message.
+ *       400:
+ *         description: Bad Request - Server UUID parameter is missing in the path.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Missing server UUID in path
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or active profile not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Authorization header with Bearer token is required | Invalid API key | Active profile not found
+ *       404:
+ *         description: Not Found - Custom instructions not found for the specified server UUID or server does not belong to the active profile.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Custom instructions not found for server UUID: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+ *       500:
+ *         description: Internal Server Error fetching custom instruction details.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal Server Error fetching custom instruction details
+ *                 details:
+ *                   type: string
  */
 export async function GET(
   request: Request,

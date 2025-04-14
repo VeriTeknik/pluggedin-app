@@ -49,7 +49,7 @@ export function useProfiles() {
     const savedProfileUuid = localStorage.getItem(CURRENT_PROFILE_KEY);
     if (profiles?.length) {
       if (savedProfileUuid) {
-        const savedProfile = profiles.find((p) => p.uuid === savedProfileUuid);
+        const savedProfile = profiles.find((p: Profile) => p.uuid === savedProfileUuid);
         if (savedProfile) {
           setCurrentProfile(savedProfile);
           return;

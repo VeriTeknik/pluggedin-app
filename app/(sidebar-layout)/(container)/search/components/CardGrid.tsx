@@ -1,9 +1,12 @@
-import { Database, Download, Github, Package, Star, ThumbsUp, UserPlus } from 'lucide-react';
+'use client';
+
+import { Database, Download, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { unshareServer } from '@/app/actions/social'; // Import unshare action
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,12 +18,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { McpServerSource, McpServerType } from '@/db/schema';
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { McpServerCategory, SearchIndex } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
 import { InstallDialog } from './InstallDialog';
-// Temporarily disable the rating dialog until we fix the import issue
-// import { RateServerDialog } from './RateServerDialog';
+import { RateServerDialog } from './RateServerDialog';
+import { ReviewsDialog } from './ReviewsDialog'; // Import the new dialog
 
 // Helper function to get category badge
 function CategoryBadge({ category }: { category?: McpServerCategory }) {
@@ -67,6 +71,13 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
           GitHub
         </Badge>
       );
+    case McpServerSource.COMMUNITY:
+      return (
+        <Badge variant="outline" className="gap-1 bg-blue-100 dark:bg-blue-900">
+          <Users className="h-3 w-3" />
+          Community
+        </Badge>
+      );
     default:
       return (
         <Badge variant="outline" className="gap-1">
@@ -77,8 +88,27 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
   }
 }
 
-export default function CardGrid({ items, installedServerMap }: { items: SearchIndex; installedServerMap: Map<string, string> }) {
-  const { t: _t } = useTranslation();
+export default function CardGrid({ 
+  items, 
+  installedServerMap,
+  currentUsername,
+  onRefreshNeeded,
+  profileUuid, // Add profileUuid prop
+  selectable = false,
+  selectedItems = [],
+  onItemSelect,
+}: {
+  items: SearchIndex;
+  installedServerMap: Map<string, string>;
+  currentUsername?: string | null; // Allow null to match session type
+  onRefreshNeeded?: () => void;
+  profileUuid?: string; // Define the prop type
+  selectable?: boolean;
+  selectedItems?: string[];
+  onItemSelect?: (serverId: string, selected: boolean) => void;
+}) {
+  const { t } = useTranslation();
+  const { toast } = useToast(); // Initialize toast
   const [selectedServer, setSelectedServer] = useState<{
     name: string;
     description: string;
@@ -93,12 +123,21 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // For rating dialog
-  const [_rateServer, setRateServer] = useState<{
+  const [rateServer, setRateServer] = useState<{
     name: string;
     source?: McpServerSource;
     external_id?: string;
   } | null>(null);
-  const [_rateDialogOpen, setRateDialogOpen] = useState(false);
+  const [rateDialogOpen, setRateDialogOpen] = useState(false);
+
+  // State for reviews dialog
+  const [reviewServer, setReviewServer] = useState<{
+    name: string;
+    source?: McpServerSource;
+    external_id?: string;
+  } | null>(null);
+  const [reviewsDialogOpen, setReviewsDialogOpen] = useState(false);
+
 
   const handleInstallClick = (key: string, item: any) => {
     // Determine if this is a stdio or SSE server
@@ -130,18 +169,124 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
     setRateDialogOpen(true);
   };
 
+  // Handle clicking the reviews count
+  const handleReviewsClick = (item: any) => {
+    setReviewServer({
+      name: item.name,
+      source: item.source,
+      external_id: item.external_id,
+    });
+    setReviewsDialogOpen(true);
+  };
+
+
   // Helper to format ratings
   const formatRating = (rating?: number, count?: number) => {
-    if (!rating || !count) {
+    // Use ratingCount (consistent with McpIndex type and renderCommunityInfo)
+    if (rating === undefined || rating === null || !count) { 
       return null;
+    }
+    
+    // Convert rating to number before using toFixed
+    const numericRating = typeof rating === 'string' ? parseFloat(rating) : rating;
+    
+    // Check if conversion was successful and it's a valid number
+    if (isNaN(numericRating)) {
+      return null; 
     }
     
     return (
       <div className="flex items-center">
         <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
-        {rating.toFixed(1)} ({count})
+        {numericRating.toFixed(1)} ({count})
       </div>
     );
+  };
+
+  // Shows meta data for community cards
+  const renderCommunityInfo = (item: any) => {
+    if (item.source !== McpServerSource.COMMUNITY) return null;
+    
+    // Don't show if there's no shared_by
+    if (!item.shared_by) return null;
+    
+    return (
+      <div className="text-xs text-muted-foreground mt-2 border-t pt-2">
+        {item.shared_by && (
+          <div className="flex items-center mt-1">
+            <Users className="h-3 w-3 mr-1" />
+            Shared by:{' '}
+            {item.shared_by_profile_url ? (
+              <Link 
+                href={item.shared_by_profile_url}
+                className="hover:underline ml-1"
+              >
+                {item.shared_by}
+              </Link>
+            ) : (
+              <span className="ml-1">{item.shared_by}</span>
+            )}
+          </div>
+        )}
+        {/* Make review count clickable */}
+        {item.ratingCount && item.ratingCount > 0 && (
+           <button
+             className="flex items-center mt-1 hover:underline cursor-pointer text-left"
+             onClick={() => handleReviewsClick(item)}
+             aria-label={`View ${item.ratingCount} reviews for ${item.name}`}
+           >
+            <MessageCircle className="h-3 w-3 mr-1" />
+            {item.ratingCount} {item.ratingCount === 1 ? 'review' : 'reviews'}
+          </button>
+        )}
+      </div>
+    );
+  };
+
+  // Helper to check if server is owned by current user
+  const isOwnServer = (item: any) => {
+    return item.shared_by === currentUsername;
+  };
+
+  // Handle unshare click
+  const handleUnshareClick = async (item: any) => {
+    if (!profileUuid) {
+      toast({
+        title: t('common.error'),
+        description: t('search.error.profileNotFound'), // Need this translation key
+        variant: 'destructive',
+      });
+      return;
+    }
+    // Assuming the item contains the shared_uuid from the search index
+    const sharedServerUuid = item.shared_uuid; 
+    if (!sharedServerUuid) {
+       toast({
+         title: t('common.error'),
+         description: t('search.error.missingShareId'), // Need this translation key
+         variant: 'destructive',
+       });
+       return;
+    }
+
+    try {
+      const result = await unshareServer(profileUuid, sharedServerUuid);
+      if (result.success) {
+        toast({
+          title: t('common.success'),
+          description: t('search.unshareSuccess', { name: item.name }), // Need this translation key
+        });
+        onRefreshNeeded?.(); // Refresh the search results
+      } else {
+        throw new Error(result.error || t('search.error.unshareFailed')); // Need this translation key
+      }
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: error instanceof Error ? error.message : t('search.error.unshareFailed'),
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -153,29 +298,46 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
             ? installedServerMap.get(`${item.source}:${item.external_id}`)
             : undefined;
 
+          const isOwned = isOwnServer(item);
+          const isSelected = selectedItems.includes(key);
+          const isInstalled = Boolean(installedUuid);
+
           return (
-          <Card key={key} className='flex flex-col'>
+          <Card 
+            key={key} 
+            className={`flex flex-col ${selectable && !isInstalled ? 'cursor-pointer hover:border-primary' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${isInstalled ? 'opacity-70' : ''}`}
+            onClick={() => {
+              if (selectable && !isInstalled && onItemSelect) {
+                onItemSelect(key, !isSelected);
+              }
+            }}
+          >
             <CardHeader className="pb-2">
               <div className="flex justify-between items-start">
                 <CardTitle className="mr-2">{item.name}</CardTitle>
-                <SourceBadge source={item.source} />
+                <div className="flex items-center gap-2">
+                  {isInstalled && (
+                    <Badge variant="secondary" className="pointer-events-none">Installed</Badge>
+                  )}
+                  <SourceBadge source={item.source} />
+                </div>
               </div>
               <CardDescription>{item.description}</CardDescription>
             </CardHeader>
             <CardContent className='flex-grow pb-2'>
               {item.package_name && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {_t('search.card.package')}: {item.package_name}
+                  {t('search.card.package')}: {item.package_name}
                 </p>
               )}
               {item.command && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {_t('search.card.command')}: {item.command}
+                  {t('search.card.command')}: {item.command}
                 </p>
               )}
               {item.args?.length > 0 && (
                 <p className='text-sm text-muted-foreground mb-2'>
-                  {_t('search.card.exampleArgs')}: {item.args.join(' ')}
+                  {t('search.card.exampleArgs')}: {item.args.join(' ')}
                 </p>
               )}
               
@@ -201,20 +363,21 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                 {item.useCount !== undefined && (
                   <div className="flex items-center">
                     <Database className="h-3 w-3 mr-1" />
-                    {_t('search.card.usageCount')}: {item.useCount}
+                    {t('search.card.usageCount')}: {item.useCount}
                   </div>
                 )}
                 
-                {formatRating(item.rating, item.rating_count)}
-                
-                {item.installation_count !== undefined && item.installation_count > 0 && (
-                  <div className="flex items-center">
-                    <UserPlus className="h-3 w-3 mr-1" />
-                    {item.installation_count}
-                  </div>
-                )}
-                
-                {item.github_stars !== undefined && item.github_stars !== null && (
+            {formatRating(item.rating, item.ratingCount)}
+
+            {/* Display Installation Count */}
+            {item.installation_count !== undefined && item.installation_count > 0 && (
+              <div className="flex items-center">
+                <UserPlus className="h-3 w-3 mr-1" />
+                {item.installation_count}
+              </div>
+            )}
+
+            {item.github_stars !== undefined && item.github_stars !== null && (
                   <div className="flex items-center">
                     <Github className="h-3 w-3 mr-1" />
                     {item.github_stars}
@@ -228,6 +391,9 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                   </div>
                 )}
               </div>
+
+              {/* Add community-specific information */}
+              {renderCommunityInfo(item)}
             </CardContent>
             <CardFooter className='flex justify-between pt-2'>
               {item.githubUrl && (
@@ -242,7 +408,8 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                 </Button>
               )}
               
-              {item.source && item.external_id && (
+              {/* Only show rate button if not user's own server */}
+              {item.source && item.external_id && !isOwned && (
                 <Button 
                   variant='outline' 
                   size="sm"
@@ -250,28 +417,36 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
                   onClick={() => handleRateClick(key, item)}
                 >
                   <ThumbsUp className='w-4 h-4' />
-                  Rate
+                  {t('search.card.rate')}
                 </Button>
               )}
               
-              {installedUuid ? (
-                  // Render Edit button if installed
-                  <Button variant='secondary' size="sm" asChild>
-                    <Link href={`/mcp-servers/${installedUuid}`}>
-                      <LucideIcons.Edit className='w-4 h-4 mr-2' />
-                      {_t('search.card.edit')}
-                    </Link>
-                  </Button>
-                ) : (
-                  // Render Install button if not installed
-                  <Button
-                    variant='default'
-                    size="sm"
-                    onClick={() => handleInstallClick(key, item)}>
-                    <Download className='w-4 h-4 mr-2' />
-                    {_t('search.card.install')}
-                  </Button>
-                )}
+              {isOwned ? (
+                // Show Unshare button for owned servers
+                <Button
+                  variant='destructive'
+                  size="sm"
+                  onClick={() => handleUnshareClick(item)}
+                >
+                  <Trash2 className='w-4 h-4 mr-2' />
+                  Unshare
+                </Button>
+              ) : isInstalled ? ( // Check if installed first
+                // Render disabled "Installed" button if installed
+                <Button variant='outline' size="sm" disabled className="pointer-events-none">
+                  {t('search.card.installed')}
+                </Button>
+              ) : ( 
+                // If not owned AND not installed, render Install button
+                <Button
+                  variant='default'
+                  size="sm"
+                  onClick={() => handleInstallClick(key, item)}
+                >
+                  <Download className='w-4 h-4 mr-2' />
+                  {t('search.card.install')}
+                </Button>
+              )}
             </CardFooter>
           </Card>
           );
@@ -286,14 +461,23 @@ export default function CardGrid({ items, installedServerMap }: { items: SearchI
         />
       )}
       
-      {/* Temporarily disable the rating dialog until we fix the import issue 
-      {_rateServer && (
+      {rateServer && (
         <RateServerDialog
-          open={_rateDialogOpen}
+          open={rateDialogOpen}
           onOpenChange={setRateDialogOpen}
-          serverData={_rateServer}
+          serverData={rateServer}
+          onRatingSubmitted={onRefreshNeeded}
         />
-      )} */}
+      )}
+
+      {/* Render the Reviews Dialog */}
+      {reviewServer && (
+        <ReviewsDialog
+          open={reviewsDialogOpen}
+          onOpenChange={setReviewsDialogOpen}
+          serverData={reviewServer}
+        />
+      )}
     </>
   );
 }

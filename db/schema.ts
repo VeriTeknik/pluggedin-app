@@ -1,4 +1,4 @@
-import { relations,sql } from 'drizzle-orm'; // Import relations
+import { relations,sql } from 'drizzle-orm';
 import {
   boolean,
   index,
@@ -7,10 +7,10 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
-  serial, // Import serial
+  serial,
   text,
   timestamp,
-  unique, // Import unique
+  unique,
   uuid,
 } from 'drizzle-orm/pg-core';
 
@@ -19,7 +19,6 @@ import { locales } from '@/i18n/config';
 import { enumToPgEnum } from './utils/enum-to-pg-enum';
 
 // Define MCP Message structure for typing JSONB columns
-// Based on @modelcontextprotocol/sdk/types PromptMessageContent
 type McpMessageContent =
   | { type: "text"; text: string }
   | { type: "image"; data: string; mimeType: string }
@@ -27,8 +26,8 @@ type McpMessageContent =
   | { type: "resource"; resource: { uri: string; mimeType?: string; text?: string; blob?: string } };
 
 type McpMessage = {
-  role: "user" | "assistant" | "system"; // Added system role
-  content: McpMessageContent | McpMessageContent[]; // Allow single or multiple content parts
+  role: "user" | "assistant" | "system";
+  content: McpMessageContent | McpMessageContent[];
 };
 
 
@@ -51,6 +50,7 @@ export enum McpServerSource {
   SMITHERY = 'SMITHERY',
   NPM = 'NPM',
   GITHUB = 'GITHUB',
+  COMMUNITY = 'COMMUNITY',
 }
 
 export const mcpServerStatusEnum = pgEnum(
@@ -68,7 +68,6 @@ export const mcpServerTypeEnum = pgEnum(
    enumToPgEnum(McpServerSource)
  );
  
- // Enum for tool/server active/inactive status
  export enum ToggleStatus {
   ACTIVE = 'ACTIVE',
   INACTIVE = 'INACTIVE',
@@ -78,10 +77,8 @@ export const toggleStatusEnum = pgEnum(
   enumToPgEnum(ToggleStatus)
 );
 
-// Enum for profile capabilities
 export enum ProfileCapability {
   TOOLS_MANAGEMENT = 'TOOLS_MANAGEMENT',
-  // Add other capabilities here if needed
 }
 export const profileCapabilityEnum = pgEnum(
   'profile_capability',
@@ -103,7 +100,18 @@ export const users = pgTable('users', {
   updated_at: timestamp('updated_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
-});
+  username: text('username').unique(),
+  // Add social fields to users table
+  bio: text('bio'),
+  is_public: boolean('is_public').default(false).notNull(),
+  language: languageEnum('language').default('en'),
+  avatar_url: text('avatar_url'),
+},
+(table) => ({
+  usersUsernameIdx: index('users_username_idx').on(table.username),
+  usersEmailIdx: index('users_email_idx').on(table.email),
+}));
+
 
 export const accounts = pgTable(
   'accounts',
@@ -172,26 +180,10 @@ export const projectsTable = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
   },
-  (table) => [
-    index('projects_user_id_idx').on(table.user_id)
-  ]
+  (table) => ({ // Use object syntax for indexes
+    projectsUserIdIdx: index('projects_user_id_idx').on(table.user_id),
+  })
 );
-
-// Relations for projectsTable
-export const projectsRelations = relations(projectsTable, ({ one, many }) => ({
-  user: one(users, {
-    fields: [projectsTable.user_id],
-    references: [users.id],
-  }),
-  profiles: many(profilesTable),
-  apiKeys: many(apiKeysTable),
-  activeProfile: one(profilesTable, {
-    fields: [projectsTable.active_profile_uuid],
-    references: [profilesTable.uuid],
-    relationName: 'activeProfile', // Optional: Define a name if needed
-  }),
-}));
-
 
 export const profilesTable = pgTable(
   'profiles',
@@ -205,16 +197,31 @@ export const profilesTable = pgTable(
       .notNull()
       .defaultNow(),
     language: languageEnum('language').default('en'),
-    // Add capabilities column
     enabled_capabilities: profileCapabilityEnum('enabled_capabilities')
       .array()
-      .notNull()
-      .default(sql`'{}'::profile_capability[]`),
-  },
-  (table) => [
-    index('profiles_project_uuid_idx').on(table.project_uuid)
-  ]
+    .notNull()
+    .default(sql`'{}'::profile_capability[]`),
+  // Removed bio, is_public, avatar_url, language from profiles
+},
+(table) => ({ // Use object syntax for indexes
+  profilesProjectUuidIdx: index('profiles_project_uuid_idx').on(table.project_uuid),
+  })
 );
+
+// Relations for projectsTable
+export const projectsRelations = relations(projectsTable, ({ one, many }) => ({
+  user: one(users, {
+    fields: [projectsTable.user_id],
+    references: [users.id],
+  }),
+  profiles: many(profilesTable),
+  apiKeys: many(apiKeysTable),
+  activeProfile: one(profilesTable, {
+    fields: [projectsTable.active_profile_uuid],
+    references: [profilesTable.uuid],
+    relationName: 'activeProfile',
+  }),
+}));
 
 // Relations for profilesTable
 export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
@@ -224,22 +231,24 @@ export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
   }),
   mcpServers: many(mcpServersTable),
   customMcpServers: many(customMcpServersTable),
-  playgroundSettings: one(playgroundSettingsTable, { // Assuming one-to-one or one-to-many where profile is unique
+  playgroundSettings: one(playgroundSettingsTable, {
     fields: [profilesTable.uuid],
     references: [playgroundSettingsTable.profile_uuid],
   }),
   serverInstallations: many(serverInstallationsTable),
-  serverRatings: many(serverRatingsTable),
+  // serverRatings: many(serverRatingsTable), // Removed relation
   auditLogs: many(auditLogsTable),
   notifications: many(notificationsTable),
-  logRetentionPolicies: many(logRetentionPoliciesTable), // Assuming one profile can have multiple policies over time? Or one-to-one?
+  logRetentionPolicies: many(logRetentionPoliciesTable),
+  // Removed followers/following relations from profiles
+  sharedMcpServers: many(sharedMcpServersTable),
+  sharedCollections: many(sharedCollectionsTable),
+  embeddedChats: many(embeddedChatsTable),
 }));
 
 
 // Define the foreign key relationship after both tables are defined
-// This will be applied in a separate migration
 export const projectsToProfilesRelation = {
-  // This should be run in a migration after both tables exist
   addActiveProfileForeignKey: () => sql`
     ALTER TABLE "projects" ADD CONSTRAINT "projects_active_profile_uuid_profiles_uuid_fk" 
     FOREIGN KEY ("active_profile_uuid") REFERENCES "profiles"("uuid") ON DELETE set null;
@@ -259,17 +268,16 @@ export const codesTable = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
   },
-  (table) => [
-    index('codes_user_id_idx').on(table.user_id)
-  ]
+  (table) => ({ // Use object syntax for indexes
+    codesUserIdIdx: index('codes_user_id_idx').on(table.user_id),
+  })
 );
 
-// Relations for codesTable
 export const codesRelations = relations(codesTable, ({ one }) => ({
   user: one(users, {
     fields: [codesTable.user_id],
     references: [users.id],
-    relationName: 'codes', // Explicitly name the relation
+    relationName: 'codes',
   }),
 }));
 
@@ -279,26 +287,23 @@ export const apiKeysTable = pgTable(
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     project_uuid: uuid('project_uuid')
       .notNull()
-      .references(() => projectsTable.uuid, { onDelete: 'cascade' }), // Correct foreign key reference
-    api_key: text('api_key').notNull(), // Assuming this column should exist based on table name
+      .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
+    api_key: text('api_key').notNull().unique(),
     name: text('name').default('API Key'),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
-    // Removed source, external_id, notes columns
   },
-  (table) => [
-    index('api_keys_project_uuid_idx').on(table.project_uuid),
-    unique('api_keys_key_unique_idx').on(table.api_key), // Add unique constraint if desired
-  ]
+  (table) => ({ // Use object syntax for indexes
+    apiKeysProjectUuidIdx: index('api_keys_project_uuid_idx').on(table.project_uuid),
+  })
 );
 
-// Relations for apiKeysTable
 export const apiKeysRelations = relations(apiKeysTable, ({ one }) => ({
   project: one(projectsTable, {
     fields: [apiKeysTable.project_uuid],
     references: [projectsTable.uuid],
-    relationName: 'apiKeys', // Explicitly name the relation
+    relationName: 'apiKeys',
   }),
 }));
 
@@ -332,20 +337,15 @@ export const mcpServersTable = pgTable(
       .notNull()
       .default(McpServerSource.PLUGGEDIN),
     external_id: text('external_id'),
-    notes: text('notes'), // Added notes column
+    notes: text('notes'),
   },
-  (table) => [
-    index('mcp_servers_status_idx').on(table.status),
-    index('mcp_servers_profile_uuid_idx').on(table.profile_uuid),
-    index('mcp_servers_type_idx').on(table.type),
-    sql`CONSTRAINT mcp_servers_url_check CHECK (
-      (type = 'SSE' AND url IS NOT NULL AND command IS NULL AND url ~ '^https?://[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*(:[0-9]+)?(/[a-zA-Z0-9-._~:/?#\[\]@!$&''()*+,;=]*)?$') OR
-      (type = 'STDIO' AND url IS NULL AND command IS NOT NULL)
-    )`,
-  ]
+  (table) => ({ // Use object syntax for indexes
+    mcpServersStatusIdx: index('mcp_servers_status_idx').on(table.status),
+    mcpServersProfileUuidIdx: index('mcp_servers_profile_uuid_idx').on(table.profile_uuid),
+    mcpServersTypeIdx: index('mcp_servers_type_idx').on(table.type),
+  })
 );
 
-// Relations for mcpServersTable
 export const mcpServersRelations = relations(mcpServersTable, ({ one, many }) => ({
   profile: one(profilesTable, {
     fields: [mcpServersTable.profile_uuid],
@@ -353,8 +353,15 @@ export const mcpServersRelations = relations(mcpServersTable, ({ one, many }) =>
   }),
   resourceTemplates: many(resourceTemplatesTable),
   serverInstallations: many(serverInstallationsTable),
-  serverRatings: many(serverRatingsTable),
+  // serverRatings: many(serverRatingsTable), // Removed relation
   auditLogs: many(auditLogsTable),
+  tools: many(toolsTable),
+  resources: many(resourcesTable),
+  prompts: many(promptsTable),
+  customInstructions: one(customInstructionsTable, {
+     fields: [mcpServersTable.uuid],
+     references: [customInstructionsTable.mcp_server_uuid],
+  }),
 }));
 
 
@@ -385,19 +392,18 @@ export const customMcpServersTable = pgTable(
       .notNull()
       .default(McpServerStatus.ACTIVE),
   },
-  (table) => [
-    index('custom_mcp_servers_status_idx').on(table.status),
-    index('custom_mcp_servers_profile_uuid_idx').on(table.profile_uuid),
-  ]
+  (table) => ({ // Use object syntax for indexes
+    customMcpServersStatusIdx: index('custom_mcp_servers_status_idx').on(table.status),
+    customMcpServersProfileUuidIdx: index('custom_mcp_servers_profile_uuid_idx').on(table.profile_uuid),
+  })
 );
 
-// Relations for customMcpServersTable
 export const customMcpServersRelations = relations(customMcpServersTable, ({ one }) => ({
   profile: one(profilesTable, {
     fields: [customMcpServersTable.profile_uuid],
     references: [profilesTable.uuid],
   }),
-  code: one(codesTable, { // Assuming relation to codesTable based on code_uuid
+  code: one(codesTable, {
     fields: [customMcpServersTable.code_uuid],
     references: [codesTable.uuid],
   }),
@@ -405,18 +411,18 @@ export const customMcpServersRelations = relations(customMcpServersTable, ({ one
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   identifier: text("identifier").notNull(),
-  token: text("token").notNull(),
+  token: text("token").notNull().primaryKey(),
   expires: timestamp("expires", { mode: 'date' }).notNull(),
 });
 
-// Add playground settings table
 export const playgroundSettingsTable = pgTable(
   'playground_settings',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     profile_uuid: uuid('profile_uuid')
       .notNull()
-      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' })
+      .unique(),
     provider: text('provider').notNull().default('anthropic'),
     model: text('model').notNull().default('claude-3-7-sonnet-20250219'),
     temperature: integer('temperature').notNull().default(0),
@@ -429,12 +435,11 @@ export const playgroundSettingsTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    index('playground_settings_profile_uuid_idx').on(table.profile_uuid),
-  ]
+  (table) => ({ // Use object syntax for indexes
+    playgroundSettingsProfileUuidIdx: index('playground_settings_profile_uuid_idx').on(table.profile_uuid),
+  })
 );
 
-// Table for caching search results from external sources
 export const searchCacheTable = pgTable(
   'search_cache',
   {
@@ -448,13 +453,12 @@ export const searchCacheTable = pgTable(
     expires_at: timestamp('expires_at', { withTimezone: true })
       .notNull(),
   },
-  (table) => [
-    index('search_cache_source_query_idx').on(table.source, table.query),
-    index('search_cache_expires_at_idx').on(table.expires_at),
-  ]
+  (table) => ({ // Use object syntax for indexes
+    searchCacheSourceQueryIdx: index('search_cache_source_query_idx').on(table.source, table.query),
+    searchCacheExpiresAtIdx: index('search_cache_expires_at_idx').on(table.expires_at),
+  })
 );
 
-// Table for tracking server installations
 export const serverInstallationsTable = pgTable(
   'server_installations',
   {
@@ -470,14 +474,13 @@ export const serverInstallationsTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    index('server_installations_server_uuid_idx').on(table.server_uuid),
-    index('server_installations_external_id_source_idx').on(table.external_id, table.source),
-    index('server_installations_profile_uuid_idx').on(table.profile_uuid),
-  ]
+  (table) => ({ // Use object syntax for indexes
+    serverInstallationsServerUuidIdx: index('server_installations_server_uuid_idx').on(table.server_uuid),
+    serverInstallationsExternalIdSourceIdx: index('server_installations_external_id_source_idx').on(table.external_id, table.source),
+    serverInstallationsProfileUuidIdx: index('server_installations_profile_uuid_idx').on(table.profile_uuid),
+  })
 );
 
-// Relations for serverInstallationsTable
 export const serverInstallationsRelations = relations(serverInstallationsTable, ({ one }) => ({
   mcpServer: one(mcpServersTable, {
     fields: [serverInstallationsTable.server_uuid],
@@ -489,19 +492,18 @@ export const serverInstallationsRelations = relations(serverInstallationsTable, 
   }),
 }));
 
-// Table for tracking server ratings
-export const serverRatingsTable = pgTable(
-  'server_ratings',
+// --- Server Reviews Table ---
+// Removed serverRatingsTable definition and relations
+export const serverReviews = pgTable(
+  'server_reviews',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
-    server_uuid: uuid('server_uuid')
-       .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
-     external_id: text('external_id'),
-     source: mcpServerSourceEnum('source').notNull(),
-     profile_uuid: uuid('profile_uuid')
-       .notNull()
-       .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
-    rating: integer('rating').notNull(), // 1-5 stars
+    server_source: mcpServerSourceEnum('server_source').notNull(),
+    server_external_id: text('server_external_id').notNull(),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    rating: integer('rating').notNull(), // Assuming 1-5 rating
     comment: text('comment'),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
@@ -510,40 +512,32 @@ export const serverRatingsTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    index('server_ratings_server_uuid_idx').on(table.server_uuid),
-    index('server_ratings_external_id_source_idx').on(table.external_id, table.source),
-    index('server_ratings_profile_uuid_idx').on(table.profile_uuid),
-    // Each user can only rate a server once (by server_uuid or external_id + source)
-    index('server_ratings_unique_idx').on(
-      table.profile_uuid, 
-      table.server_uuid
+  (table) => ({
+    serverReviewsSourceExternalIdIdx: index('server_reviews_source_external_id_idx').on(table.server_source, table.server_external_id),
+    serverReviewsUserIdIdx: index('server_reviews_user_id_idx').on(table.user_id),
+    // Unique constraint per user per server (identified by source+external_id)
+    serverReviewsUniqueUserServerIdx: unique('server_reviews_unique_user_server_idx').on(
+      table.user_id,
+      table.server_source,
+      table.server_external_id
     ),
-    index('server_ratings_unique_external_idx').on(
-      table.profile_uuid, 
-      table.external_id,
-      table.source
-    ),
-  ]
+  })
 );
 
-// Relations for serverRatingsTable
-export const serverRatingsRelations = relations(serverRatingsTable, ({ one }) => ({
-  mcpServer: one(mcpServersTable, {
-    fields: [serverRatingsTable.server_uuid],
-    references: [mcpServersTable.uuid],
+export const serverReviewsRelations = relations(serverReviews, ({ one }) => ({
+  user: one(users, {
+    fields: [serverReviews.user_id],
+    references: [users.id],
   }),
-  profile: one(profilesTable, {
-    fields: [serverRatingsTable.profile_uuid],
-    references: [profilesTable.uuid],
-  }),
+  // Optional: Add relation back to mcpServers if needed, though linking via source/external_id might be sufficient
+  // mcpServer: one(mcpServersTable, { ... }) // This would require adding a server_uuid FK potentially
 }));
 
-// Audit log tablosu
+
 export const auditLogsTable = pgTable("audit_logs", {
   id: uuid("id").defaultRandom().primaryKey(),
   profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
-  type: text("type").notNull(), // API_CALL, MCP_REQUEST, AUTH_ACTION, etc.
+  type: text("type").notNull(),
   action: text("action").notNull(),
   request_path: text("request_path"),
   request_method: text("request_method"),
@@ -556,13 +550,12 @@ export const auditLogsTable = pgTable("audit_logs", {
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   metadata: jsonb("metadata"),
 },
-(table) => [
-  index('audit_logs_profile_uuid_idx').on(table.profile_uuid),
-  index('audit_logs_type_idx').on(table.type),
-  index('audit_logs_created_at_idx').on(table.created_at),
-]);
+(table) => ({ // Use object syntax for indexes
+  auditLogsProfileUuidIdx: index('audit_logs_profile_uuid_idx').on(table.profile_uuid),
+  auditLogsTypeIdx: index('audit_logs_type_idx').on(table.type),
+  auditLogsCreatedAtIdx: index('audit_logs_created_at_idx').on(table.created_at),
+}));
 
-// Relations for auditLogsTable
 export const auditLogsRelations = relations(auditLogsTable, ({ one }) => ({
   profile: one(profilesTable, {
     fields: [auditLogsTable.profile_uuid],
@@ -574,11 +567,10 @@ export const auditLogsRelations = relations(auditLogsTable, ({ one }) => ({
   }),
 }));
 
-// Notification tablosu
 export const notificationsTable = pgTable("notifications", {
   id: uuid("id").defaultRandom().primaryKey(),
   profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
-  type: text("type").notNull(), // SYSTEM, ALERT, INFO, SUCCESS, WARNING
+  type: text("type").notNull(),
   title: text("title").notNull(),
   message: text("message").notNull(),
   read: boolean("read").default(false).notNull(),
@@ -586,13 +578,12 @@ export const notificationsTable = pgTable("notifications", {
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   expires_at: timestamp("expires_at", { withTimezone: true }),
 },
-(table) => [
-  index('notifications_profile_uuid_idx').on(table.profile_uuid),
-  index('notifications_read_idx').on(table.read),
-  index('notifications_created_at_idx').on(table.created_at),
-]);
+(table) => ({ // Use object syntax for indexes
+  notificationsProfileUuidIdx: index('notifications_profile_uuid_idx').on(table.profile_uuid),
+  notificationsReadIdx: index('notifications_read_idx').on(table.read),
+  notificationsCreatedAtIdx: index('notifications_created_at_idx').on(table.created_at),
+}));
 
-// Relations for notificationsTable
 export const notificationsRelations = relations(notificationsTable, ({ one }) => ({
   profile: one(profilesTable, {
     fields: [notificationsTable.profile_uuid],
@@ -600,36 +591,32 @@ export const notificationsRelations = relations(notificationsTable, ({ one }) =>
   }),
 }));
 
-// Sistem loglama tablosu
 export const systemLogsTable = pgTable("system_logs", {
   id: uuid("id").defaultRandom().primaryKey(),
-  level: text("level").notNull(), // ERROR, WARN, INFO, DEBUG
-  source: text("source").notNull(), // SYSTEM, MCP_SERVER, DATABASE, etc.
+  level: text("level").notNull(),
+  source: text("source").notNull(),
   message: text("message").notNull(),
   details: jsonb("details"),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 },
-(table) => [
-  index('system_logs_level_idx').on(table.level),
-  index('system_logs_source_idx').on(table.source),
-  index('system_logs_created_at_idx').on(table.created_at),
-]);
+(table) => ({ // Use object syntax for indexes
+  systemLogsLevelIdx: index('system_logs_level_idx').on(table.level),
+  systemLogsSourceIdx: index('system_logs_source_idx').on(table.source),
+  systemLogsCreatedAtIdx: index('system_logs_created_at_idx').on(table.created_at),
+}));
 
-// Log retention policy tablosu
 export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
   id: uuid("id").defaultRandom().primaryKey(),
   profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
   retention_days: integer("retention_days").default(7).notNull(),
-  // max_log_size_mb: integer("max_log_size_mb").default(100).notNull(), // Removed unused column
   is_active: boolean("is_active").default(true).notNull(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 },
-(table) => [
-  index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
-]);
+(table) => ({ // Use object syntax for indexes
+  logRetentionPoliciesProfileUuidIdx: index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
+}));
 
-// Relations for logRetentionPoliciesTable
 export const logRetentionPoliciesRelations = relations(logRetentionPoliciesTable, ({ one }) => ({
   profile: one(profilesTable, {
     fields: [logRetentionPoliciesTable.profile_uuid],
@@ -637,18 +624,17 @@ export const logRetentionPoliciesRelations = relations(logRetentionPoliciesTable
   }),
 }));
 
-// Table for storing discovered tools
 export const toolsTable = pgTable(
   'tools',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     name: text('name').notNull(),
     description: text('description'),
-    toolSchema: jsonb('tool_schema') // Store the inputSchema JSON
+    toolSchema: jsonb('tool_schema')
       .$type<{
         type: 'object';
         properties?: Record<string, any>;
-        required?: string[]; // Add required if needed
+        required?: string[];
       }>()
       .notNull(),
     created_at: timestamp('created_at', { withTimezone: true })
@@ -659,18 +645,16 @@ export const toolsTable = pgTable(
       .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
     status: toggleStatusEnum('status').notNull().default(ToggleStatus.ACTIVE),
   },
-  (table) => [
-    index('tools_mcp_server_uuid_idx').on(table.mcp_server_uuid),
-    unique('tools_unique_tool_name_per_server_idx').on( // Ensure tool name is unique per server
+  (table) => ({ // Use object syntax for indexes
+    toolsMcpServerUuidIdx: index('tools_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+    toolsUniqueToolNamePerServerIdx: unique('tools_unique_tool_name_per_server_idx').on(
       table.mcp_server_uuid,
       table.name
     ),
-    index('tools_status_idx').on(table.status), // Index status for filtering
-  ]
+    toolsStatusIdx: index('tools_status_idx').on(table.status),
+  })
 );
 
-
-// Table for storing discovered resource templates
 export const resourceTemplatesTable = pgTable(
   'resource_templates',
   {
@@ -682,7 +666,7 @@ export const resourceTemplatesTable = pgTable(
     name: text('name'),
     description: text('description'),
     mime_type: text('mime_type'),
-    template_variables: jsonb('template_variables') // Store extracted variables as JSON array
+    template_variables: jsonb('template_variables')
       .$type<string[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
@@ -690,12 +674,11 @@ export const resourceTemplatesTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    index('resource_templates_mcp_server_uuid_idx').on(table.mcp_server_uuid),
-  ]
+  (table) => ({ // Use object syntax for indexes
+    resourceTemplatesMcpServerUuidIdx: index('resource_templates_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+  })
 );
 
-// Relations for resourceTemplatesTable
 export const resourceTemplatesRelations = relations(resourceTemplatesTable, ({ one }) => ({
   mcpServer: one(mcpServersTable, {
     fields: [resourceTemplatesTable.mcp_server_uuid],
@@ -703,8 +686,6 @@ export const resourceTemplatesRelations = relations(resourceTemplatesTable, ({ o
   }),
 }));
 
-
-// Table for storing discovered resources (non-template)
 export const resourcesTable = pgTable(
   'resources',
   {
@@ -719,20 +700,18 @@ export const resourcesTable = pgTable(
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
-    // Add status if needed for filtering active/inactive resources
     status: toggleStatusEnum('status').notNull().default(ToggleStatus.ACTIVE), 
   },
-  (table) => [
-    index('resources_mcp_server_uuid_idx').on(table.mcp_server_uuid),
-    unique('resources_unique_uri_per_server_idx').on( // Ensure URI is unique per server
+  (table) => ({ // Use object syntax for indexes
+    resourcesMcpServerUuidIdx: index('resources_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+    resourcesUniqueUriPerServerIdx: unique('resources_unique_uri_per_server_idx').on(
       table.mcp_server_uuid,
       table.uri
     ),
-    index('resources_status_idx').on(table.status), // Index status for filtering
-  ]
+    resourcesStatusIdx: index('resources_status_idx').on(table.status),
+  })
 );
 
-// Relations for resourcesTable
 export const resourcesRelations = relations(resourcesTable, ({ one }) => ({
   mcpServer: one(mcpServersTable, {
     fields: [resourcesTable.mcp_server_uuid],
@@ -740,8 +719,6 @@ export const resourcesRelations = relations(resourcesTable, ({ one }) => ({
   }),
 }));
 
-
-// Relations for toolsTable
 export const toolsRelations = relations(toolsTable, ({ one }) => ({
   mcpServer: one(mcpServersTable, {
     fields: [toolsTable.mcp_server_uuid],
@@ -749,7 +726,6 @@ export const toolsRelations = relations(toolsTable, ({ one }) => ({
   }),
 }));
 
-// Table for storing discovered prompts
 export const promptsTable = pgTable(
   'prompts',
   {
@@ -759,26 +735,23 @@ export const promptsTable = pgTable(
       .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     description: text('description'),
-    // Store arguments schema as JSONB. Matches MCP PromptArgument definition.
     arguments_schema: jsonb('arguments_schema')
-      .$type<Array<{ name: string; description?: string; required?: boolean }>>() // Define expected structure
+      .$type<Array<{ name: string; description?: string; required?: boolean }>>()
       .notNull()
       .default(sql`'[]'::jsonb`),
-    // Note: We don't store the 'messages' here, as those are retrieved dynamically via prompts/get
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    index('prompts_mcp_server_uuid_idx').on(table.mcp_server_uuid),
-    unique('prompts_unique_prompt_name_per_server_idx').on( // Ensure prompt name is unique per server
+  (table) => ({ // Use object syntax for indexes
+    promptsMcpServerUuidIdx: index('prompts_mcp_server_uuid_idx').on(table.mcp_server_uuid),
+    promptsUniquePromptNamePerServerIdx: unique('prompts_unique_prompt_name_per_server_idx').on(
       table.mcp_server_uuid,
       table.name
     ),
-  ]
+  })
 );
 
-// Relations for promptsTable
 export const promptsRelations = relations(promptsTable, ({ one }) => ({
   mcpServer: one(mcpServersTable, {
     fields: [promptsTable.mcp_server_uuid],
@@ -786,22 +759,19 @@ export const promptsRelations = relations(promptsTable, ({ one }) => ({
   }),
 }));
 
-// Table for storing server-specific custom instructions (structured like prompts)
-// We'll store one instruction set per server for now, using a unique constraint
 export const customInstructionsTable = pgTable(
   'custom_instructions',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
     mcp_server_uuid: uuid('mcp_server_uuid')
       .notNull()
-      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
-    // name: text('name').notNull().default('custom_instructions'), // Fixed name for now
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' })
+      .unique(),
     description: text('description').default('Custom instructions for this server'),
-    // arguments: jsonb('arguments').$type<Array<{ name: string; description?: string; required?: boolean }>>().notNull().default(sql`'[]'::jsonb`), // Likely no arguments needed
     messages: jsonb('messages')
-      .$type<McpMessage[]>() // Use the defined McpMessage type
+      .$type<McpMessage[]>()
       .notNull()
-      .default(sql`'[]'::jsonb`), // Default to empty message array
+      .default(sql`'[]'::jsonb`),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -809,13 +779,11 @@ export const customInstructionsTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => [
-    // Ensure only one set of instructions per server
-    unique('custom_instructions_unique_server_idx').on(table.mcp_server_uuid),
-  ]
+  (table) => ({ // Use object syntax for indexes
+    // Index handled by unique constraint on mcp_server_uuid
+  })
 );
 
-// Relations for customInstructionsTable
 export const customInstructionsRelations = relations(customInstructionsTable, ({ one }) => ({
   mcpServer: one(mcpServersTable, {
     fields: [customInstructionsTable.mcp_server_uuid],
@@ -823,43 +791,33 @@ export const customInstructionsRelations = relations(customInstructionsTable, ({
   }),
 }));
 
-// Table for Release Notes
 export const releaseNotes = pgTable('release_notes', {
   id: serial('id').primaryKey(),
-  repository: text('repository').notNull(), // e.g., 'pluggedin-app' or 'pluggedin-mcp'
-  version: text('version').notNull(), // e.g., 'v1.2.0'
+  repository: text('repository').notNull(),
+  version: text('version').notNull(),
   releaseDate: timestamp('release_date', { withTimezone: true }).notNull(),
-  content: jsonb('content').notNull(), // Store structured content (features, fixes, etc.)
-  commitSha: text('commit_sha').notNull(), // SHA of the commit/tag associated with the release
+  content: jsonb('content').notNull(),
+  commitSha: text('commit_sha').notNull(),
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
 });
 
-// Relations for releaseNotes (optional, if needed later)
-// export const releaseNotesRelations = relations(releaseNotes, ({ one }) => ({
-//   // Example: If releases were linked to a user who published them
-//   // publisher: one(users, {
-//   //   fields: [releaseNotes.publisherId],
-//   //   references: [users.id],
-//   // }),
-// }));
-
-
-// Add other relations as needed for users, accounts, sessions etc. if complex queries are used elsewhere
 export const usersRelations = relations(users, ({ many }) => ({
 	accounts: many(accounts),
   sessions: many(sessions),
   projects: many(projectsTable),
   codes: many(codesTable),
-  // Add relation from profiles to prompts if needed (e.g., profile.prompts)
-  // prompts: many(promptsTable), // This might require adjusting profile/server relations
+  // Add followers/following relations to users
+  followers: many(followersTable, { relationName: 'followers' }), 
+  following: many(followersTable, { relationName: 'following' }), 
 }));
 
-// Add relation from mcpServers to prompts
-export const mcpServersPromptsRelations = relations(mcpServersTable, ({ many }) => ({
+export const mcpServersPromptsRelations = relations(mcpServersTable, ({ one, many }) => ({
   prompts: many(promptsTable),
-  // Add relation from mcpServers to customInstructions
-  customInstructions: many(customInstructionsTable), // Changed from one to many, although constrained by unique index for now
+  customInstructions: one(customInstructionsTable, {
+     fields: [mcpServersTable.uuid],
+     references: [customInstructionsTable.mcp_server_uuid],
+  }),
 }));
 
 
@@ -876,3 +834,155 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
     references: [users.id],
   }),
 }));
+
+// ===== Social Feature Tables =====
+
+export const followersTable = pgTable(
+  'followers',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    // Change to reference users table
+    follower_user_id: text('follower_user_id') 
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    followed_user_id: text('followed_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({ // Use object syntax for indexes and update names
+    followersFollowerUserIdIdx: index('followers_follower_user_id_idx').on(table.follower_user_id),
+    followersFollowedUserIdIdx: index('followers_followed_user_id_idx').on(table.followed_user_id),
+    followersUniqueUserRelationshipIdx: unique('followers_unique_user_relationship_idx').on(
+      table.follower_user_id,
+      table.followed_user_id
+    ),
+  })
+);
+
+export const followersRelations = relations(followersTable, ({ one }) => ({
+  // Update relations to point to users table
+  followerUser: one(users, { 
+    fields: [followersTable.follower_user_id],
+    references: [users.id],
+    relationName: 'following' // User is following others
+  }),
+  followedUser: one(users, { 
+    fields: [followersTable.followed_user_id],
+    references: [users.id],
+    relationName: 'followers' // User is followed by others
+  }),
+}));
+
+export const sharedMcpServersTable = pgTable(
+  'shared_mcp_servers',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    server_uuid: uuid('server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    is_public: boolean('is_public').default(true).notNull(),
+    template: jsonb('template')
+      .$type<any>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({ // Use object syntax for indexes
+    sharedMcpServersProfileUuidIdx: index('shared_mcp_servers_profile_uuid_idx').on(table.profile_uuid),
+    sharedMcpServersServerUuidIdx: index('shared_mcp_servers_server_uuid_idx').on(table.server_uuid),
+    sharedMcpServersIsPublicIdx: index('shared_mcp_servers_is_public_idx').on(table.is_public),
+  })
+);
+
+export const sharedMcpServersRelations = relations(sharedMcpServersTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [sharedMcpServersTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  server: one(mcpServersTable, {
+    fields: [sharedMcpServersTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+export const sharedCollectionsTable = pgTable(
+  'shared_collections',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    content: jsonb('content').notNull(),
+    is_public: boolean('is_public').default(true).notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({ // Use object syntax for indexes
+    sharedCollectionsProfileUuidIdx: index('shared_collections_profile_uuid_idx').on(table.profile_uuid),
+    sharedCollectionsIsPublicIdx: index('shared_collections_is_public_idx').on(table.is_public),
+  })
+);
+
+export const sharedCollectionsRelations = relations(sharedCollectionsTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [sharedCollectionsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
+export const embeddedChatsTable = pgTable(
+  'embedded_chats',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description'),
+    settings: jsonb('settings')
+      .$type<{ [key: string]: any }>()
+      .notNull()
+      .default(sql`'{}'::jsonb`),
+    is_public: boolean('is_public').default(true).notNull(),
+    is_active: boolean('is_active').default(true).notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({ // Use object syntax for indexes
+    embeddedChatsProfileUuidIdx: index('embedded_chats_profile_uuid_idx').on(table.profile_uuid),
+    embeddedChatsIsPublicIdx: index('embedded_chats_is_public_idx').on(table.is_public),
+    embeddedChatsIsActiveIdx: index('embedded_chats_is_active_idx').on(table.is_active),
+  })
+);
+
+export const embeddedChatsRelations = relations(embeddedChatsTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [embeddedChatsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
+// Removed duplicate profilesRelationsWithSocial definition

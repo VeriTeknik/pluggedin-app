@@ -2,15 +2,59 @@ import { Octokit } from '@octokit/rest'; // Using REST for simplicity first, can
 
 import { ReleaseChange,ReleaseNote } from '@/types/release'; // Import our types
 
-const GITHUB_PAT = process.env.GITHUB_PAT;
+const GITHUB_PAT = process.env.GITHUB_PAT || process.env.GITHUB_TOKEN;
 
 if (!GITHUB_PAT) {
-  console.warn('GITHUB_PAT environment variable not set. GitHub API calls will be limited or fail.');
+  console.warn('Neither GITHUB_PAT nor GITHUB_TOKEN environment variable is set. GitHub API calls will be limited or fail.');
 }
 
-const octokit = new Octokit({ auth: GITHUB_PAT });
+const octokit = new Octokit({ 
+  auth: GITHUB_PAT,
+  timeZone: 'UTC',
+});
 
 const REPO_OWNER = 'VeriTeknik'; // Assuming owner is constant for now
+
+/**
+ * Fetches tags and creates release notes from them if no releases exist
+ */
+async function fetchTagsAsReleases(repoName: 'pluggedin-app' | 'pluggedin-mcp'): Promise<any[]> {
+  try {
+    const { data: tags } = await octokit.repos.listTags({
+      owner: REPO_OWNER,
+      repo: repoName,
+      per_page: 100,
+    });
+
+    // Convert tags to release-like objects
+    const releases = await Promise.all(tags.map(async (tag) => {
+      try {
+        // Get the commit details for each tag
+        const { data: commit } = await octokit.repos.getCommit({
+          owner: REPO_OWNER,
+          repo: repoName,
+          ref: tag.commit.sha,
+        });
+
+        return {
+          tag_name: tag.name,
+          target_commitish: tag.commit.sha,
+          created_at: commit.commit.author?.date || commit.commit.committer?.date,
+          published_at: commit.commit.author?.date || commit.commit.committer?.date,
+          body: commit.commit.message,
+        };
+      } catch (error) {
+        console.error(`Error fetching commit details for tag ${tag.name}:`, error);
+        return null;
+      }
+    }));
+
+    return releases.filter(Boolean);
+  } catch (error) {
+    console.error(`Error fetching tags for ${repoName}:`, error);
+    throw new Error(`Failed to fetch tags for ${repoName}`);
+  }
+}
 
 /**
  * Fetches release information for a specific repository.
@@ -19,21 +63,27 @@ const REPO_OWNER = 'VeriTeknik'; // Assuming owner is constant for now
  * @param perPage - The number of results per page.
  * @returns A promise that resolves to an array of release data.
  */
-export async function fetchReleases(repoName: 'pluggedin-app' | 'pluggedin-mcp', page = 1, perPage = 10): Promise<any[]> { // Return type needs refinement
+export async function fetchReleases(repoName: 'pluggedin-app' | 'pluggedin-mcp', page = 1, perPage = 100): Promise<any[]> {
   try {
-    const response = await octokit.repos.listReleases({
+    // First try to get releases
+    const { data: releases } = await octokit.repos.listReleases({
       owner: REPO_OWNER,
       repo: repoName,
       page,
       per_page: perPage,
     });
-    // TODO: Map response.data to our ReleaseNote structure
-    // This will involve fetching commits between releases if needed
-    console.log(`Fetched ${response.data.length} releases for ${repoName}`);
-    return response.data; // Return raw data for now
+
+    // If no releases found, fall back to tags
+    if (releases.length === 0) {
+      console.log(`No releases found for ${repoName}, falling back to tags...`);
+      return await fetchTagsAsReleases(repoName);
+    }
+
+    return releases;
   } catch (error) {
     console.error(`Error fetching releases for ${repoName}:`, error);
-    throw new Error(`Failed to fetch releases for ${repoName}`);
+    console.log('Falling back to tags...');
+    return await fetchTagsAsReleases(repoName);
   }
 }
 
@@ -46,18 +96,28 @@ export async function fetchReleases(repoName: 'pluggedin-app' | 'pluggedin-mcp',
  */
 export async function fetchCommitsBetween(repoName: 'pluggedin-app' | 'pluggedin-mcp', base: string, head: string): Promise<any[]> {
   try {
-    const response = await octokit.repos.compareCommits({
+    const { data } = await octokit.repos.compareCommits({
       owner: REPO_OWNER,
       repo: repoName,
       base,
       head,
     });
-    // TODO: Process response.data.commits
-    console.log(`Fetched ${response.data.commits.length} commits between ${base} and ${head} for ${repoName}`);
-    return response.data.commits; // Return raw commit data for now
+    return data.commits;
   } catch (error) {
     console.error(`Error fetching commits between ${base} and ${head} for ${repoName}:`, error);
-    throw new Error(`Failed to fetch commits for ${repoName}`);
+    // If comparison fails, try to get commits directly
+    try {
+      const { data: commits } = await octokit.repos.listCommits({
+        owner: REPO_OWNER,
+        repo: repoName,
+        sha: head,
+        per_page: 100,
+      });
+      return commits;
+    } catch (fallbackError) {
+      console.error('Fallback commit fetch also failed:', fallbackError);
+      return [];
+    }
   }
 }
 
@@ -76,26 +136,29 @@ export function categorizeCommits(commits: any[]): ReleaseNote['content'] {
     otherChanges: [],
   };
 
-  // Example categorization logic (needs refinement based on actual commit message format)
   commits.forEach(commit => {
-    const message = commit.commit.message.toLowerCase();
+    const fullMessage = commit.commit.message;
+    const firstLine = fullMessage.split('\n')[0].trim();
+    const lowerMessage = firstLine.toLowerCase();
+
     const change: ReleaseChange = {
-      type: 'Other', // Default type
-      message: commit.commit.message.split('\n')[0], // Use first line as message
+      type: 'Other',
+      message: firstLine,
       commitUrl: commit.html_url,
-      contributors: [commit.author?.login || 'Unknown'],
+      contributors: [commit.author?.login || commit.commit.author?.name || 'Unknown'],
     };
 
-    if (message.startsWith('feat') || message.includes('feature:')) {
+    // Enhanced categorization logic
+    if (lowerMessage.match(/^feat(\([^)]+\))?:|^feature:|^add:/i) || lowerMessage.includes('new')) {
       change.type = 'Feature';
       content.features?.push(change);
-    } else if (message.startsWith('fix') || message.includes('bugfix:') || message.includes('bug fix:')) {
+    } else if (lowerMessage.match(/^fix(\([^)]+\))?:|^bugfix:|^bug:/i)) {
       change.type = 'Bug Fix';
       content.bugFixes?.push(change);
-    } else if (message.startsWith('perf') || message.includes('performance:')) {
+    } else if (lowerMessage.match(/^perf(\([^)]+\))?:|^performance:|^optimize:/i)) {
       change.type = 'Performance Improvement';
       content.performanceImprovements?.push(change);
-    } else if (message.includes('breaking change')) {
+    } else if (lowerMessage.includes('breaking change') || lowerMessage.includes('breaking:') || lowerMessage.match(/^break(\([^)]+\))?:/i)) {
       change.type = 'Breaking Change';
       content.breakingChanges?.push(change);
     } else {
@@ -103,13 +166,12 @@ export function categorizeCommits(commits: any[]): ReleaseNote['content'] {
     }
   });
 
-  // Remove empty arrays
+  // Remove empty categories
   Object.keys(content).forEach(key => {
     if (content[key as keyof typeof content]?.length === 0) {
       delete content[key as keyof typeof content];
     }
   });
-
 
   return content;
 }
@@ -121,45 +183,52 @@ export function categorizeCommits(commits: any[]): ReleaseNote['content'] {
  * @returns A promise that resolves to an array of structured ReleaseNote objects.
  */
 export async function getProcessedReleaseNotes(repoName: 'pluggedin-app' | 'pluggedin-mcp'): Promise<ReleaseNote[]> {
-  const releases = await fetchReleases(repoName, 1, 100); // Fetch more releases initially
+  const releases = await fetchReleases(repoName);
   const processedNotes: ReleaseNote[] = [];
 
-  // Sort releases by date descending (newest first)
-  releases.sort((a, b) => new Date(b.published_at || b.created_at).getTime() - new Date(a.published_at || a.created_at).getTime());
+  // Sort releases by date descending
+  releases.sort((a, b) => 
+    new Date(b.published_at || b.created_at).getTime() - 
+    new Date(a.published_at || a.created_at).getTime()
+  );
 
   for (let i = 0; i < releases.length; i++) {
     const currentRelease = releases[i];
-    // Determine the base tag/SHA for comparison (previous release tag or initial commit)
-    const baseTag = i + 1 < releases.length ? releases[i + 1].tag_name : null; // Or find the repo's initial commit SHA if needed
+    const nextRelease = releases[i + 1];
 
     let commits: any[] = [];
-    if (baseTag) {
-      try {
-        commits = await fetchCommitsBetween(repoName, baseTag, currentRelease.tag_name);
-      } catch (compareError) {
-         console.warn(`Could not compare commits between ${baseTag} and ${currentRelease.tag_name} for ${repoName}. Release notes might be incomplete. Error: ${compareError}`);
-         // Fallback: Maybe fetch commits since the last release date? More complex.
-      }
+    if (nextRelease) {
+      commits = await fetchCommitsBetween(repoName, nextRelease.tag_name, currentRelease.tag_name);
     } else {
-       // Handle the very first release (compare from the beginning of the repo if possible, or just use release body)
-       console.warn(`No previous release tag found to compare for ${currentRelease.tag_name} in ${repoName}. Commit categorization might be based only on release body.`);
-       // Potentially fetch commits up to this release date/tag if needed
+      // For the first release, try to get recent commits
+      try {
+        const { data: recentCommits } = await octokit.repos.listCommits({
+          owner: REPO_OWNER,
+          repo: repoName,
+          sha: currentRelease.tag_name,
+          per_page: 50,
+        });
+        commits = recentCommits;
+      } catch (error) {
+        console.warn(`Could not fetch commits for first release ${currentRelease.tag_name}:`, error);
+      }
     }
-
 
     const categorizedContent = categorizeCommits(commits);
 
-    // TODO: Enhance content by parsing the release body (currentRelease.body) if commit categorization is insufficient.
-    // Markdown parsing might be needed here.
+    // Add the release body to the content if available
+    if (currentRelease.body) {
+      categorizedContent.body = currentRelease.body;
+    }
 
     const note: ReleaseNote = {
       repository: repoName,
       version: currentRelease.tag_name,
       releaseDate: currentRelease.published_at || currentRelease.created_at,
-      commitSha: currentRelease.target_commitish, // Usually the SHA the tag points to
-      content: categorizedContent, // Use categorized commits
-      // Add parsed body content here if needed
+      commitSha: currentRelease.target_commitish,
+      content: categorizedContent,
     };
+
     processedNotes.push(note);
   }
 

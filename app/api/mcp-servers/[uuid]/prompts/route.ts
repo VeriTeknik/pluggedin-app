@@ -8,10 +8,73 @@ import { getAuthSession } from '@/lib/auth'; // Internal imports first
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/mcp-servers/{uuid}/prompts
- *
- * Retrieves a list of discovered prompts for a specific MCP server,
- * ensuring the server belongs to the authenticated user.
+ * @swagger
+ * /api/mcp-servers/{uuid}/prompts:
+ *   get:
+ *     summary: Get discovered prompts for a specific MCP server
+ *     description: Retrieves a list of all prompts discovered for a specific MCP server, identified by its UUID. Requires user session authentication (logged-in user). Note The global API key security definition does not apply here; this endpoint uses session cookies.
+ *     tags:
+ *       - MCP Servers
+ *       - Prompts
+ *     parameters:
+ *       - in: path
+ *         name: uuid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The UUID of the MCP server whose prompts are to be fetched.
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved the list of prompts, ordered by name.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Prompt' # Assuming Prompt schema is defined
+ *       400:
+ *         description: Bad Request - Server UUID parameter is missing.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Missing server UUID parameter
+ *       401:
+ *         description: Unauthorized - User session is invalid or missing.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized: User not logged in.
+ *       404:
+ *         description: Not Found - Server not found or user is not authorized to access it.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Server not found or user does not have access.
+ *       500:
+ *         description: Internal Server Error - Failed to fetch server prompts.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal Server Error fetching server prompts
+ *                 details:
+ *                   type: string
  */
 export async function GET(
   request: Request,

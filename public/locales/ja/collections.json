@@ -1,0 +1,28 @@
+{
+  "collections": {
+    "title": "",
+    "subtitle": "",
+    "create": "",
+    "edit": "",
+    "delete": "",
+    "share": "",
+    "visibility": {
+      "public": "",
+      "private": ""
+    },
+    "form": {
+      "name": "",
+      "description": "",
+      "visibility": "",
+      "submit": "",
+      "cancel": ""
+    },
+    "empty": {
+      "title": "",
+      "description": ""
+    },
+    "card": {
+      "install": ""
+    }
+  }
+}

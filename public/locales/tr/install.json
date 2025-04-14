@@ -1,0 +1,13 @@
+{
+  "title": "MCP Sunucusu Yükle",
+  "description": "Çalışma alanınıza yeni bir sunucu ekleyin",
+  "name": "Sunucu Adı",
+  "description": "Sunucu Açıklaması",
+  "command": "Komut",
+  "args": "Argümanlar (boşlukla ayrılmış)",
+  "env": "Ortam Değişkenleri (her satırda bir tane)",
+  "url": "Sunucu URL'si",
+  "cancel": "İptal",
+  "install": "Yükle",
+  "installing": "Yükleniyor..."
+} 

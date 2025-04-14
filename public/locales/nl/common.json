@@ -1,0 +1,33 @@
+{
+  "common": {
+    "or": "",
+    "error": "",
+    "success": "",
+    "releaseCandidate": "",
+    "validation": {
+      "required": "",
+      "email": "",
+      "minLength": "",
+      "maxLength": "",
+      "passwordMatch": ""
+    },
+    "save": "",
+    "previous": "",
+    "next": "",
+    "page": "",
+    "saving": "",
+    "remove": "",
+    "removing": "",
+    "cancel": "",
+    "confirm": "",
+    "confirmDelete": "",
+    "errors": {
+      "unexpected": ""
+    },
+    "loading": "",
+    "notAvailable": "",
+    "saveChanges": "",
+    "backToServerList": "",
+    "viewSchema": ""
+  }
+}

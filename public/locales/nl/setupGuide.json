@@ -1,0 +1,47 @@
+{
+  "setupGuide": {
+    "title": "",
+    "proxyBenefits": {
+      "title": "",
+      "description": "",
+      "benefits": [
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    "installation": {
+      "title": "",
+      "apiKeysNotice": "",
+      "manualConfig": {
+        "title": "",
+        "description": "",
+        "paths": {
+          "macos": "",
+          "windows": ""
+        }
+      },
+      "cursorConfig": {
+        "title": "",
+        "description": "",
+        "steps": [
+          "",
+          "",
+          "",
+          ""
+        ]
+      }
+    },
+    "smithery": {
+      "title": "",
+      "description": "",
+      "setupLink": "",
+      "serverLink": "",
+      "windowsNote": "",
+      "terminalCommand": "",
+      "desktopConfig": ""
+    }
+  }
+}

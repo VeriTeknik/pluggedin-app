@@ -22,6 +22,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { McpServerSource } from '@/db/schema';
+import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 import { McpIndex, McpServerCategory, PaginatedSearchResult } from '@/types/search';
@@ -42,7 +43,7 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('query') || '';
   const offset = parseInt(searchParams.get('offset') || '0');
-  const sourceParam = searchParams.get('source') || 'all';
+  const sourceParam = searchParams.get('source') || McpServerSource.COMMUNITY;
   const sortParam = (searchParams.get('sort') as SortOption) || 'relevance';
   const tagsParam = searchParams.get('tags') || '';
   const categoryParam = searchParams.get('category') || '';
@@ -57,19 +58,21 @@ function SearchContent() {
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableCategories, setAvailableCategories] = useState<McpServerCategory[]>([]);
   const { currentProfile } = useProfiles();
+  const { session } = useAuth(); // Use the auth hook
+  const currentUsername = session?.user?.username; // Get username from session
   const profileUuid = currentProfile?.uuid;
 
   // Fetch installed servers for the current profile
-  const { data: installedServersData } = useSWR<McpServer[]>(
+  const { data: installedServersData } = useSWR(
     profileUuid ? `${profileUuid}/installed-mcp-servers` : null,
-    () => (profileUuid ? getMcpServers(profileUuid) : Promise.resolve([]))
+    async () => profileUuid ? getMcpServers(profileUuid) : []
   );
 
   // Create a memoized map for quick lookup: 'source:external_id' -> uuid
   const installedServerMap = useMemo(() => {
     const map = new Map<string, string>();
     if (installedServersData) {
-      installedServersData.forEach(server => {
+      installedServersData.forEach((server: McpServer) => {
         if (server.source && server.external_id) {
           map.set(`${server.source}:${server.external_id}`, server.uuid);
         }
@@ -83,7 +86,7 @@ function SearchContent() {
     ? `/api/service/search?query=${encodeURIComponent(query)}&pageSize=${PAGE_SIZE}&offset=${offset}`
     : `/api/service/search?query=${encodeURIComponent(query)}&source=${source}&pageSize=${PAGE_SIZE}&offset=${offset}`;
 
-  const { data, error } = useSWR<PaginatedSearchResult>(
+  const { data, mutate } = useSWR(
     apiUrl,
     async (url: string) => {
       const res = await fetch(url);
@@ -93,7 +96,7 @@ function SearchContent() {
           `Failed to fetch: ${res.status} ${res.statusText} - ${errorText}`
         );
       }
-      return res.json();
+      return res.json() as Promise<PaginatedSearchResult>;
     }
   );
 
@@ -103,7 +106,7 @@ function SearchContent() {
       const tagSet = new Set<string>();
       const categorySet = new Set<McpServerCategory>();
       
-      Object.values(data.results).forEach((item: McpIndex) => {
+      Object.values(data.results as Record<string, McpIndex>).forEach((item) => {
         if (item.tags && item.tags.length) {
           item.tags.forEach(tag => tagSet.add(tag));
         }
@@ -217,20 +220,21 @@ function SearchContent() {
           placeholder={t('search.input.placeholder')}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className='mb-4'
+          className='mb-6 h-10'
         />
         
-        <div className="flex items-center justify-between mb-4">
-          <Tabs defaultValue={source} onValueChange={handleSourceChange} className="flex-1">
-            <TabsList className="grid grid-cols-4">
-              <TabsTrigger value="all">All Sources</TabsTrigger>
-              <TabsTrigger value={McpServerSource.SMITHERY}>Smithery</TabsTrigger>
-              <TabsTrigger value={McpServerSource.NPM}>NPM</TabsTrigger>
-              <TabsTrigger value={McpServerSource.GITHUB}>GitHub</TabsTrigger>
+        <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
+          <Tabs defaultValue={source} onValueChange={handleSourceChange} className="w-full">
+            <TabsList className="w-full h-10 flex rounded-lg">
+              <TabsTrigger value={McpServerSource.COMMUNITY} className="flex-1">Community</TabsTrigger>
+              <TabsTrigger value="all" className="flex-1">All Sources</TabsTrigger>
+              <TabsTrigger value={McpServerSource.SMITHERY} className="flex-1">Smithery</TabsTrigger>
+              <TabsTrigger value={McpServerSource.NPM} className="flex-1">NPM</TabsTrigger>
+              <TabsTrigger value={McpServerSource.GITHUB} className="flex-1">GitHub</TabsTrigger>
             </TabsList>
           </Tabs>
           
-          <div className="flex space-x-2">
+          <div className="flex space-x-2 shrink-0">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
@@ -398,20 +402,13 @@ function SearchContent() {
         )}
       </div>
 
-      {getSortedResults() && Object.keys(getSortedResults() || {}).length > 0 ? (
-        <CardGrid items={getSortedResults() || {}} installedServerMap={installedServerMap} />
-      ) : (
-        <div className="text-center py-8">
-          {error ? (
-            <p className="text-destructive">{t('search.error')}</p>
-          ) : data && Object.keys(data.results || {}).length === 0 ? (
-            <p>{t('search.noResults')}</p>
-          ) : data && getFilteredResults() && Object.keys(getFilteredResults() || {}).length === 0 ? (
-            <p>{t('search.noMatchingFilters')}</p>
-          ) : (
-            <p>{t('search.loading')}</p>
-          )}
-        </div>
+      {data?.results && (
+        <CardGrid
+          items={getSortedResults() || {}}
+          installedServerMap={installedServerMap}
+          currentUsername={currentUsername} // Pass the correct username
+          onRefreshNeeded={() => mutate()}
+        />
       )}
 
       {data && data.total > 0 && (

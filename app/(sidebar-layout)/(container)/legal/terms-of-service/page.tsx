@@ -12,9 +12,9 @@ export default function TermsOfServicePage() {
     <LegalDoc 
       title={t('legal.pages.terms.title')}
       description={t('legal.pages.terms.description')}
-      lastUpdated="March 26, 2024"
+      lastUpdated="26 Mart 2024"
     >
-      <h2>Introduction</h2>
+      <h2>{t('legal.pages.terms.content.intro')}</h2>
       <p>{t('legal.pages.terms.content.intro')}</p>
 
       <h2>{t('legal.pages.terms.content.responsibilities.title')}</h2>
@@ -24,46 +24,33 @@ export default function TermsOfServicePage() {
         <li>{t('legal.pages.terms.content.responsibilities.items.2')}</li>
       </ul>
 
-      <h2>Changes to Terms</h2>
-      <p>
-        We may modify these Terms at any time. It is your responsibility to review these Terms periodically. 
-        Your continued use of Plugged.in after any changes indicates your acceptance of the modified Terms.
-      </p>
+      <h2>{t('legal.pages.terms.content.changes.title')}</h2>
+      <p>{t('legal.pages.terms.content.changes.description')}</p>
 
-      <h2>Account Registration and Security</h2>
-      <p>
-        To use certain features of Plugged.in, you may need to create an account. You are responsible for:
-      </p>
+      <h2>{t('legal.pages.terms.content.account.title')}</h2>
+      <p>{t('legal.pages.terms.content.account.description')}</p>
       <ul>
-        <li>Providing accurate account information</li>
-        <li>Maintaining the security of your account credentials</li>
-        <li>All activities that occur under your account</li>
+        {t('legal.pages.terms.content.account.items', { returnObjects: true }).map((item: string, index: number) => (
+          <li key={index}>{item}</li>
+        ))}
       </ul>
-      <p>
-        We reserve the right to disable your account if we have reason to believe that you have violated these Terms.
-      </p>
+      <p>{t('legal.pages.terms.content.account.note')}</p>
 
-      <h2>MCP Servers and Tools</h2>
-      <p>
-        Plugged.in provides a platform for managing and using Model Context Protocol (MCP) servers and tools. You agree to:
-      </p>
+      <h2>{t('legal.pages.terms.content.mcp.title')}</h2>
+      <p>{t('legal.pages.terms.content.mcp.description')}</p>
       <ul>
-        <li>Use MCP servers and tools in compliance with applicable laws and regulations</li>
-        <li>Not use MCP servers for any illegal or unauthorized purpose</li>
-        <li>Take responsibility for MCP servers you configure or deploy</li>
+        {t('legal.pages.terms.content.mcp.items', { returnObjects: true }).map((item: string, index: number) => (
+          <li key={index}>{item}</li>
+        ))}
       </ul>
 
-      <h2>Intellectual Property</h2>
-      <p>
-        Plugged.in and its content, features, and functionality are owned by us and are protected by copyright, 
-        trademark, and other intellectual property laws. You may not copy, modify, distribute, or create derivative 
-        works based on Plugged.in without our explicit permission.
-      </p>
+      <h2>{t('legal.pages.terms.content.intellectual.title')}</h2>
+      <p>{t('legal.pages.terms.content.intellectual.description')}</p>
 
-      <h2>Third-Party Services</h2>
+      <h2>{t('legal.pages.disclaimer.title')}</h2>
       <p>{t('legal.pages.disclaimer.content.thirdParty')}</p>
 
-      <h2>Contact Us</h2>
+      <h2>{t('legal.pages.contact.title')}</h2>
       <p>{t('legal.pages.contact.content.description')}</p>
       <ul>
         <li>

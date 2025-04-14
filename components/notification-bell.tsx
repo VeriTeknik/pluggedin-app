@@ -99,7 +99,7 @@ export function NotificationBell() {
                     <Link 
                       href={notification.link} 
                       className="text-xs text-primary hover:underline mt-1"
-                      onClick={(e) => e.stopPropagation()} // Prevent dropdown from closing
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
                       Ayrıntıları görüntüle
                     </Link>

@@ -3,17 +3,96 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { mcpServersTable } from '@/db/schema';
+import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 // Define schema for PATCH request body
 const updateServerSchema = z.object({
   notes: z.string().nullable().optional(), // Allow notes to be updated or cleared
   // Add other updatable fields here if needed in the future
-  // e.g., name: z.string().optional(),
-  //       status: z.nativeEnum(McpServerStatus).optional(),
+       // e.g., name: z.string().optional(),
+       //       status: z.nativeEnum(McpServerStatus).optional(),
 });
 
+/**
+ * @swagger
+ * /api/mcp-servers/{uuid}:
+ *   patch:
+ *     summary: Update MCP server details
+ *     description: Updates specific fields (currently only 'notes') for an MCP server identified by its UUID. Requires user session authentication (logged-in user). Note The global API key security definition does not apply here; this endpoint uses session cookies.
+ *     tags:
+ *       - MCP Servers
+ *     parameters:
+ *       - in: path
+ *         name: uuid
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: uuid
+ *         description: The UUID of the MCP server to update.
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               notes:
+ *                 type: string
+ *                 nullable: true
+ *                 description: The notes to associate with the server. Set to null to clear existing notes.
+ *     responses:
+ *       200:
+ *         description: Successfully updated the MCP server notes.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/McpServer' # Assuming McpServer schema is defined
+ *       400:
+ *         description: Bad Request - Invalid request body.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid request body
+ *                 details:
+ *                   type: object # Zod error details
+ *       401:
+ *         description: Unauthorized - User session is invalid or missing.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized
+ *       404:
+ *         description: Not Found - Server not found or user is not authorized to update it.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Server not found or unauthorized
+ *       500:
+ *         description: Internal Server Error - Failed to update the server.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Failed to update server
+ *                 details:
+ *                   type: string
+ */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ uuid: string }> }
@@ -37,33 +116,19 @@ export async function PATCH(
     const { notes } = parseResult.data;
 
     // 1. Authorize: Verify the user owns the server via project/profile
-    // We need to join through profiles and projects to check user_id
-    type ServerWithRelations = {
-      uuid: string;
-      profile: {
-        uuid: string;
-        project: {
-          user_id: string;
-        };
-      } | null;
-    };
-    
-    const server = await db.query.mcpServersTable.findFirst({
-      columns: { uuid: true }, // Only need uuid for verification
-      where: eq(mcpServersTable.uuid, serverUuid),
-      with: {
-        profile: {
-          columns: { uuid: true },
-          with: {
-            project: {
-              columns: { user_id: true },
-            },
-          },
-        },
-      },
-    }) as ServerWithRelations | null;
+    const server = await db
+      .select({
+        uuid: mcpServersTable.uuid,
+        profile_uuid: mcpServersTable.profile_uuid,
+        user_id: projectsTable.user_id
+      })
+      .from(mcpServersTable)
+      .leftJoin(profilesTable, eq(mcpServersTable.profile_uuid, profilesTable.uuid))
+      .leftJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+      .where(eq(mcpServersTable.uuid, serverUuid))
+      .then(rows => rows[0]);
 
-    if (!server || server.profile?.project?.user_id !== userId) {
+    if (!server?.user_id || server.user_id !== userId) {
       return NextResponse.json({ error: 'Server not found or unauthorized' }, { status: 404 });
     }
 

@@ -6,7 +6,6 @@ import { use, useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 
 import { getCode, updateCode } from '@/app/actions/code';
-import { Code } from '@/types/code';
 
 export default function CodeEditorDetailPage({
   params,
@@ -16,7 +15,7 @@ export default function CodeEditorDetailPage({
   const { uuid } = use(params);
   const [language] = useState('python');
 
-  const { data: code, mutate } = useSWR<Code>(`codes/${uuid}`, () =>
+  const { data: code, mutate } = useSWR(`codes/${uuid}`, () =>
     getCode(uuid)
   );
 

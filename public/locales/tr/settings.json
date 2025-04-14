@@ -1,0 +1,142 @@
+{
+  "settings": {
+    "title": "Ayarlar",
+    "profile": {
+      "title": "Profil",
+      "description": "Profil bilgilerinizi yönetin",
+      "avatar": "Profil Resmi Yükle",
+      "avatarRecommendation": "Önerilen: Kare resim, maksimum 1MB",
+      "name": "İsim",
+      "namePlaceholder": "İsminizi girin",
+      "language": "Dil",
+      "updateButton": "Profili Güncelle",
+      "success": "Profil başarıyla güncellendi",
+      "error": "Profil güncellenirken hata oluştu",
+      "profileUrl": {
+        "title": "Profil URL'niz",
+        "setUsername": "Özel profil URL'nizi oluşturmak için yukarıdan bir kullanıcı adı belirleyin",
+        "copyTooltip": "URL'yi kopyalamak için tıklayın"
+      },
+      "social": {
+        "title": "Sosyal Profil",
+        "description": "Herkese açık profilinizi ve sosyal ayarlarınızı yönetin",
+        "username": {
+          "label": "Kullanıcı Adı",
+          "placeholder": "Bir kullanıcı adı seçin",
+          "checking": "Kullanılabilirlik kontrol ediliyor...",
+          "save": "Kaydet"
+        },
+        "publicProfile": {
+          "title": "Herkese Açık Profil",
+          "description": {
+            "noUsername": "Profilinizi herkese açık yapmak için önce bir kullanıcı adı belirleyin",
+            "public": "Profiliniz ve paylaştığınız içerikler herkese görünür olacak",
+            "private": "Profiliniz sadece size görünür olacak"
+          }
+        }
+      }
+    },
+    "password": {
+      "title": "Şifre",
+      "description": "Şifrenizi değiştirin",
+      "current": {
+        "label": "Mevcut Şifre",
+        "placeholder": "Mevcut şifrenizi girin"
+      },
+      "new": {
+        "label": "Yeni Şifre",
+        "placeholder": "Yeni şifrenizi girin"
+      },
+      "confirm": {
+        "label": "Yeni Şifreyi Onayla",
+        "placeholder": "Yeni şifrenizi tekrar girin"
+      },
+      "updateButton": "Şifreyi Değiştir",
+      "success": "Şifre başarıyla güncellendi",
+      "error": "Şifre güncellenirken hata oluştu"
+    },
+    "account": {
+      "title": "Hesabı Sil",
+      "description": "Hesabınızı ve ilişkili tüm verileri kalıcı olarak silin",
+      "deleteButton": "Hesabı Sil",
+      "confirmTitle": "Emin misiniz?",
+      "confirmDescription": "Bu işlem geri alınamaz. Hesabınız ve ilişkili tüm veriler sunucularımızdan kalıcı olarak silinecektir.",
+      "confirmButton": "Evet, hesabımı sil",
+      "deletingButton": "Siliniyor...",
+      "success": "Hesap başarıyla silindi",
+      "error": "Hesap silinirken hata oluştu"
+    },
+    "validation": {
+      "invalidJsonArray": "Geçersiz JSON formatı veya mesaj dizisi değil."
+    },
+    "connectedAccounts": {
+      "title": "Bağlı Hesaplar",
+      "description": "Bağlı sosyal medya hesaplarınızı yönetin",
+      "github": {
+        "connected": "GitHub'a bağlı",
+        "connect": "GitHub hesabınızı bağlayın"
+      },
+      "google": {
+        "connected": "Google'a bağlı",
+        "connect": "Google hesabınızı bağlayın"
+      },
+      "twitter": {
+        "connected": "Twitter'a bağlı",
+        "connect": "Twitter hesabınızı bağlayın"
+      },
+      "connected": "Bağlı",
+      "removed": "{{provider}} hesabı başarıyla kaldırıldı",
+      "error": "Hesap bağlantısı kesilirken hata oluştu"
+    },
+    "project": {
+      "title": "Mevcut Hub",
+      "description": "Mevcut hub ayarlarınızı yönetin",
+      "loading": "Proje Yükleniyor...",
+      "namePlaceholder": "Proje adı",
+      "updateSuccess": "Proje adı başarıyla güncellendi",
+      "updateError": "Proje adı güncellenirken hata oluştu",
+      "deleteConfirm": "Bu projeyi silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "deleteSuccess": "Proje başarıyla silindi",
+      "deleteError": "Proje silinirken hata oluştu",
+      "dangerZone": "Tehlikeli Bölge",
+      "deleteWarning": "Bir projeyi sildikten sonra geri dönüş yoktur. Lütfen dikkatli olun.",
+      "deleteButton": "Projeyi Sil"
+    },
+    "workspace": {
+      "title": "Mevcut Çalışma Alanı",
+      "description": "Mevcut çalışma alanı ayarlarınızı yönetin",
+      "loading": "Profil Yükleniyor...",
+      "namePlaceholder": "Profil adı",
+      "updateSuccess": "Profil adı başarıyla güncellendi",
+      "updateError": "Profil adı güncellenirken hata oluştu",
+      "deleteConfirm": "Bu profili silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+      "deleteSuccess": "Profil başarıyla silindi",
+      "deleteError": "Çalışma alanı silinirken hata oluştu",
+      "dangerZone": "Tehlikeli Bölge",
+      "deleteWarning": "Bir çalışma alanını sildikten sonra geri dönüş yoktur. Lütfen dikkatli olun.",
+      "deleteButton": "Çalışma Alanını Sil"
+    },
+    "appearance": {
+      "title": "Görünüm",
+      "description": "Uygulama görünümünü özelleştirin",
+      "colorTheme": "Renk Teması",
+      "light": "Açık",
+      "dark": "Koyu",
+      "system": "Sistem",
+      "font": "Yazı Tipi",
+      "selectFont": "Yazı tipi seçin",
+      "fonts": {
+        "geist": "Geist Sans (Varsayılan)",
+        "quicksand": "Quicksand",
+        "nunito": "Nunito",
+        "poppins": "Poppins",
+        "roboto": "Roboto",
+        "ubuntu": "Ubuntu",
+        "varelaRound": "Varela Round",
+        "workSans": "Work Sans",
+        "zillaSlab": "Zilla Slab",
+        "comfortaa": "Comfortaa"
+      }
+    }
+  }
+}

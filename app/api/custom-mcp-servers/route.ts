@@ -10,6 +10,69 @@ import {
 
 import { authenticateApiKey } from '../auth';
 
+/**
+ * @swagger
+ * /api/custom-mcp-servers:
+ *   get:
+ *     summary: Get custom MCP servers for the active profile
+ *     description: Retrieves a list of all custom MCP servers (both ACTIVE and INACTIVE) associated with the authenticated user's active profile. Includes the associated code snippet if available. Requires API key authentication.
+ *     tags:
+ *       - Custom MCP Servers
+ *     security:
+ *       - apiKey: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved custom MCP servers, ordered by creation date descending.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   uuid:
+ *                     type: string
+ *                     format: uuid
+ *                   name:
+ *                     type: string
+ *                   description:
+ *                     type: string
+ *                     nullable: true
+ *                   code_uuid:
+ *                     type: string
+ *                     format: uuid
+ *                     nullable: true
+ *                   additionalArgs:
+ *                     type: array
+ *                     items:
+ *                       type: string
+ *                     nullable: true
+ *                   env:
+ *                     type: object
+ *                     additionalProperties:
+ *                       type: string
+ *                     nullable: true
+ *                   created_at:
+ *                     type: string
+ *                     format: date-time
+ *                   profile_uuid:
+ *                     type: string
+ *                     format: uuid
+ *                   status:
+ *                     $ref: '#/components/schemas/McpServerStatus' # Assuming McpServerStatus schema is defined
+ *                   code:
+ *                     type: string
+ *                     description: The actual code snippet for the server.
+ *                     nullable: true
+ *                   codeFileName:
+ *                     type: string
+ *                     description: The filename associated with the code snippet.
+ *                     nullable: true
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or active profile not found.
+ *       500:
+ *         description: Internal Server Error - Failed to fetch custom MCP servers.
+ */
 export async function GET(request: Request) {
   try {
     const auth = await authenticateApiKey(request);
@@ -55,6 +118,63 @@ export async function GET(request: Request) {
   }
 }
 
+/**
+ * @swagger
+ * /api/custom-mcp-servers:
+ *   post:
+ *     summary: Create a new custom MCP server
+ *     description: Creates a new custom MCP server configuration associated with the authenticated user's active profile. Requires API key authentication.
+ *     tags:
+ *       - Custom MCP Servers
+ *     security:
+ *       - apiKey: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: The name for the new custom server.
+ *               description:
+ *                 type: string
+ *                 nullable: true
+ *                 description: An optional description for the server.
+ *               code_uuid:
+ *                 type: string
+ *                 format: uuid
+ *                 nullable: true
+ *                 description: The UUID of the code snippet (from `codesTable`) to associate with this server.
+ *               additionalArgs:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                 nullable: true
+ *                 description: Optional additional command-line arguments for the server process.
+ *               env:
+ *                 type: object
+ *                 additionalProperties:
+ *                   type: string
+ *                 nullable: true
+ *                 description: Optional environment variables for the server process.
+ *     responses:
+ *       200: # Changed from 201 to match implementation returning the object directly
+ *         description: Successfully created the custom MCP server.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/CustomMcpServer' # Assuming CustomMcpServer schema is defined
+ *       400:
+ *         description: Bad Request - Missing required fields (e.g., name).
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or active profile not found.
+ *       500:
+ *         description: Internal Server Error - Failed to create the custom MCP server.
+ */
 export async function POST(request: Request) {
   try {
     const auth = await authenticateApiKey(request);

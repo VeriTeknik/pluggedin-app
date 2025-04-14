@@ -35,7 +35,7 @@ interface PlaygroundChatProps {
   isThinking: boolean;
   sendMessage: () => void;
   startSession: () => void;
-  messagesEndRef: React.RefObject<HTMLDivElement>; // Keep this for potential scroll-to-bottom logic
+  messagesEndRef: React.RefObject<HTMLDivElement | null>;
   mcpServers?: {
     status: string;
   }[];
@@ -50,7 +50,6 @@ export function PlaygroundChat({
   isThinking,
   sendMessage,
   startSession,
-  messagesEndRef,
   mcpServers,
 }: PlaygroundChatProps) {
   const { t } = useTranslation();

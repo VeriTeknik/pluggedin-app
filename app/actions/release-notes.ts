@@ -1,7 +1,6 @@
 'use server';
 
 import { and, desc, eq, sql } from 'drizzle-orm';
-import { unstable_cache as cache } from 'next/cache'; // Using Next.js caching
 
 import { db } from '@/db';
 import { releaseNotes } from '@/db/schema';
@@ -30,33 +29,37 @@ export async function updateReleaseNotesFromGitHub(): Promise<{ success: boolean
       console.log(`Fetched ${notesFromGitHub.length} notes for ${repo}.`);
 
       if (notesFromGitHub.length > 0) {
-        // Upsert logic: Insert new notes or update existing ones based on version and repo
-        // Drizzle doesn't have a direct upsert based on multiple columns easily without raw SQL or complex logic.
-        // Simple approach: Delete existing for the repo and insert all fetched ones.
-        // More robust: Fetch existing versions, compare, insert/update selectively.
+        // Get existing versions for this repo
+        const existingVersions = await db.select({ 
+          version: releaseNotes.version,
+          repository: releaseNotes.repository 
+        })
+        .from(releaseNotes)
+        .where(eq(releaseNotes.repository, repo));
 
-        // Using the simpler approach for now:
-        console.log(`Deleting existing notes for ${repo}...`);
-        await db.delete(releaseNotes).where(eq(releaseNotes.repository, repo));
+        const existingVersionMap = new Map(
+          existingVersions.map(v => [`${v.repository}-${v.version}`, true])
+        );
 
-        console.log(`Inserting ${notesFromGitHub.length} new notes for ${repo}...`);
-        const dataToInsert = notesFromGitHub.map(note => ({
-          repository: note.repository,
-          version: note.version,
-          releaseDate: new Date(note.releaseDate), // Ensure it's a Date object
-          content: note.content as any, // Cast needed for jsonb type
-          commitSha: note.commitSha,
-        }));
+        // Filter out duplicates and prepare data for insert
+        const dataToInsert = notesFromGitHub
+          .filter(note => !existingVersionMap.has(`${note.repository}-${note.version}`))
+          .map(note => ({
+            repository: note.repository,
+            version: note.version,
+            releaseDate: new Date(note.releaseDate),
+            content: note.content as any,
+            commitSha: note.commitSha,
+          }));
 
-        await db.insert(releaseNotes).values(dataToInsert);
-        updatedRepos.push(repo);
-        console.log(`Successfully updated notes for ${repo}.`);
-
-        // Invalidate cache for this repository
-        // Note: Revalidating tags requires Next.js 13.4+ App Router setup
-        // Revalidate specific tags if using them
-        // revalidateTag(`${CACHE_KEY_PREFIX}${repo}`);
-        // revalidateTag(`${CACHE_KEY_PREFIX}all`);
+        if (dataToInsert.length > 0) {
+          console.log(`Inserting ${dataToInsert.length} new notes for ${repo}...`);
+          await db.insert(releaseNotes).values(dataToInsert);
+          updatedRepos.push(repo);
+          console.log(`Successfully updated notes for ${repo}.`);
+        } else {
+          console.log(`No new notes to insert for ${repo}.`);
+        }
       }
     } catch (error: any) {
       console.error(`Error updating release notes for ${repo}:`, error);
@@ -84,43 +87,38 @@ export async function getReleaseNotes(
   page = 1,
   limit = 10
 ): Promise<ReleaseNote[]> {
-  const cacheKey = `${CACHE_KEY_PREFIX}${repositoryFilter}_page${page}_limit${limit}`;
+  try {
+    console.log(`Fetching release notes for ${repositoryFilter}, page ${page}, limit ${limit}`);
+    const offset = (page - 1) * limit;
+    
+    // Build query conditions
+    const conditions = repositoryFilter !== 'all' 
+      ? [eq(releaseNotes.repository, repositoryFilter)] 
+      : [];
 
-  // Using unstable_cache for simple time-based caching
-  const cachedNotes = await cache(
-    async () => {
-      console.log(`Cache miss for ${cacheKey}. Fetching from DB...`);
-      const offset = (page - 1) * limit;
-      
-      // Build query conditions
-      const conditions = repositoryFilter !== 'all' 
-        ? [eq(releaseNotes.repository, repositoryFilter)] 
-        : [];
+    const notes = await db.select()
+                          .from(releaseNotes)
+                          .where(and(...conditions))
+                          .orderBy(desc(releaseNotes.releaseDate))
+                          .limit(limit)
+                          .offset(offset);
 
-      const notes = await db.select()
-                            .from(releaseNotes)
-                            .where(and(...conditions)) // Apply conditions here
-                            .orderBy(desc(releaseNotes.releaseDate))
-                            .limit(limit)
-                            .offset(offset);
+    console.log(`Found ${notes.length} release notes in database`);
 
-      // Convert Date objects to ISO strings and assert repository type
-      return notes.map(note => ({
-        ...note,
-        repository: note.repository as 'pluggedin-app' | 'pluggedin-mcp', // Type assertion
-        releaseDate: note.releaseDate.toISOString(),
-        content: note.content as ReleaseNoteContentDb, 
-        createdAt: note.createdAt.toISOString(),
-        updatedAt: note.updatedAt.toISOString(),
-      }));
-    },
-    [cacheKey], // Key parts for the cache
-    { revalidate: CACHE_TTL_SECONDS } // Cache duration
-  )(); // Immediately invoke the cached function
-
-  return cachedNotes;
+    // Convert Date objects to ISO strings and assert repository type
+    return notes.map(note => ({
+      ...note,
+      repository: note.repository as 'pluggedin-app' | 'pluggedin-mcp',
+      releaseDate: note.releaseDate.toISOString(),
+      content: note.content as ReleaseNoteContentDb,
+      createdAt: note.createdAt.toISOString(),
+      updatedAt: note.updatedAt.toISOString(),
+    }));
+  } catch (error) {
+    console.error('Error fetching release notes:', error);
+    throw error;
+  }
 }
-
 
 /**
  * Populates the database with historical release notes.

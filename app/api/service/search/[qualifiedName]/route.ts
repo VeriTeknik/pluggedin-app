@@ -17,16 +17,15 @@ async function enrichServerWithMetrics(server: McpIndex): Promise<McpIndex> {
   
   try {
     // Get metrics for this server
-    const metricsResult = await getServerRatingMetrics(
-      undefined, // No server UUID for external sources
-      server.external_id,
-      server.source
-    );
+    const metricsResult = await getServerRatingMetrics({
+      source: server.source,
+      externalId: server.external_id
+    });
     
     if (metricsResult.success && metricsResult.metrics) {
       // Add metrics to server data
       server.rating = metricsResult.metrics.averageRating;
-      server.rating_count = metricsResult.metrics.ratingCount;
+      server.ratingCount = metricsResult.metrics.ratingCount;
       server.installation_count = metricsResult.metrics.installationCount;
     }
   } catch (error) {

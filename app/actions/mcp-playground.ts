@@ -277,6 +277,41 @@ function formatModelName(modelId: string): string {
     .join(' ');
 }
 
+// Global cleanup state tracking
+let isCleaningUp = false;
+
+// Handle process termination
+const handleProcessTermination = async () => {
+  if (isCleaningUp) return;
+  isCleaningUp = true;
+
+  console.log('[MCP] Starting graceful shutdown...');
+  
+  // Get all active sessions
+  const cleanupPromises = Array.from(activeSessions.entries()).map(async ([profileUuid, session]) => {
+    try {
+      await session.cleanup();
+      activeSessions.delete(profileUuid);
+    } catch (error) {
+      console.error(`[MCP] Failed to cleanup session for profile ${profileUuid}:`, error);
+    }
+  });
+
+  try {
+    await Promise.all(cleanupPromises);
+    console.log('[MCP] All sessions cleaned up successfully');
+  } catch (error) {
+    console.error('[MCP] Error during final cleanup:', error);
+  }
+  
+  process.exit(0);
+};
+
+// Handle various termination signals
+process.on('SIGTERM', handleProcessTermination);
+process.on('SIGINT', handleProcessTermination);
+process.on('beforeExit', handleProcessTermination);
+
 // Get or create a playground session for a profile
 export async function getOrCreatePlaygroundSession(
   profileUuid: string,
@@ -416,22 +451,52 @@ export async function getOrCreatePlaygroundSession(
 
       // Create enhanced cleanup function using the combined cleanup from progressive init
       const enhancedCleanup: McpServerCleanupFn = async () => {
+        let cleanupError: Error | undefined;
+        
         try {
-          // First close any log files
-          logger.cleanup();
+          // First close any log files with timeout
+          await Promise.race([
+            logger.cleanup(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Logger cleanup timeout')), 5000)
+            )
+          ]);
+        } catch (error) {
+          console.error('[MCP] Logger cleanup error:', error);
+          cleanupError = error instanceof Error ? error : new Error(String(error));
+        }
 
-          // Then call the combined cleanup from progressive init
-          await cleanup();
+        try {
+          // Then call the combined cleanup from progressive init with timeout
+          await Promise.race([
+            cleanup(),
+            new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('MCP cleanup timeout')), 10000)
+            )
+          ]);
+        } catch (error) {
+          console.error('[MCP] MCP cleanup error:', error);
+          if (!cleanupError) {
+            cleanupError = error instanceof Error ? error : new Error(String(error));
+          }
+        }
 
-          // Log the session end
+        try {
+          // Log the session end regardless of previous cleanup errors
           await logAuditEvent({
             profileUuid,
             type: 'MCP_REQUEST',
             action: 'END_SESSION',
+            metadata: {
+              error: cleanupError?.message
+            }
           });
         } catch (error) {
-          console.error('Enhanced cleanup error:', error);
+          console.error('[MCP] Audit logging error during cleanup:', error);
         }
+
+        // If we had any cleanup errors, throw the first one
+        if (cleanupError) throw cleanupError;
       };
 
       // Store session

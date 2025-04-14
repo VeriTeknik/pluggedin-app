@@ -1,122 +1,40 @@
 'use client';
 
-import { ArrowRight, FlaskConical, LogIn, Unplug, Wrench } from 'lucide-react';
-import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
 import { Footer } from '@/components/footer';
-import { LandingHero } from '@/components/landing-hero';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { LanguageSwitcher } from '@/components/ui/language-switcher';
+import { LandingNavbar } from '@/components/landing-navbar'; // New Navbar
+import { LandingCollectionManagement } from '@/components/landing-sections/collection-management';
+import { LandingCommunitySharing } from '@/components/landing-sections/community-sharing';
+import { LandingCta } from '@/components/landing-sections/cta';
+import { LandingFeaturesOverview } from '@/components/landing-sections/features-overview';
+import { LandingHeroSection } from '@/components/landing-sections/hero'; // New Hero
+import { LandingMcpPlayground } from '@/components/landing-sections/mcp-playground';
+import { LandingSearchFunctionality } from '@/components/landing-sections/search-functionality';
+import { LandingTestimonials } from '@/components/landing-sections/testimonials';
 
 export default function Home() {
-  const { t, ready } = useTranslation();
+  const { t, ready } = useTranslation(); // Keep ready check for i18n loading
 
+  // Add a loading state while i18n is initializing
   if (!ready) {
-    return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
+     // Basic loading state, can be styled better
+    return <div className="flex min-h-screen items-center justify-center">Loading translations...</div>;
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <div className="container mx-auto py-8 space-y-12 flex-grow">
-        {/* Navigation */}
-        <div className="flex justify-end gap-4 items-center">
-          <LanguageSwitcher />
-          <Button asChild variant="outline">
-            <Link href="/mcp-servers" className="flex items-center">
-              <LogIn className="mr-2 h-4 w-4" />
-              {t('landing.navigation.enterApp')}
-            </Link>
-          </Button>
-        </div>
-        
-        {/* Hero Section */}
-        <LandingHero />
-
-        {/* Feature Cards */}
-        <section className="grid md:grid-cols-3 gap-6">
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <Unplug className="h-10 w-10 text-primary mb-4" />
-              <CardTitle>{t('landing.features.pluginManagement.title')}</CardTitle>
-              <CardDescription>
-                {t('landing.features.pluginManagement.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {t('landing.features.pluginManagement.content')}
-              </p>
-              <Button variant="outline" asChild className="w-full">
-                <Link href="/mcp-servers">
-                  {t('landing.features.pluginManagement.action')}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <FlaskConical className="h-10 w-10 text-primary mb-4" />
-              <CardTitle>{t('landing.features.aiPlayground.title')}</CardTitle>
-              <CardDescription>
-                {t('landing.features.aiPlayground.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {t('landing.features.aiPlayground.content')}
-              </p>
-              <Button variant="outline" asChild className="w-full">
-                <Link href="/mcp-playground">
-                  {t('landing.features.aiPlayground.action')}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader>
-              <Wrench className="h-10 w-10 text-primary mb-4" />
-              <CardTitle>{t('landing.features.customDevelopment.title')}</CardTitle>
-              <CardDescription>
-                {t('landing.features.customDevelopment.description')}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-4">
-                {t('landing.features.customDevelopment.content')}
-              </p>
-              <Button variant="outline" asChild className="w-full">
-                <Link href="/custom-mcp-servers">
-                  {t('landing.features.customDevelopment.action')}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
-
-        {/* Getting Started */}
-        <section className="border rounded-lg p-8 bg-muted/10">
-          <div className="max-w-3xl mx-auto">
-            <h2 className="text-2xl font-semibold mb-4">{t('landing.gettingStarted.title')}</h2>
-            <p className="text-muted-foreground mb-6">
-              {t('landing.gettingStarted.description')}
-            </p>
-            <Button asChild>
-              <Link href="/setup-guide">
-                {t('landing.gettingStarted.action')}
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </section>
-      </div>
-      
+    <div className="flex flex-col min-h-screen">
+      <LandingNavbar />
+      <main className="flex-grow">
+        <LandingHeroSection />
+        <LandingFeaturesOverview />
+        <LandingCommunitySharing />
+        <LandingCollectionManagement />
+        <LandingSearchFunctionality />
+        <LandingMcpPlayground />
+        <LandingTestimonials />
+        <LandingCta />
+      </main>
       <Footer />
     </div>
   );

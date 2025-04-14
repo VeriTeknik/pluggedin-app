@@ -151,8 +151,8 @@ export async function progressivelyInitializeMcpServers(
     logger: any;
     perServerTimeout?: number;
     totalTimeout?: number;
-    skipHealthChecks?: boolean; // Option to skip health checks
-    maxRetries?: number; // Option for max retries per server
+    skipHealthChecks?: boolean;
+    maxRetries?: number;
   }
 ): Promise<ProgressiveInitResult> {
   const {
@@ -168,99 +168,129 @@ export async function progressivelyInitializeMcpServers(
   const cleanupFunctions: McpServerCleanupFn[] = [];
   const failedServers: string[] = [];
 
-  // Perform health checks if not skipped
-  let healthResults: Record<string, boolean> = {};
-  if (!skipHealthChecks) {
-     await addServerLogForProfile(profileUuid, 'info', 'Performing pre-initialization health checks...');
-     healthResults = await performServerHealthChecks(mcpServersConfig, profileUuid);
-     await addServerLogForProfile(profileUuid, 'info', 'Health checks completed.');
-  } else {
-     // Assume all healthy if skipped
-     Object.keys(mcpServersConfig).forEach(name => healthResults[name] = true);
-  }
-
-  // Sort server names: healthy first, then by original order
-  const serverNames = Object.keys(mcpServersConfig).sort((a, b) => {
-    const healthA = healthResults[a] ?? false;
-    const healthB = healthResults[b] ?? false;
-    if (healthA && !healthB) return -1;
-    if (!healthA && healthB) return 1;
-    return 0; // Keep original relative order for servers with same health status
-  });
-
-  // Combined cleanup function
+  // Add cleanup tracking
+  let isCleaningUp = false;
+  
+  // Combined cleanup function with timeout
   const combinedCleanup: McpServerCleanupFn = async () => {
+    if (isCleaningUp) return;
+    isCleaningUp = true;
+
     const cleanupPromises = cleanupFunctions.map(cleanup =>
-      cleanup().catch(err => console.error('Error during individual server cleanup:', err))
+      cleanup().catch(err => console.error('[MCP] Error during individual server cleanup:', err))
     );
-    await Promise.allSettled(cleanupPromises);
+
+    try {
+      await Promise.race([
+        Promise.allSettled(cleanupPromises),
+        new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Combined cleanup timeout')), 15000)
+        )
+      ]);
+    } catch (error) {
+      console.error('[MCP] Error during progressive cleanup:', error);
+      throw error; // Re-throw to be handled by caller
+    }
   };
 
-  // Overall timeout promise
-  let overallTimeoutId: NodeJS.Timeout | null = null;
-  const overallTimeoutPromise = new Promise<never>((_, reject) => {
-    overallTimeoutId = setTimeout(() => {
-      reject(new Error(`Total MCP initialization timed out after ${totalTimeout / 1000} seconds. Some servers may have failed or were skipped.`));
-    }, totalTimeout);
-  });
+  // Ensure cleanup runs on process termination
+  const cleanup = async () => {
+    try {
+      await combinedCleanup();
+    } catch (error) {
+      console.error('[MCP] Error during cleanup:', error);
+    }
+  };
+
+  // Add process termination handlers
+  process.once('beforeExit', cleanup);
+  process.once('SIGTERM', cleanup);
+  process.once('SIGINT', cleanup);
 
   try {
+    // Perform health checks if not skipped
+    let healthResults: Record<string, boolean> = {};
+    if (!skipHealthChecks) {
+      await addServerLogForProfile(profileUuid, 'info', '[MCP] Performing pre-initialization health checks...');
+      healthResults = await performServerHealthChecks(mcpServersConfig, profileUuid);
+      await addServerLogForProfile(profileUuid, 'info', '[MCP] Health checks completed.');
+    } else {
+      // Assume all healthy if skipped
+      Object.keys(mcpServersConfig).forEach(name => healthResults[name] = true);
+    }
+
+    // Sort server names: healthy first, then by original order
+    const serverNames = Object.keys(mcpServersConfig).sort((a, b) => {
+      const healthA = healthResults[a] ?? false;
+      const healthB = healthResults[b] ?? false;
+      if (healthA && !healthB) return -1;
+      if (!healthA && healthB) return 1;
+      return 0;
+    });
+
+    // Overall timeout promise
+    let overallTimeoutId: NodeJS.Timeout | null = null;
+    const overallTimeoutPromise = new Promise<never>((_, reject) => {
+      overallTimeoutId = setTimeout(() => {
+        reject(new Error(`[MCP] Total initialization timed out after ${totalTimeout / 1000} seconds`));
+      }, totalTimeout);
+    });
+
     // Start initialization process with overall timeout
     await Promise.race([
       (async () => {
-        // Initialize servers one by one based on sorted order
         for (const serverName of serverNames) {
           const serverConfig = mcpServersConfig[serverName];
           const startTime = Date.now();
           const statusEntry: ServerInitStatus = { serverName, status: 'pending', startTime };
           initStatus.push(statusEntry);
 
-          // Skip initialization if health check failed (and not skipped)
           if (!skipHealthChecks && !healthResults[serverName]) {
-             statusEntry.status = 'skipped';
-             statusEntry.error = 'Skipped due to failed health check';
-             statusEntry.endTime = Date.now();
-             await addServerLogForProfile(profileUuid, 'warn', `Skipping initialization for ${serverName} due to failed health check.`);
-             continue; // Move to the next server
+            statusEntry.status = 'skipped';
+            statusEntry.error = 'Skipped due to failed health check';
+            statusEntry.endTime = Date.now();
+            await addServerLogForProfile(
+              profileUuid,
+              'warn',
+              `[MCP] Skipping initialization for ${serverName} due to failed health check.`
+            );
+            continue;
           }
 
-          await addServerLogForProfile(profileUuid, 'info', `Initializing MCP server: ${serverName}`);
-
           try {
-            // Initialize with retries
             const result = await initializeSingleServer(
               serverName,
-              serverConfig, // Pass the Record<string, any>
+              serverConfig,
               {
                 logger,
                 timeout: perServerTimeout,
-                maxRetries: maxRetries,
+                maxRetries,
                 profileUuid
               }
             );
 
-            // Success
             statusEntry.status = 'success';
             statusEntry.endTime = Date.now();
             allTools.push(...result.tools);
             cleanupFunctions.push(result.cleanup);
-            await addServerLogForProfile(profileUuid, 'info', `Successfully initialized MCP server: ${serverName}`);
-
+            await addServerLogForProfile(
+              profileUuid,
+              'info',
+              `[MCP] Successfully initialized server: ${serverName}`
+            );
           } catch (error) {
-            // Failure after retries
             statusEntry.status = 'error';
             statusEntry.error = error instanceof Error ? error.message : String(error);
             statusEntry.endTime = Date.now();
             failedServers.push(serverName);
-            // Error already logged within initializeSingleServer attempts
-            console.error(`Failed to initialize MCP server "${serverName}" after all attempts:`, error);
+            console.error(`[MCP] Failed to initialize server "${serverName}":`, error);
           }
         }
       })(),
       overallTimeoutPromise
     ]);
 
-    // If we reach here, the process completed within the overall timeout
+    // Clear timeout if we complete successfully
     if (overallTimeoutId) clearTimeout(overallTimeoutId);
 
     return {
@@ -269,17 +299,14 @@ export async function progressivelyInitializeMcpServers(
       initStatus,
       failedServers
     };
+
   } catch (error) {
-    // Overall timeout triggered or another unexpected error occurred
-    if (overallTimeoutId) clearTimeout(overallTimeoutId);
-    console.error('Error during progressive MCP initialization:', error);
-
-    // Attempt cleanup for any servers that *did* succeed before the timeout/error
-    await combinedCleanup().catch(err =>
-      console.error('Error during cleanup after initialization failure:', err)
-    );
-
-    // Re-throw the error (likely the timeout error)
+    console.error('[MCP] Error during progressive initialization:', error);
     throw error;
+  } finally {
+    // Remove cleanup handlers
+    process.removeListener('beforeExit', cleanup);
+    process.removeListener('SIGTERM', cleanup);
+    process.removeListener('SIGINT', cleanup);
   }
 }

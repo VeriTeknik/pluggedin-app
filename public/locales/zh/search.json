@@ -1,0 +1,50 @@
+{
+  "search": {
+    "title": "",
+    "subtitle": "",
+    "explorePlugins": "",
+    "input": {
+      "placeholder": ""
+    },
+    "loading": "",
+    "noResults": "",
+    "error": "",
+    "sort": "",
+    "sortBy": "",
+    "sortOptions": {
+      "relevance": "",
+      "popularity": "",
+      "recent": "",
+      "stars": ""
+    },
+    "filter": "",
+    "filterByTags": "",
+    "noTagsAvailable": "",
+    "clearFilters": "",
+    "clearAllFilters": "",
+    "noMatchingTags": "",
+    "noMatchingFilters": "",
+    "category": "",
+    "filterByCategory": "",
+    "noCategoriesAvailable": "",
+    "allCategories": "",
+    "categories": {
+      "LLM": "",
+      "UTILITY": "",
+      "TOOL": "",
+      "DATA": "",
+      "CONNECTOR": "",
+      "SEARCH": "",
+      "CODE": "",
+      "IMAGE": "",
+      "AUDIO": "",
+      "VIDEO": "",
+      "OTHER": ""
+    },
+    "card": {
+      "install": "",
+      "installed": "已安装",
+      "rate": "评分"
+    }
+  }
+}

@@ -13,6 +13,93 @@ const registerSchema = z.object({
   password: z.string().min(8),
 });
 
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     description: Creates a new user account, hashes the password, generates an email verification token, and sends a verification email.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - email
+ *               - password
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 minLength: 2
+ *                 maxLength: 100
+ *                 description: The user's full name.
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: The user's email address. Must be unique.
+ *               password:
+ *                 type: string
+ *                 format: password
+ *                 minLength: 8
+ *                 description: The user's desired password (at least 8 characters).
+ *     responses:
+ *       201:
+ *         description: User registered successfully. Verification email sent.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User registered successfully! Please verify your email.
+ *                 # Development-only fields (remove from production docs if desired)
+ *                 verificationToken:
+ *                   type: string
+ *                   description: (Development Only) The generated verification token.
+ *                 verificationUrl:
+ *                   type: string
+ *                   format: url
+ *                   description: (Development Only) The full URL to verify the email.
+ *       400:
+ *         description: Bad Request - Invalid input data (e.g., email format, password length).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid input data
+ *                 errors:
+ *                   type: array # Zod error details
+ *                   items:
+ *                     type: object
+ *       409:
+ *         description: Conflict - A user with the provided email already exists.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: User with this email already exists
+ *       500:
+ *         description: Internal Server Error - Failed to register user or send verification email.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Something went wrong
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -93,4 +180,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

@@ -30,9 +30,9 @@ export function PromptList({ serverUuid }: PromptListProps) {
   const { t } = useTranslation();
   const apiUrl = `/api/mcp-servers/${serverUuid}/prompts`;
 
-  const { data: prompts, error, isLoading } = useSWR<PromptItem[]>(apiUrl, fetcher, {
+  const { data: prompts, error, isLoading } = useSWR(apiUrl, fetcher, {
     revalidateOnFocus: false,
-  });
+  }) as { data: PromptItem[]; error: Error | undefined; isLoading: boolean };
 
   if (isLoading) {
     return (
@@ -74,7 +74,7 @@ export function PromptList({ serverUuid }: PromptListProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {prompts.map((prompt) => (
+          {prompts.map((prompt: PromptItem) => (
             <TableRow key={prompt.uuid} className="dark:border-slate-800">
               <TableCell className="font-medium flex items-center">
                  <MessageSquareText className="h-4 w-4 mr-2 text-muted-foreground" />

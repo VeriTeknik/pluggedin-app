@@ -49,7 +49,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { McpServerStatus } from '@/db/schema';
 import { useCodes } from '@/hooks/use-codes';
 import { useProfiles } from '@/hooks/use-profiles';
-import { CustomMcpServer } from '@/types/custom-mcp-server';
+// import { CustomMcpServer } from '@/types/custom-mcp-server';  implement later
+
+interface Code {
+  uuid: string;
+  fileName: string;
+}
 
 export default function CustomMcpServerDetailPage({
   params,
@@ -78,7 +83,7 @@ export default function CustomMcpServerDetailPage({
     data: customMcpServer,
     error,
     mutate,
-  } = useSWR<CustomMcpServer | null>(
+  } = useSWR(
     uuid && currentProfile?.uuid
       ? ['getCustomMcpServerByUuid', uuid, currentProfile?.uuid]
       : null,
@@ -91,9 +96,10 @@ export default function CustomMcpServerDetailPage({
         name: customMcpServer.name,
         description: customMcpServer.description || '',
         additionalArgs: customMcpServer.additionalArgs.join(' '),
-        env: Object.entries(customMcpServer.env)
-          .map(([key, value]) => `${key}=${value}`)
-          .join('\n'),
+        env:
+          Object.entries(customMcpServer.env)
+            .map(([key, value]) => `${key}=${value}`)
+            .join('\n'),
         code_uuid: customMcpServer.code_uuid || '',
       });
     }
@@ -230,7 +236,7 @@ export default function CustomMcpServerDetailPage({
                                 className='w-full justify-between'>
                                 {field.value
                                   ? codes?.find(
-                                      (code) => code.uuid === field.value
+                                      (code: Code) => code.uuid === field.value
                                     )?.fileName
                                   : 'Select code...'}
                                 <ChevronsUpDown className='ml-2 h-4 w-4 shrink-0 opacity-50' />
@@ -243,7 +249,7 @@ export default function CustomMcpServerDetailPage({
                                 <CommandInput placeholder='Search code...' />
                                 <CommandEmpty>No code found.</CommandEmpty>
                                 <CommandGroup>
-                                  {codes?.map((code) => (
+                                  {codes?.map((code: Code) => (
                                     <CommandItem
                                       key={code.uuid}
                                       value={code.uuid}

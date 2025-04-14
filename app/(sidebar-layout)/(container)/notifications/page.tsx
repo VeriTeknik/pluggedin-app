@@ -5,6 +5,7 @@ import { tr } from 'date-fns/locale';
 import { Bell, Check, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { 
   deleteAllNotifications, 
@@ -37,6 +38,7 @@ import { useToast } from '@/hooks/use-toast';
 export default function NotificationsPage() {
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const profileUuid = currentProfile?.uuid || '';
   const { notifications, refreshNotifications, unreadCount, markAllAsRead } =
     useNotifications();
@@ -67,10 +69,10 @@ export default function NotificationsPage() {
     try {
       await markNotificationAsRead(id, profileUuid);
       refreshNotifications();
-    } catch (_error) { // Prefix unused error with _
+    } catch (_error) {
       toast({
-        title: 'Error',
-        description: 'Failed to mark notification as read',
+        title: t('common.error'),
+        description: t('notifications.toast.markReadError'),
         variant: 'destructive',
       });
     }
@@ -85,14 +87,14 @@ export default function NotificationsPage() {
     try {
       await deleteNotification(id, profileUuid);
       toast({
-        title: 'Success',
-        description: 'Notification deleted',
+        title: t('common.success'),
+        description: t('notifications.toast.deleteSuccess'),
       });
       refreshNotifications();
-    } catch (_error) { // Prefix unused error with _
+    } catch (_error) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete notification',
+        title: t('common.error'),
+        description: t('notifications.toast.deleteError'),
         variant: 'destructive',
       });
     }
@@ -107,14 +109,14 @@ export default function NotificationsPage() {
     try {
       await deleteAllNotifications(profileUuid);
       toast({
-        title: 'Success',
-        description: 'All notifications deleted',
+        title: t('common.success'),
+        description: t('notifications.toast.deleteAllSuccess'),
       });
       refreshNotifications();
-    } catch (_error) { // Prefix unused error with _
+    } catch (_error) {
       toast({
-        title: 'Error',
-        description: 'Failed to delete all notifications',
+        title: t('common.error'),
+        description: t('notifications.toast.deleteAllError'),
         variant: 'destructive',
       });
     }
@@ -136,16 +138,16 @@ export default function NotificationsPage() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-2xl">Bildirimler</CardTitle>
+            <CardTitle className="text-2xl">{t('notifications.title')}</CardTitle>
             <CardDescription>
-              Sistemle ilgili tüm bildirimleri burada görebilirsiniz
+              {t('notifications.description')}
             </CardDescription>
           </div>
           <div className="flex gap-2">
             {unreadCount > 0 && (
               <Button variant="outline" onClick={() => markAllAsRead()}>
                 <Check className="mr-2 h-4 w-4" />
-                Tümünü Okundu İşaretle
+                {t('notifications.actions.markAllAsRead')}
               </Button>
             )}
             <DropdownMenu>
@@ -155,13 +157,13 @@ export default function NotificationsPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuLabel>İşlemler</DropdownMenuLabel>
+                <DropdownMenuLabel>{t('notifications.actions.actions')}</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
                   onClick={handleDeleteAll}
                 >
-                  Tüm Bildirimleri Sil
+                  {t('notifications.actions.deleteAll')}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -171,20 +173,20 @@ export default function NotificationsPage() {
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="all">
-                Tümü
+                {t('notifications.tabs.all')}
                 <Badge className="ml-2" variant="secondary">
                   {notifications.length}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="unread">
-                Okunmamış
+                {t('notifications.tabs.unread')}
                 <Badge className="ml-2" variant="secondary">
                   {unreadCount}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="ALERT">Uyarılar</TabsTrigger>
-              <TabsTrigger value="INFO">Bilgiler</TabsTrigger>
-              <TabsTrigger value="SUCCESS">Başarılar</TabsTrigger>
+              <TabsTrigger value="ALERT">{t('notifications.tabs.alerts')}</TabsTrigger>
+              <TabsTrigger value="INFO">{t('notifications.tabs.info')}</TabsTrigger>
+              <TabsTrigger value="SUCCESS">{t('notifications.tabs.success')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value={activeTab}>
@@ -192,10 +194,10 @@ export default function NotificationsPage() {
                 <div className="flex flex-col items-center justify-center py-12 text-center">
                   <Bell className="h-12 w-12 text-muted-foreground mb-4" />
                   <h3 className="text-lg font-medium">
-                    Bildirim Bulunmuyor
+                    {t('notifications.empty.title')}
                   </h3>
                   <p className="text-muted-foreground max-w-sm mt-1">
-                    Bu kategoride hiç bildiriminiz bulunmuyor.
+                    {t('notifications.empty.description')}
                   </p>
                 </div>
               ) : (

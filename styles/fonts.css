@@ -1,0 +1,40 @@
+/* Font classes */
+.font-geist {
+  font-family: var(--font-geist-sans);
+}
+
+.font-quicksand {
+  font-family: var(--font-quicksand);
+}
+
+.font-nunito {
+  font-family: var(--font-nunito);
+}
+
+.font-poppins {
+  font-family: var(--font-poppins);
+}
+
+.font-roboto {
+  font-family: var(--font-roboto);
+}
+
+.font-ubuntu {
+  font-family: var(--font-ubuntu);
+}
+
+.font-varela-round {
+  font-family: 'Varela Round', sans-serif;
+}
+
+.font-work-sans {
+  font-family: var(--font-work-sans);
+}
+
+.font-zilla-slab {
+  font-family: var(--font-zilla-slab);
+}
+
+.font-comfortaa {
+  font-family: var(--font-comfortaa);
+} 

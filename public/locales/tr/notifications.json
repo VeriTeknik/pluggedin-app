@@ -1,0 +1,29 @@
+{
+  "notifications": {
+    "title": "Bildirimler",
+    "description": "Sistemle ilgili tüm bildirimleri burada görebilirsiniz",
+    "actions": {
+      "markAllAsRead": "Tümünü Okundu İşaretle",
+      "actions": "İşlemler",
+      "deleteAll": "Tüm Bildirimleri Sil"
+    },
+    "tabs": {
+      "all": "Tümü",
+      "unread": "Okunmamış",
+      "alerts": "Uyarılar",
+      "info": "Bilgiler",
+      "success": "Başarılar"
+    },
+    "empty": {
+      "title": "Bildirim Bulunmuyor",
+      "description": "Bu kategoride hiç bildiriminiz bulunmuyor."
+    },
+    "toast": {
+      "markReadError": "Bildirim okundu olarak işaretlenemedi",
+      "deleteSuccess": "Bildirim silindi",
+      "deleteError": "Bildirim silinemedi",
+      "deleteAllSuccess": "Tüm bildirimler silindi",
+      "deleteAllError": "Tüm bildirimler silinemedi"
+    }
+  }
+}

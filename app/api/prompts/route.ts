@@ -15,10 +15,74 @@ type McpPromptListEntry = {
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/prompts
- * Retrieves a list of discovered prompts for the profile associated
- * with the provided API key. Only prompts from active MCP servers are returned.
- * Expects 'Authorization: Bearer <API_KEY>' header.
+ * @swagger
+ * /api/prompts:
+ *   get:
+ *     summary: Get discovered prompts for the active profile
+ *     description: |
+ *       Retrieves a list of discovered prompts associated with the authenticated user's active profile.
+ *       Only prompts linked to **active** MCP servers within that profile are included.
+ *       The response is formatted to mimic the MCP Prompt list structure (`ListPromptsResult`) for compatibility with the pluggedin-mcp proxy.
+ *       Requires API key authentication.
+ *     tags:
+ *       - Prompts
+ *       - MCP Servers
+ *     security:
+ *       - apiKey: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved discovered prompts, ordered by name.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     description: The name of the prompt.
+ *                   description:
+ *                     type: string
+ *                     description: The description of the prompt.
+ *                     nullable: true
+ *                   arguments:
+ *                     type: array
+ *                     description: The arguments schema defined for the prompt.
+ *                     items:
+ *                       type: object # Assuming arguments_schema stores an array of objects
+ *                       properties:
+ *                         name:
+ *                           type: string
+ *                         description:
+ *                           type: string
+ *                           nullable: true
+ *                         required:
+ *                           type: boolean
+ *                           nullable: true
+ *                     nullable: true
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or active profile not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Authorization header with Bearer token is required | Invalid API key | Active profile not found
+ *       500:
+ *         description: Internal Server Error fetching prompts.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal Server Error fetching prompts
+ *                 details:
+ *                   type: string
  */
 export async function GET(request: Request) {
   try {

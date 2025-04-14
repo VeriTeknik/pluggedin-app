@@ -3,26 +3,22 @@
 import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { 
-  McpServerSource, 
-  searchCacheTable,
-  serverInstallationsTable, 
-  serverRatingsTable
-} from '@/db/schema';
+import { McpServerSource, profilesTable, searchCacheTable, serverInstallationsTable, serverReviews } from '@/db/schema';
+import { MetricsResponse } from '@/types/reviews';
 import { SearchIndex } from '@/types/search';
 
 /**
  * Track a server installation
  */
-export async function trackServerInstallation(
-  profileUuid: string,
-  serverUuid?: string | null,
-  externalId?: string | null,
-  source?: McpServerSource
-) {
+export const trackServerInstallation = async (input: {
+  serverUuid: string;
+  externalId: string;
+  source: McpServerSource;
+  profileUuid: string;
+}) => {
   try {
     // Validate input
-    if (!serverUuid && (!externalId || !source)) {
+    if (!input.serverUuid && (!input.externalId || !input.source)) {
       return { 
         success: false, 
         error: 'Either server UUID or external ID with source must be provided' 
@@ -32,19 +28,19 @@ export async function trackServerInstallation(
     // Check if this installation already exists
     let existingInstallation;
     
-    if (serverUuid) {
+    if (input.serverUuid) {
       existingInstallation = await db.query.serverInstallationsTable.findFirst({
         where: and(
-          eq(serverInstallationsTable.profile_uuid, profileUuid),
-          eq(serverInstallationsTable.server_uuid, serverUuid)
+          eq(serverInstallationsTable.profile_uuid, input.profileUuid),
+          eq(serverInstallationsTable.server_uuid, input.serverUuid)
         ),
       });
-    } else if (externalId && source) {
+    } else if (input.externalId && input.source) {
       existingInstallation = await db.query.serverInstallationsTable.findFirst({
         where: and(
-          eq(serverInstallationsTable.profile_uuid, profileUuid),
-          eq(serverInstallationsTable.external_id, externalId),
-          eq(serverInstallationsTable.source, source)
+          eq(serverInstallationsTable.profile_uuid, input.profileUuid),
+          eq(serverInstallationsTable.external_id, input.externalId),
+          eq(serverInstallationsTable.source, input.source)
         ),
       });
     }
@@ -59,15 +55,15 @@ export async function trackServerInstallation(
 
     // Record the installation
     await db.insert(serverInstallationsTable).values({
-      profile_uuid: profileUuid,
-      server_uuid: serverUuid || undefined,
-      external_id: externalId || undefined,
-      source: source || McpServerSource.PLUGGEDIN,
+      profile_uuid: input.profileUuid,
+      server_uuid: input.serverUuid || undefined,
+      external_id: input.externalId || undefined,
+      source: input.source || McpServerSource.PLUGGEDIN,
     });
 
     // Update cache for external servers
-    if (externalId && source) {
-      await updateServerInCache(externalId, source).catch(error => {
+    if (input.externalId && input.source) {
+      await updateServerInCache({ externalId: input.externalId, source: input.source }).catch(error => {
         console.error('Failed to update cache after installation:', error);
         // Don't fail the installation tracking if cache update fails
       });
@@ -110,45 +106,51 @@ export async function rateServer(
       };
     }
 
+    // Get user ID from profile UUID
+    const profileData = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, profileUuid),
+      with: {
+        project: {
+          columns: {
+            user_id: true
+          }
+        }
+      }
+    });
+
+    if (!profileData?.project?.user_id) {
+      return {
+        success: false,
+        error: 'Could not find user associated with this profile'
+      };
+    }
+
+    const userId = profileData.project.user_id;
+
     // Check if this user already rated this server
     let existingRating;
     
     if (serverUuid) {
-      existingRating = await db.query.serverRatingsTable.findFirst({
-        where: and(
-          eq(serverRatingsTable.profile_uuid, profileUuid),
-          eq(serverRatingsTable.server_uuid, serverUuid)
-        ),
-      });
+      // TODO: Handle serverUuid case for serverReviews
+      return {
+        success: false,
+        error: 'Server UUID based reviews are not supported yet'
+      };
     } else if (externalId && source) {
-      existingRating = await db.query.serverRatingsTable.findFirst({
+      existingRating = await db.query.serverReviews.findFirst({
         where: and(
-          eq(serverRatingsTable.profile_uuid, profileUuid),
-          eq(serverRatingsTable.external_id, externalId),
-          eq(serverRatingsTable.source, source)
+          eq(serverReviews.user_id, userId),
+          eq(serverReviews.server_external_id, externalId),
+          eq(serverReviews.server_source, source)
         ),
       });
     }
 
     // If already rated, update the rating
     if (existingRating) {
-      if (serverUuid) {
+      if (externalId && source) {
         await db
-          .update(serverRatingsTable)
-          .set({ 
-            rating, 
-            comment,
-            updated_at: new Date()
-          })
-          .where(
-            and(
-              eq(serverRatingsTable.profile_uuid, profileUuid),
-              eq(serverRatingsTable.server_uuid, serverUuid)
-            )
-          );
-      } else if (externalId && source) {
-        await db
-          .update(serverRatingsTable)
+          .update(serverReviews)
           .set({ 
             rating, 
             comment,
@@ -156,16 +158,16 @@ export async function rateServer(
           })
           .where(
             and(
-              eq(serverRatingsTable.profile_uuid, profileUuid),
-              eq(serverRatingsTable.external_id, externalId),
-              eq(serverRatingsTable.source, source)
+              eq(serverReviews.user_id, userId),
+              eq(serverReviews.server_external_id, externalId),
+              eq(serverReviews.server_source, source)
             )
           );
       }
       
       // Update cache for external servers
       if (externalId && source) {
-        await updateServerInCache(externalId, source).catch(error => {
+        await updateServerInCache({ externalId, source }).catch(error => {
           console.error('Failed to update cache after rating:', error);
           // Don't fail the rating action if cache update fails
         });
@@ -178,18 +180,17 @@ export async function rateServer(
     }
 
     // Create new rating
-    await db.insert(serverRatingsTable).values({
-      profile_uuid: profileUuid,
-      server_uuid: serverUuid,
-      external_id: externalId,
-      source: source || McpServerSource.PLUGGEDIN,
+    await db.insert(serverReviews).values({
+      user_id: userId,
+      server_external_id: externalId!,
+      server_source: source || McpServerSource.PLUGGEDIN,
       rating,
       comment,
     });
 
     // Update cache for external servers
     if (externalId && source) {
-      await updateServerInCache(externalId, source).catch(error => {
+      await updateServerInCache({ externalId, source }).catch(error => {
         console.error('Failed to update cache after rating:', error);
         // Don't fail the rating action if cache update fails
       });
@@ -208,82 +209,40 @@ export async function rateServer(
 /**
  * Get server rating metrics
  */
-export async function getServerRatingMetrics(
-  serverUuid?: string,
-  externalId?: string,
-  source?: McpServerSource
-) {
+export async function getServerRatingMetrics(params: {
+  source: McpServerSource;
+  externalId: string;
+}): Promise<MetricsResponse> {
   try {
-    // Validate input
-    if (!serverUuid && (!externalId || !source)) {
-      return { 
-        success: false, 
-        error: 'Either server UUID or external ID with source must be provided' 
-      };
-    }
-
     // Get ratings
-    let ratingQuery;
-    
-    if (serverUuid) {
-      ratingQuery = db
-        .select({
-          averageRating: sql<number>`avg(${serverRatingsTable.rating})`,
-          ratingCount: sql<number>`count(${serverRatingsTable.rating})`,
-        })
-        .from(serverRatingsTable)
-        .where(eq(serverRatingsTable.server_uuid, serverUuid));
-    } else if (externalId && source) {
-      ratingQuery = db
-        .select({
-          averageRating: sql<number>`avg(${serverRatingsTable.rating})`,
-          ratingCount: sql<number>`count(${serverRatingsTable.rating})`,
-        })
-        .from(serverRatingsTable)
-        .where(
-          and(
-            eq(serverRatingsTable.external_id, externalId),
-            eq(serverRatingsTable.source, source)
-          )
-        );
-    } else {
-      return {
-        success: false,
-        error: 'Invalid parameters',
-      };
-    }
+    const ratingQuery = db
+      .select({
+        averageRating: sql<number>`COALESCE(avg(${serverReviews.rating}), 0)`,
+        ratingCount: sql<number>`count(${serverReviews.rating})`,
+      })
+      .from(serverReviews)
+      .where(
+        and(
+          eq(serverReviews.server_external_id, params.externalId),
+          eq(serverReviews.server_source, params.source)
+        )
+      );
 
     const ratingResults = await ratingQuery;
     const ratingMetrics = ratingResults[0];
 
     // Get installation count
-    let installationQuery;
-    
-    if (serverUuid) {
-      installationQuery = db
-        .select({
-          installationCount: sql<number>`count(*)`,
-        })
-        .from(serverInstallationsTable)
-        .where(eq(serverInstallationsTable.server_uuid, serverUuid));
-    } else if (externalId && source) {
-      installationQuery = db
-        .select({
-          installationCount: sql<number>`count(*)`,
-        })
-        .from(serverInstallationsTable)
-        .where(
-          and(
-            eq(serverInstallationsTable.external_id, externalId),
-            eq(serverInstallationsTable.source, source)
-          )
-        );
-    } else {
-      return {
-        success: false,
-        error: 'Invalid parameters',
-      };
-    }
+    const installationQuery = db
+      .select({
+        installationCount: sql<number>`count(*)`,
+      })
+      .from(serverInstallationsTable)
+      .where(
+        and(
+          eq(serverInstallationsTable.external_id, params.externalId),
+          eq(serverInstallationsTable.source, params.source)
+        )
+      );
 
     const installationResults = await installationQuery;
     const installationMetrics = installationResults[0];
@@ -291,9 +250,9 @@ export async function getServerRatingMetrics(
     return { 
       success: true,
       metrics: {
-        averageRating: ratingMetrics.averageRating || 0,
-        ratingCount: ratingMetrics.ratingCount || 0,
-        installationCount: installationMetrics.installationCount || 0,
+        averageRating: ratingMetrics.averageRating,
+        ratingCount: ratingMetrics.ratingCount,
+        installationCount: installationMetrics.installationCount,
       }
     };
   } catch (error) {
@@ -329,9 +288,10 @@ export async function updateSearchCacheMetrics() {
           
           // Get metrics for this server
           const metricsResult = await getServerRatingMetrics(
-            undefined,
-            typedServer.external_id,
-            typedServer.source
+            {
+              source: typedServer.source,
+              externalId: typedServer.external_id
+            }
           );
           
           if (metricsResult.success && metricsResult.metrics) {
@@ -369,20 +329,19 @@ export async function updateSearchCacheMetrics() {
 /**
  * Update cached search results for a specific server after a rating or installation action
  */
-export async function updateServerInCache(
-  externalId: string, 
-  source: McpServerSource
-) {
+export async function updateServerInCache(params: {
+  externalId: string;
+  source: McpServerSource;
+}) {
   try {
     // Get all cache entries
     const cacheEntries = await db.query.searchCacheTable.findMany();
     
     // Get latest metrics for this server
-    const metricsResult = await getServerRatingMetrics(
-      undefined,
-      externalId,
-      source
-    );
+    const metricsResult = await getServerRatingMetrics({
+      source: params.source,
+      externalId: params.externalId
+    });
     
     if (!metricsResult.success || !metricsResult.metrics) {
       return { success: false, error: 'Failed to get updated metrics' };
@@ -402,7 +361,7 @@ export async function updateServerInCache(
           const typedServer = server as any;
           
           // Only update the specific server
-          if (typedServer.external_id === externalId && typedServer.source === source) {
+          if (typedServer.external_id === params.externalId && typedServer.source === params.source) {
             // Update metrics
             typedServer.rating = averageRating;
             typedServer.rating_count = ratingCount;

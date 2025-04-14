@@ -6,10 +6,9 @@ import {
   getCodes,
   updateCode,
 } from '@/app/actions/code';
-import { Code } from '@/types/code';
 
 export function useCodes() {
-  const { data: codes, mutate } = useSWR<Code[]>('code-files', getCodes);
+  const { data: codes, mutate } = useSWR('code-files', getCodes);
 
   const handleCreateCode = async (fileName: string, code: string) => {
     const newCode = await createCode(fileName, code);

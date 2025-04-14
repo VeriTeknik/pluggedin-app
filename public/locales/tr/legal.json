@@ -1,0 +1,145 @@
+{
+  "legal": {
+    "title": "Yasal",
+    "subtitle": "Önemli Belgeler",
+    "description": "Plugged.in için önemli belgeler ve yasal bilgiler",
+    "backToLegal": "Yasal Sayfasına Dön",
+    "lastUpdated": "Son Güncelleme",
+    "pages": {
+      "privacy": {
+        "title": "Gizlilik Politikası",
+        "description": "Verilerinizi nasıl topladığımız, kullandığımız ve koruduğumuz",
+        "content": {
+          "intro": "Plugged.in'e ('biz,' 'bizim,' veya 'bize') hoş geldiniz. Bu Gizlilik Politikası, hizmetimizi kullandığınızda bilgilerinizi nasıl topladığımızı, kullandığımızı, açıkladığımızı ve koruduğumuzu açıklar. Lütfen bu gizlilik politikasını dikkatlice okuyun.",
+          "disclaimer": "Bu gizlilik politikasının şartlarını kabul etmiyorsanız, lütfen hizmete erişmeyin.",
+          "note": "ÖNEMLİ NOT: Plugged.in şu anda Yayın Adayı durumundadır. Bu gizlilik politikası, hizmet olgunlaştıkça ve ek özellikler uygulandıkça güncellenebilir.",
+          "thirdParty": "Üçüncü taraf sitelerinin veya hizmetlerinin içeriği, gizlilik politikaları veya uygulamaları üzerinde hiçbir kontrolümüz yoktur ve sorumluluk kabul etmeyiz."
+        }
+      },
+      "terms": {
+        "title": "Kullanım Şartları",
+        "description": "Hizmetimizi kullanma şartları ve koşulları",
+        "content": {
+          "intro": "Plugged.in'e erişerek veya kullanarak, bu Şartları ve geçerli olabilecek ek şartları kabul etmiş olursunuz. Bu Şartları kabul etmiyorsanız, Plugged.in'e erişmemeli veya kullanmamalısınız.",
+          "responsibilities": {
+            "title": "Sorumluluklarınız",
+            "items": [
+              "MCP sunucularını ve araçlarını geçerli yasa ve yönetmeliklere uygun olarak kullanın",
+              "MCP sunucularını yasa dışı veya yetkisiz herhangi bir amaç için kullanmayın",
+              "Yapılandırdığınız veya dağıttığınız MCP sunucularının sorumluluğunu üstlenin"
+            ]
+          },
+          "changes": {
+            "title": "Şartlardaki Değişiklikler",
+            "description": "Bu Şartları herhangi bir zamanda değiştirebiliriz. Bu Şartları periyodik olarak gözden geçirmek sizin sorumluluğunuzdadır. Herhangi bir değişiklikten sonra Plugged.in'i kullanmaya devam etmeniz, değiştirilen Şartları kabul ettiğinizi gösterir."
+          },
+          "account": {
+            "title": "Hesap Kaydı ve Güvenlik",
+            "description": "Plugged.in'in belirli özelliklerini kullanmak için bir hesap oluşturmanız gerekebilir. Şunlardan sorumlusunuz:",
+            "items": [
+              "Doğru hesap bilgileri sağlamak",
+              "Hesap kimlik bilgilerinizin güvenliğini korumak",
+              "Hesabınız altında gerçekleşen tüm aktiviteler"
+            ],
+            "note": "Bu Şartları ihlal ettiğinize inanmamız için bir nedenimiz varsa hesabınızı devre dışı bırakma hakkını saklı tutarız."
+          },
+          "mcp": {
+            "title": "MCP Sunucuları ve Araçları",
+            "description": "Plugged.in, Model Context Protocol (MCP) sunucularını ve araçlarını yönetmek ve kullanmak için bir platform sağlar. Şunları kabul edersiniz:",
+            "items": [
+              "MCP sunucularını ve araçlarını geçerli yasa ve yönetmeliklere uygun olarak kullanmak",
+              "MCP sunucularını yasa dışı veya yetkisiz herhangi bir amaç için kullanmamak",
+              "Yapılandırdığınız veya dağıttığınız MCP sunucularının sorumluluğunu üstlenmek"
+            ]
+          },
+          "intellectual": {
+            "title": "Fikri Mülkiyet",
+            "description": "Plugged.in ve içeriği, özellikleri ve işlevselliği bize aittir ve telif hakkı, ticari marka ve diğer fikri mülkiyet yasaları tarafından korunmaktadır. Açık iznimiz olmadan Plugged.in'i kopyalayamaz, değiştiremez, dağıtamaz veya türev çalışmalar oluşturamazsınız."
+          }
+        }
+      },
+      "disclaimer": {
+        "title": "Sorumluluk Reddi",
+        "description": "Önemli yasal bildirimler",
+        "content": {
+          "title": "Sorumluluk Reddi ve Sorumluluk Sınırlaması",
+          "thirdParty": "Hizmet, bizim sahip olmadığımız veya kontrol etmediğimiz üçüncü taraf web sitelerine veya hizmetlerine bağlantılar içerebilir. Üçüncü taraf web sitelerinin veya hizmetlerinin içeriği, gizlilik politikaları veya uygulamaları üzerinde hiçbir kontrolümüz yoktur ve sorumluluk kabul etmeyiz.",
+          "releaseCandidate": {
+            "title": "Yayın Adayı Durumu",
+            "important": "ÖNEMLİ",
+            "status": "Plugged.in şu anda Yayın Adayı durumundadır. Bu, yazılımın hala test ve geliştirme aşamasında olduğu anlamına gelir. Bu henüz final sürümü değildir ve yayın öncesi bir yazılım kullandığınızı kabul etmiş olursunuz.",
+            "note": "Yayın Adayı olarak:",
+            "items": [
+              "Hizmet hatalar, sorunlar veya diğer problemler içerebilir",
+              "Özellikler eksik olabilir veya değişikliğe tabi olabilir",
+              "Performans ve stabilite optimal olmayabilir",
+              "Veri kalıcılığı ve güvenliği sınırlamalara sahip olabilir"
+            ]
+          },
+          "general": {
+            "title": "Genel Sorumluluk Reddi",
+            "description": "Plugged.in'de sağlanan bilgiler yalnızca genel bilgilendirme amaçlıdır. Hizmetin veya hizmet üzerinde yer alan bilgilerin, ürünlerin, hizmetlerin veya ilgili grafiklerin eksiksizliği, doğruluğu, güvenilirliği, uygunluğu veya kullanılabilirliği hakkında hiçbir türde açık veya zımni beyan veya garanti vermemekteyiz.",
+            "risk": "Bu tür bilgilere güvenmeniz tamamen kendi sorumluluğunuzdadır. Hiçbir durumda, bu hizmetin kullanımından kaynaklanan veri veya kar kaybından doğan dolaylı veya dolaysız kayıp veya zararlar da dahil olmak üzere herhangi bir kayıp veya zarardan sorumlu olmayacağız."
+          },
+          "warranty": {
+            "title": "Garanti Yok",
+            "description": "HİZMET 'OLDUĞU GİBİ' VE 'MEVCUT OLDUĞU ŞEKILDE' HERHANGİ BİR TÜR GARANTİ VEYA TEMSİL OLMAKSIZIN SUNULMAKTADIR. AÇIK, ZIMNİ VEYA YASAL OLSUN, BAŞLIK, TİCARİ ELVERİŞLİLİK, BELİRLİ BİR AMACA UYGUNLUK VE İHLAL ETMEME GARANTİLERİ DAHİL OLMAK ÜZERE TÜM GARANTİLERİ AÇIKÇA REDDEDERİZ.",
+            "note": "Şunları garanti etmiyoruz:",
+            "items": [
+              "Hizmetin kesintisiz, zamanında, güvenli veya hatasız olacağını",
+              "Hizmetin kullanımından elde edilebilecek sonuçların doğru veya güvenilir olacağını",
+              "Hizmet aracılığıyla satın alınan herhangi bir ürün, hizmet, bilgi veya diğer materyallerin kalitesinin beklentilerinizi karşılayacağını",
+              "Hizmetteki herhangi bir hatanın düzeltileceğini"
+            ]
+          },
+          "liability": {
+            "title": "Sorumluluk Sınırlaması",
+            "description": "YÜRÜRLÜKTEKİ KANUNLARIN İZİN VERDİĞİ AZAMİ ÖLÇÜDE, HİÇBİR DURUMDA BİZ, BAĞLI KURULUŞLARIMIZ VEYA İLGİLİ YÖNETİCİLERİMİZ, DİREKTÖRLERİMİZ, ÇALIŞANLARIMIZ VEYA TEMSİLCİLERİMİZ, HİZMETİN KULLANIMINDAN VEYA KULLANILAMAMASINDAN KAYNAKLANAN KAR KAYBI, İTİBAR KAYBI, KULLANIM KAYBI, VERİ KAYBI VEYA DİĞER MADDİ OLMAYAN KAYIPLAR DAHİL OLMAK ÜZERE HERHANGİ BİR DOLAYLI, CEZAİ, ARIZİ, ÖZEL, SONUÇ NİTELİĞİNDE VEYA ÖRNEK NİTELİĞİNDE ZARARLARDAN SORUMLU OLMAYACAKTIR.",
+            "security": "HİÇBİR KOŞULDA HİZMETİN VEYA HESABINIZIN YA DA İÇERDİĞİ BİLGİLERİN HACK'LENMESİ, KURCALANMASI VEYA DİĞER YETKİSİZ ERİŞİM VEYA KULLANIMINDAN KAYNAKLANAN HERHANGİ BİR ZARAR, KAYIP VEYA YARALANMADAN SORUMLU OLMAYACAĞIZ.",
+            "rcDisclaimer": "YAYIN ADAYI AŞAMASI SORUMLULUK REDDİ: YAYIN ADAYI AŞAMASI SIRASINDA, HİZMETİ KULLANIMINIZDAN KAYNAKLANABİLECEK HERHANGİ BİR VERİ KAYBI, SİSTEM ARIZASI, KESINTI VEYA DİĞER SORUNLAR İÇİN HİÇBİR SORUMLULUK KABUL ETMİYORUZ. YAYIN ADAYINI KENDİ SORUMLULUĞUNUZDA KULLANIRSINIZ."
+          }
+        }
+      },
+      "contact": {
+        "title": "İletişim",
+        "description": "Bize nasıl ulaşabilirsiniz",
+        "content": {
+          "title": "İletişim Bilgileri",
+          "description": "Bu yasal belgelerle ilgili sorularınız için lütfen bizimle iletişime geçin",
+          "form": {
+            "title": "Bize Mesaj Gönderin",
+            "description": "Bize mesaj göndermek için aşağıdaki formu doldurun",
+            "name": "İsim",
+            "namePlaceholder": "İsminiz",
+            "email": "E-posta",
+            "emailPlaceholder": "E-posta adresiniz",
+            "subject": "Konu",
+            "subjectPlaceholder": "Mesaj konusu",
+            "message": "Mesaj",
+            "messagePlaceholder": "Mesajınız",
+            "submit": "Mesaj Gönder",
+            "sending": "Gönderiliyor...",
+            "success": "Mesajınız başarıyla gönderildi",
+            "error": "Mesaj gönderilirken bir hata oluştu"
+          },
+          "faq": {
+            "title": "Sıkça Sorulan Sorular",
+            "status": {
+              "question": "Plugged.in'in mevcut durumu nedir?",
+              "answer": "Plugged.in şu anda Yayın Adayı durumundadır. Bu, temel işlevselliğin tamamlandığı ancak final sürümünden önce düzeltilmesi gereken hatalar veya sorunlar olabileceği anlamına gelir."
+            },
+            "bugs": {
+              "question": "Bir hatayı nasıl bildirebilirim?",
+              "answer": "Hataları support@plugged.in adresine e-posta göndererek veya GitHub deposunda bir sorun açarak bildirebilirsiniz. Lütfen hatayı yeniden oluşturmak için detaylı adımları ve ilgili hata mesajlarını ekleyin."
+            },
+            "security": {
+              "question": "Yayın Adayı aşamasında verilerim güvende mi?",
+              "answer": "Standart güvenlik uygulamalarını uygulamamıza rağmen, Yayın Adayı aşamasında hizmet içinde hassas bilgiler saklamanızı önermiyoruz. Daha fazla bilgi için lütfen Gizlilik Politikamızı inceleyin."
+            }
+          },
+          "note": "Not: Yayın Adayı aşamasında, destek kapasitemiz sınırlı olabilir. Tüm sorguları zamanında yanıtlamak için elimizden geleni yapacağız."
+        }
+      }
+    }
+  }
+}

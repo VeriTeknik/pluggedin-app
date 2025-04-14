@@ -1,7 +1,20 @@
 import './globals.css';
+import '@/styles/fonts.css';
 
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Quicksand } from 'next/font/google'; // Import Quicksand
+import { 
+  Comfortaa,
+  Geist, 
+  Geist_Mono, 
+  Nunito,
+  Poppins,
+  Quicksand,
+  Roboto,
+  Ubuntu,
+  Work_Sans,
+  Zilla_Slab,
+} from 'next/font/google';
+import { Toaster as SonnerToaster } from 'sonner';
 
 import { I18nProviderWrapper } from '@/components/providers/i18n-provider-wrapper';
 import { NotificationProvider } from '@/components/providers/notification-provider';
@@ -9,6 +22,7 @@ import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Toaster } from '@/components/ui/toaster';
+import { initializeFont } from '@/lib/font-utils';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -20,12 +34,60 @@ const geistMono = Geist_Mono({
   subsets: ['latin'],
 });
 
-// Load Quicksand font using next/font
 const quicksand = Quicksand({
   variable: '--font-quicksand',
-  weight: ['400', '500', '600', '700'], // Specify the weights needed
+  weight: ['400', '500', '600', '700'],
   subsets: ['latin'],
-  display: 'swap', // Match the display=swap from the original link
+  display: 'swap',
+});
+
+const nunito = Nunito({
+  variable: '--font-nunito',
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const poppins = Poppins({
+  variable: '--font-poppins',
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const roboto = Roboto({
+  variable: '--font-roboto',
+  weight: ['400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const ubuntu = Ubuntu({
+  variable: '--font-ubuntu',
+  weight: ['400', '500', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const workSans = Work_Sans({
+  variable: '--font-work-sans',
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const zillaSlab = Zilla_Slab({
+  variable: '--font-zilla-slab',
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+const comfortaa = Comfortaa({
+  variable: '--font-comfortaa',
+  weight: ['400', '500', '600', '700'],
+  subsets: ['latin'],
+  display: 'swap',
 });
 
 export const metadata: Metadata = {
@@ -38,6 +100,11 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Initialize font on the client side
+  if (typeof window !== 'undefined') {
+    initializeFont();
+  }
+
   return (
     <html lang='en' suppressHydrationWarning>
       <head>
@@ -46,7 +113,7 @@ export default async function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className={`${geistSans.variable} ${geistMono.variable} ${quicksand.variable} antialiased`}> {/* Add quicksand variable */}
+        className={`${geistSans.variable} ${geistMono.variable} ${quicksand.variable} ${nunito.variable} ${poppins.variable} ${roboto.variable} ${ubuntu.variable} ${workSans.variable} ${zillaSlab.variable} ${comfortaa.variable} antialiased`}>
         <I18nProviderWrapper>
           <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
             <SessionProvider>
@@ -56,6 +123,7 @@ export default async function RootLayout({
               </NotificationProvider>
             </SessionProvider>
             <Toaster />
+            <SonnerToaster position="bottom-right" />
           </ThemeProvider>
         </I18nProviderWrapper>
       </body>

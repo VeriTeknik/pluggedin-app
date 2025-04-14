@@ -1,5 +1,7 @@
 'use client';
 
+// React imports
+// External library imports
 import {
   Bell,
   Blocks,
@@ -8,15 +10,17 @@ import {
   Plus,
   Trash2,
   Unplug,
-} from 'lucide-react'; // External library
-import Image from 'next/image'; // Next.js
-import Link from 'next/link'; // Next.js
-import { usePathname } from 'next/navigation'; // Next.js
-import * as React from 'react'; // React first
-import { useEffect, useState } from 'react'; // React hooks
-import { useTranslation } from 'react-i18next'; // External library
+  Users,
+} from 'lucide-react';
+// Next.js imports
+import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import * as React from 'react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-// Internal imports start here
+// Internal imports (@/)
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -49,8 +53,10 @@ import { useCodes } from '@/hooks/use-codes';
 import { useProjects } from '@/hooks/use-projects';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { useToast } from '@/hooks/use-toast';
+import { Code } from '@/types/code';
 
-import { NotificationBell } from './notification-bell'; // Local components last
+// Local component imports
+import { NotificationBell } from './notification-bell';
 import { ProfileSwitcher } from './profile-switcher';
 import { ProjectSwitcher } from './project-switcher';
 import { UserMenu } from './user-menu';
@@ -219,25 +225,17 @@ export default function SidebarLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   
-                  
-                  {/* TODO: Add custom MCP servers to the sidebar 
+                  {/* Update Discover Link to AI Social */}
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/custom-mcp-servers'>
-                        <Wrench className='mr-2 h-4 w-4' />
-                        <span>Custom MCP Servers</span>
+                    <SidebarMenuButton asChild tooltip={t('aiSocial')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/discover'>
+                        <Users className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('aiSocial')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild>
-                      <Link href='/editor'>
-                        <Code2 className='mr-2 h-4 w-4' />
-                        <span>Python Code Editor</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>*/}
-                  {/* Removed API Keys, Settings, Legal from main sidebar */}
+                  
+                  {/* TODO: Add custom MCP servers to the sidebar */}
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip={t('notifications.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/notifications'>
@@ -323,7 +321,7 @@ export default function SidebarLayout({
                         </DialogContent>
                       </Dialog>
                     </SidebarMenuItem>
-                    {codes.map((code) => (
+                    {codes.map((code: Code) => (
                       <SidebarMenuItem key={code.uuid}>
                         <SidebarMenuButton asChild className='w-full group-data-[collapsible=icon]:justify-center' tooltip={code.fileName}>
                           <Link

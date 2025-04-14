@@ -3,16 +3,44 @@
 import { and, desc, eq, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType } from '@/db/schema';
+import { 
+  customInstructionsTable, 
+  McpServerSource, 
+  mcpServersTable, 
+  McpServerStatus, 
+  McpServerType, 
+  profilesTable, 
+  projectsTable, 
+  users 
+} from '@/db/schema';
 import type { McpServer } from '@/types/mcp-server';
 
-import { discoverSingleServerTools } from './discover-mcp-tools'; // Import the discovery action
-import { trackServerInstallation } from './mcp-server-metrics';
+import { discoverSingleServerTools } from './discover-mcp-tools';
+import { getServerRatingMetrics, trackServerInstallation } from './mcp-server-metrics';
 
-export async function getMcpServers(profileUuid: string) {
-  const servers = await db
-    .select()
+type ServerWithUsername = {
+  server: typeof mcpServersTable.$inferSelect;
+  username: string | null;
+}
+
+type ServerWithMetrics = typeof mcpServersTable.$inferSelect & {
+  username: string | null;
+  averageRating?: number;
+  ratingCount?: number;
+  installationCount?: number;
+}
+
+export async function getMcpServers(profileUuid: string): Promise<ServerWithMetrics[]> {
+  // Get the servers without type assertion
+  const serversQuery = await db
+    .select({
+      server: mcpServersTable,
+      username: users.username
+    })
     .from(mcpServersTable)
+    .leftJoin(profilesTable, eq(mcpServersTable.profile_uuid, profilesTable.uuid))
+    .leftJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+    .leftJoin(users, eq(projectsTable.user_id, users.id))
     .where(
       and(
         eq(mcpServersTable.profile_uuid, profileUuid),
@@ -24,7 +52,39 @@ export async function getMcpServers(profileUuid: string) {
     )
     .orderBy(desc(mcpServersTable.created_at));
 
-  return servers as McpServer[];
+  // Type the result correctly
+  const servers: ServerWithUsername[] = serversQuery;
+
+  // Fetch ratings and installation metrics for each server
+  const serversWithMetrics = await Promise.all(
+    servers.map(async ({ server, username }) => {
+      try {
+        const metrics = await getServerRatingMetrics({
+          source: server.source || McpServerSource.PLUGGEDIN,
+          externalId: server.external_id || server.uuid
+        });
+
+        return {
+          ...server,
+          username,
+          averageRating: metrics?.metrics?.averageRating,
+          ratingCount: metrics?.metrics?.ratingCount,
+          installationCount: metrics?.metrics?.installationCount
+        };
+      } catch (error) {
+        console.error(`Error getting metrics for server ${server.uuid}:`, error);
+        return {
+          ...server,
+          username,
+          averageRating: undefined,
+          ratingCount: undefined,
+          installationCount: undefined
+        };
+      }
+    })
+  );
+
+  return serversWithMetrics;
 }
 
 export async function getMcpServerByUuid(
@@ -188,12 +248,14 @@ export async function createMcpServer({
 
     // Track server installation
     try {
-      await trackServerInstallation(
-        profileUuid,
-        newServer.uuid,
-        external_id || null,
-        source
-      );
+      if (source) {
+        await trackServerInstallation({
+          profileUuid,
+          serverUuid: newServer.uuid,
+          externalId: external_id || '',
+          source
+        });
+      }
     } catch (trackingError) {
       console.error('Error tracking installation:', trackingError);
       // Continue even if tracking fails
@@ -278,4 +340,223 @@ export async function bulkImportMcpServers(
   }
 
   return { success: true, count: serverEntries.length };
+}
+
+/**
+ * Import a shared MCP server
+ * @param profileUuid UUID of the profile to import the server to
+ * @param serverData Server data to be imported
+ * @param serverName Custom name for the imported server
+ * @returns Success status and the imported server if successful
+ */
+export async function importSharedServer(
+  profileUuid: string,
+  serverData: McpServer | any,
+  serverName: string
+): Promise<{ success: boolean; server?: McpServer; error?: string }> {
+  try {
+    // Determine if we're using the original server or a sanitized template
+    const isTemplate = serverData && !serverData.uuid;
+    
+    // Use the template values or the original server values with appropriate defaults
+    const serverToImport = {
+      name: serverName,
+      description: serverData.description, // Ensure description is properly transferred
+      type: serverData.type,
+      command: serverData.command,
+      args: serverData.args || [],
+      // If it's a template, use the sanitized env, otherwise use empty object
+      env: isTemplate && serverData.env ? serverData.env : {}, 
+      url: serverData.url,
+      profile_uuid: profileUuid,
+      status: McpServerStatus.ACTIVE,
+      source: serverData.source || McpServerSource.PLUGGEDIN,
+      external_id: null, // Don't copy external ID to avoid conflicts
+      notes: isTemplate
+        ? `Imported from template shared by ${serverData.sharedBy || 'another user'} (original server ID: ${serverData.originalServerUuid || 'unknown'})`
+        : `Imported from shared server originally created by ${serverData.profile_uuid}`,
+    };
+
+    // Create new server based on shared server data
+    const [newServer] = await db.insert(mcpServersTable)
+      .values(serverToImport)
+      .returning();
+
+    if (!newServer) {
+      return {
+        success: false,
+        error: 'Failed to import server',
+      };
+    }
+    
+    // Import custom instructions if they exist in the shared server data
+    if (serverData.customInstructions && (Array.isArray(serverData.customInstructions) || typeof serverData.customInstructions === 'string')) {
+      try {
+        // Handle both string and array formats for custom instructions
+        const messages = typeof serverData.customInstructions === 'string' 
+          ? [serverData.customInstructions] 
+          : serverData.customInstructions;
+        
+        await db.insert(customInstructionsTable).values({
+          mcp_server_uuid: newServer.uuid,
+          description: 'Imported custom instructions',
+          messages: messages,
+        });
+        
+        console.log(`Imported custom instructions for server ${newServer.uuid}`);
+      } catch (error) {
+        console.error('Error importing custom instructions:', error);
+        // Continue without custom instructions if there's an error
+      }
+    }
+
+    return {
+      success: true,
+      server: newServer as unknown as McpServer,
+    };
+  } catch (error) {
+    console.error('Error importing shared server:', error);
+    return {
+      success: false,
+      error: 'An error occurred while importing the server',
+    };
+  }
+}
+
+/**
+ * Create a shareable template from an MCP server by removing sensitive information
+ * but preserving structure with placeholders
+ *  
+ * @param server The original MCP server
+ * @returns A sanitized version for sharing
+ */
+export async function createShareableTemplate(server: McpServer): Promise<any> {
+  // Deep clone the server to avoid modifying the original
+  const template = JSON.parse(JSON.stringify(server));
+  
+  // Add metadata about the source server
+  template.originalServerUuid = server.uuid;
+  
+  try {
+    // Get profile information with user data
+    const profile = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, server.profile_uuid),
+      with: {
+        project: {
+          with: {
+            user: {
+              columns: {
+                username: true,
+                name: true
+              }
+            }
+          }
+        }
+      }
+    });
+    
+    if (profile?.project?.user) {
+      template.sharedBy = profile.project.user.username || profile.project.user.name || server.profile_uuid;
+    }
+  } catch (error) {
+    console.error("Error fetching profile information:", error);
+    // If there's an error, continue without the sharedBy information
+  }
+  
+  // Sanitize the database URL if present in command or args
+  if (template.command) {
+    template.command = sanitizeDatabaseUrl(template.command);
+  }
+  
+  if (template.args && Array.isArray(template.args)) {
+    template.args = template.args.map((arg: string) => sanitizeDatabaseUrl(arg));
+  }
+
+  // Replace sensitive env variables with placeholders
+  const sanitizedEnv: Record<string, string> = {};
+  if (template.env && typeof template.env === 'object') {
+    Object.keys(template.env).forEach(key => {
+      // Assume environment variables are sensitive and replace with placeholders
+      if (key.toLowerCase().includes('key') || 
+          key.toLowerCase().includes('token') || 
+          key.toLowerCase().includes('secret') || 
+          key.toLowerCase().includes('password') || 
+          key.toLowerCase().includes('auth')) {
+        sanitizedEnv[key] = '<YOUR_SECRET_HERE>';
+      } else {
+        // For non-sensitive keys, check if the value looks like a URL with credentials
+        const value = template.env[key];
+        if (typeof value === 'string') {
+          sanitizedEnv[key] = sanitizeDatabaseUrl(value);
+        } else {
+          sanitizedEnv[key] = value;
+        }
+      }
+    });
+  }
+  template.env = sanitizedEnv;
+  
+  // Clear any API keys or tokens in the URL
+  if (template.url) {
+    template.url = sanitizeDatabaseUrl(template.url);
+  }
+  
+  // Fetch and include custom instructions if they exist
+  try {
+    const customInstructions = await db.query.customInstructionsTable.findFirst({
+      where: eq(customInstructionsTable.mcp_server_uuid, server.uuid),
+    });
+    
+    if (customInstructions) {
+      template.customInstructions = customInstructions.messages;
+    }
+  } catch (error) {
+    console.error("Error fetching custom instructions:", error);
+    // Continue without custom instructions if there's an error
+  }
+  
+  return template;
+}
+
+/**
+ * Sanitize a database URL or any URL with credentials
+ * Replaces usernames, passwords, API keys, etc. with placeholders
+ * 
+ * @param text The text that might contain sensitive URLs
+ * @returns Sanitized text with credentials replaced by placeholders
+ */
+function sanitizeDatabaseUrl(text: string): string {
+  if (!text) return text;
+  
+  // Replace postgres connections: postgresql://username:password@host:port/database
+  text = text.replace(
+    /(postgresql:\/\/[^:]+):([^@]+)@([^\/]+\/[^\s]+)/gi, 
+    '$1:<YOUR_PASSWORD>@$3'
+  );
+  
+  // Replace mongodb connections: mongodb://username:password@host:port/database
+  text = text.replace(
+    /(mongodb:\/\/[^:]+):([^@]+)@([^\/]+\/[^\s]+)/gi, 
+    '$1:<YOUR_PASSWORD>@$3'
+  );
+  
+  // Replace mysql connections: mysql://username:password@host:port/database
+  text = text.replace(
+    /(mysql:\/\/[^:]+):([^@]+)@([^\/]+\/[^\s]+)/gi, 
+    '$1:<YOUR_PASSWORD>@$3'
+  );
+  
+  // Replace URLs with API keys in them: https://api.example.com?api_key=abcd1234
+  text = text.replace(
+    /([\?&](?:api_key|access_token|token|key|auth|apikey)=)([^&\s]+)/gi,
+    '$1<YOUR_API_KEY>'
+  );
+  
+  // Replace any other URL with basic auth: https://username:password@example.com
+  text = text.replace(
+    /(https?:\/\/[^:]+):([^@]+)@/gi,
+    '$1:<YOUR_PASSWORD>@'
+  );
+  
+  return text;
 }

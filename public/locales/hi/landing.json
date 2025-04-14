@@ -1,0 +1,36 @@
+{
+  "landing": {
+    "navigation": {
+      "enterApp": ""
+    },
+    "hero": {
+      "title": "",
+      "subtitle": ""
+    },
+    "features": {
+      "pluginManagement": {
+        "title": "",
+        "description": "",
+        "content": "",
+        "action": ""
+      },
+      "aiPlayground": {
+        "title": "",
+        "description": "",
+        "content": "",
+        "action": ""
+      },
+      "customDevelopment": {
+        "title": "",
+        "description": "",
+        "content": "",
+        "action": ""
+      }
+    },
+    "gettingStarted": {
+      "title": "",
+      "description": "",
+      "action": ""
+    }
+  }
+}

@@ -1,24 +1,55 @@
+
 import { addDays } from 'date-fns';
+import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { db } from '@/db';
-import { McpServerSource, searchCacheTable } from '@/db/schema';
-import { PaginatedSearchResult, SearchIndex, SmitherySearchResponse } from '@/types/search';
-import { fetchAwesomeMcpServersList, getGitHubRepoAsMcpServer, getRepoPackageJson, searchGitHubRepos } from '@/utils/github';
+import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema'; // Added profilesTable, projectsTable, users
+import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
+import {
+  fetchAwesomeMcpServersList,
+  getGitHubRepoAsMcpServer,
+  getRepoPackageJson,
+  searchGitHubRepos,
+} from '@/utils/github';
 import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
-import { 
-  fetchSmitheryServerDetails, 
-  getMcpServerFromSmitheryServer, 
-  updateMcpServerWithDetails 
+import {
+  fetchSmitheryServerDetails,
+  getMcpServerFromSmitheryServer,
+  updateMcpServerWithDetails,
 } from '@/utils/smithery';
 
-// Define cache TTL in minutes
+// Cache TTL in minutes for each source
 const CACHE_TTL: Record<McpServerSource, number> = {
   [McpServerSource.SMITHERY]: 60, // 1 hour
   [McpServerSource.NPM]: 360, // 6 hours
   [McpServerSource.GITHUB]: 1440, // 24 hours
   [McpServerSource.PLUGGEDIN]: 1440, // 24 hours
+  [McpServerSource.COMMUNITY]: 60, // 1 hour - community content may change frequently
+};
+
+// Add inline type definition for SmitherySearchResponse
+type SmitheryServer = {
+  qualifiedName: string;
+  displayName: string;
+  description: string;
+  homepage: string;
+  useCount: number;
+  isDeployed: boolean;
+  createdAt: string;
+};
+
+type SmitheryPagination = {
+  currentPage: number;
+  pageSize: number;
+  totalPages: number;
+  totalCount: number;
+};
+
+type SmitherySearchResponse = {
+  servers: SmitheryServer[];
+  pagination: SmitheryPagination;
 };
 
 /**
@@ -44,8 +75,10 @@ export async function GET(request: NextRequest) {
       const cachedResults = await checkCache(source, query);
       
       if (cachedResults) {
-        // Paginate cached results
-        const paginatedResults = paginateResults(cachedResults, offset, pageSize);
+        // Enrich cached results with metrics
+        const enrichedResults = await enrichWithMetrics(cachedResults);
+        // Paginate enriched results
+        const paginatedResults = paginateResults(enrichedResults, offset, pageSize);
         return NextResponse.json(paginatedResults);
       }
       
@@ -60,6 +93,9 @@ export async function GET(request: NextRequest) {
         case McpServerSource.GITHUB:
           results = await searchGitHub(query);
           break;
+        case McpServerSource.COMMUNITY:
+          results = await searchCommunity(query);
+          break;
         default:
           // Return empty results for unsupported sources
           return NextResponse.json({
@@ -71,7 +107,10 @@ export async function GET(request: NextRequest) {
           } as PaginatedSearchResult);
       }
       
-      // Cache results
+      // Enrich results with metrics before caching
+      results = await enrichWithMetrics(results);
+      
+      // Cache the enriched results
       await cacheResults(source, query, results);
       
       // Paginate and return results
@@ -80,35 +119,35 @@ export async function GET(request: NextRequest) {
     }
     
     // If no source specified, search all (with caching per source)
-    // For now, we'll search each one sequentially
-    // In a production environment, we might want to parallelize these requests
-    
     // Check if we have ALL sources cached for this query
     const cachedSmithery = await checkCache(McpServerSource.SMITHERY, query);
     const cachedNpm = await checkCache(McpServerSource.NPM, query);
     const cachedGitHub = await checkCache(McpServerSource.GITHUB, query);
+    const cachedCommunity = await checkCache(McpServerSource.COMMUNITY, query);
     
     // If all are cached, combine and return
-    if (cachedSmithery && cachedNpm && cachedGitHub) {
+    if (cachedSmithery && cachedNpm && cachedGitHub && cachedCommunity) {
       const combinedResults: SearchIndex = {};
       
-      // Add smithery results with namespace prefix
+      // Add results with namespace prefix
       Object.entries(cachedSmithery).forEach(([key, value]) => {
         combinedResults[`smithery:${key}`] = value;
       });
-      
-      // Add npm results with namespace prefix
       Object.entries(cachedNpm).forEach(([key, value]) => {
         combinedResults[`npm:${key}`] = value;
       });
-      
-      // Add github results with namespace prefix
       Object.entries(cachedGitHub).forEach(([key, value]) => {
         combinedResults[`github:${key}`] = value;
       });
+      Object.entries(cachedCommunity).forEach(([key, value]) => {
+        combinedResults[`community:${key}`] = value;
+      });
+      
+      // Enrich combined results with metrics
+      const enrichedResults = await enrichWithMetrics(combinedResults);
       
       // Paginate and return
-      const paginatedResults = paginateResults(combinedResults, offset, pageSize);
+      const paginatedResults = paginateResults(enrichedResults, offset, pageSize);
       return NextResponse.json(paginatedResults);
     }
     
@@ -128,23 +167,30 @@ export async function GET(request: NextRequest) {
       await cacheResults(McpServerSource.GITHUB, query, githubResults);
     }
     
+    const communityResults = cachedCommunity || await searchCommunity(query);
+    if (!cachedCommunity) {
+      await cacheResults(McpServerSource.COMMUNITY, query, communityResults);
+    }
+    
     // Combine all results under namespaced keys to avoid collisions
     results = {} as SearchIndex;
     
-    // Add smithery results with namespace prefix
+    // Add results with namespace prefix
     Object.entries(smitheryResults).forEach(([key, value]) => {
       results[`smithery:${key}`] = value;
     });
-    
-    // Add npm results with namespace prefix
     Object.entries(npmResults).forEach(([key, value]) => {
       results[`npm:${key}`] = value;
     });
-    
-    // Add github results with namespace prefix
     Object.entries(githubResults).forEach(([key, value]) => {
       results[`github:${key}`] = value;
     });
+    Object.entries(communityResults).forEach(([key, value]) => {
+      results[`community:${key}`] = value;
+    });
+    
+    // Enrich combined results with metrics
+    results = await enrichWithMetrics(results);
     
     // Paginate and return results
     const paginatedResults = paginateResults(results, offset, pageSize);
@@ -171,16 +217,15 @@ async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
     
     try {
       // Get metrics for this server
-      const metricsResult = await getServerRatingMetrics(
-        undefined, // No server UUID for external sources
-        server.external_id,
-        server.source
-      );
+      const metricsResult = await getServerRatingMetrics({
+        source: server.source,
+        externalId: server.external_id
+      });
       
       if (metricsResult.success && metricsResult.metrics) {
         // Add metrics to server data
         server.rating = metricsResult.metrics.averageRating;
-        server.rating_count = metricsResult.metrics.ratingCount;
+        server.ratingCount = metricsResult.metrics.ratingCount;
         server.installation_count = metricsResult.metrics.installationCount;
       }
     } catch (_error) {
@@ -322,6 +367,115 @@ async function searchGitHub(query: string): Promise<SearchIndex> {
 }
 
 /**
+ * Search for community MCP servers - implementation to show shared servers
+ * 
+ * @param query Search query
+ * @returns SearchIndex of results
+ */
+async function searchCommunity(query: string): Promise<SearchIndex> {
+  try {
+    // Get shared MCP servers, joining through profiles and projects to get user info
+    const sharedServersQuery = db
+      .select({
+        sharedServer: sharedMcpServersTable,
+        profile: profilesTable,
+        user: users, // Select user data
+      })
+      .from(sharedMcpServersTable)
+      .innerJoin(profilesTable, eq(sharedMcpServersTable.profile_uuid, profilesTable.uuid))
+      .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid)) // Join to projects
+      .innerJoin(users, eq(projectsTable.user_id, users.id)) // Join to users
+      .where(
+        query
+          ? and(
+              eq(sharedMcpServersTable.is_public, true),
+              or(
+                ilike(sharedMcpServersTable.title, `%${query}%`),
+                ilike(sharedMcpServersTable.description || '', `%${query}%`),
+                ilike(users.username, `%${query}%`), // Search by username from users table
+                ilike(users.email, `%${query}%`) // Also search by user email
+              )
+            )
+          : eq(sharedMcpServersTable.is_public, true)
+      )
+      .orderBy(desc(sharedMcpServersTable.created_at))
+      .limit(50); // Limit to 50 results
+
+    const resultsWithJoins = await sharedServersQuery;
+
+    // Convert to our SearchIndex format
+    const results: SearchIndex = {};
+
+    for (const { sharedServer, profile, user } of resultsWithJoins) {
+      // We'll use the template field which contains the sanitized MCP server data
+      const template = sharedServer.template as Record<string, any>;
+
+      if (!template) continue;
+
+      // Create an entry with metadata from the shared server
+      const serverKey = `${sharedServer.uuid}`;
+
+      // Fetch rating metrics for this shared server
+      let rating = 0;
+      let ratingCount = 0;
+      let installationCount = 0; // Declare installationCount here
+      try {
+        // For community servers, metrics are linked via external_id (which is the sharedServer.uuid) and source
+        const metricsResult = await getServerRatingMetrics({ // Pass args as a single object
+          source: McpServerSource.COMMUNITY,
+          externalId: sharedServer.uuid
+        });
+        if (metricsResult.success && metricsResult.metrics) {
+          rating = metricsResult.metrics.averageRating;
+          ratingCount = metricsResult.metrics.ratingCount;
+          installationCount = metricsResult.metrics.installationCount; // Assign value here
+        }
+      } catch (metricsError) {
+        console.error(`Failed to get metrics for community server ${serverKey}:`, metricsError);
+      }
+
+      // Determine the display name for 'shared_by' - Use username from users table first, then fallback
+      const sharedByName = user?.username || 'Unknown User';
+      const profileUrl = user?.username ? `/to/${user.username}` : null;
+
+      results[serverKey] = {
+        name: sharedServer.title,
+        description: sharedServer.description || '',
+        command: template.command || '',
+        args: template.args || [],
+        envs: Array.isArray(template.env) ? template.env : Object.keys(template.env || {}),
+        url: template.url || null,
+        source: McpServerSource.COMMUNITY,
+        external_id: sharedServer.uuid,
+        githubUrl: null,
+        package_name: null,
+        github_stars: null,
+        package_registry: null,
+        package_download_count: null,
+        // Add additional metadata
+        category: template.category,
+        tags: template.tags,
+        qualifiedName: `community:${sharedServer.uuid}`,
+        updated_at: sharedServer.updated_at.toISOString(),
+        // Add shared_by and profile URL
+        shared_by: sharedByName,
+        shared_by_profile_url: profileUrl,
+        rating: rating,
+        ratingCount: ratingCount,
+        installation_count: installationCount, // Use the declared variable
+      };
+    }
+
+    console.log(`Found ${Object.keys(results).length} community servers`);
+    
+    return results; // Return directly as metrics are fetched inside
+  } catch (error) {
+    console.error('Community search error:', error);
+    return {}; // Return empty results on error
+  }
+}
+
+/**
  * Check cache for search results
  * 
  * @param source Source to check
@@ -354,14 +508,13 @@ async function checkCache(source: McpServerSource, query: string): Promise<Searc
  * @param results Search results
  */
 async function cacheResults(source: McpServerSource, query: string, results: SearchIndex): Promise<void> {
-  const ttlMinutes = CACHE_TTL[source] || 60; // Default 1 hour
-  const expiresAt = addDays(new Date(), ttlMinutes / (24 * 60)); // Convert minutes to days
-
+  const ttl = CACHE_TTL[source] || 60; // Default to 1 hour if source not found
+  
   await db.insert(searchCacheTable).values({
     source,
     query,
     results,
-    expires_at: expiresAt,
+    expires_at: addDays(new Date(), ttl / (24 * 60)), // Convert minutes to days
   });
 }
 

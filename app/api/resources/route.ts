@@ -19,10 +19,71 @@ type McpResource = {
 export const dynamic = 'force-dynamic'; // Ensure fresh data on each request
 
 /**
- * GET /api/resources
- * Retrieves a list of discovered static resources for the profile associated
- * with the provided API key. Only resources from active MCP servers are returned.
- * Expects 'Authorization: Bearer <API_KEY>' header.
+ * @swagger
+ * /api/resources:
+ *   get:
+ *     summary: Get discovered static resources for the active profile
+ *     description: |
+ *       Retrieves a list of discovered static resources associated with the authenticated user's active profile.
+ *       Only resources linked to **active** MCP servers within that profile are included.
+ *       The response is formatted to mimic the MCP Resource list structure (`ListResourcesResult`) for compatibility with the pluggedin-mcp proxy.
+ *       Requires API key authentication.
+ *     tags:
+ *       - Resources
+ *       - MCP Servers
+ *     security:
+ *       - apiKey: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved discovered static resources, ordered by name.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   uri:
+ *                     type: string
+ *                     description: The URI of the resource.
+ *                   name:
+ *                     type: string
+ *                     description: The name of the resource (defaults to URI if not provided).
+ *                     nullable: true
+ *                   description:
+ *                     type: string
+ *                     description: The description of the resource.
+ *                     nullable: true
+ *                   mimeType:
+ *                     type: string
+ *                     description: The media type (MIME type) of the resource.
+ *                     nullable: true
+ *                   size:
+ *                     type: number
+ *                     description: The size of the resource in bytes (currently not available from DB).
+ *                     nullable: true
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or cannot determine active profile.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Unauthorized: Missing or invalid API key. | Unauthorized: Invalid API key. | Unauthorized: Cannot determine active profile for API key.
+ *       500:
+ *         description: Internal Server Error fetching resources.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal Server Error
+ *                 details:
+ *                   type: string
  */
 export async function GET(request: Request) {
   try {

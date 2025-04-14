@@ -17,11 +17,68 @@ type McpPromptListEntry = {
 export const dynamic = 'force-dynamic';
 
 /**
- * GET /api/custom-instructions
- * Retrieves a list of custom instructions for the profile associated
- * with the provided API key, formatted as MCP Prompt list entries.
- * Only instructions from active MCP servers are returned.
- * Expects 'Authorization: Bearer <API_KEY>' header.
+ * @swagger
+ * /api/custom-instructions:
+ *   get:
+ *     summary: Get custom instructions for the active profile (formatted as MCP Prompts)
+ *     description: |
+ *       Retrieves a list of custom instructions associated with the authenticated user's active profile.
+ *       Only instructions linked to **active** MCP servers within that profile are included.
+ *       The response is formatted to mimic the MCP Prompt list structure (`ListPromptsResult`) for compatibility with the pluggedin-mcp proxy, which merges these with actual prompts from downstream servers.
+ *       Requires API key authentication.
+ *     tags:
+ *       - Custom Instructions
+ *       - Prompts
+ *     security:
+ *       - apiKey: []
+ *     responses:
+ *       200:
+ *         description: Successfully retrieved custom instructions formatted as MCP Prompts.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   name:
+ *                     type: string
+ *                     description: A generated name for the instruction, typically prefixed with `pluggedin_instruction_`.
+ *                     example: pluggedin_instruction_my_server_default
+ *                   description:
+ *                     type: string
+ *                     description: The content of the custom instruction.
+ *                     nullable: true
+ *                   arguments:
+ *                     type: array
+ *                     description: Always an empty array for custom instructions.
+ *                     items: {}
+ *                   _serverUuid:
+ *                     type: string
+ *                     format: uuid
+ *                     description: The UUID of the MCP server this instruction is associated with.
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or active profile not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Authorization header with Bearer token is required | Invalid API key | Active profile not found
+ *       500:
+ *         description: Internal Server Error fetching custom instructions.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal Server Error fetching custom instructions
+ *                 details:
+ *                   type: string
  */
 export async function GET(request: Request) {
   try {

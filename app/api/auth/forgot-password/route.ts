@@ -10,6 +10,74 @@ const forgotPasswordSchema = z.object({
   email: z.string().email(),
 });
 
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Initiate password reset
+ *     description: |
+ *       Starts the password reset process for a given email address.
+ *       If the email exists in the system, it generates a password reset token, stores it, and sends an email containing a reset link.
+ *       **Important:** For security reasons (to prevent email enumeration), this endpoint **always returns a 200 OK** response with a generic message, regardless of whether the email address was found or not.
+ *     tags:
+ *       - Authentication
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - email
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: The email address of the user requesting the password reset.
+ *     responses:
+ *       200:
+ *         description: Password reset process initiated (or simulated if email not found).
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: If your email is registered, you will receive a password reset link.
+ *                 # Development-only fields (remove from production docs if desired)
+ *                 resetToken:
+ *                   type: string
+ *                   description: (Development Only) The generated password reset token.
+ *                 resetUrl:
+ *                   type: string
+ *                   format: url
+ *                   description: (Development Only) The full URL to reset the password.
+ *       400:
+ *         description: Bad Request - Invalid email address format.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Invalid email address
+ *                 errors:
+ *                   type: array # Zod error details
+ *                   items:
+ *                     type: object
+ *       500:
+ *         description: Internal Server Error - Failed to process the request or send the email.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Something went wrong
+ */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -74,4 +142,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-} 
+}

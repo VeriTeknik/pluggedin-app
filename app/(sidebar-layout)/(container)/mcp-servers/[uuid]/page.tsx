@@ -76,11 +76,11 @@ export default function McpServerDetailPage({
     data: mcpServer,
     error,
     mutate,
-  } = useSWR<McpServer | undefined>(
+  } = useSWR(
     uuid && currentProfile?.uuid
       ? ['getMcpServerByUuid', uuid, currentProfile?.uuid]
       : null,
-    () => getMcpServerByUuid(currentProfile?.uuid || '', uuid!)
+    () => getMcpServerByUuid(currentProfile?.uuid || '', uuid!) as Promise<McpServer | undefined>
   );
 
   // SWR hook for fetching resource templates
@@ -88,9 +88,9 @@ export default function McpServerDetailPage({
     data: resourceTemplates,
     error: templatesError,
     isLoading: isLoadingTemplates,
-  } = useSWR<ResourceTemplate[]>(
+  } = useSWR(
     uuid ? `/api/mcp-servers/${uuid}/resource-templates` : null,
-    (url: string) => fetch(url).then((res) => res.json())
+    (url: string) => fetch(url).then((res) => res.json()) as Promise<ResourceTemplate[]>
   );
 
   // SWR hook for fetching tools
@@ -98,9 +98,9 @@ export default function McpServerDetailPage({
     data: serverTools,
     error: toolsError,
     isLoading: isLoadingTools,
-  } = useSWR<Tool[]>(
-    uuid ? `/${uuid}/tools` : null, // Unique key for SWR
-    () => getToolsForServer(uuid!) // Fetch tools using the action
+  } = useSWR(
+    uuid ? `/${uuid}/tools` : null,
+    () => getToolsForServer(uuid!) as Promise<Tool[]>
   );
 
 
@@ -317,6 +317,20 @@ export default function McpServerDetailPage({
           />
         </CardHeader>
       </Card>
+
+      {/* Add a section that displays the import information if the server was imported */}
+      {mcpServer.notes && mcpServer.notes.includes("Imported from") && (
+        <Card className="mb-4">
+          <CardHeader>
+            <CardTitle className="text-base">Server Origin</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-sm text-muted-foreground">
+              {mcpServer.notes}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Form {...form}>
         <Tabs defaultValue="details" className="w-full">
@@ -596,7 +610,7 @@ export default function McpServerDetailPage({
                 )}
                 {!isLoadingTools && !toolsError && serverTools && serverTools.length > 0 && (
                   <div className="space-y-4">
-                    {serverTools.map((tool) => (
+                    {serverTools.map((tool: Tool) => (
                       <div key={tool.uuid} className="border p-4 rounded-md bg-muted/50">
                         <p className="font-semibold text-sm mb-1">{tool.name}</p>
                         {tool.description && <p className="text-xs text-muted-foreground mb-2">{tool.description}</p>}

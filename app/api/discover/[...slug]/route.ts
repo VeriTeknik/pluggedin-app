@@ -9,12 +9,85 @@ import { mcpServersTable,McpServerStatus } from '@/db/schema'; // Sorted
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/discover/all
- * POST /api/discover/{server_uuid}
+ * @swagger
+ * /api/discover/{slug}:
+ *   post:
+ *     summary: Trigger MCP server discovery
+ *     description: |
+ *       Initiates the discovery process for tools, prompts, and resources for MCP servers associated with the authenticated user's active profile.
+ *       Requires API key authentication. This endpoint is typically called by the `pluggedin_discover_tools` static tool within the pluggedin-mcp proxy.
  *
- * Triggers the discovery action for MCP servers associated with the API key's profile.
- * Called by the `pluggedin_discover_tools` static tool in the proxy.
- * Expects 'Authorization: Bearer <API_KEY>' header.
+ *       The `slug` parameter determines the scope:
+ *       - Use `all` (i.e., `/api/discover/all`) to trigger discovery for **all active** MCP servers in the profile.
+ *       - Use a specific server UUID (i.e., `/api/discover/{server_uuid}`) to trigger discovery for **only that active** server.
+ *
+ *       The discovery process runs asynchronously in the background. This endpoint returns an immediate success response indicating the process has started.
+ *     tags:
+ *       - Discovery
+ *       - MCP Servers
+ *     security:
+ *       - apiKey: []
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Specifies the discovery target. Should be either the literal string `all` or a valid MCP server UUID.
+ *         example: all OR 00000000-0000-0000-0000-000000000000
+ *     responses:
+ *       200:
+ *         description: Discovery process successfully initiated.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Discovery process initiated for all active servers. Results will be available shortly. | Discovery process initiated for server MyServerName. Results will be available shortly. | No active servers found for this profile to discover. | Server MyServerName is not active. Discovery skipped.
+ *       400:
+ *         description: Bad Request - Invalid discovery target in the slug.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Invalid discovery target. Use "/api/discover/all" or "/api/discover/{server_uuid}".
+ *       401:
+ *         description: Unauthorized - Invalid or missing API key or active profile not found.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Authorization header with Bearer token is required | Invalid API key | Active profile not found
+ *       404:
+ *         description: Not Found - Specific server UUID provided in the slug was not found for the authenticated profile.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Server with UUID xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx not found for this profile.
+ *       500:
+ *         description: Internal Server Error - Failed to trigger the discovery process.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Internal Server Error triggering discovery
+ *                 details:
+ *                   type: string
  */
 export async function POST(
   request: Request,

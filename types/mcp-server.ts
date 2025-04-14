@@ -17,4 +17,12 @@ export interface McpServer {
   source: McpServerSource;
   external_id: string | null;
   notes: string | null; // Added notes field
+  
+  // Additional properties for shared servers
+  originalServerUuid?: string;
+  sharedBy?: string;
+  customInstructions?: any[] | string | any;
+  averageRating?: number;
+  ratingCount?: number;
+  installationCount?: number;
 }

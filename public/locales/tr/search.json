@@ -1,0 +1,50 @@
+{
+  "search": {
+    "title": "Arama",
+    "subtitle": "Tüm içerikte arama yapın",
+    "explorePlugins": "Eklentileri Keşfet",
+    "input": {
+      "placeholder": "Ara..."
+    },
+    "loading": "Arama yükleniyor...",
+    "noResults": "Sonuç bulunamadı",
+    "error": "Arama sonuçları yüklenirken hata oluştu",
+    "sort": "Sırala",
+    "sortBy": "Sıralama kriteri",
+    "sortOptions": {
+      "relevance": "İlgililik",
+      "popularity": "Popülerlik",
+      "recent": "En yeni",
+      "stars": "GitHub yıldızları"
+    },
+    "filter": "Filtrele",
+    "filterByTags": "Etiketlere göre filtrele",
+    "noTagsAvailable": "Etiket bulunamadı",
+    "clearFilters": "Filtreleri temizle",
+    "clearAllFilters": "Tümünü temizle",
+    "noMatchingTags": "Seçili etiketlerle eşleşen sonuç yok",
+    "noMatchingFilters": "Seçili filtrelerle eşleşen sonuç yok",
+    "category": "Kategori",
+    "filterByCategory": "Kategoriye göre filtrele",
+    "noCategoriesAvailable": "Kategori bulunamadı",
+    "allCategories": "Tüm kategoriler",
+    "categories": {
+      "LLM": "YDM",
+      "UTILITY": "Yardımcı Program",
+      "TOOL": "Araç",
+      "DATA": "Veri Erişimi",
+      "CONNECTOR": "Bağlayıcı",
+      "SEARCH": "Arama",
+      "CODE": "Kod",
+      "IMAGE": "Görüntü",
+      "AUDIO": "Ses",
+      "VIDEO": "Video",
+      "OTHER": "Diğer"
+    },
+    "card": {
+      "install": "Yükle",
+      "installed": "Yüklendi",
+      "rate": "Değerlendir"
+    }
+  }
+}

@@ -65,9 +65,9 @@ export function CustomInstructionsEditor({ serverUuid, profileUuid }: CustomInst
     }, { message: t('settings.validation.invalidJsonArray') }), // Now 't' is accessible
   });
 
-  const { data: instructions, error, isLoading } = useSWR<CustomInstructionItem>(apiUrl, fetcher, {
+  const { data: instructions, error, isLoading } = useSWR(apiUrl, fetcher, {
     revalidateOnFocus: false,
-  });
+  }) as { data: CustomInstructionItem; error: Error | undefined; isLoading: boolean };
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),

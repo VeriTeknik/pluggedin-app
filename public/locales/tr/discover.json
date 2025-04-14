@@ -1,0 +1,37 @@
+{
+  "title": "Keşfet",
+  "subtitle": "İçerikleri keşfet ve diğerleriyle bağlantı kur",
+  "tabs": {
+    "people": "Kişiler",
+    "servers": "MCP Sunucuları ({{count}})",
+    "collections": "Koleksiyonlar ({{count}})",
+    "chats": "Gömülü Sohbetler ({{count}})"
+  },
+  "following": {
+    "title": "Takip Edilenler",
+    "empty": "Henüz kimseyi takip etmiyorsunuz",
+    "viewProfile": "Profili Görüntüle"
+  },
+  "suggested": {
+    "title": "Önerilen Kullanıcılar",
+    "empty": "Önerilen kullanıcı bulunamadı"
+  },
+  "search": {
+    "placeholder": "Ara...",
+    "noResults": "Sonuç bulunamadı",
+    "card": {
+      "dialog": {
+        "title": "MCP Sunucusu Ekle",
+        "description": "Çalışma alanınıza yeni bir sunucu ekleyin",
+        "name": "Sunucu Adı",
+        "command": "Komut",
+        "args": "Argümanlar",
+        "env": "Ortam Değişkenleri",
+        "url": "Sunucu URL'si",
+        "cancel": "İptal",
+        "add": "Sunucu Ekle",
+        "installing": "Yükleniyor..."
+      }
+    }
+  }
+}

@@ -31,9 +31,9 @@ export function ResourceList({ serverUuid }: ResourceListProps) {
   const { t } = useTranslation();
   const apiUrl = `/api/mcp-servers/${serverUuid}/resources`;
 
-  const { data: resources, error, isLoading } = useSWR<ResourceItem[]>(apiUrl, fetcher, {
-    revalidateOnFocus: false, // Optional: prevent revalidation on window focus
-  });
+  const { data: resources, error, isLoading } = useSWR(apiUrl, fetcher, {
+    revalidateOnFocus: false,
+  }) as { data: ResourceItem[]; error: Error | undefined; isLoading: boolean };
 
   if (isLoading) {
     return (
@@ -78,7 +78,7 @@ export function ResourceList({ serverUuid }: ResourceListProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {resources.map((resource) => (
+          {resources.map((resource: ResourceItem) => (
             <TableRow key={resource.uuid} className="dark:border-slate-800">
               <TableCell className="font-medium flex items-center">
                  <FileText className="h-4 w-4 mr-2 text-muted-foreground" />

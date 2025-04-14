@@ -1,26 +1,43 @@
 'use client';
 
-import { CheckCircle, Globe, Terminal, Trash2, XCircle } from 'lucide-react';
-import { RefreshCw } from 'lucide-react'; // Import RefreshCw icon
+import { Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, Trash2, XCircle } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react'; // Import useState
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Import the action
+import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
+import { isServerShared, unshareServer } from '@/app/actions/social';
+import { ShareServerDialog } from '@/components/server/share-server-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useToast } from '@/components/ui/use-toast';
 import { McpServerStatus, McpServerType } from '@/db/schema';
-import { useProfiles } from '@/hooks/use-profiles'; // Import useProfiles
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useProfiles } from '@/hooks/use-profiles';
+import { cn } from '@/lib/utils';
 import { McpServer } from '@/types/mcp-server';
 
 interface ServerCardProps {
   server: McpServer;
-  onStatusChange: (checked: boolean) => Promise<void>;
-  onDelete: () => Promise<void>;
+  onStatusChange?: (checked: boolean) => void;
+  onDelete?: () => void;
+  isSelected?: boolean;
+  onSelect?: (checked: boolean) => void;
 }
 
 const getServerIcon = (server: McpServer) => {
@@ -30,11 +47,47 @@ const getServerIcon = (server: McpServer) => {
   return <Globe className="h-4 w-4 text-blue-500" />;
 };
 
-export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps) {
+export function ServerCard({
+  server,
+  onStatusChange,
+  onDelete,
+  isSelected,
+  onSelect,
+}: ServerCardProps) {
   const { t } = useTranslation();
-  const { currentProfile } = useProfiles(); // Get current profile
+  const router = useRouter();
+  const { currentProfile } = useProfiles();
   const { toast } = useToast();
   const [isDiscovering, setIsDiscovering] = useState(false);
+  const [isShared, setIsShared] = useState(false);
+  const [sharedUuid, setSharedUuid] = useState<string | null>(null);
+  const [isCheckingShareStatus, setIsCheckingShareStatus] = useState(true);
+  const [isUnsharing, setIsUnsharing] = useState(false);
+
+  // Check if server is shared on mount
+  useEffect(() => {
+    async function checkIfShared() {
+      if (!currentProfile?.uuid || !server.uuid) {
+        setIsCheckingShareStatus(false);
+        return;
+      }
+      try {
+        const result = await isServerShared(currentProfile.uuid, server.uuid);
+        setIsShared(result.isShared);
+        setSharedUuid(result.server?.uuid || null);
+      } catch (error) {
+        console.error('Error checking if server is shared:', error);
+      } finally {
+        setIsCheckingShareStatus(false);
+      }
+    }
+    checkIfShared();
+  }, [currentProfile?.uuid, server.uuid]);
+
+  const handleShareStatusChange = (newIsShared: boolean, newSharedUuid: string | null) => {
+    setIsShared(newIsShared);
+    setSharedUuid(newSharedUuid);
+  };
 
   const handleDiscover = async () => {
     if (!currentProfile?.uuid || !server.uuid) {
@@ -56,8 +109,51 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
     }
   };
 
+  const handleUnshare = async () => {
+    if (!currentProfile?.uuid || !sharedUuid) return;
+
+    setIsUnsharing(true);
+    try {
+      const result = await unshareServer(currentProfile.uuid, sharedUuid);
+      if (result.success) {
+        toast({ title: t('common.success'), description: t('mcpServers.actions.unsharedSuccess') });
+        setIsShared(false);
+        setSharedUuid(null);
+        router.refresh(); // Refresh page to update UI potentially elsewhere
+      } else {
+        throw new Error(result.error || t('mcpServers.errors.unshareFailed'));
+      }
+    } catch (error: any) {
+      toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
+    } finally {
+      setIsUnsharing(false);
+    }
+  };
+
   return (
-    <Card className="group hover:shadow-md transition-all dark:bg-slate-900/70 dark:border-slate-800 dark:hover:bg-slate-900/90">
+    <Card className={cn("relative", isSelected && "ring-2 ring-primary")}>
+      {/* Add selection checkbox */}
+      <div className="absolute top-2 left-2 z-10">
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={(checked) => onSelect?.(checked as boolean)}
+                  disabled={!isShared}
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isShared 
+                ? t('mcpServers.actions.selectForCollection')
+                : t('mcpServers.errors.mustBeSharedForCollection')}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      </div>
+      
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
           <div className="h-8 w-8 rounded-lg flex items-center justify-center bg-primary/10 dark:bg-primary/20">
@@ -79,12 +175,19 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
             </Tooltip>
           </TooltipProvider>
         </div>
-        <CardTitle className="mt-3 text-xl">
-          <Link href={`/mcp-servers/${server.uuid}`} className="hover:text-primary transition-colors">
+        <CardTitle className="mt-3 text-base sm:text-xl">
+          <Link href={`/mcp-servers/${server.uuid}`} className="hover:text-primary transition-colors line-clamp-1">
             {server.name}
           </Link>
+          {server.notes?.includes("Imported from") && (
+            <div className="mt-1">
+              <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400">
+                Forked
+              </Badge>
+            </div>
+          )}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="line-clamp-2">
           {server.description || t('mcpServers.form.descriptionPlaceholder')}
         </CardDescription>
       </CardHeader>
@@ -100,12 +203,12 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
             {server.status === McpServerStatus.ACTIVE ? (
               <Badge variant="outline" className="bg-green-500/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900">
                 <CheckCircle className="mr-1 h-3 w-3" />
-                {t('mcpServers.status.active')}
+                <span className="hidden sm:inline">{t('mcpServers.status.active')}</span>
               </Badge>
             ) : (
               <Badge variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900">
                 <XCircle className="mr-1 h-3 w-3" />
-                {t('mcpServers.status.inactive')}
+                <span className="hidden sm:inline">{t('mcpServers.status.inactive')}</span>
               </Badge>
             )}
           </div>
@@ -132,30 +235,86 @@ export function ServerCard({ server, onStatusChange, onDelete }: ServerCardProps
         </div>
       </CardContent>
       
-      <CardFooter className="flex justify-between pt-2">
-        <Button variant="outline" size="sm" asChild className="dark:border-slate-700 dark:hover:bg-slate-800">
+      <CardFooter className="flex flex-wrap gap-2 pt-2">
+        <Button variant="outline" size="sm" asChild className="dark:border-slate-700 dark:hover:bg-slate-800 flex-1 sm:flex-none">
           <Link href={`/mcp-servers/${server.uuid}`}>
             {t('mcpServers.actions.edit')}
           </Link>
         </Button>
-        {/* Add Discover Tools Button */}
+
+        {/* Share / Unshare Button */}
+        {currentProfile && !isCheckingShareStatus && (
+          isShared ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="outline" size="sm" className="text-green-600 dark:text-green-500 dark:border-slate-700 dark:hover:bg-slate-800 flex-1 sm:flex-none">
+                  <Check className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">{t('mcpServers.actions.shared')}</span>
+                  <span className="sm:hidden">Shared</span>
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="w-[calc(100%-2rem)] sm:w-full sm:max-w-lg">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{t('mcpServers.actions.unshareConfirmTitle')}</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {t('mcpServers.actions.unshareConfirmDesc')}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleUnshare}
+                    disabled={isUnsharing}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {isUnsharing ? t('common.processing') : t('mcpServers.actions.unshare')}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : (
+            <ShareServerDialog
+              server={server}
+              profileUuid={currentProfile.uuid}
+              variant="outline"
+              size="sm"
+              onShareStatusChange={handleShareStatusChange}
+            >
+              {/* Custom trigger button */}
+              <Button variant="outline" size="sm" className="dark:border-slate-700 dark:hover:bg-slate-800 flex-1 sm:flex-none">
+                <Share2 className="h-4 w-4 mr-2" />
+                <span className="hidden sm:inline">{t('mcpServers.actions.share')}</span>
+                <span className="sm:hidden">Share</span>
+              </Button>
+            </ShareServerDialog>
+          )
+        )}
+        {isCheckingShareStatus && (
+           <Button variant="outline" size="sm" disabled className="flex-1 sm:flex-none">...</Button> // Loading indicator
+        )}
+
+        {/* Discover Tools Button */}
         <Button
           variant="secondary"
           size="sm"
           onClick={handleDiscover}
           disabled={isDiscovering}
-          className="dark:border-slate-700 dark:hover:bg-slate-800"
+          className="dark:border-slate-700 dark:hover:bg-slate-800 flex-1 sm:flex-none"
         >
           <RefreshCw size={14} className={`mr-1 ${isDiscovering ? 'animate-spin' : ''}`} />
-          {isDiscovering ? t('mcpServers.actions.discovering') : t('mcpServers.actions.discover')}
+          <span className="hidden sm:inline">{isDiscovering ? t('mcpServers.actions.discovering') : t('mcpServers.actions.discover')}</span>
+          <span className="sm:hidden">{isDiscovering ? 'Discovering' : 'Discover'}</span>
         </Button>
+        
         <Button
           variant="destructive"
           size="sm"
           onClick={onDelete}
+          className="flex-1 sm:flex-none"
         >
           <Trash2 size={14} className="mr-1" />
-          {t('mcpServers.actions.delete')}
+          <span className="hidden sm:inline">{t('mcpServers.actions.delete')}</span>
+          <span className="sm:hidden">Delete</span>
         </Button>
       </CardFooter>
     </Card>

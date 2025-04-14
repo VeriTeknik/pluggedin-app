@@ -1,0 +1,85 @@
+{
+  "legal": {
+    "title": "Legal",
+    "subtitle": "Important Documents",
+    "description": "Important documents and legal information for Plugged.in",
+    "backToLegal": "Back to Legal",
+    "lastUpdated": "Last Updated",
+    "pages": {
+      "privacy": {
+        "title": "Privacy Policy",
+        "description": "How we collect, use, and protect your data",
+        "content": {
+          "intro": "Welcome to Plugged.in (\"we,\" \"our,\" or \"us\"). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our service. Please read this privacy policy carefully.",
+          "disclaimer": "If you do not agree with the terms of this privacy policy, please do not access the service.",
+          "note": "IMPORTANT NOTE: Plugged.in is currently in Release Candidate status. This privacy policy may be updated as the service matures and additional features are implemented.",
+          "thirdParty": "We have no control over and assume no responsibility for the content, privacy policies or practices of any third-party sites or services."
+        }
+      },
+      "terms": {
+        "title": "Terms of Service",
+        "description": "Terms and conditions for using our service",
+        "content": {
+          "intro": "By accessing or using Plugged.in, you agree to these Terms and any additional terms that may apply. If you do not agree to these Terms, you must not access or use Plugged.in.",
+          "responsibilities": {
+            "title": "Your Responsibilities",
+            "items": [
+              "Use MCP servers and tools in compliance with applicable laws and regulations",
+              "Not use MCP servers for any illegal or unauthorized purpose",
+              "Take responsibility for MCP servers you configure or deploy"
+            ]
+          }
+        }
+      },
+      "disclaimer": {
+        "title": "Disclaimer",
+        "description": "Important legal notices",
+        "content": {
+          "title": "Disclaimer and Limitation of Liability",
+          "thirdParty": "The service may contain links to third-party websites or services that are not owned or controlled by us. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party websites or services."
+        }
+      },
+      "contact": {
+        "title": "Contact",
+        "description": "How to reach us",
+        "content": {
+          "title": "Contact Information",
+          "description": "For any questions about these legal documents, please contact us",
+          "form": {
+            "title": "Send us a Message",
+            "description": "Fill out the form below to send us a message",
+            "name": "Name",
+            "namePlaceholder": "Your name",
+            "email": "Email",
+            "emailPlaceholder": "Your email address",
+            "subject": "Subject",
+            "subjectPlaceholder": "Message subject",
+            "message": "Message",
+            "messagePlaceholder": "Your message",
+            "submit": "Send Message",
+            "sending": "Sending...",
+            "success": "Your message has been sent successfully",
+            "error": "An error occurred while sending your message",
+            "demoNotice": "This form is for demonstration purposes only. During the Release Candidate phase, please use the email address provided."
+          },
+          "faq": {
+            "title": "Frequently Asked Questions",
+            "status": {
+              "question": "What is the current status of Plugged.in?",
+              "answer": "Plugged.in is currently in Release Candidate status. This means that while the core functionality is complete, there may still be bugs or issues that need to be addressed before the final release."
+            },
+            "bugs": {
+              "question": "How can I report a bug?",
+              "answer": "You can report bugs by sending an email to support@plugged.in or by opening an issue on our GitHub repository. Please include detailed steps to reproduce the bug, along with any relevant error messages."
+            },
+            "security": {
+              "question": "Is my data secure during the Release Candidate phase?",
+              "answer": "While we implement standard security practices, during the Release Candidate phase, we recommend not storing sensitive information within the service. Please review our Privacy Policy for more information."
+            }
+          },
+          "note": "Note: During the Release Candidate phase, our support capabilities may be limited. We will do our best to respond to all inquiries in a timely manner."
+        }
+      }
+    }
+  }
+}

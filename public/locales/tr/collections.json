@@ -1,0 +1,37 @@
+{
+  "collections": {
+    "title": "Koleksiyonlar",
+    "subtitle": "Favori araçlarınızı düzenleyin ve paylaşın",
+    "create": "Koleksiyon Oluştur",
+    "edit": "Koleksiyonu Düzenle",
+    "delete": "Koleksiyonu Sil",
+    "share": "Koleksiyonu Paylaş",
+    "back": "Geri",
+    "error": "Hata",
+    "deleteSuccess": "Koleksiyon Silindi",
+    "deleteSuccessDesc": "Koleksiyon başarıyla silindi",
+    "deleteError": "Koleksiyon silinemedi",
+    "deleteConfirmTitle": "Koleksiyon Silinsin mi?",
+    "deleteConfirmDesc": "Bu işlem geri alınamaz. Bu koleksiyon kalıcı olarak silinecektir.",
+    "visibility": {
+      "public": "Herkese Açık",
+      "private": "Özel"
+    },
+    "form": {
+      "name": "İsim",
+      "description": "Açıklama",
+      "visibility": "Görünürlük",
+      "submit": "Koleksiyonu Kaydet",
+      "cancel": "İptal"
+    },
+    "empty": {
+      "title": "Henüz koleksiyon yok",
+      "description": "Favori araçlarınızı düzenlemeye başlamak için ilk koleksiyonunuzu oluşturun"
+    },
+    "card": {
+      "install": "Yükle"
+    },
+    "installSelected": "Seçilenleri Yükle ({{count}})",
+    "noServers": "Bu koleksiyonda sunucu bulunmuyor"
+  }
+}

@@ -1,9 +1,13 @@
 'use client';
 
-import { ArrowLeft, Github, Mail } from 'lucide-react';
+import { ArrowLeft, Github, Mail, MessageSquare } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 
+import { submitContactForm } from '@/app/actions/contact';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -13,6 +17,37 @@ import { Textarea } from '@/components/ui/textarea';
 
 export default function ContactPage() {
   const { t } = useTranslation();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const formData = new FormData(formRef.current!);
+      const data = {
+        name: formData.get('name') as string,
+        email: formData.get('email') as string,
+        subject: formData.get('subject') as string,
+        message: formData.get('message') as string
+      };
+
+      const result = await submitContactForm(data);
+
+      if (result.success) {
+        formRef.current?.reset();
+        toast.success(t('legal.pages.contact.content.form.success'));
+      } else {
+        toast.error(t('legal.pages.contact.content.form.error'));
+      }
+    } catch (error) {
+      console.error('Error submitting contact form:', error);
+      toast.error(t('legal.pages.contact.content.form.error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
   
   return (
     <div className="flex flex-col space-y-6 p-6">
@@ -60,62 +95,98 @@ export default function ContactPage() {
                 <h3 className="font-medium">GitHub</h3>
                 <p className="text-sm text-muted-foreground">
                   <a 
-                    href="https://github.com/pluggedin-app" 
+                    href="https://github.com/VeriTeknik/pluggedin-app" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
                   >
-                    github.com/pluggedin-app
+                    github.com/VeriTeknik/pluggedin-app
+                  </a>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              <div>
+                <h3 className="font-medium">Discord</h3>
+                <p className="text-sm text-muted-foreground">
+                  <a 
+                    href="https://discord.gg/pluggedin" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    discord.gg/pluggedin
                   </a>
                 </p>
               </div>
             </div>
 
             <p className="mt-4 text-sm text-muted-foreground">
-              <strong>Note:</strong> During the Release Candidate phase, our support 
-              capabilities may be limited. We will do our best to respond to all inquiries
-              in a timely manner.
+              {t('legal.pages.contact.content.note')}
             </p>
+            <Image src="/vtlogo.png" alt="Plugged.in Logo" width={210} height={50} className="mb-4" />
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Send us a Message</CardTitle>
+            <CardTitle>{t('legal.pages.contact.content.form.title')}</CardTitle>
             <CardDescription>
-              Fill out the form below to send us a message
+              {t('legal.pages.contact.content.form.description')}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form className="space-y-4">
+            <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Name</Label>
-                <Input id="name" placeholder="Your name" />
+                <Label htmlFor="name">{t('legal.pages.contact.content.form.name')}</Label>
+                <Input 
+                  id="name"
+                  name="name"
+                  required
+                  placeholder={t('legal.pages.contact.content.form.namePlaceholder')} 
+                />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" placeholder="Your email address" />
+                <Label htmlFor="email">{t('legal.pages.contact.content.form.email')}</Label>
+                <Input 
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  placeholder={t('legal.pages.contact.content.form.emailPlaceholder')} 
+                />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="subject">Subject</Label>
-                <Input id="subject" placeholder="Message subject" />
+                <Label htmlFor="subject">{t('legal.pages.contact.content.form.subject')}</Label>
+                <Input 
+                  id="subject"
+                  name="subject"
+                  required
+                  placeholder={t('legal.pages.contact.content.form.subjectPlaceholder')} 
+                />
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="message">Message</Label>
-                <Textarea id="message" placeholder="Your message" rows={5} />
+                <Label htmlFor="message">{t('legal.pages.contact.content.form.message')}</Label>
+                <Textarea 
+                  id="message"
+                  name="message"
+                  required
+                  placeholder={t('legal.pages.contact.content.form.messagePlaceholder')} 
+                  rows={5} 
+                />
               </div>
               
-              <Button type="submit" className="w-full">
-                Send Message
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting 
+                  ? t('legal.pages.contact.content.form.sending')
+                  : t('legal.pages.contact.content.form.submit')
+                }
               </Button>
-              
-              <p className="text-xs text-muted-foreground text-center">
-                This form is for demonstration purposes only. 
-                During the Release Candidate phase, please use the email address provided.
-              </p>
             </form>
           </CardContent>
         </Card>
@@ -123,33 +194,27 @@ export default function ContactPage() {
 
       <Card className="mt-6">
         <CardHeader>
-          <CardTitle>Frequently Asked Questions</CardTitle>
+          <CardTitle>{t('legal.pages.contact.content.faq.title')}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <h3 className="font-medium">What is the current status of Plugged.in?</h3>
+            <h3 className="font-medium">{t('legal.pages.contact.content.faq.status.question')}</h3>
             <p className="text-sm text-muted-foreground">
-              Plugged.in is currently in Release Candidate status. This means that while
-              the core functionality is complete, there may still be bugs or issues that
-              need to be addressed before the final release.
+              {t('legal.pages.contact.content.faq.status.answer')}
             </p>
           </div>
           
           <div>
-            <h3 className="font-medium">How can I report a bug?</h3>
+            <h3 className="font-medium">{t('legal.pages.contact.content.faq.bugs.question')}</h3>
             <p className="text-sm text-muted-foreground">
-              You can report bugs by sending an email to support@plugged.in or by opening
-              an issue on our GitHub repository. Please include detailed steps to reproduce
-              the bug, along with any relevant error messages.
+              {t('legal.pages.contact.content.faq.bugs.answer')}
             </p>
           </div>
           
           <div>
-            <h3 className="font-medium">Is my data secure during the Release Candidate phase?</h3>
+            <h3 className="font-medium">{t('legal.pages.contact.content.faq.security.question')}</h3>
             <p className="text-sm text-muted-foreground">
-              While we implement standard security practices, during the Release Candidate
-              phase, we recommend not storing sensitive information within the service.
-              Please review our Privacy Policy for more information.
+              {t('legal.pages.contact.content.faq.security.answer')}
             </p>
           </div>
         </CardContent>

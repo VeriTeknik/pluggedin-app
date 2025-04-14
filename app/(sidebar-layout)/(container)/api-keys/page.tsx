@@ -148,7 +148,7 @@ export default function ApiKeysPage() {
               </div>
             )}
             {apiKeys &&
-              apiKeys.map((apiKey) => (
+              apiKeys.map((apiKey: ApiKey) => (
                 <div key={apiKey.uuid} className='space-y-2'>
                   {apiKey.name && (
                     <div className='text-sm font-medium'>{apiKey.name}</div>
