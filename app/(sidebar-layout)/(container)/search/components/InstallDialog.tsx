@@ -48,6 +48,7 @@ export function InstallDialog({
   onOpenChange,
   serverData,
 }: InstallDialogProps) {
+  // Load 'discover' as the default namespace
   const { t } = useTranslation('discover');
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
@@ -117,8 +118,8 @@ export function InstallDialog({
       
       if (result.success) {
         toast({
-          title: 'Success',
-          description: 'Server installed successfully',
+          title: t('common:success'), // Added 'common:' prefix back
+          description: t('install.successDescription'), // Belongs to discover namespace
         });
 
         // Track the installation after successful creation
@@ -148,16 +149,16 @@ export function InstallDialog({
         onOpenChange(false);
       } else {
         toast({
-          title: 'Error',
-          description: result.error || 'Failed to install server',
+          title: t('common:error'), // Added 'common:' prefix back
+          description: result.error || t('install.errorDescription'), // Belongs to discover namespace
           variant: 'destructive',
         });
       }
     } catch (error) {
       console.error('Error installing server:', error);
       toast({
-        title: 'Error',
-        description: 'An unexpected error occurred',
+        title: t('common:error'), // Added 'common:' prefix back
+        description: t('common:errors.unexpected'), // Used correct key from common.json
         variant: 'destructive',
       });
     } finally {

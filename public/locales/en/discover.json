@@ -16,6 +16,17 @@
     "title": "Suggested Users",
     "empty": "No suggested users found"
   },
+  "install": {
+    "title": "Install Server",
+    "description": "Configure and install this MCP server.",
+    "name": "Server Name",
+    "command": "Command",
+    "args": "Arguments (space-separated)",
+    "env": "Environment Variables (KEY=VALUE per line)",
+    "url": "Server URL",
+    "successDescription": "Server installed successfully",
+    "errorDescription": "Failed to install server"
+  },
   "search": {
     "placeholder": "Search...",
     "noResults": "No results found",
