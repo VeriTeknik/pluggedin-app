@@ -348,17 +348,36 @@ export async function getOrCreatePlaygroundSession(
       selectedServerUuids.includes(server.uuid)
     );
 
+    // Read workspace path from env or use default
+    const mcpWorkspacePath = process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace';
+
     // Format servers for conversion and apply sandboxing for STDIO using firejail
     const mcpServersConfig: Record<string, any> = {};
     selectedServers.forEach(server => {
-      // Pass the server config directly; firejail logic is now handled in client-wrapper.ts
-      mcpServersConfig[server.name] = {
-        command: server.command,
-        args: server.args,
-        env: server.env,
-        url: server.url,
-        type: server.type
-      };
+      const isFilesystemServer = server.command === 'npx' && server.args?.includes('@modelcontextprotocol/server-filesystem');
+
+      if (isFilesystemServer && server.type === 'STDIO') {
+        // Special handling for filesystem server: set cwd and ensure arg points within workspace
+        mcpServersConfig[server.name] = {
+          command: server.command,
+          // Ensure the last argument is '.' to target the cwd
+          args: [...(server.args?.slice(0, -1) ?? []), '.'],
+          env: server.env,
+          url: server.url,
+          type: server.type,
+          cwd: mcpWorkspacePath // Explicitly set the CWD for the server process
+        };
+      } else {
+        // Pass other server configs directly; firejail logic is handled in client-wrapper.ts
+        mcpServersConfig[server.name] = {
+          command: server.command,
+          args: server.args,
+          env: server.env,
+          url: server.url,
+          type: server.type
+          // Do not set cwd for non-filesystem servers unless specifically needed/configured
+        };
+      }
     });
 
     // Initialize LLM with streaming
