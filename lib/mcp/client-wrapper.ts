@@ -69,7 +69,8 @@ export function createFirejailConfig(
 
   const baseFirejailArgs = [
     '--quiet',
-    '--private', // Create a new mount namespace
+    // Use --private=DIR to strictly cage the process within the workspace
+    `--private=${paths.mcpWorkspace}`,
     '--noroot', // Disable root privileges
 
     // Network configuration (adjust eth0 if needed)
@@ -84,8 +85,8 @@ export function createFirejailConfig(
 
     // Allow necessary paths (adjust these based on actual deployment)
     `--whitelist=${paths.localBin}`,
-    `--whitelist=${paths.appPath}`,
-    `--whitelist=${paths.mcpWorkspace}`,
+    // REMOVED: `--whitelist=${paths.appPath}`, - Prevent access to main app dir
+    `--whitelist=${paths.mcpWorkspace}`, // Allow access only to the designated workspace
 
     // Python-specific directories (adjust versions if needed)
     '--whitelist=/usr/lib/python*',
