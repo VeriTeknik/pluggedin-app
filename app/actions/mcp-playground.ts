@@ -374,9 +374,14 @@ export async function getOrCreatePlaygroundSession(
           args: server.args,
           env: server.env,
           url: server.url,
-          type: server.type
+          type: server.type,
           // Do not set cwd for non-filesystem servers unless specifically needed/configured
         };
+      }
+
+      // Add applySandboxing flag specifically for playground sessions
+      if (mcpServersConfig[server.name].type === 'STDIO') {
+        mcpServersConfig[server.name].applySandboxing = true;
       }
     });
 

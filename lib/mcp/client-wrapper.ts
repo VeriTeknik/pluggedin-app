@@ -73,8 +73,10 @@ export function createFirejailConfig(
     `--private=${paths.mcpWorkspace}`,
     '--noroot', // Disable root privileges
 
-    // Network configuration (adjust eth0 if needed)
-    '--net=eth0',
+    // Network configuration - Ignore global, start with none, add filter
+    '--ignore=net', // Ignore global config's network setting
+    '--net=none',   // Start with no network interface
+    '--netfilter', // Enable basic network filtering
     '--protocol=unix,inet,inet6',
     '--dns=1.1.1.1', // Use Cloudflare DNS, adjust if needed
 
@@ -167,11 +169,14 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
         return null;
       }
 
-      // Get firejail config if on Linux, otherwise use original config
-      const firejailConfig = createFirejailConfig(serverConfig);
+      // Apply firejail sandboxing only if explicitly requested and applicable
+      let firejailConfig: FirejailConfig | null = null;
+      if (serverConfig.applySandboxing === true) { // Check for the flag
+        firejailConfig = createFirejailConfig(serverConfig);
+      }
 
       const stdioParams: StdioServerParameters = firejailConfig ? {
-        // Use firejail configuration
+        // Use firejail configuration because applySandboxing was true
         command: firejailConfig.command,
         args: firejailConfig.args,
         env: firejailConfig.env

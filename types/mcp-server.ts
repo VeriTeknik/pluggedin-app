@@ -25,4 +25,7 @@ export interface McpServer {
   averageRating?: number;
   ratingCount?: number;
   installationCount?: number;
+
+  // Flag to indicate if firejail sandboxing should be applied (used internally)
+  applySandboxing?: boolean;
 }
