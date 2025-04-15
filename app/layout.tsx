@@ -14,6 +14,7 @@ import {
   Work_Sans,
   Zilla_Slab,
 } from 'next/font/google';
+import Script from 'next/script'; // Import the Script component
 import { Toaster as SonnerToaster } from 'sonner';
 
 import { I18nProviderWrapper } from '@/components/providers/i18n-provider-wrapper';
@@ -95,6 +96,9 @@ export const metadata: Metadata = {
   description: 'Plugged.in. The AI crossroads.',
 };
 
+// Get the GA ID from environment variables
+const gaMeasurementId = process.env.NEXT_PUBLIC_GA_ID;
+
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -109,7 +113,30 @@ export default async function RootLayout({
     <html lang='en' suppressHydrationWarning>
       <head>
       {/* Removed the <link> tag for Quicksand font */}
-      
+
+        {/* Google Analytics Scripts */}
+        {gaMeasurementId && (
+          <>
+            <Script
+              strategy="afterInteractive" // Load after page becomes interactive
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
+            />
+            <Script
+              id="google-analytics"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${gaMeasurementId}', {
+                    page_path: window.location.pathname,
+                  });
+                `,
+              }}
+            />
+          </>
+        )}
       </head>
       <body
         suppressHydrationWarning

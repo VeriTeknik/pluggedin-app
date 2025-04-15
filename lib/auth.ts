@@ -252,7 +252,7 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         // Explicitly assign ID from token, even if session object might already have it
         session.user.id = token.id as string; 
-        console.log(`Session callback: Assigning ID: ${session.user.id}`); // Add logging
+        // console.log(`Session callback: Assigning ID: ${session.user.id}`); // Add logging
         
         // Use nullish coalescing to ensure type compatibility (string | null)
         session.user.name = token.name ?? null; 
@@ -260,12 +260,12 @@ export const authOptions: NextAuthOptions = {
         session.user.image = token.picture ?? null;
         session.user.emailVerified = token.emailVerified; // This should be Date | null
         session.user.username = token.username ?? null;
-        console.log(`Session callback: Assigning username: ${session.user.username}`); // Add logging
+        // console.log(`Session callback: Assigning username: ${session.user.username}`); // Add logging
       } else {
          console.warn('Session callback: Token is missing!'); // Log if token is missing
       }
 
-      console.log('Session callback: Returning session:', session); // Log the final session object
+      // console.log('Session callback: Returning session:', session); // Log the final session object
       return session;
     },
     async jwt({ token, user, trigger, session }) {
