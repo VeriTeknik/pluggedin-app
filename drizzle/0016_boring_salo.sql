@@ -45,7 +45,7 @@ END $$;
 -- Only create systemLogsTable if it doesn't exist
 DO $$
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'system_logs') THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_tables WHERE tablename = 'system_logs') THEN
         CREATE TABLE IF NOT EXISTS "system_logs" (
             "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
             "level" text NOT NULL,
