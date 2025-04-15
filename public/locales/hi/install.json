@@ -1,0 +1,69 @@
+{
+  "title": "Server Installation",
+  "subtitle": "Set up your server with Plugged.in",
+  "steps": {
+    "welcome": {
+      "title": "Welcome",
+      "description": "Let's get your server set up with Plugged.in. This wizard will guide you through the installation process.",
+      "start_button": "Start Installation"
+    },
+    "requirements": {
+      "title": "System Requirements",
+      "description": "Please ensure your system meets the following requirements:",
+      "items": {
+        "os": "Operating System: Linux (Ubuntu 20.04+ recommended)",
+        "memory": "Memory: 4GB RAM minimum",
+        "storage": "Storage: 20GB free space",
+        "network": "Network: Stable internet connection"
+      },
+      "check_button": "Check Requirements",
+      "next_button": "Next Step"
+    },
+    "configuration": {
+      "title": "Server Configuration",
+      "description": "Configure your server settings",
+      "form": {
+        "server_name": {
+          "label": "Server Name",
+          "placeholder": "Enter a name for your server"
+        },
+        "host": {
+          "label": "Host Address",
+          "placeholder": "Enter server host address"
+        },
+        "port": {
+          "label": "Port",
+          "placeholder": "Enter port number"
+        },
+        "ssl": {
+          "label": "Enable SSL",
+          "description": "Secure communication with SSL/TLS"
+        }
+      },
+      "save_button": "Save Configuration"
+    },
+    "verification": {
+      "title": "Verify Installation",
+      "description": "Let's verify your server setup",
+      "status": {
+        "checking": "Checking connection...",
+        "success": "Connection successful",
+        "error": "Connection failed"
+      },
+      "test_button": "Test Connection",
+      "complete_button": "Complete Setup"
+    }
+  },
+  "common": {
+    "back": "Back",
+    "next": "Next",
+    "cancel": "Cancel",
+    "retry": "Retry",
+    "loading": "Loading..."
+  },
+  "messages": {
+    "success": "Server installation completed successfully",
+    "error": "An error occurred during installation",
+    "confirm_cancel": "Are you sure you want to cancel the installation?"
+  }
+}

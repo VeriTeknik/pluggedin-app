@@ -1,69 +1,142 @@
 {
   "settings": {
-    "title": "",
+    "title": "Instellingen",
     "profile": {
-      "title": "",
-      "description": "",
-      "avatar": "",
-      "avatarRecommendation": "",
-      "name": "",
-      "namePlaceholder": "",
-      "language": "",
-      "updateButton": "",
-      "success": "",
-      "error": ""
+      "title": "Profiel",
+      "description": "Beheer uw profielinformatie",
+      "avatar": "Avatar uploaden",
+      "avatarRecommendation": "Aanbevolen: Vierkante afbeelding, max 1MB",
+      "name": "Naam",
+      "namePlaceholder": "Voer uw naam in",
+      "language": "Taal",
+      "updateButton": "Profiel bijwerken",
+      "success": "Profiel succesvol bijgewerkt",
+      "error": "Bijwerken profiel mislukt",
+      "profileUrl": {
+        "title": "Uw Profiel URL",
+        "setUsername": "Stel hierboven een gebruikersnaam in om uw aangepaste openbare profiel-URL te maken",
+        "copyTooltip": "Klik om URL te kopiëren"
+      },
+      "social": {
+        "title": "Sociaal Profiel",
+        "description": "Beheer uw openbare profiel en sociale instellingen",
+        "username": {
+          "label": "Gebruikersnaam",
+          "placeholder": "Kies een gebruikersnaam",
+          "checking": "Beschikbaarheid controleren...",
+          "save": "Opslaan"
+        },
+        "publicProfile": {
+          "title": "Openbaar Profiel",
+          "description": {
+            "noUsername": "Stel eerst een gebruikersnaam in om uw profiel openbaar te maken",
+            "public": "Uw profiel en gedeelde inhoud zijn zichtbaar voor iedereen",
+            "private": "Uw profiel is alleen zichtbaar voor u"
+          }
+        }
+      }
     },
     "password": {
-      "title": "",
-      "description": "",
+      "title": "Wachtwoord",
+      "description": "Wijzig uw wachtwoord",
       "current": {
-        "label": "",
-        "placeholder": ""
+        "label": "Huidig wachtwoord",
+        "placeholder": "Voer huidig wachtwoord in"
       },
       "new": {
-        "label": "",
-        "placeholder": ""
+        "label": "Nieuw wachtwoord",
+        "placeholder": "Voer nieuw wachtwoord in"
       },
       "confirm": {
-        "label": "",
-        "placeholder": ""
+        "label": "Bevestig nieuw wachtwoord",
+        "placeholder": "Bevestig nieuw wachtwoord"
       },
-      "updateButton": "",
-      "success": "",
-      "error": ""
+      "updateButton": "Wachtwoord wijzigen",
+      "success": "Wachtwoord succesvol bijgewerkt",
+      "error": "Bijwerken wachtwoord mislukt"
     },
     "account": {
-      "title": "",
-      "description": "",
-      "deleteButton": "",
-      "confirmTitle": "",
-      "confirmDescription": "",
-      "confirmButton": "",
-      "deletingButton": "",
-      "success": "",
-      "error": ""
+      "title": "Account verwijderen",
+      "description": "Verwijder uw account en alle bijbehorende gegevens permanent",
+      "deleteButton": "Account verwijderen",
+      "confirmTitle": "Weet u het zeker?",
+      "confirmDescription": "Deze actie kan niet ongedaan worden gemaakt. Dit verwijdert uw account permanent en verwijdert alle bijbehorende gegevens van onze servers.",
+      "confirmButton": "Ja, verwijder mijn account",
+      "deletingButton": "Verwijderen...",
+      "success": "Account succesvol verwijderd",
+      "error": "Verwijderen account mislukt"
     },
     "validation": {
-      "invalidJsonArray": ""
+      "invalidJsonArray": "Ongeldig JSON-formaat of geen array van berichten."
     },
     "connectedAccounts": {
-      "title": "",
-      "description": "",
+      "title": "Verbonden accounts",
+      "description": "Beheer uw verbonden sociale accounts",
       "github": {
-        "connected": "",
-        "connect": ""
+        "connected": "Verbonden met GitHub",
+        "connect": "Verbind uw GitHub-account"
       },
       "google": {
-        "connected": "",
-        "connect": ""
+        "connected": "Verbonden met Google",
+        "connect": "Verbind uw Google-account"
       },
       "twitter": {
-        "connected": "",
-        "connect": ""
+        "connected": "Verbonden met Twitter",
+        "connect": "Verbind uw Twitter-account"
       },
-      "connected": "",
-      "removed": "",
-      "error": ""
+      "connected": "Verbonden",
+      "removed": "{{provider}}-account succesvol losgekoppeld",
+      "error": "Loskoppelen account mislukt"
+    },
+    "project": {
+      "title": "Huidige Hub",
+      "description": "Beheer uw huidige hub-instellingen",
+      "loading": "Project laden...",
+      "namePlaceholder": "Projectnaam",
+      "updateSuccess": "Projectnaam succesvol bijgewerkt",
+      "updateError": "Bijwerken projectnaam mislukt",
+      "deleteConfirm": "Weet u zeker dat u dit project wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "deleteSuccess": "Project succesvol verwijderd",
+      "deleteError": "Verwijderen project mislukt",
+      "dangerZone": "Gevarenzone",
+      "deleteWarning": "Zodra u een project verwijdert, is er geen weg terug. Wees voorzichtig.",
+      "deleteButton": "Project verwijderen"
+    },
+    "workspace": {
+      "title": "Huidige Werkruimte",
+      "description": "Beheer uw huidige werkruimte-instellingen",
+      "loading": "Profiel laden...",
+      "namePlaceholder": "Profielnaam",
+      "updateSuccess": "Profielnaam succesvol bijgewerkt",
+      "updateError": "Bijwerken profielnaam mislukt",
+      "deleteConfirm": "Weet u zeker dat u dit profiel wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "deleteSuccess": "Profiel succesvol verwijderd",
+      "deleteError": "Verwijderen werkruimte mislukt",
+      "dangerZone": "Gevarenzone",
+      "deleteWarning": "Zodra u een werkruimte verwijdert, is er geen weg terug. Wees voorzichtig.",
+      "deleteButton": "Werkruimte verwijderen"
+    },
+    "appearance": {
+      "title": "Uiterlijk",
+      "description": "Pas het uiterlijk van de applicatie aan",
+      "colorTheme": "Kleurenthema",
+      "light": "Licht",
+      "dark": "Donker",
+      "system": "Systeem",
+      "font": "Lettertype",
+      "selectFont": "Selecteer een lettertype",
+      "fonts": {
+        "geist": "Geist Sans (Standaard)",
+        "quicksand": "Quicksand",
+        "nunito": "Nunito",
+        "poppins": "Poppins",
+        "roboto": "Roboto",
+        "ubuntu": "Ubuntu",
+        "varelaRound": "Varela Round",
+        "workSans": "Work Sans",
+        "zillaSlab": "Zilla Slab",
+        "comfortaa": "Comfortaa"
+      }
     }
   }
 }

@@ -1,69 +1,142 @@
 {
   "settings": {
-    "title": "",
+    "title": "設定",
     "profile": {
-      "title": "",
-      "description": "",
-      "avatar": "",
-      "avatarRecommendation": "",
-      "name": "",
-      "namePlaceholder": "",
-      "language": "",
-      "updateButton": "",
-      "success": "",
-      "error": ""
+      "title": "プロフィール",
+      "description": "プロフィール情報を管理します",
+      "avatar": "アバターをアップロード",
+      "avatarRecommendation": "推奨：正方形の画像、最大1MB",
+      "name": "名前",
+      "namePlaceholder": "名前を入力してください",
+      "language": "言語",
+      "updateButton": "プロフィールを更新",
+      "success": "プロフィールが正常に更新されました",
+      "error": "プロフィールの更新に失敗しました",
+      "profileUrl": {
+        "title": "あなたのプロフィールURL",
+        "setUsername": "カスタム公開プロフィールURLを作成するには、上にユーザー名を設定してください",
+        "copyTooltip": "クリックしてURLをコピー"
+      },
+      "social": {
+        "title": "ソーシャルプロフィール",
+        "description": "公開プロフィールとソーシャル設定を管理します",
+        "username": {
+          "label": "ユーザー名",
+          "placeholder": "ユーザー名を選択してください",
+          "checking": "利用可能か確認中...",
+          "save": "保存"
+        },
+        "publicProfile": {
+          "title": "公開プロフィール",
+          "description": {
+            "noUsername": "プロフィールを公開するには、まずユーザー名を設定してください",
+            "public": "あなたのプロフィールと共有コンテンツはすべての人に表示されます",
+            "private": "あなたのプロフィールはあなたにのみ表示されます"
+          }
+        }
+      }
     },
     "password": {
-      "title": "",
-      "description": "",
+      "title": "パスワード",
+      "description": "パスワードを変更します",
       "current": {
-        "label": "",
-        "placeholder": ""
+        "label": "現在のパスワード",
+        "placeholder": "現在のパスワードを入力してください"
       },
       "new": {
-        "label": "",
-        "placeholder": ""
+        "label": "新しいパスワード",
+        "placeholder": "新しいパスワードを入力してください"
       },
       "confirm": {
-        "label": "",
-        "placeholder": ""
+        "label": "新しいパスワードを確認",
+        "placeholder": "新しいパスワードを確認してください"
       },
-      "updateButton": "",
-      "success": "",
-      "error": ""
+      "updateButton": "パスワードを変更",
+      "success": "パスワードが正常に更新されました",
+      "error": "パスワードの更新に失敗しました"
     },
     "account": {
-      "title": "",
-      "description": "",
-      "deleteButton": "",
-      "confirmTitle": "",
-      "confirmDescription": "",
-      "confirmButton": "",
-      "deletingButton": "",
-      "success": "",
-      "error": ""
+      "title": "アカウントを削除",
+      "description": "アカウントと関連するすべてのデータを完全に削除します",
+      "deleteButton": "アカウントを削除",
+      "confirmTitle": "よろしいですか？",
+      "confirmDescription": "この操作は元に戻せません。これにより、アカウントが完全に削除され、関連するすべてのデータがサーバーから削除されます。",
+      "confirmButton": "はい、アカウントを削除します",
+      "deletingButton": "削除中...",
+      "success": "アカウントが正常に削除されました",
+      "error": "アカウントの削除に失敗しました"
     },
     "validation": {
-      "invalidJsonArray": ""
+      "invalidJsonArray": "無効なJSON形式、またはメッセージの配列ではありません。"
     },
     "connectedAccounts": {
-      "title": "",
-      "description": "",
+      "title": "接続済みアカウント",
+      "description": "接続済みのソーシャルアカウントを管理します",
       "github": {
-        "connected": "",
-        "connect": ""
+        "connected": "GitHubに接続済み",
+        "connect": "GitHubアカウントを接続"
       },
       "google": {
-        "connected": "",
-        "connect": ""
+        "connected": "Googleに接続済み",
+        "connect": "Googleアカウントを接続"
       },
       "twitter": {
-        "connected": "",
-        "connect": ""
+        "connected": "Twitterに接続済み",
+        "connect": "Twitterアカウントを接続"
       },
-      "connected": "",
-      "removed": "",
-      "error": ""
+      "connected": "接続済み",
+      "removed": "{{provider}}アカウントが正常に切断されました",
+      "error": "アカウントの切断に失敗しました"
+    },
+    "project": {
+      "title": "現在のハブ",
+      "description": "現在のハブ設定を管理します",
+      "loading": "プロジェクトを読み込み中...",
+      "namePlaceholder": "プロジェクト名",
+      "updateSuccess": "プロジェクト名が正常に更新されました",
+      "updateError": "プロジェクト名の更新に失敗しました",
+      "deleteConfirm": "このプロジェクトを削除してもよろしいですか？この操作は元に戻せません。",
+      "deleteSuccess": "プロジェクトが正常に削除されました",
+      "deleteError": "プロジェクトの削除に失敗しました",
+      "dangerZone": "危険ゾーン",
+      "deleteWarning": "プロジェクトを削除すると元に戻すことはできません。注意してください。",
+      "deleteButton": "プロジェクトを削除"
+    },
+    "workspace": {
+      "title": "現在のワークスペース",
+      "description": "現在のワークスペース設定を管理します",
+      "loading": "プロフィールを読み込み中...",
+      "namePlaceholder": "プロフィール名",
+      "updateSuccess": "プロフィール名が正常に更新されました",
+      "updateError": "プロフィール名の更新に失敗しました",
+      "deleteConfirm": "このプロフィールを削除してもよろしいですか？この操作は元に戻せません。",
+      "deleteSuccess": "プロフィールが正常に削除されました",
+      "deleteError": "ワークスペースの削除に失敗しました",
+      "dangerZone": "危険ゾーン",
+      "deleteWarning": "ワークスペースを削除すると元に戻すことはできません。注意してください。",
+      "deleteButton": "ワークスペースを削除"
+    },
+    "appearance": {
+      "title": "外観",
+      "description": "アプリケーションの外観をカスタマイズします",
+      "colorTheme": "カラーテーマ",
+      "light": "ライト",
+      "dark": "ダーク",
+      "system": "システム",
+      "font": "フォント",
+      "selectFont": "フォントを選択",
+      "fonts": {
+        "geist": "Geist Sans (デフォルト)",
+        "quicksand": "Quicksand",
+        "nunito": "Nunito",
+        "poppins": "Poppins",
+        "roboto": "Roboto",
+        "ubuntu": "Ubuntu",
+        "varelaRound": "Varela Round",
+        "workSans": "Work Sans",
+        "zillaSlab": "Zilla Slab",
+        "comfortaa": "Comfortaa"
+      }
     }
   }
 }

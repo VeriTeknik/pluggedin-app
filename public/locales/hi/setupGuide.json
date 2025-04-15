@@ -1,47 +1,47 @@
 {
   "setupGuide": {
-    "title": "",
+    "title": "सेटअप गाइड",
     "proxyBenefits": {
-      "title": "",
-      "description": "",
+      "title": "Plugged.in MCP के लाभ",
+      "description": "Plugged.in MCP आपके सभी MCP सर्वर के लिए एक एकीकृत प्रॉक्सी के रूप में कार्य करता है, जो कई फायदे प्रदान करता है:",
       "benefits": [
-        "",
-        "",
-        "",
-        "",
-        ""
+        "एकल कॉन्फ़िगरेशन बिंदु - अपने सभी MCP सर्वर को एक केंद्रीय कॉन्फ़िगरेशन के माध्यम से प्रबंधित करें",
+        "स्वचालित अपडेट - नवीनतम सुविधाएँ और सुरक्षा अपडेट स्वचालित रूप से प्राप्त करें",
+        "सरलीकृत प्रमाणीकरण - अपने सभी MCP सर्वर के लिए एक एकल API कुंजी का उपयोग करें",
+        "उन्नत सुरक्षा - अंतर्निहित सुरक्षा सुविधाएँ और सर्वोत्तम अभ्यास",
+        "क्रॉस-प्लेटफ़ॉर्म संगतता - विभिन्न ऑपरेटिंग सिस्टम पर निर्बाध रूप से काम करता है"
       ]
     },
     "installation": {
-      "title": "",
-      "apiKeysNotice": "",
+      "title": "इंस्टॉलेशन विधियाँ",
+      "apiKeysNotice": "सूचना: आप अपनी API कुंजियों को API कुंजी पृष्ठ में प्रबंधित कर सकते हैं",
       "manualConfig": {
-        "title": "",
-        "description": "",
+        "title": "मैनुअल कॉन्फ़िगरेशन",
+        "description": "Claude Desktop के लिए, कॉन्फ़िगरेशन फ़ाइल यहाँ स्थित है:",
         "paths": {
-          "macos": "",
-          "windows": ""
+          "macos": "macOS",
+          "windows": "Windows"
         }
       },
       "cursorConfig": {
-        "title": "",
-        "description": "",
+        "title": "Cursor कॉन्फ़िगरेशन",
+        "description": "Cursor के लिए, आप सीधे सेटिंग्स में Plugged.in MCP को कॉन्फ़िगर कर सकते हैं:",
         "steps": [
-          "",
-          "",
-          "",
-          ""
+          "Cursor खोलें और Cursor सेटिंग्स पर जाएं",
+          "Features अनुभाग पर नेविगेट करें",
+          "'MCP Servers' खोजें और 'Add new MCP Server' पर क्लिक करें",
+          "निम्नलिखित कमांड का उपयोग करें:"
         ]
       }
     },
     "smithery": {
-      "title": "",
-      "description": "",
-      "setupLink": "",
-      "serverLink": "",
-      "windowsNote": "",
-      "terminalCommand": "",
-      "desktopConfig": ""
+      "title": "Smithery विंडोज कॉन्फ़िगरेशन",
+      "description": "हम अधिकतम संगतता के लिए क्लाउड पर डॉकर में MCP चलाने के लिए Smithery का उपयोग करने की सलाह देते हैं।",
+      "setupLink": "विंडोज पर Smithery CLI सेटअप करने के लिए इसे देखें:",
+      "serverLink": "सीधे Smithery पर Plugged.in MCP सर्वर लिस्टिंग पर जाएँ:",
+      "windowsNote": "विंडोज पर Smithery के लिए, आप निम्नलिखित कॉन्फ़िगरेशन विकल्पों का भी उपयोग कर सकते हैं:",
+      "terminalCommand": "आप सीधे अपने टर्मिनल में Smithery कमांड चला सकते हैं:",
+      "desktopConfig": "या इसे अपनी Claude Desktop कॉन्फ़िगरेशन फ़ाइल में कॉन्फ़िगर करें:"
     }
   }
 }

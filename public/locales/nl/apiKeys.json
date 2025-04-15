@@ -1,48 +1,48 @@
 {
   "apiKeys": {
-    "title": "",
-    "description": "",
-    "empty": "",
+    "title": "API-sleutels",
+    "description": "Uw API-sleutels worden gebruikt om verzoeken naar de Plugged.in API te authenticeren. Bewaar ze veilig en deel ze niet met anderen.",
+    "empty": "Nog geen API-sleutels. Maak er een aan om te beginnen.",
     "actions": {
-      "create": "",
-      "creating": "",
-      "delete": "",
-      "deleting": "",
-      "show": "",
-      "hide": "",
-      "copy": "",
-      "cancel": ""
+      "create": "API-sleutel aanmaken",
+      "creating": "Aanmaken...",
+      "delete": "API-sleutel verwijderen",
+      "deleting": "Verwijderen...",
+      "show": "API-sleutel tonen",
+      "hide": "API-sleutel verbergen",
+      "copy": "API-sleutel kopiëren",
+      "cancel": "Annuleren"
     },
     "dialog": {
       "create": {
-        "title": "",
-        "description": "",
-        "nameLabel": "",
-        "namePlaceholder": ""
+        "title": "API-sleutel aanmaken",
+        "description": "Maak een nieuwe API-sleutel aan voor uw project. U kunt optioneel een naam geven om het doel ervan te helpen identificeren.",
+        "nameLabel": "API-sleutelnaam (optioneel)",
+        "namePlaceholder": "bijv. Productie API-sleutel"
       },
       "delete": {
-        "title": "",
-        "description": "",
-        "namePrefix": ""
+        "title": "API-sleutel verwijderen",
+        "description": "Weet u zeker dat u deze API-sleutel {{name}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+        "namePrefix": " \""
       }
     },
     "toast": {
       "copied": {
-        "title": "",
-        "description": ""
+        "title": "API-sleutel gekopieerd",
+        "description": "De API-sleutel is naar uw klembord gekopieerd."
       },
       "created": {
-        "title": "",
-        "description": ""
+        "title": "API-sleutel aangemaakt",
+        "description": "Uw nieuwe API-sleutel is succesvol aangemaakt."
       },
       "deleted": {
-        "title": "",
-        "description": ""
+        "title": "API-sleutel verwijderd",
+        "description": "Uw API-sleutel is succesvol verwijderd."
       },
       "error": {
-        "title": "",
-        "createFailed": "",
-        "deleteFailed": ""
+        "title": "Fout",
+        "createFailed": "Aanmaken API-sleutel mislukt",
+        "deleteFailed": "Verwijderen API-sleutel mislukt"
       }
     }
   }

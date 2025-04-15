@@ -1,5 +1,29 @@
 {
   "notifications": {
-    "title": ""
+    "title": "通知",
+    "description": "すべてのシステム通知をここで確認できます",
+    "actions": {
+      "markAllAsRead": "すべて既読にする",
+      "actions": "アクション",
+      "deleteAll": "すべての通知を削除"
+    },
+    "tabs": {
+      "all": "すべて",
+      "unread": "未読",
+      "alerts": "アラート",
+      "info": "情報",
+      "success": "成功"
+    },
+    "empty": {
+      "title": "通知はありません",
+      "description": "このカテゴリには通知がありません。"
+    },
+    "toast": {
+      "markReadError": "通知を既読としてマークできませんでした",
+      "deleteSuccess": "通知が削除されました",
+      "deleteError": "通知の削除に失敗しました",
+      "deleteAllSuccess": "すべての通知が削除されました",
+      "deleteAllError": "すべての通知の削除に失敗しました"
+    }
   }
 }

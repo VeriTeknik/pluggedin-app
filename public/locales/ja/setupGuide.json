@@ -1,47 +1,47 @@
 {
   "setupGuide": {
-    "title": "",
+    "title": "セットアップガイド",
     "proxyBenefits": {
-      "title": "",
-      "description": "",
+      "title": "Plugged.in MCPの利点",
+      "description": "Plugged.in MCPは、すべてのMCPサーバーの統一プロキシとして機能し、いくつかの利点を提供します:",
       "benefits": [
-        "",
-        "",
-        "",
-        "",
-        ""
+        "単一構成ポイント - すべてのMCPサーバーを1つの中央構成で管理",
+        "自動更新 - 最新の機能とセキュリティ更新を自動的に取得",
+        "簡略化された認証 - すべてのMCPサーバーに単一のAPIキーを使用",
+        "強化されたセキュリティ - 組み込みのセキュリティ機能とベストプラクティス",
+        "クロスプラットフォーム互換性 - 異なるオペレーティングシステム間でシームレスに動作"
       ]
     },
     "installation": {
-      "title": "",
-      "apiKeysNotice": "",
+      "title": "インストール方法",
+      "apiKeysNotice": "注意：APIキーはAPIキーページで管理できます",
       "manualConfig": {
-        "title": "",
-        "description": "",
+        "title": "手動構成",
+        "description": "Claude Desktopの場合、構成ファイルは次の場所にあります:",
         "paths": {
-          "macos": "",
-          "windows": ""
+          "macos": "macOS",
+          "windows": "Windows"
         }
       },
       "cursorConfig": {
-        "title": "",
-        "description": "",
+        "title": "Cursor構成",
+        "description": "Cursorの場合、設定で直接Plugged.in MCPを構成できます:",
         "steps": [
-          "",
-          "",
-          "",
-          ""
+          "Cursorを開き、Cursor設定に移動します",
+          "機能セクションに移動します",
+          "'MCP Servers'を見つけて'Add new MCP Server'をクリックします",
+          "次のコマンドを使用します:"
         ]
       }
     },
     "smithery": {
-      "title": "",
-      "description": "",
-      "setupLink": "",
-      "serverLink": "",
-      "windowsNote": "",
-      "terminalCommand": "",
-      "desktopConfig": ""
+      "title": "Smithery Windows構成",
+      "description": "最大の互換性のために、クラウド上のDockerでMCPを実行するにはSmitheryを使用することをお勧めします。",
+      "setupLink": "WindowsでSmithery CLIをセットアップするには、こちらを確認してください:",
+      "serverLink": "Smitheryで直接Plugged.in MCPサーバーリストにアクセス:",
+      "windowsNote": "Windows上のSmitheryの場合、次の構成オプションも使用できます:",
+      "terminalCommand": "ターミナルで直接Smitheryコマンドを実行できます:",
+      "desktopConfig": "または、Claude Desktop構成ファイルで構成します:"
     }
   }
 }

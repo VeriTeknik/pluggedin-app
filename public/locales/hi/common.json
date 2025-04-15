@@ -1,33 +1,69 @@
 {
   "common": {
-    "or": "",
-    "error": "",
-    "success": "",
-    "releaseCandidate": "",
+    "or": "या",
+    "error": "त्रुटि",
+    "success": "सफलता",
+    "releaseCandidate": "रिलीज़ कैंडिडेट v{{version}}",
     "validation": {
-      "required": "",
-      "email": "",
-      "minLength": "",
-      "maxLength": "",
-      "passwordMatch": ""
+      "required": "यह फ़ील्ड आवश्यक है",
+      "email": "कृपया एक मान्य ईमेल पता दर्ज करें",
+      "minLength": "कम से कम {{count}} अक्षर होने चाहिए",
+      "maxLength": "अधिकतम {{count}} अक्षर होने चाहिए",
+      "passwordMatch": "पासवर्ड मेल खाने चाहिए"
     },
-    "save": "",
-    "previous": "",
-    "next": "",
-    "page": "",
-    "saving": "",
-    "remove": "",
-    "removing": "",
-    "cancel": "",
-    "confirm": "",
-    "confirmDelete": "",
+    "save": "सहेजें",
+    "previous": "पिछला",
+    "next": "अगला",
+    "page": "पृष्ठ {{page}}",
+    "saving": "सहेजा जा रहा है...",
+    "remove": "हटाएं",
+    "removing": "हटाया जा रहा है...",
+    "cancel": "रद्द करें",
+    "confirm": "पुष्टि करें",
+    "confirmDelete": "क्या आप वाकई इसे हटाना चाहते हैं?",
     "errors": {
-      "unexpected": ""
+      "unexpected": "एक अप्रत्याशित त्रुटि हुई। कृपया पुनः प्रयास करें।"
     },
-    "loading": "",
-    "notAvailable": "",
-    "saveChanges": "",
-    "backToServerList": "",
-    "viewSchema": ""
+    "loading": "लोड हो रहा है...",
+    "notAvailable": "लागू नहीं",
+    "saveChanges": "बदलाव सहेजें",
+    "backToServerList": "सर्वर सूची पर वापस जाएं",
+    "viewSchema": "स्कीमा देखें",
+    "delete": "हटाएं",
+    "deleting": "हटाया जा रहा है..."
+  },
+  "releaseNotes": {
+    "title": "रिलीज़ नोट्स",
+    "description": "हमारे रिपॉजिटरी में नवीनतम अपडेट और परिवर्तनों को ट्रैक करें",
+    "filters": {
+      "filterBy": "रिपॉजिटरी द्वारा फ़िल्टर करें:",
+      "all": "सभी रिपॉजिटरी",
+      "app": "pluggedin-app",
+      "mcp": "pluggedin-mcp"
+    },
+    "changeTypes": {
+      "feature": "विशेषताएँ",
+      "bugfix": "बग फिक्स",
+      "performanceimprovement": "प्रदर्शन सुधार",
+      "breakingchange": "ब्रेकिंग परिवर्तन",
+      "other": "अन्य परिवर्तन"
+    },
+    "viewCommit": "कमिट देखें",
+    "noDetails": "इस रिलीज़ के लिए कोई विशिष्ट परिवर्तन सूचीबद्ध नहीं हैं।",
+    "viewOnGitHub": "GitHub पर देखें",
+    "loadMore": "और लोड करें",
+    "loading": "रिलीज़ लोड हो रही हैं...",
+    "error": "रिलीज़ नोट्स लोड करने में विफल",
+    "retry": "पुनः प्रयास करें",
+    "noReleases": "कोई रिलीज़ नहीं मिली",
+    "noReleasesTitle": "कोई रिलीज़ नोट्स उपलब्ध नहीं हैं",
+    "noReleasesText": "वर्तमान में प्रदर्शित करने के लिए कोई रिलीज़ नोट्स नहीं हैं।",
+    "noSearchResultsTitle": "कोई परिणाम नहीं मिला",
+    "noSearchResultsText": "कोई रिलीज़ नोट्स आपके खोज मानदंडों से मेल नहीं खाते।",
+    "rssFeed": "RSS के माध्यम से सदस्यता लें",
+    "search": {
+      "placeholder": "रिलीज़ नोट्स खोजें..."
+    },
+    "refresh": "रिलीज़ रीफ्रेश करें"
   }
 }

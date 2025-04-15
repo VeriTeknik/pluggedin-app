@@ -1,28 +1,37 @@
 {
   "collections": {
-    "title": "",
-    "subtitle": "",
-    "create": "",
-    "edit": "",
-    "delete": "",
-    "share": "",
+    "title": "Collections",
+    "subtitle": "Organize and share your favorite tools",
+    "create": "Create Collection",
+    "edit": "Edit Collection",
+    "delete": "Delete Collection",
+    "share": "Share Collection",
+    "back": "Back",
+    "error": "Error",
+    "deleteSuccess": "Collection Deleted",
+    "deleteSuccessDesc": "The collection has been successfully deleted",
+    "deleteError": "Failed to delete collection",
+    "deleteConfirmTitle": "Delete Collection?",
+    "deleteConfirmDesc": "This action cannot be undone. This will permanently delete this collection.",
     "visibility": {
-      "public": "",
-      "private": ""
+      "public": "Public",
+      "private": "Private"
     },
     "form": {
-      "name": "",
-      "description": "",
-      "visibility": "",
-      "submit": "",
-      "cancel": ""
+      "name": "Name",
+      "description": "Description",
+      "visibility": "Visibility",
+      "submit": "Save Collection",
+      "cancel": "Cancel"
     },
     "empty": {
-      "title": "",
-      "description": ""
+      "title": "No collections yet",
+      "description": "Create your first collection to start organizing your favorite tools"
     },
     "card": {
-      "install": ""
-    }
+      "install": "Install"
+    },
+    "installSelected": "Install Selected ({{count}})",
+    "noServers": "No servers in this collection"
   }
 }

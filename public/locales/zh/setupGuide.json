@@ -1,47 +1,47 @@
 {
   "setupGuide": {
-    "title": "",
+    "title": "设置指南",
     "proxyBenefits": {
-      "title": "",
-      "description": "",
+      "title": "Plugged.in MCP 的优势",
+      "description": "Plugged.in MCP 作为您所有 MCP 服务器的统一代理，提供以下几个优势：",
       "benefits": [
-        "",
-        "",
-        "",
-        "",
-        ""
+        "单一配置点 - 通过一个中央配置管理所有 MCP 服务器",
+        "自动更新 - 自动获取最新功能和安全更新",
+        "简化的身份验证 - 为所有 MCP 服务器使用单个 API 密钥",
+        "增强的安全性 - 内置安全功能和最佳实践",
+        "跨平台兼容性 - 在不同操作系统上无缝工作"
       ]
     },
     "installation": {
-      "title": "",
-      "apiKeysNotice": "",
+      "title": "安装方法",
+      "apiKeysNotice": "注意：您可以在 API 密钥页面管理您的 API 密钥",
       "manualConfig": {
-        "title": "",
-        "description": "",
+        "title": "手动配置",
+        "description": "对于 Claude Desktop，配置文件位于：",
         "paths": {
-          "macos": "",
-          "windows": ""
+          "macos": "macOS",
+          "windows": "Windows"
         }
       },
       "cursorConfig": {
-        "title": "",
-        "description": "",
+        "title": "Cursor 配置",
+        "description": "对于 Cursor，您可以直接在设置中配置 Plugged.in MCP：",
         "steps": [
-          "",
-          "",
-          "",
-          ""
+          "打开 Cursor 并转到 Cursor 设置",
+          "导航到功能部分",
+          "找到 'MCP Servers' 并点击 'Add new MCP Server'",
+          "使用以下命令："
         ]
       }
     },
     "smithery": {
-      "title": "",
-      "description": "",
-      "setupLink": "",
-      "serverLink": "",
-      "windowsNote": "",
-      "terminalCommand": "",
-      "desktopConfig": ""
+      "title": "Smithery Windows 配置",
+      "description": "我们建议使用 Smithery 在云端的 Docker 中运行 MCP，以获得最大兼容性。",
+      "setupLink": "要在 Windows 上设置 Smithery CLI，请查看：",
+      "serverLink": "直接在 Smithery 上访问 Plugged.in MCP 服务器列表：",
+      "windowsNote": "对于 Windows 上的 Smithery，您还可以使用以下配置选项：",
+      "terminalCommand": "您可以直接在终端中运行 Smithery 命令：",
+      "desktopConfig": "或者在您的 Claude Desktop 配置文件中进行配置："
     }
   }
 }

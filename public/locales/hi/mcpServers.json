@@ -1,205 +1,205 @@
 {
   "mcpServers": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "MCP सर्वर",
+    "subtitle": "प्लगइन प्रबंधन",
+    "description": "अपने MCP सर्वर को कॉन्फ़िगर और प्रबंधित करें। कमांड-लाइन या URL-आधारित इंटरफेस के माध्यम से बाहरी टूल और सेवाओं से कनेक्ट करें।",
     "stats": {
-      "totalServers": "",
-      "active": "",
-      "stdio": "",
-      "sse": ""
+      "totalServers": "कुल सर्वर",
+      "active": "सक्रिय",
+      "stdio": "STDIO",
+      "sse": "SSE"
     },
     "actions": {
-      "addServer": "",
-      "import": "",
-      "export": "",
-      "search": "",
-      "edit": "",
-      "delete": "",
-      "deleteConfirm": "",
-      "cancel": "",
-      "create": "",
-      "creating": "",
-      "close": "",
-      "downloadJson": "",
-      "copy": "",
-      "copied": "",
-      "discover": "",
-      "discovering": "",
-      "shareCollection": "",
-      "unshare": "",
-      "unshareConfirmTitle": "",
-      "unshareConfirmDesc": "",
-      "shared": "",
-      "share": ""
+      "addServer": "सर्वर जोड़ें",
+      "import": "आयात करें",
+      "export": "निर्यात करें",
+      "search": "सर्वर खोजें...",
+      "edit": "संपादित करें",
+      "delete": "हटाएं",
+      "deleteConfirm": "क्या आप वाकई इस MCP सर्वर को हटाना चाहते हैं?",
+      "cancel": "रद्द करें",
+      "create": "बनाएं",
+      "creating": "बनाया जा रहा है...",
+      "close": "बंद करें",
+      "downloadJson": "JSON डाउनलोड करें",
+      "copy": "कॉपी करें",
+      "copied": "कॉपी किया गया!",
+      "discover": "खोजें",
+      "discovering": "खोजा जा रहा है...",
+      "shareCollection": "संग्रह साझा करें",
+      "unshare": "साझा करना बंद करें",
+      "unshareConfirmTitle": "सर्वर साझा करना बंद करें",
+      "unshareConfirmDesc": "क्या आप वाकई इस सर्वर को साझा करना बंद करना चाहते हैं? अन्य उपयोगकर्ता अब इसे एक्सेस नहीं कर पाएंगे।",
+      "shared": "साझा किया गया",
+      "share": "साझा करें"
     },
     "form": {
-      "success": "",
+      "success": "MCP सर्वर सफलतापूर्वक बनाया गया।",
       "error": {
-        "createFailed": ""
+        "createFailed": "MCP सर्वर बनाने में विफल।"
       },
-      "addTitle": "",
-      "addDescription": "",
-      "commandBased": "",
-      "urlBased": "",
-      "name": "",
-      "namePlaceholder": "",
-      "description": "",
-      "descriptionPlaceholder": "",
-      "command": "",
-      "commandPlaceholder": "",
-      "arguments": "",
-      "argumentsPlaceholder": "",
-      "envVars": "",
-      "envVarsPlaceholder": "",
-      "envVarsHelp": "",
-      "serverUrl": "",
-      "serverUrlPlaceholder": "",
-      "serverUrlHelp": "",
-      "created": "",
-      "notes": "",
-      "notesPlaceholder": ""
+      "addTitle": "MCP सर्वर जोड़ें",
+      "addDescription": "एक नया MCP सर्वर कॉन्फ़िगरेशन बनाएं। STDIO (कमांड-आधारित) या SSE (URL-आधारित) सर्वर प्रकार चुनें।",
+      "commandBased": "कमांड-आधारित (STDIO)",
+      "urlBased": "URL-आधारित (SSE)",
+      "name": "नाम",
+      "namePlaceholder": "उदा., mcp-server-time",
+      "description": "विवरण",
+      "descriptionPlaceholder": "(वैकल्पिक) सर्वर के उद्देश्य का संक्षिप्त विवरण",
+      "command": "कमांड",
+      "commandPlaceholder": "उदा., npx या uvx",
+      "arguments": "तर्क",
+      "argumentsPlaceholder": "उदा., mcp-server-time, --local-timezone=America/Los_Angeles",
+      "envVars": "पर्यावरण चर",
+      "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
+      "envVarsHelp": "पर्यावरण चर KEY=value प्रारूप में दर्ज करें, प्रति पंक्ति एक",
+      "serverUrl": "सर्वर यूआरएल",
+      "serverUrlPlaceholder": "http://localhost:3000/sse",
+      "serverUrlHelp": "एक मान्य HTTP/HTTPS यूआरएल होना चाहिए",
+      "created": "बनाया गया",
+      "notes": "नोट्स",
+      "notesPlaceholder": "इस सर्वर के लिए कोई भी नोट्स, उपयोग निर्देश, या ज्ञात विचित्रताएं जोड़ें..."
     },
     "empty": {
-      "title": "",
-      "noResults": "",
-      "noServers": "",
-      "addFirst": ""
+      "title": "कोई सर्वर नहीं मिला",
+      "noResults": "\"{{search}}\" से मेल खाने वाला कोई सर्वर नहीं मिला",
+      "noServers": "आपने अभी तक कोई MCP सर्वर नहीं जोड़ा है",
+      "addFirst": "अपना पहला सर्वर जोड़ें"
     },
     "import": {
-      "title": "",
-      "description": "",
-      "jsonFormat": "",
-      "jsonPlaceholder": "",
-      "importing": "",
-      "importServers": "",
-      "success": "",
+      "title": "MCP सर्वर आयात करें",
+      "description": "JSON से एकाधिक MCP सर्वर कॉन्फ़िगरेशन आयात करें। यह मौजूदा लोगों को बदले बिना नए सर्वर जोड़ देगा।",
+      "jsonFormat": "JSON प्रारूप",
+      "jsonPlaceholder": "अपना JSON यहाँ पेस्ट करें",
+      "importing": "आयात किया जा रहा है...",
+      "importServers": "सर्वर आयात करें",
+      "success": "{{count}} MCP सर्वर सफलतापूर्वक आयात किए गए।",
       "error": {
-        "invalidJson": "",
-        "missingMcpServers": "",
-        "importFailed": ""
+        "invalidJson": "अमान्य JSON प्रारूप",
+        "missingMcpServers": "JSON में \"mcpServers\" ऑब्जेक्ट होना चाहिए",
+        "importFailed": "सर्वर आयात करने में विफल। विवरण के लिए कृपया कंसोल देखें।"
       }
     },
     "export": {
-      "title": "",
-      "description": "",
-      "copyTooltip": "",
-      "downloadSuccess": "",
+      "title": "MCP सर्वर कॉन्फ़िगरेशन निर्यात करें",
+      "description": "JSON प्रारूप में आपके MCP सर्वर कॉन्फ़िगरेशन, किसी अन्य इंस्टेंस पर आयात करने के लिए तैयार हैं।",
+      "copyTooltip": "JSON को क्लिपबोर्ड पर कॉपी करें",
+      "downloadSuccess": "{{count}} MCP सर्वर कॉन्फ़िगरेशन डाउनलोड किया गया।",
       "error": {
-        "noServers": "",
-        "copyFailed": ""
+        "noServers": "निर्यात करने के लिए कोई सर्वर नहीं।",
+        "copyFailed": "क्लिपबोर्ड पर कॉपी करने में विफल।"
       }
     },
     "shareCollection": {
-      "title": "",
-      "description": "",
-      "success": "",
-      "error": "",
+      "title": "सर्वर संग्रह साझा करें",
+      "description": "अपने चयनित MCP सर्वर को अन्य उपयोगकर्ताओं के साथ साझा करें।",
+      "success": "सर्वर संग्रह सफलतापूर्वक साझा किया गया।",
+      "error": "सर्वर संग्रह साझा करने में विफल।",
       "warning": {
-        "unsharedServers": "",
-        "unsharedServersDescription": ""
+        "unsharedServers": "असाझा सर्वर का पता चला",
+        "unsharedServersDescription": "चयनित कुछ सर्वर वर्तमान में साझा नहीं किए गए हैं। जब आप इस संग्रह को साझा करेंगे तो वे स्वचालित रूप से साझा हो जाएंगे।"
       },
       "form": {
-        "servers": "",
-        "title": "",
-        "titlePlaceholder": "",
-        "description": "",
-        "descriptionPlaceholder": "",
-        "public": "",
-        "share": ""
+        "servers": "चयनित सर्वर",
+        "title": "संग्रह शीर्षक",
+        "titlePlaceholder": "अपने सर्वर संग्रह के लिए एक शीर्षक दर्ज करें",
+        "description": "संग्रह विवरण",
+        "descriptionPlaceholder": "वर्णन करें कि इन सर्वरों का उपयोग किस लिए किया जाता है और वे एक साथ कैसे काम करते हैं",
+        "public": "संग्रह को सार्वजनिक करें",
+        "share": "संग्रह साझा करें"
       }
     },
     "status": {
-      "active": "",
-      "inactive": "",
-      "stdio": "",
-      "sse": ""
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "stdio": "STDIO",
+      "sse": "SSE"
     },
     "errors": {
-      "missingInfo": "",
-      "discoveryFailed": "",
-      "fetchResourcesFailed": "",
-      "fetchTemplatesFailed": "",
-      "fetchPromptsFailed": "",
-      "fetchToolsFailed": "",
-      "fetchInstructionsFailed": ""
+      "missingInfo": "प्रोफ़ाइल या सर्वर जानकारी गायब है।",
+      "discoveryFailed": "खोज विफल।",
+      "fetchResourcesFailed": "संसाधन लोड करने में विफल।",
+      "fetchTemplatesFailed": "संसाधन टेम्पलेट लोड करने में विफल।",
+      "fetchPromptsFailed": "प्रॉम्प्ट लोड करने में विफल।",
+      "fetchToolsFailed": "टूल लोड करने में विफल।",
+      "fetchInstructionsFailed": "कस्टम निर्देश प्राप्त करने में विफल।"
     },
     "tabs": {
-      "details": "",
-      "config": "",
-      "notes": "",
-      "customInstructions": "",
-      "resources": "",
-      "templates": "",
-      "prompts": "",
-      "tools": ""
+      "details": "सर्वर विवरण",
+      "config": "कॉन्फ़िगरेशन",
+      "notes": "नोट्स",
+      "customInstructions": "कस्टम निर्देश",
+      "resources": "संसाधन",
+      "templates": "संसाधन टेम्पलेट",
+      "prompts": "प्रॉम्प्ट",
+      "tools": "टूल"
     },
     "details": {
-      "serverInfo": "",
-      "uuid": "",
-      "status": "",
-      "created": "",
-      "type": ""
+      "serverInfo": "सर्वर जानकारी",
+      "uuid": "UUID",
+      "status": "स्थिति",
+      "created": "बनाया गया",
+      "type": "प्रकार"
     },
     "config": {
-      "commandConfig": "",
-      "command": "",
-      "arguments": "",
-      "envVars": "",
-      "serverUrl": ""
+      "commandConfig": "कमांड कॉन्फ़िगरेशन",
+      "command": "कमांड",
+      "arguments": "तर्क",
+      "envVars": "पर्यावरण चर",
+      "serverUrl": "सर्वर यूआरएल"
     },
     "notes": {
-      "title": "",
-      "placeholder": ""
+      "title": "नोट्स",
+      "placeholder": "इस सर्वर के कॉन्फ़िगरेशन, उपयोग निर्देशों, या किसी अन्य प्रासंगिक जानकारी के बारे में नोट्स जोड़ें..."
     },
     "resources": {
-      "title": "",
-      "name": "",
-      "uri": "",
-      "description": "",
-      "mimeType": "",
-      "noResourcesTitle": "",
-      "noResources": ""
+      "title": "खोजे गए संसाधन",
+      "name": "नाम",
+      "uri": "URI",
+      "description": "विवरण",
+      "mimeType": "MIME प्रकार",
+      "noResourcesTitle": "कोई संसाधन नहीं मिला",
+      "noResources": "इस सर्वर के लिए अभी तक कोई स्थिर संसाधन नहीं खोजा गया है। खोज चलाने का प्रयास करें।"
     },
     "templates": {
-      "title": "",
-      "name": "",
-      "uriTemplate": "",
-      "variables": "",
-      "description": "",
-      "mimeType": "",
-      "noTemplatesTitle": "",
-      "noTemplates": ""
+      "title": "संसाधन टेम्पलेट",
+      "name": "नाम",
+      "uriTemplate": "URI टेम्पलेट",
+      "variables": "चर",
+      "description": "विवरण",
+      "mimeType": "MIME प्रकार",
+      "noTemplatesTitle": "कोई संसाधन टेम्पलेट नहीं मिला",
+      "noTemplates": "इस सर्वर के लिए अभी तक कोई संसाधन टेम्पलेट नहीं खोजा गया है। खोज चलाने का प्रयास करें।"
     },
     "prompts": {
-      "title": "",
-      "name": "",
-      "description": "",
-      "arguments": "",
-      "noPromptsTitle": "",
-      "noPrompts": "",
-      "viewArguments": ""
+      "title": "खोजे गए प्रॉम्प्ट",
+      "name": "नाम",
+      "description": "विवरण",
+      "arguments": "तर्क स्कीमा",
+      "noPromptsTitle": "कोई प्रॉम्प्ट नहीं मिला",
+      "noPrompts": "इस सर्वर के लिए अभी तक कोई प्रॉम्प्ट नहीं खोजा गया है। खोज चलाने का प्रयास करें।",
+      "viewArguments": "तर्क देखें ({{count}})"
     },
     "tools": {
-      "title": "",
-      "noTools": ""
+      "title": "खोजे गए टूल",
+      "noTools": "इस सर्वर के लिए अभी तक कोई टूल नहीं खोजा गया है। सर्वर कार्ड पर \"टूल खोजें\" बटन का उपयोग करने का प्रयास करें।"
     },
     "instructions": {
-      "title": "",
-      "descriptionLabel": "",
-      "descriptionPlaceholder": "",
-      "descriptionHelp": "",
-      "messagesLabel": "",
-      "messagesPlaceholder": "",
-      "messagesHelp": "",
-      "infoTitle": "",
-      "infoText": "",
-      "saveSuccess": "",
-      "saveError": ""
+      "title": "कस्टम निर्देश",
+      "descriptionLabel": "विवरण (वैकल्पिक)",
+      "descriptionPlaceholder": "इन निर्देशों के उद्देश्य का संक्षिप्त वर्णन करें",
+      "descriptionHelp": "यह विवरण केवल आपके संदर्भ के लिए है।",
+      "messagesLabel": "संदेश (JSON ऐरे)",
+      "messagesPlaceholder": "[\n  {\n    \"role\": \"system\",\n    \"content\": { \"type\": \"text\", \"text\": \"आपका निर्देश यहाँ...\" }\n  }\n]",
+      "messagesHelp": "JSON प्रारूप में MCP संदेश ऑब्जेक्ट्स की एक ऐरे दर्ज करें।",
+      "infoTitle": "क्लाइंट निर्देशों का उपयोग कैसे करते हैं",
+      "infoText": "इन निर्देशों का उपयोग संभावित रूप से MCP क्लाइंट (जैसे Cline) द्वारा इस सर्वर के टूल का उपयोग करते समय AI को संदर्भ प्रदान करने के लिए किया जा सकता है। सटीक उपयोग क्लाइंट कार्यान्वयन पर निर्भर करता है।",
+      "saveSuccess": "कस्टम निर्देश सफलतापूर्वक सहेजे गए।",
+      "saveError": "कस्टम निर्देश सहेजने में विफल।"
     },
     "placeholders": {
-      "serverName": "",
-      "description": ""
+      "serverName": "सर्वर का नाम दर्ज करें",
+      "description": "विवरण जोड़ने के लिए क्लिक करें..."
     }
   }
 }

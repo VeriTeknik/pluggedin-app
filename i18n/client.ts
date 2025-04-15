@@ -16,6 +16,48 @@ import enSearch from '../public/locales/en/search.json';
 import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
 import enSidebar from '../public/locales/en/sidebar.json';
+// Import Hindi chunks
+import hiApiKeys from '../public/locales/hi/apiKeys.json';
+import hiAuth from '../public/locales/hi/auth.json';
+import hiCommon from '../public/locales/hi/common.json';
+import hiDiscover from '../public/locales/hi/discover.json';
+import hiLanding from '../public/locales/hi/landing.json';
+import hiLegal from '../public/locales/hi/legal.json';
+import hiMcpServers from '../public/locales/hi/mcpServers.json';
+import hiNotifications from '../public/locales/hi/notifications.json';
+import hiPlayground from '../public/locales/hi/playground.json';
+import hiSearch from '../public/locales/hi/search.json';
+import hiSettings from '../public/locales/hi/settings.json';
+import hiSetupGuide from '../public/locales/hi/setupGuide.json';
+import hiSidebar from '../public/locales/hi/sidebar.json';
+// Import Japanese chunks
+import jaApiKeys from '../public/locales/ja/apiKeys.json';
+import jaAuth from '../public/locales/ja/auth.json';
+import jaCommon from '../public/locales/ja/common.json';
+import jaDiscover from '../public/locales/ja/discover.json';
+import jaLanding from '../public/locales/ja/landing.json';
+import jaLegal from '../public/locales/ja/legal.json';
+import jaMcpServers from '../public/locales/ja/mcpServers.json';
+import jaNotifications from '../public/locales/ja/notifications.json';
+import jaPlayground from '../public/locales/ja/playground.json';
+import jaSearch from '../public/locales/ja/search.json';
+import jaSettings from '../public/locales/ja/settings.json';
+import jaSetupGuide from '../public/locales/ja/setupGuide.json';
+import jaSidebar from '../public/locales/ja/sidebar.json';
+// Import Dutch chunks
+import nlApiKeys from '../public/locales/nl/apiKeys.json';
+import nlAuth from '../public/locales/nl/auth.json';
+import nlCommon from '../public/locales/nl/common.json';
+import nlDiscover from '../public/locales/nl/discover.json';
+import nlLanding from '../public/locales/nl/landing.json';
+import nlLegal from '../public/locales/nl/legal.json';
+import nlMcpServers from '../public/locales/nl/mcpServers.json';
+import nlNotifications from '../public/locales/nl/notifications.json';
+import nlPlayground from '../public/locales/nl/playground.json';
+import nlSearch from '../public/locales/nl/search.json';
+import nlSettings from '../public/locales/nl/settings.json';
+import nlSetupGuide from '../public/locales/nl/setupGuide.json';
+import nlSidebar from '../public/locales/nl/sidebar.json';
 // Import Turkish chunks
 import trApiKeys from '../public/locales/tr/apiKeys.json';
 import trAuth from '../public/locales/tr/auth.json';
@@ -30,8 +72,20 @@ import trSearch from '../public/locales/tr/search.json';
 import trSettings from '../public/locales/tr/settings.json';
 import trSetupGuide from '../public/locales/tr/setupGuide.json';
 import trSidebar from '../public/locales/tr/sidebar.json';
-// Import other locale files as needed
-// TODO: Add imports for hi, ja, nl, zh when translations are ready
+// Import Chinese chunks
+import zhApiKeys from '../public/locales/zh/apiKeys.json';
+import zhAuth from '../public/locales/zh/auth.json';
+import zhCommon from '../public/locales/zh/common.json';
+import zhDiscover from '../public/locales/zh/discover.json';
+import zhLanding from '../public/locales/zh/landing.json';
+import zhLegal from '../public/locales/zh/legal.json';
+import zhMcpServers from '../public/locales/zh/mcpServers.json';
+import zhNotifications from '../public/locales/zh/notifications.json';
+import zhPlayground from '../public/locales/zh/playground.json';
+import zhSearch from '../public/locales/zh/search.json';
+import zhSettings from '../public/locales/zh/settings.json';
+import zhSetupGuide from '../public/locales/zh/setupGuide.json';
+import zhSidebar from '../public/locales/zh/sidebar.json';
 import { defaultLocale, locales, namespaces } from './config';
 
 // Resources object with all translations loaded statically
@@ -66,6 +120,96 @@ const resources = {
     setupGuide: enSetupGuide,
     sidebar: enSidebar
   },
+  hi: {
+    translation: {
+      ...hiCommon,
+      ...hiAuth,
+      ...hiDiscover,
+      ...hiLanding,
+      ...hiMcpServers,
+      ...hiSearch,
+      ...hiApiKeys,
+      ...hiLegal,
+      ...hiSidebar,
+      ...hiSettings,
+      ...hiSetupGuide,
+      ...hiPlayground,
+      ...hiNotifications
+    },
+    apiKeys: hiApiKeys,
+    auth: hiAuth,
+    common: hiCommon,
+    discover: hiDiscover,
+    landing: hiLanding,
+    legal: hiLegal,
+    mcpServers: hiMcpServers,
+    notifications: hiNotifications,
+    playground: hiPlayground,
+    search: hiSearch,
+    settings: hiSettings,
+    setupGuide: hiSetupGuide,
+    sidebar: hiSidebar
+  },
+  ja: {
+    translation: {
+      ...jaCommon,
+      ...jaAuth,
+      ...jaDiscover,
+      ...jaLanding,
+      ...jaMcpServers,
+      ...jaSearch,
+      ...jaApiKeys,
+      ...jaLegal,
+      ...jaSidebar,
+      ...jaSettings,
+      ...jaSetupGuide,
+      ...jaPlayground,
+      ...jaNotifications
+    },
+    apiKeys: jaApiKeys,
+    auth: jaAuth,
+    common: jaCommon,
+    discover: jaDiscover,
+    landing: jaLanding,
+    legal: jaLegal,
+    mcpServers: jaMcpServers,
+    notifications: jaNotifications,
+    playground: jaPlayground,
+    search: jaSearch,
+    settings: jaSettings,
+    setupGuide: jaSetupGuide,
+    sidebar: jaSidebar
+  },
+  nl: {
+    translation: {
+      ...nlCommon,
+      ...nlAuth,
+      ...nlDiscover,
+      ...nlLanding,
+      ...nlMcpServers,
+      ...nlSearch,
+      ...nlApiKeys,
+      ...nlLegal,
+      ...nlSidebar,
+      ...nlSettings,
+      ...nlSetupGuide,
+      ...nlPlayground,
+      ...nlNotifications
+    },
+    apiKeys: nlApiKeys,
+    auth: nlAuth,
+    common: nlCommon,
+    discover: nlDiscover,
+    landing: nlLanding,
+    legal: nlLegal,
+    mcpServers: nlMcpServers,
+    notifications: nlNotifications,
+    playground: nlPlayground,
+    search: nlSearch,
+    settings: nlSettings,
+    setupGuide: nlSetupGuide,
+    sidebar: nlSidebar
+  },
   tr: {
     translation: {
       ...trCommon,
@@ -95,8 +239,37 @@ const resources = {
     settings: trSettings,
     setupGuide: trSetupGuide,
     sidebar: trSidebar
+  },
+  zh: {
+    translation: {
+      ...zhCommon,
+      ...zhAuth,
+      ...zhDiscover,
+      ...zhLanding,
+      ...zhMcpServers,
+      ...zhSearch,
+      ...zhApiKeys,
+      ...zhLegal,
+      ...zhSidebar,
+      ...zhSettings,
+      ...zhSetupGuide,
+      ...zhPlayground,
+      ...zhNotifications
+    },
+    apiKeys: zhApiKeys,
+    auth: zhAuth,
+    common: zhCommon,
+    discover: zhDiscover,
+    landing: zhLanding,
+    legal: zhLegal,
+    mcpServers: zhMcpServers,
+    notifications: zhNotifications,
+    playground: zhPlayground,
+    search: zhSearch,
+    settings: zhSettings,
+    setupGuide: zhSetupGuide,
+    sidebar: zhSidebar
   }
-  // Add other languages here when translations are ready
 };
 
 // Language detection options

@@ -1,0 +1,37 @@
+{
+  "title": "発見",
+  "subtitle": "コンテンツを探索し、他の人とつながる",
+  "tabs": {
+    "people": "人々",
+    "servers": "MCPサーバー ({{count}})",
+    "collections": "コレクション ({{count}})",
+    "chats": "埋め込みチャット ({{count}})"
+  },
+  "following": {
+    "title": "フォロー中",
+    "empty": "まだ誰もフォローしていません",
+    "viewProfile": "プロフィールを表示"
+  },
+  "suggested": {
+    "title": "おすすめユーザー",
+    "empty": "おすすめユーザーが見つかりません"
+  },
+  "search": {
+    "placeholder": "検索...",
+    "noResults": "結果が見つかりません",
+    "card": {
+      "dialog": {
+        "title": "MCPサーバーを追加",
+        "description": "ワークスペースに新しいサーバーを追加します",
+        "name": "サーバー名",
+        "command": "コマンド",
+        "args": "引数",
+        "env": "環境変数",
+        "url": "サーバーURL",
+        "cancel": "キャンセル",
+        "add": "サーバーを追加",
+        "installing": "インストール中..."
+      }
+    }
+  }
+}

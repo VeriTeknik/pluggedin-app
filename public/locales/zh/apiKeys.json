@@ -1,48 +1,48 @@
 {
   "apiKeys": {
-    "title": "",
-    "description": "",
-    "empty": "",
+    "title": "API 密钥",
+    "description": "您的 API 密钥用于验证对 Plugged.in API 的请求。请妥善保管，不要与他人分享。",
+    "empty": "尚无 API 密钥。创建一个开始使用。",
     "actions": {
-      "create": "",
-      "creating": "",
-      "delete": "",
-      "deleting": "",
-      "show": "",
-      "hide": "",
-      "copy": "",
-      "cancel": ""
+      "create": "创建 API 密钥",
+      "creating": "创建中...",
+      "delete": "删除 API 密钥",
+      "deleting": "删除中...",
+      "show": "显示 API 密钥",
+      "hide": "隐藏 API 密钥",
+      "copy": "复制 API 密钥",
+      "cancel": "取消"
     },
     "dialog": {
       "create": {
-        "title": "",
-        "description": "",
-        "nameLabel": "",
-        "namePlaceholder": ""
+        "title": "创建 API 密钥",
+        "description": "为您的项目创建一个新的 API 密钥。您可以选择性地给它命名以帮助识别其用途。",
+        "nameLabel": "API 密钥名称（可选）",
+        "namePlaceholder": "例如，生产环境 API 密钥"
       },
       "delete": {
-        "title": "",
-        "description": "",
-        "namePrefix": ""
+        "title": "删除 API 密钥",
+        "description": "您确定要删除此 API 密钥 {{name}} 吗？此操作无法撤销。",
+        "namePrefix": " \""
       }
     },
     "toast": {
       "copied": {
-        "title": "",
-        "description": ""
+        "title": "API 密钥已复制",
+        "description": "API 密钥已复制到您的剪贴板。"
       },
       "created": {
-        "title": "",
-        "description": ""
+        "title": "API 密钥已创建",
+        "description": "您的新 API 密钥已成功创建。"
       },
       "deleted": {
-        "title": "",
-        "description": ""
+        "title": "API 密钥已删除",
+        "description": "您的 API 密钥已成功删除。"
       },
       "error": {
-        "title": "",
-        "createFailed": "",
-        "deleteFailed": ""
+        "title": "错误",
+        "createFailed": "创建 API 密钥失败",
+        "deleteFailed": "删除 API 密钥失败"
       }
     }
   }

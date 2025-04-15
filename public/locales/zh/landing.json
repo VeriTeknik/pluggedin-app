@@ -1,36 +1,166 @@
 {
-  "landing": {
-    "navigation": {
-      "enterApp": ""
+  "navigation": {
+    "enterApp": "进入应用",
+    "features": "功能",
+    "community": "社区",
+    "collections": "集合",
+    "playground": "演练场",
+    "getStarted": "开始使用"
+  },
+  "hero": {
+    "title": "AI 的十字路口",
+    "subtitle": "通过统一平台连接、创建和扩展您的 AI 能力。构建和管理增强您 AI 工作流程的插件。",
+    "headline": "连接、共享和发现 MCP 服务器",
+    "subheadline": "机器对话协议的社区中心和通用代理",
+    "analogy": "\"一个 MCP 代理统治所有 MCP\"",
+    "openSource": "自豪地开源",
+    "cta": {
+      "getStarted": "开始使用",
+      "learnMore": "了解更多"
+    }
+  },
+  "features": {
+    "title": "功能",
+    "subtitle": "管理 MCP 服务器所需的一切",
+    "sectionTitle": "强大的 MCP 管理功能",
+    "sectionSubtitle": "有效连接、共享和发现 MCP 服务器所需的一切。",
+    "communitySharing": {
+      "title": "社区 MCP 服务器共享",
+      "description": "共享您的 MCP 服务器并发现社区的创作。"
     },
-    "hero": {
-      "title": "",
-      "subtitle": ""
+    "collectionManagement": {
+      "title": "集合管理",
+      "description": "将服务器组织到不同客户端或项目的集合中。"
     },
-    "features": {
-      "pluginManagement": {
-        "title": "",
-        "description": "",
-        "content": "",
-        "action": ""
-      },
-      "aiPlayground": {
-        "title": "",
-        "description": "",
-        "content": "",
-        "action": ""
-      },
-      "customDevelopment": {
-        "title": "",
-        "description": "",
-        "content": "",
-        "action": ""
-      }
+    "workspaceOrganization": {
+      "title": "工作区组织",
+      "description": "将集合分组到工作区中，例如开发或生产环境。"
     },
-    "gettingStarted": {
-      "title": "",
-      "description": "",
-      "action": ""
+    "advancedSearch": {
+      "title": "高级搜索",
+      "description": "通过强大的过滤功能找到完美的 MCP 服务器。"
+    },
+    "mcpPlayground": {
+      "title": "MCP 演练场",
+      "description": "在交互式环境中测试和调试您的 MCP 服务器。"
+    },
+    "pluginManagement": {
+      "title": "插件管理",
+      "description": "浏览、配置和管理 MCP 服务器和插件",
+      "content": "通过统一界面连接各种 AI 工具和服务。从中央仪表板配置和管理您的插件。",
+      "action": "浏览插件"
+    },
+    "aiPlayground": {
+      "title": "AI 演练场",
+      "description": "在交互式环境中测试和实验您的 AI 工具",
+      "content": "体验您的插件的实际效果。演练场允许您测试不同的配置并查看实时结果。",
+      "action": "打开演练场"
+    },
+    "customDevelopment": {
+      "title": "自定义开发",
+      "description": "创建和自定义您自己的 MCP 服务器和工具",
+      "benefit1": "发现来自其他开发者的创新服务器。",
+      "benefit2": "获取您共享服务器的反馈和评分。",
+      "benefit3": "在社区创作的基础上协作和构建。",
+      "benefit4": "随时了解最新的 MCP 趋势。",
+      "visualPlaceholder": "显示服务器共享/评分的视觉效果",
+      "content": "使用我们的 Python 编辑器和集成开发环境构建自定义功能。通过专业功能扩展您的 AI。",
+      "action": "创建自定义工具"
+    }
+  },
+  "community": {
+    "title": "加入 MCP 社区",
+    "subtitle": "加入不断壮大的 MCP 开发者社区",
+    "description": "共享您的 MCP 服务器，发现他人构建的强大工具，并在不断发展的生态系统中协作。评价服务器，留下评论，并找到满足您需求的最佳解决方案。",
+    "action": "加入社区",
+    "benefit1": "发现来自其他开发者的创新服务器。",
+    "benefit2": "获取您共享服务器的反馈和评分。",
+    "benefit3": "在社区创作的基础上协作和构建。",
+    "benefit4": "随时了解最新的 MCP 趋势。",
+    "visualPlaceholder": "显示服务器共享/评分的视觉效果"
+  },
+  "testimonials": {
+    "title": "开发者怎么说",
+    "subtitle": "听听社区的声音",
+    "sectionTitle": "全球开发者信赖",
+    "sectionSubtitle": "听听我们的用户对 Plugged.in 的评价。",
+    "quote1": "\"Plugged.in 彻底改变了我们团队管理 MCP 服务器的方式。组织功能太棒了！\"",
+    "name1": "张三",
+    "title1": "首席 AI 工程师，TechCorp",
+    "quote2": "\"社区共享方面改变了游戏规则。发现新工具比以往任何时候都容易。\"",
+    "name2": "李四",
+    "title2": "独立开发者",
+    "quote3": "\"使用 MCP 演练场进行调试为我们节省了无数时间。强烈推荐！\"",
+    "name3": "王五",
+    "title3": "创始人，AI Solutions Inc."
+  },
+  "search": {
+    "title": "即时找到合适的工具",
+    "subtitle": "通过强大的搜索和过滤选项发现 MCP 服务器和工具。",
+    "description": "在不断增长的 MCP 服务器和工具集合中搜索。",
+    "action": "探索工具",
+    "imagePlaceholder": "图片：显示社区服务器的搜索结果（CardGrid 模型）",
+    "feature1Title": "智能搜索",
+    "feature1Desc": "使用我们的智能搜索算法，通过名称、描述或功能快速查找服务器。",
+    "feature2Title": "高级过滤",
+    "feature2Desc": "使用类别、标签、评分和兼容性过滤器缩小结果范围。",
+    "feature3Title": "详细预览",
+    "feature3Desc": "直接从搜索结果中查看服务器详细信息、评分和社区评论。"
+  },
+  "playground": {
+    "title": "使用 MCP 演练场进行测试和调试",
+    "subtitle": "一个用于构建、测试和完善 MCP 服务器的交互式环境。",
+    "feature1Title": "交互式测试",
+    "feature1Desc": "直接与您的 MCP 服务器交互，调用工具，并实时检查资源。",
+    "feature2Title": "高效调试",
+    "feature2Desc": "通过详细的请求/响应日志和错误消息快速识别和解决问题。",
+    "feature3Title": "快速原型设计",
+    "feature3Desc": "在部署前实验不同的服务器配置和工具实现。",
+    "visualPlaceholder": "演练场环境的视觉表示",
+    "imagePlaceholder": "图片：演练场/调试模型"
+  },
+  "collections": {
+    "title": "组织您的 MCP 生态系统",
+    "subtitle": "组织您的工具",
+    "description": "创建并共享您最喜欢的 MCP 服务器和工具的集合。",
+    "action": "查看集合",
+    "collectionsTitle": "精简集合",
+    "collectionsDesc": "将相关的 MCP 服务器分组到特定客户端、应用程序或环境的逻辑集合中。",
+    "workspacesTitle": "强大的工作区",
+    "workspacesDesc": "将您的集合进一步组织到工作区中，例如分离开发、暂存和生产设置。",
+    "hierarchyPlaceholder": "集合层次结构的视觉表示",
+    "imagePlaceholder": "图片：集合/工作区模型"
+  },
+  "sharing": {
+    "title": "社区共享",
+    "subtitle": "与他人共享",
+    "description": "与社区共享您的 MCP 服务器和工具。",
+    "action": "开始共享"
+  },
+  "gettingStarted": {
+    "title": "Plugged.in 新手？",
+    "description": "按照我们的设置指南正确配置您的环境，并立即开始使用 Plugged.in 进行构建。",
+    "action": "查看设置指南"
+  },
+  "cta": {
+    "title": "准备好加速您的 MCP 工作流程了吗？",
+    "subtitle": "立即加入 Plugged.in 社区。以前所未有的方式管理、共享和发现 MCP 服务器。",
+    "description": "立即加入社区并开始使用 Plugged.in 进行构建。",
+    "primary": "开始使用",
+    "secondary": "了解更多",
+    "primaryAction": "免费开始使用",
+    "secondaryAction": "阅读文档",
+    "step1": {
+      "title": "注册",
+      "description": "几秒钟内创建您的免费帐户。"
+    },
+    "step2": {
+      "title": "连接服务器",
+      "description": "添加您现有的 MCP 服务器或发现新的服务器。"
+    },
+    "step3": {
+      "title": "探索与共享",
+      "description": "管理您的生态系统并与社区互动。"
     }
   }
 }

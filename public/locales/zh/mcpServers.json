@@ -1,205 +1,205 @@
 {
   "mcpServers": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "MCP 服务器",
+    "subtitle": "插件管理",
+    "description": "配置和管理您的 MCP 服务器。通过命令行或基于 URL 的接口连接到外部工具和服务。",
     "stats": {
-      "totalServers": "",
-      "active": "",
-      "stdio": "",
-      "sse": ""
+      "totalServers": "总服务器数",
+      "active": "活动",
+      "stdio": "STDIO",
+      "sse": "SSE"
     },
     "actions": {
-      "addServer": "",
-      "import": "",
-      "export": "",
-      "search": "",
-      "edit": "",
-      "delete": "",
-      "deleteConfirm": "",
-      "cancel": "",
-      "create": "",
-      "creating": "",
-      "close": "",
-      "downloadJson": "",
-      "copy": "",
-      "copied": "",
-      "discover": "",
-      "discovering": "",
-      "shareCollection": "",
-      "unshare": "",
-      "unshareConfirmTitle": "",
-      "unshareConfirmDesc": "",
-      "shared": "",
-      "share": ""
+      "addServer": "添加服务器",
+      "import": "导入",
+      "export": "导出",
+      "search": "搜索服务器...",
+      "edit": "编辑",
+      "delete": "删除",
+      "deleteConfirm": "您确定要删除此 MCP 服务器吗？",
+      "cancel": "取消",
+      "create": "创建",
+      "creating": "创建中...",
+      "close": "关闭",
+      "downloadJson": "下载 JSON",
+      "copy": "复制",
+      "copied": "已复制！",
+      "discover": "发现",
+      "discovering": "发现中...",
+      "shareCollection": "共享集合",
+      "unshare": "取消共享",
+      "unshareConfirmTitle": "取消共享服务器",
+      "unshareConfirmDesc": "您确定要取消共享此服务器吗？其他用户将无法再访问它。",
+      "shared": "已共享",
+      "share": "共享"
     },
     "form": {
-      "success": "",
+      "success": "MCP 服务器创建成功。",
       "error": {
-        "createFailed": ""
+        "createFailed": "创建 MCP 服务器失败。"
       },
-      "addTitle": "",
-      "addDescription": "",
-      "commandBased": "",
-      "urlBased": "",
-      "name": "",
-      "namePlaceholder": "",
-      "description": "",
-      "descriptionPlaceholder": "",
-      "command": "",
-      "commandPlaceholder": "",
-      "arguments": "",
-      "argumentsPlaceholder": "",
-      "envVars": "",
-      "envVarsPlaceholder": "",
-      "envVarsHelp": "",
-      "serverUrl": "",
-      "serverUrlPlaceholder": "",
-      "serverUrlHelp": "",
-      "created": "",
-      "notes": "",
-      "notesPlaceholder": ""
+      "addTitle": "添加 MCP 服务器",
+      "addDescription": "创建一个新的 MCP 服务器配置。选择 STDIO（基于命令）或 SSE（基于 URL）服务器类型。",
+      "commandBased": "基于命令 (STDIO)",
+      "urlBased": "基于 URL (SSE)",
+      "name": "名称",
+      "namePlaceholder": "例如，mcp-server-time",
+      "description": "描述",
+      "descriptionPlaceholder": "（可选）服务器用途的简要描述",
+      "command": "命令",
+      "commandPlaceholder": "例如，npx 或 uvx",
+      "arguments": "参数",
+      "argumentsPlaceholder": "例如，mcp-server-time, --local-timezone=America/Los_Angeles",
+      "envVars": "环境变量",
+      "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
+      "envVarsHelp": "以 KEY=value 格式输入环境变量，每行一个",
+      "serverUrl": "服务器 URL",
+      "serverUrlPlaceholder": "http://localhost:3000/sse",
+      "serverUrlHelp": "必须是有效的 HTTP/HTTPS URL",
+      "created": "已创建",
+      "notes": "备注",
+      "notesPlaceholder": "添加有关此服务器的任何备注、使用说明或已知怪癖..."
     },
     "empty": {
-      "title": "",
-      "noResults": "",
-      "noServers": "",
-      "addFirst": ""
+      "title": "未找到服务器",
+      "noResults": "没有服务器匹配 \"{{search}}\"",
+      "noServers": "您尚未添加任何 MCP 服务器",
+      "addFirst": "添加您的第一个服务器"
     },
     "import": {
-      "title": "",
-      "description": "",
-      "jsonFormat": "",
-      "jsonPlaceholder": "",
-      "importing": "",
-      "importServers": "",
-      "success": "",
+      "title": "导入 MCP 服务器",
+      "description": "从 JSON 导入多个 MCP 服务器配置。这将添加新服务器而不会替换现有服务器。",
+      "jsonFormat": "JSON 格式",
+      "jsonPlaceholder": "在此处粘贴您的 JSON",
+      "importing": "导入中...",
+      "importServers": "导入服务器",
+      "success": "成功导入 {{count}} 个 MCP 服务器。",
       "error": {
-        "invalidJson": "",
-        "missingMcpServers": "",
-        "importFailed": ""
+        "invalidJson": "无效的 JSON 格式",
+        "missingMcpServers": "JSON 必须包含 \"mcpServers\" 对象",
+        "importFailed": "导入服务器失败。请检查控制台以获取详细信息。"
       }
     },
     "export": {
-      "title": "",
-      "description": "",
-      "copyTooltip": "",
-      "downloadSuccess": "",
+      "title": "导出 MCP 服务器配置",
+      "description": "您的 MCP 服务器配置（JSON 格式），可导入到另一个实例。",
+      "copyTooltip": "将 JSON 复制到剪贴板",
+      "downloadSuccess": "已下载 {{count}} 个 MCP 服务器配置。",
       "error": {
-        "noServers": "",
-        "copyFailed": ""
+        "noServers": "没有可导出的服务器。",
+        "copyFailed": "复制到剪贴板失败。"
       }
     },
     "shareCollection": {
-      "title": "",
-      "description": "",
-      "success": "",
-      "error": "",
+      "title": "共享服务器集合",
+      "description": "与其他用户共享您选定的 MCP 服务器。",
+      "success": "服务器集合共享成功。",
+      "error": "共享服务器集合失败。",
       "warning": {
-        "unsharedServers": "",
-        "unsharedServersDescription": ""
+        "unsharedServers": "检测到未共享的服务器",
+        "unsharedServersDescription": "选定的某些服务器当前未共享。当您共享此集合时，它们将自动共享。"
       },
       "form": {
-        "servers": "",
-        "title": "",
-        "titlePlaceholder": "",
-        "description": "",
-        "descriptionPlaceholder": "",
-        "public": "",
-        "share": ""
+        "servers": "选定的服务器",
+        "title": "集合标题",
+        "titlePlaceholder": "输入您的服务器集合的标题",
+        "description": "集合描述",
+        "descriptionPlaceholder": "描述这些服务器的用途以及它们如何协同工作",
+        "public": "将集合设为公开",
+        "share": "共享集合"
       }
     },
     "status": {
-      "active": "",
-      "inactive": "",
-      "stdio": "",
-      "sse": ""
+      "active": "活动",
+      "inactive": "非活动",
+      "stdio": "STDIO",
+      "sse": "SSE"
     },
     "errors": {
-      "missingInfo": "",
-      "discoveryFailed": "",
-      "fetchResourcesFailed": "",
-      "fetchTemplatesFailed": "",
-      "fetchPromptsFailed": "",
-      "fetchToolsFailed": "",
-      "fetchInstructionsFailed": ""
+      "missingInfo": "缺少配置文件或服务器信息。",
+      "discoveryFailed": "发现失败。",
+      "fetchResourcesFailed": "加载资源失败。",
+      "fetchTemplatesFailed": "加载资源模板失败。",
+      "fetchPromptsFailed": "加载提示失败。",
+      "fetchToolsFailed": "加载工具失败。",
+      "fetchInstructionsFailed": "获取自定义指令失败。"
     },
     "tabs": {
-      "details": "",
-      "config": "",
-      "notes": "",
-      "customInstructions": "",
-      "resources": "",
-      "templates": "",
-      "prompts": "",
-      "tools": ""
+      "details": "服务器详细信息",
+      "config": "配置",
+      "notes": "备注",
+      "customInstructions": "自定义指令",
+      "resources": "资源",
+      "templates": "资源模板",
+      "prompts": "提示",
+      "tools": "工具"
     },
     "details": {
-      "serverInfo": "",
-      "uuid": "",
-      "status": "",
-      "created": "",
-      "type": ""
+      "serverInfo": "服务器信息",
+      "uuid": "UUID",
+      "status": "状态",
+      "created": "已创建",
+      "type": "类型"
     },
     "config": {
-      "commandConfig": "",
-      "command": "",
-      "arguments": "",
-      "envVars": "",
-      "serverUrl": ""
+      "commandConfig": "命令配置",
+      "command": "命令",
+      "arguments": "参数",
+      "envVars": "环境变量",
+      "serverUrl": "服务器 URL"
     },
     "notes": {
-      "title": "",
-      "placeholder": ""
+      "title": "备注",
+      "placeholder": "添加有关此服务器配置、使用说明或任何其他相关信息的备注..."
     },
     "resources": {
-      "title": "",
-      "name": "",
-      "uri": "",
-      "description": "",
-      "mimeType": "",
-      "noResourcesTitle": "",
-      "noResources": ""
+      "title": "发现的资源",
+      "name": "名称",
+      "uri": "URI",
+      "description": "描述",
+      "mimeType": "MIME 类型",
+      "noResourcesTitle": "未找到资源",
+      "noResources": "尚未为此服务器发现任何静态资源。请尝试运行发现。"
     },
     "templates": {
-      "title": "",
-      "name": "",
-      "uriTemplate": "",
-      "variables": "",
-      "description": "",
-      "mimeType": "",
-      "noTemplatesTitle": "",
-      "noTemplates": ""
+      "title": "资源模板",
+      "name": "名称",
+      "uriTemplate": "URI 模板",
+      "variables": "变量",
+      "description": "描述",
+      "mimeType": "MIME 类型",
+      "noTemplatesTitle": "未找到资源模板",
+      "noTemplates": "尚未为此服务器发现任何资源模板。请尝试运行发现。"
     },
     "prompts": {
-      "title": "",
-      "name": "",
-      "description": "",
-      "arguments": "",
-      "noPromptsTitle": "",
-      "noPrompts": "",
-      "viewArguments": ""
+      "title": "发现的提示",
+      "name": "名称",
+      "description": "描述",
+      "arguments": "参数模式",
+      "noPromptsTitle": "未找到提示",
+      "noPrompts": "尚未为此服务器发现任何提示。请尝试运行发现。",
+      "viewArguments": "查看参数 ({{count}})"
     },
     "tools": {
-      "title": "",
-      "noTools": ""
+      "title": "发现的工具",
+      "noTools": "尚未为此服务器发现任何工具。请尝试使用服务器卡上的“发现工具”按钮。"
     },
     "instructions": {
-      "title": "",
-      "descriptionLabel": "",
-      "descriptionPlaceholder": "",
-      "descriptionHelp": "",
-      "messagesLabel": "",
-      "messagesPlaceholder": "",
-      "messagesHelp": "",
-      "infoTitle": "",
-      "infoText": "",
-      "saveSuccess": "",
-      "saveError": ""
+      "title": "自定义指令",
+      "descriptionLabel": "描述（可选）",
+      "descriptionPlaceholder": "简要描述这些指令的目的",
+      "descriptionHelp": "此描述仅供您参考。",
+      "messagesLabel": "消息（JSON 数组）",
+      "messagesPlaceholder": "[\n  {\n    \"role\": \"system\",\n    \"content\": { \"type\": \"text\", \"text\": \"在此处输入您的指令...\" }\n  }\n]",
+      "messagesHelp": "以 JSON 格式输入 MCP 消息对象的数组。",
+      "infoTitle": "客户端如何使用指令",
+      "infoText": "这些指令可能被 MCP 客户端（如 Cline）用于在使用此服务器的工具时向 AI 提供上下文。具体用法取决于客户端实现。",
+      "saveSuccess": "自定义指令保存成功。",
+      "saveError": "保存自定义指令失败。"
     },
     "placeholders": {
-      "serverName": "",
-      "description": ""
+      "serverName": "输入服务器名称",
+      "description": "点击添加描述..."
     }
   }
 }

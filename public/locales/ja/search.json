@@ -1,50 +1,50 @@
 {
   "search": {
-    "title": "",
-    "subtitle": "",
-    "explorePlugins": "",
+    "title": "検索",
+    "subtitle": "すべてのコンテンツを検索",
+    "explorePlugins": "プラグインを探索",
     "input": {
-      "placeholder": ""
+      "placeholder": "検索..."
     },
-    "loading": "",
-    "noResults": "",
-    "error": "",
-    "sort": "",
-    "sortBy": "",
+    "loading": "検索を読み込み中...",
+    "noResults": "結果が見つかりません",
+    "error": "検索結果の読み込みエラー",
+    "sort": "並べ替え",
+    "sortBy": "並べ替え基準",
     "sortOptions": {
-      "relevance": "",
-      "popularity": "",
-      "recent": "",
-      "stars": ""
+      "relevance": "関連性",
+      "popularity": "人気度",
+      "recent": "最新",
+      "stars": "GitHubスター"
     },
-    "filter": "",
-    "filterByTags": "",
-    "noTagsAvailable": "",
-    "clearFilters": "",
-    "clearAllFilters": "",
-    "noMatchingTags": "",
-    "noMatchingFilters": "",
-    "category": "",
-    "filterByCategory": "",
-    "noCategoriesAvailable": "",
-    "allCategories": "",
+    "filter": "フィルター",
+    "filterByTags": "タグでフィルタリング",
+    "noTagsAvailable": "利用可能なタグはありません",
+    "clearFilters": "フィルターをクリア",
+    "clearAllFilters": "すべてクリア",
+    "noMatchingTags": "選択したタグに一致する結果はありません",
+    "noMatchingFilters": "選択したフィルターに一致する結果はありません",
+    "category": "カテゴリ",
+    "filterByCategory": "カテゴリでフィルタリング",
+    "noCategoriesAvailable": "利用可能なカテゴリはありません",
+    "allCategories": "すべてのカテゴリ",
     "categories": {
-      "LLM": "",
-      "UTILITY": "",
-      "TOOL": "",
-      "DATA": "",
-      "CONNECTOR": "",
-      "SEARCH": "",
-      "CODE": "",
-      "IMAGE": "",
-      "AUDIO": "",
-      "VIDEO": "",
-      "OTHER": ""
+      "LLM": "LLM",
+      "UTILITY": "ユーティリティ",
+      "TOOL": "ツール",
+      "DATA": "データアクセス",
+      "CONNECTOR": "コネクタ",
+      "SEARCH": "検索",
+      "CODE": "コード",
+      "IMAGE": "画像",
+      "AUDIO": "オーディオ",
+      "VIDEO": "ビデオ",
+      "OTHER": "その他"
     },
     "card": {
-      "install": "",
+      "install": "インストール",
       "installed": "インストール済み",
-      "rate": "評価する"
+      "rate": "評価"
     }
   }
 }

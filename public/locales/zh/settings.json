@@ -1,69 +1,142 @@
 {
   "settings": {
-    "title": "",
+    "title": "设置",
     "profile": {
-      "title": "",
-      "description": "",
-      "avatar": "",
-      "avatarRecommendation": "",
-      "name": "",
-      "namePlaceholder": "",
-      "language": "",
-      "updateButton": "",
-      "success": "",
-      "error": ""
+      "title": "个人资料",
+      "description": "管理您的个人资料信息",
+      "avatar": "上传头像",
+      "avatarRecommendation": "推荐：方形图片，最大 1MB",
+      "name": "姓名",
+      "namePlaceholder": "输入您的姓名",
+      "language": "语言",
+      "updateButton": "更新个人资料",
+      "success": "个人资料更新成功",
+      "error": "更新个人资料失败",
+      "profileUrl": {
+        "title": "您的个人资料 URL",
+        "setUsername": "在上方设置用户名以创建您的自定义公共个人资料 URL",
+        "copyTooltip": "点击复制 URL"
+      },
+      "social": {
+        "title": "社交资料",
+        "description": "管理您的公共个人资料和社交设置",
+        "username": {
+          "label": "用户名",
+          "placeholder": "选择一个用户名",
+          "checking": "正在检查可用性...",
+          "save": "保存"
+        },
+        "publicProfile": {
+          "title": "公共个人资料",
+          "description": {
+            "noUsername": "请先设置用户名才能公开您的个人资料",
+            "public": "您的个人资料和共享内容将对所有人可见",
+            "private": "您的个人资料将仅对您可见"
+          }
+        }
+      }
     },
     "password": {
-      "title": "",
-      "description": "",
+      "title": "密码",
+      "description": "更改您的密码",
       "current": {
-        "label": "",
-        "placeholder": ""
+        "label": "当前密码",
+        "placeholder": "输入当前密码"
       },
       "new": {
-        "label": "",
-        "placeholder": ""
+        "label": "新密码",
+        "placeholder": "输入新密码"
       },
       "confirm": {
-        "label": "",
-        "placeholder": ""
+        "label": "确认新密码",
+        "placeholder": "确认新密码"
       },
-      "updateButton": "",
-      "success": "",
-      "error": ""
+      "updateButton": "更改密码",
+      "success": "密码更新成功",
+      "error": "更新密码失败"
     },
     "account": {
-      "title": "",
-      "description": "",
-      "deleteButton": "",
-      "confirmTitle": "",
-      "confirmDescription": "",
-      "confirmButton": "",
-      "deletingButton": "",
-      "success": "",
-      "error": ""
+      "title": "删除帐户",
+      "description": "永久删除您的帐户和所有相关数据",
+      "deleteButton": "删除帐户",
+      "confirmTitle": "您确定吗？",
+      "confirmDescription": "此操作无法撤销。这将永久删除您的帐户并从我们的服务器中删除所有相关数据。",
+      "confirmButton": "是的，删除我的帐户",
+      "deletingButton": "删除中...",
+      "success": "帐户删除成功",
+      "error": "删除帐户失败"
     },
     "validation": {
-      "invalidJsonArray": ""
+      "invalidJsonArray": "无效的 JSON 格式或不是消息数组。"
     },
     "connectedAccounts": {
-      "title": "",
-      "description": "",
+      "title": "已连接的帐户",
+      "description": "管理您已连接的社交帐户",
       "github": {
-        "connected": "",
-        "connect": ""
+        "connected": "已连接到 GitHub",
+        "connect": "连接您的 GitHub 帐户"
       },
       "google": {
-        "connected": "",
-        "connect": ""
+        "connected": "已连接到 Google",
+        "connect": "连接您的 Google 帐户"
       },
       "twitter": {
-        "connected": "",
-        "connect": ""
+        "connected": "已连接到 Twitter",
+        "connect": "连接您的 Twitter 帐户"
       },
-      "connected": "",
-      "removed": "",
-      "error": ""
+      "connected": "已连接",
+      "removed": "{{provider}} 帐户已成功断开连接",
+      "error": "断开帐户连接失败"
+    },
+    "project": {
+      "title": "当前中心",
+      "description": "管理您当前的中心设置",
+      "loading": "正在加载项目...",
+      "namePlaceholder": "项目名称",
+      "updateSuccess": "项目名称更新成功",
+      "updateError": "更新项目名称失败",
+      "deleteConfirm": "您确定要删除此项目吗？此操作无法撤销。",
+      "deleteSuccess": "项目删除成功",
+      "deleteError": "删除项目失败",
+      "dangerZone": "危险区域",
+      "deleteWarning": "一旦删除项目，将无法恢复。请谨慎操作。",
+      "deleteButton": "删除项目"
+    },
+    "workspace": {
+      "title": "当前工作区",
+      "description": "管理您当前的工作区设置",
+      "loading": "正在加载配置文件...",
+      "namePlaceholder": "配置文件名称",
+      "updateSuccess": "配置文件名称更新成功",
+      "updateError": "更新配置文件名称失败",
+      "deleteConfirm": "您确定要删除此配置文件吗？此操作无法撤销。",
+      "deleteSuccess": "配置文件删除成功",
+      "deleteError": "删除工作区失败",
+      "dangerZone": "危险区域",
+      "deleteWarning": "一旦删除工作区，将无法恢复。请谨慎操作。",
+      "deleteButton": "删除工作区"
+    },
+    "appearance": {
+      "title": "外观",
+      "description": "自定义应用程序的外观",
+      "colorTheme": "颜色主题",
+      "light": "浅色",
+      "dark": "深色",
+      "system": "系统",
+      "font": "字体",
+      "selectFont": "选择字体",
+      "fonts": {
+        "geist": "Geist Sans (默认)",
+        "quicksand": "Quicksand",
+        "nunito": "Nunito",
+        "poppins": "Poppins",
+        "roboto": "Roboto",
+        "ubuntu": "Ubuntu",
+        "varelaRound": "Varela Round",
+        "workSans": "Work Sans",
+        "zillaSlab": "Zilla Slab",
+        "comfortaa": "Comfortaa"
+      }
     }
   }
 }

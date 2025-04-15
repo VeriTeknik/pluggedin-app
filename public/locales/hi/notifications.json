@@ -1,5 +1,29 @@
 {
   "notifications": {
-    "title": ""
+    "title": "सूचनाएं",
+    "description": "आप यहाँ सभी सिस्टम सूचनाएं देख सकते हैं",
+    "actions": {
+      "markAllAsRead": "सभी को पढ़ा हुआ चिह्नित करें",
+      "actions": "कार्रवाइयाँ",
+      "deleteAll": "सभी सूचनाएं हटाएं"
+    },
+    "tabs": {
+      "all": "सभी",
+      "unread": "अपठित",
+      "alerts": "अलर्ट",
+      "info": "जानकारी",
+      "success": "सफलता"
+    },
+    "empty": {
+      "title": "कोई सूचना नहीं",
+      "description": "इस श्रेणी में आपके पास कोई सूचना नहीं है।"
+    },
+    "toast": {
+      "markReadError": "सूचना को पढ़ा हुआ चिह्नित करने में विफल",
+      "deleteSuccess": "सूचना हटाई गई",
+      "deleteError": "सूचना हटाने में विफल",
+      "deleteAllSuccess": "सभी सूचनाएं हटाई गईं",
+      "deleteAllError": "सभी सूचनाएं हटाने में विफल"
+    }
   }
 }

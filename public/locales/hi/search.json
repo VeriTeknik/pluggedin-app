@@ -1,48 +1,50 @@
 {
   "search": {
-    "title": "",
-    "subtitle": "",
-    "explorePlugins": "",
+    "title": "खोजें",
+    "subtitle": "सभी सामग्री में खोजें",
+    "explorePlugins": "प्लगइन्स एक्सप्लोर करें",
     "input": {
-      "placeholder": ""
+      "placeholder": "खोजें..."
     },
-    "loading": "",
-    "noResults": "",
-    "error": "",
-    "sort": "",
-    "sortBy": "",
+    "loading": "खोज लोड हो रही है...",
+    "noResults": "कोई परिणाम नहीं मिला",
+    "error": "खोज परिणाम लोड करने में त्रुटि",
+    "sort": "क्रमबद्ध करें",
+    "sortBy": "इसके अनुसार क्रमबद्ध करें",
     "sortOptions": {
-      "relevance": "",
-      "popularity": "",
-      "recent": "",
-      "stars": ""
+      "relevance": "प्रासंगिकता",
+      "popularity": "लोकप्रियता",
+      "recent": "सबसे हाल का",
+      "stars": "GitHub सितारे"
     },
-    "filter": "",
-    "filterByTags": "",
-    "noTagsAvailable": "",
-    "clearFilters": "",
-    "clearAllFilters": "",
-    "noMatchingTags": "",
-    "noMatchingFilters": "",
-    "category": "",
-    "filterByCategory": "",
-    "noCategoriesAvailable": "",
-    "allCategories": "",
+    "filter": "फ़िल्टर करें",
+    "filterByTags": "टैग द्वारा फ़िल्टर करें",
+    "noTagsAvailable": "कोई टैग उपलब्ध नहीं",
+    "clearFilters": "फ़िल्टर साफ़ करें",
+    "clearAllFilters": "सभी साफ़ करें",
+    "noMatchingTags": "चयनित टैग से कोई परिणाम मेल नहीं खाता",
+    "noMatchingFilters": "चयनित फ़िल्टर से कोई परिणाम मेल नहीं खाता",
+    "category": "श्रेणी",
+    "filterByCategory": "श्रेणी द्वारा फ़िल्टर करें",
+    "noCategoriesAvailable": "कोई श्रेणी उपलब्ध नहीं",
+    "allCategories": "सभी श्रेणियां",
     "categories": {
-      "LLM": "",
-      "UTILITY": "",
-      "TOOL": "",
-      "DATA": "",
-      "CONNECTOR": "",
-      "SEARCH": "",
-      "CODE": "",
-      "IMAGE": "",
-      "AUDIO": "",
-      "VIDEO": "",
-      "OTHER": ""
+      "LLM": "LLM",
+      "UTILITY": "उपयोगिता",
+      "TOOL": "टूल",
+      "DATA": "डेटा एक्सेस",
+      "CONNECTOR": "कनेक्टर",
+      "SEARCH": "खोज",
+      "CODE": "कोड",
+      "IMAGE": "छवि",
+      "AUDIO": "ऑडियो",
+      "VIDEO": "वीडियो",
+      "OTHER": "अन्य"
     },
     "card": {
-      "install": ""
+      "install": "इंस्टॉल करें",
+      "installed": "इंस्टॉल किया गया",
+      "rate": "रेट करें"
     }
   }
 }

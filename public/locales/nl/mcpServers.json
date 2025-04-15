@@ -1,205 +1,205 @@
 {
   "mcpServers": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "MCP Servers",
+    "subtitle": "Plugin Beheer",
+    "description": "Configureer en beheer uw MCP-servers. Maak verbinding met externe tools en services via command-line of URL-gebaseerde interfaces.",
     "stats": {
-      "totalServers": "",
-      "active": "",
-      "stdio": "",
-      "sse": ""
+      "totalServers": "Totaal aantal servers",
+      "active": "Actief",
+      "stdio": "STDIO",
+      "sse": "SSE"
     },
     "actions": {
-      "addServer": "",
-      "import": "",
-      "export": "",
-      "search": "",
-      "edit": "",
-      "delete": "",
-      "deleteConfirm": "",
-      "cancel": "",
-      "create": "",
-      "creating": "",
-      "close": "",
-      "downloadJson": "",
-      "copy": "",
-      "copied": "",
-      "discover": "",
-      "discovering": "",
-      "shareCollection": "",
-      "unshare": "",
-      "unshareConfirmTitle": "",
-      "unshareConfirmDesc": "",
-      "shared": "",
-      "share": ""
+      "addServer": "Server toevoegen",
+      "import": "Importeren",
+      "export": "Exporteren",
+      "search": "Servers zoeken...",
+      "edit": "Bewerken",
+      "delete": "Verwijderen",
+      "deleteConfirm": "Weet u zeker dat u deze MCP-server wilt verwijderen?",
+      "cancel": "Annuleren",
+      "create": "Aanmaken",
+      "creating": "Aanmaken...",
+      "close": "Sluiten",
+      "downloadJson": "JSON downloaden",
+      "copy": "Kopiëren",
+      "copied": "Gekopieerd!",
+      "discover": "Ontdekken",
+      "discovering": "Ontdekken...",
+      "shareCollection": "Collectie delen",
+      "unshare": "Delen ongedaan maken",
+      "unshareConfirmTitle": "Server delen ongedaan maken",
+      "unshareConfirmDesc": "Weet u zeker dat u het delen van deze server ongedaan wilt maken? Andere gebruikers hebben er dan geen toegang meer toe.",
+      "shared": "Gedeeld",
+      "share": "Delen"
     },
     "form": {
-      "success": "",
+      "success": "MCP-server succesvol aangemaakt.",
       "error": {
-        "createFailed": ""
+        "createFailed": "Aanmaken MCP-server mislukt."
       },
-      "addTitle": "",
-      "addDescription": "",
-      "commandBased": "",
-      "urlBased": "",
-      "name": "",
-      "namePlaceholder": "",
-      "description": "",
-      "descriptionPlaceholder": "",
-      "command": "",
-      "commandPlaceholder": "",
-      "arguments": "",
-      "argumentsPlaceholder": "",
-      "envVars": "",
-      "envVarsPlaceholder": "",
-      "envVarsHelp": "",
-      "serverUrl": "",
-      "serverUrlPlaceholder": "",
-      "serverUrlHelp": "",
-      "created": "",
-      "notes": "",
-      "notesPlaceholder": ""
+      "addTitle": "MCP Server toevoegen",
+      "addDescription": "Maak een nieuwe MCP-serverconfiguratie aan. Kies tussen STDIO (command-based) of SSE (URL-based) servertype.",
+      "commandBased": "Command-based (STDIO)",
+      "urlBased": "URL-based (SSE)",
+      "name": "Naam",
+      "namePlaceholder": "bijv. mcp-server-time",
+      "description": "Beschrijving",
+      "descriptionPlaceholder": "(Optioneel) Korte beschrijving van het doel van de server",
+      "command": "Commando",
+      "commandPlaceholder": "bijv. npx of uvx",
+      "arguments": "Argumenten",
+      "argumentsPlaceholder": "bijv. mcp-server-time, --local-timezone=America/Los_Angeles",
+      "envVars": "Omgevingsvariabelen",
+      "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
+      "envVarsHelp": "Voer omgevingsvariabelen in KEY=value formaat in, één per regel",
+      "serverUrl": "Server URL",
+      "serverUrlPlaceholder": "http://localhost:3000/sse",
+      "serverUrlHelp": "Moet een geldige HTTP/HTTPS URL zijn",
+      "created": "Aangemaakt",
+      "notes": "Notities",
+      "notesPlaceholder": "Voeg notities, gebruiksinstructies of bekende eigenaardigheden voor deze server toe..."
     },
     "empty": {
-      "title": "",
-      "noResults": "",
-      "noServers": "",
-      "addFirst": ""
+      "title": "Geen servers gevonden",
+      "noResults": "Geen servers komen overeen met \"{{search}}\"",
+      "noServers": "U heeft nog geen MCP-servers toegevoegd",
+      "addFirst": "Voeg uw eerste server toe"
     },
     "import": {
-      "title": "",
-      "description": "",
-      "jsonFormat": "",
-      "jsonPlaceholder": "",
-      "importing": "",
-      "importServers": "",
-      "success": "",
+      "title": "MCP Servers importeren",
+      "description": "Importeer meerdere MCP-serverconfiguraties vanuit JSON. Dit voegt nieuwe servers toe zonder bestaande te vervangen.",
+      "jsonFormat": "JSON Formaat",
+      "jsonPlaceholder": "Plak hier uw JSON",
+      "importing": "Importeren...",
+      "importServers": "Servers importeren",
+      "success": "Succesvol {{count}} MCP-server(s) geïmporteerd.",
       "error": {
-        "invalidJson": "",
-        "missingMcpServers": "",
-        "importFailed": ""
+        "invalidJson": "Ongeldig JSON-formaat",
+        "missingMcpServers": "JSON moet een \"mcpServers\" object bevatten",
+        "importFailed": "Importeren van servers mislukt. Controleer de console voor details."
       }
     },
     "export": {
-      "title": "",
-      "description": "",
-      "copyTooltip": "",
-      "downloadSuccess": "",
+      "title": "MCP Servers Configuratie exporteren",
+      "description": "Uw MCP-serverconfiguraties in JSON-formaat, klaar om te importeren op een andere instantie.",
+      "copyTooltip": "Kopieer JSON naar klembord",
+      "downloadSuccess": "{{count}} MCP-server(s) configuratie gedownload.",
       "error": {
-        "noServers": "",
-        "copyFailed": ""
+        "noServers": "Geen servers om te exporteren.",
+        "copyFailed": "Kopiëren naar klembord mislukt."
       }
     },
     "shareCollection": {
-      "title": "",
-      "description": "",
-      "success": "",
-      "error": "",
+      "title": "Servercollectie delen",
+      "description": "Deel uw geselecteerde MCP-servers met andere gebruikers.",
+      "success": "Servercollectie succesvol gedeeld.",
+      "error": "Delen van servercollectie mislukt.",
       "warning": {
-        "unsharedServers": "",
-        "unsharedServersDescription": ""
+        "unsharedServers": "Niet-gedeelde servers gedetecteerd",
+        "unsharedServersDescription": "Sommige van de geselecteerde servers zijn momenteel niet gedeeld. Ze worden automatisch gedeeld wanneer u deze collectie deelt."
       },
       "form": {
-        "servers": "",
-        "title": "",
-        "titlePlaceholder": "",
-        "description": "",
-        "descriptionPlaceholder": "",
-        "public": "",
-        "share": ""
+        "servers": "Geselecteerde servers",
+        "title": "Collectietitel",
+        "titlePlaceholder": "Voer een titel in voor uw servercollectie",
+        "description": "Collectiebeschrijving",
+        "descriptionPlaceholder": "Beschrijf waarvoor deze servers worden gebruikt en hoe ze samenwerken",
+        "public": "Maak collectie openbaar",
+        "share": "Collectie delen"
       }
     },
     "status": {
-      "active": "",
-      "inactive": "",
-      "stdio": "",
-      "sse": ""
+      "active": "Actief",
+      "inactive": "Inactief",
+      "stdio": "STDIO",
+      "sse": "SSE"
     },
     "errors": {
-      "missingInfo": "",
-      "discoveryFailed": "",
-      "fetchResourcesFailed": "",
-      "fetchTemplatesFailed": "",
-      "fetchPromptsFailed": "",
-      "fetchToolsFailed": "",
-      "fetchInstructionsFailed": ""
+      "missingInfo": "Ontbrekende profiel- of serverinformatie.",
+      "discoveryFailed": "Ontdekken mislukt.",
+      "fetchResourcesFailed": "Laden van bronnen mislukt.",
+      "fetchTemplatesFailed": "Laden van bronsjablonen mislukt.",
+      "fetchPromptsFailed": "Laden van prompts mislukt.",
+      "fetchToolsFailed": "Laden van tools mislukt.",
+      "fetchInstructionsFailed": "Ophalen van aangepaste instructies mislukt."
     },
     "tabs": {
-      "details": "",
-      "config": "",
-      "notes": "",
-      "customInstructions": "",
-      "resources": "",
-      "templates": "",
-      "prompts": "",
-      "tools": ""
+      "details": "Serverdetails",
+      "config": "Configuratie",
+      "notes": "Notities",
+      "customInstructions": "Aangepaste instructies",
+      "resources": "Bronnen",
+      "templates": "Bronsjablonen",
+      "prompts": "Prompts",
+      "tools": "Tools"
     },
     "details": {
-      "serverInfo": "",
-      "uuid": "",
-      "status": "",
-      "created": "",
-      "type": ""
+      "serverInfo": "Serverinfo",
+      "uuid": "UUID",
+      "status": "Status",
+      "created": "Aangemaakt",
+      "type": "Type"
     },
     "config": {
-      "commandConfig": "",
-      "command": "",
-      "arguments": "",
-      "envVars": "",
-      "serverUrl": ""
+      "commandConfig": "Commandoconfiguratie",
+      "command": "Commando",
+      "arguments": "Argumenten",
+      "envVars": "Omgevingsvariabelen",
+      "serverUrl": "Server URL"
     },
     "notes": {
-      "title": "",
-      "placeholder": ""
+      "title": "Notities",
+      "placeholder": "Voeg notities toe over de configuratie van deze server, gebruiksinstructies of andere relevante informatie..."
     },
     "resources": {
-      "title": "",
-      "name": "",
-      "uri": "",
-      "description": "",
-      "mimeType": "",
-      "noResourcesTitle": "",
-      "noResources": ""
+      "title": "Ontdekte bronnen",
+      "name": "Naam",
+      "uri": "URI",
+      "description": "Beschrijving",
+      "mimeType": "MIME-type",
+      "noResourcesTitle": "Geen bronnen gevonden",
+      "noResources": "Er zijn nog geen statische bronnen ontdekt voor deze server. Probeer ontdekken uit te voeren."
     },
     "templates": {
-      "title": "",
-      "name": "",
-      "uriTemplate": "",
-      "variables": "",
-      "description": "",
-      "mimeType": "",
-      "noTemplatesTitle": "",
-      "noTemplates": ""
+      "title": "Bronsjablonen",
+      "name": "Naam",
+      "uriTemplate": "URI-sjabloon",
+      "variables": "Variabelen",
+      "description": "Beschrijving",
+      "mimeType": "MIME-type",
+      "noTemplatesTitle": "Geen bronsjablonen gevonden",
+      "noTemplates": "Er zijn nog geen bronsjablonen ontdekt voor deze server. Probeer ontdekken uit te voeren."
     },
     "prompts": {
-      "title": "",
-      "name": "",
-      "description": "",
-      "arguments": "",
-      "noPromptsTitle": "",
-      "noPrompts": "",
-      "viewArguments": ""
+      "title": "Ontdekte prompts",
+      "name": "Naam",
+      "description": "Beschrijving",
+      "arguments": "Argumentenschema",
+      "noPromptsTitle": "Geen prompts gevonden",
+      "noPrompts": "Er zijn nog geen prompts ontdekt voor deze server. Probeer ontdekken uit te voeren.",
+      "viewArguments": "Argumenten bekijken ({{count}})"
     },
     "tools": {
-      "title": "",
-      "noTools": ""
+      "title": "Ontdekte tools",
+      "noTools": "Er zijn nog geen tools ontdekt voor deze server. Probeer de knop \"Tools ontdekken\" op de serverkaart te gebruiken."
     },
     "instructions": {
-      "title": "",
-      "descriptionLabel": "",
-      "descriptionPlaceholder": "",
-      "descriptionHelp": "",
-      "messagesLabel": "",
-      "messagesPlaceholder": "",
-      "messagesHelp": "",
-      "infoTitle": "",
-      "infoText": "",
-      "saveSuccess": "",
-      "saveError": ""
+      "title": "Aangepaste instructies",
+      "descriptionLabel": "Beschrijving (optioneel)",
+      "descriptionPlaceholder": "Beschrijf kort het doel van deze instructies",
+      "descriptionHelp": "Deze beschrijving is alleen ter referentie.",
+      "messagesLabel": "Berichten (JSON Array)",
+      "messagesPlaceholder": "[\n  {\n    \"role\": \"system\",\n    \"content\": { \"type\": \"text\", \"text\": \"Uw instructie hier...\" }\n  }\n]",
+      "messagesHelp": "Voer een array van MCP Message-objecten in JSON-formaat in.",
+      "infoTitle": "Hoe clients instructies gebruiken",
+      "infoText": "Deze instructies kunnen mogelijk worden gebruikt door MCP-clients (zoals Cline) om context te bieden aan de AI bij het gebruik van de tools van deze server. Het exacte gebruik hangt af van de clientimplementatie.",
+      "saveSuccess": "Aangepaste instructies succesvol opgeslagen.",
+      "saveError": "Opslaan van aangepaste instructies mislukt."
     },
     "placeholders": {
-      "serverName": "",
-      "description": ""
+      "serverName": "Voer servernaam in",
+      "description": "Klik om een beschrijving toe te voegen..."
     }
   }
 }

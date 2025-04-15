@@ -1,85 +1,85 @@
 {
   "playground": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "MCP प्लेग्राउंड",
+    "subtitle": "एक इंटरैक्टिव वातावरण में अपने MCP सर्वर का परीक्षण और प्रयोग करें।",
+    "description": "MCP टूल के साथ LLM AI का उपयोग करने के लिए एक प्रायोगिक वातावरण।",
     "actions": {
-      "start": "",
-      "starting": "",
-      "end": "",
-      "ending": "",
-      "save": "",
-      "dismiss": "",
-      "clearLogs": ""
+      "start": "सत्र शुरू करें",
+      "starting": "शुरू हो रहा है...",
+      "end": "सत्र समाप्त करें",
+      "ending": "समाप्त हो रहा है...",
+      "save": "सेटिंग्स सहेजें",
+      "dismiss": "खारिज करें",
+      "clearLogs": "लॉग साफ़ करें"
     },
     "status": {
-      "active": "",
-      "inactive": "",
-      "sessionActive": "",
-      "serversConnected": ""
+      "active": "सक्रिय",
+      "inactive": "निष्क्रिय",
+      "sessionActive": "सत्र सक्रिय",
+      "serversConnected": "{{count}} {{count, plural, one {सर्वर} other {सर्वर}}} कनेक्टेड"
     },
     "config": {
-      "title": "",
-      "subtitle": "",
+      "title": "कॉन्फ़िगरेशन",
+      "subtitle": "अपने MCP प्लेग्राउंड सत्र को कॉन्फ़िगर करें।",
       "tabs": {
-        "servers": "",
-        "llm": "",
-        "logs": ""
+        "servers": "सर्वर",
+        "llm": "LLM",
+        "logs": "लॉग"
       },
       "noServers": {
-        "title": "",
-        "action": ""
+        "title": "कोई MCP सर्वर नहीं मिला",
+        "action": "MCP सर्वर जोड़ें"
       },
       "sessionError": {
-        "title": ""
+        "title": "सत्र त्रुटि"
       },
       "model": {
-        "title": "",
-        "provider": "",
-        "model": "",
-        "temperature": "",
-        "maxTokens": "",
-        "logLevel": "",
+        "title": "मॉडल कॉन्फ़िगरेशन",
+        "provider": "प्रदाता",
+        "model": "मॉडल",
+        "temperature": "तापमान",
+        "maxTokens": "अधिकतम टोकन",
+        "logLevel": "लॉग स्तर",
         "temperatureHints": {
-          "precise": "",
-          "creative": ""
+          "precise": "सटीक",
+          "creative": "रचनात्मक"
         }
       },
       "logs": {
-        "title": "",
-        "showingLevel": "",
-        "levels": "",
-        "levelsHint": "",
-        "empty": ""
+        "title": "MCP क्लाइंट लॉग",
+        "showingLevel": "{{level}} और उससे ऊपर के लॉग दिखा रहा है",
+        "levels": "लॉग स्तर: error < warn < info < debug",
+        "levelsHint": "उच्च स्तरों में सभी निचले स्तर शामिल हैं",
+        "empty": "प्रदर्शित करने के लिए कोई लॉग नहीं। यहाँ लॉग देखने के लिए एक सत्र शुरू करें।"
       }
     },
     "chat": {
-      "title": "",
-      "subtitle": "",
+      "title": "चैट",
+      "subtitle": "प्राकृतिक भाषा के माध्यम से अपने MCP सर्वर के साथ बातचीत करें।",
       "empty": {
-        "title": "",
-        "activeDescription": "",
-        "inactiveDescription": ""
+        "title": "MCP प्लेग्राउंड में आपका स्वागत है",
+        "activeDescription": "अपने MCP सर्वर के साथ बातचीत शुरू करने के लिए एक संदेश भेजें।",
+        "inactiveDescription": "अपने MCP सर्वर के साथ बातचीत शुरू करने के लिए एक सत्र शुरू करें।"
       },
       "input": {
-        "activePlaceholder": "",
-        "inactivePlaceholder": ""
+        "activePlaceholder": "अपना संदेश टाइप करें...",
+        "inactivePlaceholder": "चैटिंग शुरू करने के लिए एक सत्र शुरू करें..."
       },
-      "thinking": "",
+      "thinking": "सोच रहा है",
       "tool": {
-        "title": "",
-        "debugInfo": ""
+        "title": "टूल निष्पादन",
+        "debugInfo": "डीबग जानकारी"
       }
     },
     "provider": {
-      "anthropic": "",
-      "openai": ""
+      "anthropic": "एंथ्रोपिक",
+      "openai": "OpenAI"
     },
     "logLevels": {
-      "error": "",
-      "warn": "",
-      "info": "",
-      "debug": ""
+      "error": "त्रुटि",
+      "warn": "चेतावनी",
+      "info": "जानकारी",
+      "debug": "डीबग"
     }
   }
 }

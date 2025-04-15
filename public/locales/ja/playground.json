@@ -1,85 +1,85 @@
 {
   "playground": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "MCPプレイグラウンド",
+    "subtitle": "インタラクティブな環境でMCPサーバーをテストおよび実験します。",
+    "description": "MCPツールでLLM AIを使用するための実験的な環境。",
     "actions": {
-      "start": "",
-      "starting": "",
-      "end": "",
-      "ending": "",
-      "save": "",
-      "dismiss": "",
-      "clearLogs": ""
+      "start": "セッションを開始",
+      "starting": "開始中...",
+      "end": "セッションを終了",
+      "ending": "終了中...",
+      "save": "設定を保存",
+      "dismiss": "閉じる",
+      "clearLogs": "ログをクリア"
     },
     "status": {
-      "active": "",
-      "inactive": "",
-      "sessionActive": "",
-      "serversConnected": ""
+      "active": "アクティブ",
+      "inactive": "非アクティブ",
+      "sessionActive": "セッションアクティブ",
+      "serversConnected": "{{count}} {{count, plural, one {サーバー} other {サーバー}}} 接続済み"
     },
     "config": {
-      "title": "",
-      "subtitle": "",
+      "title": "構成",
+      "subtitle": "MCPプレイグラウンドセッションを構成します。",
       "tabs": {
-        "servers": "",
-        "llm": "",
-        "logs": ""
+        "servers": "サーバー",
+        "llm": "LLM",
+        "logs": "ログ"
       },
       "noServers": {
-        "title": "",
-        "action": ""
+        "title": "MCPサーバーが見つかりません",
+        "action": "MCPサーバーを追加"
       },
       "sessionError": {
-        "title": ""
+        "title": "セッションエラー"
       },
       "model": {
-        "title": "",
-        "provider": "",
-        "model": "",
-        "temperature": "",
-        "maxTokens": "",
-        "logLevel": "",
+        "title": "モデル構成",
+        "provider": "プロバイダー",
+        "model": "モデル",
+        "temperature": "温度",
+        "maxTokens": "最大トークン数",
+        "logLevel": "ログレベル",
         "temperatureHints": {
-          "precise": "",
-          "creative": ""
+          "precise": "正確",
+          "creative": "創造的"
         }
       },
       "logs": {
-        "title": "",
-        "showingLevel": "",
-        "levels": "",
-        "levelsHint": "",
-        "empty": ""
+        "title": "MCPクライアントログ",
+        "showingLevel": "{{level}}以上のログを表示中",
+        "levels": "ログレベル: error < warn < info < debug",
+        "levelsHint": "上位レベルにはすべての下位レベルが含まれます",
+        "empty": "表示するログはありません。ログをここで確認するにはセッションを開始してください。"
       }
     },
     "chat": {
-      "title": "",
-      "subtitle": "",
+      "title": "チャット",
+      "subtitle": "自然言語を通じてMCPサーバーと対話します。",
       "empty": {
-        "title": "",
-        "activeDescription": "",
-        "inactiveDescription": ""
+        "title": "MCPプレイグラウンドへようこそ",
+        "activeDescription": "MCPサーバーとの対話を開始するにはメッセージを送信してください。",
+        "inactiveDescription": "MCPサーバーとの対話を開始するにはセッションを開始してください。"
       },
       "input": {
-        "activePlaceholder": "",
-        "inactivePlaceholder": ""
+        "activePlaceholder": "メッセージを入力...",
+        "inactivePlaceholder": "チャットを開始するにはセッションを開始してください..."
       },
-      "thinking": "",
+      "thinking": "考え中",
       "tool": {
-        "title": "",
-        "debugInfo": ""
+        "title": "ツール実行",
+        "debugInfo": "デバッグ情報"
       }
     },
     "provider": {
-      "anthropic": "",
-      "openai": ""
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
     },
     "logLevels": {
-      "error": "",
-      "warn": "",
-      "info": "",
-      "debug": ""
+      "error": "エラー",
+      "warn": "警告",
+      "info": "情報",
+      "debug": "デバッグ"
     }
   }
 }

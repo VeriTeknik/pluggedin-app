@@ -1,205 +1,205 @@
 {
   "mcpServers": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "MCPサーバー",
+    "subtitle": "プラグイン管理",
+    "description": "MCPサーバーを設定および管理します。コマンドラインまたはURLベースのインターフェースを通じて外部ツールやサービスに接続します。",
     "stats": {
-      "totalServers": "",
-      "active": "",
-      "stdio": "",
-      "sse": ""
+      "totalServers": "総サーバー数",
+      "active": "アクティブ",
+      "stdio": "STDIO",
+      "sse": "SSE"
     },
     "actions": {
-      "addServer": "",
-      "import": "",
-      "export": "",
-      "search": "",
-      "edit": "",
-      "delete": "",
-      "deleteConfirm": "",
-      "cancel": "",
-      "create": "",
-      "creating": "",
-      "close": "",
-      "downloadJson": "",
-      "copy": "",
-      "copied": "",
-      "discover": "",
-      "discovering": "",
-      "shareCollection": "",
-      "unshare": "",
-      "unshareConfirmTitle": "",
-      "unshareConfirmDesc": "",
-      "shared": "",
-      "share": ""
+      "addServer": "サーバーを追加",
+      "import": "インポート",
+      "export": "エクスポート",
+      "search": "サーバーを検索...",
+      "edit": "編集",
+      "delete": "削除",
+      "deleteConfirm": "このMCPサーバーを削除してもよろしいですか？",
+      "cancel": "キャンセル",
+      "create": "作成",
+      "creating": "作成中...",
+      "close": "閉じる",
+      "downloadJson": "JSONをダウンロード",
+      "copy": "コピー",
+      "copied": "コピーしました！",
+      "discover": "発見",
+      "discovering": "発見中...",
+      "shareCollection": "コレクションを共有",
+      "unshare": "共有解除",
+      "unshareConfirmTitle": "サーバーの共有を解除",
+      "unshareConfirmDesc": "このサーバーの共有を解除してもよろしいですか？他のユーザーはアクセスできなくなります。",
+      "shared": "共有済み",
+      "share": "共有"
     },
     "form": {
-      "success": "",
+      "success": "MCPサーバーが正常に作成されました。",
       "error": {
-        "createFailed": ""
+        "createFailed": "MCPサーバーの作成に失敗しました。"
       },
-      "addTitle": "",
-      "addDescription": "",
-      "commandBased": "",
-      "urlBased": "",
-      "name": "",
-      "namePlaceholder": "",
-      "description": "",
-      "descriptionPlaceholder": "",
-      "command": "",
-      "commandPlaceholder": "",
-      "arguments": "",
-      "argumentsPlaceholder": "",
-      "envVars": "",
-      "envVarsPlaceholder": "",
-      "envVarsHelp": "",
-      "serverUrl": "",
-      "serverUrlPlaceholder": "",
-      "serverUrlHelp": "",
-      "created": "",
-      "notes": "",
-      "notesPlaceholder": ""
+      "addTitle": "MCPサーバーを追加",
+      "addDescription": "新しいMCPサーバー構成を作成します。STDIO（コマンドベース）またはSSE（URLベース）のサーバータイプを選択してください。",
+      "commandBased": "コマンドベース (STDIO)",
+      "urlBased": "URLベース (SSE)",
+      "name": "名前",
+      "namePlaceholder": "例：mcp-server-time",
+      "description": "説明",
+      "descriptionPlaceholder": "（オプション）サーバーの目的の簡単な説明",
+      "command": "コマンド",
+      "commandPlaceholder": "例：npx または uvx",
+      "arguments": "引数",
+      "argumentsPlaceholder": "例：mcp-server-time, --local-timezone=America/Los_Angeles",
+      "envVars": "環境変数",
+      "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
+      "envVarsHelp": "環境変数をKEY=value形式で、1行に1つずつ入力してください",
+      "serverUrl": "サーバーURL",
+      "serverUrlPlaceholder": "http://localhost:3000/sse",
+      "serverUrlHelp": "有効なHTTP/HTTPS URLである必要があります",
+      "created": "作成日",
+      "notes": "メモ",
+      "notesPlaceholder": "このサーバーに関するメモ、使用方法、既知の癖などを追加してください..."
     },
     "empty": {
-      "title": "",
-      "noResults": "",
-      "noServers": "",
-      "addFirst": ""
+      "title": "サーバーが見つかりません",
+      "noResults": "\"{{search}}\"に一致するサーバーはありません",
+      "noServers": "まだMCPサーバーを追加していません",
+      "addFirst": "最初のサーバーを追加"
     },
     "import": {
-      "title": "",
-      "description": "",
-      "jsonFormat": "",
-      "jsonPlaceholder": "",
-      "importing": "",
-      "importServers": "",
-      "success": "",
+      "title": "MCPサーバーをインポート",
+      "description": "JSONから複数のMCPサーバー構成をインポートします。これにより、既存のサーバーを置き換えることなく新しいサーバーが追加されます。",
+      "jsonFormat": "JSON形式",
+      "jsonPlaceholder": "ここにJSONを貼り付けてください",
+      "importing": "インポート中...",
+      "importServers": "サーバーをインポート",
+      "success": "{{count}}個のMCPサーバーが正常にインポートされました。",
       "error": {
-        "invalidJson": "",
-        "missingMcpServers": "",
-        "importFailed": ""
+        "invalidJson": "無効なJSON形式",
+        "missingMcpServers": "JSONには\"mcpServers\"オブジェクトが含まれている必要があります",
+        "importFailed": "サーバーのインポートに失敗しました。詳細についてはコンソールを確認してください。"
       }
     },
     "export": {
-      "title": "",
-      "description": "",
-      "copyTooltip": "",
-      "downloadSuccess": "",
+      "title": "MCPサーバー構成をエクスポート",
+      "description": "JSON形式のMCPサーバー構成。別のインスタンスにインポートする準備ができています。",
+      "copyTooltip": "JSONをクリップボードにコピー",
+      "downloadSuccess": "{{count}}個のMCPサーバー構成をダウンロードしました。",
       "error": {
-        "noServers": "",
-        "copyFailed": ""
+        "noServers": "エクスポートするサーバーがありません。",
+        "copyFailed": "クリップボードへのコピーに失敗しました。"
       }
     },
     "shareCollection": {
-      "title": "",
-      "description": "",
-      "success": "",
-      "error": "",
+      "title": "サーバーコレクションを共有",
+      "description": "選択したMCPサーバーを他のユーザーと共有します。",
+      "success": "サーバーコレクションが正常に共有されました。",
+      "error": "サーバーコレクションの共有に失敗しました。",
       "warning": {
-        "unsharedServers": "",
-        "unsharedServersDescription": ""
+        "unsharedServers": "共有されていないサーバーが検出されました",
+        "unsharedServersDescription": "選択したサーバーの一部は現在共有されていません。このコレクションを共有すると、自動的に共有されます。"
       },
       "form": {
-        "servers": "",
-        "title": "",
-        "titlePlaceholder": "",
-        "description": "",
-        "descriptionPlaceholder": "",
-        "public": "",
-        "share": ""
+        "servers": "選択されたサーバー",
+        "title": "コレクションタイトル",
+        "titlePlaceholder": "サーバーコレクションのタイトルを入力してください",
+        "description": "コレクションの説明",
+        "descriptionPlaceholder": "これらのサーバーが何に使用され、どのように連携するかを説明してください",
+        "public": "コレクションを公開する",
+        "share": "コレクションを共有"
       }
     },
     "status": {
-      "active": "",
-      "inactive": "",
-      "stdio": "",
-      "sse": ""
+      "active": "アクティブ",
+      "inactive": "非アクティブ",
+      "stdio": "STDIO",
+      "sse": "SSE"
     },
     "errors": {
-      "missingInfo": "",
-      "discoveryFailed": "",
-      "fetchResourcesFailed": "",
-      "fetchTemplatesFailed": "",
-      "fetchPromptsFailed": "",
-      "fetchToolsFailed": "",
-      "fetchInstructionsFailed": ""
+      "missingInfo": "プロファイルまたはサーバー情報がありません。",
+      "discoveryFailed": "発見に失敗しました。",
+      "fetchResourcesFailed": "リソースの読み込みに失敗しました。",
+      "fetchTemplatesFailed": "リソーステンプレートの読み込みに失敗しました。",
+      "fetchPromptsFailed": "プロンプトの読み込みに失敗しました。",
+      "fetchToolsFailed": "ツールの読み込みに失敗しました。",
+      "fetchInstructionsFailed": "カスタム指示の取得に失敗しました。"
     },
     "tabs": {
-      "details": "",
-      "config": "",
-      "notes": "",
-      "customInstructions": "",
-      "resources": "",
-      "templates": "",
-      "prompts": "",
-      "tools": ""
+      "details": "サーバー詳細",
+      "config": "構成",
+      "notes": "メモ",
+      "customInstructions": "カスタム指示",
+      "resources": "リソース",
+      "templates": "リソーステンプレート",
+      "prompts": "プロンプト",
+      "tools": "ツール"
     },
     "details": {
-      "serverInfo": "",
-      "uuid": "",
-      "status": "",
-      "created": "",
-      "type": ""
+      "serverInfo": "サーバー情報",
+      "uuid": "UUID",
+      "status": "ステータス",
+      "created": "作成日",
+      "type": "タイプ"
     },
     "config": {
-      "commandConfig": "",
-      "command": "",
-      "arguments": "",
-      "envVars": "",
-      "serverUrl": ""
+      "commandConfig": "コマンド構成",
+      "command": "コマンド",
+      "arguments": "引数",
+      "envVars": "環境変数",
+      "serverUrl": "サーバーURL"
     },
     "notes": {
-      "title": "",
-      "placeholder": ""
+      "title": "メモ",
+      "placeholder": "このサーバーの構成、使用方法、またはその他の関連情報に関するメモを追加してください..."
     },
     "resources": {
-      "title": "",
-      "name": "",
-      "uri": "",
-      "description": "",
-      "mimeType": "",
-      "noResourcesTitle": "",
-      "noResources": ""
+      "title": "発見されたリソース",
+      "name": "名前",
+      "uri": "URI",
+      "description": "説明",
+      "mimeType": "MIMEタイプ",
+      "noResourcesTitle": "リソースが見つかりません",
+      "noResources": "このサーバーにはまだ静的リソースが発見されていません。発見を実行してみてください。"
     },
     "templates": {
-      "title": "",
-      "name": "",
-      "uriTemplate": "",
-      "variables": "",
-      "description": "",
-      "mimeType": "",
-      "noTemplatesTitle": "",
-      "noTemplates": ""
+      "title": "リソーステンプレート",
+      "name": "名前",
+      "uriTemplate": "URIテンプレート",
+      "variables": "変数",
+      "description": "説明",
+      "mimeType": "MIMEタイプ",
+      "noTemplatesTitle": "リソーステンプレートが見つかりません",
+      "noTemplates": "このサーバーにはまだリソーステンプレートが発見されていません。発見を実行してみてください。"
     },
     "prompts": {
-      "title": "",
-      "name": "",
-      "description": "",
-      "arguments": "",
-      "noPromptsTitle": "",
-      "noPrompts": "",
-      "viewArguments": ""
+      "title": "発見されたプロンプト",
+      "name": "名前",
+      "description": "説明",
+      "arguments": "引数スキーマ",
+      "noPromptsTitle": "プロンプトが見つかりません",
+      "noPrompts": "このサーバーにはまだプロンプトが発見されていません。発見を実行してみてください。",
+      "viewArguments": "引数を表示 ({{count}})"
     },
     "tools": {
-      "title": "",
-      "noTools": ""
+      "title": "発見されたツール",
+      "noTools": "このサーバーにはまだツールが発見されていません。サーバーカードの「ツールを発見」ボタンを使用してみてください。"
     },
     "instructions": {
-      "title": "",
-      "descriptionLabel": "",
-      "descriptionPlaceholder": "",
-      "descriptionHelp": "",
-      "messagesLabel": "",
-      "messagesPlaceholder": "",
-      "messagesHelp": "",
-      "infoTitle": "",
-      "infoText": "",
-      "saveSuccess": "",
-      "saveError": ""
+      "title": "カスタム指示",
+      "descriptionLabel": "説明（オプション）",
+      "descriptionPlaceholder": "これらの指示の目的を簡単に説明してください",
+      "descriptionHelp": "この説明は参照用です。",
+      "messagesLabel": "メッセージ（JSON配列）",
+      "messagesPlaceholder": "[\n  {\n    \"role\": \"system\",\n    \"content\": { \"type\": \"text\", \"text\": \"ここに指示を入力...\" }\n  }\n]",
+      "messagesHelp": "JSON形式でMCPメッセージオブジェクトの配列を入力してください。",
+      "infoTitle": "クライアントが指示を使用する方法",
+      "infoText": "これらの指示は、MCPクライアント（Clineなど）がこのサーバーのツールを使用する際にAIにコンテキストを提供するために使用される可能性があります。正確な使用法はクライアントの実装によって異なります。",
+      "saveSuccess": "カスタム指示が正常に保存されました。",
+      "saveError": "カスタム指示の保存に失敗しました。"
     },
     "placeholders": {
-      "serverName": "",
-      "description": ""
+      "serverName": "サーバー名を入力",
+      "description": "クリックして説明を追加..."
     }
   }
 }

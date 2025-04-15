@@ -1,9 +1,9 @@
 {
   "sidebar": {
-    "toggle": "",
-    "navigation": "",
+    "toggle": "साइडबार टॉगल करें",
+    "navigation": "नेविगेशन",
     "keyboard": {
-      "shortcut": ""
+      "shortcut": "कीबोर्ड शॉर्टकट: {{key}}"
     }
   }
 }

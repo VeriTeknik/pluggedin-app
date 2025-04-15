@@ -1,33 +1,69 @@
 {
   "common": {
-    "or": "",
-    "error": "",
-    "success": "",
-    "releaseCandidate": "",
+    "or": "OF",
+    "error": "Fout",
+    "success": "Succes",
+    "releaseCandidate": "Release Candidate v{{version}}",
     "validation": {
-      "required": "",
-      "email": "",
-      "minLength": "",
-      "maxLength": "",
-      "passwordMatch": ""
+      "required": "Dit veld is verplicht",
+      "email": "Voer een geldig e-mailadres in",
+      "minLength": "Moet minimaal {{count}} tekens bevatten",
+      "maxLength": "Mag maximaal {{count}} tekens bevatten",
+      "passwordMatch": "Wachtwoorden moeten overeenkomen"
     },
-    "save": "",
-    "previous": "",
-    "next": "",
-    "page": "",
-    "saving": "",
-    "remove": "",
-    "removing": "",
-    "cancel": "",
-    "confirm": "",
-    "confirmDelete": "",
+    "save": "Opslaan",
+    "previous": "Vorige",
+    "next": "Volgende",
+    "page": "Pagina {{page}}",
+    "saving": "Opslaan...",
+    "remove": "Verwijderen",
+    "removing": "Verwijderen...",
+    "cancel": "Annuleren",
+    "confirm": "Bevestigen",
+    "confirmDelete": "Weet u zeker dat u dit wilt verwijderen?",
     "errors": {
-      "unexpected": ""
+      "unexpected": "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
     },
-    "loading": "",
-    "notAvailable": "",
-    "saveChanges": "",
-    "backToServerList": "",
-    "viewSchema": ""
+    "loading": "Laden...",
+    "notAvailable": "N.v.t.",
+    "saveChanges": "Wijzigingen opslaan",
+    "backToServerList": "Terug naar serverlijst",
+    "viewSchema": "Schema bekijken",
+    "delete": "Verwijderen",
+    "deleting": "Verwijderen..."
+  },
+  "releaseNotes": {
+    "title": "Release Notes",
+    "description": "Volg de laatste updates en wijzigingen in onze repositories",
+    "filters": {
+      "filterBy": "Filteren op Repository:",
+      "all": "Alle Repositories",
+      "app": "pluggedin-app",
+      "mcp": "pluggedin-mcp"
+    },
+    "changeTypes": {
+      "feature": "Functies",
+      "bugfix": "Bugfixes",
+      "performanceimprovement": "Prestatieverbeteringen",
+      "breakingchange": "Breaking Changes",
+      "other": "Overige wijzigingen"
+    },
+    "viewCommit": "Commit bekijken",
+    "noDetails": "Geen specifieke wijzigingen vermeld voor deze release.",
+    "viewOnGitHub": "Bekijken op GitHub",
+    "loadMore": "Meer laden",
+    "loading": "Releases laden...",
+    "error": "Laden van release notes mislukt",
+    "retry": "Opnieuw proberen",
+    "noReleases": "Geen releases gevonden",
+    "noReleasesTitle": "Geen Release Notes beschikbaar",
+    "noReleasesText": "Er zijn momenteel geen release notes om weer te geven.",
+    "noSearchResultsTitle": "Geen resultaten gevonden",
+    "noSearchResultsText": "Geen release notes komen overeen met uw zoekcriteria.",
+    "rssFeed": "Abonneren via RSS",
+    "search": {
+      "placeholder": "Zoek release notes..."
+    },
+    "refresh": "Releases vernieuwen"
   }
 }

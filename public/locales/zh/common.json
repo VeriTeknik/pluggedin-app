@@ -1,33 +1,69 @@
 {
   "common": {
-    "or": "",
-    "error": "",
-    "success": "",
-    "releaseCandidate": "",
+    "or": "或",
+    "error": "错误",
+    "success": "成功",
+    "releaseCandidate": "发布候选版本 v{{version}}",
     "validation": {
-      "required": "",
-      "email": "",
-      "minLength": "",
-      "maxLength": "",
-      "passwordMatch": ""
+      "required": "此字段为必填项",
+      "email": "请输入有效的电子邮件地址",
+      "minLength": "必须至少包含 {{count}} 个字符",
+      "maxLength": "最多只能包含 {{count}} 个字符",
+      "passwordMatch": "密码必须匹配"
     },
-    "save": "",
-    "previous": "",
-    "next": "",
-    "page": "",
-    "saving": "",
-    "remove": "",
-    "removing": "",
-    "cancel": "",
-    "confirm": "",
-    "confirmDelete": "",
+    "save": "保存",
+    "previous": "上一个",
+    "next": "下一个",
+    "page": "第 {{page}} 页",
+    "saving": "保存中...",
+    "remove": "移除",
+    "removing": "移除中...",
+    "cancel": "取消",
+    "confirm": "确认",
+    "confirmDelete": "您确定要删除吗？",
     "errors": {
-      "unexpected": ""
+      "unexpected": "发生意外错误。请重试。"
     },
-    "loading": "",
-    "notAvailable": "",
-    "saveChanges": "",
-    "backToServerList": "",
-    "viewSchema": ""
+    "loading": "加载中...",
+    "notAvailable": "不适用",
+    "saveChanges": "保存更改",
+    "backToServerList": "返回服务器列表",
+    "viewSchema": "查看模式",
+    "delete": "删除",
+    "deleting": "删除中..."
+  },
+  "releaseNotes": {
+    "title": "发布说明",
+    "description": "跟踪我们存储库中的最新更新和更改",
+    "filters": {
+      "filterBy": "按存储库筛选：",
+      "all": "所有存储库",
+      "app": "pluggedin-app",
+      "mcp": "pluggedin-mcp"
+    },
+    "changeTypes": {
+      "feature": "功能",
+      "bugfix": "错误修复",
+      "performanceimprovement": "性能改进",
+      "breakingchange": "重大更改",
+      "other": "其他更改"
+    },
+    "viewCommit": "查看提交",
+    "noDetails": "此版本未列出具体更改。",
+    "viewOnGitHub": "在 GitHub 上查看",
+    "loadMore": "加载更多",
+    "loading": "正在加载发布...",
+    "error": "加载发布说明失败",
+    "retry": "重试",
+    "noReleases": "未找到发布",
+    "noReleasesTitle": "无可用发布说明",
+    "noReleasesText": "当前没有可显示的发布说明。",
+    "noSearchResultsTitle": "未找到结果",
+    "noSearchResultsText": "没有发布说明符合您的搜索条件。",
+    "rssFeed": "通过 RSS 订阅",
+    "search": {
+      "placeholder": "搜索发布说明..."
+    },
+    "refresh": "刷新发布"
   }
 }

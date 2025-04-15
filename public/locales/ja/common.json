@@ -1,33 +1,69 @@
 {
   "common": {
-    "or": "",
-    "error": "",
-    "success": "",
-    "releaseCandidate": "",
+    "or": "または",
+    "error": "エラー",
+    "success": "成功",
+    "releaseCandidate": "リリース候補 v{{version}}",
     "validation": {
-      "required": "",
-      "email": "",
-      "minLength": "",
-      "maxLength": "",
-      "passwordMatch": ""
+      "required": "このフィールドは必須です",
+      "email": "有効なメールアドレスを入力してください",
+      "minLength": "少なくとも{{count}}文字である必要があります",
+      "maxLength": "最大{{count}}文字である必要があります",
+      "passwordMatch": "パスワードが一致する必要があります"
     },
-    "save": "",
-    "previous": "",
-    "next": "",
-    "page": "",
-    "saving": "",
-    "remove": "",
-    "removing": "",
-    "cancel": "",
-    "confirm": "",
-    "confirmDelete": "",
+    "save": "保存",
+    "previous": "前へ",
+    "next": "次へ",
+    "page": "ページ {{page}}",
+    "saving": "保存中...",
+    "remove": "削除",
+    "removing": "削除中...",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "confirmDelete": "これを削除してもよろしいですか？",
     "errors": {
-      "unexpected": ""
+      "unexpected": "予期せぬエラーが発生しました。もう一度お試しください。"
     },
-    "loading": "",
-    "notAvailable": "",
-    "saveChanges": "",
-    "backToServerList": "",
-    "viewSchema": ""
+    "loading": "読み込み中...",
+    "notAvailable": "該当なし",
+    "saveChanges": "変更を保存",
+    "backToServerList": "サーバーリストに戻る",
+    "viewSchema": "スキーマを表示",
+    "delete": "削除",
+    "deleting": "削除中..."
+  },
+  "releaseNotes": {
+    "title": "リリースノート",
+    "description": "リポジトリ全体の最新の更新と変更を追跡します",
+    "filters": {
+      "filterBy": "リポジトリでフィルタリング:",
+      "all": "すべてのリポジトリ",
+      "app": "pluggedin-app",
+      "mcp": "pluggedin-mcp"
+    },
+    "changeTypes": {
+      "feature": "機能",
+      "bugfix": "バグ修正",
+      "performanceimprovement": "パフォーマンス改善",
+      "breakingchange": "破壊的変更",
+      "other": "その他の変更"
+    },
+    "viewCommit": "コミットを表示",
+    "noDetails": "このリリースには特定の変更は記載されていません。",
+    "viewOnGitHub": "GitHubで表示",
+    "loadMore": "さらに読み込む",
+    "loading": "リリースを読み込み中...",
+    "error": "リリースノートの読み込みに失敗しました",
+    "retry": "再試行",
+    "noReleases": "リリースが見つかりません",
+    "noReleasesTitle": "利用可能なリリースノートはありません",
+    "noReleasesText": "現在表示するリリースノートはありません。",
+    "noSearchResultsTitle": "結果が見つかりません",
+    "noSearchResultsText": "検索条件に一致するリリースノートはありません。",
+    "rssFeed": "RSSで購読",
+    "search": {
+      "placeholder": "リリースノートを検索..."
+    },
+    "refresh": "リリースを更新"
   }
 }

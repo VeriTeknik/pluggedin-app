@@ -1,5 +1,29 @@
 {
   "notifications": {
-    "title": ""
+    "title": "通知",
+    "description": "您可以在此处查看所有系统通知",
+    "actions": {
+      "markAllAsRead": "全部标记为已读",
+      "actions": "操作",
+      "deleteAll": "删除所有通知"
+    },
+    "tabs": {
+      "all": "全部",
+      "unread": "未读",
+      "alerts": "警报",
+      "info": "信息",
+      "success": "成功"
+    },
+    "empty": {
+      "title": "无通知",
+      "description": "此类别中没有任何通知。"
+    },
+    "toast": {
+      "markReadError": "将通知标记为已读失败",
+      "deleteSuccess": "通知已删除",
+      "deleteError": "删除通知失败",
+      "deleteAllSuccess": "所有通知已删除",
+      "deleteAllError": "删除所有通知失败"
+    }
   }
 }

@@ -1,48 +1,83 @@
 {
   "legal": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "Juridisch",
+    "subtitle": "Belangrijke documenten",
+    "description": "Belangrijke documenten en juridische informatie voor Plugged.in",
+    "backToLegal": "Terug naar Juridisch",
+    "lastUpdated": "Laatst bijgewerkt",
     "pages": {
       "privacy": {
-        "title": "",
-        "description": "",
+        "title": "Privacybeleid",
+        "description": "Hoe we uw gegevens verzamelen, gebruiken en beschermen",
         "content": {
-          "intro": "",
-          "disclaimer": "",
-          "note": "",
-          "thirdParty": ""
+          "intro": "Welkom bij Plugged.in (\"wij,\" \"ons,\" of \"onze\"). Dit Privacybeleid legt uit hoe we uw informatie verzamelen, gebruiken, openbaar maken en beschermen wanneer u onze service gebruikt. Lees dit privacybeleid zorgvuldig door.",
+          "disclaimer": "Als u niet akkoord gaat met de voorwaarden van dit privacybeleid, maak dan geen gebruik van de service.",
+          "note": "BELANGRIJKE OPMERKING: Plugged.in bevindt zich momenteel in de Release Candidate-status. Dit privacybeleid kan worden bijgewerkt naarmate de service volwassener wordt en extra functies worden geïmplementeerd.",
+          "thirdParty": "We hebben geen controle over en aanvaarden geen verantwoordelijkheid voor de inhoud, het privacybeleid of de praktijken van sites of services van derden."
         }
       },
       "terms": {
-        "title": "",
-        "description": "",
+        "title": "Servicevoorwaarden",
+        "description": "Algemene voorwaarden voor het gebruik van onze service",
         "content": {
-          "intro": "",
+          "intro": "Door toegang te krijgen tot of gebruik te maken van Plugged.in, gaat u akkoord met deze Voorwaarden en eventuele aanvullende voorwaarden die van toepassing kunnen zijn. Als u niet akkoord gaat met deze Voorwaarden, mag u geen toegang krijgen tot of gebruik maken van Plugged.in.",
           "responsibilities": {
-            "title": "",
+            "title": "Uw verantwoordelijkheden",
             "items": [
-              "",
-              "",
-              ""
+              "Gebruik MCP-servers en tools in overeenstemming met toepasselijke wet- en regelgeving",
+              "Gebruik MCP-servers niet voor illegale of ongeautoriseerde doeleinden",
+              "Neem verantwoordelijkheid voor MCP-servers die u configureert of implementeert"
             ]
           }
         }
       },
       "disclaimer": {
-        "title": "",
-        "description": "",
+        "title": "Disclaimer",
+        "description": "Belangrijke juridische mededelingen",
         "content": {
-          "title": "",
-          "thirdParty": ""
+          "title": "Disclaimer en Beperking van Aansprakelijkheid",
+          "thirdParty": "De service kan links bevatten naar websites of services van derden die niet ons eigendom zijn of door ons worden beheerd. We hebben geen controle over en aanvaarden geen verantwoordelijkheid voor de inhoud, het privacybeleid of de praktijken van websites of services van derden."
         }
       },
       "contact": {
-        "title": "",
-        "description": "",
+        "title": "Contact",
+        "description": "Hoe u ons kunt bereiken",
         "content": {
-          "title": "",
-          "description": ""
+          "title": "Contactgegevens",
+          "description": "Voor vragen over deze juridische documenten kunt u contact met ons opnemen",
+          "form": {
+            "title": "Stuur ons een bericht",
+            "description": "Vul onderstaand formulier in om ons een bericht te sturen",
+            "name": "Naam",
+            "namePlaceholder": "Uw naam",
+            "email": "E-mail",
+            "emailPlaceholder": "Uw e-mailadres",
+            "subject": "Onderwerp",
+            "subjectPlaceholder": "Onderwerp van het bericht",
+            "message": "Bericht",
+            "messagePlaceholder": "Uw bericht",
+            "submit": "Bericht verzenden",
+            "sending": "Verzenden...",
+            "success": "Uw bericht is succesvol verzonden",
+            "error": "Er is een fout opgetreden bij het verzenden van uw bericht",
+            "demoNotice": "Dit formulier is alleen voor demonstratiedoeleinden. Gebruik tijdens de Release Candidate-fase het opgegeven e-mailadres."
+          },
+          "faq": {
+            "title": "Veelgestelde vragen",
+            "status": {
+              "question": "Wat is de huidige status van Plugged.in?",
+              "answer": "Plugged.in bevindt zich momenteel in de Release Candidate-status. Dit betekent dat hoewel de kernfunctionaliteit compleet is, er nog steeds bugs of problemen kunnen zijn die moeten worden aangepakt vóór de definitieve release."
+            },
+            "bugs": {
+              "question": "Hoe kan ik een bug melden?",
+              "answer": "U kunt bugs melden door een e-mail te sturen naar support@plugged.in of door een issue te openen op onze GitHub-repository. Voeg gedetailleerde stappen toe om de bug te reproduceren, samen met eventuele relevante foutmeldingen."
+            },
+            "security": {
+              "question": "Zijn mijn gegevens veilig tijdens de Release Candidate-fase?",
+              "answer": "Hoewel we standaard beveiligingspraktijken implementeren, raden we tijdens de Release Candidate-fase aan om geen gevoelige informatie binnen de service op te slaan. Raadpleeg ons Privacybeleid voor meer informatie."
+            }
+          },
+          "note": "Opmerking: Tijdens de Release Candidate-fase kunnen onze ondersteuningsmogelijkheden beperkt zijn. We zullen ons best doen om alle vragen tijdig te beantwoorden."
         }
       }
     }

@@ -1,85 +1,85 @@
 {
   "playground": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "MCP Playground",
+    "subtitle": "Test en experimenteer met uw MCP-servers in een interactieve omgeving.",
+    "description": "Een experimentele omgeving voor het gebruik van LLM AI met MCP-tools.",
     "actions": {
-      "start": "",
-      "starting": "",
-      "end": "",
-      "ending": "",
-      "save": "",
-      "dismiss": "",
-      "clearLogs": ""
+      "start": "Sessie starten",
+      "starting": "Starten...",
+      "end": "Sessie beëindigen",
+      "ending": "Beëindigen...",
+      "save": "Instellingen opslaan",
+      "dismiss": "Sluiten",
+      "clearLogs": "Logs wissen"
     },
     "status": {
-      "active": "",
-      "inactive": "",
-      "sessionActive": "",
-      "serversConnected": ""
+      "active": "Actief",
+      "inactive": "Inactief",
+      "sessionActive": "Sessie actief",
+      "serversConnected": "{{count}} {{count, plural, one {server} other {servers}}} verbonden"
     },
     "config": {
-      "title": "",
-      "subtitle": "",
+      "title": "Configuratie",
+      "subtitle": "Configureer uw MCP playground-sessie.",
       "tabs": {
-        "servers": "",
-        "llm": "",
-        "logs": ""
+        "servers": "Servers",
+        "llm": "LLM",
+        "logs": "Logs"
       },
       "noServers": {
-        "title": "",
-        "action": ""
+        "title": "Geen MCP Servers gevonden",
+        "action": "MCP Server toevoegen"
       },
       "sessionError": {
-        "title": ""
+        "title": "Sessiefout"
       },
       "model": {
-        "title": "",
-        "provider": "",
-        "model": "",
-        "temperature": "",
-        "maxTokens": "",
-        "logLevel": "",
+        "title": "Modelconfiguratie",
+        "provider": "Provider",
+        "model": "Model",
+        "temperature": "Temperatuur",
+        "maxTokens": "Max Tokens",
+        "logLevel": "Log Niveau",
         "temperatureHints": {
-          "precise": "",
-          "creative": ""
+          "precise": "Precies",
+          "creative": "Creatief"
         }
       },
       "logs": {
-        "title": "",
-        "showingLevel": "",
-        "levels": "",
-        "levelsHint": "",
-        "empty": ""
+        "title": "MCP Client Logs",
+        "showingLevel": "Toont {{level}} en hogere logs",
+        "levels": "Log niveaus: error < warn < info < debug",
+        "levelsHint": "Hogere niveaus bevatten alle lagere niveaus",
+        "empty": "Geen logs om weer te geven. Start een sessie om hier logs te zien."
       }
     },
     "chat": {
-      "title": "",
-      "subtitle": "",
+      "title": "Chat",
+      "subtitle": "Interacteer met uw MCP-servers via natuurlijke taal.",
       "empty": {
-        "title": "",
-        "activeDescription": "",
-        "inactiveDescription": ""
+        "title": "Welkom bij MCP Playground",
+        "activeDescription": "Stuur een bericht om te beginnen met interactie met uw MCP-servers.",
+        "inactiveDescription": "Start een sessie om te beginnen met interactie met uw MCP-servers."
       },
       "input": {
-        "activePlaceholder": "",
-        "inactivePlaceholder": ""
+        "activePlaceholder": "Typ uw bericht...",
+        "inactivePlaceholder": "Start een sessie om te beginnen met chatten..."
       },
-      "thinking": "",
+      "thinking": "Denken",
       "tool": {
-        "title": "",
-        "debugInfo": ""
+        "title": "Tool Uitvoering",
+        "debugInfo": "Debug Info"
       }
     },
     "provider": {
-      "anthropic": "",
-      "openai": ""
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
     },
     "logLevels": {
-      "error": "",
-      "warn": "",
-      "info": "",
-      "debug": ""
+      "error": "Fout",
+      "warn": "Waarschuwing",
+      "info": "Info",
+      "debug": "Debug"
     }
   }
 }

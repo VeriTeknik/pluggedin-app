@@ -1,9 +1,9 @@
 {
   "sidebar": {
-    "toggle": "",
-    "navigation": "",
+    "toggle": "Zijbalk wisselen",
+    "navigation": "Navigatie",
     "keyboard": {
-      "shortcut": ""
+      "shortcut": "Sneltoets: {{key}}"
     }
   }
 }

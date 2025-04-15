@@ -1,9 +1,9 @@
 {
   "sidebar": {
-    "toggle": "",
-    "navigation": "",
+    "toggle": "サイドバーを切り替え",
+    "navigation": "ナビゲーション",
     "keyboard": {
-      "shortcut": ""
+      "shortcut": "キーボードショートカット: {{key}}"
     }
   }
 }

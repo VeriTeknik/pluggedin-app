@@ -1,47 +1,47 @@
 {
   "setupGuide": {
-    "title": "",
+    "title": "Setupgids",
     "proxyBenefits": {
-      "title": "",
-      "description": "",
+      "title": "Voordelen van Plugged.in MCP",
+      "description": "Plugged.in MCP fungeert als een uniforme proxy voor al uw MCP-servers en biedt verschillende voordelen:",
       "benefits": [
-        "",
-        "",
-        "",
-        "",
-        ""
+        "Eén configuratiepunt - Beheer al uw MCP-servers via één centrale configuratie",
+        "Automatische updates - Ontvang automatisch de nieuwste functies en beveiligingsupdates",
+        "Vereenvoudigde authenticatie - Gebruik één API-sleutel voor al uw MCP-servers",
+        "Verbeterde beveiliging - Ingebouwde beveiligingsfuncties en best practices",
+        "Compatibiliteit tussen platforms - Werkt naadloos op verschillende besturingssystemen"
       ]
     },
     "installation": {
-      "title": "",
-      "apiKeysNotice": "",
+      "title": "Installatiemethoden",
+      "apiKeysNotice": "Opmerking: u kunt uw API-sleutels beheren op de API-sleutelpagina",
       "manualConfig": {
-        "title": "",
-        "description": "",
+        "title": "Handmatige configuratie",
+        "description": "Voor Claude Desktop vindt u het configuratiebestand op:",
         "paths": {
-          "macos": "",
-          "windows": ""
+          "macos": "macOS",
+          "windows": "Windows"
         }
       },
       "cursorConfig": {
-        "title": "",
-        "description": "",
+        "title": "Cursor Configuratie",
+        "description": "Voor Cursor kunt u Plugged.in MCP rechtstreeks in de instellingen configureren:",
         "steps": [
-          "",
-          "",
-          "",
-          ""
+          "Open Cursor en ga naar Cursor Instellingen",
+          "Navigeer naar het gedeelte Functies",
+          "Zoek 'MCP Servers' en klik op 'Nieuwe MCP Server toevoegen'",
+          "Gebruik het volgende commando:"
         ]
       }
     },
     "smithery": {
-      "title": "",
-      "description": "",
-      "setupLink": "",
-      "serverLink": "",
-      "windowsNote": "",
-      "terminalCommand": "",
-      "desktopConfig": ""
+      "title": "Smithery Windows Configuratie",
+      "description": "We raden aan om Smithery te gebruiken om MCP's in Docker in de cloud uit te voeren voor maximale compatibiliteit.",
+      "setupLink": "Om Smithery CLI op Windows in te stellen, bekijk dit:",
+      "serverLink": "Bezoek de Plugged.in MCP-serverlijst rechtstreeks op Smithery:",
+      "windowsNote": "Voor Smithery op Windows kunt u ook de volgende configuratieopties gebruiken:",
+      "terminalCommand": "U kunt het Smithery-commando rechtstreeks in uw terminal uitvoeren:",
+      "desktopConfig": "Of configureer het in uw Claude Desktop-configuratiebestand:"
     }
   }
 }

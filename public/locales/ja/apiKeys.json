@@ -1,48 +1,48 @@
 {
   "apiKeys": {
-    "title": "",
-    "description": "",
-    "empty": "",
+    "title": "APIキー",
+    "description": "APIキーは、Plugged.in APIへのリクエストを認証するために使用されます。安全に保管し、他人と共有しないでください。",
+    "empty": "まだAPIキーはありません。開始するには1つ作成してください。",
     "actions": {
-      "create": "",
-      "creating": "",
-      "delete": "",
-      "deleting": "",
-      "show": "",
-      "hide": "",
-      "copy": "",
-      "cancel": ""
+      "create": "APIキーを作成",
+      "creating": "作成中...",
+      "delete": "APIキーを削除",
+      "deleting": "削除中...",
+      "show": "APIキーを表示",
+      "hide": "APIキーを非表示",
+      "copy": "APIキーをコピー",
+      "cancel": "キャンセル"
     },
     "dialog": {
       "create": {
-        "title": "",
-        "description": "",
-        "nameLabel": "",
-        "namePlaceholder": ""
+        "title": "APIキーを作成",
+        "description": "プロジェクト用に新しいAPIキーを作成します。オプションで、目的を識別しやすくするために名前を付けることができます。",
+        "nameLabel": "APIキー名（オプション）",
+        "namePlaceholder": "例：本番環境APIキー"
       },
       "delete": {
-        "title": "",
-        "description": "",
-        "namePrefix": ""
+        "title": "APIキーを削除",
+        "description": "このAPIキー{{name}}を削除してもよろしいですか？この操作は元に戻せません。",
+        "namePrefix": " \""
       }
     },
     "toast": {
       "copied": {
-        "title": "",
-        "description": ""
+        "title": "APIキーがコピーされました",
+        "description": "APIキーがクリップボードにコピーされました。"
       },
       "created": {
-        "title": "",
-        "description": ""
+        "title": "APIキーが作成されました",
+        "description": "新しいAPIキーが正常に作成されました。"
       },
       "deleted": {
-        "title": "",
-        "description": ""
+        "title": "APIキーが削除されました",
+        "description": "APIキーが正常に削除されました。"
       },
       "error": {
-        "title": "",
-        "createFailed": "",
-        "deleteFailed": ""
+        "title": "エラー",
+        "createFailed": "APIキーの作成に失敗しました",
+        "deleteFailed": "APIキーの削除に失敗しました"
       }
     }
   }

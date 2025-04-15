@@ -1,48 +1,83 @@
 {
   "legal": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "法律",
+    "subtitle": "重要文件",
+    "description": "Plugged.in 的重要文件和法律信息",
+    "backToLegal": "返回法律",
+    "lastUpdated": "最后更新",
     "pages": {
       "privacy": {
-        "title": "",
-        "description": "",
+        "title": "隐私政策",
+        "description": "我们如何收集、使用和保护您的数据",
         "content": {
-          "intro": "",
-          "disclaimer": "",
-          "note": "",
-          "thirdParty": ""
+          "intro": "欢迎来到 Plugged.in（“我们”、“我们的”）。本隐私政策解释了当您使用我们的服务时，我们如何收集、使用、披露和保护您的信息。请仔细阅读本隐私政策。",
+          "disclaimer": "如果您不同意本隐私政策的条款，请不要访问该服务。",
+          "note": "重要提示：Plugged.in 目前处于发布候选状态。随着服务的成熟和附加功能的实施，本隐私政策可能会更新。",
+          "thirdParty": "我们无法控制任何第三方网站或服务的内容、隐私政策或做法，也不承担任何责任。"
         }
       },
       "terms": {
-        "title": "",
-        "description": "",
+        "title": "服务条款",
+        "description": "使用我们服务的条款和条件",
         "content": {
-          "intro": "",
+          "intro": "访问或使用 Plugged.in，即表示您同意这些条款以及可能适用的任何附加条款。如果您不同意这些条款，则不得访问或使用 Plugged.in。",
           "responsibilities": {
-            "title": "",
+            "title": "您的责任",
             "items": [
-              "",
-              "",
-              ""
+              "遵守适用的法律法规使用 MCP 服务器和工具",
+              "不得将 MCP 服务器用于任何非法或未经授权的目的",
+              "对您配置或部署的 MCP 服务器负责"
             ]
           }
         }
       },
       "disclaimer": {
-        "title": "",
-        "description": "",
+        "title": "免责声明",
+        "description": "重要法律声明",
         "content": {
-          "title": "",
-          "thirdParty": ""
+          "title": "免责声明和责任限制",
+          "thirdParty": "该服务可能包含指向非我们所有或控制的第三方网站或服务的链接。我们无法控制任何第三方网站或服务的内容、隐私政策或做法，也不承担任何责任。"
         }
       },
       "contact": {
-        "title": "",
-        "description": "",
+        "title": "联系我们",
+        "description": "如何联系我们",
         "content": {
-          "title": "",
-          "description": ""
+          "title": "联系信息",
+          "description": "有关这些法律文件的任何问题，请联系我们",
+          "form": {
+            "title": "给我们发送消息",
+            "description": "填写下面的表格给我们发送消息",
+            "name": "姓名",
+            "namePlaceholder": "您的姓名",
+            "email": "电子邮件",
+            "emailPlaceholder": "您的电子邮件地址",
+            "subject": "主题",
+            "subjectPlaceholder": "消息主题",
+            "message": "消息",
+            "messagePlaceholder": "您的消息",
+            "submit": "发送消息",
+            "sending": "发送中...",
+            "success": "您的消息已成功发送",
+            "error": "发送您的消息时出错",
+            "demoNotice": "此表格仅用于演示目的。在发布候选阶段，请使用提供的电子邮件地址。"
+          },
+          "faq": {
+            "title": "常见问题",
+            "status": {
+              "question": "Plugged.in 的当前状态是什么？",
+              "answer": "Plugged.in 目前处于发布候选状态。这意味着虽然核心功能已完成，但在最终发布之前可能仍存在需要解决的错误或问题。"
+            },
+            "bugs": {
+              "question": "如何报告错误？",
+              "answer": "您可以通过发送电子邮件至 support@plugged.in 或在我们的 GitHub 存储库上提交问题来报告错误。请包括重现错误的详细步骤以及任何相关的错误消息。"
+            },
+            "security": {
+              "question": "在发布候选阶段我的数据安全吗？",
+              "answer": "虽然我们实施了标准的安全措施，但在发布候选阶段，我们建议不要在服务中存储敏感信息。请查看我们的隐私政策以获取更多信息。"
+            }
+          },
+          "note": "注意：在发布候选阶段，我们的支持能力可能有限。我们将尽力及时回复所有查询。"
         }
       }
     }

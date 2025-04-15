@@ -1,85 +1,85 @@
 {
   "playground": {
-    "title": "",
-    "subtitle": "",
-    "description": "",
+    "title": "MCP 演练场",
+    "subtitle": "在交互式环境中测试和实验您的 MCP 服务器。",
+    "description": "一个使用 LLM AI 和 MCP 工具的实验环境。",
     "actions": {
-      "start": "",
-      "starting": "",
-      "end": "",
-      "ending": "",
-      "save": "",
-      "dismiss": "",
-      "clearLogs": ""
+      "start": "开始会话",
+      "starting": "正在开始...",
+      "end": "结束会话",
+      "ending": "正在结束...",
+      "save": "保存设置",
+      "dismiss": "关闭",
+      "clearLogs": "清除日志"
     },
     "status": {
-      "active": "",
-      "inactive": "",
-      "sessionActive": "",
-      "serversConnected": ""
+      "active": "活动",
+      "inactive": "非活动",
+      "sessionActive": "会话活动",
+      "serversConnected": "{{count}} 个服务器已连接"
     },
     "config": {
-      "title": "",
-      "subtitle": "",
+      "title": "配置",
+      "subtitle": "配置您的 MCP 演练场会话。",
       "tabs": {
-        "servers": "",
-        "llm": "",
-        "logs": ""
+        "servers": "服务器",
+        "llm": "LLM",
+        "logs": "日志"
       },
       "noServers": {
-        "title": "",
-        "action": ""
+        "title": "未找到 MCP 服务器",
+        "action": "添加 MCP 服务器"
       },
       "sessionError": {
-        "title": ""
+        "title": "会话错误"
       },
       "model": {
-        "title": "",
-        "provider": "",
-        "model": "",
-        "temperature": "",
-        "maxTokens": "",
-        "logLevel": "",
+        "title": "模型配置",
+        "provider": "提供商",
+        "model": "模型",
+        "temperature": "温度",
+        "maxTokens": "最大令牌数",
+        "logLevel": "日志级别",
         "temperatureHints": {
-          "precise": "",
-          "creative": ""
+          "precise": "精确",
+          "creative": "创造性"
         }
       },
       "logs": {
-        "title": "",
-        "showingLevel": "",
-        "levels": "",
-        "levelsHint": "",
-        "empty": ""
+        "title": "MCP 客户端日志",
+        "showingLevel": "显示 {{level}} 及以上级别的日志",
+        "levels": "日志级别：error < warn < info < debug",
+        "levelsHint": "更高级别包含所有较低级别",
+        "empty": "无日志显示。开始一个会话以在此处查看日志。"
       }
     },
     "chat": {
-      "title": "",
-      "subtitle": "",
+      "title": "聊天",
+      "subtitle": "通过自然语言与您的 MCP 服务器交互。",
       "empty": {
-        "title": "",
-        "activeDescription": "",
-        "inactiveDescription": ""
+        "title": "欢迎来到 MCP 演练场",
+        "activeDescription": "发送消息以开始与您的 MCP 服务器交互。",
+        "inactiveDescription": "开始一个会话以开始与您的 MCP 服务器交互。"
       },
       "input": {
-        "activePlaceholder": "",
-        "inactivePlaceholder": ""
+        "activePlaceholder": "输入您的消息...",
+        "inactivePlaceholder": "开始一个会话以开始聊天..."
       },
-      "thinking": "",
+      "thinking": "思考中",
       "tool": {
-        "title": "",
-        "debugInfo": ""
+        "title": "工具执行",
+        "debugInfo": "调试信息"
       }
     },
     "provider": {
-      "anthropic": "",
-      "openai": ""
+      "anthropic": "Anthropic",
+      "openai": "OpenAI"
     },
     "logLevels": {
-      "error": "",
-      "warn": "",
-      "info": "",
-      "debug": ""
+      "error": "错误",
+      "warn": "警告",
+      "info": "信息",
+      "debug": "调试"
     }
   }
 }

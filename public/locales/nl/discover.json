@@ -1,0 +1,37 @@
+{
+  "title": "Ontdekken",
+  "subtitle": "Verken inhoud en maak contact met anderen",
+  "tabs": {
+    "people": "Mensen",
+    "servers": "MCP Servers ({{count}})",
+    "collections": "Collecties ({{count}})",
+    "chats": "Ingesloten Chats ({{count}})"
+  },
+  "following": {
+    "title": "Volgend",
+    "empty": "U volgt nog niemand",
+    "viewProfile": "Profiel bekijken"
+  },
+  "suggested": {
+    "title": "Voorgestelde gebruikers",
+    "empty": "Geen voorgestelde gebruikers gevonden"
+  },
+  "search": {
+    "placeholder": "Zoeken...",
+    "noResults": "Geen resultaten gevonden",
+    "card": {
+      "dialog": {
+        "title": "MCP Server toevoegen",
+        "description": "Voeg een nieuwe server toe aan uw werkruimte",
+        "name": "Servernaam",
+        "command": "Commando",
+        "args": "Argumenten",
+        "env": "Omgevingsvariabelen",
+        "url": "Server URL",
+        "cancel": "Annuleren",
+        "add": "Server toevoegen",
+        "installing": "Installeren..."
+      }
+    }
+  }
+}

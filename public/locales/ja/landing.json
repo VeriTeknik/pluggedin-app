@@ -1,36 +1,166 @@
 {
-  "landing": {
-    "navigation": {
-      "enterApp": ""
+  "navigation": {
+    "enterApp": "アプリに入る",
+    "features": "機能",
+    "community": "コミュニティ",
+    "collections": "コレクション",
+    "playground": "プレイグラウンド",
+    "getStarted": "始める"
+  },
+  "hero": {
+    "title": "AIの交差点",
+    "subtitle": "統一されたプラットフォームでAI機能を接続、作成、拡張します。AIワークフローを強化するプラグインを構築および管理します。",
+    "headline": "MCPサーバーを接続、共有、発見",
+    "subheadline": "マシン会話プロトコルのためのコミュニティハブおよびユニバーサルプロキシ",
+    "analogy": "\"すべてのMCPを支配する一つのMCPプロキシ\"",
+    "openSource": "誇りを持ってオープンソース",
+    "cta": {
+      "getStarted": "始める",
+      "learnMore": "詳細を見る"
+    }
+  },
+  "features": {
+    "title": "機能",
+    "subtitle": "MCPサーバーを管理するために必要なすべて",
+    "sectionTitle": "MCP管理のための強力な機能",
+    "sectionSubtitle": "MCPサーバーを効果的に接続、共有、発見するために必要なすべて。",
+    "communitySharing": {
+      "title": "コミュニティMCPサーバー共有",
+      "description": "MCPサーバーを共有し、コミュニティからの作成物を発見します。"
     },
-    "hero": {
-      "title": "",
-      "subtitle": ""
+    "collectionManagement": {
+      "title": "コレクション管理",
+      "description": "異なるクライアントやプロジェクトのためにサーバーをコレクションに整理します。"
     },
-    "features": {
-      "pluginManagement": {
-        "title": "",
-        "description": "",
-        "content": "",
-        "action": ""
-      },
-      "aiPlayground": {
-        "title": "",
-        "description": "",
-        "content": "",
-        "action": ""
-      },
-      "customDevelopment": {
-        "title": "",
-        "description": "",
-        "content": "",
-        "action": ""
-      }
+    "workspaceOrganization": {
+      "title": "ワークスペース整理",
+      "description": "開発環境や本番環境など、コレクションをワークスペースにグループ化します。"
     },
-    "gettingStarted": {
-      "title": "",
-      "description": "",
-      "action": ""
+    "advancedSearch": {
+      "title": "高度な検索",
+      "description": "強力なフィルタリング機能で完璧なMCPサーバーを見つけます。"
+    },
+    "mcpPlayground": {
+      "title": "MCPプレイグラウンド",
+      "description": "インタラクティブな環境でMCPサーバーをテストおよびデバッグします。"
+    },
+    "pluginManagement": {
+      "title": "プラグイン管理",
+      "description": "MCPサーバーとプラグインを閲覧、設定、管理します",
+      "content": "統一されたインターフェースを通じて、さまざまなAIツールやサービスを接続します。中央ダッシュボードからプラグインを設定および管理します。",
+      "action": "プラグインを閲覧"
+    },
+    "aiPlayground": {
+      "title": "AIプレイグラウンド",
+      "description": "インタラクティブな環境でAIツールをテストおよび実験します",
+      "content": "プラグインの動作を体験してください。プレイグラウンドでは、さまざまな設定をテストし、リアルタイムの結果を確認できます。",
+      "action": "プレイグラウンドを開く"
+    },
+    "customDevelopment": {
+      "title": "カスタム開発",
+      "description": "独自のMCPサーバーとツールを作成およびカスタマイズします",
+      "benefit1": "仲間の開発者から革新的なサーバーを発見します。",
+      "benefit2": "共有したサーバーに関するフィードバックと評価を取得します。",
+      "benefit3": "コミュニティの作成物に基づいて協力し、構築します。",
+      "benefit4": "最新のMCPトレンドを常に把握します。",
+      "visualPlaceholder": "サーバー共有/評価を示すビジュアル",
+      "content": "Pythonエディターと統合開発環境を使用してカスタム機能を構築します。特殊な機能でAIを拡張します。",
+      "action": "カスタムツールを作成"
+    }
+  },
+  "community": {
+    "title": "MCPコミュニティに参加",
+    "subtitle": "成長するMCP開発者コミュニティに参加",
+    "description": "MCPサーバーを共有し、他の人が作成した強力なツールを発見し、成長するエコシステム内で協力します。サーバーを評価し、レビューを残し、ニーズに最適なソリューションを見つけます。",
+    "action": "コミュニティに参加",
+    "benefit1": "仲間の開発者から革新的なサーバーを発見します。",
+    "benefit2": "共有したサーバーに関するフィードバックと評価を取得します。",
+    "benefit3": "コミュニティの作成物に基づいて協力し、構築します。",
+    "benefit4": "最新のMCPトレンドを常に把握します。",
+    "visualPlaceholder": "サーバー共有/評価を示すビジュアル"
+  },
+  "testimonials": {
+    "title": "開発者の声",
+    "subtitle": "コミュニティからの声を聞く",
+    "sectionTitle": "世界中の開発者から信頼されています",
+    "sectionSubtitle": "ユーザーがPlugged.inについて語る声を聞いてください。",
+    "quote1": "\"Plugged.inは、私たちのチームがMCPサーバーを管理する方法に革命をもたらしました。整理機能は素晴らしいです！\"",
+    "name1": "ジェーン・ドウ",
+    "title1": "リードAIエンジニア、TechCorp",
+    "quote2": "\"コミュニティ共有の側面はゲームチェンジャーです。新しいツールを発見するのがこれまで以上に簡単になりました。\"",
+    "name2": "アレックス・スミス",
+    "title2": "独立開発者",
+    "quote3": "\"MCPプレイグラウンドでのデバッグにより、数え切れないほどの時間を節約できました。強くお勧めします！\"",
+    "name3": "マリア・キム",
+    "title3": "創設者、AI Solutions Inc."
+  },
+  "search": {
+    "title": "適切なツールを即座に見つける",
+    "subtitle": "強力な検索およびフィルタリングオプションでMCPサーバーとツールを発見します。",
+    "description": "成長するMCPサーバーとツールのコレクションを検索します。",
+    "action": "ツールを探索",
+    "imagePlaceholder": "画像：コミュニティサーバーを示す検索結果（CardGridモックアップ）",
+    "feature1Title": "インテリジェント検索",
+    "feature1Desc": "スマート検索アルゴリズムを使用して、名前、説明、または機能でサーバーをすばやく見つけます。",
+    "feature2Title": "高度なフィルタリング",
+    "feature2Desc": "カテゴリ、タグ、評価、互換性のフィルターで結果を絞り込みます。",
+    "feature3Title": "詳細なプレビュー",
+    "feature3Desc": "検索結果から直接、サーバーの詳細、評価、コミュニティレビューを表示します。"
+  },
+  "playground": {
+    "title": "MCPプレイグラウンドでテスト＆デバッグ",
+    "subtitle": "MCPサーバーを構築、テスト、改良するためのインタラクティブな環境。",
+    "feature1Title": "インタラクティブテスト",
+    "feature1Desc": "MCPサーバーと直接対話し、ツールを呼び出し、リアルタイムでリソースを検査します。",
+    "feature2Title": "効率的なデバッグ",
+    "feature2Desc": "詳細なリクエスト/レスポンスログとエラーメッセージで問題を迅速に特定して解決します。",
+    "feature3Title": "迅速なプロトタイピング",
+    "feature3Desc": "展開前にさまざまなサーバー構成とツール実装を実験します。",
+    "visualPlaceholder": "プレイグラウンド環境の視覚的表現",
+    "imagePlaceholder": "画像：プレイグラウンド/デバッグモックアップ"
+  },
+  "collections": {
+    "title": "MCPエコシステムを整理",
+    "subtitle": "ツールを整理",
+    "description": "お気に入りのMCPサーバーとツールのコレクションを作成して共有します。",
+    "action": "コレクションを表示",
+    "collectionsTitle": "合理化されたコレクション",
+    "collectionsDesc": "特定のクライアント、アプリケーション、または環境向けに関連するMCPサーバーを論理的なコレクションにグループ化します。",
+    "workspacesTitle": "強力なワークスペース",
+    "workspacesDesc": "開発、ステージング、本番セットアップを分離するなど、コレクションをさらにワークスペースに整理します。",
+    "hierarchyPlaceholder": "コレクション階層の視覚的表現",
+    "imagePlaceholder": "画像：コレクション/ワークスペースモックアップ"
+  },
+  "sharing": {
+    "title": "コミュニティ共有",
+    "subtitle": "他の人と共有",
+    "description": "MCPサーバーとツールをコミュニティと共有します。",
+    "action": "共有を開始"
+  },
+  "gettingStarted": {
+    "title": "Plugged.inは初めてですか？",
+    "description": "セットアップガイドに従って環境を適切に設定し、すぐにPlugged.inで構築を開始してください。",
+    "action": "セットアップガイドを表示"
+  },
+  "cta": {
+    "title": "MCPワークフローを強化する準備はできましたか？",
+    "subtitle": "今日Plugged.inコミュニティに参加してください。これまでにない方法でMCPサーバーを管理、共有、発見します。",
+    "description": "コミュニティに参加して、今日Plugged.inで構築を始めましょう。",
+    "primary": "始める",
+    "secondary": "詳細を見る",
+    "primaryAction": "無料で始める",
+    "secondaryAction": "ドキュメントを読む",
+    "step1": {
+      "title": "サインアップ",
+      "description": "数秒で無料アカウントを作成します。"
+    },
+    "step2": {
+      "title": "サーバーを接続",
+      "description": "既存のMCPサーバーを追加するか、新しいサーバーを発見します。"
+    },
+    "step3": {
+      "title": "探索＆共有",
+      "description": "エコシステムを管理し、コミュニティと関わります。"
     }
   }
 }

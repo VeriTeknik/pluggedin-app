@@ -1,0 +1,37 @@
+{
+  "title": "发现",
+  "subtitle": "探索内容并与他人联系",
+  "tabs": {
+    "people": "用户",
+    "servers": "MCP 服务器 ({{count}})",
+    "collections": "集合 ({{count}})",
+    "chats": "嵌入式聊天 ({{count}})"
+  },
+  "following": {
+    "title": "正在关注",
+    "empty": "您尚未关注任何人",
+    "viewProfile": "查看个人资料"
+  },
+  "suggested": {
+    "title": "建议用户",
+    "empty": "未找到建议用户"
+  },
+  "search": {
+    "placeholder": "搜索...",
+    "noResults": "未找到结果",
+    "card": {
+      "dialog": {
+        "title": "添加 MCP 服务器",
+        "description": "向您的工作区添加新服务器",
+        "name": "服务器名称",
+        "command": "命令",
+        "args": "参数",
+        "env": "环境变量",
+        "url": "服务器 URL",
+        "cancel": "取消",
+        "add": "添加服务器",
+        "installing": "正在安装..."
+      }
+    }
+  }
+}

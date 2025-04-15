@@ -1,36 +1,166 @@
 {
-  "landing": {
-    "navigation": {
-      "enterApp": ""
+  "navigation": {
+    "enterApp": "App openen",
+    "features": "Functies",
+    "community": "Community",
+    "collections": "Collecties",
+    "playground": "Playground",
+    "getStarted": "Aan de slag"
+  },
+  "hero": {
+    "title": "Het AI-kruispunt",
+    "subtitle": "Verbind, creëer en breid uw AI-mogelijkheden uit met een uniform platform. Bouw en beheer plug-ins die uw AI-workflows verbeteren.",
+    "headline": "Verbind, deel en ontdek MCP Servers",
+    "subheadline": "De community hub en universele proxy voor het Machine Conversation Protocol",
+    "analogy": "\"Eén MCP-proxy om alle MCP's te regeren\"",
+    "openSource": "Trots Open Source",
+    "cta": {
+      "getStarted": "Aan de slag",
+      "learnMore": "Meer informatie"
+    }
+  },
+  "features": {
+    "title": "Functies",
+    "subtitle": "Alles wat u nodig heeft om uw MCP-servers te beheren",
+    "sectionTitle": "Krachtige functies voor MCP-beheer",
+    "sectionSubtitle": "Alles wat u nodig heeft om MCP-servers effectief te verbinden, delen en ontdekken.",
+    "communitySharing": {
+      "title": "Community MCP Server Delen",
+      "description": "Deel uw MCP-servers en ontdek creaties van de community."
     },
-    "hero": {
-      "title": "",
-      "subtitle": ""
+    "collectionManagement": {
+      "title": "Collectiebeheer",
+      "description": "Organiseer servers in collecties voor verschillende clients of projecten."
     },
-    "features": {
-      "pluginManagement": {
-        "title": "",
-        "description": "",
-        "content": "",
-        "action": ""
-      },
-      "aiPlayground": {
-        "title": "",
-        "description": "",
-        "content": "",
-        "action": ""
-      },
-      "customDevelopment": {
-        "title": "",
-        "description": "",
-        "content": "",
-        "action": ""
-      }
+    "workspaceOrganization": {
+      "title": "Werkruimte Organisatie",
+      "description": "Groepeer collecties in werkruimtes zoals ontwikkeling of productie."
     },
-    "gettingStarted": {
-      "title": "",
-      "description": "",
-      "action": ""
+    "advancedSearch": {
+      "title": "Geavanceerd zoeken",
+      "description": "Vind de perfecte MCP-server met krachtige filtermogelijkheden."
+    },
+    "mcpPlayground": {
+      "title": "MCP Playground",
+      "description": "Test en debug uw MCP-servers in een interactieve omgeving."
+    },
+    "pluginManagement": {
+      "title": "Plugin Beheer",
+      "description": "Blader, configureer en beheer MCP-servers en plug-ins",
+      "content": "Verbind verschillende AI-tools en -services via een uniforme interface. Configureer en beheer uw plug-ins vanuit een centraal dashboard.",
+      "action": "Blader door plug-ins"
+    },
+    "aiPlayground": {
+      "title": "AI Playground",
+      "description": "Test en experimenteer met uw AI-tools in een interactieve omgeving",
+      "content": "Ervaar uw plug-ins in actie. De playground stelt u in staat verschillende configuraties te testen en realtime resultaten te zien.",
+      "action": "Playground openen"
+    },
+    "customDevelopment": {
+      "title": "Aangepaste ontwikkeling",
+      "description": "Creëer en pas uw eigen MCP-servers en tools aan",
+      "benefit1": "Ontdek innovatieve servers van collega-ontwikkelaars.",
+      "benefit2": "Krijg feedback en beoordelingen over uw gedeelde servers.",
+      "benefit3": "Werk samen en bouw voort op community-creaties.",
+      "benefit4": "Blijf op de hoogte van de nieuwste MCP-trends.",
+      "visualPlaceholder": "Visualisatie van server delen/beoordelingen",
+      "content": "Bouw aangepaste mogelijkheden met onze Python-editor en geïntegreerde ontwikkelomgeving. Breid uw AI uit met gespecialiseerde functionaliteiten.",
+      "action": "Aangepaste tools maken"
+    }
+  },
+  "community": {
+    "title": "Word lid van de MCP Community",
+    "subtitle": "Word lid van de groeiende community van MCP-ontwikkelaars",
+    "description": "Deel uw MCP-servers, ontdek krachtige tools die door anderen zijn gebouwd en werk samen binnen een groeiend ecosysteem. Beoordeel servers, laat recensies achter en vind de beste oplossingen voor uw behoeften.",
+    "action": "Word lid van de community",
+    "benefit1": "Ontdek innovatieve servers van collega-ontwikkelaars.",
+    "benefit2": "Krijg feedback en beoordelingen over uw gedeelde servers.",
+    "benefit3": "Werk samen en bouw voort op community-creaties.",
+    "benefit4": "Blijf op de hoogte van de nieuwste MCP-trends.",
+    "visualPlaceholder": "Visualisatie van server delen/beoordelingen"
+  },
+  "testimonials": {
+    "title": "Wat ontwikkelaars zeggen",
+    "subtitle": "Hoor van de community",
+    "sectionTitle": "Vertrouwd door ontwikkelaars wereldwijd",
+    "sectionSubtitle": "Hoor wat onze gebruikers te zeggen hebben over Plugged.in.",
+    "quote1": "\"Plugged.in heeft een revolutie teweeggebracht in hoe ons team MCP-servers beheert. De organisatiefuncties zijn fantastisch!\"",
+    "name1": "Jane Doe",
+    "title1": "Lead AI Engineer, TechCorp",
+    "quote2": "\"Het community-sharing aspect is een game-changer. Nieuwe tools ontdekken is eenvoudiger dan ooit.\"",
+    "name2": "Alex Smit",
+    "title2": "Onafhankelijke ontwikkelaar",
+    "quote3": "\"Debuggen met de MCP Playground heeft ons talloze uren bespaard. Sterk aanbevolen!\"",
+    "name3": "Maria Kim",
+    "title3": "Oprichter, AI Solutions Inc."
+  },
+  "search": {
+    "title": "Vind direct de juiste tools",
+    "subtitle": "Ontdek MCP-servers en tools met krachtige zoek- en filteropties.",
+    "description": "Zoek door de groeiende collectie MCP-servers en tools.",
+    "action": "Verken tools",
+    "imagePlaceholder": "Afbeelding: Zoekresultaten met community-servers (CardGrid Mockup)",
+    "feature1Title": "Intelligent zoeken",
+    "feature1Desc": "Vind snel servers op naam, beschrijving of mogelijkheden met ons slimme zoekalgoritme.",
+    "feature2Title": "Geavanceerd filteren",
+    "feature2Desc": "Verfijn resultaten met filters voor categorieën, tags, beoordelingen en compatibiliteit.",
+    "feature3Title": "Gedetailleerde voorbeelden",
+    "feature3Desc": "Bekijk serverdetails, beoordelingen en communityrecensies rechtstreeks vanuit de zoekresultaten."
+  },
+  "playground": {
+    "title": "Test & Debug met MCP Playground",
+    "subtitle": "Een interactieve omgeving om uw MCP-servers te bouwen, testen en verfijnen.",
+    "feature1Title": "Interactief testen",
+    "feature1Desc": "Interacteer rechtstreeks met uw MCP-servers, roep tools aan en inspecteer bronnen in realtime.",
+    "feature2Title": "Efficiënt debuggen",
+    "feature2Desc": "Identificeer en los problemen snel op met gedetailleerde request/response logs en foutmeldingen.",
+    "feature3Title": "Snelle prototyping",
+    "feature3Desc": "Experimenteer met verschillende serverconfiguraties en tool-implementaties vóór implementatie.",
+    "visualPlaceholder": "Visuele weergave van de playground-omgeving",
+    "imagePlaceholder": "Afbeelding: Playground/Debugging Mockup"
+  },
+  "collections": {
+    "title": "Organiseer uw MCP-ecosysteem",
+    "subtitle": "Organiseer uw tools",
+    "description": "Creëer en deel collecties van uw favoriete MCP-servers en tools.",
+    "action": "Bekijk collecties",
+    "collectionsTitle": "Gestroomlijnde collecties",
+    "collectionsDesc": "Groepeer gerelateerde MCP-servers in logische collecties voor specifieke clients, applicaties of omgevingen.",
+    "workspacesTitle": "Krachtige werkruimtes",
+    "workspacesDesc": "Organiseer uw collecties verder in werkruimtes, zoals het scheiden van ontwikkelings-, staging- en productie-setups.",
+    "hierarchyPlaceholder": "Visuele weergave van collectiehiërarchie",
+    "imagePlaceholder": "Afbeelding: Collectie/Werkruimte Mockup"
+  },
+  "sharing": {
+    "title": "Community Delen",
+    "subtitle": "Deel met anderen",
+    "description": "Deel uw MCP-servers en tools met de community.",
+    "action": "Begin met delen"
+  },
+  "gettingStarted": {
+    "title": "Nieuw bij Plugged.in?",
+    "description": "Volg onze setupgids om uw omgeving correct te configureren en direct te beginnen met bouwen met Plugged.in.",
+    "action": "Bekijk Setupgids"
+  },
+  "cta": {
+    "title": "Klaar om uw MCP-workflow te superchargen?",
+    "subtitle": "Word vandaag nog lid van de Plugged.in community. Beheer, deel en ontdek MCP-servers als nooit tevoren.",
+    "description": "Word lid van de community en begin vandaag nog met bouwen met Plugged.in.",
+    "primary": "Aan de slag",
+    "secondary": "Meer informatie",
+    "primaryAction": "Gratis aan de slag",
+    "secondaryAction": "Lees documentatie",
+    "step1": {
+      "title": "Aanmelden",
+      "description": "Maak binnen enkele seconden uw gratis account aan."
+    },
+    "step2": {
+      "title": "Servers verbinden",
+      "description": "Voeg uw bestaande MCP-servers toe of ontdek nieuwe."
+    },
+    "step3": {
+      "title": "Verkennen & Delen",
+      "description": "Beheer uw ecosysteem en ga in gesprek met de community."
     }
   }
 }

@@ -1,69 +1,142 @@
 {
   "settings": {
-    "title": "",
+    "title": "सेटिंग्स",
     "profile": {
-      "title": "",
-      "description": "",
-      "avatar": "",
-      "avatarRecommendation": "",
-      "name": "",
-      "namePlaceholder": "",
-      "language": "",
-      "updateButton": "",
-      "success": "",
-      "error": ""
+      "title": "प्रोफ़ाइल",
+      "description": "अपनी प्रोफ़ाइल जानकारी प्रबंधित करें",
+      "avatar": "अवतार अपलोड करें",
+      "avatarRecommendation": "अनुशंसित: वर्गाकार छवि, अधिकतम 1MB",
+      "name": "नाम",
+      "namePlaceholder": "अपना नाम दर्ज करें",
+      "language": "भाषा",
+      "updateButton": "प्रोफ़ाइल अपडेट करें",
+      "success": "प्रोफ़ाइल सफलतापूर्वक अपडेट की गई",
+      "error": "प्रोफ़ाइल अपडेट करने में विफल",
+      "profileUrl": {
+        "title": "आपका प्रोफ़ाइल यूआरएल",
+        "setUsername": "अपना कस्टम सार्वजनिक प्रोफ़ाइल यूआरएल बनाने के लिए ऊपर एक उपयोगकर्ता नाम सेट करें",
+        "copyTooltip": "यूआरएल कॉपी करने के लिए क्लिक करें"
+      },
+      "social": {
+        "title": "सामाजिक प्रोफ़ाइल",
+        "description": "अपनी सार्वजनिक प्रोफ़ाइल और सामाजिक सेटिंग्स प्रबंधित करें",
+        "username": {
+          "label": "उपयोगकर्ता नाम",
+          "placeholder": "एक उपयोगकर्ता नाम चुनें",
+          "checking": "उपलब्धता जाँची जा रही है...",
+          "save": "सहेजें"
+        },
+        "publicProfile": {
+          "title": "सार्वजनिक प्रोफ़ाइल",
+          "description": {
+            "noUsername": "अपनी प्रोफ़ाइल को सार्वजनिक करने के लिए पहले एक उपयोगकर्ता नाम सेट करें",
+            "public": "आपकी प्रोफ़ाइल और साझा सामग्री सभी को दिखाई देगी",
+            "private": "आपकी प्रोफ़ाइल केवल आपको दिखाई देगी"
+          }
+        }
+      }
     },
     "password": {
-      "title": "",
-      "description": "",
+      "title": "पासवर्ड",
+      "description": "अपना पासवर्ड बदलें",
       "current": {
-        "label": "",
-        "placeholder": ""
+        "label": "वर्तमान पासवर्ड",
+        "placeholder": "वर्तमान पासवर्ड दर्ज करें"
       },
       "new": {
-        "label": "",
-        "placeholder": ""
+        "label": "नया पासवर्ड",
+        "placeholder": "नया पासवर्ड दर्ज करें"
       },
       "confirm": {
-        "label": "",
-        "placeholder": ""
+        "label": "नए पासवर्ड की पुष्टि करें",
+        "placeholder": "नए पासवर्ड की पुष्टि करें"
       },
-      "updateButton": "",
-      "success": "",
-      "error": ""
+      "updateButton": "पासवर्ड बदलें",
+      "success": "पासवर्ड सफलतापूर्वक अपडेट किया गया",
+      "error": "पासवर्ड अपडेट करने में विफल"
     },
     "account": {
-      "title": "",
-      "description": "",
-      "deleteButton": "",
-      "confirmTitle": "",
-      "confirmDescription": "",
-      "confirmButton": "",
-      "deletingButton": "",
-      "success": "",
-      "error": ""
+      "title": "खाता हटाएं",
+      "description": "अपना खाता और सभी संबंधित डेटा स्थायी रूप से हटाएं",
+      "deleteButton": "खाता हटाएं",
+      "confirmTitle": "क्या आप निश्चित हैं?",
+      "confirmDescription": "यह कार्रवाई पूर्ववत नहीं की जा सकती। यह आपके खाते को स्थायी रूप से हटा देगा और हमारे सर्वर से सभी संबंधित डेटा हटा देगा।",
+      "confirmButton": "हाँ, मेरा खाता हटाएं",
+      "deletingButton": "हटाया जा रहा है...",
+      "success": "खाता सफलतापूर्वक हटाया गया",
+      "error": "खाता हटाने में विफल"
     },
     "validation": {
-      "invalidJsonArray": ""
+      "invalidJsonArray": "अमान्य JSON प्रारूप या संदेशों की ऐरे नहीं।"
     },
     "connectedAccounts": {
-      "title": "",
-      "description": "",
+      "title": "जुड़े हुए खाते",
+      "description": "अपने जुड़े हुए सामाजिक खाते प्रबंधित करें",
       "github": {
-        "connected": "",
-        "connect": ""
+        "connected": "GitHub से जुड़ा हुआ",
+        "connect": "अपना GitHub खाता कनेक्ट करें"
       },
       "google": {
-        "connected": "",
-        "connect": ""
+        "connected": "Google से जुड़ा हुआ",
+        "connect": "अपना Google खाता कनेक्ट करें"
       },
       "twitter": {
-        "connected": "",
-        "connect": ""
+        "connected": "Twitter से जुड़ा हुआ",
+        "connect": "अपना Twitter खाता कनेक्ट करें"
       },
-      "connected": "",
-      "removed": "",
-      "error": ""
+      "connected": "जुड़ा हुआ",
+      "removed": "{{provider}} खाता सफलतापूर्वक डिस्कनेक्ट किया गया",
+      "error": "खाता डिस्कनेक्ट करने में विफल"
+    },
+    "project": {
+      "title": "वर्तमान हब",
+      "description": "अपनी वर्तमान हब सेटिंग्स प्रबंधित करें",
+      "loading": "प्रोजेक्ट लोड हो रहा है...",
+      "namePlaceholder": "प्रोजेक्ट का नाम",
+      "updateSuccess": "प्रोजेक्ट का नाम सफलतापूर्वक अपडेट किया गया",
+      "updateError": "प्रोजेक्ट का नाम अपडेट करने में विफल",
+      "deleteConfirm": "क्या आप वाकई इस प्रोजेक्ट को हटाना चाहते हैं? यह कार्रवाई पूर्ववत नहीं की जा सकती।",
+      "deleteSuccess": "प्रोजेक्ट सफलतापूर्वक हटाया गया",
+      "deleteError": "प्रोजेक्ट हटाने में विफल",
+      "dangerZone": "खतरा क्षेत्र",
+      "deleteWarning": "एक बार जब आप कोई प्रोजेक्ट हटा देते हैं, तो वापस जाने का कोई रास्ता नहीं है। कृपया सावधान रहें।",
+      "deleteButton": "प्रोजेक्ट हटाएं"
+    },
+    "workspace": {
+      "title": "वर्तमान कार्यक्षेत्र",
+      "description": "अपनी वर्तमान कार्यक्षेत्र सेटिंग्स प्रबंधित करें",
+      "loading": "प्रोफ़ाइल लोड हो रही है...",
+      "namePlaceholder": "प्रोफ़ाइल का नाम",
+      "updateSuccess": "प्रोफ़ाइल का नाम सफलतापूर्वक अपडेट किया गया",
+      "updateError": "प्रोफ़ाइल का नाम अपडेट करने में विफल",
+      "deleteConfirm": "क्या आप वाकई इस प्रोफ़ाइल को हटाना चाहते हैं? यह कार्रवाई पूर्ववत नहीं की जा सकती।",
+      "deleteSuccess": "प्रोफ़ाइल सफलतापूर्वक हटाई गई",
+      "deleteError": "कार्यक्षेत्र हटाने में विफल",
+      "dangerZone": "खतरा क्षेत्र",
+      "deleteWarning": "एक बार जब आप कोई कार्यक्षेत्र हटा देते हैं, तो वापस जाने का कोई रास्ता नहीं है। कृपया सावधान रहें।",
+      "deleteButton": "कार्यक्षेत्र हटाएं"
+    },
+    "appearance": {
+      "title": "दिखावट",
+      "description": "एप्लिकेशन की दिखावट को अनुकूलित करें",
+      "colorTheme": "रंग थीम",
+      "light": "हल्का",
+      "dark": "गहरा",
+      "system": "सिस्टम",
+      "font": "फ़ॉन्ट",
+      "selectFont": "एक फ़ॉन्ट चुनें",
+      "fonts": {
+        "geist": "Geist Sans (डिफ़ॉल्ट)",
+        "quicksand": "Quicksand",
+        "nunito": "Nunito",
+        "poppins": "Poppins",
+        "roboto": "Roboto",
+        "ubuntu": "Ubuntu",
+        "varelaRound": "Varela Round",
+        "workSans": "Work Sans",
+        "zillaSlab": "Zilla Slab",
+        "comfortaa": "Comfortaa"
+      }
     }
   }
 }

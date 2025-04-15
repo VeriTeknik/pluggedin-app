@@ -1,5 +1,29 @@
 {
   "notifications": {
-    "title": ""
+    "title": "Notificaties",
+    "description": "U kunt hier alle systeemnotificaties zien",
+    "actions": {
+      "markAllAsRead": "Alles als gelezen markeren",
+      "actions": "Acties",
+      "deleteAll": "Alle notificaties verwijderen"
+    },
+    "tabs": {
+      "all": "Alles",
+      "unread": "Ongelezen",
+      "alerts": "Waarschuwingen",
+      "info": "Informatie",
+      "success": "Succes"
+    },
+    "empty": {
+      "title": "Geen notificaties",
+      "description": "U heeft geen notificaties in deze categorie."
+    },
+    "toast": {
+      "markReadError": "Markeren van notificatie als gelezen mislukt",
+      "deleteSuccess": "Notificatie verwijderd",
+      "deleteError": "Verwijderen van notificatie mislukt",
+      "deleteAllSuccess": "Alle notificaties verwijderd",
+      "deleteAllError": "Verwijderen van alle notificaties mislukt"
+    }
   }
 }
