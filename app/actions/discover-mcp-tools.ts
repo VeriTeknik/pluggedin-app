@@ -49,9 +49,8 @@ export async function discoverSingleServerTools(
 
     console.log(`[Action] Found server config for ${serverConfig.name || serverUuid}`);
 
-    // 1. Construct the McpServersConfig object for the single server
-    // Ensure server name is used as key, handle potential null/empty names
-    console.log(`[Action] Found server config for ${serverConfig.name || serverUuid}`);
+    // Reverted: No longer modifying command path here. Relying on PATH.
+    const discoveryServerConfig = { ...serverConfig }; // Keep using a copy
 
     let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = [];
     let discoveredTemplates: Awaited<ReturnType<typeof listResourceTemplatesFromServer>> = [];
@@ -64,8 +63,9 @@ export async function discoverSingleServerTools(
 
     // --- Discover Tools ---
     try {
-        console.log(`[Action] Discovering tools for ${serverConfig.name || serverUuid}...`);
-        discoveredTools = await listToolsFromServer(serverConfig);
+        console.log(`[Action] Discovering tools for ${discoveryServerConfig.name || serverUuid}...`);
+        // Use the potentially modified config for the discovery call
+        discoveredTools = await listToolsFromServer(discoveryServerConfig);
         console.log(`[Action] Discovered ${discoveredTools.length} tools.`);
 
         // Delete existing tools
@@ -92,8 +92,9 @@ export async function discoverSingleServerTools(
 
     // --- Discover Resource Templates ---
     try {
-        console.log(`[Action] Discovering resource templates for ${serverConfig.name || serverUuid}...`);
-        discoveredTemplates = await listResourceTemplatesFromServer(serverConfig);
+        console.log(`[Action] Discovering resource templates for ${discoveryServerConfig.name || serverUuid}...`);
+        // Use the potentially modified config for the discovery call
+        discoveredTemplates = await listResourceTemplatesFromServer(discoveryServerConfig);
         console.log(`[Action] Discovered ${discoveredTemplates.length} resource templates.`);
 
         // Delete existing templates
@@ -124,8 +125,9 @@ export async function discoverSingleServerTools(
 
     // --- Discover Static Resources ---
     try {
-        console.log(`[Action] Discovering static resources for ${serverConfig.name || serverUuid}...`);
-        discoveredResources = await listResourcesFromServer(serverConfig);
+        console.log(`[Action] Discovering static resources for ${discoveryServerConfig.name || serverUuid}...`);
+        // Use the potentially modified config for the discovery call
+        discoveredResources = await listResourcesFromServer(discoveryServerConfig);
         console.log(`[Action] Discovered ${discoveredResources.length} static resources.`);
 
         // Delete existing resources
@@ -152,8 +154,9 @@ export async function discoverSingleServerTools(
 
     // --- Discover Prompts ---
     try {
-        console.log(`[Action] Discovering prompts for ${serverConfig.name || serverUuid}...`);
-        discoveredPrompts = await listPromptsFromServer(serverConfig);
+        console.log(`[Action] Discovering prompts for ${discoveryServerConfig.name || serverUuid}...`);
+        // Use the potentially modified config for the discovery call
+        discoveredPrompts = await listPromptsFromServer(discoveryServerConfig);
         console.log(`[Action] Discovered ${discoveredPrompts.length} prompts.`);
 
         // Delete existing prompts

@@ -67,56 +67,55 @@ export function createFirejailConfig(
 
   const isUvCommand = serverConfig.command === 'uv' || serverConfig.command === 'uvenv' || serverConfig.command === 'uvx';
 
+  // Restore stricter firejail config
   const baseFirejailArgs = [
-    '--quiet',
-    // Use --private=DIR to strictly cage the process within the workspace
-    `--private=${paths.mcpWorkspace}`,
-    '--noroot', // Disable root privileges
+      '--quiet',
+      `--private=${paths.mcpWorkspace}`, // Cage to workspace
+      '--noroot',
 
-    // Network configuration - Ignore global, start with none, add filter
-    '--ignore=net', // Ignore global config's network setting
-    '--net=none',   // Start with no network interface
-    '--netfilter', // Enable basic network filtering
-    '--protocol=unix,inet,inet6',
-    '--dns=1.1.1.1', // Use Cloudflare DNS, adjust if needed
+      // Network config (ignore global, use none + filter)
+      '--ignore=net',
+      '--net=none',
+      '--netfilter',
+      '--protocol=unix,inet,inet6',
+      '--dns=1.1.1.1',
 
-    // Basic security
-    '--seccomp', // Enable seccomp filter
-    '--memory-deny-write-execute',
-    '--restrict-namespaces',
+      // Security
+      '--seccomp',
+      '--memory-deny-write-execute',
+      '--restrict-namespaces',
 
-    // Allow necessary paths (adjust these based on actual deployment)
-    `--whitelist=${paths.localBin}`,
-    // REMOVED: `--whitelist=${paths.appPath}`, - Prevent access to main app dir
-    `--whitelist=${paths.mcpWorkspace}`, // Allow access only to the designated workspace
+      // Whitelists
+      `--whitelist=${paths.localBin}`, // Allow access to bin dir
+      `--whitelist=${paths.localBin}/uv`, // Explicitly allow uv
+      `--whitelist=${paths.localBin}/uvx`, // Explicitly allow uvx
+      `--whitelist=${paths.mcpWorkspace}`, // Allow workspace access
+      '--whitelist=/usr/lib/python*', // Python libs
+      '--whitelist=/usr/local/lib/python*',
+      `--whitelist=${paths.userHome}/.cache/uv`, // UV cache
+      `--whitelist=${paths.userHome}/.venv`, // Virtual envs
 
-    // Python-specific directories (adjust versions if needed)
-    '--whitelist=/usr/lib/python*',
-    '--whitelist=/usr/local/lib/python*',
-    `--whitelist=${paths.userHome}/.cache/uv`,
-    `--whitelist=${paths.userHome}/.venv`, // Allow access to virtual environments
+      // Read-only system dirs
+      '--read-only=/usr/bin',
+      '--read-only=/usr/lib',
+      '--read-only=/usr/local/bin',
+      '--read-only=/usr/local/lib',
 
-    // Read-only system directories
-    '--read-only=/usr/bin',
-    '--read-only=/usr/lib',
-    '--read-only=/usr/local/bin',
-    '--read-only=/usr/local/lib',
+      // Private /etc
+      '--private-etc=passwd,group,resolv.conf,ssl,ca-certificates,python*',
 
-    // Allow specific /etc files needed by many tools
-    '--private-etc=passwd,group,resolv.conf,ssl,ca-certificates,python*',
+      // Temp/Dev
+      '--private-tmp',
+      '--private-dev',
 
-    // Temporary directory handling
-    '--private-tmp',
-    '--private-dev', // Create a new /dev
-
-    // Additional security
-    '--caps.drop=all', // Drop all capabilities
-    '--disable-mnt', // Disable mount operations
-    '--shell=none', // Prevent shell execution
+      // Other security
+      '--caps.drop=all',
+      '--disable-mnt',
+      '--shell=none',
   ];
 
-  // Use full path for UV commands inside the jail
-  const commandToExecute = isUvCommand ? `${paths.localBin}/${serverConfig.command}` : serverConfig.command;
+  // Use the original command name; rely on PATH set within the sandbox env
+  const commandToExecute = serverConfig.command;
 
   // Construct the final environment, prioritizing serverConfig.env
   const finalEnv = {
@@ -142,9 +141,9 @@ export function createFirejailConfig(
   return {
     command: 'firejail', // The actual command to run is firejail
     args: [
-      ...baseFirejailArgs,
-      commandToExecute, // The original command becomes an argument to firejail
-      ...(serverConfig.args || []) // Append original args
+      ...baseFirejailArgs, // Firejail's own arguments first
+      commandToExecute,   // Then the command firejail should execute
+      ...(serverConfig.args || []) // Finally, the arguments for the original command
     ],
     env: finalEnv
   };
@@ -182,11 +181,22 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
         env: firejailConfig.env
       } : {
         // Use original configuration (non-Linux or non-STDIO/command)
+        // Construct necessary env even when not using firejail, especially for uvx
         command: serverConfig.command,
         args: serverConfig.args || [],
         env: {
-          ...(process.env as Record<string, string>), // Inherit parent process environment
-          ...(serverConfig.env || {}) // Server-specific env vars override
+          // Start with parent process env
+          ...(process.env as Record<string, string>),
+          // Add potentially missing vars needed by uvx/python, using defaults
+          // Note: Reading paths again here, could be refactored later if needed
+          PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin'}:${process.env.PATH}`, // Prepend local bin
+          HOME: process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin',
+          UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin'}/.local/uv`,
+          PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace'}/lib/python`,
+          PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace',
+          UV_SYSTEM_PYTHON: 'true',
+          // Apply server-specific env vars, overriding anything above
+          ...(serverConfig.env || {})
         }
       };
 

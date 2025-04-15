@@ -348,13 +348,15 @@ export async function getOrCreatePlaygroundSession(
       selectedServerUuids.includes(server.uuid)
     );
 
-    // Read workspace path from env or use default
+    // Read workspace and local bin paths from env or use defaults
     const mcpWorkspacePath = process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace';
+    const localBinPath = process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin'; // Needed for uvx path
 
     // Format servers for conversion and apply sandboxing for STDIO using firejail
     const mcpServersConfig: Record<string, any> = {};
     selectedServers.forEach(server => {
       const isFilesystemServer = server.command === 'npx' && server.args?.includes('@modelcontextprotocol/server-filesystem');
+      // Removed isUvxServer check
 
       if (isFilesystemServer && server.type === 'STDIO') {
         // Special handling for filesystem server: set cwd and ensure arg points within workspace
@@ -379,8 +381,10 @@ export async function getOrCreatePlaygroundSession(
         };
       }
 
-      // Add applySandboxing flag specifically for playground sessions
-      if (mcpServersConfig[server.name].type === 'STDIO') {
+      // Removed absolute path logic for uvx
+
+      // Add applySandboxing flag specifically for playground sessions for STDIO servers
+      if (mcpServersConfig[server.name]?.type === 'STDIO') {
         mcpServersConfig[server.name].applySandboxing = true;
       }
     });
