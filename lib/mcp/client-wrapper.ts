@@ -22,6 +22,20 @@ import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type 
 
 // --- Configuration & Types ---
 
+// Add these types/interfaces at the top
+interface FirejailConfig {
+  command: string;
+  args: string[];
+  env: Record<string, string>;
+}
+
+interface PathConfig {
+  userHome: string;
+  localBin: string;
+  appPath: string;
+  mcpWorkspace: string;
+}
+
 // Interface for the connected client and its cleanup function
 interface ConnectedMcpClient {
   client: Client;
@@ -31,6 +45,108 @@ interface ConnectedMcpClient {
 // --- Helper Functions ---
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Add this function to handle firejail configuration
+export function createFirejailConfig(
+  serverConfig: McpServer
+): FirejailConfig | null {
+  // Only apply firejail on Linux
+  if (process.platform !== 'linux') return null;
+  // Only apply firejail to STDIO servers with a command
+  if (serverConfig.type !== McpServerType.STDIO || !serverConfig.command) return null;
+
+  // Read paths from environment variables with fallbacks
+  const paths: PathConfig = {
+    userHome: process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin',
+    localBin: process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin',
+    appPath: process.env.FIREJAIL_APP_PATH ?? '/home/pluggedin/pluggedin-app',
+    mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace'
+  };
+  // Only apply firejail to STDIO servers with a command
+  if (serverConfig.type !== McpServerType.STDIO || !serverConfig.command) return null;
+
+  const isUvCommand = serverConfig.command === 'uv' || serverConfig.command === 'uvenv' || serverConfig.command === 'uvx';
+
+  const baseFirejailArgs = [
+    '--quiet',
+    '--private', // Create a new mount namespace
+    '--noroot', // Disable root privileges
+
+    // Network configuration (adjust eth0 if needed)
+    '--net=eth0',
+    '--protocol=unix,inet,inet6',
+    '--dns=1.1.1.1', // Use Cloudflare DNS, adjust if needed
+
+    // Basic security
+    '--seccomp', // Enable seccomp filter
+    '--memory-deny-write-execute',
+    '--restrict-namespaces',
+
+    // Allow necessary paths (adjust these based on actual deployment)
+    `--whitelist=${paths.localBin}`,
+    `--whitelist=${paths.appPath}`,
+    `--whitelist=${paths.mcpWorkspace}`,
+
+    // Python-specific directories (adjust versions if needed)
+    '--whitelist=/usr/lib/python*',
+    '--whitelist=/usr/local/lib/python*',
+    `--whitelist=${paths.userHome}/.cache/uv`,
+    `--whitelist=${paths.userHome}/.venv`, // Allow access to virtual environments
+
+    // Read-only system directories
+    '--read-only=/usr/bin',
+    '--read-only=/usr/lib',
+    '--read-only=/usr/local/bin',
+    '--read-only=/usr/local/lib',
+
+    // Allow specific /etc files needed by many tools
+    '--private-etc=passwd,group,resolv.conf,ssl,ca-certificates,python*',
+
+    // Temporary directory handling
+    '--private-tmp',
+    '--private-dev', // Create a new /dev
+
+    // Additional security
+    '--caps.drop=all', // Drop all capabilities
+    '--disable-mnt', // Disable mount operations
+    '--shell=none', // Prevent shell execution
+  ];
+
+  // Use full path for UV commands inside the jail
+  const commandToExecute = isUvCommand ? `${paths.localBin}/${serverConfig.command}` : serverConfig.command;
+
+  // Construct the final environment, prioritizing serverConfig.env
+  const finalEnv = {
+    // Sensible defaults, adjust user/home if needed
+    PATH: `${paths.localBin}:/usr/local/bin:/usr/bin:/bin`,
+    HOME: paths.userHome,
+    USER: process.env.FIREJAIL_USER ?? 'pluggedin',
+    USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',
+    LOGNAME: process.env.FIREJAIL_LOGNAME ?? 'pluggedin',
+    // Python specific
+    PYTHONPATH: `${paths.mcpWorkspace}/lib/python`, // Adjust if needed
+    PYTHONUSERBASE: paths.mcpWorkspace, // Adjust if needed
+    // UV specific
+    UV_ROOT: `${paths.userHome}/.local/uv`, // Adjust if needed
+    UV_SYSTEM_PYTHON: 'true',
+    // Inherit parent process env (like PATH, etc.)
+    ...(process.env as Record<string, string>),
+    // Apply server-specific env vars, overriding inherited ones
+    ...(serverConfig.env || {}),
+  };
+
+
+  return {
+    command: 'firejail', // The actual command to run is firejail
+    args: [
+      ...baseFirejailArgs,
+      commandToExecute, // The original command becomes an argument to firejail
+      ...(serverConfig.args || []) // Append original args
+    ],
+    env: finalEnv
+  };
+}
+
 
 // --- Core Client Logic ---
 
@@ -49,15 +165,25 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
         console.error(`[MCP Wrapper] STDIO server ${serverConfig.name} is missing command.`);
         return null;
       }
-      const stdioParams: StdioServerParameters = {
+
+      // Get firejail config if on Linux, otherwise use original config
+      const firejailConfig = createFirejailConfig(serverConfig);
+
+      const stdioParams: StdioServerParameters = firejailConfig ? {
+        // Use firejail configuration
+        command: firejailConfig.command,
+        args: firejailConfig.args,
+        env: firejailConfig.env
+      } : {
+        // Use original configuration (non-Linux or non-STDIO/command)
         command: serverConfig.command,
         args: serverConfig.args || [],
-        // Merge process.env with serverConfig.env, giving precedence to serverConfig.env
         env: {
-          ...(process.env as Record<string, string>), // Inherit parent process environment (includes PATH)
-          ...(serverConfig.env || {}), // Server-specific env vars override
-        } as Record<string, string>,
+          ...(process.env as Record<string, string>), // Inherit parent process environment
+          ...(serverConfig.env || {}) // Server-specific env vars override
+        }
       };
+
       transport = new StdioClientTransport(stdioParams);
     } else if (serverConfig.type === McpServerType.SSE) {
       if (!serverConfig.url) {

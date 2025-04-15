@@ -285,7 +285,7 @@ export const authOptions: NextAuthOptions = {
           });
           // Ensure null is assigned if dbUser or dbUser.username is null/undefined
           token.username = dbUser?.username ?? null;
-          console.log('JWT callback - username fetched:', token.username);
+          // console.log('JWT callback - username fetched:', token.username);
        } catch (error) {
           console.error('Error fetching username in JWT callback:', error);
           token.username = null; // Fallback to null on error
@@ -308,7 +308,7 @@ export const authOptions: NextAuthOptions = {
             });
             // Ensure null is assigned if dbUser or dbUser.username is null/undefined
             token.username = dbUser?.username ?? null;
-            console.log('JWT callback - username fetched (fallback):', token.username);
+            // console.log('JWT callback - username fetched (fallback):', token.username);
           } catch (error) {
             console.error('Error fetching username in JWT callback (fallback):', error);
             token.username = null; // Fallback to null on error
