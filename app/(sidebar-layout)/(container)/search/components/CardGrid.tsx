@@ -17,6 +17,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { McpServerSource, McpServerType } from '@/db/schema';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast'; // Import useToast
@@ -111,6 +120,19 @@ export default function CardGrid({
   const { t } = useTranslation();
   const { toast } = useToast(); // Initialize toast
   const { isAuthenticated, signIn } = useAuth();
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authDialogMessage, setAuthDialogMessage] = useState<{ key: string; defaultMsg: string } | null>(null);
+
+  // Helper function to check authentication and show a dialog if not authenticated
+  const requireAuth = (descriptionKey: string, descriptionDefault: string): boolean => {
+    if (!isAuthenticated) {
+      setAuthDialogMessage({ key: descriptionKey, defaultMsg: descriptionDefault });
+      setShowAuthDialog(true);
+      return false;
+    }
+    return true;
+  };
+
   const [selectedServer, setSelectedServer] = useState<{
     name: string;
     description: string;
@@ -142,15 +164,7 @@ export default function CardGrid({
 
 
   const handleInstallClick = (key: string, item: any) => {
-    if (!isAuthenticated) {
-      toast({
-        title: t('auth:loginRequired', 'Login Required'),
-        description: t('auth:loginToInstall', 'You must be logged in to install servers.'),
-        variant: 'destructive',
-      });
-      signIn();
-      return;
-    }
+    if (!requireAuth('auth:loginToInstall', 'You must be logged in to install servers.')) return;
     // Determine if this is a stdio or SSE server
     const isSSE = item.url || false;
     
@@ -171,15 +185,7 @@ export default function CardGrid({
 
   // Handle clicking the rate button
   const handleRateClick = (key: string, item: any) => {
-    if (!isAuthenticated) {
-      toast({
-        title: t('auth:loginRequired', 'Login Required'),
-        description: t('auth:loginToRate', 'You must be logged in to rate servers.'),
-        variant: 'destructive',
-      });
-      signIn();
-      return;
-    }
+    if (!requireAuth('auth:loginToRate', 'You must be logged in to rate servers.')) return;
     setRateServer({
       name: item.name,
       source: item.source,
@@ -498,6 +504,41 @@ export default function CardGrid({
           serverData={reviewServer}
         />
       )}
+
+      {/* Auth Dialog */}
+      <Dialog open={showAuthDialog} onOpenChange={setShowAuthDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('auth:loginRequired', 'Login Required')}</DialogTitle>
+            <DialogDescription>
+              {authDialogMessage ? t(authDialogMessage.key, authDialogMessage.defaultMsg) : ''}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="default"
+              onClick={() => {
+                setShowAuthDialog(false);
+                signIn();
+              }}
+            >
+              {t('auth:login', 'Login')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAuthDialog(false);
+                window.location.href = '/auth/register';
+              }}
+            >
+              {t('auth:register', 'Register')}
+            </Button>
+            <DialogClose asChild>
+              <Button variant="ghost">{t('common.cancel', 'Cancel')}</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
