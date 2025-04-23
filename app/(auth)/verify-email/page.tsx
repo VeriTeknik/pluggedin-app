@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useCallback,useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { verifyEmail } from '@/app/actions/auth';
@@ -17,13 +17,7 @@ function VerifyEmailContent() {
   const token = searchParams.get('token');
   const [isVerifying, setIsVerifying] = useState(false);
 
-  useEffect(() => {
-    if (token) {
-      handleVerify();
-    }
-  }, [token]);
-
-  const handleVerify = async () => {
+  const handleVerify = useCallback(async () => {
     if (!token) {
       toast({
         title: t('auth.verifyEmail.error'),
@@ -41,7 +35,7 @@ function VerifyEmailContent() {
         description: t('auth.verifyEmail.successDescription'),
       });
       router.push('/login');
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: t('auth.verifyEmail.error'),
         description: t('auth.verifyEmail.errorDescription'),
@@ -50,7 +44,13 @@ function VerifyEmailContent() {
     } finally {
       setIsVerifying(false);
     }
-  };
+  }, [token, t, toast, router]);
+
+  useEffect(() => {
+    if (token) {
+      handleVerify();
+    }
+  }, [token, handleVerify]);
 
   return (
     <div className="container relative min-h-screen flex-col items-center justify-center grid lg:max-w-none lg:grid-cols-1 lg:px-0">

@@ -5,8 +5,6 @@ import { CheckCircle, Star } from 'lucide-react'; // Example icons
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 
-// TODO: Replace placeholder image with actual visual
-const placeholderImageUrl = '/placeholder-community.png'; // Update this path
 
 // Animation variants
 const sectionVariants = {

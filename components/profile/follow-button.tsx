@@ -44,7 +44,7 @@ export function FollowButton({
       } else {
         setError(result.error || 'An error occurred');
       }
-    } catch (err) {
+    } catch (_error) {
       setError('Failed to update follow status');
     } finally {
       setIsPending(false);

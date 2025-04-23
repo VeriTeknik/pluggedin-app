@@ -4,10 +4,18 @@ export function useGithubStars(repo: string) {
   const [stars, setStars] = useState<number | null>(null);
 
   useEffect(() => {
-    fetch(`https://api.github.com/repos/${repo}`)
+    const controller = new AbortController();
+    fetch(`https://api.github.com/repos/${repo}`, { signal: controller.signal })
       .then((res) => res.json())
       .then((data) => setStars(data.stargazers_count))
-      .catch(() => setStars(null));
+      .catch((error) => {
+        if (error.name !== 'AbortError') {
+          setStars(null);
+        }
+      });
+    return () => {
+      controller.abort();
+    };
   }, [repo]);
 
   return stars;

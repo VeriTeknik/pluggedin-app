@@ -11,7 +11,7 @@
     "title": "The AI Crossroads",
     "subtitle": "Connect, create, and extend your AI capabilities with a unified platform. Build and manage plugins that enhance your AI workflows.",
     "headline": "Connect, Share, and Discover MCP Servers",
-    "subheadline": "The community hub and universal proxy for the Machine Conversation Protocol",
+    "subheadline": "The community hub and universal proxy for the Model Context Protocol",
     "analogy": "\"One MCP proxy to rule all MCPs\"",
     "openSource": "Proudly Open Source",
     "cta": {
@@ -121,7 +121,8 @@
     "feature3Title": "Rapid Prototyping",
     "feature3Desc": "Experiment with different server configurations and tool implementations before deployment.",
     "visualPlaceholder": "Visual representation of playground environment",
-    "imagePlaceholder": "Image: Playground/Debugging Mockup"
+    "imagePlaceholder": "Image: Playground/Debugging Mockup",
+    "langchainCallout": "<0>Test with Any Model:</0> Thanks to our <1>Langchain abstraction</1>, you can test your MCP servers with Claude, GPT, Llama, and more—all from a single playground. Instantly compare models and experience true model-agnostic AI."
   },
   "collections": {
     "title": "Organize Your MCP Ecosystem",

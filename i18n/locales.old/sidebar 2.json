@@ -1,9 +1,0 @@
-{
-  "sidebar": {
-    "toggle": "Toggle Sidebar",
-    "navigation": "Navigation",
-    "keyboard": {
-      "shortcut": "Keyboard shortcut: {{key}}"
-    }
-  }
-}
