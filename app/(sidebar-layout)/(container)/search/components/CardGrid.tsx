@@ -21,6 +21,7 @@ import { McpServerSource, McpServerType } from '@/db/schema';
 import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { McpServerCategory, SearchIndex } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
+import { useAuth } from '@/hooks/use-auth';
 
 import { InstallDialog } from './InstallDialog';
 import { RateServerDialog } from './RateServerDialog';
@@ -109,6 +110,7 @@ export default function CardGrid({
 }) {
   const { t } = useTranslation();
   const { toast } = useToast(); // Initialize toast
+  const { isAuthenticated, signIn } = useAuth();
   const [selectedServer, setSelectedServer] = useState<{
     name: string;
     description: string;
@@ -140,6 +142,15 @@ export default function CardGrid({
 
 
   const handleInstallClick = (key: string, item: any) => {
+    if (!isAuthenticated) {
+      toast({
+        title: t('auth:loginRequired', 'Login Required'),
+        description: t('auth:loginToInstall', 'You must be logged in to install servers.'),
+        variant: 'destructive',
+      });
+      signIn();
+      return;
+    }
     // Determine if this is a stdio or SSE server
     const isSSE = item.url || false;
     
@@ -160,6 +171,15 @@ export default function CardGrid({
 
   // Handle clicking the rate button
   const handleRateClick = (key: string, item: any) => {
+    if (!isAuthenticated) {
+      toast({
+        title: t('auth:loginRequired', 'Login Required'),
+        description: t('auth:loginToRate', 'You must be logged in to rate servers.'),
+        variant: 'destructive',
+      });
+      signIn();
+      return;
+    }
     setRateServer({
       name: item.name,
       source: item.source,

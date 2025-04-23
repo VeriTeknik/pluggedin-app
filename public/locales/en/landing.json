@@ -66,6 +66,10 @@
       "visualPlaceholder": "Visual showing server sharing/ratings",
       "content": "Build custom capabilities using our Python editor and integrated development environment. Extend your AI with specialized functionalities.",
       "action": "Create Custom Tools"
+    },
+    "langchainAbstraction": {
+      "title": "Test Any Model: Langchain Abstraction",
+      "description": "Plugged.in uses the Langchain abstraction layer so you can test your MCP servers with Claude, GPT, Llama, and more—all from a single interface. Instantly compare models, future-proof your workflow, and experience true model-agnostic AI."
     }
   },
   "community": {

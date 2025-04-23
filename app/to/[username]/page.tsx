@@ -124,4 +124,4 @@ export default async function ProfilePage({ params, searchParams }: PageProps) {
       />
     </div>
   );
-}
+} 
