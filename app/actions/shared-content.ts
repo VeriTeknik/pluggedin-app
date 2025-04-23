@@ -138,3 +138,55 @@ export async function getFormattedSharedServersForUser(
     return {}; // Return empty on error
   }
 }
+
+/**
+ * Fetches the top N public community MCP servers for unauthenticated discovery (e.g., /to/ page).
+ * @param limit Number of servers to fetch (default: 6)
+ * @returns A promise resolving to a SearchIndex object.
+ */
+export async function getTopCommunitySharedServers(limit: number = 6): Promise<SearchIndex> {
+  try {
+    // Join shared servers with profiles, projects, and users for attribution
+    const sharedServers = await db
+      .select({
+        sharedServer: sharedMcpServersTable,
+        profile: profilesTable,
+        user: users,
+      })
+      .from(sharedMcpServersTable)
+      .innerJoin(profilesTable, eq(sharedMcpServersTable.profile_uuid, profilesTable.uuid))
+      .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+      .innerJoin(users, eq(projectsTable.user_id, users.id))
+      .where(eq(sharedMcpServersTable.is_public, true))
+      .orderBy(desc(sharedMcpServersTable.created_at))
+      .limit(limit);
+
+    const formattedResults: SearchIndex = {};
+    for (const { sharedServer, user } of sharedServers) {
+      const template = sharedServer.template as any;
+      formattedResults[sharedServer.uuid] = {
+        name: sharedServer.title,
+        description: sharedServer.description || '',
+        source: McpServerSource.COMMUNITY,
+        external_id: sharedServer.uuid,
+        command: template.command || '',
+        args: template.args || [],
+        envs: template.env ? Object.keys(template.env) : [],
+        url: template.url ?? undefined,
+        rating: undefined, // Not fetched here for performance
+        ratingCount: undefined,
+        shared_by: user?.username || 'Unknown User',
+        shared_by_profile_url: user?.username ? `/to/${user.username}` : null,
+        githubUrl: null,
+        package_name: null,
+        github_stars: null,
+        package_registry: null,
+        package_download_count: null,
+      };
+    }
+    return formattedResults;
+  } catch (error) {
+    console.error('Error fetching top community shared servers:', error);
+    return {};
+  }
+}
