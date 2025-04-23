@@ -29,7 +29,6 @@ interface ProfileTabsProps {
 }
 
 export function ProfileTabs({ 
-  isOwner, 
   username 
 }: ProfileTabsProps) {
   const { t } = useTranslation();

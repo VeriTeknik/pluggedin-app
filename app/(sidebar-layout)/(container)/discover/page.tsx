@@ -46,8 +46,7 @@ export default function DiscoverPage() {
   const [followingUsers, setFollowingUsers] = useState<User[]>([]); // State for followed users
   const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]); // State for suggested users
   // Removed sharedServers state
-  const [sharedCollections, setSharedCollections] = useState<SharedCollection[]>([]);
-  const [embeddedChats, setEmbeddedChats] = useState<EmbeddedChat[]>([]);
+  const [embeddedChats] = useState<EmbeddedChat[]>([]);
   const [serverOffset, setServerOffset] = useState(
     parseInt(searchParams.get('serverOffset') || '0')
   ); // Added state for server pagination
@@ -90,7 +89,7 @@ export default function DiscoverPage() {
   }, [currentUserId, toast]); // Depend on currentUserId
 
   // Fetch Installed Servers for the current profile
-  const { data: installedServersData, isLoading: isLoadingInstalled } = useSWR(
+  const { data: installedServersData } = useSWR(
     profileUuid ? `${profileUuid}/installed-mcp-servers` : null,
     async () => (profileUuid ? getMcpServers(profileUuid) : Promise.resolve([]))
   );
@@ -113,8 +112,7 @@ export default function DiscoverPage() {
   const {
     data: communityServersData,
     error: communityServersError,
-    isLoading: isLoadingCommunityServers,
-    mutate: mutateCommunityServers
+    isLoading: isLoadingCommunityServers
   } = useSWR(
     session?.user ? communityServersApiUrl : null, // Only fetch if user is authenticated
     async (url: string) => {

@@ -11,7 +11,7 @@
     "title": "AI 的十字路口",
     "subtitle": "通过统一平台连接、创建和扩展您的 AI 能力。构建和管理增强您 AI 工作流程的插件。",
     "headline": "连接、共享和发现 MCP 服务器",
-    "subheadline": "机器对话协议的社区中心和通用代理",
+    "subheadline": "Model Context Protocol 的社区中心和通用代理",
     "analogy": "\"一个 MCP 代理统治所有 MCP\"",
     "openSource": "自豪地开源",
     "cta": {
@@ -66,6 +66,10 @@
       "visualPlaceholder": "显示服务器共享/评分的视觉效果",
       "content": "使用我们的 Python 编辑器和集成开发环境构建自定义功能。通过专业功能扩展您的 AI。",
       "action": "创建自定义工具"
+    },
+    "langchainAbstraction": {
+      "title": "测试任意模型：Langchain 抽象层",
+      "description": "Plugged.in 使用 Langchain 抽象层，您可以通过一个界面用 Claude、GPT、Llama 等多种模型测试您的 MCP 服务器。即时对比模型，为您的工作流做好未来准备，体验真正的模型无关 AI。"
     }
   },
   "community": {
@@ -117,7 +121,8 @@
     "feature3Title": "快速原型设计",
     "feature3Desc": "在部署前实验不同的服务器配置和工具实现。",
     "visualPlaceholder": "演练场环境的视觉表示",
-    "imagePlaceholder": "图片：演练场/调试模型"
+    "imagePlaceholder": "图片：演练场/调试模型",
+    "langchainCallout": "<0>用任意模型测试：</0>得益于我们的<1>Langchain 抽象层</1>，您可以在同一个演练场用 Claude、GPT、Llama 等多种模型测试您的 MCP 服务器。即时对比模型，体验真正的模型无关 AI。"
   },
   "collections": {
     "title": "组织您的 MCP 生态系统",

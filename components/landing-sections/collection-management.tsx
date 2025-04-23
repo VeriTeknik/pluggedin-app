@@ -29,17 +29,6 @@ const terminalVariants = {
 export function LandingCollectionManagement() {
   const { t } = useTranslation(); // Use default hook
 
-  // Placeholder command examples
-  const exampleCommands = `
-# Create a new collection for your project
-pluggedin collection create my-project-servers
-
-# Add a server to the collection
-pluggedin server add --collection my-project-servers --name "My API Server" --url http://...
-
-# Organize collections into workspaces
-pluggedin workspace add-collection --workspace development --collection my-project-servers
-  `.trim();
 
   return (
     <motion.section

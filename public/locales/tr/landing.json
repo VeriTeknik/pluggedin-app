@@ -11,7 +11,7 @@
     "title": "Yapay Zeka Kavşağı",
     "subtitle": "Birleşik bir platformla yapay zeka yeteneklerinizi bağlayın, oluşturun ve genişletin. Yapay zeka iş akışlarınızı geliştiren eklentiler oluşturun ve yönetin.",
     "headline": "MCP Sunucularını Bağlayın, Paylaşın ve Keşfedin",
-    "subheadline": "Makine Konuşma Protokolü için topluluk merkezi ve evrensel proxy",
+    "subheadline": "Model Context Protocol için topluluk merkezi ve evrensel proxy",
     "analogy": "\"Tüm MCP'lere hükmedecek tek bir MCP proxy'si\"",
     "openSource": "Gururla Açık Kaynak",
     "cta": {
@@ -66,6 +66,10 @@
       "visualPlaceholder": "Sunucu paylaşımını/derecelendirmelerini gösteren görsel",
       "content": "Python düzenleyicimizi ve entegre geliştirme ortamımızı kullanarak özel yetenekler oluşturun. Yapay zekanızı özel işlevlerle genişletin.",
       "action": "Özel Araçlar Oluşturun"
+    },
+    "langchainAbstraction": {
+      "title": "Her Modelde Test: Langchain Soyutlaması",
+      "description": "Plugged.in, Langchain soyutlama katmanını kullanır; böylece MCP sunucularınızı Claude, GPT, Llama ve daha fazlasıyla tek bir arayüzden test edebilirsiniz. Modelleri anında karşılaştırın, iş akışınızı geleceğe hazırlayın ve gerçek modelden bağımsız yapay zekayı deneyimleyin."
     }
   },
   "community": {
@@ -117,7 +121,8 @@
     "feature3Title": "Hızlı Prototipleme",
     "feature3Desc": "Dağıtımdan önce farklı sunucu yapılandırmaları ve araç uygulamalarıyla deney yapın.",
     "visualPlaceholder": "Oyun alanı ortamının görsel temsili",
-    "imagePlaceholder": "Resim: Oyun Alanı/Hata Ayıklama Mockup"
+    "imagePlaceholder": "Resim: Oyun Alanı/Hata Ayıklama Mockup",
+    "langchainCallout": "<0>Her Modelde Test Edin:</0> <1>Langchain soyutlaması</1> sayesinde MCP sunucularınızı Claude, GPT, Llama ve daha fazlasıyla tek bir oyun alanında test edebilirsiniz. Modelleri anında karşılaştırın ve gerçek modelden bağımsız yapay zekayı deneyimleyin."
   },
   "collections": {
     "title": "MCP Ekosisteminizi Düzenleyin",

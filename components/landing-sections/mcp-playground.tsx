@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import { Beaker, Bug, Terminal } from 'lucide-react'; // Example icons
 import Image from 'next/image';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 
 // TODO: Integrate MagicUI components when available:
 // - Terminal component
@@ -40,6 +40,15 @@ export function LandingMcpPlayground() {
       viewport={{ once: true, amount: 0.2 }}
     >
       <div className="container mx-auto px-4">
+        {/* Langchain Abstraction Callout */}
+        <div className="mb-8 flex items-center justify-center">
+          <div className="rounded-lg bg-primary/10 text-primary px-4 py-3 text-center max-w-xl w-full border border-primary/20 shadow-sm">
+            <Trans i18nKey="playground.langchainCallout" ns="landing">
+              <strong>Test with Any Model:</strong> Thanks to our <span className="font-semibold">Langchain abstraction</span>, you can test your MCP servers with Claude, GPT, Llama, and more—all from a single playground. Instantly compare models and experience true model-agnostic AI.
+            </Trans>
+          </div>
+        </div>
+
         <motion.div className="mb-12 text-center max-w-2xl mx-auto" variants={textVariants}>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             {t('playground.title', 'Test & Debug with MCP Playground')} {/* Use key relative to 'landing' namespace */}

@@ -11,7 +11,7 @@ import { LandingFeaturesOverview } from '@/components/landing-sections/features-
 import { LandingHeroSection } from '@/components/landing-sections/hero'; // New Hero
 import { LandingMcpPlayground } from '@/components/landing-sections/mcp-playground';
 import { LandingSearchFunctionality } from '@/components/landing-sections/search-functionality';
-import { LandingTestimonials } from '@/components/landing-sections/testimonials';
+//import { LandingTestimonials } from '@/components/landing-sections/testimonials';   // TODO: Add testimonials when we have them
 
 export default function Home() {
   const { t, ready } = useTranslation(); // Keep ready check for i18n loading
@@ -32,7 +32,7 @@ export default function Home() {
         <LandingCollectionManagement />
         <LandingSearchFunctionality />
         <LandingMcpPlayground />
-        <LandingTestimonials />
+        {/* <LandingTestimonials /> */}
         <LandingCta />
       </main>
       <Footer />

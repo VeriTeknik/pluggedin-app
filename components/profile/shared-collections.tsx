@@ -36,8 +36,8 @@ export function SharedCollections({ collections, isLoading = false, currentUserI
   const [deletingCollection, setDeletingCollection] = useState<string | null>(null);
 
   const handleDelete = async (collection: SharedCollection) => {
-    if (!collection.profile_uuid) return;
-    
+    const isOwner = !!currentUserId && currentUserId === collection.profile?.project?.user?.id;
+    if (!collection.profile_uuid || !isOwner) return;
     setDeletingCollection(collection.uuid);
     try {
       const result = await unshareCollection(collection.profile_uuid, collection.uuid);
@@ -95,7 +95,7 @@ export function SharedCollections({ collections, isLoading = false, currentUserI
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
       {collections.map((collection) => {
-        const isOwner = currentUserId === collection.profile?.project?.user?.id;
+        const isOwner = !!currentUserId && currentUserId === collection.profile?.project?.user?.id;
         return (
           <Card key={collection.uuid} className="flex flex-col">
             <CardHeader className="pb-2">

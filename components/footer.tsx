@@ -5,11 +5,9 @@ import Image from 'next/image';
 import Link from 'next/link';
 
 import { Separator } from '@/components/ui/separator';
-import { useThemeLogo } from '@/hooks/use-theme-logo';
 import { cn } from '@/lib/utils';
 
 export function Footer({ className }: { className?: string }) {
-  const { logoSrc } = useThemeLogo();
   const year = new Date().getFullYear();
 
   return (

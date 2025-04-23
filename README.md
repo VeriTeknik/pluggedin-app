@@ -13,7 +13,7 @@
 
 ## 📋 Overview
 
-The plugged.in App is a comprehensive web application for managing Machine Conversation Protocol (MCP) servers. It works in conjunction with the [plugged.in MCP Proxy](https://github.com/VeriTeknik/pluggedin-mcp) to provide a unified interface for discovering, configuring, and utilizing AI tools across multiple MCP servers.
+The plugged.in App is a comprehensive web application for managing Model Context Protocol (MCP) servers. It works in conjunction with the [plugged.in MCP Proxy](https://github.com/VeriTeknik/pluggedin-mcp) to provide a unified interface for discovering, configuring, and utilizing AI tools across multiple MCP servers.
 
 This application enables seamless integration with any MCP client (Claude, Cline, Cursor, etc.) while providing advanced management capabilities through an intuitive web interface.
 
@@ -264,7 +264,7 @@ The plugged.in App is designed to work seamlessly with the [plugged.in MCP Proxy
 ## 📚 Related Resources
 
 - [plugged.in MCP Proxy Repository](https://github.com/VeriTeknik/pluggedin-mcp)
-- [Machine Conversation Protocol (MCP) Specification](https://modelcontextprotocol.io/)
+- [Model Context Protocol (MCP) Specification](https://modelcontextprotocol.io/)
 - [Claude Desktop Documentation](https://docs.anthropic.com/claude/docs/claude-desktop)
 - [Cline Documentation](https://docs.cline.bot/)
 

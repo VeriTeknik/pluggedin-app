@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { useMounted } from '@/hooks/use-mounted';
+import { useGithubStars } from '@/hooks/useGithubStars';
 import { cn } from '@/lib/utils';
 
 // TODO: Integrate MagicUI components when available:
@@ -16,6 +17,7 @@ import { cn } from '@/lib/utils';
 export function LandingHeroSection() {
   const mounted = useMounted();
   const { t, ready } = useTranslation('landing');
+  const stars = useGithubStars('VeriTeknik/pluggedin-app');
 
   // Don't render until translations are ready and component is mounted
   if (!mounted || !ready) {
@@ -85,14 +87,32 @@ export function LandingHeroSection() {
         </div>
 
         {/* Open Source Mention */}
-        <p
+        <div
           className={cn(
-            'mt-6 text-xs text-muted-foreground transition-all duration-700 delay-500 ease-in-out',
+            'mt-6 flex flex-col items-center text-xs text-muted-foreground transition-all duration-700 delay-500 ease-in-out',
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           )}
         >
-          {t('hero.openSource')}
-        </p>
+          <span>{t('hero.openSource')}</span>
+          <a
+            href="https://github.com/VeriTeknik/pluggedin-app"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 underline hover:text-primary mt-1"
+          >
+            <svg
+              width="16"
+              height="16"
+              fill="currentColor"
+              viewBox="0 0 16 16"
+              className="inline-block"
+              aria-hidden="true"
+            >
+              <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.01.08-2.11 0 0 .67-.21 2.2.82a7.65 7.65 0 0 1 2-.27c.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.91.08 2.11.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.19 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"/>
+            </svg>
+            {stars !== null ? stars : '...'} stars
+          </a>
+        </div>
       </div>
     </section>
   );

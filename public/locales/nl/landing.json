@@ -11,7 +11,7 @@
     "title": "Het AI-kruispunt",
     "subtitle": "Verbind, creëer en breid uw AI-mogelijkheden uit met een uniform platform. Bouw en beheer plug-ins die uw AI-workflows verbeteren.",
     "headline": "Verbind, deel en ontdek MCP Servers",
-    "subheadline": "De community hub en universele proxy voor het Machine Conversation Protocol",
+    "subheadline": "Het communityplatform en universele proxy voor het Model Context Protocol",
     "analogy": "\"Eén MCP-proxy om alle MCP's te regeren\"",
     "openSource": "Trots Open Source",
     "cta": {
@@ -66,6 +66,10 @@
       "visualPlaceholder": "Visualisatie van server delen/beoordelingen",
       "content": "Bouw aangepaste mogelijkheden met onze Python-editor en geïntegreerde ontwikkelomgeving. Breid uw AI uit met gespecialiseerde functionaliteiten.",
       "action": "Aangepaste tools maken"
+    },
+    "langchainAbstraction": {
+      "title": "Test elk model: Langchain Abstractie",
+      "description": "Plugged.in gebruikt de Langchain abstractielaag zodat u uw MCP-servers kunt testen met Claude, GPT, Llama en meer—allemaal vanuit één interface. Vergelijk modellen direct, maak uw workflow toekomstbestendig en ervaar echt model-agnostische AI."
     }
   },
   "community": {
@@ -117,7 +121,8 @@
     "feature3Title": "Snelle prototyping",
     "feature3Desc": "Experimenteer met verschillende serverconfiguraties en tool-implementaties vóór implementatie.",
     "visualPlaceholder": "Visuele weergave van de playground-omgeving",
-    "imagePlaceholder": "Afbeelding: Playground/Debugging Mockup"
+    "imagePlaceholder": "Afbeelding: Playground/Debugging Mockup",
+    "langchainCallout": "<0>Test met elk model:</0> Dankzij onze <1>Langchain-abstractie</1> kunt u uw MCP-servers testen met Claude, GPT, Llama en meer—allemaal vanuit één playground. Vergelijk modellen direct en ervaar echt model-agnostische AI."
   },
   "collections": {
     "title": "Organiseer uw MCP-ecosysteem",

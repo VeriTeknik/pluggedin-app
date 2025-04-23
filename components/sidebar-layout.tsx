@@ -73,7 +73,12 @@ export default function SidebarLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { codes, createCode, deleteCode } = useCodes();
+  const { isAuthenticated } = useProjects();
+  // Always call useCodes, but only use its values if authenticated
+  const codesHook = useCodes();
+  const codes = isAuthenticated ? codesHook.codes : [];
+  const createCode = isAuthenticated ? codesHook.createCode : undefined;
+  const deleteCode = isAuthenticated ? codesHook.deleteCode : undefined;
   const [open, setOpen] = React.useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [selectedCodeUuid, setSelectedCodeUuid] = React.useState<string | null>(
@@ -82,7 +87,6 @@ export default function SidebarLayout({
   const [fileName, setFileName] = React.useState('');
   const { toast } = useToast();
   const { logoSrc } = useThemeLogo();
-  const { isAuthenticated } = useProjects();
   const [mounted, setMounted] = useState(false);
   const { t } = useTranslation();
   
@@ -130,7 +134,7 @@ export default function SidebarLayout({
   }
 
   const handleCreateCode = async () => {
-    if (fileName.trim()) {
+    if (fileName.trim() && createCode) {
       await createCode(fileName, '');
       setFileName('');
       setOpen(false);
@@ -373,7 +377,7 @@ export default function SidebarLayout({
               <Button
                 variant='destructive'
                 onClick={async () => {
-                  if (selectedCodeUuid) {
+                  if (selectedCodeUuid && deleteCode) {
                     try {
                       await deleteCode(selectedCodeUuid);
                       setDeleteDialogOpen(false);

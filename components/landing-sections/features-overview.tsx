@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Blocks, Box, Search, Share2, TerminalSquare } from 'lucide-react'; // Example icons
+import { Blocks, Box, Layers, Search, Share2, TerminalSquare } from 'lucide-react'; // Example icons
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,11 @@ interface Feature {
 
 // Placeholder feature data - update with actual keys and content
 const features: Feature[] = [
+  {
+    icon: Layers,
+    titleKey: 'features.langchainAbstraction.title',
+    descriptionKey: 'features.langchainAbstraction.description'
+  },
   {
     icon: Share2,
     titleKey: 'features.communitySharing.title',

@@ -24,8 +24,7 @@ const nextConfig: NextConfig = {
   },
   // Fix for dynamic server usage error
   staticPageGenerationTimeout: 120, // Increase timeout for static page generation
-  // Configure dynamic routes
-  dynamicParams: true, // Allow dynamic parameters in routes
+  
   webpack: (config: WebpackConfig, { isServer }: WebpackConfigContext) => {
     // Force Next.js to use the native Node.js fetch
     if (!isServer) {

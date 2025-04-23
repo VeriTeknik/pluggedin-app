@@ -11,7 +11,7 @@
     "title": "AIの交差点",
     "subtitle": "統一されたプラットフォームでAI機能を接続、作成、拡張します。AIワークフローを強化するプラグインを構築および管理します。",
     "headline": "MCPサーバーを接続、共有、発見",
-    "subheadline": "マシン会話プロトコルのためのコミュニティハブおよびユニバーサルプロキシ",
+    "subheadline": "Model Context Protocol のためのコミュニティハブおよびユニバーサルプロキシ",
     "analogy": "\"すべてのMCPを支配する一つのMCPプロキシ\"",
     "openSource": "誇りを持ってオープンソース",
     "cta": {
@@ -66,6 +66,10 @@
       "visualPlaceholder": "サーバー共有/評価を示すビジュアル",
       "content": "Pythonエディターと統合開発環境を使用してカスタム機能を構築します。特殊な機能でAIを拡張します。",
       "action": "カスタムツールを作成"
+    },
+    "langchainAbstraction": {
+      "title": "あらゆるモデルをテスト: Langchain抽象化",
+      "description": "Plugged.inはLangchain抽象化レイヤーを使用しているため、Claude、GPT、Llamaなど、さまざまなモデルでMCPサーバーを1つのインターフェースからテストできます。モデルを即座に比較し、ワークフローを将来に備え、本当のモデル非依存AIを体験しましょう。"
     }
   },
   "community": {
@@ -117,7 +121,8 @@
     "feature3Title": "迅速なプロトタイピング",
     "feature3Desc": "展開前にさまざまなサーバー構成とツール実装を実験します。",
     "visualPlaceholder": "プレイグラウンド環境の視覚的表現",
-    "imagePlaceholder": "画像：プレイグラウンド/デバッグモックアップ"
+    "imagePlaceholder": "画像：プレイグラウンド/デバッグモックアップ",
+    "langchainCallout": "<0>あらゆるモデルでテスト:</0> 私たちの<1>Langchain抽象化</1>のおかげで、Claude、GPT、Llamaなど、さまざまなモデルでMCPサーバーを1つのプレイグラウンドからテストできます。モデルを即座に比較し、本当のモデル非依存AIを体験しましょう。"
   },
   "collections": {
     "title": "MCPエコシステムを整理",
