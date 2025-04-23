@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { useGithubStars } from '@/hooks/useGithubStars';
 import { useMounted } from '@/hooks/use-mounted';
+import { useGithubStars } from '@/hooks/useGithubStars';
 import { cn } from '@/lib/utils';
 
 // TODO: Integrate MagicUI components when available:

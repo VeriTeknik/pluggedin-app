@@ -1,6 +1,8 @@
 import { sql } from 'drizzle-orm';
-import Link from 'next/link';
 import { User2 } from 'lucide-react';
+import Image from 'next/image';
+import Link from 'next/link';
+
 import { db } from '@/db';
 import { users } from '@/db/schema';
 
@@ -29,7 +31,14 @@ export default async function ToDirectoryPage() {
           <Link key={user.username} href={`/to/${user.username}`}>
             <div className="p-4 border rounded hover:shadow flex flex-col items-center">
               {user.image ? (
-                <img src={user.image} alt={user.name || user.username} className="w-16 h-16 rounded-full mb-2" />
+                <Image
+                  src={user.image}
+                  alt={user.name || user.username}
+                  width={64}
+                  height={64}
+                  className="w-16 h-16 rounded-full mb-2"
+                  unoptimized
+                />
               ) : (
                 <User2 className="w-16 h-16 text-gray-400 mb-2" />
               )}

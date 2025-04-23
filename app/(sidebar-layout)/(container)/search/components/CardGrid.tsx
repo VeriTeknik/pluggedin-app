@@ -18,10 +18,10 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { McpServerSource, McpServerType } from '@/db/schema';
+import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { McpServerCategory, SearchIndex } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
-import { useAuth } from '@/hooks/use-auth';
 
 import { InstallDialog } from './InstallDialog';
 import { RateServerDialog } from './RateServerDialog';
