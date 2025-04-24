@@ -297,6 +297,9 @@ export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool
       { method: 'tools/list', params: {} },
       ListToolsResultSchema
     );
+    
+    // Return tools as-is without transforming names
+    // This ensures compatibility with clients that expect original tool names
     return result.tools || [];
   } catch (error) {
     console.error(`[MCP Wrapper] Error listing tools from ${serverConfig.name || serverConfig.uuid}:`, error);

@@ -77,7 +77,7 @@ export async function discoverSingleServerTools(
             console.log(`[Action] Inserting ${discoveredTools.length} new tools...`);
             const toolsToInsert = discoveredTools.map(tool => ({
                 mcp_server_uuid: serverUuid,
-                name: tool.name,
+                name: tool.name, // Keep original name without transformation
                 description: tool.description,
                 // Ensure inputSchema is stored correctly as JSONB
                 toolSchema: tool.inputSchema as any, // Cast if necessary, Drizzle handles JSONB

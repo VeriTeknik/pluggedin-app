@@ -13,17 +13,19 @@ type McpTool = {
   name: string;
   description?: string;
   inputSchema: any; // Keep as any for now, assuming DB stores valid JSON schema
+  _serverName?: string; // Add server name for proxy routing
   // Add other fields from MCP spec if needed, e.g., annotations
 };
 
 
 /**
  * Simple sanitization for creating a server name prefix.
+ * Modified to preserve original tool names by using a delimiter that doesn't break MCP calls.
  */
 function sanitizeServerNameForPrefix(name: string | null | undefined): string {
-  if (!name) return 'unknown_server'; // Fallback prefix
-  // Basic sanitization: lowercase, replace non-alphanumeric with underscore, trim underscores
-  return name.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+  if (!name) return 'unknown-server'; // Fallback prefix - using hyphen instead of underscore
+  // Use hyphens instead of underscores as delimiters to avoid breaking MCP tool names
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
 
@@ -130,13 +132,15 @@ export async function GET(request: Request) {
 
     // Map results to include prefixed names and _serverUuid
     const formattedTools: (McpTool & { _serverUuid: string })[] = results.map((tool: DbTool) => { // Use DbTool type
-        const prefix = sanitizeServerNameForPrefix(tool.serverName);
-        const prefixedName = `${prefix}_${tool.name}`;
+        // Only add prefixes if needed - for now, let's keep original tool names
+        // This is critical for compatibility with existing clients like VS Code extensions
         return {
-            name: prefixedName,
+            name: tool.name, // Keep original name without prefix
             description: tool.description ?? undefined,
             inputSchema: tool.toolSchema as any, // Assuming toolSchema is the correct JSON schema structure
             _serverUuid: tool.mcp_server_uuid, // Add the original server UUID
+            // Add a metadata field to help the proxy identify which server to route to
+            _serverName: tool.serverName ?? undefined
         };
     });
 
