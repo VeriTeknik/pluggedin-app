@@ -136,6 +136,34 @@ export async function POST(req: NextRequest) {
       updated_at: new Date(),
     });
     
+        
+    // Send admin notification email
+    const adminRecipients = [
+      'cem.karaca@gmail.com',
+      'emirolgun@gmail.com'
+    ];
+
+    const adminEmailContent = `
+      <h2>New User Registration</h2>
+      <p>A new user has registered on Plugged.in:</p>
+      <ul>
+        <li><strong>Name:</strong> ${data.name}</li>
+        <li><strong>Email:</strong> ${data.email}</li>
+        <li><strong>Registration Time:</strong> ${new Date().toLocaleString()}</li>
+      </ul>
+    `;
+
+    // Send to all admin recipients
+    const adminEmailPromises = adminRecipients.map(recipient => 
+      sendEmail({
+        to: recipient,
+        subject: `New User Registration: ${data.name}`,
+        html: adminEmailContent
+      })
+    );
+
+    await Promise.all(adminEmailPromises);
+    
     // Store the verification token
     await db.insert(verificationTokens).values({
       identifier: data.email,

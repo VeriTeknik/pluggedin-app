@@ -7,11 +7,28 @@ import { db } from '@/db';
 import { accounts, apiKeysTable, customMcpServersTable,mcpServersTable, profilesTable, projectsTable, sessions, users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
-export async function DELETE(_req: Request) { // Prefix unused req with _
+export async function DELETE(_req: Request) {
   try {
     const session = await getAuthSession();
     if (!session?.user) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
+    // Verify user exists before attempting deletion
+    const userExists = await db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+    });
+
+    if (!userExists) {
+      // If user doesn't exist, clear their session
+      await db.delete(sessions).where(eq(sessions.userId, session.user.id));
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
     }
 
     // Start a transaction to ensure all deletions succeed or none do
@@ -72,7 +89,7 @@ export async function DELETE(_req: Request) { // Prefix unused req with _
           const avatarPath = join(process.cwd(), 'public', session.user.image);
           await unlink(avatarPath);
         } catch (error) {
-          // Ignore file deletion errors
+          // Log but don't fail the deletion if avatar deletion fails
           console.error('Failed to delete avatar file:', error);
         }
       }
@@ -83,10 +100,17 @@ export async function DELETE(_req: Request) { // Prefix unused req with _
         .where(eq(users.id, session.user.id));
     });
 
-    return NextResponse.json({ message: 'Account deleted successfully' });
+    // Clear the session cookie
+    const response = NextResponse.json({ success: true });
+    response.cookies.delete('next-auth.session-token');
+    response.cookies.delete('__Secure-next-auth.session-token');
+    return response;
   } catch (error) {
     console.error('Account deletion error:', error);
-    return new NextResponse('Internal Server Error', { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to delete account. Please try again later.' },
+      { status: 500 }
+    );
   }
 }
 

@@ -209,8 +209,8 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || t('settings.account.error'));
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || t('settings.account.error'));
       }
 
       // Clear any session data
