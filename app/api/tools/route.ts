@@ -1,11 +1,11 @@
-import { and, eq, type InferSelectModel,sql } from 'drizzle-orm'; // Consolidated drizzle imports
+import { and, eq, type InferSelectModel, sql } from 'drizzle-orm'; // Removed unused isNull, kept sql
 import { NextResponse } from 'next/server';
 
+import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Moved up
+import { authenticateApiKey } from '@/app/api/auth'; // Moved up
 import { db } from '@/db';
 import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema';
 
-import { authenticateApiKey } from '../auth';
-// Removed direct SDK type import
 
 // Infer Tool type from DB schema and define expected MCP Tool structure
 type DbTool = InferSelectModel<typeof toolsTable> & { serverName: string | null }; // Add serverName from join
@@ -89,28 +89,78 @@ function validateToolStatus(status: string | undefined): ToggleStatus {
  */
 export async function GET(request: Request) {
   try {
+    // 1. Authenticate API Key and get active profile
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
+    const profileUuid = auth.activeProfile.uuid;
 
+    let discoveryTriggered = false;
+    const serversBeingDiscovered: string[] = []; // Changed to const
+
+    // 2. Fetch ACTIVE MCP servers for the profile to check for discovery needs
+    const activeServers = await db.query.mcpServersTable.findMany({
+      where: and(
+        eq(mcpServersTable.profile_uuid, profileUuid),
+        eq(mcpServersTable.status, McpServerStatus.ACTIVE)
+      ),
+      columns: { uuid: true, name: true },
+    });
+
+    // 3. Check each active server for existing tools and trigger discovery if needed
+    // Use Promise.allSettled for better handling if many discoveries are triggered
+    const discoveryChecks = activeServers.map(async (server) => {
+      try {
+        const existingToolsCountResult = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(toolsTable)
+          .where(and(
+            // eq(toolsTable.profile_uuid, profileUuid), // This was the error - profile_uuid is not directly on toolsTable
+            eq(toolsTable.mcp_server_uuid, server.uuid) // We already know the server belongs to the profile from the activeServers query
+          ))
+          .limit(1);
+
+        const count = existingToolsCountResult[0]?.count ?? 0;
+
+        // 4. Trigger discovery if server is active but has no tools
+        if (count === 0) {
+          console.log(`[API /api/tools] No tools found for active server ${server.name || 'Unnamed'} (${server.uuid}). Triggering discovery.`);
+          discoveryTriggered = true; // Set flag (note: race condition possible if multiple requests hit this, but acceptable for now)
+          serversBeingDiscovered.push(server.name || server.uuid);
+
+          // Trigger discovery asynchronously (fire-and-forget)
+          discoverSingleServerTools(profileUuid, server.uuid).catch(err => {
+            console.error(`[API /api/tools] Background discovery failed for ${server.uuid}:`, err);
+            // Optionally update server status back to ACTIVE or ERROR in DB
+          });
+        }
+      } catch (checkError) {
+         console.error(`[API /api/tools] Error checking tools for server ${server.uuid}:`, checkError);
+         // Decide how to handle check errors, maybe log and continue
+      }
+    });
+
+    // Wait for all checks to initiate (or fail) before proceeding
+    // This doesn't wait for discovery itself, just the check and trigger step
+    await Promise.allSettled(discoveryChecks);
+
+
+    // --- Now, fetch the tools based on the original request parameters ---
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status'); // e.g., 'ACTIVE' or 'INACTIVE'
+    const statusParam = searchParams.get('status'); // e.g., 'ACTIVE' or 'INACTIVE'
 
-    // Base conditions: filter by the authenticated user's active profile AND ensure parent server is ACTIVE
-    const conditions = [
-      eq(mcpServersTable.profile_uuid, auth.activeProfile.uuid),
-      eq(mcpServersTable.status, McpServerStatus.ACTIVE) // Filter by parent server status
+    // Base conditions for fetching tools: filter by the authenticated user's active profile AND ensure parent server is ACTIVE
+    const fetchConditions = [
+      eq(mcpServersTable.profile_uuid, profileUuid),
+      eq(mcpServersTable.status, McpServerStatus.ACTIVE) // Only fetch tools from ACTIVE servers
     ];
 
     // Add tool status filter if provided and valid
-    if (status && Object.values(ToggleStatus).includes(status as ToggleStatus)) {
-      conditions.push(eq(toolsTable.status, status as ToggleStatus));
-    } else {
-      // Default to fetching only ACTIVE tools if no specific status is requested
-      conditions.push(eq(toolsTable.status, ToggleStatus.ACTIVE));
-    }
+    const validatedStatus = validateToolStatus(statusParam ?? undefined); // Use helper
+    fetchConditions.push(eq(toolsTable.status, validatedStatus));
 
-    // Perform the query joining tools and servers tables
-    const results: DbTool[] = await db // Add DbTool type annotation
+
+    // Perform the query joining tools and servers tables to get current tools
+    const currentToolsDb: DbTool[] = await db
       .select({
         // Select ALL columns from toolsTable to match DbTool type
         uuid: toolsTable.uuid,
@@ -120,35 +170,47 @@ export async function GET(request: Request) {
         created_at: toolsTable.created_at,
         mcp_server_uuid: toolsTable.mcp_server_uuid,
         status: toolsTable.status,
-        // Select server name for prefix
+        // Select server name for prefix/metadata
         serverName: mcpServersTable.name,
       })
       .from(toolsTable)
       .innerJoin(
         mcpServersTable,
-        eq(toolsTable.mcp_server_uuid, mcpServersTable.uuid) // Correct join condition
+        eq(toolsTable.mcp_server_uuid, mcpServersTable.uuid)
       )
-      .where(and(...conditions));
+      .where(and(...fetchConditions));
 
-    // Map results to include prefixed names and _serverUuid
-    const formattedTools: (McpTool & { _serverUuid: string })[] = results.map((tool: DbTool) => { // Use DbTool type
-        // Only add prefixes if needed - for now, let's keep original tool names
-        // This is critical for compatibility with existing clients like VS Code extensions
+    // Map results to the expected MCP format
+    const formattedTools: (McpTool & { _serverUuid: string })[] = currentToolsDb.map((tool: DbTool) => {
         return {
-            name: tool.name, // Keep original name without prefix
+            name: tool.name, // Keep original name
             description: tool.description ?? undefined,
-            inputSchema: tool.toolSchema as any, // Assuming toolSchema is the correct JSON schema structure
-            _serverUuid: tool.mcp_server_uuid, // Add the original server UUID
-            // Add a metadata field to help the proxy identify which server to route to
+            inputSchema: tool.toolSchema as any,
+            _serverUuid: tool.mcp_server_uuid,
             _serverName: tool.serverName ?? undefined
         };
     });
 
-    // Return the flat array of tools, as expected by the proxy's list handler
-    return NextResponse.json(formattedTools);
+    // 5. Modify Response if discovery was triggered
+    const responsePayload: { tools: (McpTool & { _serverUuid: string })[], message?: string } = {
+      tools: formattedTools, // Return whatever tools are currently known matching the filter
+    };
+
+    if (discoveryTriggered) {
+      // Use Set to avoid duplicate names if multiple requests trigger for the same server concurrently
+      const uniqueServerNames = [...new Set(serversBeingDiscovered)];
+      responsePayload.message = `Discovery initiated for servers: ${uniqueServerNames.join(', ')}. Full tool list may be available shortly.`;
+    }
+
+    const responseHeaders = new Headers();
+    if (discoveryTriggered) {
+      responseHeaders.set('X-Discovery-Status', 'pending');
+    }
+
+    return NextResponse.json(responsePayload, { headers: responseHeaders });
 
   } catch (error) {
-    console.error("Error fetching tools:", error);
+    console.error("Error in GET /api/tools:", error); // More specific error log
     return NextResponse.json(
       { error: "Internal server error while fetching tools" },
       { status: 500 }
