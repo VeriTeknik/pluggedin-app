@@ -167,6 +167,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.1.0(react@19.1.0)
+      react-dropzone:
+        specifier: ^14.3.8
+        version: 14.3.8(react@19.1.0)
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.1.1)(react@19.1.0)
@@ -3227,6 +3230,10 @@ packages:
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
 
+  attr-accept@2.2.5:
+    resolution: {integrity: sha512-0bDNnY/u6pPwHDMoF0FieU354oBi0a8rD9FcsLwzcGWbc8KS8KPIi7y+s13OlVY+gMWc/9xEMUgNE6Qm8ZllYQ==}
+    engines: {node: '>=4'}
+
   autolinker@3.16.2:
     resolution: {integrity: sha512-JiYl7j2Z19F9NdTmirENSUUIIL/9MytEWtmzhfmsKPCp9E+G35Y0UNCMoM9tFigxT59qSc8Ml2dlZXOCVTYwuA==}
 
@@ -4328,6 +4335,10 @@ packages:
   file-entry-cache@8.0.0:
     resolution: {integrity: sha512-XXTUwCvisa5oacNGRP9SfNtYBNAMi+RPwBFmblZEF7N7swHYQS6/Zfk7SRwx4D5j3CH211YNRco1DEMNVfZCnQ==}
     engines: {node: '>=16.0.0'}
+
+  file-selector@2.1.2:
+    resolution: {integrity: sha512-QgXo+mXTe8ljeqUFaX3QVHc5osSItJ/Km+xpocx0aSqWGMSCf6qYs/VnzZgS864Pjn5iceMRFigeAV7AfTlaig==}
+    engines: {node: '>= 12'}
 
   file-type@16.5.4:
     resolution: {integrity: sha512-/yFHK0aGjFEgDJjEKP0pWCplsPFPhwyfwevf/pVxiN0tmE4L9LmwWxWukdJSHdoCli4VgQLehjJtwQBnqmsKcw==}
@@ -6297,6 +6308,12 @@ packages:
     resolution: {integrity: sha512-Xs1hdnE+DyKgeHJeJznQmYMIBG3TKIHJJT95Q58nHLSrElKlGQqDTR2HQ9fx5CN/Gk6Vh/kupBTDLU11/nDk/g==}
     peerDependencies:
       react: ^19.1.0
+
+  react-dropzone@14.3.8:
+    resolution: {integrity: sha512-sBgODnq+lcA4P296DY4wacOZz3JFpD99fp+hb//iBO2HHnyeZU3FwWyXJ6salNpqQdsZrgMrotuko/BdJMV8Ug==}
+    engines: {node: '>= 10.13'}
+    peerDependencies:
+      react: '>= 16.8 || 18.0.0'
 
   react-hook-form@7.55.0:
     resolution: {integrity: sha512-XRnjsH3GVMQz1moZTW53MxfoWN7aDpUg/GpVNc4A3eXRVNdGXfbzJ4vM4aLQ8g6XCUh1nIbx70aaNCl7kxnjog==}
@@ -10497,6 +10514,8 @@ snapshots:
 
   asynckit@0.4.0: {}
 
+  attr-accept@2.2.5: {}
+
   autolinker@3.16.2:
     dependencies:
       tslib: 2.8.1
@@ -11782,6 +11801,10 @@ snapshots:
   file-entry-cache@8.0.0:
     dependencies:
       flat-cache: 4.0.1
+
+  file-selector@2.1.2:
+    dependencies:
+      tslib: 2.8.1
 
   file-type@16.5.4:
     dependencies:
@@ -14175,6 +14198,13 @@ snapshots:
     dependencies:
       react: 19.1.0
       scheduler: 0.26.0
+
+  react-dropzone@14.3.8(react@19.1.0):
+    dependencies:
+      attr-accept: 2.2.5
+      file-selector: 2.1.2
+      prop-types: 15.8.1
+      react: 19.1.0
 
   react-hook-form@7.55.0(react@19.1.0):
     dependencies:

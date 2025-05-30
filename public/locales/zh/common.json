@@ -32,6 +32,9 @@
     "delete": "删除",
     "deleting": "删除中..."
   },
+  "docs": {
+    "title": "文档"
+  },
   "releaseNotes": {
     "title": "发布说明",
     "description": "跟踪我们存储库中的最新更新和更改",

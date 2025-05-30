@@ -232,6 +232,20 @@
       "when": 1744485176404,
       "tag": "0032_condemned_sandman",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1748631607301,
+      "tag": "0033_careless_hairball",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1748638082177,
+      "tag": "0034_demonic_ghost_rider",
+      "breakpoints": true
     }
   ]
 }

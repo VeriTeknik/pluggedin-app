@@ -54,8 +54,6 @@ export type PlaygroundConfigFormValues = PlaygroundSettings & {
 
 export interface PlaygroundConfigProps {
   logsEndRef?: React.RefObject<HTMLDivElement | null>;
-  onSubmit?: (values: PlaygroundConfigFormValues) => void;
-  defaultValues?: PlaygroundConfigFormValues;
   isLoading: boolean;
   mcpServers?: McpServer[];
   clearLogs: () => void;
@@ -95,8 +93,6 @@ export function PlaygroundConfig({
   logsEndRef,
   activeTab,
   setActiveTab,
-  onSubmit,
-  defaultValues,
 }: PlaygroundConfigProps) {
   const { t } = useTranslation();
   
@@ -479,6 +475,43 @@ export function PlaygroundConfig({
                     <SelectItem value='error'>{t('playground.logLevels.error')}</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* RAG Configuration */}
+              <div className='border-t pt-4'>
+                <div className='flex items-center justify-between'>
+                  <div>
+                    <Label htmlFor='ragEnabled' className='text-sm font-medium'>
+                      Enable RAG
+                    </Label>
+                    <p className='text-xs text-muted-foreground mt-1'>
+                      Use your uploaded documents for context
+                    </p>
+                  </div>
+                  <Switch
+                    id='ragEnabled'
+                    checked={llmConfig.ragEnabled || false}
+                    onCheckedChange={async (checked) => {
+                      const updatedConfig = {
+                        ...llmConfig,
+                        ragEnabled: checked,
+                      };
+                      setLlmConfig(updatedConfig);
+                      
+                      // Auto-save settings when RAG toggle changes
+                      // Wait a bit for state to settle, then save
+                      setTimeout(async () => {
+                        try {
+                          await saveSettings();
+                          console.log('[RAG DEBUG] Settings auto-saved after RAG toggle change');
+                        } catch (error) {
+                          console.error('[RAG DEBUG] Failed to auto-save settings:', error);
+                        }
+                      }, 500);
+                    }}
+                    disabled={isSessionActive}
+                  />
+                </div>
               </div>
             </div>
           </TabsContent>

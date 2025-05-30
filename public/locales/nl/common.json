@@ -32,6 +32,9 @@
     "delete": "Verwijderen",
     "deleting": "Verwijderen..."
   },
+  "docs": {
+    "title": "Documenten"
+  },
   "releaseNotes": {
     "title": "Release Notes",
     "description": "Volg de laatste updates en wijzigingen in onze repositories",

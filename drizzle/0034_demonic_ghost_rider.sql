@@ -1,0 +1,1 @@
+ALTER TABLE "playground_settings" ADD COLUMN "rag_enabled" boolean DEFAULT false NOT NULL;

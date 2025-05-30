@@ -30,6 +30,9 @@
   "viewSchema": "Şemayı Görüntüle",
   "delete": "Sil",
   "deleting": "Siliniyor...",
+  "docs": {
+    "title": "Belgeler"
+  },
   "navigation": {
     "aiSocial": "Yapay Zeka Sosyal"
   },

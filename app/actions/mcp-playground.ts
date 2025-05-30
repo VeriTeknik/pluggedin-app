@@ -7,11 +7,15 @@ import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
+import { eq } from 'drizzle-orm';
 
 import { logAuditEvent } from '@/app/actions/audit-logger'; // Correct path alias
 import { ensureLogDirectories } from '@/app/actions/log-retention'; // Correct path alias
 import { createEnhancedMcpLogger } from '@/app/actions/mcp-server-logger'; // Correct path alias
 import { getMcpServers } from '@/app/actions/mcp-servers'; // Correct path alias
+import { getPlaygroundSettings } from '@/app/actions/playground-settings'; // Add this import
+import { db } from '@/db'; // Add this import
+import { profilesTable } from '@/db/schema'; // Add this import
 
 import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization'; // Import the new function
 
@@ -569,6 +573,33 @@ export async function getServerLogs(profileUuid: string) {
   }
 }
 
+// Helper function to get user_id from profile_uuid
+async function getUserIdFromProfile(profileUuid: string): Promise<string | null> {
+  try {
+    console.log('[RAG DEBUG] getUserIdFromProfile called with:', profileUuid);
+    
+    const profile = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, profileUuid),
+      with: {
+        project: {
+          columns: {
+            user_id: true,
+          },
+        },
+      },
+    });
+    
+    console.log('[RAG DEBUG] Profile query result:', profile);
+    console.log('[RAG DEBUG] Project data:', profile?.project);
+    console.log('[RAG DEBUG] User ID from project:', profile?.project?.user_id);
+    
+    return profile?.project?.user_id || null;
+  } catch (error) {
+    console.error('[RAG DEBUG] Error getting user_id from profile:', error);
+    return null;
+  }
+}
+
 // Execute a query against the playground agent
 export async function executePlaygroundQuery(
   profileUuid: string,
@@ -586,13 +617,73 @@ export async function executePlaygroundQuery(
     // Update last active timestamp
     session.lastActive = new Date();
 
+    console.log('[RAG DEBUG] Starting executePlaygroundQuery');
+    console.log('[RAG DEBUG] Profile UUID:', profileUuid);
+
+    // Get playground settings to check if RAG is enabled
+    const settingsResult = await getPlaygroundSettings(profileUuid);
+    console.log('[RAG DEBUG] Settings result:', settingsResult);
+    
+    let finalQuery = query;
+    
+    if (settingsResult.success && settingsResult.settings?.ragEnabled) {
+      console.log('[RAG DEBUG] RAG is enabled, proceeding with RAG query');
+      
+      // Get user_id for RAG query
+      const userId = await getUserIdFromProfile(profileUuid);
+      console.log('[RAG DEBUG] Retrieved user ID:', userId);
+      
+      if (userId) {
+        console.log('[RAG DEBUG] User ID found, querying RAG API');
+        
+        // Query RAG for relevant context
+        const ragResult = await queryRag(query, userId);
+        console.log('[RAG DEBUG] RAG result:', ragResult);
+        
+        if (ragResult.success && ragResult.context) {
+          // Prepend RAG context to the query
+          finalQuery = `Context from your documents:\n${ragResult.context}\n\nBased on the above context and your knowledge, please answer: ${query}`;
+          console.log('[RAG DEBUG] Enhanced query created, length:', finalQuery.length);
+          
+          // Log RAG usage
+          await addServerLogForProfile(
+            profileUuid,
+            'info',
+            `[RAG] Retrieved context: ${ragResult.context.slice(0, 100)}${ragResult.context.length > 100 ? '...' : ''}`
+          );
+        } else {
+          console.log('[RAG DEBUG] RAG query failed or returned no context');
+          // Log RAG failure but continue with original query
+          await addServerLogForProfile(
+            profileUuid,
+            'warn',
+            `[RAG] Failed to retrieve context: ${ragResult.error || 'Unknown error'}`
+          );
+        }
+      } else {
+        console.log('[RAG DEBUG] No user ID found for profile');
+        await addServerLogForProfile(
+          profileUuid,
+          'warn',
+          '[RAG] Could not determine user ID for RAG query'
+        );
+      }
+    } else {
+      console.log('[RAG DEBUG] RAG is disabled or settings failed to load');
+      console.log('[RAG DEBUG] Settings success:', settingsResult.success);
+      console.log('[RAG DEBUG] RAG enabled:', settingsResult.settings?.ragEnabled);
+    }
+
+    console.log('[RAG DEBUG] Final query length:', finalQuery.length);
+    console.log('[RAG DEBUG] Using original query:', finalQuery === query);
+
     // Track streaming state for partial message updates
     let currentAiMessage = '';
     let isFirstToken = true;
 
-    // Execute query with streaming enabled
+    // Execute query with streaming enabled (using finalQuery which may include RAG context)
     const agentFinalState = await session.agent.invoke(
-      { messages: [new HumanMessage(query)] },
+      { messages: [new HumanMessage(finalQuery)] },
       {
         configurable: { thread_id: profileUuid },
         callbacks: [
@@ -745,4 +836,46 @@ export async function endPlaygroundSession(profileUuid: string) {
   }
 
   return { success: true }; // Session doesn't exist, so consider it ended
+}
+
+// Query RAG API for relevant context
+export async function queryRag(query: string, userId: string) {
+  try {
+    const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
+    const url = new URL('/rag/rag-query', ragApiUrl);
+    url.searchParams.set('query', query);
+    url.searchParams.set('user_id', userId);
+
+    console.log(`[RAG] Querying RAG API: ${url.toString()}`);
+    console.log(`[RAG] Query: "${query}"`);
+    console.log(`[RAG] User ID: "${userId}"`);
+
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
+
+    console.log(`[RAG] Response status: ${response.status} ${response.statusText}`);
+
+    if (!response.ok) {
+      throw new Error(`RAG API error: ${response.status} ${response.statusText}`);
+    }
+
+    const ragContext = await response.text();
+    
+    console.log(`[RAG] Retrieved context (${ragContext.length} chars):`, ragContext);
+    
+    return {
+      success: true,
+      context: ragContext
+    };
+  } catch (error) {
+    console.error('[RAG] Error querying RAG API:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }

@@ -65,6 +65,7 @@ export function usePlayground() {
     temperature: 0,
     maxTokens: 1000,
     logLevel: 'info', // Default, will be overwritten by fetched settings
+    ragEnabled: false, // Add ragEnabled to default state
   });
 
   // State for selected servers (will now use active servers instead of selection)
@@ -128,6 +129,7 @@ export function usePlayground() {
             temperature: data.settings.temperature,
             maxTokens: data.settings.maxTokens,
             logLevel: data.settings.logLevel,
+            ragEnabled: data.settings.ragEnabled || false, // Include ragEnabled with fallback
           };
           setLlmConfig(newSettings);
           setLogLevel(data.settings.logLevel);
@@ -550,18 +552,33 @@ export function usePlayground() {
 
       updateSettingsThrottledRef.current = setTimeout(async () => {
         try {
-          // Ensure llmConfig includes logLevel before saving
-          const settingsToSave = { ...llmConfig, logLevel };
-          const result = await updatePlaygroundSettings(profileUuid, settingsToSave);
-
-          if (result.success) {
-            addLog('info', 'Settings saved successfully');
-            // Optionally mutate settings if needed, though SWR handles revalidation
-            // mutateSettings();
-          } else {
-            const msg = result.error || 'Unknown error';
-            addLog('error', `Failed to save settings: ${msg}`);
-          }
+          // Get the current state values at execution time
+          setLlmConfig(currentConfig => {
+            setLogLevel(currentLogLevel => {
+              // Ensure llmConfig includes logLevel before saving
+              const settingsToSave = { ...currentConfig, logLevel: currentLogLevel };
+              
+              console.log('[RAG DEBUG] Saving settings:', settingsToSave);
+              
+              updatePlaygroundSettings(profileUuid, settingsToSave).then(result => {
+                if (result.success) {
+                  addLog('info', 'Settings saved successfully');
+                  console.log('[RAG DEBUG] Settings saved successfully to database');
+                } else {
+                  const msg = result.error || 'Unknown error';
+                  addLog('error', `Failed to save settings: ${msg}`);
+                  console.error('[RAG DEBUG] Failed to save settings:', msg);
+                }
+              }).catch(error => {
+                console.error('[RAG DEBUG] Exception saving settings:', error);
+                const msg = error instanceof Error ? error.message : 'Unknown error';
+                addLog('error', `Exception saving settings: ${msg}`);
+              });
+              
+              return currentLogLevel; // Return unchanged
+            });
+            return currentConfig; // Return unchanged
+          });
           updateSettingsThrottledRef.current = null;
         } catch (error) {
           console.error('Failed to save settings:', error);
@@ -576,7 +593,7 @@ export function usePlayground() {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       addLog('error', `Exception initiating settings save: ${msg}`);
     }
-  }, [profileUuid, llmConfig, logLevel, addLog]); // Added logLevel dependency
+  }, [profileUuid, addLog]); // Removed llmConfig and logLevel dependencies since we get them fresh
 
   // Effect to update llmConfig's logLevel when the separate logLevel state changes
   useEffect(() => {

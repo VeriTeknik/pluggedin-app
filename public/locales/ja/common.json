@@ -32,6 +32,9 @@
     "delete": "削除",
     "deleting": "削除中..."
   },
+  "docs": {
+    "title": "ドキュメント"
+  },
   "releaseNotes": {
     "title": "リリースノート",
     "description": "リポジトリ全体の最新の更新と変更を追跡します",

@@ -6,6 +6,7 @@ import {
   Bell,
   Blocks,
   Code2,
+  FileText,
   FlaskConical,
   Plus,
   Trash2,
@@ -248,6 +249,16 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('docs.title')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/docs'>
+                        <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('docs.title')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
                   {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/inspector-guide'>

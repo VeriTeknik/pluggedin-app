@@ -32,6 +32,9 @@
     "delete": "Delete",
     "deleting": "Deleting..."
   },
+  "docs": {
+    "title": "Docs"
+  },
   "releaseNotes": {
     "title": "Release Notes",
     "description": "Track the latest updates and changes across our repositories",
