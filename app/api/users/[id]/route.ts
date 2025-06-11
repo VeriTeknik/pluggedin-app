@@ -70,9 +70,13 @@ export async function GET(
   context: any // Use 'any' to bypass type check temporarily
 ) {
   const { params } = context; // Destructure params inside the function
+  
+  // Await params to comply with Next.js 15 requirements
+  const resolvedParams = await params;
+  
   try {
     const user = await db.query.users.findFirst({
-      where: eq(users.id, params.id),
+      where: eq(users.id, resolvedParams.id),
       columns: {
         id: true,
         name: true,

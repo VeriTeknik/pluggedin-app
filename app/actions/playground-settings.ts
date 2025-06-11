@@ -84,10 +84,7 @@ export async function updatePlaygroundSettings(
       where: eq(playgroundSettingsTable.profile_uuid, profileUuid),
     });
 
-    console.log('[RAG DEBUG] Existing settings:', existingSettings);
-
     if (existingSettings) {
-      console.log('[RAG DEBUG] Updating existing settings');
       // Update existing settings
       await db
         .update(playgroundSettingsTable)
@@ -102,7 +99,6 @@ export async function updatePlaygroundSettings(
         })
         .where(eq(playgroundSettingsTable.profile_uuid, profileUuid));
     } else {
-      console.log('[RAG DEBUG] Creating new settings');
       // Create new settings
       await db.insert(playgroundSettingsTable).values({
         profile_uuid: profileUuid,
@@ -115,14 +111,11 @@ export async function updatePlaygroundSettings(
       });
     }
 
-    console.log('[RAG DEBUG] Settings saved successfully');
-
     return {
       success: true,
       settings,
     };
   } catch (error) {
-    console.error('[RAG DEBUG] Failed to update playground settings:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update settings',

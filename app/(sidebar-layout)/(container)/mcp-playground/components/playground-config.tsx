@@ -100,6 +100,9 @@ export function PlaygroundConfig({
   const prevLogLevelRef = useRef(logLevel);
   const logLevelChangeTimerRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Create a ref to track previous ragEnabled value
+  const prevRagEnabledRef = useRef(llmConfig.ragEnabled);
+  
   // Fix the settings saved loop with a single, properly controlled useEffect
   useEffect(() => {
     // Only trigger save if the log level actually changed
@@ -134,6 +137,26 @@ export function PlaygroundConfig({
       }
     };
   }, [logLevel, llmConfig.logLevel, setLlmConfig, saveSettings]);
+
+  // Auto-save when ragEnabled changes (prevents race conditions vs setTimeout)
+  useEffect(() => {
+    // Only save if ragEnabled actually changed and it's not the initial render
+    if (prevRagEnabledRef.current !== llmConfig.ragEnabled && prevRagEnabledRef.current !== undefined) {
+      const saveRagSettings = async () => {
+        try {
+          await saveSettings();
+          console.log('[RAG DEBUG] Settings auto-saved after RAG toggle change');
+        } catch (error) {
+          console.error('[RAG DEBUG] Failed to auto-save settings:', error);
+        }
+      };
+      
+      saveRagSettings();
+    }
+    
+    // Update the previous value reference
+    prevRagEnabledRef.current = llmConfig.ragEnabled;
+  }, [llmConfig.ragEnabled, saveSettings]);
   
   // Handler to update log level without triggering save cascade
   const handleLogLevelChange = (level: LogLevel) => {
@@ -491,23 +514,11 @@ export function PlaygroundConfig({
                   <Switch
                     id='ragEnabled'
                     checked={llmConfig.ragEnabled || false}
-                    onCheckedChange={async (checked) => {
-                      const updatedConfig = {
+                    onCheckedChange={(checked) => {
+                      setLlmConfig({
                         ...llmConfig,
                         ragEnabled: checked,
-                      };
-                      setLlmConfig(updatedConfig);
-                      
-                      // Auto-save settings when RAG toggle changes
-                      // Wait a bit for state to settle, then save
-                      setTimeout(async () => {
-                        try {
-                          await saveSettings();
-                          console.log('[RAG DEBUG] Settings auto-saved after RAG toggle change');
-                        } catch (error) {
-                          console.error('[RAG DEBUG] Failed to auto-save settings:', error);
-                        }
-                      }, 500);
+                      });
                     }}
                     disabled={isSessionActive}
                   />

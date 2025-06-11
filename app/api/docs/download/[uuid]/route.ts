@@ -16,7 +16,7 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    // Await params
+    // Extract uuid from params
     const { uuid } = await params;
 
     // Get the document using the authenticated user's ID

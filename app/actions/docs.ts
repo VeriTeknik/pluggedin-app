@@ -44,7 +44,9 @@ export async function getDocByUuid(userId: string, docUuid: string): Promise<Doc
       ),
     });
 
-    if (!doc) return null;
+    if (!doc) {
+      return null;
+    }
 
     return {
       ...doc,
@@ -57,109 +59,161 @@ export async function getDocByUuid(userId: string, docUuid: string): Promise<Doc
   }
 }
 
+// Helper function: Parse and validate form data
+async function parseAndValidateFormData(formData: FormData) {
+  const fileEntry = formData.get('file');
+  const name = formData.get('name') as string;
+  const description = formData.get('description') as string || null;
+  const tagsString = formData.get('tags') as string;
+  
+  // Validate file entry is actually a File object
+  if (!fileEntry || typeof fileEntry === 'string') {
+    throw new Error('Valid file is required');
+  }
+  
+  // Additional validation to ensure it's a proper File/Blob with required properties
+  if (!('size' in fileEntry) || !('type' in fileEntry) || !('name' in fileEntry)) {
+    throw new Error('Invalid file object');
+  }
+  
+  const file = fileEntry as File;
+  
+  if (!name) {
+    throw new Error('File name is required');
+  }
+
+  // Validate file size (max 10MB)
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    throw new Error('File size must be less than 10MB');
+  }
+
+  // Parse tags
+  const tags = tagsString 
+    ? tagsString.split(',').map(tag => tag.trim()).filter(Boolean)
+    : [];
+
+  return { file, name, description, tags };
+}
+
+// Helper function: Save file to disk
+async function saveFileToDisk(file: File) {
+  // Create uploads directory
+  await mkdir(UPLOADS_DIR, { recursive: true });
+
+  // Generate unique filename
+  const timestamp = Date.now();
+  const fileName = `${timestamp}-${file.name}`;
+  const filePath = join(UPLOADS_DIR, fileName);
+  const relativePath = `/uploads/docs/${fileName}`;
+
+  // Save file to disk
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  await writeFile(filePath, buffer);
+
+  return { fileName, relativePath };
+}
+
+// Helper function: Insert document record into database
+async function insertDocRecord(
+  userId: string,
+  name: string,
+  description: string | null,
+  file: File,
+  relativePath: string,
+  tags: string[]
+) {
+  const [docRecord] = await db
+    .insert(docsTable)
+    .values({
+      user_id: userId,
+      name,
+      description,
+      file_name: file.name,
+      file_size: file.size,
+      mime_type: file.type,
+      file_path: relativePath,
+      tags,
+    })
+    .returning();
+  
+  return docRecord;
+}
+
+// Helper function: Extract text content for RAG
+async function extractTextContent(file: File, description: string | null): Promise<string> {
+  try {
+    if (file.type.includes('text') || file.type.includes('markdown')) {
+      return await file.text();
+    } else if (file.type.includes('pdf')) {
+      // For PDF, you might want to use a PDF parsing library
+      // For now, we'll just use the filename and description
+      return `PDF Document: ${file.name}\nDescription: ${description || 'No description'}`;
+    } else {
+      return `Document: ${file.name}\nType: ${file.type}\nDescription: ${description || 'No description'}`;
+    }
+  } catch (parseError) {
+    console.warn('Failed to parse file content for RAG:', parseError);
+    return `Document: ${file.name}\nDescription: ${description || 'No description'}`;
+  }
+}
+
+// Helper function: Process RAG upload
+async function processRagUpload(
+  docRecord: any,
+  textContent: string,
+  file: File,
+  name: string,
+  tags: string[],
+  userId: string
+) {
+  try {
+    await sendToRAGAPI({
+      id: docRecord.uuid,
+      title: name,
+      content: textContent,
+      metadata: {
+        filename: file.name,
+        mimeType: file.type,
+        fileSize: file.size,
+        tags,
+        userId,
+      },
+    }, file);
+    console.log('Document successfully uploaded to RAG API');
+    return { ragProcessed: true, ragError: undefined };
+  } catch (ragErr) {
+    console.error('Failed to send document to RAG API:', ragErr);
+    const ragError = ragErr instanceof Error ? ragErr.message : 'RAG processing failed';
+    // Continue with success even if RAG fails
+    return { ragProcessed: false, ragError };
+  }
+}
+
 export async function createDoc(
   userId: string,
   formData: FormData
 ): Promise<DocUploadResponse> {
   try {
-    // Extract form data
-    const file = formData.get('file') as File;
-    const name = formData.get('name') as string;
-    const description = formData.get('description') as string || null;
-    const tagsString = formData.get('tags') as string;
+    // Step 1: Parse and validate form data
+    const { file, name, description, tags } = await parseAndValidateFormData(formData);
     
-    if (!file || !name) {
-      return {
-        success: false,
-        error: 'File and name are required',
-      };
-    }
-
-    // Validate file size (max 10MB)
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      return {
-        success: false,
-        error: 'File size must be less than 10MB',
-      };
-    }
-
-    // Parse tags
-    const tags = tagsString 
-      ? tagsString.split(',').map(tag => tag.trim()).filter(Boolean)
-      : [];
-
-    // Create uploads directory
-    await mkdir(UPLOADS_DIR, { recursive: true });
-
-    // Generate unique filename
-    const timestamp = Date.now();
-    const fileName = `${timestamp}-${file.name}`;
-    const filePath = join(UPLOADS_DIR, fileName);
-    const relativePath = `/uploads/docs/${fileName}`;
-
-    // Save file to disk
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filePath, buffer);
-
-    // Save to database
-    const [docRecord] = await db
-      .insert(docsTable)
-      .values({
-        user_id: userId,
-        name,
-        description,
-        file_name: file.name,
-        file_size: file.size,
-        mime_type: file.type,
-        file_path: relativePath,
-        tags,
-      })
-      .returning();
-
-    // Convert file content to text for RAG API
-    let textContent = '';
-    try {
-      if (file.type.includes('text') || file.type.includes('markdown')) {
-        textContent = await file.text();
-      } else if (file.type.includes('pdf')) {
-        // For PDF, you might want to use a PDF parsing library
-        // For now, we'll just use the filename and description
-        textContent = `PDF Document: ${file.name}\nDescription: ${description || 'No description'}`;
-      } else {
-        textContent = `Document: ${file.name}\nType: ${file.type}\nDescription: ${description || 'No description'}`;
-      }
-    } catch (parseError) {
-      console.warn('Failed to parse file content for RAG:', parseError);
-      textContent = `Document: ${file.name}\nDescription: ${description || 'No description'}`;
-    }
-
-    // Send to RAG API and wait for completion
-    let ragProcessed = false;
-    let ragError: string | undefined;
+    // Step 2: Save file to disk
+    const { fileName, relativePath } = await saveFileToDisk(file);
     
-    try {
-      await sendToRAGAPI({
-        id: docRecord.uuid,
-        title: name,
-        content: textContent,
-        metadata: {
-          filename: file.name,
-          mimeType: file.type,
-          fileSize: file.size,
-          tags,
-          userId,
-        },
-      }, file);
-      console.log('Document successfully uploaded to RAG API');
-      ragProcessed = true;
-    } catch (ragErr) {
-      console.error('Failed to send document to RAG API:', ragErr);
-      ragError = ragErr instanceof Error ? ragErr.message : 'RAG processing failed';
-      // Continue with success even if RAG fails
-    }
+    // Step 3: Insert document record into database
+    const docRecord = await insertDocRecord(userId, name, description, file, relativePath, tags);
+    
+    // Step 4: Extract text content for RAG
+    const textContent = await extractTextContent(file, description);
+    
+    // Step 5: Process RAG upload
+    const { ragProcessed, ragError } = await processRagUpload(
+      docRecord, textContent, file, name, tags, userId
+    );
 
+    // Step 6: Return response with formatted doc
     const doc: Doc = {
       ...docRecord,
       created_at: new Date(docRecord.created_at),

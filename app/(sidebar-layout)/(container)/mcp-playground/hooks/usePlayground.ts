@@ -97,6 +97,10 @@ export function usePlayground() {
   // Ref for settings throttling
   const updateSettingsThrottledRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Refs to mirror state values for accessing latest values without closures
+  const llmConfigRef = useRef<PlaygroundSettings>(llmConfig);
+  const logLevelRef = useRef<LogLevel>(logLevel);
+
   // User scroll control flag - Keep this in the hook as it affects message updates
   const [userScrollControlled, setUserScrollControlled] = useState(false);
 
@@ -540,64 +544,57 @@ export function usePlayground() {
     updateMessages, // Added updateMessages
   ]);
 
-  // Save settings with debounce
+  // Save settings with debounce using refs to avoid nested callbacks
   const saveSettings = useCallback(async () => {
     if (!profileUuid) return;
 
-    try {
-      addLog('info', 'Saving playground settings...');
-      if (updateSettingsThrottledRef.current) {
-        clearTimeout(updateSettingsThrottledRef.current);
-      }
-
-      updateSettingsThrottledRef.current = setTimeout(async () => {
-        try {
-          // Get the current state values at execution time
-          setLlmConfig(currentConfig => {
-            setLogLevel(currentLogLevel => {
-              // Ensure llmConfig includes logLevel before saving
-              const settingsToSave = { ...currentConfig, logLevel: currentLogLevel };
-              
-              console.log('[RAG DEBUG] Saving settings:', settingsToSave);
-              
-              updatePlaygroundSettings(profileUuid, settingsToSave).then(result => {
-                if (result.success) {
-                  addLog('info', 'Settings saved successfully');
-                  console.log('[RAG DEBUG] Settings saved successfully to database');
-                } else {
-                  const msg = result.error || 'Unknown error';
-                  addLog('error', `Failed to save settings: ${msg}`);
-                  console.error('[RAG DEBUG] Failed to save settings:', msg);
-                }
-              }).catch(error => {
-                console.error('[RAG DEBUG] Exception saving settings:', error);
-                const msg = error instanceof Error ? error.message : 'Unknown error';
-                addLog('error', `Exception saving settings: ${msg}`);
-              });
-              
-              return currentLogLevel; // Return unchanged
-            });
-            return currentConfig; // Return unchanged
-          });
-          updateSettingsThrottledRef.current = null;
-        } catch (error) {
-          console.error('Failed to save settings:', error);
-          const msg = error instanceof Error ? error.message : 'Unknown error';
-          addLog('error', `Exception saving settings: ${msg}`);
-          updateSettingsThrottledRef.current = null;
-        }
-      }, 1500);
-    } catch (error) {
-      // This catch block might be redundant as the async operation is inside setTimeout
-      console.error('Error initiating settings save:', error);
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      addLog('error', `Exception initiating settings save: ${msg}`);
+    addLog('info', 'Saving playground settings...');
+    
+    if (updateSettingsThrottledRef.current) {
+      clearTimeout(updateSettingsThrottledRef.current);
     }
-  }, [profileUuid, addLog]); // Removed llmConfig and logLevel dependencies since we get them fresh
+
+    updateSettingsThrottledRef.current = setTimeout(async () => {
+      // Get the latest state values from refs
+      const settingsToSave = {
+        ...llmConfigRef.current,
+        logLevel: logLevelRef.current,
+      };
+      
+      console.log('[RAG DEBUG] Saving settings:', settingsToSave);
+      
+      try {
+        const result = await updatePlaygroundSettings(profileUuid, settingsToSave);
+        if (result.success) {
+          addLog('info', 'Settings saved successfully');
+          console.log('[RAG DEBUG] Settings saved successfully to database');
+        } else {
+          const msg = result.error || 'Unknown error';
+          addLog('error', `Failed to save settings: ${msg}`);
+          console.error('[RAG DEBUG] Failed to save settings:', msg);
+        }
+      } catch (error) {
+        console.error('[RAG DEBUG] Exception saving settings:', error);
+        const msg = error instanceof Error ? error.message : 'Unknown error';
+        addLog('error', `Exception saving settings: ${msg}`);
+      }
+      
+      updateSettingsThrottledRef.current = null;
+    }, 1500);
+  }, [profileUuid, addLog]);
 
   // Effect to update llmConfig's logLevel when the separate logLevel state changes
   useEffect(() => {
     setLlmConfig(prev => ({ ...prev, logLevel: logLevel }));
+  }, [logLevel]);
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    llmConfigRef.current = llmConfig;
+  }, [llmConfig]);
+
+  useEffect(() => {
+    logLevelRef.current = logLevel;
   }, [logLevel]);
 
 
