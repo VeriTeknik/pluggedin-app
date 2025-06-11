@@ -231,6 +231,7 @@ export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
   }),
   mcpServers: many(mcpServersTable),
   customMcpServers: many(customMcpServersTable),
+  docs: many(docsTable),
   playgroundSettings: one(playgroundSettingsTable, {
     fields: [profilesTable.uuid],
     references: [playgroundSettingsTable.profile_uuid],
@@ -799,6 +800,8 @@ export const docsTable = pgTable(
     user_id: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    profile_uuid: uuid('profile_uuid')
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     description: text('description'),
     file_name: text('file_name').notNull(),
@@ -815,6 +818,7 @@ export const docsTable = pgTable(
   },
   (table) => ({
     docsUserIdIdx: index('docs_user_id_idx').on(table.user_id),
+    docsProfileUuidIdx: index('docs_profile_uuid_idx').on(table.profile_uuid),
     docsNameIdx: index('docs_name_idx').on(table.name),
     docsCreatedAtIdx: index('docs_created_at_idx').on(table.created_at),
   })
@@ -824,6 +828,10 @@ export const docsRelations = relations(docsTable, ({ one }) => ({
   user: one(users, {
     fields: [docsTable.user_id],
     references: [users.id],
+  }),
+  profile: one(profilesTable, {
+    fields: [docsTable.profile_uuid],
+    references: [profilesTable.uuid],
   }),
 }));
 

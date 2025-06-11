@@ -253,6 +253,34 @@
       "when": 1749649097459,
       "tag": "0035_slimy_lightspeed",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1749652478476,
+      "tag": "0036_foamy_hellion",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1749652553391,
+      "tag": "0037_wakeful_pestilence",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1749653876550,
+      "tag": "0038_add_profile_uuid_to_docs",
+      "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1749653917213,
+      "tag": "0039_add_profile_uuid_to_docs",
+      "breakpoints": true
     }
   ]
 }

@@ -7,15 +7,12 @@ import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
-import { eq } from 'drizzle-orm';
 
 import { logAuditEvent } from '@/app/actions/audit-logger'; // Correct path alias
 import { ensureLogDirectories } from '@/app/actions/log-retention'; // Correct path alias
 import { createEnhancedMcpLogger } from '@/app/actions/mcp-server-logger'; // Correct path alias
 import { getMcpServers } from '@/app/actions/mcp-servers'; // Correct path alias
 import { getPlaygroundSettings } from '@/app/actions/playground-settings'; // Add this import
-import { db } from '@/db'; // Add this import
-import { profilesTable } from '@/db/schema'; // Add this import
 
 import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization'; // Import the new function
 
@@ -573,26 +570,7 @@ export async function getServerLogs(profileUuid: string) {
   }
 }
 
-// Helper function to get user_id from profile_uuid
-async function getUserIdFromProfile(profileUuid: string): Promise<string | null> {
-  try {
-    const profile = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, profileUuid),
-      with: {
-        project: {
-          columns: {
-            user_id: true,
-          },
-        },
-      },
-    });
-    
-    return profile?.project?.user_id || null;
-  } catch (error) {
-    console.error('Error getting user_id from profile:', error);
-    return null;
-  }
-}
+
 
 // Execute a query against the playground agent
 export async function executePlaygroundQuery(
@@ -617,42 +595,31 @@ export async function executePlaygroundQuery(
     let finalQuery = query;
     
     if (settingsResult.success && settingsResult.settings?.ragEnabled) {
-      // Get user_id for RAG query
-      const userId = await getUserIdFromProfile(profileUuid);
+      // Query workspace-specific collection only (clean workspace isolation)
+      const ragResult = await queryRag(query, profileUuid);
       
-      if (userId) {
-        // Query RAG for relevant context
-        const ragResult = await queryRag(query, userId);
-        
-        if (ragResult.success && ragResult.context) {
-          // Limit RAG context to avoid token overrun
-          const MAX_CONTEXT_CHARS = 2000; // Adjust as needed based on model/tokenizer
-          let limitedContext = ragResult.context;
-          if (limitedContext.length > MAX_CONTEXT_CHARS) {
-            limitedContext = limitedContext.slice(0, MAX_CONTEXT_CHARS) + '\n...[truncated]';
-          }
-          // Prepend (possibly truncated) RAG context to the query
-          finalQuery = `Context from your documents:\n${limitedContext}\n\nBased on the above context and your knowledge, please answer: ${query}`;
-          
-          // Log RAG usage
-          await addServerLogForProfile(
-            profileUuid,
-            'info',
-            `[RAG] Retrieved context: ${ragResult.context.slice(0, 100)}${ragResult.context.length > 100 ? '...' : ''}`
-          );
-        } else {
-          // Log RAG failure but continue with original query
-          await addServerLogForProfile(
-            profileUuid,
-            'warn',
-            `[RAG] Failed to retrieve context: ${ragResult.error || 'Unknown error'}`
-          );
+      if (ragResult.success && ragResult.context) {
+        // Limit RAG context to avoid token overrun
+        const MAX_CONTEXT_CHARS = 2000; // Adjust as needed based on model/tokenizer
+        let limitedContext = ragResult.context;
+        if (limitedContext.length > MAX_CONTEXT_CHARS) {
+          limitedContext = limitedContext.slice(0, MAX_CONTEXT_CHARS) + '\n...[truncated]';
         }
+        // Prepend (possibly truncated) RAG context to the query
+        finalQuery = `Context from your documents:\n${limitedContext}\n\nBased on the above context and your knowledge, please answer: ${query}`;
+        
+        // Log RAG usage
+        await addServerLogForProfile(
+          profileUuid,
+          'info',
+          `[RAG] Retrieved workspace context: ${ragResult.context.slice(0, 100)}${ragResult.context.length > 100 ? '...' : ''}`
+        );
       } else {
+        // Log RAG failure but continue with original query
         await addServerLogForProfile(
           profileUuid,
           'warn',
-          '[RAG] Could not determine user ID for RAG query'
+          `[RAG] No context found in workspace: ${ragResult.error || 'No documents available'}`
         );
       }
     }
@@ -819,10 +786,12 @@ export async function endPlaygroundSession(profileUuid: string) {
 }
 
 // Query RAG API for relevant context
-export async function queryRag(query: string, userId: string) {
+export async function queryRag(query: string, ragIdentifier: string) {
   try {
     const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
     const url = new URL('/rag/rag-query', ragApiUrl);
+
+
 
     const response = await fetch(url.toString(), {
       method: 'POST',
@@ -832,7 +801,7 @@ export async function queryRag(query: string, userId: string) {
       },
       body: JSON.stringify({
         query: query,
-        user_id: userId,
+        user_id: ragIdentifier,
       }),
     });
 

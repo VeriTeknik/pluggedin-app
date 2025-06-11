@@ -4,11 +4,13 @@ import useSWR from 'swr';
 
 import { getDocs, createDoc, deleteDoc } from '@/app/actions/docs';
 import { useToast } from './use-toast';
-import type { Doc, CreateDocRequest } from '@/types/docs';
+import type { Doc } from '@/types/docs';
+import { useProfiles } from '@/hooks/use-profiles';
 
 export function useDocs() {
   const { data: session } = useSession();
   const { toast } = useToast();
+  const { currentProfile } = useProfiles();
 
   const {
     data: docsResponse,
@@ -16,63 +18,61 @@ export function useDocs() {
     mutate,
     isLoading,
   } = useSWR(
-    session?.user?.id ? ['docs', session.user.id] : null,
-    () => session?.user?.id ? getDocs(session.user.id) : null,
-    {
-      revalidateOnFocus: false,
-      dedupingInterval: 30000, // 30 seconds
+    session?.user?.id ? ['docs', session.user.id, currentProfile?.uuid] : null,
+    async () => {
+      if (!session?.user?.id) {
+        throw new Error('Not authenticated');
+      }
+      return await getDocs(session.user.id, currentProfile?.uuid);
     }
   );
 
   const docs: Doc[] = docsResponse?.success ? docsResponse.docs || [] : [];
 
   const uploadDoc = useCallback(
-    async (request: CreateDocRequest) => {
+    async (data: {
+      file: File;
+      name: string;
+      description?: string;
+      tags?: string[];
+    }) => {
       if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
 
       const formData = new FormData();
-      formData.append('file', request.file);
-      formData.append('name', request.name);
-      if (request.description) {
-        formData.append('description', request.description);
+      formData.append('file', data.file);
+      formData.append('name', data.name);
+      if (data.description) {
+        formData.append('description', data.description);
       }
-      if (request.tags && request.tags.length > 0) {
-        formData.append('tags', request.tags.join(','));
+      if (data.tags && data.tags.length > 0) {
+        formData.append('tags', data.tags.join(','));
       }
 
-      const result = await createDoc(session.user.id, formData);
-      
+      const result = await createDoc(session.user.id, currentProfile?.uuid, formData);
+
       if (result.success) {
         // Optimistically update the cache
         await mutate();
-        
-        // First notification: Document uploaded
         toast({
-          title: 'Document Uploaded',
-          description: 'Document saved successfully. RAG processing in progress...',
+          title: 'Success',
+          description: 'Document uploaded successfully',
         });
         
-        // Second notification: RAG processing result
+        // Show RAG processing status
         if (result.ragProcessed) {
-          setTimeout(() => {
-            toast({
-              title: 'RAG Processing Complete',
-              description: 'Document is now available for AI queries!',
-            });
-          }, 500); // Small delay so user can see both notifications
+          toast({
+            title: 'RAG Processing',
+            description: 'Document has been added to your knowledge base',
+          });
         } else if (result.ragError) {
-          setTimeout(() => {
-            toast({
-              title: 'RAG Processing Failed',
-              description: `Warning: ${result.ragError}. Document saved but not available for AI queries.`,
-              variant: 'destructive',
-            });
-          }, 500);
+          toast({
+            title: 'RAG Processing Failed',
+            description: `Document uploaded but RAG processing failed: ${result.ragError}`,
+            variant: 'destructive',
+          });
         }
-        
-        return result.doc;
       } else {
         toast({
           title: 'Error',
@@ -82,7 +82,7 @@ export function useDocs() {
         throw new Error(result.error || 'Failed to upload document');
       }
     },
-    [session?.user?.id, mutate, toast]
+    [session?.user?.id, currentProfile?.uuid, mutate, toast]
   );
 
   const removeDoc = useCallback(
@@ -91,7 +91,7 @@ export function useDocs() {
         throw new Error('Not authenticated');
       }
 
-      const result = await deleteDoc(session.user.id, docUuid);
+      const result = await deleteDoc(session.user.id, docUuid, currentProfile?.uuid);
       
       if (result.success) {
         // Optimistically update the cache
@@ -109,7 +109,7 @@ export function useDocs() {
         throw new Error(result.error || 'Failed to delete document');
       }
     },
-    [session?.user?.id, mutate, toast]
+    [session?.user?.id, currentProfile?.uuid, mutate, toast]
   );
 
   const downloadDoc = useCallback(
@@ -118,8 +118,8 @@ export function useDocs() {
         throw new Error('Not authenticated');
       }
 
-      // Create download URL (no need for profileUuid parameter anymore)
-      const downloadUrl = `/api/docs/download/${doc.uuid}`;
+      // Create download URL with workspace verification
+      const downloadUrl = `/api/docs/download/${doc.uuid}${currentProfile?.uuid ? `?profileUuid=${currentProfile.uuid}` : ''}`;
       
       // Create a temporary link and trigger download
       const link = document.createElement('a');
@@ -129,7 +129,7 @@ export function useDocs() {
       link.click();
       document.body.removeChild(link);
     },
-    [session?.user?.id]
+    [session?.user?.id, currentProfile?.uuid]
   );
 
   return {

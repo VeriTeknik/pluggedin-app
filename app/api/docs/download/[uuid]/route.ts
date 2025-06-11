@@ -20,6 +20,7 @@ export async function GET(
     const { uuid } = await params;
 
     // Get the document using the authenticated user's ID
+    // This now checks that the document belongs to a profile owned by the user
     const doc = await getDocByUuid(session.user.id, uuid);
     if (!doc) {
       return new NextResponse('Document not found', { status: 404 });

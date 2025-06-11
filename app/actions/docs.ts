@@ -1,7 +1,7 @@
 'use server';
 
-import { and, desc,eq } from 'drizzle-orm';
-import { mkdir, unlink,writeFile } from 'fs/promises';
+import { and, desc, eq, isNull, or } from 'drizzle-orm';
+import { mkdir, unlink, writeFile } from 'fs/promises';
 import { join } from 'path';
 
 import { db } from '@/db';
@@ -11,12 +11,29 @@ import type { Doc, DocDeleteResponse, DocListResponse, DocUploadResponse, RAGDoc
 // Create uploads directory if it doesn't exist
 const UPLOADS_DIR = join(process.cwd(), 'public', 'uploads', 'docs');
 
-export async function getDocs(userId: string): Promise<DocListResponse> {
+export async function getDocs(userId: string, profileUuid?: string): Promise<DocListResponse> {
   try {
-    const docs = await db.query.docsTable.findMany({
-      where: eq(docsTable.user_id, userId),
-      orderBy: [desc(docsTable.created_at)],
-    });
+    let docs;
+    
+    if (profileUuid) {
+      // Get documents specifically for this profile AND legacy documents without profile_uuid
+      docs = await db.query.docsTable.findMany({
+        where: and(
+          eq(docsTable.user_id, userId),
+          or(
+            eq(docsTable.profile_uuid, profileUuid),
+            isNull(docsTable.profile_uuid)
+          )
+        ),
+        orderBy: [desc(docsTable.created_at)],
+      });
+    } else {
+      // Fallback: get all documents for user
+      docs = await db.query.docsTable.findMany({
+        where: eq(docsTable.user_id, userId),
+        orderBy: [desc(docsTable.created_at)],
+      });
+    }
 
     return {
       success: true,
@@ -35,8 +52,9 @@ export async function getDocs(userId: string): Promise<DocListResponse> {
   }
 }
 
-export async function getDocByUuid(userId: string, docUuid: string): Promise<Doc | null> {
+export async function getDocByUuid(userId: string, docUuid: string, profileUuid?: string): Promise<Doc | null> {
   try {
+    // First check if user owns the document
     const doc = await db.query.docsTable.findFirst({
       where: and(
         eq(docsTable.uuid, docUuid),
@@ -45,6 +63,12 @@ export async function getDocByUuid(userId: string, docUuid: string): Promise<Doc
     });
 
     if (!doc) {
+      return null;
+    }
+
+    // If profileUuid provided, verify document belongs to this workspace
+    // (or is a legacy document without profile_uuid)
+    if (profileUuid && doc.profile_uuid && doc.profile_uuid !== profileUuid) {
       return null;
     }
 
@@ -118,6 +142,7 @@ async function saveFileToDisk(file: File) {
 // Helper function: Insert document record into database
 async function insertDocRecord(
   userId: string,
+  profileUuid: string | undefined,
   name: string,
   description: string | null,
   file: File,
@@ -128,6 +153,7 @@ async function insertDocRecord(
     .insert(docsTable)
     .values({
       user_id: userId,
+      profile_uuid: profileUuid,
       name,
       description,
       file_name: file.name,
@@ -166,9 +192,13 @@ async function processRagUpload(
   file: File,
   name: string,
   tags: string[],
-  userId: string
+  userId: string,
+  profileUuid?: string
 ) {
   try {
+    // Use profileUuid for workspace-specific RAG, fallback to userId for legacy
+    const ragIdentifier = profileUuid || userId;
+    
     await sendToRAGAPI({
       id: docRecord.uuid,
       title: name,
@@ -179,8 +209,9 @@ async function processRagUpload(
         fileSize: file.size,
         tags,
         userId,
+        profileUuid: profileUuid || undefined,
       },
-    }, file);
+    }, file, ragIdentifier);
     console.log('Document successfully uploaded to RAG API');
     return { ragProcessed: true, ragError: undefined };
   } catch (ragErr) {
@@ -193,24 +224,25 @@ async function processRagUpload(
 
 export async function createDoc(
   userId: string,
+  profileUuid: string | undefined,
   formData: FormData
 ): Promise<DocUploadResponse> {
   try {
     // Step 1: Parse and validate form data
     const { file, name, description, tags } = await parseAndValidateFormData(formData);
-    
+
     // Step 2: Save file to disk
-    const { fileName, relativePath } = await saveFileToDisk(file);
+    const { relativePath } = await saveFileToDisk(file);
     
     // Step 3: Insert document record into database
-    const docRecord = await insertDocRecord(userId, name, description, file, relativePath, tags);
+    const docRecord = await insertDocRecord(userId, profileUuid, name, description, file, relativePath, tags);
     
     // Step 4: Extract text content for RAG
     const textContent = await extractTextContent(file, description);
     
     // Step 5: Process RAG upload
     const { ragProcessed, ragError } = await processRagUpload(
-      docRecord, textContent, file, name, tags, userId
+      docRecord, textContent, file, name, tags, userId, profileUuid
     );
 
     // Step 6: Return response with formatted doc
@@ -237,11 +269,12 @@ export async function createDoc(
 
 export async function deleteDoc(
   userId: string,
-  docUuid: string
+  docUuid: string,
+  profileUuid?: string
 ): Promise<DocDeleteResponse> {
   try {
-    // Get the doc first to get file path
-    const doc = await getDocByUuid(userId, docUuid);
+    // Get the doc first to get file path and verify ownership
+    const doc = await getDocByUuid(userId, docUuid, profileUuid);
     if (!doc) {
       return {
         success: false,
@@ -268,8 +301,9 @@ export async function deleteDoc(
       // Don't fail the operation if file deletion fails
     }
 
-    // Remove from RAG API (don't await to avoid blocking)
-    removeFromRAGAPI(docUuid, userId).catch(error => {
+    // Remove from RAG API (use profileUuid or fallback to userId)
+    const ragIdentifier = profileUuid || userId;
+    removeFromRAGAPI(docUuid, ragIdentifier).catch(error => {
       console.error('Failed to remove document from RAG API:', error);
     });
 
@@ -286,7 +320,7 @@ export async function deleteDoc(
 }
 
 // Helper function to send document to RAG API
-async function sendToRAGAPI(document: RAGDocumentRequest, file: File): Promise<void> {
+async function sendToRAGAPI(document: RAGDocumentRequest, file: File, ragIdentifier: string): Promise<void> {
   try {
     const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
     
@@ -299,7 +333,7 @@ async function sendToRAGAPI(document: RAGDocumentRequest, file: File): Promise<v
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await fetch(`${ragApiUrl}/rag/upload-to-collection?user_id=${document.metadata.userId}`, {
+    const response = await fetch(`${ragApiUrl}/rag/upload-to-collection?user_id=${ragIdentifier}`, {
       method: 'POST',
       headers: {
         'accept': 'application/json',
@@ -312,7 +346,7 @@ async function sendToRAGAPI(document: RAGDocumentRequest, file: File): Promise<v
       throw new Error(`RAG API responded with status: ${response.status}`);
     }
 
-    console.log(`Successfully sent document ${document.id} to RAG API`);
+    console.log(`Successfully sent document ${document.id} to RAG API for ${ragIdentifier}`);
   } catch (error) {
     console.error('Error sending to RAG API:', error);
     throw error;
@@ -320,7 +354,7 @@ async function sendToRAGAPI(document: RAGDocumentRequest, file: File): Promise<v
 }
 
 // Helper function to remove document from RAG API
-async function removeFromRAGAPI(documentId: string, userId: string): Promise<void> {
+async function removeFromRAGAPI(documentId: string, ragIdentifier: string): Promise<void> {
   try {
     const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
     
@@ -329,7 +363,7 @@ async function removeFromRAGAPI(documentId: string, userId: string): Promise<voi
       return;
     }
 
-    const response = await fetch(`${ragApiUrl}/rag/delete-from-collection?document_id=${documentId}&user_id=${userId}`, {
+    const response = await fetch(`${ragApiUrl}/rag/delete-from-collection?document_id=${documentId}&user_id=${ragIdentifier}`, {
       method: 'DELETE',
       headers: {
         'accept': 'application/json',
@@ -340,14 +374,14 @@ async function removeFromRAGAPI(documentId: string, userId: string): Promise<voi
       throw new Error(`RAG API responded with status: ${response.status}`);
     }
 
-    console.log(`Successfully removed document ${documentId} from RAG API`);
+    console.log(`Successfully removed document ${documentId} from RAG API for ${ragIdentifier}`);
   } catch (error) {
     console.error('Error removing from RAG API:', error);
     throw error;
   }
 }
 
-export async function getRagDocuments(userId: string): Promise<{ success: boolean; documents?: Array<[string, string]>; error?: string }> {
+export async function getRagDocuments(ragIdentifier: string): Promise<{ success: boolean; documents?: Array<[string, string]>; error?: string }> {
   try {
     const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
     
@@ -358,7 +392,7 @@ export async function getRagDocuments(userId: string): Promise<{ success: boolea
       };
     }
 
-    const response = await fetch(`${ragApiUrl}/rag/get-collection?user_id=${userId}`, {
+    const response = await fetch(`${ragApiUrl}/rag/get-collection?user_id=${ragIdentifier}`, {
       method: 'GET',
       headers: {
         'accept': 'application/json',
@@ -382,4 +416,48 @@ export async function getRagDocuments(userId: string): Promise<{ success: boolea
       error: error instanceof Error ? error.message : 'Failed to fetch RAG documents',
     };
   }
-} 
+}
+
+export async function queryRag(ragIdentifier: string, query: string): Promise<{ success: boolean; response?: string; error?: string }> {
+  try {
+    const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
+    
+    if (!ragApiUrl) {
+      return {
+        success: false,
+        error: 'RAG_API_URL not configured',
+      };
+    }
+
+    const response = await fetch(`${ragApiUrl}/rag/query`, {
+      method: 'POST',
+      headers: {
+        'accept': 'application/json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        user_id: ragIdentifier,
+        query: query,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`RAG API responded with status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    
+    return {
+      success: true,
+      response: result.response || result.answer || 'No response received',
+    };
+  } catch (error) {
+    console.error('Error querying RAG:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to query RAG',
+    };
+  }
+}
+
+ 
