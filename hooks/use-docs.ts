@@ -2,7 +2,7 @@ import { useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import useSWR from 'swr';
 
-import { getDocs, createDoc, deleteDoc } from '@/app/actions/docs';
+import { getDocs, createDoc, deleteDoc, getWorkspaceStorageUsage } from '@/app/actions/docs';
 import { useToast } from './use-toast';
 import type { Doc } from '@/types/docs';
 import { useProfiles } from '@/hooks/use-profiles';
@@ -27,7 +27,23 @@ export function useDocs() {
     }
   );
 
+  // Fetch storage usage data separately
+  const {
+    data: storageResponse,
+    mutate: mutateStorage,
+  } = useSWR(
+    session?.user?.id ? ['storage', session.user.id, currentProfile?.uuid] : null,
+    async () => {
+      if (!session?.user?.id) {
+        throw new Error('Not authenticated');
+      }
+      return await getWorkspaceStorageUsage(session.user.id, currentProfile?.uuid);
+    }
+  );
+
   const docs: Doc[] = docsResponse?.success ? docsResponse.docs || [] : [];
+  const storageUsage = storageResponse?.success ? storageResponse.usage : 0;
+  const storageLimit = storageResponse?.success ? storageResponse.limit : 100 * 1024 * 1024;
 
   const uploadDoc = useCallback(
     async (data: {
@@ -53,8 +69,8 @@ export function useDocs() {
       const result = await createDoc(session.user.id, currentProfile?.uuid, formData);
 
       if (result.success) {
-        // Optimistically update the cache
-        await mutate();
+        // Optimistically update both caches
+        await Promise.all([mutate(), mutateStorage()]);
         toast({
           title: 'Success',
           description: 'Document uploaded successfully',
@@ -82,7 +98,7 @@ export function useDocs() {
         throw new Error(result.error || 'Failed to upload document');
       }
     },
-    [session?.user?.id, currentProfile?.uuid, mutate, toast]
+    [session?.user?.id, currentProfile?.uuid, mutate, mutateStorage, toast]
   );
 
   const removeDoc = useCallback(
@@ -94,8 +110,8 @@ export function useDocs() {
       const result = await deleteDoc(session.user.id, docUuid, currentProfile?.uuid);
       
       if (result.success) {
-        // Optimistically update the cache
-        await mutate();
+        // Optimistically update both caches
+        await Promise.all([mutate(), mutateStorage()]);
         toast({
           title: 'Success',
           description: 'Document deleted successfully',
@@ -109,7 +125,7 @@ export function useDocs() {
         throw new Error(result.error || 'Failed to delete document');
       }
     },
-    [session?.user?.id, currentProfile?.uuid, mutate, toast]
+    [session?.user?.id, currentProfile?.uuid, mutate, mutateStorage, toast]
   );
 
   const downloadDoc = useCallback(
@@ -136,6 +152,8 @@ export function useDocs() {
     docs,
     isLoading,
     error: error || (docsResponse && !docsResponse.success ? docsResponse.error : null),
+    storageUsage,
+    storageLimit,
     uploadDoc,
     removeDoc,
     downloadDoc,

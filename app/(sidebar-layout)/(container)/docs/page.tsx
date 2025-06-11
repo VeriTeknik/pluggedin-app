@@ -32,7 +32,7 @@ const columnHelper = createColumnHelper<Doc>();
 
 export default function DocsPage() {
   const { t } = useTranslation();
-  const { docs, isLoading, uploadDoc, removeDoc, downloadDoc } = useDocs();
+  const { docs, isLoading, storageUsage, uploadDoc, removeDoc, downloadDoc } = useDocs();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -210,7 +210,7 @@ export default function DocsPage() {
   });
 
   // Calculate stats
-  const totalSize = docs.reduce((acc, doc) => acc + doc.file_size, 0);
+  const totalSize = storageUsage || 0; // Use actual storage usage from database
   const recentUploads = docs.filter(doc => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
@@ -246,6 +246,7 @@ export default function DocsPage() {
           isUploading={isUploading}
           onUpload={handleUpload}
           formatFileSize={formatFileSize}
+          storageUsage={storageUsage}
         />
       </div>
 

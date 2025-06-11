@@ -1,15 +1,19 @@
 'use server';
 
-import { and, desc, eq, isNull, or } from 'drizzle-orm';
+import { and, desc, eq, isNull, or, sum } from 'drizzle-orm';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { join } from 'path';
 
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
+import { extractTextContent } from '@/lib/file-utils';
 import type { Doc, DocDeleteResponse, DocListResponse, DocUploadResponse, RAGDocumentRequest } from '@/types/docs';
 
 // Create uploads directory if it doesn't exist
 const UPLOADS_DIR = join(process.cwd(), 'public', 'uploads', 'docs');
+
+// Workspace storage limit: 100 MB
+const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
 
 export async function getDocs(userId: string, profileUuid?: string): Promise<DocListResponse> {
   try {
@@ -83,6 +87,40 @@ export async function getDocByUuid(userId: string, docUuid: string, profileUuid?
   }
 }
 
+// Helper function: Calculate workspace storage usage
+export async function getWorkspaceStorageUsage(
+  userId: string,
+  profileUuid?: string
+): Promise<{ success: boolean; usage: number; limit: number; error?: string }> {
+  try {
+    // Calculate total file size for the workspace
+    const result = await db
+      .select({ totalSize: sum(docsTable.file_size) })
+      .from(docsTable)
+      .where(
+        profileUuid 
+          ? eq(docsTable.profile_uuid, profileUuid)
+          : eq(docsTable.user_id, userId)
+      );
+
+    const usage = Number(result[0]?.totalSize) || 0;
+
+    return {
+      success: true,
+      usage,
+      limit: WORKSPACE_STORAGE_LIMIT,
+    };
+  } catch (error) {
+    console.error('Error calculating workspace storage usage:', error);
+    return {
+      success: false,
+      usage: 0,
+      limit: WORKSPACE_STORAGE_LIMIT,
+      error: error instanceof Error ? error.message : 'Failed to calculate storage usage',
+    };
+  }
+}
+
 // Helper function: Parse and validate form data
 async function parseAndValidateFormData(formData: FormData) {
   const fileEntry = formData.get('file');
@@ -106,9 +144,9 @@ async function parseAndValidateFormData(formData: FormData) {
     throw new Error('File name is required');
   }
 
-  // Validate file size (max 10MB)
-  const maxSize = 10 * 1024 * 1024; // 10MB
-  if (file.size > maxSize) {
+  // Validate file size (max 10MB per file)
+  const maxFileSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxFileSize) {
     throw new Error('File size must be less than 10MB');
   }
 
@@ -167,21 +205,30 @@ async function insertDocRecord(
   return docRecord;
 }
 
-// Helper function: Extract text content for RAG
-async function extractTextContent(file: File, description: string | null): Promise<string> {
-  try {
-    if (file.type.includes('text') || file.type.includes('markdown')) {
-      return await file.text();
-    } else if (file.type.includes('pdf')) {
-      // For PDF, you might want to use a PDF parsing library
-      // For now, we'll just use the filename and description
-      return `PDF Document: ${file.name}\nDescription: ${description || 'No description'}`;
-    } else {
-      return `Document: ${file.name}\nType: ${file.type}\nDescription: ${description || 'No description'}`;
-    }
-  } catch (parseError) {
-    console.warn('Failed to parse file content for RAG:', parseError);
-    return `Document: ${file.name}\nDescription: ${description || 'No description'}`;
+// Helper function: Validate workspace storage limit
+async function validateWorkspaceStorageLimit(
+  userId: string,
+  profileUuid: string | undefined,
+  newFileSize: number
+): Promise<void> {
+  const storageResult = await getWorkspaceStorageUsage(userId, profileUuid);
+  
+  if (!storageResult.success) {
+    throw new Error(storageResult.error || 'Failed to check workspace storage');
+  }
+
+  const newTotalSize = storageResult.usage + newFileSize;
+  
+  if (newTotalSize > WORKSPACE_STORAGE_LIMIT) {
+    const usedMB = Math.round(storageResult.usage / (1024 * 1024) * 100) / 100;
+    const limitMB = Math.round(WORKSPACE_STORAGE_LIMIT / (1024 * 1024));
+    const fileMB = Math.round(newFileSize / (1024 * 1024) * 100) / 100;
+    
+    throw new Error(
+      `Workspace storage limit exceeded. Current usage: ${usedMB} MB, ` +
+      `File size: ${fileMB} MB, Limit: ${limitMB} MB. ` +
+      `Please delete some documents to free up space.`
+    );
   }
 }
 
@@ -231,21 +278,24 @@ export async function createDoc(
     // Step 1: Parse and validate form data
     const { file, name, description, tags } = await parseAndValidateFormData(formData);
 
-    // Step 2: Save file to disk
+    // Step 2: Validate workspace storage limit
+    await validateWorkspaceStorageLimit(userId, profileUuid, file.size);
+
+    // Step 3: Save file to disk
     const { relativePath } = await saveFileToDisk(file);
     
-    // Step 3: Insert document record into database
+    // Step 4: Insert document record into database
     const docRecord = await insertDocRecord(userId, profileUuid, name, description, file, relativePath, tags);
     
-    // Step 4: Extract text content for RAG
+    // Step 5: Extract text content for RAG
     const textContent = await extractTextContent(file, description);
     
-    // Step 5: Process RAG upload
+    // Step 6: Process RAG upload
     const { ragProcessed, ragError } = await processRagUpload(
       docRecord, textContent, file, name, tags, userId, profileUuid
     );
 
-    // Step 6: Return response with formatted doc
+    // Step 7: Return response with formatted doc
     const doc: Doc = {
       ...docRecord,
       created_at: new Date(docRecord.created_at),

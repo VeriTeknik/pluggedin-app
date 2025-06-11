@@ -1,9 +1,10 @@
 'use client';
 
-import { Upload } from 'lucide-react';
-import { useCallback } from 'react';
+import { AlertTriangle, Upload } from 'lucide-react';
+import { useCallback, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -16,7 +17,12 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+
+// 100 MB workspace storage limit
+const STORAGE_LIMIT = 100 * 1024 * 1024;
 
 export interface UploadDialogProps {
   open: boolean;
@@ -36,6 +42,7 @@ export interface UploadDialogProps {
   isUploading: boolean;
   onUpload: () => Promise<void>;
   formatFileSize: (bytes: number) => string;
+  storageUsage?: number;
 }
 
 export function UploadDialog({
@@ -46,7 +53,30 @@ export function UploadDialog({
   isUploading,
   onUpload,
   formatFileSize,
+  storageUsage = 0,
 }: UploadDialogProps) {
+  // Calculate storage warnings
+  const storageInfo = useMemo(() => {
+    const currentUsage = storageUsage;
+    const fileSize = form.file?.size || 0;
+    const projectedUsage = currentUsage + fileSize;
+    const usagePercentage = (currentUsage / STORAGE_LIMIT) * 100;
+    const projectedPercentage = (projectedUsage / STORAGE_LIMIT) * 100;
+    
+    const wouldExceedLimit = projectedUsage > STORAGE_LIMIT;
+    const isNearLimit = usagePercentage >= 80;
+    
+    return {
+      currentUsage,
+      fileSize,
+      projectedUsage,
+      usagePercentage,
+      projectedPercentage,
+      wouldExceedLimit,
+      isNearLimit,
+    };
+  }, [storageUsage, form.file?.size]);
+
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (file) {
@@ -61,7 +91,7 @@ export function UploadDialog({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: false,
-    maxSize: 10 * 1024 * 1024, // 10MB limit
+    maxSize: 10 * 1024 * 1024, // 10MB limit per file
     accept: {
       'application/pdf': ['.pdf'],
       'text/plain': ['.txt'],
@@ -83,18 +113,57 @@ export function UploadDialog({
         <DialogHeader>
           <DialogTitle>Upload Document</DialogTitle>
           <DialogDescription>
-            Upload a new document to your collection
+            Upload a new document to your collection (Workspace limit: {formatFileSize(STORAGE_LIMIT)})
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
+          {/* Storage Usage Info */}
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span>Current Usage:</span>
+              <span>{formatFileSize(storageInfo.currentUsage)} / {formatFileSize(STORAGE_LIMIT)}</span>
+            </div>
+            <Progress 
+              value={storageInfo.usagePercentage} 
+              className="h-2"
+            />
+            <div className="text-xs text-muted-foreground">
+              {storageInfo.usagePercentage.toFixed(1)}% of workspace storage used
+            </div>
+          </div>
+
+          {/* Storage Warnings */}
+          {storageInfo.wouldExceedLimit && form.file && (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                This file ({formatFileSize(storageInfo.fileSize)}) would exceed your workspace storage limit. 
+                Current usage: {formatFileSize(storageInfo.currentUsage)}.
+                Please delete some documents or choose a smaller file.
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {storageInfo.isNearLimit && !storageInfo.wouldExceedLimit && form.file && (
+            <Alert>
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Warning: You&apos;re approaching your storage limit. 
+                After uploading this file, you&apos;ll have used {storageInfo.projectedPercentage.toFixed(1)}% of your workspace storage.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* File Drop Zone */}
           <div
             {...getRootProps()}
-            className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+            className={cn(
+              "border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors",
               isDragActive 
                 ? 'border-primary bg-primary/5' 
-                : 'border-muted-foreground/25 hover:border-primary/50'
-            }`}
+                : 'border-muted-foreground/25 hover:border-primary/50',
+              storageInfo.wouldExceedLimit && 'border-destructive bg-destructive/5'
+            )}
           >
             <input {...getInputProps()} />
             <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
@@ -104,6 +173,11 @@ export function UploadDialog({
                 <p className="text-sm text-muted-foreground">
                   {formatFileSize(form.file.size)}
                 </p>
+                {storageInfo.wouldExceedLimit && (
+                  <p className="text-sm text-destructive mt-1">
+                    File too large for remaining storage
+                  </p>
+                )}
               </div>
             ) : (
               <div>
@@ -111,7 +185,7 @@ export function UploadDialog({
                   {isDragActive ? 'Drop the file here' : 'Click to select or drag and drop'}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  PDF, TXT, MD, DOCX, Images (max 10MB)
+                  PDF, TXT, MD, DOCX, Images (max 10MB per file)
                 </p>
               </div>
             )}
@@ -159,7 +233,7 @@ export function UploadDialog({
           </Button>
           <Button 
             onClick={onUpload} 
-            disabled={!form.file || !form.name || isUploading}
+            disabled={!form.file || !form.name || isUploading || storageInfo.wouldExceedLimit}
           >
             {isUploading ? 'Uploading...' : 'Upload Document'}
           </Button>
