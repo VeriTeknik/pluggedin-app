@@ -232,10 +232,10 @@ export default function SidebarLayout({
                   
                   {/* Update Discover Link to AI Social */}
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('aiSocial')} className="group-data-[collapsible=icon]:justify-center">
+                    <SidebarMenuButton asChild tooltip={t('aiSocial.description')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/discover'>
                         <Users className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('aiSocial')}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{t('aiSocial.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

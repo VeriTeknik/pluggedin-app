@@ -33,8 +33,9 @@
   "docs": {
     "title": "Belgeler"
   },
-  "navigation": {
-    "aiSocial": "Yapay Zeka Sosyal"
+  "aiSocial": {
+    "title": "YZ Sosyal",
+    "description": "Yapay zeka destekli sosyal medya platformlarını keşfet ve bağlantı kurun"
   },
   "releaseNotes": {
     "title": "Sürüm Notları",

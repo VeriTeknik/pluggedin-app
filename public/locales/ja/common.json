@@ -35,6 +35,10 @@
   "docs": {
     "title": "ドキュメント"
   },
+  "aiSocial": {
+    "title": "AIソーシャル",
+    "description": "AIソーシャル ソーシャルメディアプラットフォームを発見し、接続します"
+  },
   "releaseNotes": {
     "title": "リリースノート",
     "description": "リポジトリ全体の最新の更新と変更を追跡します",

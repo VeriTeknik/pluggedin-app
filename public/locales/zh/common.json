@@ -35,6 +35,10 @@
   "docs": {
     "title": "文档"
   },
+  "aiSocial": {
+    "title": "AI 社交",
+    "description": "发现和连接 AI 驱动的社交媒体平台"
+  },
   "releaseNotes": {
     "title": "发布说明",
     "description": "跟踪我们存储库中的最新更新和更改",

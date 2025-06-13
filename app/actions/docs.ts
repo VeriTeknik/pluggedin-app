@@ -10,7 +10,7 @@ import { extractTextContent } from '@/lib/file-utils';
 import type { Doc, DocDeleteResponse, DocListResponse, DocUploadResponse, RAGDocumentRequest } from '@/types/docs';
 
 // Create uploads directory if it doesn't exist
-const UPLOADS_DIR = join(process.cwd(), 'public', 'uploads', 'docs');
+const UPLOADS_BASE_DIR = join(process.cwd(), 'uploads');
 
 // Workspace storage limit: 100 MB
 const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
@@ -144,10 +144,10 @@ async function parseAndValidateFormData(formData: FormData) {
     throw new Error('File name is required');
   }
 
-  // Validate file size (max 10MB per file)
-  const maxFileSize = 10 * 1024 * 1024; // 10MB
+  // Validate file size (max 100MB per file)
+  const maxFileSize = 100 * 1024 * 1024; // 100MB
   if (file.size > maxFileSize) {
-    throw new Error('File size must be less than 10MB');
+    throw new Error('File size must be less than 100MB');
   }
 
   // Parse tags
@@ -158,16 +158,18 @@ async function parseAndValidateFormData(formData: FormData) {
   return { file, name, description, tags };
 }
 
-// Helper function: Save file to disk
-async function saveFileToDisk(file: File) {
-  // Create uploads directory
-  await mkdir(UPLOADS_DIR, { recursive: true });
+// Helper function: Save file to disk in user-specific directory (outside public)
+async function saveFileToDisk(file: File, userId: string) {
+  // Create user-specific uploads directory
+  const userDir = join(UPLOADS_BASE_DIR, userId);
+  await mkdir(userDir, { recursive: true });
 
   // Generate unique filename
   const timestamp = Date.now();
   const fileName = `${timestamp}-${file.name}`;
-  const filePath = join(UPLOADS_DIR, fileName);
-  const relativePath = `/uploads/docs/${fileName}`;
+  const filePath = join(userDir, fileName);
+  // Store only the user-relative path for later secure access
+  const relativePath = `${userId}/${fileName}`;
 
   // Save file to disk
   const bytes = await file.arrayBuffer();
@@ -281,8 +283,8 @@ export async function createDoc(
     // Step 2: Validate workspace storage limit
     await validateWorkspaceStorageLimit(userId, profileUuid, file.size);
 
-    // Step 3: Save file to disk
-    const { relativePath } = await saveFileToDisk(file);
+    // Step 3: Save file to disk in user-specific directory
+    const { relativePath } = await saveFileToDisk(file, userId);
     
     // Step 4: Insert document record into database
     const docRecord = await insertDocRecord(userId, profileUuid, name, description, file, relativePath, tags);
@@ -342,9 +344,9 @@ export async function deleteDoc(
         )
       );
 
-    // Delete file from disk
+    // Delete file from disk (new uploads directory)
     try {
-      const fullPath = join(process.cwd(), 'public', doc.file_path);
+      const fullPath = join(process.cwd(), 'uploads', doc.file_path);
       await unlink(fullPath);
     } catch (fileError) {
       console.warn('Failed to delete file from disk:', fileError);

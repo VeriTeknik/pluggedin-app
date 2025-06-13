@@ -79,6 +79,7 @@ export function UploadDialog({
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
+    console.log('Accepted files:', acceptedFiles);
     if (file) {
       setForm(prev => ({
         ...prev,
@@ -91,7 +92,7 @@ export function UploadDialog({
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     multiple: false,
-    maxSize: 10 * 1024 * 1024, // 10MB limit per file
+    maxSize: STORAGE_LIMIT, // 100MB limit per file
     accept: {
       'application/pdf': ['.pdf'],
       'text/plain': ['.txt'],

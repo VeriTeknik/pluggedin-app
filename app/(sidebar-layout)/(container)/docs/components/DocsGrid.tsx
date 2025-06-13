@@ -37,14 +37,20 @@ export function DocsGrid({
   }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+    <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
       {docs.map((doc) => (
-        <Card key={doc.uuid} className="hover:shadow-md transition-shadow">
-          <CardHeader className="pb-3">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-lg">{getMimeTypeIcon(doc.mime_type)}</span>
-                <CardTitle className="text-sm truncate flex-1">
+        <Card
+          key={doc.uuid}
+          className="hover:shadow-lg transition-shadow h-full flex flex-col justify-between bg-zinc-900/80 border-zinc-800"
+        >
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-2xl">{getMimeTypeIcon(doc.mime_type)}</span>
+                <CardTitle
+                  className="text-base font-semibold truncate max-w-[160px] md:max-w-[180px] lg:max-w-[200px]"
+                  title={doc.name}
+                >
                   {doc.name}
                 </CardTitle>
               </div>
@@ -74,21 +80,20 @@ export function DocsGrid({
               </DropdownMenu>
             </div>
           </CardHeader>
-          <CardContent className="pt-0">
+          <CardContent className="pt-0 flex-1 flex flex-col justify-between">
             <div className="space-y-2">
               {doc.description && (
                 <p className="text-xs text-muted-foreground line-clamp-2">
                   {doc.description}
                 </p>
               )}
-              <div className="text-xs text-muted-foreground">
-                {formatFileSize(doc.file_size)}
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {new Date(doc.created_at).toLocaleDateString()}
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>{formatFileSize(doc.file_size)}</span>
+                <span className="mx-1">•</span>
+                <span>{new Date(doc.created_at).toLocaleDateString()}</span>
               </div>
               {doc.tags && doc.tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1 mt-1">
                   {doc.tags.slice(0, 2).map((tag) => (
                     <Badge key={tag} variant="secondary" className="text-xs">
                       {tag}

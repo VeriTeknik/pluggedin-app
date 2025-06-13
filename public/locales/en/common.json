@@ -35,6 +35,10 @@
   "docs": {
     "title": "Docs"
   },
+    "aiSocial": {
+      "title": "AI Social",
+      "description": "Discover and connect with AI-powered social media platforms"
+    },
   "releaseNotes": {
     "title": "Release Notes",
     "description": "Track the latest updates and changes across our repositories",
