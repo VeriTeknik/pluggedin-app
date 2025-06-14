@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, FileText, HardDrive, Upload } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -22,6 +23,7 @@ export function DocsStats({
   recentUploads, 
   formatFileSize 
 }: DocsStatsProps) {
+  const { t } = useTranslation('docs');
   // Calculate storage usage percentage
   const storagePercentage = Math.min((totalSize / STORAGE_LIMIT) * 100, 100);
   const isNearLimit = storagePercentage >= 80;
@@ -29,23 +31,23 @@ export function DocsStats({
 
   const stats = [
     {
-      title: 'Total Documents',
+      title: t('stats.totalDocuments'),
       value: totalDocs.toString(),
       icon: FileText,
-      description: 'Documents in your collection',
+      description: t('stats.documentsInCollection'),
     },
     {
-      title: 'Storage Used',
+      title: t('stats.storageUsed'),
       value: formatFileSize(totalSize),
       icon: HardDrive,
-      description: `${formatFileSize(STORAGE_LIMIT)} limit`,
+      description: t('stats.storageLimit', { limit: formatFileSize(STORAGE_LIMIT) }),
       isStorage: true,
     },
     {
-      title: 'Recent Uploads',
+      title: t('stats.recentUploads'),
       value: recentUploads.toString(),
       icon: Upload,
-      description: 'Uploaded in last 7 days',
+      description: t('stats.uploadedInLast7Days'),
     },
   ];
 
@@ -87,14 +89,14 @@ export function DocsStats({
                     isOverLimit && "text-destructive",
                     isNearLimit && !isOverLimit && "text-yellow-600"
                   )}>
-                    {storagePercentage.toFixed(1)}% used
+                    {t('stats.percentageUsed', { percentage: storagePercentage.toFixed(1) })}
                   </span>
                   {isNearLimit && (
                     <span className={cn(
                       "font-medium",
                       isOverLimit ? "text-destructive" : "text-yellow-600"
                     )}>
-                      {isOverLimit ? 'Limit exceeded!' : 'Near limit!'}
+                      {isOverLimit ? t('stats.limitExceeded') : t('stats.nearLimit')}
                     </span>
                   )}
                 </div>

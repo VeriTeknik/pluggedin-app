@@ -1,0 +1,99 @@
+{
+  "uploadDialog": {
+    "title": "दस्तावेज़ अपलोड करें",
+    "description": "अपने संग्रह में एक नया दस्तावेज़ अपलोड करें (कार्यक्षेत्र सीमा: {{limit}})",
+    "button": "दस्तावेज़ अपलोड करें",
+    "currentUsage": "वर्तमान उपयोग:",
+    "storageUsed": "कार्यक्षेत्र भंडारण का {{percentage}}% उपयोग किया गया",
+    "exceedLimitWarning": "यह फ़ाइल ({{fileSize}}) आपकी कार्यक्षेत्र भंडारण सीमा से अधिक होगी। वर्तमान उपयोग: {{currentUsage}}। कृपया कुछ दस्तावेज़ हटाएं या छोटी फ़ाइल चुनें।",
+    "nearLimitWarning": "चेतावनी: आप अपनी भंडारण सीमा के करीब पहुंच रहे हैं। इस फ़ाइल को अपलोड करने के बाद, आपने अपने कार्यक्षेत्र भंडारण का {{percentage}}% उपयोग किया होगा।",
+    "fileTooLarge": "शेष भंडारण के लिए फ़ाइल बहुत बड़ी है",
+    "dropFileHere": "फ़ाइल को यहाँ छोड़ें",
+    "clickToSelect": "चुनने के लिए क्लिक करें या खींचें और छोड़ें",
+    "supportedFormats": "PDF, TXT, MD, DOCX, चित्र (प्रति फ़ाइल अधिकतम 10MB)",
+    "documentName": "दस्तावेज़ नाम",
+    "documentNamePlaceholder": "दस्तावेज़ नाम दर्ज करें",
+    "description": "विवरण (वैकल्पिक)",
+    "descriptionPlaceholder": "दस्तावेज़ विवरण दर्ज करें",
+    "tags": "टैग (वैकल्पिक)",
+    "tagsPlaceholder": "अल्पविराम से अलग किए गए टैग दर्ज करें",
+    "cancel": "रद्द करें",
+    "startingUpload": "अपलोड शुरू हो रहा है...",
+    "uploadButton": "दस्तावेज़ अपलोड करें"
+  },
+  "stats": {
+    "totalDocuments": "कुल दस्तावेज़",
+    "documentsInCollection": "आपके संग्रह में दस्तावेज़",
+    "storageUsed": "उपयोग किया गया भंडारण",
+    "storageLimit": "{{limit}} सीमा",
+    "recentUploads": "हाल की अपलोड",
+    "uploadedInLast7Days": "पिछले 7 दिनों में अपलोड किया गया",
+    "percentageUsed": "{{percentage}}% उपयोग किया गया",
+    "limitExceeded": "सीमा पार हो गई!",
+    "nearLimit": "सीमा के पास!"
+  },
+  "page": {
+    "title": "दस्तावेज़",
+    "description": "अपनी दस्तावेज़ फ़ाइलों को अपलोड, प्रबंधित और साझा करें",
+    "loading": "दस्तावेज़ लोड हो रहे हैं...",
+    "tableHeaders": {
+      "name": "नाम",
+      "description": "विवरण",
+      "size": "आकार",
+      "tags": "टैग",
+      "created": "बनाया गया",
+      "actions": "क्रियाएं"
+    }
+  },
+  "controls": {
+    "searchPlaceholder": "दस्तावेज़ खोजें...",
+    "grid": "ग्रिड",
+    "table": "तालिका"
+  },
+  "grid": {
+    "noDocuments": "कोई दस्तावेज़ नहीं मिला।",
+    "openMenu": "मेनू खोलें",
+    "download": "डाउनलोड",
+    "delete": "हटाएं"
+  },
+  "table": {
+    "noDocuments": "कोई दस्तावेज़ नहीं मिला।"
+  },
+  "deleteDialog": {
+    "title": "दस्तावेज़ हटाएं",
+    "description": "क्या आप वाकई \"{{name}}\" को हटाना चाहते हैं? यह क्रिया पूर्ववत नहीं की जा सकती।",
+    "cancel": "रद्द करें",
+    "delete": "हटाएं",
+    "deleting": "हटाया जा रहा है..."
+  },
+  "uploadProgress": {
+    "title": "अपलोड प्रगति",
+    "clearCompleted": "पूर्ण हुए को साफ़ करें",
+    "processingComplete": "प्रसंस्करण पूर्ण",
+    "processingFailed": "प्रसंस्करण असफल",
+    "step": "चरण",
+    "of": "का",
+    "currentStepProgress": "वर्तमान चरण प्रगति",
+    "chunksProcessed": "चंक प्रसंस्कृत",
+    "remaining": "शेष",
+    "processingSteps": "प्रसंस्करण चरण",
+    "completedMessage": "दस्तावेज़ आपके ज्ञान आधार में सफलतापूर्वक जोड़ा गया है",
+    "failedMessage": "प्रसंस्करण के दौरान एक त्रुटि हुई",
+    "timeoutMessage": "प्रसंस्करण समय समाप्त - कृपया अपने दस्तावेज़ों की जांच करें",
+    "processingCompletedMessage": "प्रसंस्करण पूर्ण",
+    "steps": {
+      "textExtraction": "पाठ सामग्री निकालना",
+      "chunking": "सामग्री को तोड़ना",
+      "idGeneration": "अद्वितीय पहचानकर्ता बनाना",
+      "embeddings": "वेक्टर एम्बेडिंग बनाना",
+      "databaseInsertion": "ज्ञान आधार में संग्रहीत करना"
+    },
+    "stepDescriptions": {
+      "textExtraction": "दस्तावेज़ सामग्री पढ़ना और पार्स करना",
+      "chunking": "सामग्री को प्रबंधनीय टुकड़ों में विभाजित करना",
+      "idGeneration": "सामग्री के लिए अद्वितीय पहचानकर्ता बनाना",
+      "embeddings": "पाठ को वेक्टर प्रतिनिधित्व में परिवर्तित करना",
+      "databaseInsertion": "प्रसंस्कृत डेटा को डेटाबेस में सहेजना"
+    }
+  }
+} 

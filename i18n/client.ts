@@ -7,6 +7,7 @@ import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
+import enDocs from '../public/locales/en/docs.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
 import enMcpServers from '../public/locales/en/mcpServers.json';
@@ -21,6 +22,7 @@ import hiApiKeys from '../public/locales/hi/apiKeys.json';
 import hiAuth from '../public/locales/hi/auth.json';
 import hiCommon from '../public/locales/hi/common.json';
 import hiDiscover from '../public/locales/hi/discover.json';
+import hiDocs from '../public/locales/hi/docs.json';
 import hiLanding from '../public/locales/hi/landing.json';
 import hiLegal from '../public/locales/hi/legal.json';
 import hiMcpServers from '../public/locales/hi/mcpServers.json';
@@ -35,6 +37,7 @@ import jaApiKeys from '../public/locales/ja/apiKeys.json';
 import jaAuth from '../public/locales/ja/auth.json';
 import jaCommon from '../public/locales/ja/common.json';
 import jaDiscover from '../public/locales/ja/discover.json';
+import jaDocs from '../public/locales/ja/docs.json';
 import jaLanding from '../public/locales/ja/landing.json';
 import jaLegal from '../public/locales/ja/legal.json';
 import jaMcpServers from '../public/locales/ja/mcpServers.json';
@@ -49,6 +52,7 @@ import nlApiKeys from '../public/locales/nl/apiKeys.json';
 import nlAuth from '../public/locales/nl/auth.json';
 import nlCommon from '../public/locales/nl/common.json';
 import nlDiscover from '../public/locales/nl/discover.json';
+import nlDocs from '../public/locales/nl/docs.json';
 import nlLanding from '../public/locales/nl/landing.json';
 import nlLegal from '../public/locales/nl/legal.json';
 import nlMcpServers from '../public/locales/nl/mcpServers.json';
@@ -63,6 +67,7 @@ import trApiKeys from '../public/locales/tr/apiKeys.json';
 import trAuth from '../public/locales/tr/auth.json';
 import trCommon from '../public/locales/tr/common.json';
 import trDiscover from '../public/locales/tr/discover.json';
+import trDocs from '../public/locales/tr/docs.json';
 import trLanding from '../public/locales/tr/landing.json';
 import trLegal from '../public/locales/tr/legal.json';
 import trMcpServers from '../public/locales/tr/mcpServers.json';
@@ -77,6 +82,7 @@ import zhApiKeys from '../public/locales/zh/apiKeys.json';
 import zhAuth from '../public/locales/zh/auth.json';
 import zhCommon from '../public/locales/zh/common.json';
 import zhDiscover from '../public/locales/zh/discover.json';
+import zhDocs from '../public/locales/zh/docs.json';
 import zhLanding from '../public/locales/zh/landing.json';
 import zhLegal from '../public/locales/zh/legal.json';
 import zhMcpServers from '../public/locales/zh/mcpServers.json';
@@ -95,6 +101,7 @@ const resources = {
       ...enCommon,
       ...enAuth,
       ...enDiscover,
+      ...enDocs,
       ...enLanding,
       ...enMcpServers,
       ...enSearch,
@@ -110,6 +117,7 @@ const resources = {
     auth: enAuth,
     common: enCommon,
     discover: enDiscover,
+    docs: enDocs,
     landing: enLanding,
     legal: enLegal,
     mcpServers: enMcpServers,
@@ -125,6 +133,7 @@ const resources = {
       ...hiCommon,
       ...hiAuth,
       ...hiDiscover,
+      ...hiDocs,
       ...hiLanding,
       ...hiMcpServers,
       ...hiSearch,
@@ -140,6 +149,7 @@ const resources = {
     auth: hiAuth,
     common: hiCommon,
     discover: hiDiscover,
+    docs: hiDocs,
     landing: hiLanding,
     legal: hiLegal,
     mcpServers: hiMcpServers,
@@ -155,6 +165,7 @@ const resources = {
       ...jaCommon,
       ...jaAuth,
       ...jaDiscover,
+      ...jaDocs,
       ...jaLanding,
       ...jaMcpServers,
       ...jaSearch,
@@ -170,6 +181,7 @@ const resources = {
     auth: jaAuth,
     common: jaCommon,
     discover: jaDiscover,
+    docs: jaDocs,
     landing: jaLanding,
     legal: jaLegal,
     mcpServers: jaMcpServers,
@@ -185,6 +197,7 @@ const resources = {
       ...nlCommon,
       ...nlAuth,
       ...nlDiscover,
+      ...nlDocs,
       ...nlLanding,
       ...nlMcpServers,
       ...nlSearch,
@@ -200,6 +213,7 @@ const resources = {
     auth: nlAuth,
     common: nlCommon,
     discover: nlDiscover,
+    docs: nlDocs,
     landing: nlLanding,
     legal: nlLegal,
     mcpServers: nlMcpServers,
@@ -215,6 +229,7 @@ const resources = {
       ...trCommon,
       ...trAuth,
       ...trDiscover,
+      ...trDocs,
       ...trLanding,
       ...trMcpServers,
       ...trSearch,
@@ -230,6 +245,7 @@ const resources = {
     auth: trAuth,
     common: trCommon,
     discover: trDiscover,
+    docs: trDocs,
     landing: trLanding,
     legal: trLegal,
     mcpServers: trMcpServers,
@@ -245,6 +261,7 @@ const resources = {
       ...zhCommon,
       ...zhAuth,
       ...zhDiscover,
+      ...zhDocs,
       ...zhLanding,
       ...zhMcpServers,
       ...zhSearch,
@@ -260,6 +277,7 @@ const resources = {
     auth: zhAuth,
     common: zhCommon,
     discover: zhDiscover,
+    docs: zhDocs,
     landing: zhLanding,
     legal: zhLegal,
     mcpServers: zhMcpServers,

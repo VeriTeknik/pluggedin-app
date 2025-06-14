@@ -1,6 +1,7 @@
 'use client';
 
 import { Download, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,10 +29,11 @@ export function DocsGrid({
   formatFileSize, 
   getMimeTypeIcon 
 }: DocsGridProps) {
+  const { t } = useTranslation('docs');
   if (docs.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-muted-foreground">No documents found.</p>
+        <p className="text-muted-foreground">{t('grid.noDocuments')}</p>
       </div>
     );
   }
@@ -58,7 +60,7 @@ export function DocsGrid({
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
                     <MoreHorizontal className="h-4 w-4" />
-                    <span className="sr-only">Open menu</span>
+                    <span className="sr-only">{t('grid.openMenu')}</span>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -67,14 +69,14 @@ export function DocsGrid({
                     className="cursor-pointer"
                   >
                     <Download className="mr-2 h-4 w-4" />
-                    Download
+                    {t('grid.download')}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
                     onClick={() => onDelete(doc)}
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
-                    Delete
+                    {t('grid.delete')}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

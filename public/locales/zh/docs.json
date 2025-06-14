@@ -1,0 +1,99 @@
+{
+  "uploadDialog": {
+    "title": "上传文档",
+    "description": "上传新文档到您的收藏 (工作区限制: {{limit}})",
+    "button": "上传文档",
+    "currentUsage": "当前使用量:",
+    "storageUsed": "已使用工作区存储的 {{percentage}}%",
+    "exceedLimitWarning": "此文件 ({{fileSize}}) 将超出您的工作区存储限制。当前使用量: {{currentUsage}}。请删除一些文档或选择较小的文件。",
+    "nearLimitWarning": "警告: 您正在接近存储限制。上传此文件后，您将使用工作区存储的 {{percentage}}%。",
+    "fileTooLarge": "文件对于剩余存储空间来说太大",
+    "dropFileHere": "将文件拖放到这里",
+    "clickToSelect": "点击选择或拖放",
+    "supportedFormats": "PDF, TXT, MD, DOCX, 图片 (每个文件最大10MB)",
+    "documentName": "文档名称",
+    "documentNamePlaceholder": "输入文档名称",
+    "description": "描述 (可选)",
+    "descriptionPlaceholder": "输入文档描述",
+    "tags": "标签 (可选)",
+    "tagsPlaceholder": "输入用逗号分隔的标签",
+    "cancel": "取消",
+    "startingUpload": "开始上传...",
+    "uploadButton": "上传文档"
+  },
+  "stats": {
+    "totalDocuments": "文档总数",
+    "documentsInCollection": "您收藏中的文档",
+    "storageUsed": "已用存储",
+    "storageLimit": "{{limit}} 限制",
+    "recentUploads": "最近上传",
+    "uploadedInLast7Days": "最近7天上传",
+    "percentageUsed": "已使用 {{percentage}}%",
+    "limitExceeded": "超出限制！",
+    "nearLimit": "接近限制！"
+  },
+  "page": {
+    "title": "文档",
+    "description": "上传、管理和分享您的文档文件",
+    "loading": "正在加载文档...",
+    "tableHeaders": {
+      "name": "名称",
+      "description": "描述",
+      "size": "大小",
+      "tags": "标签",
+      "created": "创建时间",
+      "actions": "操作"
+    }
+  },
+  "controls": {
+    "searchPlaceholder": "搜索文档...",
+    "grid": "网格",
+    "table": "表格"
+  },
+  "grid": {
+    "noDocuments": "未找到文档。",
+    "openMenu": "打开菜单",
+    "download": "下载",
+    "delete": "删除"
+  },
+  "table": {
+    "noDocuments": "未找到文档。"
+  },
+  "deleteDialog": {
+    "title": "删除文档",
+    "description": "您确定要删除\"{{name}}\"吗？此操作无法撤销。",
+    "cancel": "取消",
+    "delete": "删除",
+    "deleting": "删除中..."
+  },
+  "uploadProgress": {
+    "title": "上传进度",
+    "clearCompleted": "清除已完成",
+    "processingComplete": "处理完成",
+    "processingFailed": "处理失败",
+    "step": "步骤",
+    "of": "/",
+    "currentStepProgress": "当前步骤进度",
+    "chunksProcessed": "个块已处理",
+    "remaining": "剩余",
+    "processingSteps": "处理步骤",
+    "completedMessage": "文档已成功添加到您的知识库",
+    "failedMessage": "处理过程中发生错误",
+    "timeoutMessage": "处理超时 - 请检查您的文档",
+    "processingCompletedMessage": "处理完成",
+    "steps": {
+      "textExtraction": "提取文本内容",
+      "chunking": "分解内容",
+      "idGeneration": "生成唯一标识符",
+      "embeddings": "创建向量嵌入",
+      "databaseInsertion": "存储到知识库"
+    },
+    "stepDescriptions": {
+      "textExtraction": "读取和解析文档内容",
+      "chunking": "将内容分割成可管理的片段",
+      "idGeneration": "为内容创建唯一标识符",
+      "embeddings": "将文本转换为向量表示",
+      "databaseInsertion": "将处理后的数据保存到数据库"
+    }
+  }
+} 

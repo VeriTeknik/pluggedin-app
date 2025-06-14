@@ -1,6 +1,7 @@
 'use client';
 
 import { flexRender, Table as TanStackTable } from '@tanstack/react-table';
+import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -28,6 +29,7 @@ export function DocsTable({
   formatFileSize: _formatFileSize, 
   getMimeTypeIcon: _getMimeTypeIcon 
 }: DocsTableProps) {
+  const { t } = useTranslation('docs');
   return (
     <Card>
       <CardContent className="p-0">
@@ -68,7 +70,7 @@ export function DocsTable({
                   colSpan={table.getAllColumns().length}
                   className="h-24 text-center"
                 >
-                  No documents found.
+                  {t('table.noDocuments')}
                 </TableCell>
               </TableRow>
             )}

@@ -1,0 +1,99 @@
+{
+  "uploadDialog": {
+    "title": "ドキュメントをアップロード",
+    "description": "コレクションに新しいドキュメントをアップロード (ワークスペース制限: {{limit}})",
+    "button": "ドキュメントをアップロード",
+    "currentUsage": "現在の使用量:",
+    "storageUsed": "ワークスペースストレージの {{percentage}}% を使用",
+    "exceedLimitWarning": "このファイル ({{fileSize}}) はワークスペースストレージ制限を超えます。現在の使用量: {{currentUsage}}。いくつかのドキュメントを削除するか、より小さなファイルを選択してください。",
+    "nearLimitWarning": "警告: ストレージ制限に近づいています。このファイルをアップロード後、ワークスペースストレージの {{percentage}}% を使用することになります。",
+    "fileTooLarge": "残りストレージに対してファイルが大きすぎます",
+    "dropFileHere": "ファイルをここにドロップ",
+    "clickToSelect": "クリックして選択またはドラッグ&ドロップ",
+    "supportedFormats": "PDF, TXT, MD, DOCX, 画像 (ファイルあたり最大10MB)",
+    "documentName": "ドキュメント名",
+    "documentNamePlaceholder": "ドキュメント名を入力",
+    "description": "説明 (オプション)",
+    "descriptionPlaceholder": "ドキュメントの説明を入力",
+    "tags": "タグ (オプション)",
+    "tagsPlaceholder": "カンマ区切りでタグを入力",
+    "cancel": "キャンセル",
+    "startingUpload": "アップロード開始中...",
+    "uploadButton": "ドキュメントをアップロード"
+  },
+  "stats": {
+    "totalDocuments": "総ドキュメント数",
+    "documentsInCollection": "コレクション内のドキュメント",
+    "storageUsed": "使用ストレージ",
+    "storageLimit": "{{limit}} 制限",
+    "recentUploads": "最近のアップロード",
+    "uploadedInLast7Days": "過去7日間にアップロード",
+    "percentageUsed": "{{percentage}}% 使用",
+    "limitExceeded": "制限を超過！",
+    "nearLimit": "制限に近い！"
+  },
+  "page": {
+    "title": "ドキュメント",
+    "description": "ドキュメントファイルをアップロード、管理、共有",
+    "loading": "ドキュメントを読み込み中...",
+    "tableHeaders": {
+      "name": "名前",
+      "description": "説明",
+      "size": "サイズ",
+      "tags": "タグ",
+      "created": "作成日",
+      "actions": "アクション"
+    }
+  },
+  "controls": {
+    "searchPlaceholder": "ドキュメントを検索...",
+    "grid": "グリッド",
+    "table": "テーブル"
+  },
+  "grid": {
+    "noDocuments": "ドキュメントが見つかりません。",
+    "openMenu": "メニューを開く",
+    "download": "ダウンロード",
+    "delete": "削除"
+  },
+  "table": {
+    "noDocuments": "ドキュメントが見つかりません。"
+  },
+  "deleteDialog": {
+    "title": "ドキュメントを削除",
+    "description": "\"{{name}}\"を削除してもよろしいですか？この操作は元に戻せません。",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "deleting": "削除中..."
+  },
+  "uploadProgress": {
+    "title": "アップロード進行状況",
+    "clearCompleted": "完了済みをクリア",
+    "processingComplete": "処理完了",
+    "processingFailed": "処理失敗",
+    "step": "ステップ",
+    "of": "/",
+    "currentStepProgress": "現在のステップ進行状況",
+    "chunksProcessed": "チャンク処理済み",
+    "remaining": "残り",
+    "processingSteps": "処理ステップ",
+    "completedMessage": "ドキュメントがナレッジベースに正常に追加されました",
+    "failedMessage": "処理中にエラーが発生しました",
+    "timeoutMessage": "処理タイムアウト - ドキュメントを確認してください",
+    "processingCompletedMessage": "処理完了",
+    "steps": {
+      "textExtraction": "テキストコンテンツの抽出",
+      "chunking": "コンテンツの分割",
+      "idGeneration": "一意識別子の生成",
+      "embeddings": "ベクター埋め込みの作成",
+      "databaseInsertion": "ナレッジベースへの保存"
+    },
+    "stepDescriptions": {
+      "textExtraction": "ドキュメントコンテンツの読み取りと解析",
+      "chunking": "コンテンツを管理可能な部分に分割",
+      "idGeneration": "コンテンツの一意識別子を作成",
+      "embeddings": "テキストをベクター表現に変換",
+      "databaseInsertion": "処理されたデータをデータベースに保存"
+    }
+  }
+} 

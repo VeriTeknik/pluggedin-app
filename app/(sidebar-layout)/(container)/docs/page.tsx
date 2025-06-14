@@ -27,11 +27,12 @@ import { DocsGrid } from './components/DocsGrid';
 import { DocsStats } from './components/DocsStats';
 import { DocsTable } from './components/DocsTable';
 import { UploadDialog } from './components/UploadDialog';
+import { UploadProgress } from './components/UploadProgress';
 
 const columnHelper = createColumnHelper<Doc>();
 
 export default function DocsPage() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('docs');
   const { docs, isLoading, storageUsage, uploadDoc, removeDoc, downloadDoc } = useDocs();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -145,15 +146,15 @@ export default function DocsPage() {
           </div>
         </div>
       ),
-      header: 'Name',
+      header: t('page.tableHeaders.name'),
     }),
     columnHelper.accessor('description', {
       cell: (info) => info.getValue() || '-',
-      header: 'Description',
+      header: t('page.tableHeaders.description'),
     }),
     columnHelper.accessor('file_size', {
       cell: (info) => formatFileSize(info.getValue()),
-      header: 'Size',
+      header: t('page.tableHeaders.size'),
     }),
     columnHelper.accessor('tags', {
       cell: (info) => (
@@ -165,11 +166,11 @@ export default function DocsPage() {
           )) || '-'}
         </div>
       ),
-      header: 'Tags',
+      header: t('page.tableHeaders.tags'),
     }),
     columnHelper.accessor('created_at', {
       cell: (info) => info.getValue().toLocaleDateString(),
-      header: 'Created',
+      header: t('page.tableHeaders.created'),
     }),
     columnHelper.display({
       id: 'actions',
@@ -191,7 +192,7 @@ export default function DocsPage() {
           </Button>
         </div>
       ),
-      header: 'Actions',
+      header: t('page.tableHeaders.actions'),
     }),
   ];
 
@@ -222,7 +223,7 @@ export default function DocsPage() {
       <div className="container mx-auto p-6 flex items-center justify-center min-h-[400px]">
         <div className="flex items-center gap-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading documents...</span>
+          <span>{t('page.loading')}</span>
         </div>
       </div>
     );
@@ -233,9 +234,9 @@ export default function DocsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t('docs.title')}</h1>
+          <h1 className="text-3xl font-bold">{t('page.title')}</h1>
           <p className="text-muted-foreground">
-            Upload, manage, and share your documentation files
+            {t('page.description')}
           </p>
         </div>
         <UploadDialog
@@ -249,6 +250,9 @@ export default function DocsPage() {
           storageUsage={storageUsage}
         />
       </div>
+
+      {/* Upload Progress */}
+      <UploadProgress />
 
       {/* Stats */}
       <DocsStats

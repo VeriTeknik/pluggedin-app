@@ -1,16 +1,19 @@
-import { useCallback } from 'react';
 import { useSession } from 'next-auth/react';
+import { useCallback } from 'react';
 import useSWR from 'swr';
 
-import { getDocs, createDoc, deleteDoc, getWorkspaceStorageUsage } from '@/app/actions/docs';
-import { useToast } from './use-toast';
-import type { Doc } from '@/types/docs';
+import { createDoc, deleteDoc, getDocs, getWorkspaceStorageUsage } from '@/app/actions/docs';
+import { useUploadProgress } from '@/contexts/UploadProgressContext';
 import { useProfiles } from '@/hooks/use-profiles';
+import type { Doc } from '@/types/docs';
+
+import { useToast } from './use-toast';
 
 export function useDocs() {
   const { data: session } = useSession();
   const { toast } = useToast();
   const { currentProfile } = useProfiles();
+  const { addUpload } = useUploadProgress();
 
   const {
     data: docsResponse,
@@ -71,18 +74,39 @@ export function useDocs() {
       if (result.success) {
         // Optimistically update both caches
         await Promise.all([mutate(), mutateStorage()]);
+        
+        // Add to progress tracking if we have an upload_id
+        if (result.upload_id) {
+          addUpload({
+            upload_id: result.upload_id,
+            file_name: data.file.name,
+            file_size: data.file.size,
+            status: 'processing',
+            progress: {
+              step: 'text_extraction',
+              current: 1,
+              total: 5,
+              step_progress: {
+                percentage: 0,
+              },
+            },
+            message: 'Starting document processing...',
+            document_id: null,
+          });
+        }
+        
         toast({
-          title: 'Success',
-          description: 'Document uploaded successfully',
+          title: 'Upload Started',
+          description: 'Document uploaded successfully, processing in background',
         });
         
-        // Show RAG processing status
-        if (result.ragProcessed) {
+        // Handle legacy RAG processing status (for backward compatibility)
+        if (result.ragProcessed && !result.upload_id) {
           toast({
-            title: 'RAG Processing',
+            title: 'RAG Processing Complete',
             description: 'Document has been added to your knowledge base',
           });
-        } else if (result.ragError) {
+        } else if (result.ragError && !result.upload_id) {
           toast({
             title: 'RAG Processing Failed',
             description: `Document uploaded but RAG processing failed: ${result.ragError}`,
@@ -98,7 +122,7 @@ export function useDocs() {
         throw new Error(result.error || 'Failed to upload document');
       }
     },
-    [session?.user?.id, currentProfile?.uuid, mutate, mutateStorage, toast]
+    [session?.user?.id, currentProfile?.uuid, mutate, mutateStorage, toast, addUpload]
   );
 
   const removeDoc = useCallback(

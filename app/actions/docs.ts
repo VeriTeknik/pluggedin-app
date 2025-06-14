@@ -7,7 +7,15 @@ import { join } from 'path';
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
 import { extractTextContent } from '@/lib/file-utils';
-import type { Doc, DocDeleteResponse, DocListResponse, DocUploadResponse, RAGDocumentRequest } from '@/types/docs';
+import type { 
+  Doc, 
+  DocDeleteResponse, 
+  DocListResponse, 
+  DocUploadResponse, 
+  RAGDocumentRequest, 
+  UploadProgress, 
+  UploadStatusResponse 
+} from '@/types/docs';
 
 // Create uploads directory if it doesn't exist
 const UPLOADS_BASE_DIR = join(process.cwd(), 'uploads');
@@ -234,7 +242,7 @@ async function validateWorkspaceStorageLimit(
   }
 }
 
-// Helper function: Process RAG upload
+// Helper function: Process RAG upload - now returns upload_id for tracking
 async function processRagUpload(
   docRecord: any,
   textContent: string,
@@ -248,7 +256,7 @@ async function processRagUpload(
     // Use profileUuid for workspace-specific RAG, fallback to userId for legacy
     const ragIdentifier = profileUuid || userId;
     
-    await sendToRAGAPI({
+    const result = await sendToRAGAPI({
       id: docRecord.uuid,
       title: name,
       content: textContent,
@@ -261,13 +269,14 @@ async function processRagUpload(
         profileUuid: profileUuid || undefined,
       },
     }, file, ragIdentifier);
+    
     console.log('Document successfully uploaded to RAG API');
-    return { ragProcessed: true, ragError: undefined };
+    return { ragProcessed: true, ragError: undefined, upload_id: result.upload_id };
   } catch (ragErr) {
     console.error('Failed to send document to RAG API:', ragErr);
     const ragError = ragErr instanceof Error ? ragErr.message : 'RAG processing failed';
     // Continue with success even if RAG fails
-    return { ragProcessed: false, ragError };
+    return { ragProcessed: false, ragError, upload_id: undefined };
   }
 }
 
@@ -293,7 +302,7 @@ export async function createDoc(
     const textContent = await extractTextContent(file, description);
     
     // Step 6: Process RAG upload
-    const { ragProcessed, ragError } = await processRagUpload(
+    const { ragProcessed, ragError, upload_id } = await processRagUpload(
       docRecord, textContent, file, name, tags, userId, profileUuid
     );
 
@@ -307,6 +316,7 @@ export async function createDoc(
     return {
       success: true,
       doc,
+      upload_id, // Include upload_id for progress tracking
       ragProcessed,
       ragError,
     };
@@ -371,14 +381,13 @@ export async function deleteDoc(
   }
 }
 
-// Helper function to send document to RAG API
-async function sendToRAGAPI(document: RAGDocumentRequest, file: File, ragIdentifier: string): Promise<void> {
+// Helper function to send document to RAG API - now returns upload_id for progress tracking
+async function sendToRAGAPI(document: RAGDocumentRequest, file: File, ragIdentifier: string): Promise<{ upload_id: string }> {
   try {
     const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
     
     if (!ragApiUrl) {
-      console.warn('RAG_API_URL not configured');
-      return;
+      throw new Error('RAG_API_URL not configured');
     }
 
     // Create FormData for multipart upload
@@ -398,7 +407,16 @@ async function sendToRAGAPI(document: RAGDocumentRequest, file: File, ragIdentif
       throw new Error(`RAG API responded with status: ${response.status}`);
     }
 
-    console.log(`Successfully sent document ${document.id} to RAG API for ${ragIdentifier}`);
+    const result = await response.json();
+    console.log(`RAG API upload response:`, JSON.stringify(result, null, 2));
+    console.log(`Successfully sent document ${document.id} to RAG API for ${ragIdentifier}, upload_id: ${result.upload_id}`);
+    
+    if (!result.upload_id) {
+      console.error('Warning: No upload_id in RAG API response, falling back to legacy behavior');
+      throw new Error('No upload_id returned from RAG API');
+    }
+    
+    return { upload_id: result.upload_id };
   } catch (error) {
     console.error('Error sending to RAG API:', error);
     throw error;
@@ -508,6 +526,63 @@ export async function queryRag(ragIdentifier: string, query: string): Promise<{ 
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to query RAG',
+    };
+  }
+}
+
+// New function to check upload progress status
+export async function getUploadStatus(uploadId: string, ragIdentifier: string): Promise<UploadStatusResponse> {
+  try {
+    const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
+    
+    if (!ragApiUrl) {
+      return {
+        success: false,
+        error: 'RAG_API_URL not configured',
+      };
+    }
+
+    console.log(`Checking upload status for uploadId: ${uploadId}, ragIdentifier: ${ragIdentifier}`);
+    const statusUrl = `${ragApiUrl}/rag/upload-status/${uploadId}?user_id=${ragIdentifier}`;
+    console.log(`Making request to: ${statusUrl}`);
+
+    const response = await fetch(statusUrl, {
+      method: 'GET',
+      headers: {
+        'accept': 'application/json',
+      },
+    });
+
+    console.log(`Upload status response status: ${response.status}`);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`RAG API upload status error (${response.status}): ${errorText}`);
+      
+      // If upload not found, it might be completed already - check documents
+      if (response.status === 404) {
+        console.log('Upload not found - might be completed already');
+        return {
+          success: false,
+          error: 'Upload not found - may have completed',
+        };
+      }
+      
+      throw new Error(`RAG API responded with status: ${response.status} - ${errorText}`);
+    }
+
+    const progress: UploadProgress = await response.json();
+    console.log('Upload status response:', JSON.stringify(progress, null, 2));
+    
+    return {
+      success: true,
+      progress,
+    };
+  } catch (error) {
+    console.error('Error checking upload status:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to check upload status',
     };
   }
 }

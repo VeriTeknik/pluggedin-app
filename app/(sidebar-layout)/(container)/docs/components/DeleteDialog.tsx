@@ -1,5 +1,7 @@
 'use client';
 
+import { useTranslation } from 'react-i18next';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -26,13 +28,14 @@ export function DeleteDialog({
   onConfirm,
   isDeleting = false,
 }: DeleteDialogProps) {
+  const { t } = useTranslation('docs');
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Delete Document</DialogTitle>
+          <DialogTitle>{t('deleteDialog.title')}</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete &ldquo;{doc?.name}&rdquo;? This action cannot be undone.
+            {t('deleteDialog.description', { name: doc?.name })}
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
@@ -41,14 +44,14 @@ export function DeleteDialog({
             onClick={() => onOpenChange(false)}
             disabled={isDeleting}
           >
-            Cancel
+            {t('deleteDialog.cancel')}
           </Button>
           <Button 
             variant="destructive" 
             onClick={onConfirm}
             disabled={isDeleting}
           >
-            {isDeleting ? 'Deleting...' : 'Delete'}
+            {isDeleting ? t('deleteDialog.deleting') : t('deleteDialog.delete')}
           </Button>
         </DialogFooter>
       </DialogContent>

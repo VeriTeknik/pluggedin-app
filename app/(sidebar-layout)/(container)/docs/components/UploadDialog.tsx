@@ -3,6 +3,7 @@
 import { AlertTriangle, Upload } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useDropzone } from 'react-dropzone';
+import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
@@ -55,6 +56,7 @@ export function UploadDialog({
   formatFileSize,
   storageUsage = 0,
 }: UploadDialogProps) {
+  const { t } = useTranslation('docs');
   // Calculate storage warnings
   const storageInfo = useMemo(() => {
     const currentUsage = storageUsage;
@@ -107,21 +109,21 @@ export function UploadDialog({
       <DialogTrigger asChild>
         <Button>
           <Upload className="mr-2 h-4 w-4" />
-          Upload Document
+          {t('uploadDialog.button')}
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Upload Document</DialogTitle>
+          <DialogTitle>{t('uploadDialog.title')}</DialogTitle>
           <DialogDescription>
-            Upload a new document to your collection (Workspace limit: {formatFileSize(STORAGE_LIMIT)})
+            {t('uploadDialog.description', { limit: formatFileSize(STORAGE_LIMIT) })}
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           {/* Storage Usage Info */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span>Current Usage:</span>
+              <span>{t('uploadDialog.currentUsage')}</span>
               <span>{formatFileSize(storageInfo.currentUsage)} / {formatFileSize(STORAGE_LIMIT)}</span>
             </div>
             <Progress 
@@ -129,7 +131,7 @@ export function UploadDialog({
               className="h-2"
             />
             <div className="text-xs text-muted-foreground">
-              {storageInfo.usagePercentage.toFixed(1)}% of workspace storage used
+              {t('uploadDialog.storageUsed', { percentage: storageInfo.usagePercentage.toFixed(1) })}
             </div>
           </div>
 
@@ -138,9 +140,10 @@ export function UploadDialog({
             <Alert variant="destructive">
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                This file ({formatFileSize(storageInfo.fileSize)}) would exceed your workspace storage limit. 
-                Current usage: {formatFileSize(storageInfo.currentUsage)}.
-                Please delete some documents or choose a smaller file.
+                {t('uploadDialog.exceedLimitWarning', { 
+                  fileSize: formatFileSize(storageInfo.fileSize),
+                  currentUsage: formatFileSize(storageInfo.currentUsage)
+                })}
               </AlertDescription>
             </Alert>
           )}
@@ -149,8 +152,9 @@ export function UploadDialog({
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                Warning: You&apos;re approaching your storage limit. 
-                After uploading this file, you&apos;ll have used {storageInfo.projectedPercentage.toFixed(1)}% of your workspace storage.
+                {t('uploadDialog.nearLimitWarning', { 
+                  percentage: storageInfo.projectedPercentage.toFixed(1)
+                })}
               </AlertDescription>
             </Alert>
           )}
@@ -176,17 +180,17 @@ export function UploadDialog({
                 </p>
                 {storageInfo.wouldExceedLimit && (
                   <p className="text-sm text-destructive mt-1">
-                    File too large for remaining storage
+                    {t('uploadDialog.fileTooLarge')}
                   </p>
                 )}
               </div>
             ) : (
               <div>
                 <p className="text-sm font-medium">
-                  {isDragActive ? 'Drop the file here' : 'Click to select or drag and drop'}
+                  {isDragActive ? t('uploadDialog.dropFileHere') : t('uploadDialog.clickToSelect')}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  PDF, TXT, MD, DOCX, Images (max 10MB per file)
+                  {t('uploadDialog.supportedFormats')}
                 </p>
               </div>
             )}
@@ -195,31 +199,31 @@ export function UploadDialog({
           {/* Form Fields */}
           <div className="space-y-3">
             <div>
-              <Label htmlFor="name">Document Name</Label>
+              <Label htmlFor="name">{t('uploadDialog.documentName')}</Label>
               <Input
                 id="name"
                 value={form.name}
                 onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Enter document name"
+                placeholder={t('uploadDialog.documentNamePlaceholder')}
               />
             </div>
             <div>
-              <Label htmlFor="description">Description (optional)</Label>
+              <Label htmlFor="description">{t('uploadDialog.description')}</Label>
               <Textarea
                 id="description"
                 value={form.description}
                 onChange={(e) => setForm(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Enter document description"
+                placeholder={t('uploadDialog.descriptionPlaceholder')}
                 rows={2}
               />
             </div>
             <div>
-              <Label htmlFor="tags">Tags (optional)</Label>
+              <Label htmlFor="tags">{t('uploadDialog.tags')}</Label>
               <Input
                 id="tags"
                 value={form.tags}
                 onChange={(e) => setForm(prev => ({ ...prev, tags: e.target.value }))}
-                placeholder="Enter tags separated by commas"
+                placeholder={t('uploadDialog.tagsPlaceholder')}
               />
             </div>
           </div>
@@ -230,13 +234,13 @@ export function UploadDialog({
             onClick={() => onOpenChange(false)}
             disabled={isUploading}
           >
-            Cancel
+            {t('uploadDialog.cancel')}
           </Button>
           <Button 
             onClick={onUpload} 
             disabled={!form.file || !form.name || isUploading || storageInfo.wouldExceedLimit}
           >
-            {isUploading ? 'Uploading...' : 'Upload Document'}
+            {isUploading ? t('uploadDialog.startingUpload') : t('uploadDialog.uploadButton')}
           </Button>
         </DialogFooter>
       </DialogContent>
