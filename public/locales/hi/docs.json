@@ -13,7 +13,7 @@
     "supportedFormats": "PDF, TXT, MD, DOCX, चित्र (प्रति फ़ाइल अधिकतम 10MB)",
     "documentName": "दस्तावेज़ नाम",
     "documentNamePlaceholder": "दस्तावेज़ नाम दर्ज करें",
-    "description": "विवरण (वैकल्पिक)",
+    "descriptionLabel": "विवरण (वैकल्पिक)",
     "descriptionPlaceholder": "दस्तावेज़ विवरण दर्ज करें",
     "tags": "टैग (वैकल्पिक)",
     "tagsPlaceholder": "अल्पविराम से अलग किए गए टैग दर्ज करें",

@@ -13,7 +13,7 @@
     "supportedFormats": "PDF, TXT, MD, DOCX, Afbeeldingen (max 10MB per bestand)",
     "documentName": "Document Naam",
     "documentNamePlaceholder": "Voer document naam in",
-    "description": "Beschrijving (optioneel)",
+    "descriptionLabel": "Beschrijving (optioneel)",
     "descriptionPlaceholder": "Voer document beschrijving in",
     "tags": "Tags (optioneel)",
     "tagsPlaceholder": "Voer tags gescheiden door komma's in",

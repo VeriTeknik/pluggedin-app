@@ -208,7 +208,7 @@ export function UploadDialog({
               />
             </div>
             <div>
-              <Label htmlFor="description">{t('uploadDialog.description')}</Label>
+              <Label htmlFor="description">{t('uploadDialog.descriptionLabel')}</Label>
               <Textarea
                 id="description"
                 value={form.description}

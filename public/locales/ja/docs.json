@@ -13,7 +13,7 @@
     "supportedFormats": "PDF, TXT, MD, DOCX, 画像 (ファイルあたり最大10MB)",
     "documentName": "ドキュメント名",
     "documentNamePlaceholder": "ドキュメント名を入力",
-    "description": "説明 (オプション)",
+    "descriptionLabel": "説明 (オプション)",
     "descriptionPlaceholder": "ドキュメントの説明を入力",
     "tags": "タグ (オプション)",
     "tagsPlaceholder": "カンマ区切りでタグを入力",

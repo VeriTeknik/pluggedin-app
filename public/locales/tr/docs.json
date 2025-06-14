@@ -13,7 +13,7 @@
     "supportedFormats": "PDF, TXT, MD, DOCX, Resimler (dosya başına maks 10MB)",
     "documentName": "Belge Adı",
     "documentNamePlaceholder": "Belge adını girin",
-    "description": "Açıklama (isteğe bağlı)",
+    "descriptionLabel": "Açıklama (isteğe bağlı)",
     "descriptionPlaceholder": "Belge açıklamasını girin",
     "tags": "Etiketler (isteğe bağlı)",
     "tagsPlaceholder": "Virgülle ayrılmış etiketleri girin",

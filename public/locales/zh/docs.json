@@ -13,7 +13,7 @@
     "supportedFormats": "PDF, TXT, MD, DOCX, 图片 (每个文件最大10MB)",
     "documentName": "文档名称",
     "documentNamePlaceholder": "输入文档名称",
-    "description": "描述 (可选)",
+    "descriptionLabel": "描述 (可选)",
     "descriptionPlaceholder": "输入文档描述",
     "tags": "标签 (可选)",
     "tagsPlaceholder": "输入用逗号分隔的标签",
