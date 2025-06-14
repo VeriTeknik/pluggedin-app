@@ -222,7 +222,6 @@ export function UploadProgress({ className }: UploadProgressProps) {
     return null;
   }
 
-  const processingUploads = uploads.filter(upload => upload.status === 'processing');
   const completedUploads = uploads.filter(upload => upload.status !== 'processing');
 
   return (

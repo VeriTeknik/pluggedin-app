@@ -285,10 +285,6 @@ export default function DocsPage() {
         <TabsContent value="table">
           <DocsTable
             table={table}
-            onDownload={handleDownload}
-            onDelete={handleDelete}
-            formatFileSize={formatFileSize}
-            getMimeTypeIcon={getMimeTypeIcon}
           />
         </TabsContent>
       </Tabs>

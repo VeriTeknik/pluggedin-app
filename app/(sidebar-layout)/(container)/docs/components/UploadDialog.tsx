@@ -81,7 +81,6 @@ export function UploadDialog({
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
-    console.log('Accepted files:', acceptedFiles);
     if (file) {
       setForm(prev => ({
         ...prev,

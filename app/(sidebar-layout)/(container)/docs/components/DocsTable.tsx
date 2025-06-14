@@ -16,18 +16,10 @@ import { Doc } from '@/types/docs';
 
 export interface DocsTableProps {
   table: TanStackTable<Doc>;
-  onDownload: (doc: Doc) => void;
-  onDelete: (doc: Doc) => void;
-  formatFileSize: (bytes: number) => string;
-  getMimeTypeIcon: (mimeType: string) => string;
 }
 
 export function DocsTable({ 
-  table, 
-  onDownload: _onDownload, 
-  onDelete: _onDelete, 
-  formatFileSize: _formatFileSize, 
-  getMimeTypeIcon: _getMimeTypeIcon 
+  table
 }: DocsTableProps) {
   const { t } = useTranslation('docs');
   return (
