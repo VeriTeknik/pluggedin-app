@@ -7,14 +7,12 @@ import { join } from 'path';
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
 import { extractTextContent } from '@/lib/file-utils';
+import { ragService, type UploadStatusResponse } from '@/lib/rag-service';
 import type { 
   Doc, 
   DocDeleteResponse, 
   DocListResponse, 
-  DocUploadResponse, 
-  RAGDocumentRequest, 
-  UploadProgress, 
-  UploadStatusResponse 
+  DocUploadResponse
 } from '@/types/docs';
 
 // Create uploads directory if it doesn't exist
@@ -256,7 +254,7 @@ async function processRagUpload(
     // Use profileUuid for workspace-specific RAG, fallback to userId for legacy
     const ragIdentifier = profileUuid || userId;
     
-    const result = await sendToRAGAPI({
+    const result = await ragService.uploadDocument({
       id: docRecord.uuid,
       title: name,
       content: textContent,
@@ -270,8 +268,12 @@ async function processRagUpload(
       },
     }, file, ragIdentifier);
     
-    console.log('Document successfully uploaded to RAG API');
-    return { ragProcessed: true, ragError: undefined, upload_id: result.upload_id };
+    if (result.success) {
+      console.log('Document successfully uploaded to RAG API');
+      return { ragProcessed: true, ragError: undefined, upload_id: result.upload_id };
+    } else {
+      throw new Error(result.error || 'RAG upload failed');
+    }
   } catch (ragErr) {
     console.error('Failed to send document to RAG API:', ragErr);
     const ragError = ragErr instanceof Error ? ragErr.message : 'RAG processing failed';
@@ -365,7 +367,7 @@ export async function deleteDoc(
 
     // Remove from RAG API (use profileUuid or fallback to userId)
     const ragIdentifier = profileUuid || userId;
-    removeFromRAGAPI(docUuid, ragIdentifier).catch(error => {
+    ragService.removeDocument(docUuid, ragIdentifier).catch(error => {
       console.error('Failed to remove document from RAG API:', error);
     });
 
@@ -381,210 +383,19 @@ export async function deleteDoc(
   }
 }
 
-// Helper function to send document to RAG API - now returns upload_id for progress tracking
-async function sendToRAGAPI(document: RAGDocumentRequest, file: File, ragIdentifier: string): Promise<{ upload_id: string }> {
-  try {
-    const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
-    
-    if (!ragApiUrl) {
-      throw new Error('RAG_API_URL not configured');
-    }
 
-    // Create FormData for multipart upload
-    const formData = new FormData();
-    formData.append('file', file);
-
-    const response = await fetch(`${ragApiUrl}/rag/upload-to-collection?user_id=${ragIdentifier}`, {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        // Don't set Content-Type, let browser set it with boundary for multipart
-      },
-      body: formData,
-    });
-
-    if (!response.ok) {
-      throw new Error(`RAG API responded with status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log(`RAG API upload response:`, JSON.stringify(result, null, 2));
-    console.log(`Successfully sent document ${document.id} to RAG API for ${ragIdentifier}, upload_id: ${result.upload_id}`);
-    
-    if (!result.upload_id) {
-      console.error('Warning: No upload_id in RAG API response, falling back to legacy behavior');
-      throw new Error('No upload_id returned from RAG API');
-    }
-    
-    return { upload_id: result.upload_id };
-  } catch (error) {
-    console.error('Error sending to RAG API:', error);
-    throw error;
-  }
-}
-
-// Helper function to remove document from RAG API
-async function removeFromRAGAPI(documentId: string, ragIdentifier: string): Promise<void> {
-  try {
-    const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
-    
-    if (!ragApiUrl) {
-      console.warn('RAG_API_URL not configured');
-      return;
-    }
-
-    const response = await fetch(`${ragApiUrl}/rag/delete-from-collection?document_id=${documentId}&user_id=${ragIdentifier}`, {
-      method: 'DELETE',
-      headers: {
-        'accept': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`RAG API responded with status: ${response.status}`);
-    }
-
-    console.log(`Successfully removed document ${documentId} from RAG API for ${ragIdentifier}`);
-  } catch (error) {
-    console.error('Error removing from RAG API:', error);
-    throw error;
-  }
-}
 
 export async function getRagDocuments(ragIdentifier: string): Promise<{ success: boolean; documents?: Array<[string, string]>; error?: string }> {
-  try {
-    const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
-    
-    if (!ragApiUrl) {
-      return {
-        success: false,
-        error: 'RAG_API_URL not configured',
-      };
-    }
-
-    const response = await fetch(`${ragApiUrl}/rag/get-collection?user_id=${ragIdentifier}`, {
-      method: 'GET',
-      headers: {
-        'accept': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`RAG API responded with status: ${response.status}`);
-    }
-
-    const documents = await response.json();
-    
-    return {
-      success: true,
-      documents, // Array of [filename, document_id] pairs
-    };
-  } catch (error) {
-    console.error('Error fetching RAG documents:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to fetch RAG documents',
-    };
-  }
+  return ragService.getDocuments(ragIdentifier);
 }
 
 export async function queryRag(ragIdentifier: string, query: string): Promise<{ success: boolean; response?: string; error?: string }> {
-  try {
-    const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
-    
-    if (!ragApiUrl) {
-      return {
-        success: false,
-        error: 'RAG_API_URL not configured',
-      };
-    }
-
-    const response = await fetch(`${ragApiUrl}/rag/query`, {
-      method: 'POST',
-      headers: {
-        'accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        user_id: ragIdentifier,
-        query: query,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`RAG API responded with status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    
-    return {
-      success: true,
-      response: result.response || result.answer || 'No response received',
-    };
-  } catch (error) {
-    console.error('Error querying RAG:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to query RAG',
-    };
-  }
+  return ragService.queryForResponse(ragIdentifier, query);
 }
 
 // New function to check upload progress status
 export async function getUploadStatus(uploadId: string, ragIdentifier: string): Promise<UploadStatusResponse> {
-  try {
-    const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
-    
-    if (!ragApiUrl) {
-      return {
-        success: false,
-        error: 'RAG_API_URL not configured',
-      };
-    }
-
-    console.log(`Checking upload status for uploadId: ${uploadId}, ragIdentifier: ${ragIdentifier}`);
-    const statusUrl = `${ragApiUrl}/rag/upload-status/${uploadId}?user_id=${ragIdentifier}`;
-    console.log(`Making request to: ${statusUrl}`);
-
-    const response = await fetch(statusUrl, {
-      method: 'GET',
-      headers: {
-        'accept': 'application/json',
-      },
-    });
-
-    console.log(`Upload status response status: ${response.status}`);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`RAG API upload status error (${response.status}): ${errorText}`);
-      
-      // If upload not found, it might be completed already - check documents
-      if (response.status === 404) {
-        console.log('Upload not found - might be completed already');
-        return {
-          success: false,
-          error: 'Upload not found - may have completed',
-        };
-      }
-      
-      throw new Error(`RAG API responded with status: ${response.status} - ${errorText}`);
-    }
-
-    const progress: UploadProgress = await response.json();
-    console.log('Upload status response:', JSON.stringify(progress, null, 2));
-    
-    return {
-      success: true,
-      progress,
-    };
-  } catch (error) {
-    console.error('Error checking upload status:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to check upload status',
-    };
-  }
+  return ragService.getUploadStatus(uploadId, ragIdentifier);
 }
 
  

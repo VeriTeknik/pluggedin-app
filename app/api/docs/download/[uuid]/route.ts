@@ -16,12 +16,14 @@ export async function GET(
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    // Extract uuid from params
+    // Extract uuid from params and profileUuid from query
     const { uuid } = await params;
+    const { searchParams } = new URL(request.url);
+    const profileUuid = searchParams.get('profileUuid');
 
-    // Get the document using the authenticated user's ID
-    // This now checks that the document belongs to a profile owned by the user
-    const doc = await getDocByUuid(session.user.id, uuid);
+    // Get the document using the authenticated user's ID and profile UUID
+    // This ensures users can only access documents within their own workspace
+    const doc = await getDocByUuid(session.user.id, uuid, profileUuid || undefined);
     if (!doc) {
       return new NextResponse('Document not found', { status: 404 });
     }

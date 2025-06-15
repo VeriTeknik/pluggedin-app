@@ -144,7 +144,8 @@ export function UploadProgressProvider({ children }: { children: React.ReactNode
             }));
           }
         } catch (error) {
-          // Silent error handling - could add proper error reporting here
+          console.error('Upload polling error:', error);
+          // Continue polling despite errors to avoid breaking the upload flow
         }
       }
 

@@ -95,7 +95,7 @@ export function usePlayground() {
   const lastLogCountRef = useRef<number>(0); // Track number of logs to detect changes
 
   // Ref for settings throttling
-  const updateSettingsThrottledRef = useRef<NodeJS.Timeout | null>(null);
+  const updateSettingsThrottledRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs to mirror state values for accessing latest values without closures
   const llmConfigRef = useRef<PlaygroundSettings>(llmConfig);
@@ -561,20 +561,15 @@ export function usePlayground() {
         logLevel: logLevelRef.current,
       };
       
-      console.log('[RAG DEBUG] Saving settings:', settingsToSave);
-      
       try {
         const result = await updatePlaygroundSettings(profileUuid, settingsToSave);
         if (result.success) {
           addLog('info', 'Settings saved successfully');
-          console.log('[RAG DEBUG] Settings saved successfully to database');
         } else {
           const msg = result.error || 'Unknown error';
           addLog('error', `Failed to save settings: ${msg}`);
-          console.error('[RAG DEBUG] Failed to save settings:', msg);
         }
       } catch (error) {
-        console.error('[RAG DEBUG] Exception saving settings:', error);
         const msg = error instanceof Error ? error.message : 'Unknown error';
         addLog('error', `Exception saving settings: ${msg}`);
       }

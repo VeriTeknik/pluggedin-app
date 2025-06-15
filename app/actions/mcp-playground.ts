@@ -787,39 +787,6 @@ export async function endPlaygroundSession(profileUuid: string) {
 
 // Query RAG API for relevant context
 export async function queryRag(query: string, ragIdentifier: string) {
-  try {
-    const ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
-    const url = new URL('/rag/rag-query', ragApiUrl);
-
-
-
-    const response = await fetch(url.toString(), {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: query,
-        user_id: ragIdentifier,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`RAG API error: ${response.status} ${response.statusText}`);
-    }
-
-    const ragContext = await response.text();
-    
-    return {
-      success: true,
-      context: ragContext
-    };
-  } catch (error) {
-    console.error('Error querying RAG API:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
+  const { ragService } = await import('@/lib/rag-service');
+  return ragService.queryForContext(query, ragIdentifier);
 }

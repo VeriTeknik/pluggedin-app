@@ -30,6 +30,7 @@ export function DocsControls({
           value={searchTerm}
           onChange={(e) => onSearchChange(e.target.value)}
           className="pl-9"
+          aria-label={t('controls.searchPlaceholder')}
         />
       </div>
 
