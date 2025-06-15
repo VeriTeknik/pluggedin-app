@@ -1,6 +1,6 @@
 'use server';
 
-import { and, desc, eq, isNull, or, sum } from 'drizzle-orm';
+import { and, desc, eq, sum } from 'drizzle-orm';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { join } from 'path';
 
@@ -21,19 +21,16 @@ const UPLOADS_BASE_DIR = join(process.cwd(), 'uploads');
 // Workspace storage limit: 100 MB
 const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
 
-export async function getDocs(userId: string, profileUuid?: string): Promise<DocListResponse> {
+export async function getDocs(userId: string, projectUuid?: string): Promise<DocListResponse> {
   try {
     let docs;
     
-    if (profileUuid) {
-      // Get documents specifically for this profile AND legacy documents without profile_uuid
+    if (projectUuid) {
+      // Get documents specifically for this project
       docs = await db.query.docsTable.findMany({
         where: and(
           eq(docsTable.user_id, userId),
-          or(
-            eq(docsTable.profile_uuid, profileUuid),
-            isNull(docsTable.profile_uuid)
-          )
+          eq(docsTable.project_uuid, projectUuid)
         ),
         orderBy: [desc(docsTable.created_at)],
       });
@@ -62,7 +59,7 @@ export async function getDocs(userId: string, profileUuid?: string): Promise<Doc
   }
 }
 
-export async function getDocByUuid(userId: string, docUuid: string, profileUuid?: string): Promise<Doc | null> {
+export async function getDocByUuid(userId: string, docUuid: string, projectUuid?: string): Promise<Doc | null> {
   try {
     // First check if user owns the document
     const doc = await db.query.docsTable.findFirst({
@@ -76,9 +73,8 @@ export async function getDocByUuid(userId: string, docUuid: string, profileUuid?
       return null;
     }
 
-    // If profileUuid provided, verify document belongs to this workspace
-    // (or is a legacy document without profile_uuid)
-    if (profileUuid && doc.profile_uuid && doc.profile_uuid !== profileUuid) {
+    // If projectUuid provided, verify document belongs to this project
+    if (projectUuid && doc.project_uuid && doc.project_uuid !== projectUuid) {
       return null;
     }
 
@@ -93,19 +89,19 @@ export async function getDocByUuid(userId: string, docUuid: string, profileUuid?
   }
 }
 
-// Helper function: Calculate workspace storage usage
-export async function getWorkspaceStorageUsage(
+// Helper function: Calculate project storage usage
+export async function getProjectStorageUsage(
   userId: string,
-  profileUuid?: string
+  projectUuid?: string
 ): Promise<{ success: boolean; usage: number; limit: number; error?: string }> {
   try {
-    // Calculate total file size for the workspace
+    // Calculate total file size for the project
     const result = await db
       .select({ totalSize: sum(docsTable.file_size) })
       .from(docsTable)
       .where(
-        profileUuid 
-          ? eq(docsTable.profile_uuid, profileUuid)
+        projectUuid 
+          ? eq(docsTable.project_uuid, projectUuid)
           : eq(docsTable.user_id, userId)
       );
 
@@ -117,7 +113,7 @@ export async function getWorkspaceStorageUsage(
       limit: WORKSPACE_STORAGE_LIMIT,
     };
   } catch (error) {
-    console.error('Error calculating workspace storage usage:', error);
+    console.error('Error calculating project storage usage:', error);
     return {
       success: false,
       usage: 0,
@@ -188,7 +184,7 @@ async function saveFileToDisk(file: File, userId: string) {
 // Helper function: Insert document record into database
 async function insertDocRecord(
   userId: string,
-  profileUuid: string | undefined,
+  projectUuid: string | undefined,
   name: string,
   description: string | null,
   file: File,
@@ -199,7 +195,7 @@ async function insertDocRecord(
     .insert(docsTable)
     .values({
       user_id: userId,
-      profile_uuid: profileUuid,
+      project_uuid: projectUuid,
       name,
       description,
       file_name: file.name,
@@ -213,13 +209,13 @@ async function insertDocRecord(
   return docRecord;
 }
 
-// Helper function: Validate workspace storage limit
-async function validateWorkspaceStorageLimit(
+// Helper function: Validate project storage limit
+async function validateProjectStorageLimit(
   userId: string,
-  profileUuid: string | undefined,
+  projectUuid: string | undefined,
   newFileSize: number
 ): Promise<void> {
-  const storageResult = await getWorkspaceStorageUsage(userId, profileUuid);
+  const storageResult = await getProjectStorageUsage(userId, projectUuid);
   
   if (!storageResult.success) {
     throw new Error(storageResult.error || 'Failed to check workspace storage');
@@ -248,24 +244,23 @@ async function processRagUpload(
   name: string,
   tags: string[],
   userId: string,
-  profileUuid?: string
+  projectUuid?: string
 ) {
   try {
-    // Use profileUuid for workspace-specific RAG, fallback to userId for legacy
-    const ragIdentifier = profileUuid || userId;
+    // Use projectUuid for project-specific RAG, fallback to userId for legacy
+    const ragIdentifier = projectUuid || userId;
     
     const result = await ragService.uploadDocument({
       id: docRecord.uuid,
       title: name,
       content: textContent,
-      metadata: {
-        filename: file.name,
-        mimeType: file.type,
-        fileSize: file.size,
-        tags,
-        userId,
-        profileUuid: profileUuid || undefined,
-      },
+              metadata: {
+          filename: file.name,
+          mimeType: file.type,
+          fileSize: file.size,
+          tags,
+          userId,
+        },
     }, file, ragIdentifier);
     
     if (result.success) {
@@ -284,28 +279,28 @@ async function processRagUpload(
 
 export async function createDoc(
   userId: string,
-  profileUuid: string | undefined,
+  projectUuid: string | undefined,
   formData: FormData
 ): Promise<DocUploadResponse> {
   try {
     // Step 1: Parse and validate form data
     const { file, name, description, tags } = await parseAndValidateFormData(formData);
 
-    // Step 2: Validate workspace storage limit
-    await validateWorkspaceStorageLimit(userId, profileUuid, file.size);
+    // Step 2: Validate project storage limit
+    await validateProjectStorageLimit(userId, projectUuid, file.size);
 
     // Step 3: Save file to disk in user-specific directory
     const { relativePath } = await saveFileToDisk(file, userId);
     
     // Step 4: Insert document record into database
-    const docRecord = await insertDocRecord(userId, profileUuid, name, description, file, relativePath, tags);
+    const docRecord = await insertDocRecord(userId, projectUuid, name, description, file, relativePath, tags);
     
     // Step 5: Extract text content for RAG
     const textContent = await extractTextContent(file, description);
     
     // Step 6: Process RAG upload
     const { ragProcessed, ragError, upload_id } = await processRagUpload(
-      docRecord, textContent, file, name, tags, userId, profileUuid
+      docRecord, textContent, file, name, tags, userId, projectUuid
     );
 
     // Step 7: Return response with formatted doc
@@ -334,11 +329,11 @@ export async function createDoc(
 export async function deleteDoc(
   userId: string,
   docUuid: string,
-  profileUuid?: string
+  projectUuid?: string
 ): Promise<DocDeleteResponse> {
   try {
     // Get the doc first to get file path and verify ownership
-    const doc = await getDocByUuid(userId, docUuid, profileUuid);
+    const doc = await getDocByUuid(userId, docUuid, projectUuid);
     if (!doc) {
       return {
         success: false,
@@ -365,8 +360,8 @@ export async function deleteDoc(
       // Don't fail the operation if file deletion fails
     }
 
-    // Remove from RAG API (use profileUuid or fallback to userId)
-    const ragIdentifier = profileUuid || userId;
+    // Remove from RAG API (use projectUuid or fallback to userId)
+    const ragIdentifier = projectUuid || userId;
     ragService.removeDocument(docUuid, ragIdentifier).catch(error => {
       console.error('Failed to remove document from RAG API:', error);
     });
@@ -383,8 +378,6 @@ export async function deleteDoc(
   }
 }
 
-
-
 export async function getRagDocuments(ragIdentifier: string): Promise<{ success: boolean; documents?: Array<[string, string]>; error?: string }> {
   return ragService.getDocuments(ragIdentifier);
 }
@@ -397,5 +390,7 @@ export async function queryRag(ragIdentifier: string, query: string): Promise<{ 
 export async function getUploadStatus(uploadId: string, ragIdentifier: string): Promise<UploadStatusResponse> {
   return ragService.getUploadStatus(uploadId, ragIdentifier);
 }
+
+
 
  

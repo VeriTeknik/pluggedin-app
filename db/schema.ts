@@ -800,8 +800,8 @@ export const docsTable = pgTable(
     user_id: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    profile_uuid: uuid('profile_uuid')
-      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    project_uuid: uuid('project_uuid')
+      .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     description: text('description'),
     file_name: text('file_name').notNull(),
@@ -818,7 +818,7 @@ export const docsTable = pgTable(
   },
   (table) => ({
     docsUserIdIdx: index('docs_user_id_idx').on(table.user_id),
-    docsProfileUuidIdx: index('docs_profile_uuid_idx').on(table.profile_uuid),
+    docsProjectUuidIdx: index('docs_project_uuid_idx').on(table.project_uuid),
     docsNameIdx: index('docs_name_idx').on(table.name),
     docsCreatedAtIdx: index('docs_created_at_idx').on(table.created_at),
   })
@@ -829,9 +829,9 @@ export const docsRelations = relations(docsTable, ({ one }) => ({
     fields: [docsTable.user_id],
     references: [users.id],
   }),
-  profile: one(profilesTable, {
-    fields: [docsTable.profile_uuid],
-    references: [profilesTable.uuid],
+  project: one(projectsTable, {
+    fields: [docsTable.project_uuid],
+    references: [projectsTable.uuid],
   }),
 }));
 

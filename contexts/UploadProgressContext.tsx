@@ -4,7 +4,7 @@ import { useSession } from 'next-auth/react';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useProfiles } from '@/hooks/use-profiles';
+import { useProjects } from '@/hooks/use-projects';
 import type { UploadProgressState } from '@/types/docs';
 
 interface UploadProgressContextType {
@@ -26,7 +26,7 @@ const UploadProgressContext = createContext<UploadProgressContextType | undefine
 
 export function UploadProgressProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
-  const { currentProfile } = useProfiles();
+  const { currentProject } = useProjects();
   const { t } = useTranslation('docs');
   const [uploads, setUploads] = useState<UploadProgressState[]>([]);
   const [pollTrackers, setPollTrackers] = useState<Map<string, PollTracker>>(new Map());
@@ -171,7 +171,7 @@ export function UploadProgressProvider({ children }: { children: React.ReactNode
 
     // Start polling for this upload
     if (session?.user?.id && upload.status === 'processing') {
-      const ragIdentifier = currentProfile?.uuid || session.user.id;
+      const ragIdentifier = currentProject?.uuid || session.user.id;
       
       setPollTrackers(prev => new Map(prev.set(upload.upload_id, {
         uploadId: upload.upload_id,
@@ -184,7 +184,7 @@ export function UploadProgressProvider({ children }: { children: React.ReactNode
       // Trigger initial poll
       setPollTrigger(prev => prev + 1);
     }
-  }, [session?.user?.id, currentProfile?.uuid]);
+  }, [session?.user?.id, currentProject?.uuid]);
 
   const removeUpload = useCallback((uploadId: string) => {
     setUploads(prev => prev.filter(upload => upload.upload_id !== uploadId));

@@ -7,12 +7,15 @@ import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
+import { eq } from 'drizzle-orm';
 
 import { logAuditEvent } from '@/app/actions/audit-logger'; // Correct path alias
 import { ensureLogDirectories } from '@/app/actions/log-retention'; // Correct path alias
 import { createEnhancedMcpLogger } from '@/app/actions/mcp-server-logger'; // Correct path alias
 import { getMcpServers } from '@/app/actions/mcp-servers'; // Correct path alias
 import { getPlaygroundSettings } from '@/app/actions/playground-settings'; // Add this import
+import { db } from '@/db';
+import { profilesTable } from '@/db/schema';
 
 import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization'; // Import the new function
 
@@ -595,8 +598,16 @@ export async function executePlaygroundQuery(
     let finalQuery = query;
     
     if (settingsResult.success && settingsResult.settings?.ragEnabled) {
-      // Query workspace-specific collection only (clean workspace isolation)
-      const ragResult = await queryRag(query, profileUuid);
+      // Get project UUID from profile for project-specific RAG collection
+      const profileData = await db.query.profilesTable.findFirst({
+        where: eq(profilesTable.uuid, profileUuid),
+        columns: { project_uuid: true }
+      });
+      
+      const ragIdentifier = profileData?.project_uuid || profileUuid;
+      
+      // Query project-specific collection (Hub-bound RAG)
+      const ragResult = await queryRag(query, ragIdentifier);
       
       if (ragResult.success && ragResult.context) {
         // Limit RAG context to avoid token overrun

@@ -1,7 +1,7 @@
 export interface Doc {
   uuid: string;
   user_id: string;
-  profile_uuid?: string | null;
+  project_uuid?: string | null;
   name: string;
   description?: string | null;
   file_name: string;
@@ -94,6 +94,6 @@ export interface RAGDocumentRequest {
     fileSize: number;
     tags?: string[];
     userId: string;
-    profileUuid?: string;
+    projectUuid?: string;
   };
 } 

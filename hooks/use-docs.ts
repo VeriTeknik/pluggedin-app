@@ -2,9 +2,9 @@ import { useSession } from 'next-auth/react';
 import { useCallback } from 'react';
 import useSWR from 'swr';
 
-import { createDoc, deleteDoc, getDocs, getWorkspaceStorageUsage } from '@/app/actions/docs';
+import { createDoc, deleteDoc, getDocs, getProjectStorageUsage } from '@/app/actions/docs';
 import { useUploadProgress } from '@/contexts/UploadProgressContext';
-import { useProfiles } from '@/hooks/use-profiles';
+import { useProjects } from '@/hooks/use-projects';
 import type { Doc } from '@/types/docs';
 
 import { useToast } from './use-toast';
@@ -12,7 +12,7 @@ import { useToast } from './use-toast';
 export function useDocs() {
   const { data: session } = useSession();
   const { toast } = useToast();
-  const { currentProfile } = useProfiles();
+  const { currentProject } = useProjects();
   const { addUpload } = useUploadProgress();
 
   const {
@@ -21,12 +21,12 @@ export function useDocs() {
     mutate,
     isLoading,
   } = useSWR(
-    session?.user?.id ? ['docs', session.user.id, currentProfile?.uuid] : null,
+    session?.user?.id ? ['docs', session.user.id, currentProject?.uuid] : null,
     async () => {
       if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
-      return await getDocs(session.user.id, currentProfile?.uuid);
+      return await getDocs(session.user.id, currentProject?.uuid);
     }
   );
 
@@ -35,12 +35,12 @@ export function useDocs() {
     data: storageResponse,
     mutate: mutateStorage,
   } = useSWR(
-    session?.user?.id ? ['storage', session.user.id, currentProfile?.uuid] : null,
+    session?.user?.id ? ['storage', session.user.id, currentProject?.uuid] : null,
     async () => {
       if (!session?.user?.id) {
         throw new Error('Not authenticated');
       }
-      return await getWorkspaceStorageUsage(session.user.id, currentProfile?.uuid);
+      return await getProjectStorageUsage(session.user.id, currentProject?.uuid);
     }
   );
 
@@ -69,7 +69,7 @@ export function useDocs() {
         formData.append('tags', data.tags.join(','));
       }
 
-      const result = await createDoc(session.user.id, currentProfile?.uuid, formData);
+      const result = await createDoc(session.user.id, currentProject?.uuid, formData);
 
       if (result.success) {
         // Optimistically update both caches
@@ -122,7 +122,7 @@ export function useDocs() {
         throw new Error(result.error || 'Failed to upload document');
       }
     },
-    [session?.user?.id, currentProfile?.uuid, mutate, mutateStorage, toast, addUpload]
+    [session?.user?.id, currentProject?.uuid, mutate, mutateStorage, toast, addUpload]
   );
 
   const removeDoc = useCallback(
@@ -131,7 +131,7 @@ export function useDocs() {
         throw new Error('Not authenticated');
       }
 
-      const result = await deleteDoc(session.user.id, docUuid, currentProfile?.uuid);
+      const result = await deleteDoc(session.user.id, docUuid, currentProject?.uuid);
       
       if (result.success) {
         // Optimistically update both caches
@@ -149,7 +149,7 @@ export function useDocs() {
         throw new Error(result.error || 'Failed to delete document');
       }
     },
-    [session?.user?.id, currentProfile?.uuid, mutate, mutateStorage, toast]
+    [session?.user?.id, currentProject?.uuid, mutate, mutateStorage, toast]
   );
 
   const downloadDoc = useCallback(
@@ -158,8 +158,8 @@ export function useDocs() {
         throw new Error('Not authenticated');
       }
 
-      // Create download URL with workspace verification
-      const downloadUrl = `/api/docs/download/${doc.uuid}${currentProfile?.uuid ? `?profileUuid=${currentProfile.uuid}` : ''}`;
+      // Create download URL with project verification
+      const downloadUrl = `/api/docs/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`;
       
       // Create a temporary link and trigger download
       const link = document.createElement('a');
@@ -169,7 +169,7 @@ export function useDocs() {
       link.click();
       document.body.removeChild(link);
     },
-    [session?.user?.id, currentProfile?.uuid]
+    [session?.user?.id, currentProject?.uuid]
   );
 
   return {
