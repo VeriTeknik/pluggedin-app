@@ -121,7 +121,11 @@ class RagService {
         };
       }
 
-      const response = await fetch(`${this.ragApiUrl}/rag/query`, {
+      // Use the same endpoint as queryForContext which works in playground
+      const apiUrl = `${this.ragApiUrl}/rag/rag-query`;
+      console.log(`[RAG Service] Making request to: ${apiUrl} with user_id: ${ragIdentifier}`);
+
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'accept': 'application/json',
@@ -137,11 +141,12 @@ class RagService {
         throw new Error(`RAG API responded with status: ${response.status}`);
       }
 
-      const result = await response.json();
+      // The /rag/rag-query endpoint returns plain text, like queryForContext
+      const result = await response.text();
       
       return {
         success: true,
-        response: result.response || result.answer || 'No response received',
+        response: result || 'No response received',
       };
     } catch (error) {
       console.error('Error querying RAG for response:', error);
