@@ -459,6 +459,31 @@ export async function getOrCreatePlaygroundSession(
         llm,
         tools, // Use the tools returned by progressive initialization
         checkpointSaver: new MemorySaver(),
+        stateModifier: (state: any) => {
+          const systemMessage = `You are an AI assistant specialized in helping users interact with their development environment through MCP (Model Context Protocol) servers and knowledge bases.
+
+INFORMATION SOURCES:
+• Knowledge Context: Documentation, schemas, and background information from RAG
+• MCP Tools: Real-time data access and system interactions
+
+DECISION FRAMEWORK:
+1. Use knowledge context to understand structure, relationships, and background
+2. Use MCP tools for current data, live queries, and actions
+3. Combine both sources when helpful - context for understanding, tools for current information
+4. Always prioritize accuracy and currency of information
+
+EXAMPLES:
+• "How many users?" → Check knowledge for user table structure, use MCP tool to get current count
+• "Database schema?" → Use knowledge context if available, otherwise query via MCP tools
+• "Update settings" → Use MCP tools for the action, knowledge for validation
+
+Be transparent about which sources you use and why. When you have both context and tools available, use them together for the most complete and accurate response.`;
+
+          return [
+            { role: 'system', content: systemMessage },
+            ...state.messages
+          ];
+        }
       });
 
       // Create enhanced cleanup function using the combined cleanup from progressive init
@@ -581,8 +606,6 @@ export async function getServerLogs(profileUuid: string) {
   }
 }
 
-
-
 // Execute a query against the playground agent
 export async function executePlaygroundQuery(
   profileUuid: string,
@@ -625,7 +648,12 @@ export async function executePlaygroundQuery(
           limitedContext = limitedContext.slice(0, MAX_CONTEXT_CHARS) + '\n...[truncated]';
         }
         // Prepend (possibly truncated) RAG context to the query
-        finalQuery = `Context from your documents:\n${limitedContext}\n\nBased on the above context and your knowledge, please answer: ${query}`;
+        finalQuery = `Here's additional context from your knowledge base:
+${limitedContext}
+
+User question: ${query}
+
+Please answer the user's question using both the provided context and your available tools as appropriate. Use the context for background understanding and tools for current data or actions.`;
         
         // Log RAG usage
         await addServerLogForProfile(
