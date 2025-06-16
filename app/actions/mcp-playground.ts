@@ -4,6 +4,7 @@
 import { McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
@@ -165,7 +166,7 @@ export async function addServerLogForProfile(profileUuid: string, level: string,
 
 // Initialize chat model based on provider
 function initChatModel(config: {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'google';
   model: string;
   temperature?: number;
   maxTokens?: number;
@@ -187,6 +188,13 @@ function initChatModel(config: {
       maxTokens,
       streaming,
     });
+  } else if (provider === 'google') {
+    return new ChatGoogleGenerativeAI({
+      model: model,
+      temperature,
+      maxOutputTokens: maxTokens,
+      streaming,
+    }) as any;
   } else {
     throw new Error(`Unsupported provider: ${provider}`);
   }
@@ -321,7 +329,7 @@ export async function getOrCreatePlaygroundSession(
   profileUuid: string,
   selectedServerUuids: string[],
   llmConfig: {
-    provider: 'openai' | 'anthropic';
+    provider: 'openai' | 'anthropic' | 'google';
     model: string;
     temperature?: number;
     maxTokens?: number;

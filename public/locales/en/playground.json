@@ -73,7 +73,8 @@
     },
     "provider": {
       "anthropic": "Anthropic",
-      "openai": "OpenAI"
+      "openai": "OpenAI",
+      "google": "Google"
     },
     "logLevels": {
       "error": "Error",

@@ -6,7 +6,7 @@ import { db } from '@/db';
 import { playgroundSettingsTable } from '@/db/schema';
 
 export type PlaygroundSettings = {
-  provider: 'anthropic' | 'openai';
+  provider: 'anthropic' | 'openai' | 'google';
   model: string;
   temperature: number;
   maxTokens: number;
@@ -38,7 +38,7 @@ export async function getPlaygroundSettings(profileUuid: string) {
     return {
       success: true,
       settings: {
-        provider: settings.provider as 'anthropic' | 'openai',
+        provider: settings.provider as 'anthropic' | 'openai' | 'google',
         model: settings.model,
         temperature: settings.temperature,
         maxTokens: settings.max_tokens,
@@ -66,7 +66,7 @@ export async function updatePlaygroundSettings(
     });
 
     // Validate settings
-    if (!['anthropic', 'openai'].includes(settings.provider)) {
+    if (!['anthropic', 'openai', 'google'].includes(settings.provider)) {
       throw new Error('Invalid provider');
     }
     if (!['error', 'warn', 'info', 'debug'].includes(settings.logLevel)) {

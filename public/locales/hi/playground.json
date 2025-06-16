@@ -72,8 +72,9 @@
       }
     },
     "provider": {
-      "anthropic": "एंथ्रोपिक",
-      "openai": "OpenAI"
+      "anthropic": "Anthropic",
+      "openai": "OpenAI",
+      "google": "Google"
     },
     "logLevels": {
       "error": "त्रुटि",

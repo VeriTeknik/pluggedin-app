@@ -1,6 +1,6 @@
 'use client';
 
-import { Save, Server, Trash2 } from 'lucide-react';
+import { Server, Trash2 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -23,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -244,26 +243,26 @@ export function PlaygroundConfig({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
-                          className={`flex items-center justify-between p-2.5 rounded-md transition-colors ${
+                          className={`flex items-start justify-between p-3 rounded-lg border transition-colors ${
                             server.status === 'ACTIVE'
-                              ? 'bg-secondary/50'
-                              : 'hover:bg-muted/50'
+                              ? 'bg-secondary/50 border-primary/20'
+                              : 'hover:bg-muted/50 border-muted'
                           }`}>
-                          <div className='flex-1'>
+                          <div className='flex-1 min-w-0'>
                             <div className='flex items-center'>
-                              <div className='font-medium'>
+                              <div className='font-medium truncate pr-2'>
                                 {server.name}
                               </div>
                               {server.status === 'ACTIVE' ? (
                                 <Badge
                                   variant='outline'
-                                  className='ml-2 bg-green-500/10 text-green-700 border-green-200'>
+                                  className='ml-2 bg-green-500/10 text-green-700 border-green-200 flex-shrink-0'>
                                   {t('playground.status.active')}
                                 </Badge>
                               ) : (
                                 <Badge
                                   variant='outline'
-                                  className='ml-2 bg-amber-500/10 text-amber-700 border-amber-200'>
+                                  className='ml-2 bg-amber-500/10 text-amber-700 border-amber-200 flex-shrink-0'>
                                   {t('playground.status.inactive')}
                                 </Badge>
                               )}
@@ -271,10 +270,12 @@ export function PlaygroundConfig({
                             <div className='text-sm text-muted-foreground flex items-center'>
                               <Badge
                                 variant='secondary'
-                                className='mr-1.5 py-0 px-1.5 h-5 font-normal'>
+                                className='mr-1.5 py-0 px-1.5 h-5 font-normal flex-shrink-0'>
                                 {server.type}
                               </Badge>
-                              {server.description && server.description}
+                              {server.description && (
+                                <span className='truncate'>{server.description}</span>
+                              )}
                             </div>
                           </div>
                           <Switch
@@ -321,209 +322,367 @@ export function PlaygroundConfig({
 
           {/* LLM Tab */}
           <TabsContent value='llm' className='flex-1 mt-4 overflow-y-auto pr-2'>
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between mb-4'>
-                <div className='bg-muted/30 p-4 rounded-lg flex-1'>
-                  <div className='text-sm font-medium mb-2'>{t('playground.config.model.title')}</div>
-                  <div className='flex items-center'>
-                    <Badge className='bg-primary/10 text-primary border-primary/20 py-1.5 px-3'>
-                      {llmConfig.provider === 'anthropic' ? 'Anthropic' : 'OpenAI'}
-                    </Badge>
-                    <Separator orientation='vertical' className='mx-3 h-5' />
-                    <div className='text-sm font-medium'>{llmConfig.model}</div>
-                  </div>
-                </div>
-                <Button
-                  variant='outline'
-                  size='sm'
-                  onClick={saveSettings}
-                  disabled={isSessionActive}>
-                  <Save className='mr-2 h-4 w-4' />
-                  {t('playground.actions.save')}
-                </Button>
-              </div>
-
-              <div>
-                <Label htmlFor='provider' className='text-sm font-medium'>
-                  {t('playground.config.model.provider')}
-                </Label>
-                <Select
-                  value={llmConfig.provider}
-                  onValueChange={(value) =>
-                    setLlmConfig({ ...llmConfig, provider: value as 'anthropic' | 'openai' })
-                  }
-                  disabled={isSessionActive}>
-                  <SelectTrigger className='mt-1.5'>
-                    <SelectValue placeholder={t('playground.config.model.provider')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value='anthropic'>{t('playground.provider.anthropic')}</SelectItem>
-                    <SelectItem value='openai'>{t('playground.provider.openai')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <Label htmlFor='model' className='text-sm font-medium'>
-                  {t('playground.config.model.model')}
-                </Label>
-                <Select
-                  value={llmConfig.model}
-                  onValueChange={(value) =>
-                    setLlmConfig({ ...llmConfig, model: value })
-                  }
-                  disabled={isSessionActive}>
-                  <SelectTrigger className='mt-1.5'>
-                    <SelectValue placeholder={t('playground.config.model.model')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {llmConfig.provider === 'anthropic' ? (
-                      <>
-                        <SelectItem value='claude-3-7-sonnet-20250219'>
-                          Claude 3.7 Sonnet
-                        </SelectItem>
-                        <SelectItem value='claude-3-5-sonnet-20240620'>
-                          Claude 3.5 Sonnet
-                        </SelectItem>
-                        <SelectItem value='claude-3-opus-20240229'>
-                          Claude 3 Opus
-                        </SelectItem>
-                        <SelectItem value='claude-3-sonnet-20240229'>
-                          Claude 3 Sonnet
-                        </SelectItem>
-                        <SelectItem value='claude-3-haiku-20240307'>
-                          Claude 3 Haiku
-                        </SelectItem>
-                      </>
-                    ) : (
-                      <>
-                        <SelectItem value='gpt-4o-2024-05-13'>
-                          GPT-4o
-                        </SelectItem>
-                        <SelectItem value='gpt-4o-mini-2024-07-18'>
-                          GPT-4o Mini
-                        </SelectItem>
-                        <SelectItem value='gpt-4-turbo-2024-04-09'>
-                          GPT-4 Turbo
-                        </SelectItem>
-                        <SelectItem value='gpt-3.5-turbo-0125'>
-                          GPT-3.5 Turbo
-                        </SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div>
-                <div className='flex justify-between items-center'>
-                  <Label
-                    htmlFor='temperature'
-                    className='text-sm font-medium'>
-                    {t('playground.config.model.temperature')}
-                  </Label>
-                  <span className='text-sm text-muted-foreground'>
-                    {llmConfig.temperature}
-                  </span>
-                </div>
-                <Input
-                  id='temperature'
-                  type='range'
-                  min='0'
-                  max='1'
-                  step='0.1'
-                  value={llmConfig.temperature}
-                  onChange={(e) =>
-                    setLlmConfig({
-                      ...llmConfig,
-                      temperature: parseFloat(e.target.value),
-                    })
-                  }
-                  disabled={isSessionActive}
-                  className='mt-1.5'
-                />
-                <div className='flex justify-between text-xs text-muted-foreground mt-1'>
-                  <span>{t('playground.config.model.temperatureHints.precise')}</span>
-                  <span>{t('playground.config.model.temperatureHints.creative')}</span>
-                </div>
-              </div>
-
-              <div>
-                <div className='flex justify-between items-center'>
-                  <Label
-                    htmlFor='maxTokens'
-                    className='text-sm font-medium'>
-                    {t('playground.config.model.maxTokens')}
-                  </Label>
-                  <span className='text-sm text-muted-foreground'>
-                    {llmConfig.maxTokens}
-                  </span>
-                </div>
-                <Input
-                  id='maxTokens'
-                  type='range'
-                  min='100'
-                  max='4000'
-                  step='100'
-                  value={llmConfig.maxTokens}
-                  onChange={(e) =>
-                    setLlmConfig({
-                      ...llmConfig,
-                      maxTokens: parseInt(e.target.value),
-                    })
-                  }
-                  disabled={isSessionActive}
-                  className='mt-1.5'
-                />
-              </div>
-
-              <div>
-                <Label htmlFor='logLevel' className='text-sm font-medium'>
-                  {t('playground.config.model.logLevel')}
-                </Label>
-                <Select
-                  value={logLevel}
-                  onValueChange={(value) =>
-                    handleLogLevelChange(value as LogLevel)
-                  }
-                  disabled={isSessionActive}>
-                  <SelectTrigger className='mt-1.5'>
-                    <SelectValue placeholder={t('playground.config.model.logLevel')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {/* Use corrected keys */}
-                    <SelectItem value='debug'>{t('playground.logLevels.debug')}</SelectItem>
-                    <SelectItem value='info'>{t('playground.logLevels.info')}</SelectItem>
-                    <SelectItem value='warn'>{t('playground.logLevels.warn')}</SelectItem>
-                    <SelectItem value='error'>{t('playground.logLevels.error')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* RAG Configuration */}
-              <div className='border-t pt-4'>
+            <div className='space-y-6'>
+              
+              {/* Provider Selection */}
+              <div className='space-y-3'>
                 <div className='flex items-center justify-between'>
-                  <div>
-                    <Label htmlFor='ragEnabled' className='text-sm font-medium'>
-                      Enable RAG
-                    </Label>
-                    <p className='text-xs text-muted-foreground mt-1'>
-                      Use your uploaded documents for context
-                    </p>
+                  <h3 className='text-lg font-semibold'>{t('playground.config.model.provider')}</h3>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <div className="h-2 w-2 rounded-full bg-green-500"></div>
+                    Auto-saved
                   </div>
-                  <Switch
-                    id='ragEnabled'
-                    checked={llmConfig.ragEnabled || false}
-                    onCheckedChange={(checked) => {
-                      setLlmConfig({
-                        ...llmConfig,
-                        ragEnabled: checked,
-                      });
-                    }}
-                    disabled={isSessionActive}
-                  />
+                </div>
+                <div className='grid grid-cols-3 gap-4'>
+                  {/* Anthropic Card */}
+                  <div 
+                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
+                      llmConfig.provider === 'anthropic' 
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                        : 'border-muted hover:bg-muted/50'
+                    }`}
+                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'anthropic', model: 'claude-3-7-sonnet-20250219' })}
+                  >
+                    {llmConfig.provider === 'anthropic' && (
+                      <div className="absolute top-2 right-2">
+                        <div className="h-3 w-3 rounded-full bg-primary"></div>
+                      </div>
+                    )}
+                    <div className='text-center space-y-2'>
+                      <div className='w-8 h-8 mx-auto bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center'>
+                        <span className='text-white font-bold text-sm'>A</span>
+                      </div>
+                      <div className='font-medium'>Anthropic</div>
+                      <div className='text-xs text-muted-foreground'>7 models</div>
+                    </div>
+                  </div>
+
+                  {/* OpenAI Card */}
+                  <div 
+                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
+                      llmConfig.provider === 'openai' 
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                        : 'border-muted hover:bg-muted/50'
+                    }`}
+                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'openai', model: 'gpt-4o-2024-05-13' })}
+                  >
+                    {llmConfig.provider === 'openai' && (
+                      <div className="absolute top-2 right-2">
+                        <div className="h-3 w-3 rounded-full bg-primary"></div>
+                      </div>
+                    )}
+                    <div className='text-center space-y-2'>
+                      <div className='w-8 h-8 mx-auto bg-gradient-to-br from-green-500 to-teal-500 rounded-lg flex items-center justify-center'>
+                        <span className='text-white font-bold text-sm'>O</span>
+                      </div>
+                      <div className='font-medium'>OpenAI</div>
+                      <div className='text-xs text-muted-foreground'>6 models</div>
+                    </div>
+                  </div>
+
+                  {/* Google Card */}
+                  <div 
+                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
+                      llmConfig.provider === 'google' 
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                        : 'border-muted hover:bg-muted/50'
+                    }`}
+                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'google', model: 'models/gemini-2.5-pro-preview-06-05' })}
+                  >
+                    {llmConfig.provider === 'google' && (
+                      <div className="absolute top-2 right-2">
+                        <div className="h-3 w-3 rounded-full bg-primary"></div>
+                      </div>
+                    )}
+                    <div className='text-center space-y-2'>
+                      <div className='w-8 h-8 mx-auto bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center'>
+                        <span className='text-white font-bold text-sm'>G</span>
+                      </div>
+                      <div className='font-medium'>Google</div>
+                      <div className='text-xs text-muted-foreground'>3 models</div>
+                    </div>
+                  </div>
                 </div>
               </div>
+
+              {/* Model Configuration Card */}
+              <Card className='border-2 border-primary/20 bg-primary/5'>
+                <CardHeader className='pb-4'>
+                  <div className='flex items-center justify-between'>
+                    <div>
+                      <CardTitle className='text-lg'>Selected Model</CardTitle>
+                      <CardDescription>Currently using {llmConfig.provider === 'anthropic' ? 'Anthropic' : llmConfig.provider === 'openai' ? 'OpenAI' : 'Google'}</CardDescription>
+                    </div>
+                    <Badge className='bg-primary text-primary-foreground px-3 py-1'>
+                      {llmConfig.provider === 'anthropic' ? 'Anthropic' : llmConfig.provider === 'openai' ? 'OpenAI' : 'Google'}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                  <div>
+                    <Label htmlFor='model' className='text-sm font-medium mb-3 block'>
+                      {t('playground.config.model.model')}
+                    </Label>
+                    <div className='grid grid-cols-2 gap-3'>
+                      {llmConfig.provider === 'anthropic' ? (
+                        <>
+                          {[
+                            { value: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', desc: 'Balanced reasoning', badge: 'New' },
+                            { value: 'claude-4-sonnet-20250514', name: 'Claude 4 Sonnet', desc: 'Superior intelligence', badge: 'Latest' },
+                            { value: 'claude-4-opus-20250514', name: 'Claude 4 Opus', desc: 'Most powerful', badge: 'Pro' },
+                            { value: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet', desc: 'Fast & capable' },
+                            { value: 'claude-3-opus-20240229', name: 'Claude 3 Opus', desc: 'Creative tasks' },
+                            { value: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', desc: 'Quick responses' }
+                          ].map((model) => (
+                            <div
+                              key={model.value}
+                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                llmConfig.model === model.value
+                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50'
+                              }`}
+                              onClick={() => setLlmConfig({ ...llmConfig, model: model.value })}
+                            >
+                              <div className='flex items-start justify-between'>
+                                <div>
+                                  <div className='font-medium text-sm'>{model.name}</div>
+                                  <div className='text-xs text-muted-foreground'>{model.desc}</div>
+                                </div>
+                                {model.badge && (
+                                  <Badge variant="secondary" className='text-xs'>{model.badge}</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      ) : llmConfig.provider === 'openai' ? (
+                        <>
+                          {[
+                            { value: 'gpt-4.1-2025-04-14', name: 'GPT-4.1', desc: 'Latest flagship', badge: 'New' },
+                            { value: 'gpt-4.1-mini-2025-04-14', name: 'GPT-4.1 Mini', desc: 'Cost efficient', badge: 'New' },
+                            { value: 'gpt-4o-2024-05-13', name: 'GPT-4o', desc: 'Multimodal' },
+                            { value: 'gpt-4o-mini-2024-07-18', name: 'GPT-4o Mini', desc: 'Fast & affordable' },
+                            { value: 'gpt-4-turbo-2024-04-09', name: 'GPT-4 Turbo', desc: 'High performance' },
+                            { value: 'gpt-3.5-turbo-0125', name: 'GPT-3.5 Turbo', desc: 'Quick tasks' }
+                          ].map((model) => (
+                            <div
+                              key={model.value}
+                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                llmConfig.model === model.value
+                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50'
+                              }`}
+                              onClick={() => setLlmConfig({ ...llmConfig, model: model.value })}
+                            >
+                              <div className='flex items-start justify-between'>
+                                <div>
+                                  <div className='font-medium text-sm'>{model.name}</div>
+                                  <div className='text-xs text-muted-foreground'>{model.desc}</div>
+                                </div>
+                                {model.badge && (
+                                  <Badge variant="secondary" className='text-xs'>{model.badge}</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      ) : (
+                        <>
+                          {[
+                            { value: 'models/gemini-2.5-pro-preview-06-05', name: 'Gemini 2.5 Pro', desc: 'Most intelligent', badge: 'New' },
+                            { value: 'models/gemini-2.5-flash-preview-05-20', name: 'Gemini 2.5 Flash', desc: 'Best performance', badge: 'New' },
+                            { value: 'models/gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Fast & capable' }
+                          ].map((model) => (
+                            <div
+                              key={model.value}
+                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                                llmConfig.model === model.value
+                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50'
+                              }`}
+                              onClick={() => setLlmConfig({ ...llmConfig, model: model.value })}
+                            >
+                              <div className='flex items-start justify-between'>
+                                <div>
+                                  <div className='font-medium text-sm'>{model.name}</div>
+                                  <div className='text-xs text-muted-foreground'>{model.desc}</div>
+                                </div>
+                                {model.badge && (
+                                  <Badge variant="secondary" className='text-xs'>{model.badge}</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Behavior Configuration */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className='flex items-center gap-2'>
+                    Behavior Settings
+                    <div className="flex gap-1">
+                      {['Precise', 'Balanced', 'Creative'].map((preset) => (
+                        <Button
+                          key={preset}
+                          variant="outline"
+                          size="sm"
+                          className="h-6 px-2 text-xs"
+                          onClick={() => {
+                            const presetValues = {
+                              'Precise': { temperature: 0, maxTokens: 1000 },
+                              'Balanced': { temperature: 0.5, maxTokens: 2000 },
+                              'Creative': { temperature: 0.8, maxTokens: 3000 }
+                            };
+                            setLlmConfig({ ...llmConfig, ...presetValues[preset as keyof typeof presetValues] });
+                          }}
+                        >
+                          {preset}
+                        </Button>
+                      ))}
+                    </div>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className='space-y-6'>
+                  {/* Temperature Control */}
+                  <div>
+                    <div className='flex justify-between items-center mb-3'>
+                      <Label htmlFor='temperature' className='text-sm font-medium flex items-center gap-2'>
+                        <div className='flex items-center gap-1'>
+                          <div className={`w-3 h-3 rounded-full ${
+                            llmConfig.temperature <= 0.3 ? 'bg-blue-500' :
+                            llmConfig.temperature <= 0.7 ? 'bg-yellow-500' : 'bg-red-500'
+                          }`}></div>
+                          {t('playground.config.model.temperature')}
+                        </div>
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <span className='text-sm font-mono bg-muted px-2 py-1 rounded'>
+                          {llmConfig.temperature}
+                        </span>
+                        <div className="text-xs text-muted-foreground">
+                          {llmConfig.temperature <= 0.3 ? 'Precise' :
+                           llmConfig.temperature <= 0.7 ? 'Balanced' : 'Creative'}
+                        </div>
+                      </div>
+                    </div>
+                    <Input
+                      id='temperature'
+                      type='range'
+                      min='0'
+                      max='1'
+                      step='0.1'
+                      value={llmConfig.temperature}
+                      onChange={(e) =>
+                        setLlmConfig({
+                          ...llmConfig,
+                          temperature: parseFloat(e.target.value),
+                        })
+                      }
+                      disabled={isSessionActive}
+                      className='mt-1.5'
+                    />
+                    <div className='flex justify-between text-xs text-muted-foreground mt-2'>
+                      <span>🎯 {t('playground.config.model.temperatureHints.precise')}</span>
+                      <span>🎨 {t('playground.config.model.temperatureHints.creative')}</span>
+                    </div>
+                  </div>
+
+                  {/* Max Tokens Control */}
+                  <div>
+                    <div className='flex justify-between items-center mb-3'>
+                      <Label htmlFor='maxTokens' className='text-sm font-medium'>
+                        {t('playground.config.model.maxTokens')}
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <span className='text-sm font-mono bg-muted px-2 py-1 rounded'>
+                          {llmConfig.maxTokens}
+                        </span>
+                        <div className="text-xs text-muted-foreground">
+                          ~{Math.round(llmConfig.maxTokens * 0.75)} words
+                        </div>
+                      </div>
+                    </div>
+                    <Input
+                      id='maxTokens'
+                      type='range'
+                      min='100'
+                      max='4000'
+                      step='100'
+                      value={llmConfig.maxTokens}
+                      onChange={(e) =>
+                        setLlmConfig({
+                          ...llmConfig,
+                          maxTokens: parseInt(e.target.value),
+                        })
+                      }
+                      disabled={isSessionActive}
+                      className='mt-1.5'
+                    />
+                    <div className='flex justify-between text-xs text-muted-foreground mt-2'>
+                      <span>Short (100)</span>
+                      <span>Long (4000)</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Advanced Settings */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className='text-base'>Advanced Settings</CardTitle>
+                </CardHeader>
+                <CardContent className='space-y-4'>
+                  <div>
+                    <Label htmlFor='logLevel' className='text-sm font-medium'>
+                      {t('playground.config.model.logLevel')}
+                    </Label>
+                    <Select
+                      value={logLevel}
+                      onValueChange={(value) =>
+                        handleLogLevelChange(value as LogLevel)
+                      }
+                      disabled={isSessionActive}>
+                      <SelectTrigger className='mt-1.5'>
+                        <SelectValue placeholder={t('playground.config.model.logLevel')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value='debug'>{t('playground.logLevels.debug')}</SelectItem>
+                        <SelectItem value='info'>{t('playground.logLevels.info')}</SelectItem>
+                        <SelectItem value='warn'>{t('playground.logLevels.warn')}</SelectItem>
+                        <SelectItem value='error'>{t('playground.logLevels.error')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* RAG Configuration */}
+                  <div className='flex items-center justify-between'>
+                    <div>
+                      <Label htmlFor='ragEnabled' className='text-sm font-medium'>
+                        Enable RAG
+                      </Label>
+                      <p className='text-xs text-muted-foreground mt-1'>
+                        Use your uploaded documents for context
+                      </p>
+                    </div>
+                    <Switch
+                      id='ragEnabled'
+                      checked={llmConfig.ragEnabled || false}
+                      onCheckedChange={(checked) => {
+                        setLlmConfig({
+                          ...llmConfig,
+                          ragEnabled: checked,
+                        });
+                      }}
+                      disabled={isSessionActive}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
