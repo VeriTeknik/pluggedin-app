@@ -76,9 +76,10 @@ export function useDocs() {
         await Promise.all([mutate(), mutateStorage()]);
         
         // Add to progress tracking if we have an upload_id
-        if (result.upload_id) {
+        if (result.upload_id && result.doc) {
           addUpload({
             upload_id: result.upload_id,
+            doc_uuid: result.doc.uuid,
             file_name: data.file.name,
             file_size: data.file.size,
             status: 'processing',

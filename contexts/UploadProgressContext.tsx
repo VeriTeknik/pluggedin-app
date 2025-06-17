@@ -16,6 +16,7 @@ interface UploadProgressContextType {
 
 interface PollTracker {
   uploadId: string;
+  docUuid?: string;
   ragIdentifier: string;
   pollCount: number;
   isActive: boolean;
@@ -87,7 +88,7 @@ export function UploadProgressProvider({ children }: { children: React.ReactNode
             continue;
           }
           
-          const result = await fetch(`/api/upload-status/${tracker.uploadId}?ragIdentifier=${tracker.ragIdentifier}`, {
+          const result = await fetch(`/api/upload-status/${tracker.uploadId}?ragIdentifier=${tracker.ragIdentifier}${tracker.docUuid ? `&docUuid=${tracker.docUuid}` : ''}`, {
             method: 'GET',
           });
 
@@ -175,6 +176,7 @@ export function UploadProgressProvider({ children }: { children: React.ReactNode
       
       setPollTrackers(prev => new Map(prev.set(upload.upload_id, {
         uploadId: upload.upload_id,
+        docUuid: upload.doc_uuid,
         ragIdentifier,
         pollCount: 0,
         isActive: true,

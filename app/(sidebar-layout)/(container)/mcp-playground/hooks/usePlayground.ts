@@ -7,7 +7,9 @@ import {
   endPlaygroundSession,
   executePlaygroundQuery,
   getOrCreatePlaygroundSession,
+  getPlaygroundSessionStatus,
   getServerLogs,
+  updatePlaygroundSessionModel,
 } from '@/app/actions/mcp-playground';
 import {
   getMcpServers,
@@ -103,6 +105,9 @@ export function usePlayground() {
 
   // User scroll control flag - Keep this in the hook as it affects message updates
   const [userScrollControlled, setUserScrollControlled] = useState(false);
+
+  // Session restoration flag to prevent multiple restoration attempts
+  const [sessionRestored, setSessionRestored] = useState(false);
 
   // Fetch MCP servers
   const {
@@ -328,18 +333,24 @@ export function usePlayground() {
       .filter((server: McpServer) => server.status === McpServerStatus.ACTIVE)
       .map((server: McpServer) => server.uuid);
 
-    if (activeServerUuids.length === 0) {
+    // Allow session to start if RAG is enabled, even with no servers
+    if (activeServerUuids.length === 0 && !llmConfig.ragEnabled) {
       toast({
         title: 'Error',
-        description: 'Please activate at least one MCP server.',
+        description: 'Please activate at least one MCP server or enable RAG.',
         variant: 'destructive',
       });
-      addLog('error', 'Failed to start session: No active MCP servers.');
+      addLog('error', 'Failed to start session: No active MCP servers and RAG is disabled.');
       return;
     }
 
     addLog('info', 'Initiating MCP playground session...');
-    addLog('info', `Attempting to connect ${activeServerUuids.length} server(s)...`);
+    if (activeServerUuids.length > 0) {
+      addLog('info', `Attempting to connect ${activeServerUuids.length} server(s)...`);
+    }
+    if (llmConfig.ragEnabled) {
+        addLog('info', 'RAG is enabled for this session.');
+    }
     addLog(
       'info',
       `LLM config: ${llmConfig.provider} ${llmConfig.model} (temp: ${llmConfig.temperature})`
@@ -592,6 +603,126 @@ export function usePlayground() {
     logLevelRef.current = logLevel;
   }, [logLevel]);
 
+  // Model switching function
+  const switchModel = useCallback(async (newLlmConfig: PlaygroundSettings) => {
+    if (!profileUuid || !isSessionActive) {
+      // If no session is active, just update the config
+      setLlmConfig(newLlmConfig);
+      setLogLevel(newLlmConfig.logLevel);
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+      addLog('info', `Switching model to ${newLlmConfig.provider} ${newLlmConfig.model}...`);
+
+      const result = await updatePlaygroundSessionModel(profileUuid, {
+        provider: newLlmConfig.provider,
+        model: newLlmConfig.model,
+        temperature: newLlmConfig.temperature,
+        maxTokens: newLlmConfig.maxTokens,
+        logLevel: newLlmConfig.logLevel,
+        streaming: true,
+      });
+
+      if (result.success) {
+        setLlmConfig(newLlmConfig);
+        setLogLevel(newLlmConfig.logLevel);
+        addLog('connection', result.message || 'Model switched successfully');
+        toast({
+          title: 'Model Switched',
+          description: `Now using ${newLlmConfig.provider} ${newLlmConfig.model}`,
+        });
+      } else {
+        addLog('error', `Failed to switch model: ${result.error}`);
+        toast({
+          title: 'Model Switch Failed',
+          description: result.error || 'Unknown error',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Error switching model:', error);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      addLog('error', `Exception switching model: ${msg}`);
+      toast({
+        title: 'Error',
+        description: 'Failed to switch model',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [profileUuid, isSessionActive, addLog, toast]);
+
+  // Session restoration effect
+  useEffect(() => {
+    const restoreSession = async () => {
+      if (!profileUuid || sessionRestored || isLoading) {
+        return;
+      }
+
+      try {
+        // Check localStorage for session hint
+        const sessionHint = localStorage.getItem(`playground-session-${profileUuid}`);
+        if (!sessionHint) {
+          setSessionRestored(true);
+          return;
+        }
+
+        // Check server-side session status
+        const statusResult = await getPlaygroundSessionStatus(profileUuid);
+        
+        if (statusResult.success && statusResult.isActive) {
+          // Restore session state
+          setIsSessionActive(true);
+          if (statusResult.messages) {
+            setMessages(statusResult.messages);
+          }
+          if (statusResult.llmConfig) {
+            const restoredConfig = statusResult.llmConfig;
+            setLlmConfig({
+              provider: restoredConfig.provider,
+              model: restoredConfig.model,
+              temperature: restoredConfig.temperature || 0,
+              maxTokens: restoredConfig.maxTokens || 1000,
+              logLevel: restoredConfig.logLevel || 'info',
+              ragEnabled: false, // Will be set from settings
+            });
+            setLogLevel(restoredConfig.logLevel || 'info');
+          }
+          
+          addLog('connection', 'Session restored from previous state');
+          toast({
+            title: 'Session Restored',
+            description: 'Your playground session has been restored.',
+          });
+          
+          // Resume log polling if session is active
+          startLogPolling();
+        } else {
+          // Clear localStorage if server session doesn't exist
+          localStorage.removeItem(`playground-session-${profileUuid}`);
+        }
+      } catch (error) {
+        console.error('Error restoring session:', error);
+        localStorage.removeItem(`playground-session-${profileUuid}`);
+      } finally {
+        setSessionRestored(true);
+      }
+    };
+
+    restoreSession();
+  }, [profileUuid, sessionRestored, isLoading, addLog, toast, startLogPolling]);
+
+  // Effect to store session hint in localStorage when session becomes active
+  useEffect(() => {
+    if (isSessionActive && profileUuid) {
+      localStorage.setItem(`playground-session-${profileUuid}`, 'active');
+    } else if (!isSessionActive && profileUuid) {
+      localStorage.removeItem(`playground-session-${profileUuid}`);
+    }
+  }, [isSessionActive, profileUuid]);
 
   // Cleanup effect for all timers
   useEffect(() => {
@@ -654,6 +785,7 @@ export function usePlayground() {
     endSession,
     sendMessage,
     saveSettings,
+    switchModel,
     addLog, // Expose if needed externally, though unlikely
   };
 }

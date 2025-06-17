@@ -7,7 +7,7 @@ import { join } from 'path';
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
 import { extractTextContent } from '@/lib/file-utils';
-import { ragService, type UploadStatusResponse } from '@/lib/rag-service';
+import { ragService } from '@/lib/rag-service';
 import type { 
   Doc, 
   DocDeleteResponse, 
@@ -277,6 +277,58 @@ async function processRagUpload(
   }
 }
 
+// Function to update document with RAG document ID after upload completion
+export async function updateDocRagId(
+  docUuid: string,
+  ragDocumentId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await db
+      .update(docsTable)
+      .set({ 
+        rag_document_id: ragDocumentId,
+        updated_at: new Date()
+      })
+      .where(
+        and(
+          eq(docsTable.uuid, docUuid),
+          eq(docsTable.user_id, userId)
+        )
+      );
+
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to update document RAG ID:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+// Function to get upload status from RAG API
+export async function getUploadStatus(
+  uploadId: string,
+  ragIdentifier: string
+): Promise<{ success: boolean; status?: any; error?: string }> {
+  try {
+    const { ragService } = await import('@/lib/rag-service');
+    const result = await ragService.getUploadStatus(uploadId, ragIdentifier);
+    
+    return {
+      success: true,
+      status: result
+    };
+  } catch (error) {
+    console.error('Failed to get upload status:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
 export async function createDoc(
   userId: string,
   projectUuid: string | undefined,
@@ -360,11 +412,14 @@ export async function deleteDoc(
       // Don't fail the operation if file deletion fails
     }
 
-    // Remove from RAG API (use projectUuid or fallback to userId)
-    const ragIdentifier = projectUuid || userId;
-    ragService.removeDocument(docUuid, ragIdentifier).catch(error => {
-      console.error('Failed to remove document from RAG API:', error);
-    });
+    // Remove from RAG API using the stored rag_document_id (if it exists)
+    if (doc.rag_document_id) {
+      const ragIdentifier = projectUuid || userId;
+      
+      ragService.removeDocument(doc.rag_document_id, ragIdentifier).catch(error => {
+        console.error('Failed to remove document from RAG API:', error);
+      });
+    }
 
     return {
       success: true,
@@ -384,11 +439,6 @@ export async function getRagDocuments(ragIdentifier: string): Promise<{ success:
 
 export async function queryRag(ragIdentifier: string, query: string): Promise<{ success: boolean; response?: string; error?: string }> {
   return ragService.queryForResponse(ragIdentifier, query);
-}
-
-// New function to check upload progress status
-export async function getUploadStatus(uploadId: string, ragIdentifier: string): Promise<UploadStatusResponse> {
-  return ragService.getUploadStatus(uploadId, ragIdentifier);
 }
 
 

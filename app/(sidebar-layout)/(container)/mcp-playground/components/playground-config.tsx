@@ -67,6 +67,7 @@ export interface PlaygroundConfigProps {
   toggleServerStatus: (serverUuid: string, status: boolean) => Promise<void>;
   llmConfig: PlaygroundConfigFormValues;
   setLlmConfig: (config: PlaygroundConfigFormValues | ((prev: PlaygroundConfigFormValues) => PlaygroundConfigFormValues)) => void;
+  switchModel: (config: PlaygroundConfigFormValues) => Promise<void>;
   logLevel: LogLevel;
   setLogLevel: (level: LogLevel) => void;
   clientLogs: LogEntry[];
@@ -83,6 +84,7 @@ export function PlaygroundConfig({
   toggleServerStatus,
   llmConfig,
   setLlmConfig,
+  switchModel,
   logLevel,
   setLogLevel,
   clientLogs,
@@ -336,12 +338,12 @@ export function PlaygroundConfig({
                 <div className='grid grid-cols-3 gap-4'>
                   {/* Anthropic Card */}
                   <div 
-                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
+                    className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
                       llmConfig.provider === 'anthropic' 
                         ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
                         : 'border-muted hover:bg-muted/50'
                     }`}
-                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'anthropic', model: 'claude-3-7-sonnet-20250219' })}
+                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'anthropic' })}
                   >
                     {llmConfig.provider === 'anthropic' && (
                       <div className="absolute top-2 right-2">
@@ -352,19 +354,19 @@ export function PlaygroundConfig({
                       <div className='w-8 h-8 mx-auto bg-gradient-to-br from-orange-500 to-red-500 rounded-lg flex items-center justify-center'>
                         <span className='text-white font-bold text-sm'>A</span>
                       </div>
-                      <div className='font-medium'>Anthropic</div>
+                      <div className='font-medium text-sm truncate'>Anthropic</div>
                       <div className='text-xs text-muted-foreground'>7 models</div>
                     </div>
                   </div>
 
                   {/* OpenAI Card */}
                   <div 
-                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
+                    className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
                       llmConfig.provider === 'openai' 
                         ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
                         : 'border-muted hover:bg-muted/50'
                     }`}
-                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'openai', model: 'gpt-4o-2024-05-13' })}
+                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'openai' })}
                   >
                     {llmConfig.provider === 'openai' && (
                       <div className="absolute top-2 right-2">
@@ -375,19 +377,19 @@ export function PlaygroundConfig({
                       <div className='w-8 h-8 mx-auto bg-gradient-to-br from-green-500 to-teal-500 rounded-lg flex items-center justify-center'>
                         <span className='text-white font-bold text-sm'>O</span>
                       </div>
-                      <div className='font-medium'>OpenAI</div>
+                      <div className='font-medium text-sm truncate'>OpenAI</div>
                       <div className='text-xs text-muted-foreground'>6 models</div>
                     </div>
                   </div>
 
                   {/* Google Card */}
                   <div 
-                    className={`relative p-4 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
+                    className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
                       llmConfig.provider === 'google' 
                         ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
                         : 'border-muted hover:bg-muted/50'
                     }`}
-                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'google', model: 'models/gemini-2.5-pro-preview-06-05' })}
+                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'google' })}
                   >
                     {llmConfig.provider === 'google' && (
                       <div className="absolute top-2 right-2">
@@ -398,7 +400,7 @@ export function PlaygroundConfig({
                       <div className='w-8 h-8 mx-auto bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center'>
                         <span className='text-white font-bold text-sm'>G</span>
                       </div>
-                      <div className='font-medium'>Google</div>
+                      <div className='font-medium text-sm truncate'>Google</div>
                       <div className='text-xs text-muted-foreground'>3 models</div>
                     </div>
                   </div>
@@ -423,7 +425,7 @@ export function PlaygroundConfig({
                     <Label htmlFor='model' className='text-sm font-medium mb-3 block'>
                       {t('playground.config.model.model')}
                     </Label>
-                    <div className='grid grid-cols-2 gap-3'>
+                    <div className='grid grid-cols-2 gap-4'>
                       {llmConfig.provider === 'anthropic' ? (
                         <>
                           {[
@@ -441,15 +443,15 @@ export function PlaygroundConfig({
                                   ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
                                   : 'border-muted hover:border-primary/50 hover:bg-muted/50'
                               }`}
-                              onClick={() => setLlmConfig({ ...llmConfig, model: model.value })}
+                              onClick={() => switchModel({ ...llmConfig, model: model.value })}
                             >
-                              <div className='flex items-start justify-between'>
-                                <div>
-                                  <div className='font-medium text-sm'>{model.name}</div>
-                                  <div className='text-xs text-muted-foreground'>{model.desc}</div>
+                              <div className='flex items-start justify-between gap-2'>
+                                <div className='min-w-0 flex-1'>
+                                  <div className='font-medium text-sm truncate'>{model.name}</div>
+                                  <div className='text-xs text-muted-foreground truncate'>{model.desc}</div>
                                 </div>
                                 {model.badge && (
-                                  <Badge variant="secondary" className='text-xs'>{model.badge}</Badge>
+                                  <Badge variant="secondary" className='text-xs flex-shrink-0'>{model.badge}</Badge>
                                 )}
                               </div>
                             </div>
@@ -472,15 +474,15 @@ export function PlaygroundConfig({
                                   ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
                                   : 'border-muted hover:border-primary/50 hover:bg-muted/50'
                               }`}
-                              onClick={() => setLlmConfig({ ...llmConfig, model: model.value })}
+                              onClick={() => switchModel({ ...llmConfig, model: model.value })}
                             >
-                              <div className='flex items-start justify-between'>
-                                <div>
-                                  <div className='font-medium text-sm'>{model.name}</div>
-                                  <div className='text-xs text-muted-foreground'>{model.desc}</div>
+                              <div className='flex items-start justify-between gap-2'>
+                                <div className='min-w-0 flex-1'>
+                                  <div className='font-medium text-sm truncate'>{model.name}</div>
+                                  <div className='text-xs text-muted-foreground truncate'>{model.desc}</div>
                                 </div>
                                 {model.badge && (
-                                  <Badge variant="secondary" className='text-xs'>{model.badge}</Badge>
+                                  <Badge variant="secondary" className='text-xs flex-shrink-0'>{model.badge}</Badge>
                                 )}
                               </div>
                             </div>
@@ -500,15 +502,15 @@ export function PlaygroundConfig({
                                   ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
                                   : 'border-muted hover:border-primary/50 hover:bg-muted/50'
                               }`}
-                              onClick={() => setLlmConfig({ ...llmConfig, model: model.value })}
+                              onClick={() => switchModel({ ...llmConfig, model: model.value })}
                             >
-                              <div className='flex items-start justify-between'>
-                                <div>
-                                  <div className='font-medium text-sm'>{model.name}</div>
-                                  <div className='text-xs text-muted-foreground'>{model.desc}</div>
+                              <div className='flex items-start justify-between gap-2'>
+                                <div className='min-w-0 flex-1'>
+                                  <div className='font-medium text-sm truncate'>{model.name}</div>
+                                  <div className='text-xs text-muted-foreground truncate'>{model.desc}</div>
                                 </div>
                                 {model.badge && (
-                                  <Badge variant="secondary" className='text-xs'>{model.badge}</Badge>
+                                  <Badge variant="secondary" className='text-xs flex-shrink-0'>{model.badge}</Badge>
                                 )}
                               </div>
                             </div>
@@ -538,7 +540,7 @@ export function PlaygroundConfig({
                               'Balanced': { temperature: 0.5, maxTokens: 2000 },
                               'Creative': { temperature: 0.8, maxTokens: 3000 }
                             };
-                            setLlmConfig({ ...llmConfig, ...presetValues[preset as keyof typeof presetValues] });
+                            switchModel({ ...llmConfig, ...presetValues[preset as keyof typeof presetValues] });
                           }}
                         >
                           {preset}
@@ -578,12 +580,11 @@ export function PlaygroundConfig({
                       step='0.1'
                       value={llmConfig.temperature}
                       onChange={(e) =>
-                        setLlmConfig({
+                        switchModel({
                           ...llmConfig,
                           temperature: parseFloat(e.target.value),
                         })
                       }
-                      disabled={isSessionActive}
                       className='mt-1.5'
                     />
                     <div className='flex justify-between text-xs text-muted-foreground mt-2'>
@@ -615,12 +616,11 @@ export function PlaygroundConfig({
                       step='100'
                       value={llmConfig.maxTokens}
                       onChange={(e) =>
-                        setLlmConfig({
+                        switchModel({
                           ...llmConfig,
                           maxTokens: parseInt(e.target.value),
                         })
                       }
-                      disabled={isSessionActive}
                       className='mt-1.5'
                     />
                     <div className='flex justify-between text-xs text-muted-foreground mt-2'>

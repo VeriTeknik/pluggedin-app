@@ -5,10 +5,11 @@
     "description": "An experimental environment for using LLM AI with MCP tools.",
     "actions": {
       "start": "Start Session",
+      "startNewSession": "Start New Session",
       "starting": "Starting...",
       "end": "End Session",
-      "ending": "Ending...",
-      "save": "Save Settings",
+      "clear": "Clear",
+      "save": "Save",
       "dismiss": "Dismiss",
       "clearLogs": "Clear Logs"
     },
@@ -56,20 +57,33 @@
     "chat": {
       "title": "Chat",
       "subtitle": "Interact with your MCP servers through natural language.",
+      "header": {
+        "temperature": "Temperature",
+        "maxTokens": "Max Tokens", 
+        "serverConnected": "server connected",
+        "serversConnected": "servers connected",
+        "switchModel": "Switch Model",
+        "moreModels": "More Models",
+        "stopSession": "Stop Session",
+        "stopping": "Stopping..."
+      },
       "empty": {
-        "title": "Welcome to MCP Playground",
-        "activeDescription": "Send a message to start interacting with your MCP servers.",
-        "inactiveDescription": "Start a session to begin interacting with your MCP servers."
+        "title": "Ready to chat",
+        "activeDescription": "Start a conversation with your MCP servers using natural language.",
+        "inactiveDescription": "Select your servers and click start to begin chatting with your MCP tools."
       },
       "input": {
         "activePlaceholder": "Type your message...",
-        "inactivePlaceholder": "Start a session to begin chatting..."
+        "inactivePlaceholder": "Start a session to begin chatting"
       },
       "thinking": "Thinking",
       "tool": {
-        "title": "Tool Execution",
+        "title": "Tool Response",
         "debugInfo": "Debug Info"
-      }
+      },
+      "sessionEnded": "Session has ended. Start a new one to continue.",
+      "selectServerHint": "Select at least one active server to begin.",
+      "selectServerOrEnableRagHint": "Select an active server or enable RAG to begin."
     },
     "provider": {
       "anthropic": "Anthropic",
@@ -81,6 +95,8 @@
       "warn": "Warning",
       "info": "Info",
       "debug": "Debug"
-    }
+    },
+    "server": "server",
+    "servers": "servers"
   }
 }

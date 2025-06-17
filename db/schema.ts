@@ -809,6 +809,7 @@ export const docsTable = pgTable(
     mime_type: text('mime_type').notNull(),
     file_path: text('file_path').notNull(),
     tags: text('tags').array().default(sql`'{}'::text[]`),
+    rag_document_id: text('rag_document_id'),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

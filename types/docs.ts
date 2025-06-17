@@ -9,6 +9,7 @@ export interface Doc {
   mime_type: string;
   file_path: string;
   tags?: string[] | null;
+  rag_document_id?: string | null;
   created_at: Date;
   updated_at: Date;
 }
@@ -49,6 +50,7 @@ export interface UploadProgress {
 
 export interface UploadProgressState {
   upload_id: string;
+  doc_uuid?: string;
   file_name: string;
   file_size: number;
   status: 'processing' | 'completed' | 'failed';

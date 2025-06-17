@@ -1,6 +1,6 @@
 {
-  "id": "ab78dec4-7590-4955-bebe-4cceb5ccbf22",
-  "prevId": "d5ec1583-3ebf-4884-b9af-4f01c65969d6",
+  "id": "3ffc58e7-ca23-4a12-b8d0-4c33a747ca38",
+  "prevId": "4eec1bd1-e2fc-4d95-8861-1e7e6223dae1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -676,6 +676,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "project_uuid": {
+          "name": "project_uuid",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
         "name": {
           "name": "name",
           "type": "text",
@@ -719,6 +725,12 @@
           "notNull": false,
           "default": "'{}'::text[]"
         },
+        "rag_document_id": {
+          "name": "rag_document_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -740,6 +752,21 @@
           "columns": [
             {
               "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "docs_project_uuid_idx": {
+          "name": "docs_project_uuid_idx",
+          "columns": [
+            {
+              "expression": "project_uuid",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -791,6 +818,19 @@
           ],
           "columnsTo": [
             "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "docs_project_uuid_projects_uuid_fk": {
+          "name": "docs_project_uuid_projects_uuid_fk",
+          "tableFrom": "docs",
+          "tableTo": "projects",
+          "columnsFrom": [
+            "project_uuid"
+          ],
+          "columnsTo": [
+            "uuid"
           ],
           "onDelete": "cascade",
           "onUpdate": "no action"
