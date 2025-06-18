@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { notificationsTable } from '@/db/schema';
 
-export type NotificationType = 'SYSTEM' | 'ALERT' | 'INFO' | 'SUCCESS' | 'WARNING';
+export type NotificationType = 'SYSTEM' | 'ALERT' | 'INFO' | 'SUCCESS' | 'WARNING' | 'CUSTOM';
 
 interface CreateNotificationOptions {
   profileUuid: string;

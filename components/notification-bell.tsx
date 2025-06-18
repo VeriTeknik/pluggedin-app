@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Bell } from 'lucide-react';
+import { Bell, Circle } from 'lucide-react';
 import Link from 'next/link';
 
 import { useNotifications } from '@/components/providers/notification-provider';
@@ -33,8 +33,20 @@ export function NotificationBell() {
         return 'text-red-500';
       case 'INFO':
         return 'text-blue-500';
+      case 'CUSTOM':
+        return 'text-yellow-500';
       default:
         return 'text-muted-foreground';
+    }
+  };
+  
+  // Function to get icon based on notification type
+  const getIconByType = (type: string) => {
+    switch (type.toUpperCase()) {
+      case 'CUSTOM':
+        return <Circle className="h-4 w-4 mr-2 text-yellow-500" />;
+      default:
+        return null;
     }
   };
   
@@ -83,9 +95,12 @@ export function NotificationBell() {
               >
                 <div className="flex flex-col gap-1 w-full">
                   <div className="flex items-center justify-between">
-                    <span className={`font-medium ${getColorByType(notification.type)}`}>
-                      {notification.title}
-                    </span>
+                    <div className="flex items-center">
+                      {getIconByType(notification.type)}
+                      <span className={`font-medium ${getColorByType(notification.type)}`}>
+                        {notification.title}
+                      </span>
+                    </div>
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(notification.created_at), { 
                         addSuffix: true,

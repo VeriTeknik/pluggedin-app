@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { tr } from 'date-fns/locale';
-import { Bell, Check, Trash2 } from 'lucide-react';
+import { Bell, Check, Circle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -55,8 +55,20 @@ export default function NotificationsPage() {
         return 'destructive';
       case 'INFO':
         return 'secondary';
+      case 'CUSTOM':
+        return 'outline'; // Use outline for custom with yellow styling
       default:
         return 'outline';
+    }
+  };
+
+  // Function to get icon for notification type
+  const getNotificationIcon = (type: string) => {
+    switch (type.toUpperCase()) {
+      case 'CUSTOM':
+        return <Circle className="h-4 w-4 mr-2 text-yellow-500" />;
+      default:
+        return null;
     }
   };
 
@@ -222,12 +234,15 @@ export default function NotificationsPage() {
                                   ? 'bg-red-500'
                                   : notification.type === 'INFO'
                                   ? 'bg-blue-500'
+                                  : notification.type === 'CUSTOM'
+                                  ? 'bg-yellow-500'
                                   : 'bg-muted-foreground'
                               }`}
                             />
                             <div className="flex-1 p-4">
                               <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center">
+                                  {getNotificationIcon(notification.type)}
                                   <h3 className="font-medium text-base">
                                     {notification.title}
                                   </h3>
@@ -235,7 +250,11 @@ export default function NotificationsPage() {
                                     variant={getBadgeVariant(
                                       notification.type
                                     )}
-                                    className="ml-2"
+                                    className={`ml-2 ${
+                                      notification.type === 'CUSTOM' 
+                                        ? 'border-yellow-500 text-yellow-700 dark:text-yellow-400' 
+                                        : ''
+                                    }`}
                                   >
                                     {notification.type}
                                   </Badge>
