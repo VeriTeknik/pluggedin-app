@@ -25,6 +25,7 @@ import {
 import { McpServerStatus } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
+import { notifications } from '@/lib/notification-helper';
 import { McpServer } from '@/types/mcp-server';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';
@@ -729,10 +730,11 @@ export function usePlayground() {
           }
           
           addLog('connection', 'Session restored from previous state');
-          toast({
-            title: 'Session Restored',
-            description: 'Your playground session has been restored.',
-          });
+          await notifications.info(
+            'Session Restored',
+            'Your playground session has been restored.',
+            { profileUuid, saveToDatabase: true }
+          );
           
                   // Resume log polling if session is active
         startLogPolling();
