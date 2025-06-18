@@ -1009,7 +1009,10 @@ Please answer the user's question using both the provided context and your avail
     }
 
     // Get all messages for display with debugging information
-    const messages = agentFinalState.messages.map((message: any, index: number) => {
+    const processedMessages: any[] = [];
+    let lastHumanIndex = -1;
+    
+    agentFinalState.messages.forEach((message: any, index: number) => {
       // Add debugging information
       const contentType = typeof message.content;
       const contentKeys = message.content && typeof message.content === 'object' ?
@@ -1018,30 +1021,51 @@ Please answer the user's question using both the provided context and your avail
       const debugInfo = `[DEBUG: Message ${index}, Type: ${message.constructor.name}, Content type: ${contentType}, Keys: ${contentKeys.join(',')}]`;
 
       if (message instanceof HumanMessage) {
-        return {
+        lastHumanIndex = processedMessages.length;
+        processedMessages.push({
           role: 'human',
           content: message.content,
           debug: debugInfo,
           timestamp: new Date()
-        };
+        });
       } else if (message instanceof AIMessage) {
         const modelInfo = `${session.llmConfig.provider} ${session.llmConfig.model}`;
-        return {
+        processedMessages.push({
           role: 'ai',
           content: safeProcessContent(message.content),
           debug: debugInfo,
           timestamp: new Date(),
-          model: modelInfo // Add current model info
-        };
+          model: modelInfo
+        });
       } else {
-        return {
-          role: 'tool',
-          content: safeProcessContent(message.content),
-          debug: debugInfo,
-          timestamp: new Date()
-        };
+        // Check if this is the final response after a human message
+        const content = safeProcessContent(message.content);
+        const isLastMessage = index === agentFinalState.messages.length - 1;
+        const hasHumanBefore = lastHumanIndex >= 0;
+        const isNotToolCall = !message.name || message.name === 'Agent';
+        
+        // If this looks like the final AI response, mark it as AI
+        if (isLastMessage && hasHumanBefore && isNotToolCall && content.length > 20) {
+          const modelInfo = `${session.llmConfig.provider} ${session.llmConfig.model}`;
+          processedMessages.push({
+            role: 'ai',
+            content: content,
+            debug: debugInfo + ' [Final Response]',
+            timestamp: new Date(),
+            model: modelInfo
+          });
+        } else {
+          processedMessages.push({
+            role: 'tool',
+            content: content,
+            debug: debugInfo,
+            timestamp: new Date()
+          });
+        }
       }
     });
+    
+    const messages = processedMessages;
 
     // Store the messages in the session for persistence
     session.messages = messages;

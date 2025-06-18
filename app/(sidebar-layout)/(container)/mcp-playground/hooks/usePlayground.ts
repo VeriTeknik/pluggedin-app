@@ -492,7 +492,7 @@ export function usePlayground() {
         if (result.debug) {
           addLog(
             'info',
-            `Messages: ${result.debug.messageCount}, Last content type: ${result.debug.lastMessageContentType}`
+            `Messages: ${result.debug.messageCount}, Types: ${result.debug.messageTypes?.join(', ')}, Last content type: ${result.debug.lastMessageContentType}`
           );
         }
 
@@ -712,14 +712,6 @@ export function usePlayground() {
           // Restore session state
           setIsSessionActive(true);
           if (statusResult.messages) {
-            console.log('Restoring messages from session:', statusResult.messages.map((msg: any, idx: number) => ({
-              index: idx,
-              role: msg.role,
-              hasModel: !!msg.model,
-              model: msg.model,
-              timestamp: msg.timestamp,
-              isPartial: msg.isPartial
-            })));
             setMessages(statusResult.messages);
           }
           if (statusResult.llmConfig) {
