@@ -69,7 +69,7 @@ export function PlaygroundChat({
   }, [messages.length, rowVirtualizer]);
 
   return (
-    <div className='flex flex-col h-full bg-background'>
+    <div className='flex flex-col h-[calc(100vh-9rem)] bg-background'>
       {/* Chat Messages Area */}
       <div ref={parentRef} className='flex-1 overflow-y-auto p-4'>
         <div 
@@ -77,10 +77,13 @@ export function PlaygroundChat({
             height: `${rowVirtualizer.getTotalSize()}px`,
             width: '100%', 
             position: 'relative',
+            minHeight: '100%',
+            display: 'flex',
+            alignItems: 'center'
           }}
         >
           {messages.length === 0 ? (
-            <div className='absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center text-center p-8'>
+            <div className='w-full flex flex-col items-center justify-center text-center p-8'>
               <div className='bg-muted/30 rounded-full p-6 mb-6'>
                 <Settings className='h-12 w-12 text-primary/40' />
               </div>
