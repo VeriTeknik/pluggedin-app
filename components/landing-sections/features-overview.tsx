@@ -1,7 +1,16 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Blocks, Box, Layers, Search, Share2, TerminalSquare } from 'lucide-react'; // Example icons
+import { 
+  Bell,
+  Blocks, 
+  Box, 
+  Database,
+  Globe, 
+  Search, 
+  Share2, 
+  Shield,
+  TerminalSquare} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,13 +22,8 @@ interface Feature {
   descriptionKey: string;
 }
 
-// Placeholder feature data - update with actual keys and content
+// Feature data with all 9 major features
 const features: Feature[] = [
-  {
-    icon: Layers,
-    titleKey: 'features.langchainAbstraction.title',
-    descriptionKey: 'features.langchainAbstraction.description'
-  },
   {
     icon: Share2,
     titleKey: 'features.communitySharing.title',
@@ -44,6 +48,26 @@ const features: Feature[] = [
     icon: TerminalSquare,
     titleKey: 'features.mcpPlayground.title',
     descriptionKey: 'features.mcpPlayground.description'
+  },
+  {
+    icon: Database,
+    titleKey: 'features.ragIntegration.title',
+    descriptionKey: 'features.ragIntegration.description'
+  },
+  {
+    icon: Bell,
+    titleKey: 'features.notifications.title',
+    descriptionKey: 'features.notifications.description'
+  },
+  {
+    icon: Shield,
+    titleKey: 'features.security.title',
+    descriptionKey: 'features.security.description'
+  },
+  {
+    icon: Globe,
+    titleKey: 'features.internationalization.title',
+    descriptionKey: 'features.internationalization.description'
   }
 ];
 

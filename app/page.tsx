@@ -7,14 +7,18 @@ import { LandingNavbar } from '@/components/landing-navbar'; // New Navbar
 import { LandingCollectionManagement } from '@/components/landing-sections/collection-management';
 import { LandingCommunitySharing } from '@/components/landing-sections/community-sharing';
 import { LandingCta } from '@/components/landing-sections/cta';
+import { LandingDevelopersSection } from '@/components/landing-sections/developers';
 import { LandingFeaturesOverview } from '@/components/landing-sections/features-overview';
+import { LandingGettingStartedSection } from '@/components/landing-sections/getting-started';
 import { LandingHeroSection } from '@/components/landing-sections/hero'; // New Hero
 import { LandingMcpPlayground } from '@/components/landing-sections/mcp-playground';
+import { LandingPricingSection } from '@/components/landing-sections/pricing';
 import { LandingSearchFunctionality } from '@/components/landing-sections/search-functionality';
+import { LandingSecuritySection } from '@/components/landing-sections/security';
 //import { LandingTestimonials } from '@/components/landing-sections/testimonials';   // TODO: Add testimonials when we have them
 
 export default function Home() {
-  const { t, ready } = useTranslation(); // Keep ready check for i18n loading
+  const { ready } = useTranslation(); // Keep ready check for i18n loading
 
   // Add a loading state while i18n is initializing
   if (!ready) {
@@ -32,6 +36,10 @@ export default function Home() {
         <LandingCollectionManagement />
         <LandingSearchFunctionality />
         <LandingMcpPlayground />
+        <LandingSecuritySection />
+        <LandingDevelopersSection />
+        <LandingPricingSection />
+        <LandingGettingStartedSection />
         {/* <LandingTestimonials /> */}
         <LandingCta />
       </main>

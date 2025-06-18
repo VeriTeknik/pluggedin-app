@@ -1,7 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Beaker, Bug, Terminal } from 'lucide-react'; // Example icons
+import { 
+  Activity, 
+  Cpu, 
+  Database, 
+  FileCode, 
+  Gauge} from 'lucide-react';
 import Image from 'next/image';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -51,56 +56,92 @@ export function LandingMcpPlayground() {
 
         <motion.div className="mb-12 text-center max-w-2xl mx-auto" variants={textVariants}>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            {t('playground.title', 'Test & Debug with MCP Playground')} {/* Use key relative to 'landing' namespace */}
+            {t('playground.title')}
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            {t('playground.subtitle', 'An interactive environment to build, test, and refine your MCP servers.')} {/* Use key relative to 'landing' namespace */}
+            {t('playground.subtitle')}
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center">
-          {/* Explanatory Text */}
+          {/* Features Grid */}
           <motion.div variants={textVariants}>
-             <div className="flex items-start mb-6">
-                <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
-                    <Terminal className="h-5 w-5" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold">
-                        {t('playground.feature1Title', 'Interactive Testing')} {/* Use key relative to 'landing' namespace */}
-                    </h3>
-                    <p className="text-muted-foreground mt-1">
-                        {t('playground.feature1Desc', 'Directly interact with your MCP servers, call tools, and inspect resources in real-time.')} {/* Use key relative to 'landing' namespace */}
-                    </p>
-                </div>
+             <div className="grid grid-cols-1 gap-6">
+               {/* Multi-Model Support */}
+               <div className="flex items-start">
+                  <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
+                      <Cpu className="h-5 w-5" />
+                  </div>
+                  <div>
+                      <h3 className="text-lg font-semibold">
+                          {t('playground.feature1Title')}
+                      </h3>
+                      <p className="text-muted-foreground mt-1">
+                          {t('playground.feature1Desc')}
+                      </p>
+                  </div>
+               </div>
+               
+               {/* RAG Integration */}
+               <div className="flex items-start">
+                  <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
+                      <Database className="h-5 w-5" />
+                  </div>
+                  <div>
+                      <h3 className="text-lg font-semibold">
+                          {t('playground.feature2Title')}
+                      </h3>
+                      <p className="text-muted-foreground mt-1">
+                          {t('playground.feature2Desc')}
+                      </p>
+                  </div>
+               </div>
+               
+               {/* Performance */}
+               <div className="flex items-start">
+                  <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
+                      <Gauge className="h-5 w-5" />
+                  </div>
+                  <div>
+                      <h3 className="text-lg font-semibold">
+                          {t('playground.feature3Title')}
+                      </h3>
+                      <p className="text-muted-foreground mt-1">
+                          {t('playground.feature3Desc')}
+                      </p>
+                  </div>
+               </div>
+               
+               {/* Custom Instructions */}
+               <div className="flex items-start">
+                  <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
+                      <FileCode className="h-5 w-5" />
+                  </div>
+                  <div>
+                      <h3 className="text-lg font-semibold">
+                          {t('playground.feature4Title')}
+                      </h3>
+                      <p className="text-muted-foreground mt-1">
+                          {t('playground.feature4Desc')}
+                      </p>
+                  </div>
+               </div>
+               
+               {/* Real-time Monitoring */}
+               <div className="flex items-start">
+                  <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
+                      <Activity className="h-5 w-5" />
+                  </div>
+                  <div>
+                      <h3 className="text-lg font-semibold">
+                          {t('playground.feature5Title')}
+                      </h3>
+                      <p className="text-muted-foreground mt-1">
+                          {t('playground.feature5Desc')}
+                      </p>
+                  </div>
+               </div>
              </div>
-             <div className="flex items-start">
-                <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
-                    <Bug className="h-5 w-5" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold">
-                        {t('playground.feature2Title', 'Efficient Debugging')} {/* Use key relative to 'landing' namespace */}
-                    </h3>
-                    <p className="text-muted-foreground mt-1">
-                        {t('playground.feature2Desc', 'Identify and resolve issues quickly with detailed request/response logs and error messages.')} {/* Use key relative to 'landing' namespace */}
-                    </p>
-                </div>
-             </div>
-              <div className="flex items-start mt-6">
-                <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
-                    <Beaker className="h-5 w-5" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold">
-                        {t('playground.feature3Title', 'Rapid Prototyping')} {/* Use key relative to 'landing' namespace */}
-                    </h3>
-                    <p className="text-muted-foreground mt-1">
-                        {t('playground.feature3Desc', 'Experiment with different server configurations and tool implementations before deployment.')} {/* Use key relative to 'landing' namespace */}
-                    </p>
-                </div>
-             </div>
-             
           </motion.div>
 
            {/* Image Placeholder */}

@@ -11,38 +11,55 @@
     "title": "Yapay Zeka Kavşağı",
     "subtitle": "Birleşik bir platformla yapay zeka yeteneklerinizi bağlayın, oluşturun ve genişletin. Yapay zeka iş akışlarınızı geliştiren eklentiler oluşturun ve yönetin.",
     "headline": "MCP Sunucularını Bağlayın, Paylaşın ve Keşfedin",
-    "subheadline": "Model Context Protocol için topluluk merkezi ve evrensel proxy",
-    "analogy": "\"Tüm MCP'lere hükmedecek tek bir MCP proxy'si\"",
+    "subheadline": "Model Context Protocol için topluluk merkezi, evrensel proxy ve yapay zeka bilgi platformu",
+    "analogy": "\"Yapay zeka ekosistemin, birleşik ve sosyal\"",
     "openSource": "Gururla Açık Kaynak",
+    "version": "v1.0.0",
     "cta": {
-      "getStarted": "Başlayın",
-      "learnMore": "Daha Fazla Bilgi Edinin"
+      "getStarted": "Topluluğa Katıl",
+      "learnMore": "Özellikleri Keşfet"
     }
   },
   "features": {
     "title": "Özellikler",
     "subtitle": "MCP sunucularınızı yönetmek için ihtiyacınız olan her şey",
-    "sectionTitle": "MCP Yönetimi için Güçlü Özellikler",
-    "sectionSubtitle": "MCP sunucularını etkili bir şekilde bağlamak, paylaşmak ve keşfetmek için ihtiyacınız olan her şey.",
+    "sectionTitle": "Eksiksiz Yapay Zeka Ekosistem Platformu",
+    "sectionSubtitle": "Kurumsal düzeyde özelliklerle yapay zeka yeteneklerinizi bağlayın, paylaşın, keşfedin ve genişletin.",
     "communitySharing": {
-      "title": "Topluluk MCP Sunucu Paylaşımı",
-      "description": "MCP sunucularınızı paylaşın ve topluluğun oluşturduklarını keşfedin."
+      "title": "Sosyal Platform ve Topluluk",
+      "description": "MCP sunucularını paylaşın, geliştiricileri takip edin, bildirimler alın ve yapay zeka ağınızı kurun. Herkese açık profiller, derecelendirmeler ve işbirlikçi keşif."
     },
     "collectionManagement": {
-      "title": "Koleksiyon Yönetimi",
-      "description": "Farklı istemciler veya projeler için sunucuları koleksiyonlar halinde düzenleyin."
+      "title": "Sürüm Kontrolü ile Akıllı Koleksiyonlar",
+      "description": "Sunucuları sürümlendirilmiş koleksiyonlar halinde düzenleyin. Herkese açık veya özel paylaşın, kurulumları takip edin ve seçilmiş araç setleri üzerinde işbirliği yapın."
     },
     "workspaceOrganization": {
-      "title": "Çalışma Alanı Organizasyonu",
-      "description": "Koleksiyonları geliştirme veya üretim gibi çalışma alanlarında gruplayın."
+      "title": "Çoklu Çalışma Alanı Yönetimi",
+      "description": "Özel çalışma alanlarıyla projeleri izole edin. Geliştirme, hazırlık ve üretim ortamları arasında anında geçiş yapın."
     },
     "advancedSearch": {
-      "title": "Gelişmiş Arama",
-      "description": "Güçlü filtreleme yetenekleriyle mükemmel MCP sunucusunu bulun."
+      "title": "Akıllı Keşif Motoru",
+      "description": "GitHub, Smithery ve npm genelinde mükemmel MCP sunucusunu bulun. Yetenekler, derecelendirmeler ve topluluk önerileri ile filtreleyin."
     },
     "mcpPlayground": {
-      "title": "MCP Oyun Alanı",
-      "description": "MCP sunucularınızı etkileşimli bir ortamda test edin ve hatalarını ayıklayın."
+      "title": "Evrensel Yapay Zeka Oyun Alanı",
+      "description": "MCP sunucularını herhangi bir model ile test edin - Claude, GPT, Llama ve daha fazlası. Büyük konuşmalar için sanal kaydırma ve özel talimat desteği."
+    },
+    "ragIntegration": {
+      "title": "Yapay Zeka Bilgi Platformu (RAG)",
+      "description": "Belgeleri yükleyin, bilgi tabanları oluşturun ve herhangi bir MCP istemcisi üzerinden sorgulayın. Kurumsal düzeyde güvenlik ile güvenli, proje tabanlı izolasyon."
+    },
+    "notifications": {
+      "title": "Gerçek Zamanlı Etkinlik İzleme",
+      "description": "Tüm MCP işlemlerini ayrıntılı günlükler, yürütme analitiği ve opsiyonel e-posta teslimatı ile özel bildirimlerle takip edin."
+    },
+    "security": {
+      "title": "Kurumsal Güvenlik ve Gizlilik",
+      "description": "Çok katmanlı kimlik doğrulama, Firejail sandboxing, kapsamlı denetim izleri ve tam kontrol için kendi kendine barındırma seçenekleri."
+    },
+    "internationalization": {
+      "title": "Küresel Platform",
+      "description": "Otomatik tarayıcı algılama ile 6 dilde mevcut. Dünya çapında erişilebilirlik için topluluk odaklı çeviriler."
     },
     "pluginManagement": {
       "title": "Eklenti Yönetimi",
@@ -73,10 +90,23 @@
     }
   },
   "community": {
-    "title": "MCP Topluluğuna Katılın",
-    "subtitle": "Büyüyen MCP geliştiricileri topluluğuna katılın",
-    "description": "MCP sunucularınızı paylaşın, başkaları tarafından oluşturulan güçlü araçları keşfedin ve büyüyen bir ekosistem içinde işbirliği yapın. Sunucuları derecelendirin, yorum bırakın ve ihtiyaçlarınız için en iyi çözümleri bulun.",
+    "title": "Küresel MCP Topluluğuna Katılın",
+    "subtitle": "Yapay zekanın geleceğini inşa eden binlerce geliştiriciyle bağlantı kurun",
+    "description": "MCP sunucularınızı paylaşın, geliştiricileri takip edin, gerçek zamanlı bildirimler alın ve sosyal platformumuz içinde işbirliği yapın. Derecelendirmeler, yorumlar ve topluluk katkılarıyla itibarınızı oluşturun.",
     "action": "Topluluğa Katılın",
+    "stats": {
+      "developers": "10K+ Geliştirici",
+      "servers": "5000+ MCP Sunucusu",
+      "collections": "1500+ Koleksiyon",
+      "languages": "6 Dil"
+    },
+    "socialFeatures": {
+      "title": "Sosyal Platform Özellikleri",
+      "profiles": "Etkinlik akışları ile herkese açık geliştirici profilleri",
+      "following": "Geliştiricileri takip edin ve çalışmaları hakkında güncellemeler alın",
+      "notifications": "Takipler, paylaşımlar ve güncellemeler için gerçek zamanlı bildirimler",
+      "reputation": "Topluluk katılımı ile itibarınızı oluşturun"
+    },
     "benefit1": "Diğer geliştiricilerin yenilikçi sunucularını keşfedin.",
     "benefit2": "Paylaşılan sunucularınız hakkında geri bildirim ve derecelendirme alın.",
     "benefit3": "Topluluk eserleri üzerinde işbirliği yapın ve geliştirin.",
@@ -99,40 +129,67 @@
     "title3": "Kurucu, AI Solutions Inc."
   },
   "search": {
-    "title": "Doğru Araçları Anında Bulun",
-    "subtitle": "Güçlü arama ve filtreleme seçenekleriyle MCP sunucularını ve araçlarını keşfedin.",
-    "description": "Büyüyen MCP sunucuları ve araçları koleksiyonunda arama yapın.",
-    "action": "Araçları Keşfedin",
+    "title": "Akıllı Keşif Motoru",
+    "subtitle": "GitHub, Smithery ve npm genelinde mükemmel MCP sunucusunu bulun",
+    "description": "Gelişmiş keşif motorumuz birden fazla kaynağı arar ve en iyi araçları öne çıkarmak için topluluk sinyallerini kullanır.",
+    "action": "Araçları Keşfet",
+    "sources": {
+      "title": "Tüm Kaynaklarda Arama",
+      "github": "MCP sunucuları olan GitHub depoları",
+      "smithery": "Smithery pazar yeri entegrasyonları",
+      "npm": "MCP desteği olan NPM paketleri",
+      "community": "Topluluk tarafından paylaşılan sunucular"
+    },
     "imagePlaceholder": "Resim: Topluluk sunucularını gösteren arama sonuçları (CardGrid Mockup)",
-    "feature1Title": "Akıllı Arama",
-    "feature1Desc": "Akıllı arama algoritmamızı kullanarak sunucuları ada, açıklamaya veya yeteneklere göre hızla bulun.",
-    "feature2Title": "Gelişmiş Filtreleme",
-    "feature2Desc": "Kategoriler, etiketler, derecelendirmeler ve uyumluluk için filtrelerle sonuçları daraltın.",
-    "feature3Title": "Detaylı Önizlemeler",
-    "feature3Desc": "Sunucu ayrıntılarını, derecelendirmeleri ve topluluk yorumlarını doğrudan arama sonuçlarından görüntüleyin."
+    "feature1Title": "Yapay Zeka Destekli Arama",
+    "feature1Desc": "Sadece anahtar kelimeler değil, ne aradığınızı anlayan doğal dil araması.",
+    "feature2Title": "Topluluk Sinyalleri",
+    "feature2Desc": "Derecelendirmeler, kurulumlar, son güncellemeler ve geliştirici itibarı ile filtreleyin.",
+    "feature3Title": "Yetenek Eşleştirme",
+    "feature3Desc": "İhtiyacınız olan tam yeteneklere göre sunucular bulun - araçlar, kaynaklar veya istemler.",
+    "feature4Title": "Anında Önizleme",
+    "feature4Desc": "Arama sonuçlarından kurulum yapmadan sunucuları doğrudan test edin."
   },
   "playground": {
-    "title": "MCP Oyun Alanı ile Test Edin ve Hata Ayıklayın",
-    "subtitle": "MCP sunucularınızı oluşturmak, test etmek ve iyileştirmek için etkileşimli bir ortam.",
-    "feature1Title": "Etkileşimli Test",
-    "feature1Desc": "MCP sunucularınızla doğrudan etkileşim kurun, araçları çağırın ve kaynakları gerçek zamanlı olarak inceleyin.",
-    "feature2Title": "Verimli Hata Ayıklama",
-    "feature2Desc": "Ayrıntılı istek/yanıt günlükleri ve hata mesajlarıyla sorunları hızla belirleyin ve çözün.",
-    "feature3Title": "Hızlı Prototipleme",
-    "feature3Desc": "Dağıtımdan önce farklı sunucu yapılandırmaları ve araç uygulamalarıyla deney yapın.",
+    "title": "Evrensel Yapay Zeka Test Oyun Alanı",
+    "subtitle": "Herhangi bir MCP sunucusunu herhangi bir yapay zeka modeli ile test edin - Claude, GPT, Llama ve daha fazlası.",
+    "feature1Title": "Çoklu Model Desteği",
+    "feature1Desc": "Langchain entegrasyonumuz ile Claude, GPT-4, Llama, Gemini ve düzinelerce model ile test edin.",
+    "feature2Title": "Gelişmiş RAG Entegrasyonu",
+    "feature2Desc": "Belgeleri yükleyin, bilgi tabanları oluşturun ve herhangi bir model ile anında sorgulayın.",
+    "feature3Title": "Sanal Kaydırma ve Performans",
+    "feature3Desc": "Sanal kaydırma ve optimize edilmiş performans ile büyük konuşmaları ele alın.",
+    "feature4Title": "Özel Talimatlar",
+    "feature4Desc": "Hassas kontrol için model özel talimatları ve sistem istemlerini ayarlayın.",
+    "feature5Title": "Gerçek Zamanlı İzleme",
+    "feature5Desc": "Ayrıntılı günlükler, yürütme analitiği ve performans metrikleri ile tüm işlemleri takip edin.",
     "visualPlaceholder": "Oyun alanı ortamının görsel temsili",
     "imagePlaceholder": "Resim: Oyun Alanı/Hata Ayıklama Mockup",
     "langchainCallout": "<0>Her Modelde Test Edin:</0> <1>Langchain soyutlaması</1> sayesinde MCP sunucularınızı Claude, GPT, Llama ve daha fazlasıyla tek bir oyun alanında test edebilirsiniz. Modelleri anında karşılaştırın ve gerçek modelden bağımsız yapay zekayı deneyimleyin."
   },
   "collections": {
-    "title": "MCP Ekosisteminizi Düzenleyin",
-    "subtitle": "Araçlarınızı düzenleyin",
-    "description": "Favori MCP sunucularınızın ve araçlarınızın koleksiyonlarını oluşturun ve paylaşın.",
-    "action": "Koleksiyonları Görüntüle",
+    "title": "Akıllı Koleksiyonlar ve Sürüm Kontrolü",
+    "subtitle": "MCP sunucu koleksiyonlarınızı düzenleyin, sürümleyin ve paylaşın",
+    "description": "Sürümlendirilmiş koleksiyonlar oluşturun, kurulumları takip edin, ekiplerle işbirliği yapın ve geliştirme, hazırlık ve üretim için farklı yapılandırmalar sürdürün.",
+    "action": "Koleksiyonları Keşfet",
+    "versionControl": {
+      "title": "Koleksiyonlar için Sürüm Kontrolü",
+      "feature1": "Koleksiyonlarınızın herhangi bir noktasında anlık görüntüler oluşturun",
+      "feature2": "Gerektiğinde önceki sürümlere geri dönün",
+      "feature3": "Değişiklikleri takip edin ve sürümler arasındaki farkları görün",
+      "feature4": "Belirli sürümleri ekibinizle paylaşın"
+    },
+    "sharing": {
+      "title": "Herkese Açık ve Özel Paylaşım",
+      "public": "Koleksiyonları toplulukla herkese açık paylaşın",
+      "private": "Ekip üyeleriyle özel paylaşım",
+      "stats": "Kurulum ve kullanım istatistiklerini takip edin",
+      "ratings": "Kullanıcılardan geri bildirim ve derecelendirme alın"
+    },
     "collectionsTitle": "Kolaylaştırılmış Koleksiyonlar",
     "collectionsDesc": "İlgili MCP sunucularını belirli istemciler, uygulamalar veya ortamlar için mantıksal koleksiyonlar halinde gruplayın.",
-    "workspacesTitle": "Güçlü Çalışma Alanları",
-    "workspacesDesc": "Koleksiyonlarınızı geliştirme, hazırlık ve üretim kurulumlarını ayırmak gibi çalışma alanlarında daha fazla düzenleyin.",
+    "workspacesTitle": "Çoklu Çalışma Alanı Yönetimi",
+    "workspacesDesc": "Özel çalışma alanlarıyla projeleri izole edin. Geliştirme, hazırlık ve üretim yapılandırmaları arasında anında geçiş yapın.",
     "hierarchyPlaceholder": "Koleksiyon hiyerarşisinin görsel temsili",
     "imagePlaceholder": "Resim: Koleksiyon/Çalışma Alanı Mockup"
   },
@@ -142,30 +199,186 @@
     "description": "MCP sunucularınızı ve araçlarınızı toplulukla paylaşın.",
     "action": "Paylaşmaya Başlayın"
   },
+  "security": {
+    "title": "Kurumsal Düzeyde Güvenlik",
+    "subtitle": "Yapay zeka altyapınız, her katmanda korundu",
+    "description": "Çok katmanlı kimlik doğrulama, sandbox yürütme ve kapsamlı denetim izleri ile güvenlik öncelikli mimari ile oluşturuldu.",
+    "features": {
+      "authentication": {
+        "title": "Çok Katmanlı Kimlik Doğrulama",
+        "desc": "OAuth sağlayıcıları, API anahtarları ve JWT belirteçleri ile oturum yönetimi"
+      },
+      "sandboxing": {
+        "title": "Firejail Sandboxing",
+        "desc": "Linux'ta tüm STDIO MCP sunucuları için otomatik güvenlik sandboxing"
+      },
+      "isolation": {
+        "title": "Proje İzolasyonu",
+        "desc": "Rol tabanlı erişim kontrolü ile projeler arasında tam veri izolasyonu"
+      },
+      "audit": {
+        "title": "Kapsamlı Denetim İzleri",
+        "desc": "Uyumluluk için tüm işlemleri, API çağrılarını ve kullanıcı eylemlerini takip edin"
+      },
+      "encryption": {
+        "title": "Veri Şifreleme",
+        "desc": "Hassas veriler ve API iletişimi için uçtan uca şifreleme"
+      },
+      "selfhost": {
+        "title": "Kendi Kendine Barındırma Seçeneği",
+        "desc": "Tam kontrol ve uyumluluk için kendi altyapınızda dağıtın"
+      }
+    },
+    "compliance": "Düzenli güvenlik denetimleri ile SOC2 Type II uyumlu altyapı",
+    "action": "Güvenlik Ayrıntılarını Görüntüle"
+  },
+  "developers": {
+    "title": "Geliştiriciler İçin Oluşturuldu",
+    "subtitle": "Yapay zeka yeteneklerinizi genişletmek için güçlü araçlar ve API'ler",
+    "description": "Kapsamlı API'ler, SDK'lar ve geliştirici araçları ile açık kaynak platform.",
+    "features": {
+      "opensource": {
+        "title": "%100 Açık Kaynak",
+        "desc": "GitHub'da şeffaf geliştirme ile MIT lisanslı"
+      },
+      "apis": {
+        "title": "RESTful API'ler",
+        "desc": "Tüm platform özellikleri için eksiksiz API kapsamı"
+      },
+      "sdks": {
+        "title": "TypeScript SDK",
+        "desc": "Tam IntelliSense desteği ile tip güvenli SDK"
+      },
+      "extensibility": {
+        "title": "Eklenti Mimarisi",
+        "desc": "Özel MCP sunucuları ve entegrasyonlarla platformu genişletin"
+      },
+      "documentation": {
+        "title": "Kapsamlı Belgeler",
+        "desc": "Örnekler ve öğreticiler ile ayrıntılı belgeler"
+      },
+      "community": {
+        "title": "Aktif Topluluk",
+        "desc": "Discord, GitHub tartışmaları ve topluluk desteği"
+      }
+    },
+    "codeExample": {
+      "title": "Hızlı Entegrasyon Örneği",
+      "description": "Saniyeler içinde Plugged.in'e bağlanın:"
+    },
+    "action": "Belgeleri Görüntüle"
+  },
+  "pricing": {
+    "title": "Basit, Şeffaf Fiyatlandırma",
+    "subtitle": "Ücretsiz başlayın, büyüdükçe ölçeklendirin",
+    "free": {
+      "title": "Sonsuza Kadar Ücretsiz",
+      "price": "₺0",
+      "period": "/ay",
+      "description": "Bireyler ve küçük ekipler için mükemmel",
+      "features": [
+        "Sınırsız MCP sunucusu",
+        "Tüm yapay zeka modelleri desteklenir",
+        "5 RAG bilgi tabanı",
+        "Herkese açık profil ve paylaşım",
+        "Topluluk desteği"
+      ],
+      "cta": "Ücretsiz Başla"
+    },
+    "pro": {
+      "title": "Pro",
+      "price": "₺549",
+      "period": "/ay",
+      "description": "Profesyonel geliştiriciler ve ekipler için",
+      "features": [
+        "Ücretsiz'deki her şey",
+        "Sınırsız RAG bilgi tabanı",
+        "Özel koleksiyonlar",
+        "Öncelikli destek",
+        "Gelişmiş analitik",
+        "Ekip işbirliği"
+      ],
+      "cta": "Pro Deneme Başlat"
+    },
+    "enterprise": {
+      "title": "Kurumsal",
+      "price": "Özel",
+      "period": "",
+      "description": "Gelişmiş ihtiyaçları olan kuruluşlar için",
+      "features": [
+        "Pro'daki her şey",
+        "Kendi kendine barındırma seçeneği",
+        "SSO/SAML kimlik doğrulama",
+        "SLA garantileri",
+        "Özel destek",
+        "Özel entegrasyonlar"
+      ],
+      "cta": "Satış Ekibiyle İletişime Geç"
+    }
+  },
   "gettingStarted": {
-    "title": "Plugged.in'de Yeni misiniz?",
-    "description": "Ortamınızı doğru şekilde yapılandırmak ve hemen Plugged.in ile oluşturmaya başlamak için kurulum kılavuzumuzu takip edin.",
+    "title": "Başlamak Kolay",
+    "subtitle": "5 dakikadan kısa sürede sıfırdan yapay zeka destekli",
+    "description": "İlk MCP sunucunuzu bağlamak ve inşa etmeye başlamak için hızlı başlangıç kılavuzumuzu takip edin.",
+    "steps": {
+      "step1": {
+        "title": "1. Hesap Oluştur",
+        "desc": "E-posta veya OAuth sağlayıcısı ile kaydolun"
+      },
+      "step2": {
+        "title": "2. API Anahtarı Al",
+        "desc": "Kontrol panelinden API anahtarınızı oluşturun"
+      },
+      "step3": {
+        "title": "3. MCP Proxy Kur",
+        "desc": "Çalıştır: npx @pluggedin/mcp-proxy@latest"
+      },
+      "step4": {
+        "title": "4. İstemci Bağla",
+        "desc": "Claude, Cursor veya herhangi bir MCP istemcisine ekle"
+      }
+    },
+    "resources": {
+      "title": "Öğrenme Kaynakları",
+      "quickstart": "5 dakikalık hızlı başlangıç kılavuzu",
+      "tutorials": "Adım adım öğreticiler",
+      "videos": "Video anlatımları",
+      "examples": "Örnek projeler ve şablonlar"
+    },
     "action": "Kurulum Kılavuzunu Görüntüle"
   },
   "cta": {
-    "title": "MCP İş Akışınızı Güçlendirmeye Hazır mısınız?",
-    "subtitle": "Bugün Plugged.in topluluğuna katılın. MCP sunucularını daha önce hiç olmadığı gibi yönetin, paylaşın ve keşfedin.",
-    "description": "Topluluğa katılın ve bugün Plugged.in ile oluşturmaya başlayın.",
-    "primary": "Başlayın",
-    "secondary": "Daha Fazla Bilgi Edinin",
-    "primaryAction": "Ücretsiz Başlayın",
-    "secondaryAction": "Belgeleri Oku",
+    "title": "Yapay Zeka Devrimine Katılmaya Hazır mısınız?",
+    "subtitle": "En kapsamlı MCP platformu ile inşa etmeye başlayın. Bireyler için sonsuza kadar ücretsiz.",
+    "description": "Plugged.in v1.0.0 ile yapay zekanın geleceğini inşa eden binlerce geliştiriciye katılın.",
+    "primary": "Ücretsiz Başla",
+    "secondary": "Belgeleri Görüntüle",
+    "primaryAction": "Ücretsiz Hesap Oluştur",
+    "secondaryAction": "Belgeleri Keşfet",
+    "features": {
+      "title": "İhtiyacınız Olan Her Şey",
+      "feature1": "✓ Sınırsız MCP sunucusu",
+      "feature2": "✓ Tüm yapay zeka modelleri desteklenir",
+      "feature3": "✓ RAG bilgi tabanları",
+      "feature4": "✓ Sosyal özellikler",
+      "feature5": "✓ 6 dil desteği",
+      "feature6": "✓ Kurumsal güvenlik"
+    },
     "step1": {
-      "title": "Kaydolun",
-      "description": "Ücretsiz hesabınızı saniyeler içinde oluşturun."
+      "title": "Kaydol",
+      "description": "Saniyeler içinde ücretsiz hesabınızı oluşturun. Kredi kartı gerekmez."
     },
     "step2": {
-      "title": "Sunucuları Bağlayın",
-      "description": "Mevcut MCP sunucularınızı ekleyin veya yenilerini keşfedin."
+      "title": "Bağlan ve Keşfet",
+      "description": "MCP sunucuları ekleyin, geliştiricileri takip edin, topluluğa katılın."
     },
     "step3": {
-      "title": "Keşfedin ve Paylaşın",
-      "description": "Ekosisteminizi yönetin ve toplulukla etkileşim kurun."
+      "title": "İnşa Et ve Paylaş",
+      "description": "Koleksiyonlar oluşturun, bilgi yükleyin, dünyayla paylaşın."
+    },
+    "security": {
+      "title": "Kurumsal Düzeyde Güvenlik",
+      "description": "Verileriniz çok katmanlı kimlik doğrulama, Firejail sandboxing ve kapsamlı denetim izleri ile korunur. Tam kontrol için kendi kendine barındırın."
     }
   }
 }

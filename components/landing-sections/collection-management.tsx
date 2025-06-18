@@ -1,9 +1,15 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { FolderKanban, Layers } from 'lucide-react'; // Example icons
+import { 
+  BarChart3, 
+  GitBranch, 
+  Layers, 
+  Share2} from 'lucide-react';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
+
+import { Card, CardContent } from '@/components/ui/card';
 
 
 // TODO: Integrate MagicUI components when available:
@@ -27,7 +33,7 @@ const terminalVariants = {
 };
 
 export function LandingCollectionManagement() {
-  const { t } = useTranslation(); // Use default hook
+  const { t } = useTranslation('landing');
 
 
   return (
@@ -42,10 +48,13 @@ export function LandingCollectionManagement() {
       <div className="container mx-auto px-4">
         <motion.div className="mb-12 text-center max-w-2xl mx-auto" variants={textVariants}>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            {t('collections.title', 'Organize Your MCP Ecosystem')} {/* Use relative key */}
+            {t('collections.title')}
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            {t('collections.subtitle', 'Effortlessly manage servers with collections and workspaces, tailored for your workflow.')} {/* Use relative key */}
+            {t('collections.subtitle')}
+          </p>
+          <p className="mt-2 text-base text-muted-foreground">
+            {t('collections.description')}
           </p>
         </motion.div>
 
@@ -63,35 +72,66 @@ export function LandingCollectionManagement() {
             </div>
           </motion.div>
 
-          {/* Explanatory Text */}
+          {/* Features */}
           <motion.div variants={textVariants}>
-             <div className="flex items-start mb-6">
-                <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
-                    <FolderKanban className="h-5 w-5" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold">
-                        {t('collections.collectionsTitle', 'Streamlined Collections')} {/* Use relative key */}
-                    </h3>
-                    <p className="text-muted-foreground mt-1">
-                        {t('collections.collectionsDesc', 'Group related MCP servers into logical collections for specific clients, applications, or environments.')} {/* Use relative key */}
-                    </p>
-                </div>
+             {/* Version Control */}
+             <div className="mb-8">
+               <h3 className="text-xl font-semibold mb-4">
+                 {t('collections.versionControl.title')}
+               </h3>
+               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                 {[1, 2, 3, 4].map((i) => (
+                   <div key={i} className="flex items-start">
+                     <GitBranch className="h-5 w-5 text-primary mr-2 mt-0.5 flex-shrink-0" />
+                     <span className="text-sm text-muted-foreground">
+                       {t(`collections.versionControl.feature${i}`)}
+                     </span>
+                   </div>
+                 ))}
+               </div>
              </div>
+
+             {/* Sharing Features */}
+             <div className="mb-8">
+               <h3 className="text-xl font-semibold mb-4">
+                 {t('collections.sharing.title')}
+               </h3>
+               <div className="grid grid-cols-1 gap-3">
+                 <Card>
+                   <CardContent className="p-4 flex items-start">
+                     <Share2 className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                     <div>
+                       <p className="font-medium">{t('collections.sharing.public')}</p>
+                       <p className="text-sm text-muted-foreground">{t('collections.sharing.private')}</p>
+                     </div>
+                   </CardContent>
+                 </Card>
+                 <Card>
+                   <CardContent className="p-4 flex items-start">
+                     <BarChart3 className="h-5 w-5 text-primary mr-3 mt-0.5 flex-shrink-0" />
+                     <div>
+                       <p className="font-medium">{t('collections.sharing.stats')}</p>
+                       <p className="text-sm text-muted-foreground">{t('collections.sharing.ratings')}</p>
+                     </div>
+                   </CardContent>
+                 </Card>
+               </div>
+             </div>
+
+             {/* Workspaces */}
              <div className="flex items-start">
                 <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
                     <Layers className="h-5 w-5" />
                 </div>
                 <div>
                     <h3 className="text-lg font-semibold">
-                        {t('collections.workspacesTitle', 'Powerful Workspaces')} {/* Use relative key */}
+                        {t('collections.workspacesTitle')}
                     </h3>
                     <p className="text-muted-foreground mt-1">
-                        {t('collections.workspacesDesc', 'Organize your collections further into workspaces, such as separating development, staging, and production setups.')} {/* Use relative key */}
+                        {t('collections.workspacesDesc')}
                     </p>
                 </div>
              </div>
-             
           </motion.div>
         </div>
       </div>

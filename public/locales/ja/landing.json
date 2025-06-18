@@ -11,38 +11,55 @@
     "title": "AIの交差点",
     "subtitle": "統一されたプラットフォームでAI機能を接続、作成、拡張します。AIワークフローを強化するプラグインを構築および管理します。",
     "headline": "MCPサーバーを接続、共有、発見",
-    "subheadline": "Model Context Protocol のためのコミュニティハブおよびユニバーサルプロキシ",
-    "analogy": "\"すべてのMCPを支配する一つのMCPプロキシ\"",
+    "subheadline": "Model Context Protocol のためのコミュニティハブ、ユニバーサルプロキシ、AI知識プラットフォーム",
+    "analogy": "\"AIエコシステムを統合し、ソーシャルに\"",
     "openSource": "誇りを持ってオープンソース",
+    "version": "v1.0.0",
     "cta": {
-      "getStarted": "始める",
-      "learnMore": "詳細を見る"
+      "getStarted": "コミュニティに参加",
+      "learnMore": "機能を探索"
     }
   },
   "features": {
     "title": "機能",
     "subtitle": "MCPサーバーを管理するために必要なすべて",
-    "sectionTitle": "MCP管理のための強力な機能",
-    "sectionSubtitle": "MCPサーバーを効果的に接続、共有、発見するために必要なすべて。",
+    "sectionTitle": "完全なAIエコシステムプラットフォーム",
+    "sectionSubtitle": "エンタープライズグレードの機能でAI機能を接続、共有、発見、拡張します。",
     "communitySharing": {
-      "title": "コミュニティMCPサーバー共有",
-      "description": "MCPサーバーを共有し、コミュニティからの作成物を発見します。"
+      "title": "ソーシャルプラットフォーム＆コミュニティ",
+      "description": "MCPサーバーを共有し、開発者をフォローし、通知を受け取り、AIネットワークを構築します。公開プロフィール、評価、協力的な発見機能。"
     },
     "collectionManagement": {
-      "title": "コレクション管理",
-      "description": "異なるクライアントやプロジェクトのためにサーバーをコレクションに整理します。"
+      "title": "バージョン管理付きスマートコレクション",
+      "description": "サーバーをバージョン管理されたコレクションに整理します。公開または非公開で共有し、インストールを追跡し、厳選されたツールセットで協力します。"
     },
     "workspaceOrganization": {
-      "title": "ワークスペース整理",
-      "description": "開発環境や本番環境など、コレクションをワークスペースにグループ化します。"
+      "title": "マルチワークスペース管理",
+      "description": "専用ワークスペースでプロジェクトを分離します。開発、ステージング、本番環境間でコンテキストを瞬時に切り替えます。"
     },
     "advancedSearch": {
-      "title": "高度な検索",
-      "description": "強力なフィルタリング機能で完璧なMCPサーバーを見つけます。"
+      "title": "インテリジェント発見エンジン",
+      "description": "GitHub、Smithery、npmを横断して完璧なMCPサーバーを見つけます。機能、評価、コミュニティ推奨でフィルタリング。"
     },
     "mcpPlayground": {
-      "title": "MCPプレイグラウンド",
-      "description": "インタラクティブな環境でMCPサーバーをテストおよびデバッグします。"
+      "title": "ユニバーサルAIプレイグラウンド",
+      "description": "任意のモデル（Claude、GPT、Llamaなど）でMCPサーバーをテストします。大規模な会話のための仮想スクロールとカスタム指示サポート。"
+    },
+    "ragIntegration": {
+      "title": "AI知識プラットフォーム（RAG）",
+      "description": "ドキュメントをアップロードし、知識ベースを作成し、任意のMCPクライアントを通じてクエリします。エンタープライズグレードセキュリティによる安全なプロジェクトベース分離。"
+    },
+    "notifications": {
+      "title": "リアルタイム活動監視",
+      "description": "詳細なログ、実行分析、オプションのメール配信による カスタム通知で、すべてのMCP操作を追跡します。"
+    },
+    "security": {
+      "title": "エンタープライズセキュリティ＆プライバシー",
+      "description": "多層認証、Firejailサンドボックス、包括的監査証跡、完全制御のためのセルフホスティングオプション。"
+    },
+    "internationalization": {
+      "title": "グローバルプラットフォーム",
+      "description": "自動ブラウザ検出付きの6言語で利用可能。世界的なアクセシビリティのためのコミュニティ主導翻訳。"
     },
     "pluginManagement": {
       "title": "プラグイン管理",
@@ -73,10 +90,23 @@
     }
   },
   "community": {
-    "title": "MCPコミュニティに参加",
-    "subtitle": "成長するMCP開発者コミュニティに参加",
-    "description": "MCPサーバーを共有し、他の人が作成した強力なツールを発見し、成長するエコシステム内で協力します。サーバーを評価し、レビューを残し、ニーズに最適なソリューションを見つけます。",
+    "title": "グローバルMCPコミュニティに参加",
+    "subtitle": "AIの未来を構築する数千人の開発者とつながる",
+    "description": "MCPサーバーを共有し、開発者をフォローし、リアルタイム通知を受け取り、ソーシャルプラットフォーム内で協力します。評価、レビュー、コミュニティ貢献で評判を構築します。",
     "action": "コミュニティに参加",
+    "stats": {
+      "developers": "10,000+開発者",
+      "servers": "5,000+MCPサーバー",
+      "collections": "1,500+コレクション",
+      "languages": "6言語"
+    },
+    "socialFeatures": {
+      "title": "ソーシャルプラットフォーム機能",
+      "profiles": "活動フィード付き公開開発者プロフィール",
+      "following": "開発者をフォローし、その作業の更新を受け取る",
+      "notifications": "フォロー、共有、更新のリアルタイム通知",
+      "reputation": "コミュニティエンゲージメントを通じて評判を構築"
+    },
     "benefit1": "仲間の開発者から革新的なサーバーを発見します。",
     "benefit2": "共有したサーバーに関するフィードバックと評価を取得します。",
     "benefit3": "コミュニティの作成物に基づいて協力し、構築します。",
@@ -99,40 +129,67 @@
     "title3": "創設者、AI Solutions Inc."
   },
   "search": {
-    "title": "適切なツールを即座に見つける",
-    "subtitle": "強力な検索およびフィルタリングオプションでMCPサーバーとツールを発見します。",
-    "description": "成長するMCPサーバーとツールのコレクションを検索します。",
-    "action": "ツールを探索",
+    "title": "インテリジェント発見エンジン",
+    "subtitle": "GitHub、Smithery、npmを横断して完璧なMCPサーバーを見つける",
+    "description": "高度な発見エンジンが複数のソースを検索し、コミュニティシグナルを使用してニーズに最適なツールを表面化します。",
+    "action": "ツールを発見",
+    "sources": {
+      "title": "すべてのソースを横断検索",
+      "github": "MCPサーバー付きGitHubリポジトリ",
+      "smithery": "Smitheryマーケットプレイス統合",
+      "npm": "MCPサポート付きNPMパッケージ",
+      "community": "コミュニティ共有サーバー"
+    },
     "imagePlaceholder": "画像：コミュニティサーバーを示す検索結果（CardGridモックアップ）",
-    "feature1Title": "インテリジェント検索",
-    "feature1Desc": "スマート検索アルゴリズムを使用して、名前、説明、または機能でサーバーをすばやく見つけます。",
-    "feature2Title": "高度なフィルタリング",
-    "feature2Desc": "カテゴリ、タグ、評価、互換性のフィルターで結果を絞り込みます。",
-    "feature3Title": "詳細なプレビュー",
-    "feature3Desc": "検索結果から直接、サーバーの詳細、評価、コミュニティレビューを表示します。"
+    "feature1Title": "AI搭載検索",
+    "feature1Desc": "キーワードだけでなく、探しているものを理解する自然言語検索。",
+    "feature2Title": "コミュニティシグナル",
+    "feature2Desc": "評価、インストール数、最新更新、開発者評価でフィルタリング。",
+    "feature3Title": "機能マッチング",
+    "feature3Desc": "必要な正確な機能（ツール、リソース、プロンプト）でサーバーを見つける。",
+    "feature4Title": "即座プレビュー",
+    "feature4Desc": "インストールなしで検索結果から直接サーバーをテスト。"
   },
   "playground": {
-    "title": "MCPプレイグラウンドでテスト＆デバッグ",
-    "subtitle": "MCPサーバーを構築、テスト、改良するためのインタラクティブな環境。",
-    "feature1Title": "インタラクティブテスト",
-    "feature1Desc": "MCPサーバーと直接対話し、ツールを呼び出し、リアルタイムでリソースを検査します。",
-    "feature2Title": "効率的なデバッグ",
-    "feature2Desc": "詳細なリクエスト/レスポンスログとエラーメッセージで問題を迅速に特定して解決します。",
-    "feature3Title": "迅速なプロトタイピング",
-    "feature3Desc": "展開前にさまざまなサーバー構成とツール実装を実験します。",
+    "title": "ユニバーサルAIテストプレイグラウンド",
+    "subtitle": "任意のAIモデル（Claude、GPT、Llamaなど）で任意のMCPサーバーをテスト。",
+    "feature1Title": "マルチモデルサポート",
+    "feature1Desc": "Langchain統合を通じてClaude、GPT-4、Llama、Geminiなど数十のモデルでテスト。",
+    "feature2Title": "高度なRAG統合",
+    "feature2Desc": "ドキュメントをアップロードし、知識ベースを作成し、任意のモデルで即座にクエリ。",
+    "feature3Title": "仮想スクロール＆パフォーマンス",
+    "feature3Desc": "仮想スクロールと最適化されたパフォーマンスで大規模な会話を処理。",
+    "feature4Title": "カスタム指示",
+    "feature4Desc": "精密な制御のためのモデル固有の指示とシステムプロンプトを設定。",
+    "feature5Title": "リアルタイム監視",
+    "feature5Desc": "詳細なログ、実行分析、パフォーマンスメトリクスですべての操作を追跡。",
     "visualPlaceholder": "プレイグラウンド環境の視覚的表現",
     "imagePlaceholder": "画像：プレイグラウンド/デバッグモックアップ",
-    "langchainCallout": "<0>あらゆるモデルでテスト:</0> 私たちの<1>Langchain抽象化</1>のおかげで、Claude、GPT、Llamaなど、さまざまなモデルでMCPサーバーを1つのプレイグラウンドからテストできます。モデルを即座に比較し、本当のモデル非依存AIを体験しましょう。"
+    "langchainCallout": "<0>任意のモデルでテスト:</0> 私たちの<1>Langchain抽象化</1>のおかげで、Claude、GPT、Llamaなど、さまざまなモデルでMCPサーバーを1つのプレイグラウンドからテストできます。モデルを即座に比較し、本当のモデル非依存AIを体験しましょう。"
   },
   "collections": {
-    "title": "MCPエコシステムを整理",
-    "subtitle": "ツールを整理",
-    "description": "お気に入りのMCPサーバーとツールのコレクションを作成して共有します。",
-    "action": "コレクションを表示",
+    "title": "スマートコレクション＆バージョン管理",
+    "subtitle": "MCPサーバーコレクションを整理、バージョン管理、共有",
+    "description": "バージョン管理されたコレクションを作成し、インストールを追跡し、チームと協力し、開発、ステージング、本番用の異なる構成を維持します。",
+    "action": "コレクションを探索",
+    "versionControl": {
+      "title": "コレクションのバージョン管理",
+      "feature1": "任意の時点でコレクションのスナップショットを作成",
+      "feature2": "必要に応じて以前のバージョンにロールバック",
+      "feature3": "変更を追跡し、バージョン間の違いを確認",
+      "feature4": "特定のバージョンをチームと共有"
+    },
+    "sharing": {
+      "title": "公開＆非公開共有",
+      "public": "コミュニティとコレクションを公開共有",
+      "private": "チームメンバーとの非公開共有",
+      "stats": "インストールと使用統計を追跡",
+      "ratings": "ユーザーからフィードバックと評価を取得"
+    },
     "collectionsTitle": "合理化されたコレクション",
     "collectionsDesc": "特定のクライアント、アプリケーション、または環境向けに関連するMCPサーバーを論理的なコレクションにグループ化します。",
-    "workspacesTitle": "強力なワークスペース",
-    "workspacesDesc": "開発、ステージング、本番セットアップを分離するなど、コレクションをさらにワークスペースに整理します。",
+    "workspacesTitle": "マルチワークスペース管理",
+    "workspacesDesc": "専用ワークスペースでプロジェクトを分離します。開発、ステージング、本番構成間で瞬時に切り替えます。",
     "hierarchyPlaceholder": "コレクション階層の視覚的表現",
     "imagePlaceholder": "画像：コレクション/ワークスペースモックアップ"
   },
@@ -142,30 +199,186 @@
     "description": "MCPサーバーとツールをコミュニティと共有します。",
     "action": "共有を開始"
   },
+  "security": {
+    "title": "エンタープライズグレードセキュリティ",
+    "subtitle": "あらゆる層で保護されたAIインフラストラクチャ",
+    "description": "多層認証、サンドボックス実行、包括的監査証跡を特徴とするセキュリティファーストアーキテクチャで構築。",
+    "features": {
+      "authentication": {
+        "title": "多層認証",
+        "desc": "OAuthプロバイダー、APIキー、JWTトークンによるセッション管理"
+      },
+      "sandboxing": {
+        "title": "Firejailサンドボックス",
+        "desc": "Linux上のすべてのSTDIO MCPサーバーの自動セキュリティサンドボックス"
+      },
+      "isolation": {
+        "title": "プロジェクト分離",
+        "desc": "役割ベースアクセス制御によるプロジェクト間の完全なデータ分離"
+      },
+      "audit": {
+        "title": "包括的監査証跡",
+        "desc": "コンプライアンスのためのすべての操作、API呼び出し、ユーザーアクションを追跡"
+      },
+      "encryption": {
+        "title": "データ暗号化",
+        "desc": "機密データとAPI通信のエンドツーエンド暗号化"
+      },
+      "selfhost": {
+        "title": "セルフホスティングオプション",
+        "desc": "完全な制御とコンプライアンスのためにインフラストラクチャに展開"
+      }
+    },
+    "compliance": "定期的なセキュリティ監査を伴うSOC2 Type II準拠インフラストラクチャ",
+    "action": "セキュリティ詳細を表示"
+  },
+  "developers": {
+    "title": "開発者のために構築",
+    "subtitle": "AI機能を拡張する強力なツールとAPI",
+    "description": "包括的なAPI、SDK、開発者ツールを備えたオープンソースプラットフォーム。",
+    "features": {
+      "opensource": {
+        "title": "100%オープンソース",
+        "desc": "GitHubでの透明な開発を伴うMITライセンス"
+      },
+      "apis": {
+        "title": "RESTful API",
+        "desc": "すべてのプラットフォーム機能の完全なAPI カバレッジ"
+      },
+      "sdks": {
+        "title": "TypeScript SDK",
+        "desc": "完全なIntelliSenseサポートを備えたタイプセーフSDK"
+      },
+      "extensibility": {
+        "title": "プラグインアーキテクチャ",
+        "desc": "カスタムMCPサーバーと統合でプラットフォームを拡張"
+      },
+      "documentation": {
+        "title": "包括的ドキュメント",
+        "desc": "例とチュートリアル付きの詳細ドキュメント"
+      },
+      "community": {
+        "title": "アクティブコミュニティ",
+        "desc": "Discord、GitHub discussions、コミュニティサポート"
+      }
+    },
+    "codeExample": {
+      "title": "クイック統合例",
+      "description": "数秒でPlugged.inに接続："
+    },
+    "action": "ドキュメントを表示"
+  },
+  "pricing": {
+    "title": "シンプルで透明な価格設定",
+    "subtitle": "無料で始めて、成長に合わせてスケール",
+    "free": {
+      "title": "永続無料",
+      "price": "$0",
+      "period": "/月",
+      "description": "個人および小規模チームに最適",
+      "features": [
+        "無制限MCPサーバー",
+        "すべてのAIモデルサポート",
+        "5つのRAG知識ベース",
+        "公開プロフィール＆共有",
+        "コミュニティサポート"
+      ],
+      "cta": "無料で始める"
+    },
+    "pro": {
+      "title": "プロ",
+      "price": "$19",
+      "period": "/月",
+      "description": "プロフェッショナル開発者とチーム向け",
+      "features": [
+        "無料プランのすべて",
+        "無制限RAG知識ベース",
+        "非公開コレクション",
+        "優先サポート",
+        "高度な分析",
+        "チーム協力"
+      ],
+      "cta": "プロトライアル開始"
+    },
+    "enterprise": {
+      "title": "エンタープライズ",
+      "price": "カスタム",
+      "period": "",
+      "description": "高度なニーズを持つ組織向け",
+      "features": [
+        "プロプランのすべて",
+        "セルフホスティングオプション",
+        "SSO/SAML認証",
+        "SLA保証",
+        "専用サポート",
+        "カスタム統合"
+      ],
+      "cta": "営業に連絡"
+    }
+  },
   "gettingStarted": {
-    "title": "Plugged.inは初めてですか？",
-    "description": "セットアップガイドに従って環境を適切に設定し、すぐにPlugged.inで構築を開始してください。",
+    "title": "始めるのは簡単",
+    "subtitle": "5分以内にゼロからAI搭載へ",
+    "description": "最初のMCPサーバーを接続して構築を開始するクイックスタートガイドに従ってください。",
+    "steps": {
+      "step1": {
+        "title": "1. アカウント作成",
+        "desc": "メールまたはOAuthプロバイダーでサインアップ"
+      },
+      "step2": {
+        "title": "2. APIキー取得",
+        "desc": "ダッシュボードからAPIキーを生成"
+      },
+      "step3": {
+        "title": "3. MCPプロキシインストール",
+        "desc": "実行：npx @pluggedin/mcp-proxy@latest"
+      },
+      "step4": {
+        "title": "4. クライアント接続",
+        "desc": "Claude、Cursor、または任意のMCPクライアントに追加"
+      }
+    },
+    "resources": {
+      "title": "学習リソース",
+      "quickstart": "5分クイックスタートガイド",
+      "tutorials": "ステップバイステップチュートリアル",
+      "videos": "ビデオウォークスルー",
+      "examples": "例プロジェクトとテンプレート"
+    },
     "action": "セットアップガイドを表示"
   },
   "cta": {
-    "title": "MCPワークフローを強化する準備はできましたか？",
-    "subtitle": "今日Plugged.inコミュニティに参加してください。これまでにない方法でMCPサーバーを管理、共有、発見します。",
-    "description": "コミュニティに参加して、今日Plugged.inで構築を始めましょう。",
-    "primary": "始める",
-    "secondary": "詳細を見る",
-    "primaryAction": "無料で始める",
-    "secondaryAction": "ドキュメントを読む",
+    "title": "AI革命に参加する準備はできましたか？",
+    "subtitle": "最も包括的なMCPプラットフォームで構築を開始します。個人には永続無料。",
+    "description": "Plugged.in v1.0.0でAIの未来を構築する数千人の開発者に参加します。",
+    "primary": "無料で始める",
+    "secondary": "ドキュメントを表示",
+    "primaryAction": "無料アカウント作成",
+    "secondaryAction": "ドキュメントを探索",
+    "features": {
+      "title": "必要なすべて",
+      "feature1": "✓ 無制限MCPサーバー",
+      "feature2": "✓ すべてのAIモデルサポート",
+      "feature3": "✓ RAG知識ベース",
+      "feature4": "✓ ソーシャル機能",
+      "feature5": "✓ 6言語サポート",
+      "feature6": "✓ エンタープライズセキュリティ"
+    },
     "step1": {
       "title": "サインアップ",
-      "description": "数秒で無料アカウントを作成します。"
+      "description": "数秒で無料アカウントを作成します。クレジットカード不要。"
     },
     "step2": {
-      "title": "サーバーを接続",
-      "description": "既存のMCPサーバーを追加するか、新しいサーバーを発見します。"
+      "title": "接続＆発見",
+      "description": "MCPサーバーを追加し、開発者をフォローし、コミュニティに参加します。"
     },
     "step3": {
-      "title": "探索＆共有",
-      "description": "エコシステムを管理し、コミュニティと関わります。"
+      "title": "構築＆共有",
+      "description": "コレクションを作成し、知識をアップロードし、世界と共有します。"
+    },
+    "security": {
+      "title": "エンタープライズグレードセキュリティ",
+      "description": "データは多層認証、Firejailサンドボックス、包括的監査証跡で保護されています。完全な制御のためにセルフホストできます。"
     }
   }
 }

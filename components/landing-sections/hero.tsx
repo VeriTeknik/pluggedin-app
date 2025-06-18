@@ -64,6 +64,16 @@ export function LandingHeroSection() {
           {t('hero.analogy')}
         </p>
 
+        {/* Version Badge */}
+        <div
+          className={cn(
+            'mt-4 inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary transition-all duration-700 delay-350 ease-in-out',
+            mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+          )}
+        >
+          {t('hero.version')}
+        </div>
+
         {/* Actions */}
         <div
           className={cn(

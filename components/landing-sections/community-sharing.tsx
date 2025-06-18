@@ -1,9 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { CheckCircle, Star } from 'lucide-react'; // Example icons
+import { Award,Bell, Star, UserPlus, Users } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
+
+import { Card, CardContent } from '@/components/ui/card';
 
 
 // Animation variants
@@ -35,12 +37,20 @@ const imageVariants = {
 export function LandingCommunitySharing() {
   const { t } = useTranslation('landing');
 
-  // Placeholder benefits - update keys and content
-  const benefits = [
-    { key: 'features.customDevelopment.benefit1' },
-    { key: 'features.customDevelopment.benefit2' },
-    { key: 'features.customDevelopment.benefit3' },
-    { key: 'features.customDevelopment.benefit4' },
+  // Social platform features
+  const socialFeatures = [
+    { key: 'community.socialFeatures.profiles', icon: Users },
+    { key: 'community.socialFeatures.following', icon: UserPlus },
+    { key: 'community.socialFeatures.notifications', icon: Bell },
+    { key: 'community.socialFeatures.reputation', icon: Award },
+  ];
+
+  // Community stats
+  const stats = [
+    { key: 'community.stats.developers' },
+    { key: 'community.stats.servers' },
+    { key: 'community.stats.collections' },
+    { key: 'community.stats.languages' },
   ];
 
   return (
@@ -57,20 +67,38 @@ export function LandingCommunitySharing() {
           {/* Text Content */}
           <motion.div variants={textVariants}>
             <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
-              {t('features.communitySharing.title')}
+              {t('community.title')}
             </h2>
             <p className="text-lg text-muted-foreground mb-6">
-              {t('features.communitySharing.description')}
+              {t('community.subtitle')}
             </p>
+            <p className="text-base text-muted-foreground mb-8">
+              {t('community.description')}
+            </p>
+
+            {/* Community Stats */}
+            <div className="grid grid-cols-2 gap-4 mb-8">
+              {stats.map((stat) => (
+                <Card key={stat.key} className="border-muted">
+                  <CardContent className="p-4 text-center">
+                    <p className="text-2xl font-bold text-primary">{t(stat.key)}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Social Features */}
+            <h3 className="text-xl font-semibold mb-4">
+              {t('community.socialFeatures.title')}
+            </h3>
             <motion.ul className="space-y-3" variants={listVariants}>
-              {benefits.map((benefit) => (
-                <motion.li key={benefit.key} className="flex items-start" variants={listItemVariants}>
-                  <CheckCircle className="h-5 w-5 text-primary mr-3 mt-1 flex-shrink-0" />
-                  <span className="text-muted-foreground">{t(benefit.key)}</span>
+              {socialFeatures.map((feature) => (
+                <motion.li key={feature.key} className="flex items-start" variants={listItemVariants}>
+                  <feature.icon className="h-5 w-5 text-primary mr-3 mt-1 flex-shrink-0" />
+                  <span className="text-muted-foreground">{t(feature.key)}</span>
                 </motion.li>
               ))}
             </motion.ul>
-            {/* Optional: Add a CTA button here */}
           </motion.div>
 
           {/* Visual Content */}
