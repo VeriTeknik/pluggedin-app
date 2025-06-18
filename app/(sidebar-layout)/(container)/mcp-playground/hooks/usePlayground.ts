@@ -9,6 +9,7 @@ import {
   getOrCreatePlaygroundSession,
   getPlaygroundSessionStatus,
   getServerLogs,
+  restorePlaygroundSession,
   updatePlaygroundSessionModel,
 } from '@/app/actions/mcp-playground';
 import {
@@ -33,6 +34,7 @@ interface Message {
   debug?: string;
   timestamp?: Date;
   isPartial?: boolean;
+  model?: string;
 }
 
 interface LogEntry {
@@ -495,17 +497,31 @@ export function usePlayground() {
         }
 
         if (result.messages) {
-          const currentMessageContents = messages.map((m) => m.content);
+          // Create a more sophisticated duplicate detection using content + role
+          const currentMessageSignatures = messages.map((m) => `${m.role}:${m.content}`);
           const newMessages = result.messages.filter(
-            (m: any) => !currentMessageContents.includes(m.content)
+            (m: any) => !currentMessageSignatures.includes(`${m.role}:${m.content}`)
           );
 
           if (newMessages.length > 0) {
             const scrollPos = window.scrollY;
             const timestampedMessages = newMessages.map((m: any) => ({
-              ...m,
-              timestamp: new Date(),
+              ...m, // Preserve all fields including model
+              timestamp: m.timestamp || new Date(), // Keep existing timestamp if available
             }));
+            
+            // Log model info for debugging and ensure AI messages have model field
+            timestampedMessages.forEach((msg: any) => {
+              if (msg.role === 'ai') {
+                // Ensure AI messages always have a model field
+                if (!msg.model) {
+                  msg.model = `${llmConfig.provider} ${llmConfig.model}`;
+                  addLog('info', `Added missing model field: ${msg.model}`);
+                }
+                addLog('info', `AI message - has model: ${!!msg.model}, model value: ${msg.model}, keys: ${Object.keys(msg).join(',')}`);
+              }
+            });
+            
             updateMessages((prev) => [...prev, ...timestampedMessages]);
             setTimeout(() => window.scrollTo(0, scrollPos), 0); // Restore scroll
 
@@ -525,7 +541,7 @@ export function usePlayground() {
         toast({ title: 'Error', description: msg, variant: 'destructive' });
         updateMessages((prev) => [
           ...prev,
-          { role: 'ai', content: `Error: ${msg}`, timestamp: new Date() },
+          { role: 'ai', content: `Error: ${msg}`, timestamp: new Date(), model: 'Error' },
         ]);
       }
     } catch (error) {
@@ -535,7 +551,7 @@ export function usePlayground() {
       toast({ title: 'Error', description: msg, variant: 'destructive' });
       updateMessages((prev) => [
         ...prev,
-        { role: 'ai', content: `Error: ${msg}`, timestamp: new Date() },
+        { role: 'ai', content: `Error: ${msg}`, timestamp: new Date(), model: 'Error' },
       ]);
     } finally {
       setIsProcessing(false);
@@ -606,9 +622,18 @@ export function usePlayground() {
   // Model switching function
   const switchModel = useCallback(async (newLlmConfig: PlaygroundSettings) => {
     if (!profileUuid || !isSessionActive) {
-      // If no session is active, just update the config
+      // If no session is active, update the config and save to database
       setLlmConfig(newLlmConfig);
       setLogLevel(newLlmConfig.logLevel);
+      
+      // Save to database for persistence
+      try {
+        await saveSettings();
+        addLog('info', 'Model configuration saved');
+      } catch (saveError) {
+        console.error('Failed to save model configuration:', saveError);
+        addLog('error', 'Failed to save model configuration to database');
+      }
       return;
     }
 
@@ -629,6 +654,16 @@ export function usePlayground() {
         setLlmConfig(newLlmConfig);
         setLogLevel(newLlmConfig.logLevel);
         addLog('connection', result.message || 'Model switched successfully');
+        
+        // Save the new configuration to database for persistence
+        try {
+          await saveSettings();
+          addLog('info', 'Model configuration saved to database');
+        } catch (saveError) {
+          console.error('Failed to save model configuration:', saveError);
+          addLog('error', 'Model switched but failed to save to database');
+        }
+        
         toast({
           title: 'Model Switched',
           description: `Now using ${newLlmConfig.provider} ${newLlmConfig.model}`,
@@ -677,6 +712,14 @@ export function usePlayground() {
           // Restore session state
           setIsSessionActive(true);
           if (statusResult.messages) {
+            console.log('Restoring messages from session:', statusResult.messages.map((msg: any, idx: number) => ({
+              index: idx,
+              role: msg.role,
+              hasModel: !!msg.model,
+              model: msg.model,
+              timestamp: msg.timestamp,
+              isPartial: msg.isPartial
+            })));
             setMessages(statusResult.messages);
           }
           if (statusResult.llmConfig) {
@@ -698,12 +741,54 @@ export function usePlayground() {
             description: 'Your playground session has been restored.',
           });
           
-          // Resume log polling if session is active
+                  // Resume log polling if session is active
+        startLogPolling();
+      } else if (statusResult.needsRestore) {
+        // Server session is lost but client thinks it should exist
+        // Attempt to restore from saved settings
+        addLog('info', 'Server session lost, attempting automatic restoration...');
+        
+        const restoreResult = await restorePlaygroundSession(profileUuid);
+        
+        if (restoreResult.success && !restoreResult.wasAlreadyActive) {
+          // Successfully restored session
+          setIsSessionActive(true);
+          
+          if (restoreResult.llmConfig) {
+            setLlmConfig({
+              provider: restoreResult.llmConfig.provider,
+              model: restoreResult.llmConfig.model,
+              temperature: restoreResult.llmConfig.temperature || 0,
+              maxTokens: restoreResult.llmConfig.maxTokens || 1000,
+              logLevel: restoreResult.llmConfig.logLevel || 'info',
+              ragEnabled: false, // Will be set from settings
+            });
+            setLogLevel(restoreResult.llmConfig.logLevel || 'info');
+          }
+          
+          addLog('connection', `Session automatically restored: ${restoreResult.serverCount} servers connected`);
+          toast({
+            title: 'Session Automatically Restored',
+            description: `Your playground session has been restored with ${restoreResult.serverCount} MCP servers.`,
+          });
+          
+          // Resume log polling
           startLogPolling();
         } else {
-          // Clear localStorage if server session doesn't exist
+          // Restoration failed, clear localStorage
+          addLog('error', `Session restoration failed: ${restoreResult.error || 'Unknown error'}`);
           localStorage.removeItem(`playground-session-${profileUuid}`);
+          
+          toast({
+            title: 'Session Lost',
+            description: 'Could not restore your session. Please start a new one.',
+            variant: 'destructive',
+          });
         }
+      } else {
+        // Clear localStorage if server session doesn't exist
+        localStorage.removeItem(`playground-session-${profileUuid}`);
+      }
       } catch (error) {
         console.error('Error restoring session:', error);
         localStorage.removeItem(`playground-session-${profileUuid}`);

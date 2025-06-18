@@ -15,6 +15,7 @@ interface Message {
   debug?: string;
   timestamp?: Date;
   isPartial?: boolean;
+  model?: string;
 }
 
 interface PlaygroundChatProps {
@@ -50,6 +51,18 @@ export function PlaygroundChat({
 }: PlaygroundChatProps) {
   const { t } = useTranslation();
   const parentRef = useRef<HTMLDivElement>(null);
+  
+  // Debug: Log all messages and their model info
+  useEffect(() => {
+    console.log('PlaygroundChat - All messages:', messages.map((msg, idx) => ({
+      index: idx,
+      role: msg.role,
+      hasModel: !!msg.model,
+      model: msg.model,
+      isPartial: msg.isPartial,
+      timestamp: msg.timestamp
+    })));
+  }, [messages]);
 
   // Virtualizer setup
   const rowVirtualizer = useVirtualizer({
@@ -94,6 +107,16 @@ export function PlaygroundChat({
             rowVirtualizer.getVirtualItems().map((virtualRow) => {
               const message = messages[virtualRow.index];
               if (!message) return null;
+              
+              // Debug logging for AI messages
+              if (message.role === 'ai') {
+                console.log('AI Message Debug:', {
+                  index: virtualRow.index,
+                  hasModel: !!message.model,
+                  modelValue: message.model,
+                  fullMessage: message
+                });
+              }
 
               return (
                 <div
@@ -117,9 +140,25 @@ export function PlaygroundChat({
                             ? 'bg-secondary/80 border-l-4 border-primary/60 animate-pulse'
                             : 'bg-secondary'
                     }`}>
-                    {message.timestamp && (
+                    {message.role === 'ai' && (
                       <div className='text-xs text-muted-foreground/70 mb-2 flex items-center'>
-                        <span>{message.timestamp.toLocaleTimeString()}</span>
+                        {message.timestamp && (
+                          <>
+                            <span>{message.timestamp instanceof Date ? message.timestamp.toLocaleTimeString() : new Date(message.timestamp).toLocaleTimeString()}</span>
+                            <span className="mx-2">·</span>
+                          </>
+                        )}
+                        <span className={`px-2 py-1 rounded-md text-xs font-semibold ${
+                          (message.model?.toLowerCase().includes('openai') || message.model?.toLowerCase().includes('gpt')) ? 
+                            'bg-emerald-500 text-white' :
+                          (message.model?.toLowerCase().includes('anthropic') || message.model?.toLowerCase().includes('claude')) ?
+                            'bg-orange-500 text-white' :
+                          (message.model?.toLowerCase().includes('google') || message.model?.toLowerCase().includes('gemini')) ?
+                            'bg-blue-500 text-white' :
+                            'bg-gray-500 text-white'
+                        }`}>
+                          {message.model || 'AI Model'}
+                        </span>
                         {message.isPartial && (
                           <>
                             <span className="mx-2">·</span>
@@ -129,6 +168,11 @@ export function PlaygroundChat({
                             </span>
                           </>
                         )}
+                      </div>
+                    )}
+                    {message.role !== 'ai' && message.timestamp && (
+                      <div className='text-xs text-muted-foreground/70 mb-2'>
+                        <span>{message.timestamp instanceof Date ? message.timestamp.toLocaleTimeString() : new Date(message.timestamp).toLocaleTimeString()}</span>
                       </div>
                     )}
 

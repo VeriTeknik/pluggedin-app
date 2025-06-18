@@ -36,6 +36,15 @@ interface McpPlaygroundSession {
   agent: ReturnType<typeof createReactAgent>;
   cleanup: McpServerCleanupFn;
   lastActive: Date;
+  llmConfig: {
+    provider: 'openai' | 'anthropic' | 'google';
+    model: string;
+    temperature?: number;
+    maxTokens?: number;
+    logLevel?: 'error' | 'warn' | 'info' | 'debug';
+    streaming?: boolean;
+  };
+  messages: Array<{role: string, content: string, timestamp?: Date, model?: string}>;
 }
 
 // Map to store active sessions by profile UUID
@@ -319,10 +328,237 @@ const handleProcessTermination = async () => {
   process.exit(0);
 };
 
-// Handle various termination signals
-process.on('SIGTERM', handleProcessTermination);
-process.on('SIGINT', handleProcessTermination);
-process.on('beforeExit', handleProcessTermination);
+// Handle various termination signals - only add listeners once
+if (!process.listenerCount('SIGTERM')) {
+  process.on('SIGTERM', handleProcessTermination);
+}
+if (!process.listenerCount('SIGINT')) {
+  process.on('SIGINT', handleProcessTermination);
+}
+if (!process.listenerCount('beforeExit')) {
+  process.on('beforeExit', handleProcessTermination);
+}
+
+// Get playground session status for a profile
+export async function getPlaygroundSessionStatus(profileUuid: string) {
+  try {
+    const session = activeSessions.get(profileUuid);
+    
+    if (!session) {
+      return {
+        success: true,
+        isActive: false,
+        message: 'No active session found',
+        needsRestore: true // Indicate that client should attempt to restore
+      };
+    }
+
+    // Update last active timestamp
+    session.lastActive = new Date();
+
+    return {
+      success: true,
+      isActive: true,
+      message: 'Session is active',
+      llmConfig: session.llmConfig,
+      messages: session.messages,
+      needsRestore: false
+    };
+  } catch (error) {
+    console.error('Failed to get playground session status:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      isActive: false,
+      needsRestore: false
+    };
+  }
+}
+
+// Restore a lost session by recreating it from saved settings
+export async function restorePlaygroundSession(profileUuid: string) {
+  try {
+    // Check if session already exists
+    const existingSession = activeSessions.get(profileUuid);
+    if (existingSession) {
+      return {
+        success: true,
+        message: 'Session already active',
+        wasAlreadyActive: true
+      };
+    }
+
+    // Get saved playground settings to recreate the session
+    const settingsResult = await getPlaygroundSettings(profileUuid);
+    if (!settingsResult.success || !settingsResult.settings) {
+      return {
+        success: false,
+        error: 'Could not retrieve saved playground settings for restoration'
+      };
+    }
+
+    const settings = settingsResult.settings;
+    
+    // Get active MCP servers from the profile
+    const allServers = await getMcpServers(profileUuid);
+    const activeServers = allServers.filter(server => server.status === 'ACTIVE');
+
+    // Allow restoration if RAG is enabled, even with no servers
+    if (activeServers.length === 0 && !settings.ragEnabled) {
+      return {
+        success: false,
+        error: 'Cannot restore session: No active MCP servers and RAG is disabled'
+      };
+    }
+
+    // Extract server UUIDs
+    const activeServerUuids = activeServers.map(server => server.uuid);
+
+    // Create the LLM config from saved settings
+    const llmConfig = {
+      provider: settings.provider as 'openai' | 'anthropic' | 'google',
+      model: settings.model,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      logLevel: settings.logLevel as 'error' | 'warn' | 'info' | 'debug',
+      streaming: true
+    };
+
+    // Use the existing session creation function
+    const result = await getOrCreatePlaygroundSession(
+      profileUuid,
+      activeServerUuids,
+      llmConfig
+    );
+
+    if (result.success) {
+      await addServerLogForProfile(
+        profileUuid,
+        'info',
+        `Session restored from saved settings: ${llmConfig.provider} ${llmConfig.model}, ${activeServerUuids.length} servers`
+      );
+      
+      return {
+        success: true,
+        message: 'Session successfully restored from saved settings',
+        llmConfig,
+        serverCount: activeServerUuids.length,
+        wasAlreadyActive: false
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to recreate session during restoration'
+      };
+    }
+  } catch (error) {
+    console.error('Failed to restore playground session:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error during session restoration'
+    };
+  }
+}
+
+// Update playground session model/LLM configuration
+export async function updatePlaygroundSessionModel(
+  profileUuid: string,
+  llmConfig: {
+    provider: 'openai' | 'anthropic' | 'google';
+    model: string;
+    temperature?: number;
+    maxTokens?: number;
+    logLevel?: 'error' | 'warn' | 'info' | 'debug';
+    streaming?: boolean;
+  }
+) {
+  try {
+    const session = activeSessions.get(profileUuid);
+    
+    if (!session) {
+      return {
+        success: false,
+        error: 'No active session found. Please start a new session.'
+      };
+    }
+
+    // Update last active timestamp
+    session.lastActive = new Date();
+
+    // Create new LLM instance with updated configuration
+    const newLlm = initChatModel({
+      provider: llmConfig.provider,
+      model: llmConfig.model,
+      temperature: llmConfig.temperature,
+      maxTokens: llmConfig.maxTokens,
+      streaming: llmConfig.streaming !== false,
+    });
+
+    // Get the current agent's tools and checkpoint saver
+    const currentAgent = session.agent;
+    
+    // Create a new agent with the new LLM but same tools and memory
+    const newAgent = createReactAgent({
+      llm: newLlm,
+      tools: (currentAgent as any).tools || [], // Preserve existing tools
+      checkpointSaver: (currentAgent as any).checkpointSaver, // Preserve memory
+      stateModifier: (state: any) => {
+        const systemMessage = `You are an AI assistant specialized in helping users interact with their development environment through MCP (Model Context Protocol) servers and knowledge bases.
+
+INFORMATION SOURCES:
+• Knowledge Context: Documentation, schemas, and background information from RAG
+• MCP Tools: Real-time data access and system interactions
+
+DECISION FRAMEWORK:
+1. Use knowledge context to understand structure, relationships, and background
+2. Use MCP tools for current data, live queries, and actions
+3. Combine both sources when helpful - context for understanding, tools for current information
+4. Always prioritize accuracy and currency of information
+
+EXAMPLES:
+• "How many users?" → Check knowledge for user table structure, use MCP tool to get current count
+• "Database schema?" → Use knowledge context if available, otherwise query via MCP tools
+• "Update settings" → Use MCP tools for the action, knowledge for validation
+
+Be transparent about which sources you use and why. When you have both context and tools available, use them together for the most complete and accurate response.`;
+
+        return [
+          { role: 'system', content: systemMessage },
+          ...state.messages
+        ];
+      }
+    });
+
+    // Update the session with new agent and config
+    session.agent = newAgent;
+    session.llmConfig = {
+      provider: llmConfig.provider,
+      model: llmConfig.model,
+      temperature: llmConfig.temperature,
+      maxTokens: llmConfig.maxTokens,
+      logLevel: llmConfig.logLevel,
+      streaming: llmConfig.streaming
+    };
+    
+    // Log the model update
+    await addServerLogForProfile(
+      profileUuid,
+      'info',
+      `Model switched to ${llmConfig.provider} ${llmConfig.model} - Agent recreated with new LLM`
+    );
+
+    return {
+      success: true,
+      message: `Model switched to ${llmConfig.provider} ${llmConfig.model}`
+    };
+  } catch (error) {
+    console.error('Failed to update playground session model:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
 
 // Get or create a playground session for a profile
 export async function getOrCreatePlaygroundSession(
@@ -540,7 +776,16 @@ Be transparent about which sources you use and why. When you have both context a
       activeSessions.set(profileUuid, {
         agent,
         cleanup: enhancedCleanup,
-        lastActive: new Date()
+        lastActive: new Date(),
+        llmConfig: {
+          provider: llmConfig.provider,
+          model: llmConfig.model,
+          temperature: llmConfig.temperature,
+          maxTokens: llmConfig.maxTokens,
+          logLevel: llmConfig.logLevel,
+          streaming: llmConfig.streaming
+        },
+        messages: []
       });
 
       return { success: true };
@@ -776,22 +1021,30 @@ Please answer the user's question using both the provided context and your avail
         return {
           role: 'human',
           content: message.content,
-          debug: debugInfo
+          debug: debugInfo,
+          timestamp: new Date()
         };
       } else if (message instanceof AIMessage) {
+        const modelInfo = `${session.llmConfig.provider} ${session.llmConfig.model}`;
         return {
           role: 'ai',
           content: safeProcessContent(message.content),
-          debug: debugInfo
+          debug: debugInfo,
+          timestamp: new Date(),
+          model: modelInfo // Add current model info
         };
       } else {
         return {
           role: 'tool',
           content: safeProcessContent(message.content),
-          debug: debugInfo
+          debug: debugInfo,
+          timestamp: new Date()
         };
       }
     });
+
+    // Store the messages in the session for persistence
+    session.messages = messages;
 
     return {
       success: true,
