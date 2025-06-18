@@ -1114,3 +1114,22 @@ export async function queryRag(query: string, ragIdentifier: string) {
   const { ragService } = await import('@/lib/rag-service');
   return ragService.queryForContext(query, ragIdentifier);
 }
+
+// Clear server logs for a profile
+export async function clearServerLogs(profileUuid: string) {
+  try {
+    // Clear the server logs from memory
+    serverLogsByProfile.set(profileUuid, []);
+    
+    // Also clear any partial streaming logs
+    serverLogsByProfile.delete(profileUuid + '_partial');
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error clearing server logs:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}

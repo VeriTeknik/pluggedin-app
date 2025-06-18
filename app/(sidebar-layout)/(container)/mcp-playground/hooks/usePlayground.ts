@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import {
+  clearServerLogs,
   endPlaygroundSession,
   executePlaygroundQuery,
   getOrCreatePlaygroundSession,
@@ -824,6 +825,29 @@ export function usePlayground() {
     return () => window.removeEventListener('scroll', scrollGuard);
   }, [userScrollControlled]);
 
+  // Clear logs function that clears both client and server logs
+  const clearLogs = useCallback(async () => {
+    if (!profileUuid) return;
+    
+    try {
+      // Clear client-side logs immediately
+      setClientLogs([]);
+      setServerLogs([]);
+      
+      // Clear server-side logs
+      const result = await clearServerLogs(profileUuid);
+      if (!result.success) {
+        console.error('Failed to clear server logs:', result.error);
+        addLog('error', `Failed to clear server logs: ${result.error}`);
+      } else {
+        addLog('info', 'Logs cleared successfully');
+      }
+    } catch (error) {
+      console.error('Error clearing logs:', error);
+      addLog('error', `Error clearing logs: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }, [profileUuid, addLog]);
+
   return {
     // State
     activeTab,
@@ -863,6 +887,7 @@ export function usePlayground() {
     sendMessage,
     saveSettings,
     switchModel,
+    clearLogs,
     addLog, // Expose if needed externally, though unlikely
   };
 }

@@ -55,7 +55,7 @@ export interface PlaygroundConfigProps {
   logsEndRef?: React.RefObject<HTMLDivElement | null>;
   isLoading: boolean;
   mcpServers?: McpServer[];
-  clearLogs: () => void;
+  clearLogs: () => Promise<void>;
   saveSettings: () => Promise<void>;
   activeTab: string;
   setActiveTab: (tab: string) => void;
@@ -725,7 +725,7 @@ export function PlaygroundConfig({
               <div className="h-[calc(100vh-25rem)] rounded-md border">
                 {serverLogs.length === 0 && clientLogs.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
-                    {t('playground.logs.empty')}
+                    {t('playground.config.logs.empty')}
                   </div>
                 ) : (
                   <div 

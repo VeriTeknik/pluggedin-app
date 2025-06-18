@@ -82,6 +82,7 @@ export default function McpPlaygroundPage() {
     sendMessage,
     saveSettings,
     switchModel,
+    clearLogs,
   } = usePlayground();
 
   const toggleSidebar = () => {
@@ -142,10 +143,7 @@ export default function McpPlaygroundPage() {
             logsEndRef={logsEndRef}
             isLoading={isLoading}
             mcpServers={mcpServers}
-            clearLogs={() => {
-              setClientLogs([]);
-              setServerLogs([]);
-            }}
+            clearLogs={clearLogs}
             saveSettings={saveSettings}
             activeTab={activeTab}
             setActiveTab={setActiveTab}
