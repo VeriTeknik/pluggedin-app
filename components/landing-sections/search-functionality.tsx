@@ -1,9 +1,20 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Filter, ListChecks, SearchCode } from 'lucide-react'; // Example icons
+import { 
+  Brain,
+  Filter, 
+  Github,
+  Globe, 
+  Package,
+  Star,
+  Users,
+  Zap
+} from 'lucide-react';
 import Image from 'next/image';
-import { useTranslation } from 'react-i18next'; // Correct import
+import { useTranslation } from 'react-i18next';
+
+import { Card, CardContent } from '@/components/ui/card';
 
 // TODO: Integrate MagicUI components when available:
 // - Safari component
@@ -40,56 +51,111 @@ export function LandingSearchFunctionality() {
       <div className="container mx-auto px-4">
         <motion.div className="mb-12 text-center max-w-2xl mx-auto" variants={textVariants}>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            {t('search.title', 'Find the Right Tools, Instantly')} {/* Use key relative to 'landing' namespace */}
+            {t('search.title')}
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            {t('search.subtitle', 'Discover MCP servers and tools with powerful search and filtering options.')} {/* Use key relative to 'landing' namespace */}
+            {t('search.subtitle')}
+          </p>
+          <p className="mt-2 text-base text-muted-foreground">
+            {t('search.description')}
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 md:gap-16 items-center">
-           {/* Explanatory Text */}
+           {/* Features */}
            <motion.div variants={textVariants}>
-             <div className="flex items-start mb-6">
-                <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
-                    <SearchCode className="h-5 w-5" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-semibold">
-                        {t('search.feature1Title', 'Intelligent Search')} {/* Use key relative to 'landing' namespace */}
-                    </h3>
+             {/* Search Sources */}
+             <div className="mb-8">
+               <h3 className="text-xl font-semibold mb-4">
+                 {t('search.sources.title')}
+               </h3>
+               <div className="grid grid-cols-2 gap-3">
+                 <Card>
+                   <CardContent className="p-3 flex items-center">
+                     <Github className="h-5 w-5 text-primary mr-2" />
+                     <span className="text-sm">{t('search.sources.github')}</span>
+                   </CardContent>
+                 </Card>
+                 <Card>
+                   <CardContent className="p-3 flex items-center">
+                     <Globe className="h-5 w-5 text-primary mr-2" />
+                     <span className="text-sm">{t('search.sources.smithery')}</span>
+                   </CardContent>
+                 </Card>
+                 <Card>
+                   <CardContent className="p-3 flex items-center">
+                     <Package className="h-5 w-5 text-primary mr-2" />
+                     <span className="text-sm">{t('search.sources.npm')}</span>
+                   </CardContent>
+                 </Card>
+                 <Card>
+                   <CardContent className="p-3 flex items-center">
+                     <Users className="h-5 w-5 text-primary mr-2" />
+                     <span className="text-sm">{t('search.sources.community')}</span>
+                   </CardContent>
+                 </Card>
+               </div>
+             </div>
+             
+             {/* Search Features */}
+             <div className="space-y-4">
+               <div className="flex items-start">
+                  <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
+                      <Brain className="h-5 w-5" />
+                  </div>
+                  <div>
+                      <h3 className="text-lg font-semibold">
+                          {t('search.feature1Title')}
+                      </h3>
                     <p className="text-muted-foreground mt-1">
-                        {t('search.feature1Desc', 'Quickly find servers by name, description, or capabilities using our smart search algorithm.')} {/* Use key relative to 'landing' namespace */}
+                        {t('search.feature1Desc')}
                     </p>
                 </div>
              </div>
+             
+             <div className="flex items-start">
+                <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
+                    <Star className="h-5 w-5" />
+                </div>
+                <div>
+                    <h3 className="text-lg font-semibold">
+                        {t('search.feature2Title')}
+                    </h3>
+                    <p className="text-muted-foreground mt-1">
+                        {t('search.feature2Desc')}
+                    </p>
+                </div>
+             </div>
+             
              <div className="flex items-start">
                 <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
                     <Filter className="h-5 w-5" />
                 </div>
                 <div>
                     <h3 className="text-lg font-semibold">
-                        {t('search.feature2Title', 'Advanced Filtering')} {/* Use key relative to 'landing' namespace */}
+                        {t('search.feature3Title')}
                     </h3>
                     <p className="text-muted-foreground mt-1">
-                        {t('search.feature2Desc', 'Narrow down results with filters for categories, tags, ratings, and compatibility.')} {/* Use key relative to 'landing' namespace */}
+                        {t('search.feature3Desc')}
                     </p>
                 </div>
              </div>
-              <div className="flex items-start mt-6">
+             
+             <div className="flex items-start">
                 <div className="flex-shrink-0 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary mr-4">
-                    <ListChecks className="h-5 w-5" />
+                    <Zap className="h-5 w-5" />
                 </div>
                 <div>
                     <h3 className="text-lg font-semibold">
-                        {t('search.feature3Title', 'Detailed Previews')} {/* Use key relative to 'landing' namespace */}
+                        {t('search.feature4Title')}
                     </h3>
                     <p className="text-muted-foreground mt-1">
-                        {t('search.feature3Desc', 'View server details, ratings, and community reviews directly from the search results.')} {/* Use key relative to 'landing' namespace */}
+                        {t('search.feature4Desc')}
                     </p>
                 </div>
              </div>
-          </motion.div>
+           </div>
+         </motion.div>
 
           {/* Image Placeholder (representing CardGrid) */}
           <motion.div variants={safariVariants} className="flex items-center justify-center">

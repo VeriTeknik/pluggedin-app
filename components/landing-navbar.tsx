@@ -17,6 +17,7 @@ const navLinks = [
   { href: '#community', labelKey: 'navigation.community' },
   { href: '#collections', labelKey: 'navigation.collections' },
   { href: '#playground', labelKey: 'navigation.playground' },
+  { href: '/docs', labelKey: 'navigation.documentation' },
 ];
 
 export function LandingNavbar() {

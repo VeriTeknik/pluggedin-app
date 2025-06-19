@@ -6,11 +6,12 @@ import { db } from '@/db';
 import { playgroundSettingsTable } from '@/db/schema';
 
 export type PlaygroundSettings = {
-  provider: 'anthropic' | 'openai';
+  provider: 'anthropic' | 'openai' | 'google';
   model: string;
   temperature: number;
   maxTokens: number;
   logLevel: 'error' | 'warn' | 'info' | 'debug';
+  ragEnabled?: boolean;
 };
 
 export async function getPlaygroundSettings(profileUuid: string) {
@@ -29,6 +30,7 @@ export async function getPlaygroundSettings(profileUuid: string) {
           temperature: 0,
           maxTokens: 1000,
           logLevel: 'info',
+          ragEnabled: false,
         } as PlaygroundSettings,
       };
     }
@@ -36,11 +38,12 @@ export async function getPlaygroundSettings(profileUuid: string) {
     return {
       success: true,
       settings: {
-        provider: settings.provider as 'anthropic' | 'openai',
+        provider: settings.provider as 'anthropic' | 'openai' | 'google',
         model: settings.model,
         temperature: settings.temperature,
         maxTokens: settings.max_tokens,
         logLevel: settings.log_level as 'error' | 'warn' | 'info' | 'debug',
+        ragEnabled: settings.rag_enabled || false,
       } as PlaygroundSettings,
     };
   } catch (error) {
@@ -57,8 +60,13 @@ export async function updatePlaygroundSettings(
   settings: PlaygroundSettings
 ) {
   try {
+    console.log('[RAG DEBUG] updatePlaygroundSettings called with:', {
+      profileUuid,
+      settings
+    });
+
     // Validate settings
-    if (!['anthropic', 'openai'].includes(settings.provider)) {
+    if (!['anthropic', 'openai', 'google'].includes(settings.provider)) {
       throw new Error('Invalid provider');
     }
     if (!['error', 'warn', 'info', 'debug'].includes(settings.logLevel)) {
@@ -86,6 +94,7 @@ export async function updatePlaygroundSettings(
           temperature: settings.temperature,
           max_tokens: settings.maxTokens,
           log_level: settings.logLevel,
+          rag_enabled: settings.ragEnabled || false,
           updated_at: new Date(),
         })
         .where(eq(playgroundSettingsTable.profile_uuid, profileUuid));
@@ -98,6 +107,7 @@ export async function updatePlaygroundSettings(
         temperature: settings.temperature,
         max_tokens: settings.maxTokens,
         log_level: settings.logLevel,
+        rag_enabled: settings.ragEnabled || false,
       });
     }
 
@@ -106,7 +116,6 @@ export async function updatePlaygroundSettings(
       settings,
     };
   } catch (error) {
-    console.error('Failed to update playground settings:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to update settings',

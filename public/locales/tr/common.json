@@ -30,8 +30,12 @@
   "viewSchema": "Şemayı Görüntüle",
   "delete": "Sil",
   "deleting": "Siliniyor...",
-  "navigation": {
-    "aiSocial": "Yapay Zeka Sosyal"
+  "library": {
+    "title": "Kütüphane"
+  },
+  "aiSocial": {
+    "title": "YZ Sosyal",
+    "description": "Yapay zeka destekli sosyal medya platformlarını keşfet ve bağlantı kurun"
   },
   "releaseNotes": {
     "title": "Sürüm Notları",

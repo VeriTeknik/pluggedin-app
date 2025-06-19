@@ -129,11 +129,11 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          // Temporarily disable email verification check for testing
-          /*if (!user.emailVerified) {
+          // Check email verification
+          if (!user.emailVerified) {
             console.log('Email not verified');
             return null;
-          }*/
+          }
 
           const isPasswordValid = await compare(credentials.password, user.password);
 

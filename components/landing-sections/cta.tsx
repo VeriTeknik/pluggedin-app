@@ -1,11 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, Rocket } from 'lucide-react';
+import { ArrowRight, Check, Rocket, Shield } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 // Animation variants
 const sectionVariants = {
@@ -19,7 +20,7 @@ const contentVariants = {
 };
 
 export function LandingCta() {
-  const { t } = useTranslation(); // Use default hook
+  const { t } = useTranslation('landing');
 
   return (
     <motion.section
@@ -42,25 +43,52 @@ export function LandingCta() {
       >
         <Rocket className="h-12 w-12 mx-auto mb-4 text-primary" />
         <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
-          {t('cta.title', 'Ready to Supercharge Your MCP Workflow?')} {/* Use relative key */}
+          {t('cta.title')}
         </h2>
-        <p className="text-lg text-muted-foreground mb-8">
-          {t('cta.subtitle', 'Join the Plugged.in community today. Manage, share, and discover MCP servers like never before.')} {/* Use relative key */}
+        <p className="text-lg text-muted-foreground mb-4">
+          {t('cta.subtitle')}
         </p>
+        <p className="text-base text-muted-foreground mb-8">
+          {t('cta.description')}
+        </p>
+        
+        {/* Features List */}
+        <Card className="mb-8 max-w-md mx-auto">
+          <CardContent className="p-6">
+            <h3 className="text-lg font-semibold mb-4">{t('cta.features.title')}</h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="flex items-start">
+                  <Check className="h-4 w-4 text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                  <span>{t(`cta.features.feature${i}`)}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
         <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
           <Button asChild size="lg">
-            {/* TODO: Update href to actual signup/app page */}
-            <Link href="/login">
-              {t('cta.primaryAction', 'Get Started for Free')} {/* Use relative key */}
+            <Link href="/register">
+              {t('cta.primaryAction')}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            {/* TODO: Update href to docs or contact page */}
             <Link href="/docs">
-              {t('cta.secondaryAction', 'Read Documentation')} {/* Use relative key */}
+              {t('cta.secondaryAction')}
             </Link>
           </Button>
+        </div>
+        
+        {/* Security Note */}
+        <div className="mt-8 p-4 bg-muted/50 rounded-lg max-w-2xl mx-auto">
+          <div className="flex items-start">
+            <Shield className="h-5 w-5 text-green-500 mr-3 mt-0.5 flex-shrink-0" />
+            <div className="text-sm text-muted-foreground">
+              <p className="font-semibold mb-1">{t('cta.security.title')}</p>
+              <p>{t('cta.security.description')}</p>
+            </div>
+          </div>
         </div>
       </motion.div>
     </motion.section>

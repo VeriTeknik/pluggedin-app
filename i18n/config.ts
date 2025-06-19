@@ -22,6 +22,8 @@ import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
+import enDocs from '../public/locales/en/docs.json';
+import enLibrary from '../public/locales/en/library.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
 import enMcpServers from '../public/locales/en/mcpServers.json';
@@ -38,8 +40,10 @@ export const namespaces = [
   'auth',
   'common',
   'discover',
+  'docs',
   'landing',
   'legal',
+  'library',
   'mcpServers',
   'notifications',
   'playground',
@@ -57,8 +61,10 @@ export type Messages = {
   auth: typeof enAuth;
   common: typeof enCommon;
   discover: typeof enDiscover;
+  docs: typeof enDocs;
   landing: typeof enLanding;
   legal: typeof enLegal;
+  library: typeof enLibrary;
   mcpServers: typeof enMcpServers;
   notifications: typeof enNotifications;
   playground: typeof enPlayground;

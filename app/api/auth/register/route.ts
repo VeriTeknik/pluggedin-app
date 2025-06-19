@@ -5,7 +5,9 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { users, verificationTokens } from '@/db/schema';
-import { generateVerificationEmail,sendEmail } from '@/lib/email';
+import { createErrorResponse, ErrorResponses } from '@/lib/api-errors';
+import { generateVerificationEmail, sendEmail } from '@/lib/email';
+import { RateLimiters } from '@/lib/rate-limiter';
 
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
@@ -101,6 +103,16 @@ const registerSchema = z.object({
  *                   example: Something went wrong
  */
 export async function POST(req: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = await RateLimiters.auth(req);
+  if (!rateLimitResult.allowed) {
+    return createErrorResponse(
+      'Too many requests. Please try again later.',
+      429,
+      'RATE_LIMIT_EXCEEDED'
+    );
+  }
+  
   try {
     const body = await req.json();
     const data = registerSchema.parse(body);
@@ -138,10 +150,8 @@ export async function POST(req: NextRequest) {
     
         
     // Send admin notification email
-    const adminRecipients = [
-      'cem.karaca@gmail.com',
-      'emirolgun@gmail.com'
-    ];
+    const adminEmailsEnv = process.env.ADMIN_NOTIFICATION_EMAILS || '';
+    const adminRecipients = adminEmailsEnv.split(',').map(email => email.trim()).filter(Boolean);
 
     const adminEmailContent = `
       <h2>New User Registration</h2>
@@ -197,15 +207,9 @@ export async function POST(req: NextRequest) {
     console.error('Registration error:', error);
     
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { message: 'Invalid input data', errors: error.errors },
-        { status: 400 }
-      );
+      return ErrorResponses.validationError('Invalid input data');
     }
     
-    return NextResponse.json(
-      { message: 'Something went wrong' },
-      { status: 500 }
-    );
+    return ErrorResponses.serverError();
   }
 }

@@ -231,6 +231,7 @@ export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
   }),
   mcpServers: many(mcpServersTable),
   customMcpServers: many(customMcpServersTable),
+  docs: many(docsTable),
   playgroundSettings: one(playgroundSettingsTable, {
     fields: [profilesTable.uuid],
     references: [playgroundSettingsTable.profile_uuid],
@@ -428,6 +429,7 @@ export const playgroundSettingsTable = pgTable(
     temperature: integer('temperature').notNull().default(0),
     max_tokens: integer('max_tokens').notNull().default(1000),
     log_level: text('log_level').notNull().default('info'),
+    rag_enabled: boolean('rag_enabled').notNull().default(false),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -791,6 +793,49 @@ export const customInstructionsRelations = relations(customInstructionsTable, ({
   }),
 }));
 
+export const docsTable = pgTable(
+  'docs',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    project_uuid: uuid('project_uuid')
+      .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    description: text('description'),
+    file_name: text('file_name').notNull(),
+    file_size: integer('file_size').notNull(),
+    mime_type: text('mime_type').notNull(),
+    file_path: text('file_path').notNull(),
+    tags: text('tags').array().default(sql`'{}'::text[]`),
+    rag_document_id: text('rag_document_id'),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    docsUserIdIdx: index('docs_user_id_idx').on(table.user_id),
+    docsProjectUuidIdx: index('docs_project_uuid_idx').on(table.project_uuid),
+    docsNameIdx: index('docs_name_idx').on(table.name),
+    docsCreatedAtIdx: index('docs_created_at_idx').on(table.created_at),
+  })
+);
+
+export const docsRelations = relations(docsTable, ({ one }) => ({
+  user: one(users, {
+    fields: [docsTable.user_id],
+    references: [users.id],
+  }),
+  project: one(projectsTable, {
+    fields: [docsTable.project_uuid],
+    references: [projectsTable.uuid],
+  }),
+}));
+
 export const releaseNotes = pgTable('release_notes', {
   id: serial('id').primaryKey(),
   repository: text('repository').notNull(),
@@ -807,6 +852,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   projects: many(projectsTable),
   codes: many(codesTable),
+  docs: many(docsTable),
   // Add followers/following relations to users
   followers: many(followersTable, { relationName: 'followers' }), 
   following: many(followersTable, { relationName: 'following' }), 

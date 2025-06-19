@@ -1,0 +1,43 @@
+{
+  "title": "文档",
+  "description": "学习如何使用 Plugged.in，集成 MCP 服务器，构建 AI 驱动的应用程序",
+  "search": {
+    "placeholder": "搜索文档...",
+    "noResults": "未找到 \"{{query}}\" 的结果",
+    "results": "找到 {{count}} 个结果"
+  },
+  "categories": {
+    "getting-started": "入门指南",
+    "tutorials": "教程",
+    "api-reference": "API 参考",
+    "examples": "示例",
+    "guides": "指南",
+    "integrations": "集成"
+  },
+  "navigation": {
+    "previous": "上一页",
+    "next": "下一页",
+    "backToTop": "返回顶部",
+    "backToDocs": "返回文档",
+    "editOnGitHub": "在 GitHub 上编辑"
+  },
+  "toc": {
+    "title": "本页内容",
+    "empty": "未找到标题"
+  },
+  "metadata": {
+    "lastUpdated": "最后更新于 {{date}}",
+    "readingTime": "{{minutes}} 分钟阅读",
+    "author": "作者：{{author}}"
+  },
+  "feedback": {
+    "title": "这有帮助吗？",
+    "yes": "是",
+    "no": "否",
+    "thanks": "感谢您的反馈！"
+  },
+  "errors": {
+    "notFound": "未找到文档页面",
+    "loadFailed": "加载文档失败"
+  }
+}

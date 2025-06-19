@@ -5,10 +5,11 @@
     "description": "An experimental environment for using LLM AI with MCP tools.",
     "actions": {
       "start": "Start Session",
+      "startNewSession": "Start New Session",
       "starting": "Starting...",
       "end": "End Session",
-      "ending": "Ending...",
-      "save": "Save Settings",
+      "clear": "Clear",
+      "save": "Save",
       "dismiss": "Dismiss",
       "clearLogs": "Clear Logs"
     },
@@ -56,30 +57,87 @@
     "chat": {
       "title": "Chat",
       "subtitle": "Interact with your MCP servers through natural language.",
+      "header": {
+        "temperature": "Temperature",
+        "maxTokens": "Max Tokens", 
+        "serverConnected": "server connected",
+        "serversConnected": "servers connected",
+        "switchModel": "Switch Model",
+        "moreModels": "More Models",
+        "stopSession": "Stop Session",
+        "stopping": "Stopping..."
+      },
       "empty": {
-        "title": "Welcome to MCP Playground",
-        "activeDescription": "Send a message to start interacting with your MCP servers.",
-        "inactiveDescription": "Start a session to begin interacting with your MCP servers."
+        "title": "Ready to chat",
+        "activeDescription": "Start a conversation with your MCP servers using natural language.",
+        "inactiveDescription": "Select your servers and click start to begin chatting with your MCP tools."
       },
       "input": {
         "activePlaceholder": "Type your message...",
-        "inactivePlaceholder": "Start a session to begin chatting..."
+        "inactivePlaceholder": "Start a session to begin chatting"
       },
       "thinking": "Thinking",
       "tool": {
-        "title": "Tool Execution",
+        "title": "Tool Response",
         "debugInfo": "Debug Info"
-      }
+      },
+      "sessionEnded": "Session has ended. Start a new one to continue.",
+      "selectServerHint": "Select at least one active server to begin.",
+      "selectServerOrEnableRagHint": "Select an active server or enable RAG to begin."
     },
     "provider": {
       "anthropic": "Anthropic",
-      "openai": "OpenAI"
+      "openai": "OpenAI",
+      "google": "Google"
     },
     "logLevels": {
       "error": "Error",
       "warn": "Warning",
       "info": "Info",
       "debug": "Debug"
+    },
+    "server": "server",
+    "servers": "servers",
+    "models": {
+      "anthropic": {
+        "claude-3-7-sonnet": "Balanced reasoning",
+        "claude-4-sonnet": "Superior intelligence",
+        "claude-4-opus": "Most powerful",
+        "claude-3-5-sonnet": "Fast & capable",
+        "claude-3-opus": "Creative tasks",
+        "claude-3-haiku": "Quick responses"
+      },
+      "openai": {
+        "gpt-4-1": "Latest flagship",
+        "gpt-4-1-mini": "Cost efficient",
+        "gpt-4o": "Multimodal",
+        "gpt-4o-mini": "Fast & affordable",
+        "gpt-4-turbo": "High performance",
+        "gpt-3-5-turbo": "Quick tasks"
+      },
+      "google": {
+        "gemini-2-5-pro": "Most intelligent",
+        "gemini-2-5-flash": "Best performance",
+        "gemini-2-0-flash": "Fast & capable"
+      }
+    },
+    "behavior": {
+      "title": "Behavior Settings",
+      "presets": {
+        "precise": "Precise",
+        "balanced": "Balanced",
+        "creative": "Creative"
+      },
+      "sliders": {
+        "short": "Short",
+        "long": "Long",
+        "words": "words"
+      }
+    },
+    "badges": {
+      "new": "New",
+      "latest": "Latest",
+      "pro": "Pro"
     }
   }
 }

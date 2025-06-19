@@ -1,0 +1,43 @@
+{
+  "title": "ドキュメント",
+  "description": "Plugged.inの使い方を学び、MCPサーバーを統合し、AI搭載アプリケーションを構築する",
+  "search": {
+    "placeholder": "ドキュメントを検索...",
+    "noResults": "\"{{query}}\" の結果が見つかりません",
+    "results": "{{count}} 件の結果"
+  },
+  "categories": {
+    "getting-started": "はじめに",
+    "tutorials": "チュートリアル",
+    "api-reference": "APIリファレンス",
+    "examples": "例",
+    "guides": "ガイド",
+    "integrations": "統合"
+  },
+  "navigation": {
+    "previous": "前へ",
+    "next": "次へ",
+    "backToTop": "トップへ戻る",
+    "backToDocs": "ドキュメントへ戻る",
+    "editOnGitHub": "GitHubで編集"
+  },
+  "toc": {
+    "title": "このページの内容",
+    "empty": "見出しが見つかりません"
+  },
+  "metadata": {
+    "lastUpdated": "最終更新日: {{date}}",
+    "readingTime": "{{minutes}} 分で読む",
+    "author": "執筆者: {{author}}"
+  },
+  "feedback": {
+    "title": "役に立ちましたか？",
+    "yes": "はい",
+    "no": "いいえ",
+    "thanks": "フィードバックありがとうございます！"
+  },
+  "errors": {
+    "notFound": "ドキュメントページが見つかりません",
+    "loadFailed": "ドキュメントの読み込みに失敗しました"
+  }
+}

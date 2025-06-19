@@ -5,44 +5,62 @@
     "community": "Community",
     "collections": "Collections",
     "playground": "Playground",
+    "documentation": "Documentation",
     "getStarted": "Get Started"
   },
   "hero": {
     "title": "The AI Crossroads",
     "subtitle": "Connect, create, and extend your AI capabilities with a unified platform. Build and manage plugins that enhance your AI workflows.",
     "headline": "Connect, Share, and Discover MCP Servers",
-    "subheadline": "The community hub and universal proxy for the Model Context Protocol",
-    "analogy": "\"One MCP proxy to rule all MCPs\"",
+    "subheadline": "The community hub, universal proxy, and AI knowledge platform for the Model Context Protocol",
+    "analogy": "\"Your AI ecosystem, unified and social\"",
     "openSource": "Proudly Open Source",
+    "version": "v1.0.0",
     "cta": {
-      "getStarted": "Get Started",
-      "learnMore": "Learn More"
+      "getStarted": "Join the Community",
+      "learnMore": "Explore Features"
     }
   },
   "features": {
     "title": "Features",
     "subtitle": "Everything you need to manage your MCP servers",
-    "sectionTitle": "Powerful Features for MCP Management",
-    "sectionSubtitle": "Everything you need to connect, share, and discover MCP servers effectively.",
+    "sectionTitle": "A Complete AI Ecosystem Platform",
+    "sectionSubtitle": "Connect, share, discover, and extend your AI capabilities with enterprise-grade features.",
     "communitySharing": {
-      "title": "Community MCP Server Sharing",
-      "description": "Share your MCP servers and discover creations from the community."
+      "title": "Social Platform & Community",
+      "description": "Share MCP servers, follow developers, get notifications, and build your AI network. Public profiles, ratings, and collaborative discovery."
     },
     "collectionManagement": {
-      "title": "Collection Management",
-      "description": "Organize servers into collections for different clients or projects."
+      "title": "Smart Collections with Version Control",
+      "description": "Organize servers into versioned collections. Share publicly or privately, track installations, and collaborate on curated toolsets."
     },
     "workspaceOrganization": {
-      "title": "Workspace Organization",
-      "description": "Group collections into workspaces like development or production."
+      "title": "Multi-Workspace Management",
+      "description": "Isolate projects with dedicated workspaces. Switch contexts instantly between development, staging, and production environments."
     },
     "advancedSearch": {
-      "title": "Advanced Search",
-      "description": "Find the perfect MCP server with powerful filtering capabilities."
+      "title": "Intelligent Discovery Engine",
+      "description": "Find the perfect MCP server across GitHub, Smithery, and npm. Filter by capabilities, ratings, and community recommendations."
     },
     "mcpPlayground": {
-      "title": "MCP Playground",
-      "description": "Test and debug your MCP servers in an interactive environment."
+      "title": "Universal AI Playground",
+      "description": "Test MCP servers with any model - Claude, GPT, Llama, and more. Virtual scrolling for large conversations and custom instructions support."
+    },
+    "ragIntegration": {
+      "title": "AI Knowledge Platform (RAG)",
+      "description": "Upload documents, create knowledge bases, and query them through any MCP client. Secure, project-based isolation with enterprise-grade security."
+    },
+    "notifications": {
+      "title": "Real-time Activity Monitoring",
+      "description": "Track all MCP operations with detailed logs, execution analytics, and custom notifications with optional email delivery."
+    },
+    "security": {
+      "title": "Enterprise Security & Privacy",
+      "description": "Multi-layer authentication, Firejail sandboxing, comprehensive audit trails, and self-hosting options for complete control."
+    },
+    "internationalization": {
+      "title": "Global Platform",
+      "description": "Available in 6 languages with automatic browser detection. Community-driven translations for worldwide accessibility."
     },
     "pluginManagement": {
       "title": "Plugin Management",
@@ -73,10 +91,23 @@
     }
   },
   "community": {
-    "title": "Join the MCP Community",
-    "subtitle": "Join the growing community of MCP developers",
-    "description": "Share your MCP servers, discover powerful tools built by others, and collaborate within a growing ecosystem. Rate servers, leave reviews, and find the best solutions for your needs.",
+    "title": "Join the Global MCP Community",
+    "subtitle": "Connect with thousands of developers building the future of AI",
+    "description": "Share your MCP servers, follow developers, get real-time notifications, and collaborate within our social platform. Build your reputation with ratings, reviews, and community contributions.",
     "action": "Join Community",
+    "stats": {
+      "developers": "10K+ Developers",
+      "servers": "5000+ MCP Servers",
+      "collections": "1500+ Collections",
+      "languages": "6 Languages"
+    },
+    "socialFeatures": {
+      "title": "Social Platform Features",
+      "profiles": "Public developer profiles with activity feeds",
+      "following": "Follow developers and get updates on their work",
+      "notifications": "Real-time notifications for follows, shares, and updates",
+      "reputation": "Build your reputation through community engagement"
+    },
     "benefit1": "Discover innovative servers from fellow developers.",
     "benefit2": "Get feedback and ratings on your shared servers.",
     "benefit3": "Collaborate and build upon community creations.",
@@ -99,40 +130,67 @@
     "title3": "Founder, AI Solutions Inc."
   },
   "search": {
-    "title": "Find the Right Tools, Instantly",
-    "subtitle": "Discover MCP servers and tools with powerful search and filtering options.",
-    "description": "Search through the growing collection of MCP servers and tools.",
-    "action": "Explore Tools",
+    "title": "Intelligent Discovery Engine",
+    "subtitle": "Find the perfect MCP server across GitHub, Smithery, and npm",
+    "description": "Our advanced discovery engine searches multiple sources and uses community signals to surface the best tools for your needs.",
+    "action": "Discover Tools",
+    "sources": {
+      "title": "Search Across All Sources",
+      "github": "GitHub repositories with MCP servers",
+      "smithery": "Smithery marketplace integrations",
+      "npm": "NPM packages with MCP support",
+      "community": "Community-shared servers"
+    },
     "imagePlaceholder": "Image: Search results showing community servers (CardGrid Mockup)",
-    "feature1Title": "Intelligent Search",
-    "feature1Desc": "Quickly find servers by name, description, or capabilities using our smart search algorithm.",
-    "feature2Title": "Advanced Filtering",
-    "feature2Desc": "Narrow down results with filters for categories, tags, ratings, and compatibility.",
-    "feature3Title": "Detailed Previews",
-    "feature3Desc": "View server details, ratings, and community reviews directly from the search results."
+    "feature1Title": "AI-Powered Search",
+    "feature1Desc": "Natural language search that understands what you're looking for, not just keywords.",
+    "feature2Title": "Community Signals",
+    "feature2Desc": "Filter by ratings, installations, recent updates, and developer reputation.",
+    "feature3Title": "Capability Matching",
+    "feature3Desc": "Find servers by the exact capabilities you need - tools, resources, or prompts.",
+    "feature4Title": "Instant Preview",
+    "feature4Desc": "Test servers directly from search results without installation."
   },
   "playground": {
-    "title": "Test & Debug with MCP Playground",
-    "subtitle": "An interactive environment to build, test, and refine your MCP servers.",
-    "feature1Title": "Interactive Testing",
-    "feature1Desc": "Directly interact with your MCP servers, call tools, and inspect resources in real-time.",
-    "feature2Title": "Efficient Debugging",
-    "feature2Desc": "Identify and resolve issues quickly with detailed request/response logs and error messages.",
-    "feature3Title": "Rapid Prototyping",
-    "feature3Desc": "Experiment with different server configurations and tool implementations before deployment.",
+    "title": "Universal AI Testing Playground",
+    "subtitle": "Test any MCP server with any AI model - Claude, GPT, Llama, and more.",
+    "feature1Title": "Multi-Model Support",
+    "feature1Desc": "Test with Claude, GPT-4, Llama, Gemini, and dozens more through our Langchain integration.",
+    "feature2Title": "Advanced RAG Integration",
+    "feature2Desc": "Upload documents, create knowledge bases, and query them instantly with any model.",
+    "feature3Title": "Virtual Scrolling & Performance",
+    "feature3Desc": "Handle massive conversations with virtual scrolling and optimized performance.",
+    "feature4Title": "Custom Instructions",
+    "feature4Desc": "Set model-specific instructions and system prompts for precise control.",
+    "feature5Title": "Real-time Monitoring",
+    "feature5Desc": "Track all operations with detailed logs, execution analytics, and performance metrics.",
     "visualPlaceholder": "Visual representation of playground environment",
     "imagePlaceholder": "Image: Playground/Debugging Mockup",
     "langchainCallout": "<0>Test with Any Model:</0> Thanks to our <1>Langchain abstraction</1>, you can test your MCP servers with Claude, GPT, Llama, and more—all from a single playground. Instantly compare models and experience true model-agnostic AI."
   },
   "collections": {
-    "title": "Organize Your MCP Ecosystem",
-    "subtitle": "Organize your tools",
-    "description": "Create and share collections of your favorite MCP servers and tools.",
-    "action": "View Collections",
+    "title": "Smart Collections & Version Control",
+    "subtitle": "Organize, version, and share your MCP server collections",
+    "description": "Create versioned collections, track installations, collaborate with teams, and maintain different configurations for dev, staging, and production.",
+    "action": "Explore Collections",
+    "versionControl": {
+      "title": "Version Control for Collections",
+      "feature1": "Create snapshots of your collections at any point",
+      "feature2": "Roll back to previous versions when needed",
+      "feature3": "Track changes and see what's different between versions",
+      "feature4": "Share specific versions with your team"
+    },
+    "sharing": {
+      "title": "Public & Private Sharing",
+      "public": "Share collections publicly with the community",
+      "private": "Private sharing with team members",
+      "stats": "Track installations and usage statistics",
+      "ratings": "Get feedback and ratings from users"
+    },
     "collectionsTitle": "Streamlined Collections",
     "collectionsDesc": "Group related MCP servers into logical collections for specific clients, applications, or environments.",
-    "workspacesTitle": "Powerful Workspaces",
-    "workspacesDesc": "Organize your collections further into workspaces, such as separating development, staging, and production setups.",
+    "workspacesTitle": "Multi-Workspace Management",
+    "workspacesDesc": "Isolate projects with dedicated workspaces. Switch instantly between development, staging, and production configurations.",
     "hierarchyPlaceholder": "Visual representation of collection hierarchy",
     "imagePlaceholder": "Image: Collection/Workspace Mockup"
   },
@@ -142,30 +200,186 @@
     "description": "Share your MCP servers and tools with the community.",
     "action": "Start Sharing"
   },
+  "security": {
+    "title": "Enterprise-Grade Security",
+    "subtitle": "Your AI infrastructure, protected at every layer",
+    "description": "Built with security-first architecture featuring multi-layer authentication, sandboxed execution, and comprehensive audit trails.",
+    "features": {
+      "authentication": {
+        "title": "Multi-Layer Authentication",
+        "desc": "OAuth providers, API keys, and session management with JWT tokens"
+      },
+      "sandboxing": {
+        "title": "Firejail Sandboxing",
+        "desc": "Automatic security sandboxing for all STDIO MCP servers on Linux"
+      },
+      "isolation": {
+        "title": "Project Isolation",
+        "desc": "Complete data isolation between projects with role-based access control"
+      },
+      "audit": {
+        "title": "Comprehensive Audit Trails",
+        "desc": "Track all operations, API calls, and user actions for compliance"
+      },
+      "encryption": {
+        "title": "Data Encryption",
+        "desc": "End-to-end encryption for sensitive data and API communications"
+      },
+      "selfhost": {
+        "title": "Self-Hosting Option",
+        "desc": "Deploy on your infrastructure for complete control and compliance"
+      }
+    },
+    "compliance": "SOC2 Type II compliant infrastructure with regular security audits",
+    "action": "View Security Details"
+  },
+  "developers": {
+    "title": "Built for Developers",
+    "subtitle": "Powerful tools and APIs to extend your AI capabilities",
+    "description": "Open-source platform with comprehensive APIs, SDKs, and developer tools.",
+    "features": {
+      "opensource": {
+        "title": "100% Open Source",
+        "desc": "MIT licensed with transparent development on GitHub"
+      },
+      "apis": {
+        "title": "RESTful APIs",
+        "desc": "Complete API coverage for all platform features"
+      },
+      "sdks": {
+        "title": "TypeScript SDK",
+        "desc": "Type-safe SDK with full IntelliSense support"
+      },
+      "extensibility": {
+        "title": "Plugin Architecture",
+        "desc": "Extend the platform with custom MCP servers and integrations"
+      },
+      "documentation": {
+        "title": "Comprehensive Docs",
+        "desc": "Detailed documentation with examples and tutorials"
+      },
+      "community": {
+        "title": "Active Community",
+        "desc": "Discord, GitHub discussions, and community support"
+      }
+    },
+    "codeExample": {
+      "title": "Quick Integration Example",
+      "description": "Connect to Plugged.in in seconds:"
+    },
+    "action": "View Documentation"
+  },
+  "pricing": {
+    "title": "Simple, Transparent Pricing",
+    "subtitle": "Start free, scale as you grow",
+    "free": {
+      "title": "Free Forever",
+      "price": "$0",
+      "period": "/month",
+      "description": "Perfect for individuals and small teams",
+      "features": [
+        "Unlimited MCP servers",
+        "All AI models supported",
+        "5 RAG knowledge bases",
+        "Public profile & sharing",
+        "Community support"
+      ],
+      "cta": "Get Started Free"
+    },
+    "pro": {
+      "title": "Pro",
+      "price": "$19",
+      "period": "/month",
+      "description": "For professional developers and teams",
+      "features": [
+        "Everything in Free",
+        "Unlimited RAG knowledge bases",
+        "Private collections",
+        "Priority support",
+        "Advanced analytics",
+        "Team collaboration"
+      ],
+      "cta": "Start Pro Trial"
+    },
+    "enterprise": {
+      "title": "Enterprise",
+      "price": "Custom",
+      "period": "",
+      "description": "For organizations with advanced needs",
+      "features": [
+        "Everything in Pro",
+        "Self-hosting option",
+        "SSO/SAML authentication",
+        "SLA guarantees",
+        "Dedicated support",
+        "Custom integrations"
+      ],
+      "cta": "Contact Sales"
+    }
+  },
   "gettingStarted": {
-    "title": "New to Plugged.in?",
-    "description": "Follow our setup guide to get your environment configured properly and start building with Plugged.in right away.",
+    "title": "Getting Started is Easy",
+    "subtitle": "From zero to AI-powered in under 5 minutes",
+    "description": "Follow our quick start guide to connect your first MCP server and start building.",
+    "steps": {
+      "step1": {
+        "title": "1. Create Account",
+        "desc": "Sign up with email or OAuth provider"
+      },
+      "step2": {
+        "title": "2. Get API Key",
+        "desc": "Generate your API key from the dashboard"
+      },
+      "step3": {
+        "title": "3. Install MCP Proxy",
+        "desc": "Run: npx @pluggedin/mcp-proxy@latest"
+      },
+      "step4": {
+        "title": "4. Connect Client",
+        "desc": "Add to Claude, Cursor, or any MCP client"
+      }
+    },
+    "resources": {
+      "title": "Learning Resources",
+      "quickstart": "5-minute quickstart guide",
+      "tutorials": "Step-by-step tutorials",
+      "videos": "Video walkthroughs",
+      "examples": "Example projects and templates"
+    },
     "action": "View Setup Guide"
   },
   "cta": {
-    "title": "Ready to Supercharge Your MCP Workflow?",
-    "subtitle": "Join the Plugged.in community today. Manage, share, and discover MCP servers like never before.",
-    "description": "Join the community and start building with Plugged.in today.",
-    "primary": "Get Started",
-    "secondary": "Learn More",
-    "primaryAction": "Get Started for Free",
-    "secondaryAction": "Read Documentation",
+    "title": "Ready to Join the AI Revolution?",
+    "subtitle": "Start building with the most comprehensive MCP platform. Free forever for individuals.",
+    "description": "Join thousands of developers building the future of AI with Plugged.in v1.0.0.",
+    "primary": "Get Started Free",
+    "secondary": "View Documentation",
+    "primaryAction": "Create Free Account",
+    "secondaryAction": "Explore Documentation",
+    "features": {
+      "title": "Everything You Need",
+      "feature1": "✓ Unlimited MCP servers",
+      "feature2": "✓ All AI models supported",
+      "feature3": "✓ RAG knowledge bases",
+      "feature4": "✓ Social features",
+      "feature5": "✓ 6 language support",
+      "feature6": "✓ Enterprise security"
+    },
     "step1": {
       "title": "Sign Up",
-      "description": "Create your free account in seconds."
+      "description": "Create your free account in seconds. No credit card required."
     },
     "step2": {
-      "title": "Connect Servers",
-      "description": "Add your existing MCP servers or discover new ones."
+      "title": "Connect & Discover",
+      "description": "Add MCP servers, follow developers, join the community."
     },
     "step3": {
-      "title": "Explore & Share",
-      "description": "Manage your ecosystem and engage with the community."
+      "title": "Build & Share",
+      "description": "Create collections, upload knowledge, share with the world."
+    },
+    "security": {
+      "title": "Enterprise-Grade Security",
+      "description": "Your data is protected with multi-layer authentication, Firejail sandboxing, and comprehensive audit trails. Self-host for complete control."
     }
   }
 }

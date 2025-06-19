@@ -4,14 +4,19 @@
 import { McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
+import { eq } from 'drizzle-orm';
 
 import { logAuditEvent } from '@/app/actions/audit-logger'; // Correct path alias
 import { ensureLogDirectories } from '@/app/actions/log-retention'; // Correct path alias
 import { createEnhancedMcpLogger } from '@/app/actions/mcp-server-logger'; // Correct path alias
 import { getMcpServers } from '@/app/actions/mcp-servers'; // Correct path alias
+import { getPlaygroundSettings } from '@/app/actions/playground-settings'; // Add this import
+import { db } from '@/db';
+import { profilesTable } from '@/db/schema';
 
 import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization'; // Import the new function
 
@@ -31,6 +36,15 @@ interface McpPlaygroundSession {
   agent: ReturnType<typeof createReactAgent>;
   cleanup: McpServerCleanupFn;
   lastActive: Date;
+  llmConfig: {
+    provider: 'openai' | 'anthropic' | 'google';
+    model: string;
+    temperature?: number;
+    maxTokens?: number;
+    logLevel?: 'error' | 'warn' | 'info' | 'debug';
+    streaming?: boolean;
+  };
+  messages: Array<{role: string, content: string, timestamp?: Date, model?: string}>;
 }
 
 // Map to store active sessions by profile UUID
@@ -161,7 +175,7 @@ export async function addServerLogForProfile(profileUuid: string, level: string,
 
 // Initialize chat model based on provider
 function initChatModel(config: {
-  provider: 'openai' | 'anthropic';
+  provider: 'openai' | 'anthropic' | 'google';
   model: string;
   temperature?: number;
   maxTokens?: number;
@@ -183,6 +197,13 @@ function initChatModel(config: {
       maxTokens,
       streaming,
     });
+  } else if (provider === 'google') {
+    return new ChatGoogleGenerativeAI({
+      model: model,
+      temperature,
+      maxOutputTokens: maxTokens,
+      streaming,
+    }) as any;
   } else {
     throw new Error(`Unsupported provider: ${provider}`);
   }
@@ -307,17 +328,244 @@ const handleProcessTermination = async () => {
   process.exit(0);
 };
 
-// Handle various termination signals
-process.on('SIGTERM', handleProcessTermination);
-process.on('SIGINT', handleProcessTermination);
-process.on('beforeExit', handleProcessTermination);
+// Handle various termination signals - only add listeners once
+if (!process.listenerCount('SIGTERM')) {
+  process.on('SIGTERM', handleProcessTermination);
+}
+if (!process.listenerCount('SIGINT')) {
+  process.on('SIGINT', handleProcessTermination);
+}
+if (!process.listenerCount('beforeExit')) {
+  process.on('beforeExit', handleProcessTermination);
+}
+
+// Get playground session status for a profile
+export async function getPlaygroundSessionStatus(profileUuid: string) {
+  try {
+    const session = activeSessions.get(profileUuid);
+    
+    if (!session) {
+      return {
+        success: true,
+        isActive: false,
+        message: 'No active session found',
+        needsRestore: true // Indicate that client should attempt to restore
+      };
+    }
+
+    // Update last active timestamp
+    session.lastActive = new Date();
+
+    return {
+      success: true,
+      isActive: true,
+      message: 'Session is active',
+      llmConfig: session.llmConfig,
+      messages: session.messages,
+      needsRestore: false
+    };
+  } catch (error) {
+    console.error('Failed to get playground session status:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      isActive: false,
+      needsRestore: false
+    };
+  }
+}
+
+// Restore a lost session by recreating it from saved settings
+export async function restorePlaygroundSession(profileUuid: string) {
+  try {
+    // Check if session already exists
+    const existingSession = activeSessions.get(profileUuid);
+    if (existingSession) {
+      return {
+        success: true,
+        message: 'Session already active',
+        wasAlreadyActive: true
+      };
+    }
+
+    // Get saved playground settings to recreate the session
+    const settingsResult = await getPlaygroundSettings(profileUuid);
+    if (!settingsResult.success || !settingsResult.settings) {
+      return {
+        success: false,
+        error: 'Could not retrieve saved playground settings for restoration'
+      };
+    }
+
+    const settings = settingsResult.settings;
+    
+    // Get active MCP servers from the profile
+    const allServers = await getMcpServers(profileUuid);
+    const activeServers = allServers.filter(server => server.status === 'ACTIVE');
+
+    // Allow restoration if RAG is enabled, even with no servers
+    if (activeServers.length === 0 && !settings.ragEnabled) {
+      return {
+        success: false,
+        error: 'Cannot restore session: No active MCP servers and RAG is disabled'
+      };
+    }
+
+    // Extract server UUIDs
+    const activeServerUuids = activeServers.map(server => server.uuid);
+
+    // Create the LLM config from saved settings
+    const llmConfig = {
+      provider: settings.provider as 'openai' | 'anthropic' | 'google',
+      model: settings.model,
+      temperature: settings.temperature,
+      maxTokens: settings.maxTokens,
+      logLevel: settings.logLevel as 'error' | 'warn' | 'info' | 'debug',
+      streaming: true
+    };
+
+    // Use the existing session creation function
+    const result = await getOrCreatePlaygroundSession(
+      profileUuid,
+      activeServerUuids,
+      llmConfig
+    );
+
+    if (result.success) {
+      await addServerLogForProfile(
+        profileUuid,
+        'info',
+        `Session restored from saved settings: ${llmConfig.provider} ${llmConfig.model}, ${activeServerUuids.length} servers`
+      );
+      
+      return {
+        success: true,
+        message: 'Session successfully restored from saved settings',
+        llmConfig,
+        serverCount: activeServerUuids.length,
+        wasAlreadyActive: false
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to recreate session during restoration'
+      };
+    }
+  } catch (error) {
+    console.error('Failed to restore playground session:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error during session restoration'
+    };
+  }
+}
+
+// Update playground session model/LLM configuration
+export async function updatePlaygroundSessionModel(
+  profileUuid: string,
+  llmConfig: {
+    provider: 'openai' | 'anthropic' | 'google';
+    model: string;
+    temperature?: number;
+    maxTokens?: number;
+    logLevel?: 'error' | 'warn' | 'info' | 'debug';
+    streaming?: boolean;
+  }
+) {
+  try {
+    const session = activeSessions.get(profileUuid);
+    
+    if (!session) {
+      return {
+        success: false,
+        error: 'No active session found. Please start a new session.'
+      };
+    }
+
+    // Update last active timestamp
+    session.lastActive = new Date();
+
+    // Create new LLM instance with updated configuration
+    const newLlm = initChatModel({
+      provider: llmConfig.provider,
+      model: llmConfig.model,
+      temperature: llmConfig.temperature,
+      maxTokens: llmConfig.maxTokens,
+      streaming: llmConfig.streaming !== false,
+    });
+
+    // Get the current agent's tools and checkpoint saver
+    const currentAgent = session.agent;
+    
+    // Create a new agent with the new LLM but same tools and memory
+    const newAgent = createReactAgent({
+      llm: newLlm,
+      tools: (currentAgent as any).tools || [], // Preserve existing tools
+      checkpointSaver: (currentAgent as any).checkpointSaver, // Preserve memory
+      stateModifier: (state: any) => {
+        const systemMessage = `You are an AI assistant specialized in helping users interact with their development environment through MCP (Model Context Protocol) servers and knowledge bases.
+
+INFORMATION SOURCES:
+• Knowledge Context: Documentation, schemas, and background information from RAG
+• MCP Tools: Real-time data access and system interactions
+
+DECISION FRAMEWORK:
+1. Use knowledge context to understand structure, relationships, and background
+2. Use MCP tools for current data, live queries, and actions
+3. Combine both sources when helpful - context for understanding, tools for current information
+4. Always prioritize accuracy and currency of information
+
+EXAMPLES:
+• "How many users?" → Check knowledge for user table structure, use MCP tool to get current count
+• "Database schema?" → Use knowledge context if available, otherwise query via MCP tools
+• "Update settings" → Use MCP tools for the action, knowledge for validation
+
+Be transparent about which sources you use and why. When you have both context and tools available, use them together for the most complete and accurate response.`;
+
+        return [
+          { role: 'system', content: systemMessage },
+          ...state.messages
+        ];
+      }
+    });
+
+    // Update the session with new agent and config
+    session.agent = newAgent;
+    session.llmConfig = {
+      provider: llmConfig.provider,
+      model: llmConfig.model,
+      temperature: llmConfig.temperature,
+      maxTokens: llmConfig.maxTokens,
+      logLevel: llmConfig.logLevel,
+      streaming: llmConfig.streaming
+    };
+    
+    // Log the model update
+    await addServerLogForProfile(
+      profileUuid,
+      'info',
+      `Model switched to ${llmConfig.provider} ${llmConfig.model} - Agent recreated with new LLM`
+    );
+
+    return {
+      success: true,
+      message: `Model switched to ${llmConfig.provider} ${llmConfig.model}`
+    };
+  } catch (error) {
+    console.error('Failed to update playground session model:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
 
 // Get or create a playground session for a profile
 export async function getOrCreatePlaygroundSession(
   profileUuid: string,
   selectedServerUuids: string[],
   llmConfig: {
-    provider: 'openai' | 'anthropic';
+    provider: 'openai' | 'anthropic' | 'google';
     model: string;
     temperature?: number;
     maxTokens?: number;
@@ -447,6 +695,31 @@ export async function getOrCreatePlaygroundSession(
         llm,
         tools, // Use the tools returned by progressive initialization
         checkpointSaver: new MemorySaver(),
+        stateModifier: (state: any) => {
+          const systemMessage = `You are an AI assistant specialized in helping users interact with their development environment through MCP (Model Context Protocol) servers and knowledge bases.
+
+INFORMATION SOURCES:
+• Knowledge Context: Documentation, schemas, and background information from RAG
+• MCP Tools: Real-time data access and system interactions
+
+DECISION FRAMEWORK:
+1. Use knowledge context to understand structure, relationships, and background
+2. Use MCP tools for current data, live queries, and actions
+3. Combine both sources when helpful - context for understanding, tools for current information
+4. Always prioritize accuracy and currency of information
+
+EXAMPLES:
+• "How many users?" → Check knowledge for user table structure, use MCP tool to get current count
+• "Database schema?" → Use knowledge context if available, otherwise query via MCP tools
+• "Update settings" → Use MCP tools for the action, knowledge for validation
+
+Be transparent about which sources you use and why. When you have both context and tools available, use them together for the most complete and accurate response.`;
+
+          return [
+            { role: 'system', content: systemMessage },
+            ...state.messages
+          ];
+        }
       });
 
       // Create enhanced cleanup function using the combined cleanup from progressive init
@@ -503,7 +776,16 @@ export async function getOrCreatePlaygroundSession(
       activeSessions.set(profileUuid, {
         agent,
         cleanup: enhancedCleanup,
-        lastActive: new Date()
+        lastActive: new Date(),
+        llmConfig: {
+          provider: llmConfig.provider,
+          model: llmConfig.model,
+          temperature: llmConfig.temperature,
+          maxTokens: llmConfig.maxTokens,
+          logLevel: llmConfig.logLevel,
+          streaming: llmConfig.streaming
+        },
+        messages: []
       });
 
       return { success: true };
@@ -586,15 +868,79 @@ export async function executePlaygroundQuery(
     // Update last active timestamp
     session.lastActive = new Date();
 
+    // Get playground settings to check if RAG is enabled
+    const settingsResult = await getPlaygroundSettings(profileUuid);
+    
+    let finalQuery = query;
+    
+    if (settingsResult.success && settingsResult.settings?.ragEnabled) {
+      // Get project UUID from profile for project-specific RAG collection
+      const profileData = await db.query.profilesTable.findFirst({
+        where: eq(profilesTable.uuid, profileUuid),
+        columns: { project_uuid: true }
+      });
+      
+      const ragIdentifier = profileData?.project_uuid || profileUuid;
+      
+      // Query project-specific collection (Hub-bound RAG)
+      const ragResult = await queryRag(query, ragIdentifier);
+      
+      if (ragResult.success && ragResult.context) {
+        // Limit RAG context to avoid token overrun
+        const MAX_CONTEXT_CHARS = 2000; // Adjust as needed based on model/tokenizer
+        let limitedContext = ragResult.context;
+        if (limitedContext.length > MAX_CONTEXT_CHARS) {
+          limitedContext = limitedContext.slice(0, MAX_CONTEXT_CHARS) + '\n...[truncated]';
+        }
+        // Prepend (possibly truncated) RAG context to the query
+        finalQuery = `Here's additional context from your knowledge base:
+${limitedContext}
+
+User question: ${query}
+
+Please answer the user's question using both the provided context and your available tools as appropriate. Use the context for background understanding and tools for current data or actions.`;
+        
+        // Log RAG usage
+        await addServerLogForProfile(
+          profileUuid,
+          'info',
+          `[RAG] Retrieved workspace context: ${ragResult.context.slice(0, 100)}${ragResult.context.length > 100 ? '...' : ''}`
+        );
+      } else {
+        // Log RAG failure but continue with original query
+        await addServerLogForProfile(
+          profileUuid,
+          'warn',
+          `[RAG] No context found in workspace: ${ragResult.error || 'No documents available'}`
+        );
+      }
+    }
+
     // Track streaming state for partial message updates
     let currentAiMessage = '';
     let isFirstToken = true;
 
-    // Execute query with streaming enabled
+    // Check the agent's message history size before invoking
+    const MAX_AGENT_MESSAGES = 50; // Limit for LangChain agent's internal message history
+    
+    // Create a thread ID that includes message count to force new threads when needed
+    const threadId = session.messages.length > MAX_AGENT_MESSAGES 
+      ? `${profileUuid}_reset_${Date.now()}`  // Force new thread
+      : profileUuid;
+    
+    if (session.messages.length > MAX_AGENT_MESSAGES) {
+      await addServerLogForProfile(
+        profileUuid,
+        'info',
+        `[MEMORY] Creating new agent thread due to message limit (${session.messages.length} messages)`
+      );
+    }
+    
+    // Execute query with streaming enabled (using finalQuery which may include RAG context)
     const agentFinalState = await session.agent.invoke(
-      { messages: [new HumanMessage(query)] },
+      { messages: [new HumanMessage(finalQuery)] },
       {
-        configurable: { thread_id: profileUuid },
+        configurable: { thread_id: threadId },
         callbacks: [
           {
             handleLLMNewToken: async (token) => {
@@ -679,7 +1025,10 @@ export async function executePlaygroundQuery(
     }
 
     // Get all messages for display with debugging information
-    const messages = agentFinalState.messages.map((message: any, index: number) => {
+    const processedMessages: any[] = [];
+    let lastHumanIndex = -1;
+    
+    agentFinalState.messages.forEach((message: any, index: number) => {
       // Add debugging information
       const contentType = typeof message.content;
       const contentKeys = message.content && typeof message.content === 'object' ?
@@ -688,25 +1037,71 @@ export async function executePlaygroundQuery(
       const debugInfo = `[DEBUG: Message ${index}, Type: ${message.constructor.name}, Content type: ${contentType}, Keys: ${contentKeys.join(',')}]`;
 
       if (message instanceof HumanMessage) {
-        return {
+        lastHumanIndex = processedMessages.length;
+        processedMessages.push({
           role: 'human',
           content: message.content,
-          debug: debugInfo
-        };
+          debug: debugInfo,
+          timestamp: new Date()
+        });
       } else if (message instanceof AIMessage) {
-        return {
+        const modelInfo = `${session.llmConfig.provider} ${session.llmConfig.model}`;
+        processedMessages.push({
           role: 'ai',
           content: safeProcessContent(message.content),
-          debug: debugInfo
-        };
+          debug: debugInfo,
+          timestamp: new Date(),
+          model: modelInfo
+        });
       } else {
-        return {
-          role: 'tool',
-          content: safeProcessContent(message.content),
-          debug: debugInfo
-        };
+        // Check if this is the final response after a human message
+        const content = safeProcessContent(message.content);
+        const isLastMessage = index === agentFinalState.messages.length - 1;
+        const hasHumanBefore = lastHumanIndex >= 0;
+        const isNotToolCall = !message.name || message.name === 'Agent';
+        
+        // If this looks like the final AI response, mark it as AI
+        if (isLastMessage && hasHumanBefore && isNotToolCall && content.length > 20) {
+          const modelInfo = `${session.llmConfig.provider} ${session.llmConfig.model}`;
+          processedMessages.push({
+            role: 'ai',
+            content: content,
+            debug: debugInfo + ' [Final Response]',
+            timestamp: new Date(),
+            model: modelInfo
+          });
+        } else {
+          processedMessages.push({
+            role: 'tool',
+            content: content,
+            debug: debugInfo,
+            timestamp: new Date()
+          });
+        }
       }
     });
+    
+    const messages = processedMessages;
+
+    // Store the messages in the session for persistence with memory limit
+    const MAX_SESSION_MESSAGES = 100; // Limit session message history
+    
+    // Append new messages to existing ones
+    const allMessages = [...session.messages, ...messages];
+    
+    // Keep only the most recent messages if we exceed the limit
+    if (allMessages.length > MAX_SESSION_MESSAGES) {
+      session.messages = allMessages.slice(allMessages.length - MAX_SESSION_MESSAGES);
+      
+      // Log that we trimmed messages
+      await addServerLogForProfile(
+        profileUuid,
+        'info',
+        `[MEMORY] Trimmed session messages from ${allMessages.length} to ${MAX_SESSION_MESSAGES}`
+      );
+    } else {
+      session.messages = allMessages;
+    }
 
     return {
       success: true,
@@ -745,4 +1140,29 @@ export async function endPlaygroundSession(profileUuid: string) {
   }
 
   return { success: true }; // Session doesn't exist, so consider it ended
+}
+
+// Query RAG API for relevant context
+export async function queryRag(query: string, ragIdentifier: string) {
+  const { ragService } = await import('@/lib/rag-service');
+  return ragService.queryForContext(query, ragIdentifier);
+}
+
+// Clear server logs for a profile
+export async function clearServerLogs(profileUuid: string) {
+  try {
+    // Clear the server logs from memory
+    serverLogsByProfile.set(profileUuid, []);
+    
+    // Also clear any partial streaming logs
+    serverLogsByProfile.delete(profileUuid + '_partial');
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error clearing server logs:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
 }

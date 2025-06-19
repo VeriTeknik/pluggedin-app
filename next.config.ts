@@ -16,6 +16,7 @@ const nextConfig: NextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: ['plugged.in'],
+      bodySizeLimit: '100mb', // Allow up to 100MB file uploads
     },
     staleTimes: {
       dynamic: 30,  // 30 seconds for dynamic content

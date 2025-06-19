@@ -1,0 +1,99 @@
+{
+  "uploadDialog": {
+    "title": "Document Uploaden",
+    "description": "Upload een nieuw document naar je collectie (Werkruimte limiet: {{limit}})",
+    "button": "Document Uploaden",
+    "currentUsage": "Huidig Gebruik:",
+    "storageUsed": "{{percentage}}% van werkruimte opslag gebruikt",
+    "exceedLimitWarning": "Dit bestand ({{fileSize}}) zou je werkruimte opslaglimiet overschrijden. Huidig gebruik: {{currentUsage}}. Verwijder enkele documenten of kies een kleiner bestand.",
+    "nearLimitWarning": "Waarschuwing: Je nadert je opslaglimiet. Na het uploaden van dit bestand heb je {{percentage}}% van je werkruimte opslag gebruikt.",
+    "fileTooLarge": "Bestand te groot voor resterende opslag",
+    "dropFileHere": "Zet het bestand hier neer",
+    "clickToSelect": "Klik om te selecteren of sleep en zet neer",
+    "supportedFormats": "PDF, TXT, MD, DOCX, Afbeeldingen (max 10MB per bestand)",
+    "documentName": "Document Naam",
+    "documentNamePlaceholder": "Voer document naam in",
+    "descriptionLabel": "Beschrijving (optioneel)",
+    "descriptionPlaceholder": "Voer document beschrijving in",
+    "tags": "Tags (optioneel)",
+    "tagsPlaceholder": "Voer tags gescheiden door komma's in",
+    "cancel": "Annuleren",
+    "startingUpload": "Upload Starten...",
+    "uploadButton": "Document Uploaden"
+  },
+  "stats": {
+    "totalDocuments": "Totaal Documenten",
+    "documentsInCollection": "Documenten in je collectie",
+    "storageUsed": "Opslag Gebruikt",
+    "storageLimit": "{{limit}} limiet",
+    "recentUploads": "Recente Uploads",
+    "uploadedInLast7Days": "Geüpload in laatste 7 dagen",
+    "percentageUsed": "{{percentage}}% gebruikt",
+    "limitExceeded": "Limiet overschreden!",
+    "nearLimit": "Bijna limiet!"
+  },
+  "page": {
+    "title": "Documenten",
+    "description": "Upload, beheer en deel je documentatiebestanden",
+    "loading": "Documenten laden...",
+    "tableHeaders": {
+      "name": "Naam",
+      "description": "Beschrijving",
+      "size": "Grootte",
+      "tags": "Tags",
+      "created": "Gemaakt",
+      "actions": "Acties"
+    }
+  },
+  "controls": {
+    "searchPlaceholder": "Zoek documenten...",
+    "grid": "Raster",
+    "table": "Tabel"
+  },
+  "grid": {
+    "noDocuments": "Geen documenten gevonden.",
+    "openMenu": "Menu openen",
+    "download": "Downloaden",
+    "delete": "Verwijderen"
+  },
+  "table": {
+    "noDocuments": "Geen documenten gevonden."
+  },
+  "deleteDialog": {
+    "title": "Document Verwijderen",
+    "description": "Weet je zeker dat je \"{{name}}\" wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "cancel": "Annuleren",
+    "delete": "Verwijderen",
+    "deleting": "Verwijderen..."
+  },
+  "uploadProgress": {
+    "title": "Upload Voortgang",
+    "clearCompleted": "Voltooide Wissen",
+    "processingComplete": "Verwerking Voltooid",
+    "processingFailed": "Verwerking Mislukt",
+    "step": "Stap",
+    "of": "van",
+    "currentStepProgress": "Huidige Stap Voortgang",
+    "chunksProcessed": "chunks verwerkt",
+    "remaining": "resterend",
+    "processingSteps": "Verwerkingsstappen",
+    "completedMessage": "Document is succesvol toegevoegd aan uw kennisbank",
+    "failedMessage": "Er is een fout opgetreden tijdens de verwerking",
+    "timeoutMessage": "Verwerking time-out - controleer uw documenten",
+    "processingCompletedMessage": "Verwerking voltooid",
+    "steps": {
+      "textExtraction": "Tekstinhoud extraheren",
+      "chunking": "Inhoud opsplitsen",
+      "idGeneration": "Unieke identificaties genereren",
+      "embeddings": "Vector embeddings maken",
+      "databaseInsertion": "Opslaan in kennisbank"
+    },
+    "stepDescriptions": {
+      "textExtraction": "Documentinhoud lezen en parseren",
+      "chunking": "Inhoud verdelen in beheersbare stukken",
+      "idGeneration": "Unieke identificaties maken voor inhoud",
+      "embeddings": "Tekst omzetten naar vectorrepresentaties",
+      "databaseInsertion": "Verwerkte gegevens opslaan in database"
+    }
+  }
+} 

@@ -1,0 +1,43 @@
+{
+  "title": "Dokümantasyon",
+  "description": "Plugged.in kullanımını öğrenin, MCP sunucularını entegre edin ve AI destekli uygulamalar geliştirin",
+  "search": {
+    "placeholder": "Dokümanlarda ara...",
+    "noResults": "\"{{query}}\" için sonuç bulunamadı",
+    "results": "{{count}} sonuç bulundu"
+  },
+  "categories": {
+    "getting-started": "Başlangıç",
+    "tutorials": "Eğitimler",
+    "api-reference": "API Referansı",
+    "examples": "Örnekler",
+    "guides": "Kılavuzlar",
+    "integrations": "Entegrasyonlar"
+  },
+  "navigation": {
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "backToTop": "Başa dön",
+    "backToDocs": "Dokümantasyona Dön",
+    "editOnGitHub": "GitHub'da Düzenle"
+  },
+  "toc": {
+    "title": "Bu sayfada",
+    "empty": "Başlık bulunamadı"
+  },
+  "metadata": {
+    "lastUpdated": "Son güncelleme: {{date}}",
+    "readingTime": "{{minutes}} dk okuma",
+    "author": "Yazar: {{author}}"
+  },
+  "feedback": {
+    "title": "Bu yardımcı oldu mu?",
+    "yes": "Evet",
+    "no": "Hayır",
+    "thanks": "Geri bildiriminiz için teşekkürler!"
+  },
+  "errors": {
+    "notFound": "Dokümantasyon sayfası bulunamadı",
+    "loadFailed": "Dokümantasyon yüklenemedi"
+  }
+}

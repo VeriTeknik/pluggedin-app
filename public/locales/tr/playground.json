@@ -5,10 +5,12 @@
     "description": "MCP araçlarıyla YDM yapay zeka için deneysel bir ortam.",
     "actions": {
       "start": "Oturumu Başlat",
+      "startNewSession": "Yeni Oturum Başlat",
       "starting": "Başlatılıyor...",
       "end": "Oturumu Sonlandır",
       "ending": "Sonlandırılıyor...",
-      "save": "Ayarları Kaydet",
+      "clear": "Temizle",
+      "save": "Kaydet",
       "dismiss": "Kapat",
       "clearLogs": "Günlükleri Temizle"
     },
@@ -56,30 +58,87 @@
     "chat": {
       "title": "Sohbet",
       "subtitle": "MCP sunucularınızla doğal dil üzerinden etkileşime geçin.",
+      "header": {
+        "temperature": "Sıcaklık",
+        "maxTokens": "Maksimum Token",
+        "serverConnected": "sunucu bağlı",
+        "serversConnected": "sunucu bağlı",
+        "switchModel": "Model Değiştir",
+        "moreModels": "Daha Fazla Model",
+        "stopSession": "Oturumu Durdur",
+        "stopping": "Durduruluyor..."
+      },
       "empty": {
-        "title": "MCP Oyun Alanına Hoş Geldiniz",
-        "activeDescription": "MCP sunucularınızla etkileşime başlamak için bir mesaj gönderin.",
-        "inactiveDescription": "MCP sunucularınızla etkileşime başlamak için bir oturum başlatın."
+        "title": "Sohbete hazır",
+        "activeDescription": "Doğal dil kullanarak MCP sunucularınızla konuşmaya başlayın.",
+        "inactiveDescription": "Sunucularınızı seçin ve MCP araçlarınızla sohbet etmeye başlamak için başlat'a tıklayın."
       },
       "input": {
         "activePlaceholder": "Mesajınızı yazın...",
-        "inactivePlaceholder": "Sohbete başlamak için bir oturum başlatın..."
+        "inactivePlaceholder": "Sohbet etmeye başlamak için bir oturum başlatın"
       },
       "thinking": "Düşünüyor",
       "tool": {
-        "title": "Araç Yürütme",
+        "title": "Araç Yanıtı",
         "debugInfo": "Hata Ayıklama Bilgisi"
-      }
+      },
+      "sessionEnded": "Oturum sona erdi. Devam etmek için yeni bir oturum başlatın.",
+      "selectServerHint": "Başlamak için en az bir aktif sunucu seçin.",
+      "selectServerOrEnableRagHint": "Başlamak için aktif bir sunucu seçin veya RAG'ı etkinleştirin."
     },
     "provider": {
       "anthropic": "Anthropic",
-      "openai": "OpenAI"
+      "openai": "OpenAI",
+      "google": "Google"
     },
     "logLevels": {
       "error": "Hata",
       "warn": "Uyarı",
       "info": "Bilgi",
       "debug": "Hata Ayıklama"
+    },
+    "server": "sunucu",
+    "servers": "sunucu",
+    "models": {
+      "anthropic": {
+        "claude-3-7-sonnet": "Dengeli akıl yürütme",
+        "claude-4-sonnet": "Üstün zeka",
+        "claude-4-opus": "En güçlü",
+        "claude-3-5-sonnet": "Hızlı ve yetenekli",
+        "claude-3-opus": "Yaratıcı görevler",
+        "claude-3-haiku": "Hızlı yanıtlar"
+      },
+      "openai": {
+        "gpt-4-1": "En son amiral gemisi",
+        "gpt-4-1-mini": "Maliyet etkin",
+        "gpt-4o": "Çok modlu",
+        "gpt-4o-mini": "Hızlı ve uygun fiyatlı",
+        "gpt-4-turbo": "Yüksek performans",
+        "gpt-3-5-turbo": "Hızlı görevler"
+      },
+      "google": {
+        "gemini-2-5-pro": "En zeki",
+        "gemini-2-5-flash": "En iyi performans",
+        "gemini-2-0-flash": "Hızlı ve yetenekli"
+      }
+    },
+    "behavior": {
+      "title": "Davranış Ayarları",
+      "presets": {
+        "precise": "Hassas",
+        "balanced": "Dengeli",
+        "creative": "Yaratıcı"
+      },
+      "sliders": {
+        "short": "Kısa",
+        "long": "Uzun",
+        "words": "kelime"
+      }
+    },
+    "badges": {
+      "new": "Yeni",
+      "latest": "En Son",
+      "pro": "Pro"
     }
   }
 }

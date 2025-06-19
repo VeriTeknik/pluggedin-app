@@ -3,6 +3,8 @@
 import { useEffect } from 'react';
 
 import SidebarLayout from '@/components/sidebar-layout';
+import { UploadProgressToast } from '@/components/upload-progress-toast';
+import { UploadProgressProvider } from '@/contexts/UploadProgressContext';
 import { initializeFont } from '@/lib/font-utils';
 
 export default function LoggedInLayout({
@@ -21,5 +23,10 @@ export default function LoggedInLayout({
     }
   }, []);
 
-  return <SidebarLayout>{children}</SidebarLayout>;
+  return (
+    <UploadProgressProvider>
+      <SidebarLayout>{children}</SidebarLayout>
+      <UploadProgressToast />
+    </UploadProgressProvider>
+  );
 }

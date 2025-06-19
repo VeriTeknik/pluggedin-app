@@ -1,0 +1,43 @@
+{
+  "title": "Documentation",
+  "description": "Learn how to use Plugged.in, integrate MCP servers, and build AI-powered applications",
+  "search": {
+    "placeholder": "Search documentation...",
+    "noResults": "No results found for \"{{query}}\"",
+    "results": "{{count}} results found"
+  },
+  "categories": {
+    "getting-started": "Getting Started",
+    "tutorials": "Tutorials",
+    "api-reference": "API Reference",
+    "examples": "Examples",
+    "guides": "Guides",
+    "integrations": "Integrations"
+  },
+  "navigation": {
+    "previous": "Previous",
+    "next": "Next",
+    "backToTop": "Back to top",
+    "backToDocs": "Back to Documentation",
+    "editOnGitHub": "Edit on GitHub"
+  },
+  "toc": {
+    "title": "On this page",
+    "empty": "No headings found"
+  },
+  "metadata": {
+    "lastUpdated": "Last updated on {{date}}",
+    "readingTime": "{{minutes}} min read",
+    "author": "Written by {{author}}"
+  },
+  "feedback": {
+    "title": "Was this helpful?",
+    "yes": "Yes",
+    "no": "No",
+    "thanks": "Thanks for your feedback!"
+  },
+  "errors": {
+    "notFound": "Documentation page not found",
+    "loadFailed": "Failed to load documentation"
+  }
+}

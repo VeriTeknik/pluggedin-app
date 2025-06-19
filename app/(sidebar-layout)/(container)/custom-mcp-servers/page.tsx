@@ -9,6 +9,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
+import * as dotenv from 'dotenv';
 import { Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -55,6 +56,7 @@ import {
 } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { useToast } from '@/components/ui/use-toast';
 import { McpServerStatus } from '@/db/schema';
 import { useCodes } from '@/hooks/use-codes';
 import { useProfiles } from '@/hooks/use-profiles';
@@ -72,6 +74,7 @@ interface Code {
 export default function CustomMCPServersPage() {
   const { currentProfile } = useProfiles();
   const profileUuid = currentProfile?.uuid;
+  const { toast } = useToast();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [open, setOpen] = useState(false);
@@ -191,14 +194,19 @@ export default function CustomMCPServersPage() {
     setIsSubmitting(true);
     try {
       const additionalArgs = values.additionalArgs.trim().split(/\s+/).filter(Boolean);
-      const env: Record<string, string> = {};
+      let env: Record<string, string> = {};
       try {
-        values.env.split('\n').forEach((line: string) => {
-          const [key, value] = line.split('=');
-          env[key] = value;
-        });
+        // Use dotenv.parse for secure parsing that handles quotes, multiline values, etc.
+        env = dotenv.parse(values.env || '');
       } catch (e) {
         console.error('Failed to parse env:', e);
+        toast({
+          title: 'Error',
+          description: 'Invalid environment variables format',
+          variant: 'destructive',
+        });
+        setIsSubmitting(false);
+        return;
       }
 
       await createCustomMcpServer(profileUuid, {

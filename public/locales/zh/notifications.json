@@ -2,10 +2,17 @@
   "notifications": {
     "title": "通知",
     "description": "您可以在此处查看所有系统通知",
+    "status": {
+      "unread": "未读"
+    },
     "actions": {
       "markAllAsRead": "全部标记为已读",
       "actions": "操作",
-      "deleteAll": "删除所有通知"
+      "deleteAll": "删除所有通知",
+      "viewDetails": "查看详情",
+      "markAsRead": "标记为已读",
+      "delete": "删除",
+      "viewAll": "查看所有通知"
     },
     "tabs": {
       "all": "全部",

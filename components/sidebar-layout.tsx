@@ -6,6 +6,7 @@ import {
   Bell,
   Blocks,
   Code2,
+  FileText,
   FlaskConical,
   Plus,
   Trash2,
@@ -231,10 +232,10 @@ export default function SidebarLayout({
                   
                   {/* Update Discover Link to AI Social */}
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('aiSocial')} className="group-data-[collapsible=icon]:justify-center">
+                    <SidebarMenuButton asChild tooltip={t('aiSocial.description')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/discover'>
                         <Users className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('aiSocial')}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{t('aiSocial.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -248,6 +249,16 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('library.title')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/library'>
+                        <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('library.title')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
                   {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/inspector-guide'>

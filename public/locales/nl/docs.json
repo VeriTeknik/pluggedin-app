@@ -1,0 +1,43 @@
+{
+  "title": "Documentatie",
+  "description": "Leer hoe je Plugged.in gebruikt, MCP-servers integreert en AI-gestuurde applicaties bouwt",
+  "search": {
+    "placeholder": "Zoek in documentatie...",
+    "noResults": "Geen resultaten gevonden voor \"{{query}}\"",
+    "results": "{{count}} resultaten gevonden"
+  },
+  "categories": {
+    "getting-started": "Aan de slag",
+    "tutorials": "Tutorials",
+    "api-reference": "API Referentie",
+    "examples": "Voorbeelden",
+    "guides": "Handleidingen",
+    "integrations": "Integraties"
+  },
+  "navigation": {
+    "previous": "Vorige",
+    "next": "Volgende",
+    "backToTop": "Terug naar boven",
+    "backToDocs": "Terug naar Documentatie",
+    "editOnGitHub": "Bewerk op GitHub"
+  },
+  "toc": {
+    "title": "Op deze pagina",
+    "empty": "Geen koppen gevonden"
+  },
+  "metadata": {
+    "lastUpdated": "Laatst bijgewerkt op {{date}}",
+    "readingTime": "{{minutes}} min lezen",
+    "author": "Geschreven door {{author}}"
+  },
+  "feedback": {
+    "title": "Was dit nuttig?",
+    "yes": "Ja",
+    "no": "Nee",
+    "thanks": "Bedankt voor je feedback!"
+  },
+  "errors": {
+    "notFound": "Documentatiepagina niet gevonden",
+    "loadFailed": "Documentatie laden mislukt"
+  }
+}

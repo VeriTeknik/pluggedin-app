@@ -5,47 +5,65 @@
     "community": "Community",
     "collections": "Collecties",
     "playground": "Playground",
+    "documentation": "Documentatie",
     "getStarted": "Aan de slag"
   },
   "hero": {
     "title": "Het AI-kruispunt",
     "subtitle": "Verbind, creëer en breid uw AI-mogelijkheden uit met een uniform platform. Bouw en beheer plug-ins die uw AI-workflows verbeteren.",
     "headline": "Verbind, deel en ontdek MCP Servers",
-    "subheadline": "Het communityplatform en universele proxy voor het Model Context Protocol",
-    "analogy": "\"Eén MCP-proxy om alle MCP's te regeren\"",
+    "subheadline": "De community-hub, universele proxy en AI-kennisplatform voor het Model Context Protocol",
+    "analogy": "\"Uw AI-ecosysteem, uniform en sociaal\"",
     "openSource": "Trots Open Source",
+    "version": "v1.0.0",
     "cta": {
-      "getStarted": "Aan de slag",
-      "learnMore": "Meer informatie"
+      "getStarted": "Word lid van de community",
+      "learnMore": "Verken functies"
     }
   },
   "features": {
     "title": "Functies",
     "subtitle": "Alles wat u nodig heeft om uw MCP-servers te beheren",
-    "sectionTitle": "Krachtige functies voor MCP-beheer",
-    "sectionSubtitle": "Alles wat u nodig heeft om MCP-servers effectief te verbinden, delen en ontdekken.",
+    "sectionTitle": "Een compleet AI-ecosysteemplatform",
+    "sectionSubtitle": "Verbind, deel, ontdek en breid uw AI-mogelijkheden uit met enterprise-grade functies.",
     "communitySharing": {
-      "title": "Community MCP Server Delen",
-      "description": "Deel uw MCP-servers en ontdek creaties van de community."
+      "title": "Sociaal platform & Community",
+      "description": "Deel MCP-servers, volg ontwikkelaars, ontvang meldingen en bouw uw AI-netwerk. Openbare profielen, beoordelingen en collaboratieve ontdekking."
     },
     "collectionManagement": {
-      "title": "Collectiebeheer",
-      "description": "Organiseer servers in collecties voor verschillende clients of projecten."
+      "title": "Slimme collecties met versiebeheer",
+      "description": "Organiseer servers in collecties met versiebeheer. Deel publiek of privé, volg installaties en werk samen aan gecureerde toolsets."
     },
     "workspaceOrganization": {
-      "title": "Werkruimte Organisatie",
-      "description": "Groepeer collecties in werkruimtes zoals ontwikkeling of productie."
+      "title": "Multi-werkruimte beheer",
+      "description": "Isoleer projecten met toegewijde werkruimtes. Schakel direct tussen ontwikkeling-, staging- en productieomgevingen."
     },
     "advancedSearch": {
-      "title": "Geavanceerd zoeken",
-      "description": "Vind de perfecte MCP-server met krachtige filtermogelijkheden."
+      "title": "Intelligente ontdekkingsengine",
+      "description": "Vind de perfecte MCP-server via GitHub, Smithery en npm. Filter op mogelijkheden, beoordelingen en community-aanbevelingen."
     },
     "mcpPlayground": {
-      "title": "MCP Playground",
-      "description": "Test en debug uw MCP-servers in een interactieve omgeving."
+      "title": "Universele AI Playground",
+      "description": "Test MCP-servers met elk model - Claude, GPT, Llama en meer. Virtueel scrollen voor grote gesprekken en ondersteuning voor aangepaste instructies."
+    },
+    "ragIntegration": {
+      "title": "AI-kennisplatform (RAG)",
+      "description": "Upload documenten, creëer kennisbases en bevraag ze via elke MCP-client. Veilig, projectgebaseerde isolatie met enterprise-grade beveiliging."
+    },
+    "notifications": {
+      "title": "Real-time activiteitsmonitoring",
+      "description": "Volg alle MCP-operaties met gedetailleerde logs, uitvoeringsanalyses en aangepaste meldingen met optionele e-maillevering."
+    },
+    "security": {
+      "title": "Enterprise beveiliging & privacy",
+      "description": "Multi-layer authenticatie, Firejail sandboxing, uitgebreide audittrails en self-hosting opties voor volledige controle."
+    },
+    "internationalization": {
+      "title": "Wereldwijd platform",
+      "description": "Beschikbaar in 6 talen met automatische browserdetectie. Community-gedreven vertalingen voor wereldwijde toegankelijkheid."
     },
     "pluginManagement": {
-      "title": "Plugin Beheer",
+      "title": "Plugin beheer",
       "description": "Blader, configureer en beheer MCP-servers en plug-ins",
       "content": "Verbind verschillende AI-tools en -services via een uniforme interface. Configureer en beheer uw plug-ins vanuit een centraal dashboard.",
       "action": "Blader door plug-ins"
@@ -68,15 +86,28 @@
       "action": "Aangepaste tools maken"
     },
     "langchainAbstraction": {
-      "title": "Test elk model: Langchain Abstractie",
+      "title": "Test elk model: Langchain abstractie",
       "description": "Plugged.in gebruikt de Langchain abstractielaag zodat u uw MCP-servers kunt testen met Claude, GPT, Llama en meer—allemaal vanuit één interface. Vergelijk modellen direct, maak uw workflow toekomstbestendig en ervaar echt model-agnostische AI."
     }
   },
   "community": {
-    "title": "Word lid van de MCP Community",
-    "subtitle": "Word lid van de groeiende community van MCP-ontwikkelaars",
-    "description": "Deel uw MCP-servers, ontdek krachtige tools die door anderen zijn gebouwd en werk samen binnen een groeiend ecosysteem. Beoordeel servers, laat recensies achter en vind de beste oplossingen voor uw behoeften.",
+    "title": "Word lid van de wereldwijde MCP Community",
+    "subtitle": "Verbind met duizenden ontwikkelaars die de toekomst van AI bouwen",
+    "description": "Deel uw MCP-servers, volg ontwikkelaars, ontvang real-time meldingen en werk samen binnen ons sociale platform. Bouw uw reputatie op met beoordelingen, recensies en community-bijdragen.",
     "action": "Word lid van de community",
+    "stats": {
+      "developers": "10K+ Ontwikkelaars",
+      "servers": "5000+ MCP Servers",
+      "collections": "1500+ Collecties",
+      "languages": "6 Talen"
+    },
+    "socialFeatures": {
+      "title": "Sociale platformfuncties",
+      "profiles": "Openbare ontwikkelaarsprofielen met activiteitenfeeds",
+      "following": "Volg ontwikkelaars en krijg updates over hun werk",
+      "notifications": "Real-time meldingen voor volgers, shares en updates",
+      "reputation": "Bouw uw reputatie op door community-betrokkenheid"
+    },
     "benefit1": "Ontdek innovatieve servers van collega-ontwikkelaars.",
     "benefit2": "Krijg feedback en beoordelingen over uw gedeelde servers.",
     "benefit3": "Werk samen en bouw voort op community-creaties.",
@@ -92,80 +123,263 @@
     "name1": "Jane Doe",
     "title1": "Lead AI Engineer, TechCorp",
     "quote2": "\"Het community-sharing aspect is een game-changer. Nieuwe tools ontdekken is eenvoudiger dan ooit.\"",
-    "name2": "Alex Smit",
+    "name2": "Alex Smith",
     "title2": "Onafhankelijke ontwikkelaar",
     "quote3": "\"Debuggen met de MCP Playground heeft ons talloze uren bespaard. Sterk aanbevolen!\"",
     "name3": "Maria Kim",
     "title3": "Oprichter, AI Solutions Inc."
   },
   "search": {
-    "title": "Vind direct de juiste tools",
-    "subtitle": "Ontdek MCP-servers en tools met krachtige zoek- en filteropties.",
-    "description": "Zoek door de groeiende collectie MCP-servers en tools.",
-    "action": "Verken tools",
+    "title": "Intelligente ontdekkingsengine",
+    "subtitle": "Vind de perfecte MCP-server via GitHub, Smithery en npm",
+    "description": "Onze geavanceerde ontdekkingsengine doorzoekt meerdere bronnen en gebruikt community-signalen om de beste tools voor uw behoeften naar boven te halen.",
+    "action": "Ontdek tools",
+    "sources": {
+      "title": "Zoek in alle bronnen",
+      "github": "GitHub repositories met MCP-servers",
+      "smithery": "Smithery marketplace integraties",
+      "npm": "NPM packages met MCP-ondersteuning",
+      "community": "Community-gedeelde servers"
+    },
     "imagePlaceholder": "Afbeelding: Zoekresultaten met community-servers (CardGrid Mockup)",
-    "feature1Title": "Intelligent zoeken",
-    "feature1Desc": "Vind snel servers op naam, beschrijving of mogelijkheden met ons slimme zoekalgoritme.",
-    "feature2Title": "Geavanceerd filteren",
-    "feature2Desc": "Verfijn resultaten met filters voor categorieën, tags, beoordelingen en compatibiliteit.",
-    "feature3Title": "Gedetailleerde voorbeelden",
-    "feature3Desc": "Bekijk serverdetails, beoordelingen en communityrecensies rechtstreeks vanuit de zoekresultaten."
+    "feature1Title": "AI-aangedreven zoeken",
+    "feature1Desc": "Natuurlijke taalzoekfunctie die begrijpt wat u zoekt, niet alleen sleutelwoorden.",
+    "feature2Title": "Community-signalen",
+    "feature2Desc": "Filter op beoordelingen, installaties, recente updates en ontwikkelaarsreputatie.",
+    "feature3Title": "Mogelijkheden matching",
+    "feature3Desc": "Vind servers op de exacte mogelijkheden die u nodig heeft - tools, bronnen of prompts.",
+    "feature4Title": "Direct voorvertonen",
+    "feature4Desc": "Test servers direct vanuit zoekresultaten zonder installatie."
   },
   "playground": {
-    "title": "Test & Debug met MCP Playground",
-    "subtitle": "Een interactieve omgeving om uw MCP-servers te bouwen, testen en verfijnen.",
-    "feature1Title": "Interactief testen",
-    "feature1Desc": "Interacteer rechtstreeks met uw MCP-servers, roep tools aan en inspecteer bronnen in realtime.",
-    "feature2Title": "Efficiënt debuggen",
-    "feature2Desc": "Identificeer en los problemen snel op met gedetailleerde request/response logs en foutmeldingen.",
-    "feature3Title": "Snelle prototyping",
-    "feature3Desc": "Experimenteer met verschillende serverconfiguraties en tool-implementaties vóór implementatie.",
+    "title": "Universele AI testplayground",
+    "subtitle": "Test elke MCP-server met elk AI-model - Claude, GPT, Llama en meer.",
+    "feature1Title": "Multi-model ondersteuning",
+    "feature1Desc": "Test met Claude, GPT-4, Llama, Gemini en tientallen meer via onze Langchain integratie.",
+    "feature2Title": "Geavanceerde RAG integratie",
+    "feature2Desc": "Upload documenten, creëer kennisbases en bevraag ze direct met elk model.",
+    "feature3Title": "Virtueel scrollen & prestaties",
+    "feature3Desc": "Behandel massale gesprekken met virtueel scrollen en geoptimaliseerde prestaties.",
+    "feature4Title": "Aangepaste instructies",
+    "feature4Desc": "Stel modelspecifieke instructies en systeemprompts in voor precieze controle.",
+    "feature5Title": "Real-time monitoring",
+    "feature5Desc": "Volg alle operaties met gedetailleerde logs, uitvoeringsanalyses en prestatiemetrics.",
     "visualPlaceholder": "Visuele weergave van de playground-omgeving",
     "imagePlaceholder": "Afbeelding: Playground/Debugging Mockup",
     "langchainCallout": "<0>Test met elk model:</0> Dankzij onze <1>Langchain-abstractie</1> kunt u uw MCP-servers testen met Claude, GPT, Llama en meer—allemaal vanuit één playground. Vergelijk modellen direct en ervaar echt model-agnostische AI."
   },
   "collections": {
-    "title": "Organiseer uw MCP-ecosysteem",
-    "subtitle": "Organiseer uw tools",
-    "description": "Creëer en deel collecties van uw favoriete MCP-servers en tools.",
-    "action": "Bekijk collecties",
+    "title": "Slimme collecties & versiebeheer",
+    "subtitle": "Organiseer, versioneer en deel uw MCP-servercollecties",
+    "description": "Creëer collecties met versiebeheer, volg installaties, werk samen met teams en onderhoud verschillende configuraties voor dev, staging en productie.",
+    "action": "Verken collecties",
+    "versionControl": {
+      "title": "Versiebeheer voor collecties",
+      "feature1": "Creëer snapshots van uw collecties op elk moment",
+      "feature2": "Rol terug naar vorige versies wanneer nodig",
+      "feature3": "Volg wijzigingen en zie wat er verschilt tussen versies",
+      "feature4": "Deel specifieke versies met uw team"
+    },
+    "sharing": {
+      "title": "Publiek & privé delen",
+      "public": "Deel collecties publiek met de community",
+      "private": "Privé delen met teamleden",
+      "stats": "Volg installaties en gebruiksstatistieken",
+      "ratings": "Krijg feedback en beoordelingen van gebruikers"
+    },
     "collectionsTitle": "Gestroomlijnde collecties",
     "collectionsDesc": "Groepeer gerelateerde MCP-servers in logische collecties voor specifieke clients, applicaties of omgevingen.",
-    "workspacesTitle": "Krachtige werkruimtes",
-    "workspacesDesc": "Organiseer uw collecties verder in werkruimtes, zoals het scheiden van ontwikkelings-, staging- en productie-setups.",
+    "workspacesTitle": "Multi-werkruimte beheer",
+    "workspacesDesc": "Isoleer projecten met toegewijde werkruimtes. Schakel direct tussen ontwikkeling-, staging- en productieconfiguraties.",
     "hierarchyPlaceholder": "Visuele weergave van collectiehiërarchie",
     "imagePlaceholder": "Afbeelding: Collectie/Werkruimte Mockup"
   },
   "sharing": {
-    "title": "Community Delen",
+    "title": "Community delen",
     "subtitle": "Deel met anderen",
     "description": "Deel uw MCP-servers en tools met de community.",
     "action": "Begin met delen"
   },
+  "security": {
+    "title": "Enterprise-grade beveiliging",
+    "subtitle": "Uw AI-infrastructuur, beschermd op elke laag",
+    "description": "Gebouwd met security-first architectuur met multi-layer authenticatie, gesandboxte uitvoering en uitgebreide audittrails.",
+    "features": {
+      "authentication": {
+        "title": "Multi-layer authenticatie",
+        "desc": "OAuth providers, API-sleutels en sessiebeheer met JWT-tokens"
+      },
+      "sandboxing": {
+        "title": "Firejail sandboxing",
+        "desc": "Automatische beveiligingssandboxing voor alle STDIO MCP-servers op Linux"
+      },
+      "isolation": {
+        "title": "Project isolatie",
+        "desc": "Volledige data-isolatie tussen projecten met op rollen gebaseerde toegangscontrole"
+      },
+      "audit": {
+        "title": "Uitgebreide audittrails",
+        "desc": "Volg alle operaties, API-calls en gebruikersacties voor compliance"
+      },
+      "encryption": {
+        "title": "Data-encryptie",
+        "desc": "End-to-end encryptie voor gevoelige data en API-communicatie"
+      },
+      "selfhost": {
+        "title": "Self-hosting optie",
+        "desc": "Deploy op uw infrastructuur voor volledige controle en compliance"
+      }
+    },
+    "compliance": "SOC2 Type II compliant infrastructuur met regelmatige beveiligingsaudits",
+    "action": "Bekijk beveiligingsdetails"
+  },
+  "developers": {
+    "title": "Gebouwd voor ontwikkelaars",
+    "subtitle": "Krachtige tools en API's om uw AI-mogelijkheden uit te breiden",
+    "description": "Open-source platform met uitgebreide API's, SDK's en ontwikkeltools.",
+    "features": {
+      "opensource": {
+        "title": "100% Open Source",
+        "desc": "MIT gelicenseerd met transparante ontwikkeling op GitHub"
+      },
+      "apis": {
+        "title": "RESTful API's",
+        "desc": "Volledige API-dekking voor alle platformfuncties"
+      },
+      "sdks": {
+        "title": "TypeScript SDK",
+        "desc": "Type-safe SDK met volledige IntelliSense ondersteuning"
+      },
+      "extensibility": {
+        "title": "Plugin architectuur",
+        "desc": "Breid het platform uit met aangepaste MCP-servers en integraties"
+      },
+      "documentation": {
+        "title": "Uitgebreide documentatie",
+        "desc": "Gedetailleerde documentatie met voorbeelden en tutorials"
+      },
+      "community": {
+        "title": "Actieve community",
+        "desc": "Discord, GitHub discussies en community-ondersteuning"
+      }
+    },
+    "codeExample": {
+      "title": "Snelle integratie voorbeeld",
+      "description": "Verbind met Plugged.in in seconden:"
+    },
+    "action": "Bekijk documentatie"
+  },
+  "pricing": {
+    "title": "Eenvoudige, transparante prijzen",
+    "subtitle": "Begin gratis, schaal mee met uw groei",
+    "free": {
+      "title": "Gratis voor altijd",
+      "price": "€0",
+      "period": "/maand",
+      "description": "Perfect voor individuen en kleine teams",
+      "features": [
+        "Onbeperkte MCP-servers",
+        "Alle AI-modellen ondersteund",
+        "5 RAG kennisbases",
+        "Openbaar profiel & delen",
+        "Community ondersteuning"
+      ],
+      "cta": "Gratis beginnen"
+    },
+    "pro": {
+      "title": "Pro",
+      "price": "€19",
+      "period": "/maand",
+      "description": "Voor professionele ontwikkelaars en teams",
+      "features": [
+        "Alles in Gratis",
+        "Onbeperkte RAG kennisbases",
+        "Privé collecties",
+        "Prioriteitsondersteuning",
+        "Geavanceerde analytics",
+        "Teamsamenwerking"
+      ],
+      "cta": "Start Pro proefperiode"
+    },
+    "enterprise": {
+      "title": "Enterprise",
+      "price": "Op maat",
+      "period": "",
+      "description": "Voor organisaties met geavanceerde behoeften",
+      "features": [
+        "Alles in Pro",
+        "Self-hosting optie",
+        "SSO/SAML authenticatie",
+        "SLA garanties",
+        "Toegewijde ondersteuning",
+        "Aangepaste integraties"
+      ],
+      "cta": "Contact sales"
+    }
+  },
   "gettingStarted": {
-    "title": "Nieuw bij Plugged.in?",
-    "description": "Volg onze setupgids om uw omgeving correct te configureren en direct te beginnen met bouwen met Plugged.in.",
-    "action": "Bekijk Setupgids"
+    "title": "Aan de slag is eenvoudig",
+    "subtitle": "Van nul naar AI-powered in minder dan 5 minuten",
+    "description": "Volg onze quickstart gids om uw eerste MCP-server te verbinden en te beginnen met bouwen.",
+    "steps": {
+      "step1": {
+        "title": "1. Account aanmaken",
+        "desc": "Meld u aan met e-mail of OAuth provider"
+      },
+      "step2": {
+        "title": "2. API-sleutel verkrijgen",
+        "desc": "Genereer uw API-sleutel vanuit het dashboard"
+      },
+      "step3": {
+        "title": "3. MCP Proxy installeren",
+        "desc": "Voer uit: npx @pluggedin/mcp-proxy@latest"
+      },
+      "step4": {
+        "title": "4. Client verbinden",
+        "desc": "Voeg toe aan Claude, Cursor of elke MCP-client"
+      }
+    },
+    "resources": {
+      "title": "Leermiddelen",
+      "quickstart": "5-minuten quickstart gids",
+      "tutorials": "Stap-voor-stap tutorials",
+      "videos": "Video walkthroughs",
+      "examples": "Voorbeeldprojecten en templates"
+    },
+    "action": "Bekijk setupgids"
   },
   "cta": {
-    "title": "Klaar om uw MCP-workflow te superchargen?",
-    "subtitle": "Word vandaag nog lid van de Plugged.in community. Beheer, deel en ontdek MCP-servers als nooit tevoren.",
-    "description": "Word lid van de community en begin vandaag nog met bouwen met Plugged.in.",
-    "primary": "Aan de slag",
-    "secondary": "Meer informatie",
-    "primaryAction": "Gratis aan de slag",
-    "secondaryAction": "Lees documentatie",
+    "title": "Klaar om deel te nemen aan de AI-revolutie?",
+    "subtitle": "Begin met bouwen op het meest uitgebreide MCP-platform. Gratis voor altijd voor individuen.",
+    "description": "Word lid van duizenden ontwikkelaars die de toekomst van AI bouwen met Plugged.in v1.0.0.",
+    "primary": "Gratis beginnen",
+    "secondary": "Bekijk documentatie",
+    "primaryAction": "Gratis account aanmaken",
+    "secondaryAction": "Verken documentatie",
+    "features": {
+      "title": "Alles wat u nodig heeft",
+      "feature1": "✓ Onbeperkte MCP-servers",
+      "feature2": "✓ Alle AI-modellen ondersteund",
+      "feature3": "✓ RAG kennisbases",
+      "feature4": "✓ Sociale functies",
+      "feature5": "✓ 6-talige ondersteuning",
+      "feature6": "✓ Enterprise beveiliging"
+    },
     "step1": {
       "title": "Aanmelden",
-      "description": "Maak binnen enkele seconden uw gratis account aan."
+      "description": "Maak binnen enkele seconden uw gratis account aan. Geen creditcard vereist."
     },
     "step2": {
-      "title": "Servers verbinden",
-      "description": "Voeg uw bestaande MCP-servers toe of ontdek nieuwe."
+      "title": "Verbinden & ontdekken",
+      "description": "Voeg MCP-servers toe, volg ontwikkelaars, word lid van de community."
     },
     "step3": {
-      "title": "Verkennen & Delen",
-      "description": "Beheer uw ecosysteem en ga in gesprek met de community."
+      "title": "Bouwen & delen",
+      "description": "Creëer collecties, upload kennis, deel met de wereld."
+    },
+    "security": {
+      "title": "Enterprise-grade beveiliging",
+      "description": "Uw data is beschermd met multi-layer authenticatie, Firejail sandboxing en uitgebreide audittrails. Self-host voor volledige controle."
     }
   }
 }

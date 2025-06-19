@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
+import { RateLimiters } from '@/lib/rate-limiter';
+import { createErrorResponse } from '@/lib/api-errors';
 
 // Only run middleware on matching paths
 export const config = {
@@ -23,6 +25,23 @@ export async function middleware(request: NextRequest) {
 
   // Get the pathname of the request
   const pathname = request.nextUrl.pathname;
+  
+  // Apply rate limiting to API routes
+  if (pathname.startsWith('/api/')) {
+    // Skip rate limiting for NextAuth routes (they have their own)
+    if (!pathname.startsWith('/api/auth/')) {
+      const rateLimiter = pathname.startsWith('/api/mcp/') ? RateLimiters.api : RateLimiters.public;
+      const rateLimitResult = await rateLimiter(request);
+      
+      if (!rateLimitResult.allowed) {
+        return createErrorResponse(
+          'Too many requests. Please try again later.',
+          429,
+          'RATE_LIMIT_EXCEEDED'
+        );
+      }
+    }
+  }
 
   // Define routes that require authentication
   const protectedRoutes = [

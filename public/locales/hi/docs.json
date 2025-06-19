@@ -1,0 +1,43 @@
+{
+  "title": "दस्तावेज़ीकरण",
+  "description": "Plugged.in का उपयोग करना सीखें, MCP सर्वर को एकीकृत करें और AI-संचालित एप्लिकेशन बनाएं",
+  "search": {
+    "placeholder": "दस्तावेज़ खोजें...",
+    "noResults": "\"{{query}}\" के लिए कोई परिणाम नहीं मिला",
+    "results": "{{count}} परिणाम मिले"
+  },
+  "categories": {
+    "getting-started": "शुरुआत करना",
+    "tutorials": "ट्यूटोरियल",
+    "api-reference": "API संदर्भ",
+    "examples": "उदाहरण",
+    "guides": "गाइड",
+    "integrations": "एकीकरण"
+  },
+  "navigation": {
+    "previous": "पिछला",
+    "next": "अगला",
+    "backToTop": "शीर्ष पर वापस",
+    "backToDocs": "दस्तावेज़ों पर वापस",
+    "editOnGitHub": "GitHub पर संपादित करें"
+  },
+  "toc": {
+    "title": "इस पृष्ठ पर",
+    "empty": "कोई शीर्षक नहीं मिला"
+  },
+  "metadata": {
+    "lastUpdated": "अंतिम अपडेट: {{date}}",
+    "readingTime": "{{minutes}} मिनट पढ़ना",
+    "author": "लेखक: {{author}}"
+  },
+  "feedback": {
+    "title": "क्या यह मददगार था?",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "thanks": "आपकी प्रतिक्रिया के लिए धन्यवाद!"
+  },
+  "errors": {
+    "notFound": "दस्तावेज़ पृष्ठ नहीं मिला",
+    "loadFailed": "दस्तावेज़ लोड करने में विफल"
+  }
+}

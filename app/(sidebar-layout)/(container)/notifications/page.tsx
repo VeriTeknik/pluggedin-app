@@ -1,8 +1,8 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { tr } from 'date-fns/locale';
-import { Bell, Check, Trash2 } from 'lucide-react';
+import { enUS, hi,ja, nl, tr, zhCN } from 'date-fns/locale';
+import { Bell, Check, Circle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -38,11 +38,23 @@ import { useToast } from '@/hooks/use-toast';
 export default function NotificationsPage() {
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation('notifications');
   const profileUuid = currentProfile?.uuid || '';
   const { notifications, refreshNotifications, unreadCount, markAllAsRead } =
     useNotifications();
   const [activeTab, setActiveTab] = useState('all');
+  
+  // Get date locale based on current language
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'tr': return tr;
+      case 'nl': return nl;
+      case 'zh': return zhCN;
+      case 'ja': return ja;
+      case 'hi': return hi;
+      default: return enUS;
+    }
+  };
 
   // Function to get badge color based on notification type
   const getBadgeVariant = (type: string): "default" | "destructive" | "secondary" | "outline" => {
@@ -55,8 +67,20 @@ export default function NotificationsPage() {
         return 'destructive';
       case 'INFO':
         return 'secondary';
+      case 'CUSTOM':
+        return 'outline'; // Use outline for custom with yellow styling
       default:
         return 'outline';
+    }
+  };
+
+  // Function to get icon for notification type
+  const getNotificationIcon = (type: string) => {
+    switch (type.toUpperCase()) {
+      case 'CUSTOM':
+        return <Circle className="h-4 w-4 mr-2 text-yellow-500" />;
+      default:
+        return null;
     }
   };
 
@@ -222,12 +246,15 @@ export default function NotificationsPage() {
                                   ? 'bg-red-500'
                                   : notification.type === 'INFO'
                                   ? 'bg-blue-500'
+                                  : notification.type === 'CUSTOM'
+                                  ? 'bg-yellow-500'
                                   : 'bg-muted-foreground'
                               }`}
                             />
                             <div className="flex-1 p-4">
                               <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center">
+                                  {getNotificationIcon(notification.type)}
                                   <h3 className="font-medium text-base">
                                     {notification.title}
                                   </h3>
@@ -235,7 +262,11 @@ export default function NotificationsPage() {
                                     variant={getBadgeVariant(
                                       notification.type
                                     )}
-                                    className="ml-2"
+                                    className={`ml-2 ${
+                                      notification.type === 'CUSTOM' 
+                                        ? 'border-yellow-500 text-yellow-700 dark:text-yellow-400' 
+                                        : ''
+                                    }`}
                                   >
                                     {notification.type}
                                   </Badge>
@@ -244,7 +275,7 @@ export default function NotificationsPage() {
                                       variant="secondary"
                                       className="ml-2"
                                     >
-                                      Okunmadı
+                                      {t('status.unread')}
                                     </Badge>
                                   )}
                                 </div>
@@ -253,7 +284,7 @@ export default function NotificationsPage() {
                                     new Date(notification.created_at),
                                     {
                                       addSuffix: true,
-                                      locale: tr,
+                                      locale: getDateLocale(),
                                     }
                                   )}
                                 </span>
@@ -267,7 +298,7 @@ export default function NotificationsPage() {
                                     href={notification.link}
                                     className="text-sm text-primary hover:underline"
                                   >
-                                    Ayrıntıları görüntüle
+                                    {t('actions.viewDetails')}
                                   </Link>
                                 ) : (
                                   <div />
@@ -282,7 +313,7 @@ export default function NotificationsPage() {
                                       }
                                     >
                                       <Check className="h-4 w-4 mr-1" />
-                                      Okundu
+                                      {t('actions.markAsRead')}
                                     </Button>
                                   )}
                                   <Button
@@ -294,7 +325,7 @@ export default function NotificationsPage() {
                                     }
                                   >
                                     <Trash2 className="h-4 w-4 mr-1" />
-                                    Sil
+                                    {t('actions.delete')}
                                   </Button>
                                 </div>
                               </div>
