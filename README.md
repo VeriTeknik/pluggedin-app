@@ -3,31 +3,43 @@
 <div align="center">
   <img src="https://plugged.in/_next/image?url=%2Fpluggedin-wl.png&w=256&q=75" alt="plugged.in Logo" width="256" height="75">
   <h3>The Crossroads for AI Data Exchanges</h3>
-  <p>A unified management interface for all your MCP servers</p>
+  <p>A unified management interface for all your MCP servers with RAG capabilities</p>
 
+  [![Version](https://img.shields.io/badge/version-2.1.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
   [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
   [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
-  [![Next.js](https://img.shields.io/badge/Next.js-14+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+  [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
   [![MCP](https://img.shields.io/badge/MCP-Compatible-green?style=for-the-badge)](https://modelcontextprotocol.io/)
 </div>
 
 ## 📋 Overview
 
-The plugged.in App is a comprehensive web application for managing Model Context Protocol (MCP) servers. It works in conjunction with the [plugged.in MCP Proxy](https://github.com/VeriTeknik/pluggedin-mcp) to provide a unified interface for discovering, configuring, and utilizing AI tools across multiple MCP servers.
+The plugged.in App is a comprehensive web application for managing Model Context Protocol (MCP) servers with integrated RAG (Retrieval-Augmented Generation) capabilities. It works in conjunction with the [plugged.in MCP Proxy](https://github.com/VeriTeknik/pluggedin-mcp) to provide a unified interface for discovering, configuring, and utilizing AI tools across multiple MCP servers while leveraging your own documents as context.
 
-This application enables seamless integration with any MCP client (Claude, Cline, Cursor, etc.) while providing advanced management capabilities through an intuitive web interface.
+This application enables seamless integration with any MCP client (Claude, Cline, Cursor, etc.) while providing advanced management capabilities, document-based knowledge augmentation, and real-time notifications through an intuitive web interface.
 
 ## ✨ Key Features
 
+### 🚀 Core Capabilities
 - **Multi-Workspace Support**: Switch between different sets of MCP configurations to prevent context pollution
 - **Interactive Playground**: Test and experiment with your MCP tools directly in the browser
 - **Tool Management**: Discover, organize, and manage AI tools from multiple sources
 - **Resource & Template Discovery**: View available resources and resource templates for connected MCP servers
 - **Custom Instructions**: Add server-specific instructions that can be used as MCP prompts
+- **Prompt Management**: Discover and manage prompts from connected MCP servers
+
+### 📚 New in v2.1.0
+- **Document Library with RAG**: Upload and manage documents that serve as knowledge context for AI interactions
+- **Real-Time Notifications**: Get instant notifications for MCP activities with optional email delivery
+- **Progressive Server Initialization**: Faster startup with resilient server connections
+- **Enhanced Security**: Industry-standard sanitization and secure environment variable handling
+- **Improved UI/UX**: Redesigned playground, better responsive design, and theme customization
+
+### 🔧 Advanced Features
 - **Server Notes**: Add custom notes to each configured MCP server
 - **Extensive Logging**: Detailed logging capabilities for MCP interactions in the Playground
-- **Prompt Management**: Discover and manage prompts from connected MCP servers
 - **Expanded Discovery**: Search for MCP servers across GitHub, Smithery, and npmjs.com
+- **Email Verification**: Secure account registration with email verification
 - **Self-Hostable**: Run your own instance with full control over your data
 
 ## 🚀 Quick Start with Docker
@@ -48,6 +60,16 @@ docker compose up --build -d
 ```
 
 Then open http://localhost:12005 in your browser to access the plugged.in App.
+
+### 🔄 Upgrading to v2.1.0
+
+For existing installations, see our [Migration Guide](./MIGRATION_GUIDE_v2.1.0.md) for detailed upgrade instructions.
+
+```bash
+# Quick upgrade for Docker users
+docker pull ghcr.io/veriteknik/pluggedin-app:v2.1.0
+docker-compose down && docker-compose up -d
+```
 
 ## 🔌 Connecting MCP Clients
 
@@ -84,7 +106,7 @@ npx -y @pluggedin/mcp-proxy@latest --pluggedin-api-key YOUR_API_KEY --pluggedin-
 
 ## 🏗️ System Architecture
 
-The plugged.in ecosystem consists of two main components:
+The plugged.in ecosystem consists of integrated components working together to provide a comprehensive MCP management solution with RAG capabilities:
 
 ```mermaid
 sequenceDiagram
@@ -118,6 +140,56 @@ sequenceDiagram
         PluggedinMCP ->> MCPClient: Return discovery result
     end
 ```
+
+## ⚙️ Configuration
+
+### Environment Variables
+
+The plugged.in App supports various configuration options through environment variables:
+
+```bash
+# Core Configuration
+DATABASE_URL=postgresql://user:password@localhost:5432/pluggedin
+NEXTAUTH_URL=http://localhost:12005
+NEXTAUTH_SECRET=your-secret-key
+
+# Feature Flags (New in v2.1.0)
+ENABLE_RAG=true                    # Enable RAG features
+ENABLE_NOTIFICATIONS=true          # Enable notification system
+ENABLE_EMAIL_VERIFICATION=true     # Enable email verification
+
+# Email Configuration (for notifications)
+EMAIL_SERVER_HOST=smtp.example.com
+EMAIL_SERVER_PORT=587
+EMAIL_SERVER_USER=your-email@example.com
+EMAIL_SERVER_PASSWORD=your-password
+EMAIL_FROM=noreply@example.com
+
+# RAG Configuration (optional)
+RAG_API_URL=http://localhost:8000  # Your RAG service endpoint
+RAG_CHUNK_SIZE=1000               # Document chunk size
+RAG_CHUNK_OVERLAP=200             # Chunk overlap for context
+
+# MCP Server Sandboxing (Linux)
+FIREJAIL_USER_HOME=/home/pluggedin
+FIREJAIL_LOCAL_BIN=/home/pluggedin/.local/bin
+FIREJAIL_APP_PATH=/home/pluggedin/pluggedin-app
+FIREJAIL_MCP_WORKSPACE=/home/pluggedin/mcp-workspace
+```
+
+### Feature Configuration
+
+#### Document Library & RAG
+1. Enable RAG in playground settings
+2. Upload documents through the Library page
+3. Documents are automatically indexed for context retrieval
+4. Supported formats: PDF, TXT, MD, DOCX, and more
+
+#### Notifications
+1. Real-time notifications for MCP activities
+2. Optional email delivery for important alerts
+3. Configurable notification preferences per profile
+4. Activity logging for debugging and monitoring
 
 ## 💻 Production Deployment
 
@@ -310,9 +382,24 @@ The plugged.in project is actively developing several exciting features:
 
 ## 📝 Recent Updates
 
-### Security Enhancements (Latest)
+### Version 2.1.0 (June 2025)
 
+#### 🎯 Major Features
+- **Document Library with RAG Integration**: Upload and manage documents that enhance AI context
+- **Real-Time Notification System**: Get instant updates on MCP activities with email support
+- **Progressive Server Initialization**: Faster, more resilient MCP server connections
+- **Enhanced Playground UI**: Redesigned layout with better responsiveness and streaming indicators
+
+#### 🔒 Security Enhancements
 - **Improved RAG Query Security**: Replaced custom sanitization with `sanitize-html` library for robust XSS protection
 - **Secure Environment Variable Parsing**: Implemented `dotenv` library for proper handling of quotes, multiline values, and special characters
 - **Enhanced Input Validation**: Added comprehensive validation for all user inputs across the application
 - **Strengthened API Security**: Implemented rate limiting and improved authentication checks
+
+#### 🐛 Bug Fixes
+- Fixed JSON-RPC protocol interference in MCP proxy
+- Resolved memory leaks in long-running playground sessions
+- Corrected streaming message handling
+- Fixed localhost URL validation for development environments
+
+See [Release Notes](./RELEASE_NOTES_v2.1.0.md) for complete details.
