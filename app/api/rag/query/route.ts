@@ -11,18 +11,37 @@ const RagQuerySchema = z.object({
     .min(1, 'Query cannot be empty')
     .max(1000, 'Query too long') // Prevent abuse with overly long queries
     .transform((query) => {
-      // Remove all HTML/script tags and dangerous patterns
-      return query
-        .replace(/<[^>]*>/g, '') // Remove all HTML tags
-        .replace(/javascript:/gi, '') // Remove javascript: protocol
-        .replace(/on\w+\s*=/gi, '') // Remove event handlers
-        .replace(/data:.*?;base64/gi, '') // Remove data URIs
-        .trim();
+      // Multi-pass sanitization to handle nested/overlapping malicious patterns
+      let sanitized = query;
+      let previousSanitized = '';
+      const maxPasses = 10; // Prevent infinite loops
+      let passCount = 0;
+      
+      while (sanitized !== previousSanitized && passCount < maxPasses) {
+        previousSanitized = sanitized;
+        
+        // Remove dangerous patterns in each pass
+        sanitized = sanitized
+          .replace(/<[^>]*>/g, '') // Remove all HTML tags
+          .replace(/javascript:/gi, '') // Remove javascript: protocol
+          .replace(/on\w+\s*=/gi, '') // Remove event handlers
+          .replace(/data:.*?;base64/gi, '') // Remove data URIs
+          .replace(/vbscript:/gi, '') // Remove vbscript: protocol
+          .replace(/&lt;/gi, '<') // Decode HTML entities that could become tags
+          .replace(/&gt;/gi, '>') // Decode HTML entities that could become tags
+          .replace(/&#(\d+);?/gi, '') // Remove numeric HTML entities
+          .replace(/&#x([0-9a-fA-F]+);?/gi, '') // Remove hex HTML entities
+          .replace(/\\/g, ''); // Remove backslashes that could be used for escaping
+          
+        passCount++;
+      }
+      
+      return sanitized.trim();
     })
     .refine(
       (query) => {
         // Whitelist approach: only allow alphanumeric, spaces, and common punctuation
-        const allowedPattern = /^[a-zA-Z0-9\s\-_.,!?'"():;@#$%&*+=\/\\[\]{}|~`\u0080-\uFFFF]+$/;
+        const allowedPattern = /^[a-zA-Z0-9\s\-_.,!?'"():;@#$%&*+=\/[\]{}|~`\u0080-\uFFFF]+$/;
         return allowedPattern.test(query);
       },
       'Query contains invalid characters'
