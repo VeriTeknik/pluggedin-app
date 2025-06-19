@@ -2,10 +2,17 @@
   "notifications": {
     "title": "Notifications",
     "description": "You can see all system notifications here",
+    "status": {
+      "unread": "Unread"
+    },
     "actions": {
       "markAllAsRead": "Mark All as Read",
       "actions": "Actions",
-      "deleteAll": "Delete All Notifications"
+      "deleteAll": "Delete All Notifications",
+      "viewDetails": "View Details",
+      "markAsRead": "Mark as Read",
+      "delete": "Delete",
+      "viewAll": "View All Notifications"
     },
     "tabs": {
       "all": "All",

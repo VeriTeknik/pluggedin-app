@@ -1,0 +1,50 @@
+{
+  "categories": [
+    {
+      "id": "getting-started",
+      "name": "Getting Started",
+      "description": "Quick start guides and installation instructions",
+      "articles": [
+        {
+          "id": "installation",
+          "title": "Installation",
+          "description": "Learn how to install and set up Plugged.in"
+        },
+        {
+          "id": "quick-start",
+          "title": "Quick Start Guide",
+          "description": "Get up and running with Plugged.in in 5 minutes"
+        },
+        {
+          "id": "configuration",
+          "title": "Configuration",
+          "description": "Configure your Plugged.in instance"
+        }
+      ]
+    },
+    {
+      "id": "tutorials",
+      "name": "Tutorials",
+      "description": "Step-by-step guides for common tasks",
+      "articles": []
+    },
+    {
+      "id": "api-reference",
+      "name": "API Reference",
+      "description": "Complete API documentation",
+      "articles": []
+    },
+    {
+      "id": "guides",
+      "name": "Guides",
+      "description": "In-depth guides and best practices",
+      "articles": []
+    },
+    {
+      "id": "integrations",
+      "name": "Integrations",
+      "description": "Connect Plugged.in with other services",
+      "articles": []
+    }
+  ]
+}

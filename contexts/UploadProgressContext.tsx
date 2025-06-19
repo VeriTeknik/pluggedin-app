@@ -4,8 +4,10 @@ import { useSession } from 'next-auth/react';
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useProfiles } from '@/hooks/use-profiles';
 import { useProjects } from '@/hooks/use-projects';
-import type { UploadProgressState } from '@/types/docs';
+import { notifications } from '@/lib/notification-helper';
+import type { UploadProgressState } from '@/types/library';
 
 interface UploadProgressContextType {
   uploads: UploadProgressState[];
@@ -28,7 +30,8 @@ const UploadProgressContext = createContext<UploadProgressContextType | undefine
 export function UploadProgressProvider({ children }: { children: React.ReactNode }) {
   const { data: session } = useSession();
   const { currentProject } = useProjects();
-  const { t } = useTranslation('docs');
+  const { currentProfile } = useProfiles();
+  const { t } = useTranslation('library');
   const [uploads, setUploads] = useState<UploadProgressState[]>([]);
   const [pollTrackers, setPollTrackers] = useState<Map<string, PollTracker>>(new Map());
   const [pollTrigger, setPollTrigger] = useState(0);
@@ -118,6 +121,18 @@ export function UploadProgressProvider({ children }: { children: React.ReactNode
                   newMap.delete(tracker.uploadId);
                   return newMap;
                 });
+                
+                // Send notification for document digestion completion
+                if (progress.status === 'completed' && currentProfile?.uuid) {
+                  const upload = uploads.find(u => u.upload_id === tracker.uploadId);
+                  if (upload) {
+                    await notifications.success(
+                      'Document Digested',
+                      `Document "${upload.file_name}" has been successfully processed and added to your knowledge base`,
+                      { profileUuid: currentProfile.uuid }
+                    );
+                  }
+                }
               }
             }
           } else if (result.status === 404 && tracker.pollCount > 4) {
@@ -143,6 +158,18 @@ export function UploadProgressProvider({ children }: { children: React.ReactNode
               }
               return upload;
             }));
+            
+            // Send notification for document digestion completion (404 case)
+            if (currentProfile?.uuid) {
+              const upload = uploads.find(u => u.upload_id === tracker.uploadId);
+              if (upload) {
+                await notifications.success(
+                  'Document Digested',
+                  `Document "${upload.file_name}" has been successfully processed and added to your knowledge base`,
+                  { profileUuid: currentProfile.uuid }
+                );
+              }
+            }
           }
         } catch (error) {
           console.error('Upload polling error:', error);
@@ -160,7 +187,7 @@ export function UploadProgressProvider({ children }: { children: React.ReactNode
     };
 
     pollAll();
-  }, [pollTrigger, pollTrackers, t]);
+  }, [pollTrigger, pollTrackers, t, uploads, currentProfile?.uuid]);
 
   const addUpload = useCallback((upload: Omit<UploadProgressState, 'created_at'>) => {
     const newUpload: UploadProgressState = {

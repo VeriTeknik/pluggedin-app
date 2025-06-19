@@ -31,6 +31,11 @@ export function Footer({ className }: { className?: string }) {
             <h4 className="font-medium text-sm">Resources</h4>
             <ul className="space-y-2 text-sm">
               <li>
+                <Link href="/docs" className="text-muted-foreground hover:text-foreground transition-colors">
+                  Documentation
+                </Link>
+              </li>
+              <li>
                 <Link href="/setup-guide" className="text-muted-foreground hover:text-foreground transition-colors">
                   Setup Guide
                 </Link>

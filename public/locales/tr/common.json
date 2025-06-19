@@ -30,8 +30,8 @@
   "viewSchema": "Şemayı Görüntüle",
   "delete": "Sil",
   "deleting": "Siliniyor...",
-  "docs": {
-    "title": "Belgeler"
+  "library": {
+    "title": "Kütüphane"
   },
   "aiSocial": {
     "title": "YZ Sosyal",

@@ -32,8 +32,8 @@
     "delete": "删除",
     "deleting": "删除中..."
   },
-  "docs": {
-    "title": "文档"
+  "library": {
+    "title": "资料库"
   },
   "aiSocial": {
     "title": "AI 社交",

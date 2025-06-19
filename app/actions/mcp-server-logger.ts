@@ -97,7 +97,18 @@ export async function createEnhancedMcpLogger(
           message,
           details: serverName ? { serverName } : undefined,
           created_at: new Date(),
-        }).then().catch(err => console.error('Failed to store log in database:', err));
+        }).then().catch(err => {
+          console.error('Failed to store log in database:', err);
+          // If source column is missing, try without it as a fallback
+          if (err.code === '42703' && err.message?.includes('source')) {
+            db.insert(systemLogsTable).values({
+              level,
+              message,
+              details: serverName ? { serverName } : undefined,
+              created_at: new Date(),
+            } as any).catch(fallbackErr => console.error('Fallback log storage also failed:', fallbackErr));
+          }
+        });
 
         // Log to console
         const colors = { debug: '\x1b[36m', info: '\x1b[32m', warn: '\x1b[33m', error: '\x1b[31m', reset: '\x1b[0m' };
@@ -133,7 +144,18 @@ export async function createEnhancedMcpLogger(
           message,
           details: serverName ? { serverName } : undefined,
           created_at: new Date(),
-        }).then().catch(err => console.error('Failed to store log in database:', err));
+        }).then().catch(err => {
+          console.error('Failed to store log in database:', err);
+          // If source column is missing, try without it as a fallback
+          if (err.code === '42703' && err.message?.includes('source')) {
+            db.insert(systemLogsTable).values({
+              level,
+              message,
+              details: serverName ? { serverName } : undefined,
+              created_at: new Date(),
+            } as any).catch(fallbackErr => console.error('Fallback log storage also failed:', fallbackErr));
+          }
+        });
 
         // Log to console in development
         if (process.env.NODE_ENV === 'development') {

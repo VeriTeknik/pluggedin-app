@@ -2,10 +2,17 @@
   "notifications": {
     "title": "Notificaties",
     "description": "U kunt hier alle systeemnotificaties zien",
+    "status": {
+      "unread": "Ongelezen"
+    },
     "actions": {
       "markAllAsRead": "Alles als gelezen markeren",
       "actions": "Acties",
-      "deleteAll": "Alle notificaties verwijderen"
+      "deleteAll": "Alle notificaties verwijderen",
+      "viewDetails": "Details bekijken",
+      "markAsRead": "Als gelezen markeren",
+      "delete": "Verwijderen",
+      "viewAll": "Alle notificaties bekijken"
     },
     "tabs": {
       "all": "Alles",

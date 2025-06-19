@@ -1,99 +1,43 @@
 {
-  "uploadDialog": {
-    "title": "Belge Yükle",
-    "description": "Koleksiyonunuza yeni bir belge yükleyin (Çalışma alanı sınırı: {{limit}})",
-    "button": "Belge Yükle",
-    "currentUsage": "Mevcut Kullanım:",
-    "storageUsed": "Çalışma alanı depolamasının {{percentage}}%'i kullanıldı",
-    "exceedLimitWarning": "Bu dosya ({{fileSize}}) çalışma alanı depolama sınırınızı aşacak. Mevcut kullanım: {{currentUsage}}. Lütfen bazı belgeleri silin veya daha küçük bir dosya seçin.",
-    "nearLimitWarning": "Uyarı: Depolama sınırınıza yaklaşıyorsunuz. Bu dosyayı yükledikten sonra çalışma alanı depolamanızın {{percentage}}%'ini kullanmış olacaksınız.",
-    "fileTooLarge": "Dosya kalan depolama için çok büyük",
-    "dropFileHere": "Dosyayı buraya bırakın",
-    "clickToSelect": "Seçmek için tıklayın veya sürükleyip bırakın",
-    "supportedFormats": "PDF, TXT, MD, DOCX, Resimler (dosya başına maks 10MB)",
-    "documentName": "Belge Adı",
-    "documentNamePlaceholder": "Belge adını girin",
-    "descriptionLabel": "Açıklama (isteğe bağlı)",
-    "descriptionPlaceholder": "Belge açıklamasını girin",
-    "tags": "Etiketler (isteğe bağlı)",
-    "tagsPlaceholder": "Virgülle ayrılmış etiketleri girin",
-    "cancel": "İptal",
-    "startingUpload": "Yükleme Başlatılıyor...",
-    "uploadButton": "Belge Yükle"
+  "title": "Dokümantasyon",
+  "description": "Plugged.in kullanımını öğrenin, MCP sunucularını entegre edin ve AI destekli uygulamalar geliştirin",
+  "search": {
+    "placeholder": "Dokümanlarda ara...",
+    "noResults": "\"{{query}}\" için sonuç bulunamadı",
+    "results": "{{count}} sonuç bulundu"
   },
-  "stats": {
-    "totalDocuments": "Toplam Belgeler",
-    "documentsInCollection": "Koleksiyonunuzdaki belgeler",
-    "storageUsed": "Kullanılan Depolama",
-    "storageLimit": "{{limit}} sınır",
-    "recentUploads": "Son Yüklemeler",
-    "uploadedInLast7Days": "Son 7 günde yüklenen",
-    "percentageUsed": "{{percentage}}% kullanıldı",
-    "limitExceeded": "Sınır aşıldı!",
-    "nearLimit": "Sınıra yakın!"
+  "categories": {
+    "getting-started": "Başlangıç",
+    "tutorials": "Eğitimler",
+    "api-reference": "API Referansı",
+    "examples": "Örnekler",
+    "guides": "Kılavuzlar",
+    "integrations": "Entegrasyonlar"
   },
-  "page": {
-    "title": "Belgeler",
-    "description": "Belge dosyalarınızı yükleyin, yönetin ve paylaşın",
-    "loading": "Belgeler yükleniyor...",
-    "tableHeaders": {
-      "name": "Ad",
-      "description": "Açıklama",
-      "size": "Boyut",
-      "tags": "Etiketler",
-      "created": "Oluşturuldu",
-      "actions": "İşlemler"
-    }
+  "navigation": {
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "backToTop": "Başa dön",
+    "backToDocs": "Dokümantasyona Dön",
+    "editOnGitHub": "GitHub'da Düzenle"
   },
-  "controls": {
-    "searchPlaceholder": "Belgelerde ara...",
-    "grid": "Izgara",
-    "table": "Tablo"
+  "toc": {
+    "title": "Bu sayfada",
+    "empty": "Başlık bulunamadı"
   },
-  "grid": {
-    "noDocuments": "Belge bulunamadı.",
-    "openMenu": "Menüyü aç",
-    "download": "İndir",
-    "delete": "Sil"
+  "metadata": {
+    "lastUpdated": "Son güncelleme: {{date}}",
+    "readingTime": "{{minutes}} dk okuma",
+    "author": "Yazar: {{author}}"
   },
-  "table": {
-    "noDocuments": "Belge bulunamadı."
+  "feedback": {
+    "title": "Bu yardımcı oldu mu?",
+    "yes": "Evet",
+    "no": "Hayır",
+    "thanks": "Geri bildiriminiz için teşekkürler!"
   },
-  "deleteDialog": {
-    "title": "Belgeyi Sil",
-    "description": "\"{{name}}\" belgesini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
-    "cancel": "İptal",
-    "delete": "Sil",
-    "deleting": "Siliniyor..."
-  },
-  "uploadProgress": {
-    "title": "Yükleme İlerlemesi",
-    "clearCompleted": "Tamamlananları Temizle",
-    "processingComplete": "İşleme Tamamlandı",
-    "processingFailed": "İşleme Başarısız",
-    "step": "Adım",
-    "of": "/",
-    "currentStepProgress": "Mevcut Adım İlerlemesi",
-    "chunksProcessed": "parça işlendi",
-    "remaining": "kalan",
-    "processingSteps": "İşleme Adımları",
-    "completedMessage": "Belge bilgi tabanınıza başarıyla eklendi",
-    "failedMessage": "İşleme sırasında bir hata oluştu",
-    "timeoutMessage": "İşleme zaman aşımı - lütfen belgelerinizi kontrol edin",
-    "processingCompletedMessage": "İşleme tamamlandı",
-    "steps": {
-      "textExtraction": "Metin içeriği çıkarılıyor",
-      "chunking": "İçerik parçalara ayrılıyor",
-      "idGeneration": "Benzersiz tanımlayıcılar oluşturuluyor",
-      "embeddings": "Vektör gömmeleri oluşturuluyor",
-      "databaseInsertion": "Bilgi tabanında saklanıyor"
-    },
-    "stepDescriptions": {
-      "textExtraction": "Belge içeriği okunuyor ve ayrıştırılıyor",
-      "chunking": "İçerik yönetilebilir parçalara bölünüyor",
-      "idGeneration": "İçerik için benzersiz tanımlayıcılar oluşturuluyor",
-      "embeddings": "Metin vektör temsillerine dönüştürülüyor",
-      "databaseInsertion": "İşlenmiş veriler veritabanına kaydediliyor"
-    }
+  "errors": {
+    "notFound": "Dokümantasyon sayfası bulunamadı",
+    "loadFailed": "Dokümantasyon yüklenemedi"
   }
-} 
+}

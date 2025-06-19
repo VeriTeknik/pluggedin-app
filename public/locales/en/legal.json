@@ -28,6 +28,34 @@
               "Not use MCP servers for any illegal or unauthorized purpose",
               "Take responsibility for MCP servers you configure or deploy"
             ]
+          },
+          "changes": {
+            "title": "Changes to Terms",
+            "description": "We reserve the right to modify these terms at any time. When we do, we will post the updated terms on this page and update the 'Last Updated' date."
+          },
+          "account": {
+            "title": "Account Terms",
+            "description": "When you create an account with us, you must provide information that is accurate, complete, and current at all times.",
+            "items": [
+              "You are responsible for safeguarding the password",
+              "You agree to accept responsibility for all activities that occur under your account",
+              "You must notify us immediately upon becoming aware of any breach of security"
+            ],
+            "note": "We reserve the right to refuse service, terminate accounts, or remove content in our sole discretion."
+          },
+          "mcp": {
+            "title": "MCP Server Usage",
+            "description": "When using MCP servers through our platform:",
+            "items": [
+              "You understand that MCP servers may have their own terms and conditions",
+              "You are responsible for ensuring your usage complies with all applicable laws",
+              "We do not guarantee the availability or functionality of any MCP server",
+              "You use MCP servers at your own risk"
+            ]
+          },
+          "intellectual": {
+            "title": "Intellectual Property",
+            "description": "The Service and its original content, features, and functionality are and will remain the exclusive property of Plugged.in and its licensors."
           }
         }
       },
@@ -36,7 +64,41 @@
         "description": "Important legal notices",
         "content": {
           "title": "Disclaimer and Limitation of Liability",
-          "thirdParty": "The service may contain links to third-party websites or services that are not owned or controlled by us. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party websites or services."
+          "thirdParty": "The service may contain links to third-party websites or services that are not owned or controlled by us. We have no control over, and assume no responsibility for, the content, privacy policies, or practices of any third-party websites or services.",
+          "releaseCandidate": {
+            "title": "Release Candidate Notice",
+            "important": "IMPORTANT",
+            "status": "Plugged.in is currently in Release Candidate (RC) status.",
+            "note": "This means that while the core functionality is implemented and tested, there may still be bugs, issues, or incomplete features.",
+            "items": [
+              "The service may experience unexpected downtime or errors",
+              "Features may be added, modified, or removed without notice",
+              "Data loss may occur, though we make efforts to prevent it",
+              "Performance may vary and is not guaranteed"
+            ]
+          },
+          "general": {
+            "title": "General Disclaimer",
+            "description": "The information and services provided through Plugged.in are provided on an 'as is' and 'as available' basis.",
+            "risk": "You expressly agree that your use of, or inability to use, the service is at your sole risk."
+          },
+          "warranty": {
+            "title": "No Warranties",
+            "description": "We make no warranties, expressed or implied, and hereby disclaim and negate all other warranties including, without limitation, implied warranties or conditions of merchantability, fitness for a particular purpose, or non-infringement of intellectual property or other violation of rights.",
+            "note": "We do not warrant that:",
+            "items": [
+              "The service will function uninterrupted, secure or available at any particular time or location",
+              "Any errors or defects will be corrected",
+              "The service is free of viruses or other harmful components",
+              "The results of using the service will meet your requirements"
+            ]
+          },
+          "liability": {
+            "title": "Limitation of Liability",
+            "description": "In no event shall Plugged.in, nor its directors, employees, partners, agents, suppliers, or affiliates, be liable for any indirect, incidental, special, consequential, or punitive damages.",
+            "security": "We cannot guarantee the absolute security of your data transmitted to our service.",
+            "rcDisclaimer": "During the Release Candidate phase, these limitations are especially important as the service is still being refined."
+          }
         }
       },
       "contact": {

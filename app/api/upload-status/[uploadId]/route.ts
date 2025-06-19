@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { getUploadStatus, updateDocRagId } from '@/app/actions/docs';
+import { getUploadStatus, updateDocRagId } from '@/app/actions/library';
 import { getAuthSession } from '@/lib/auth';
 
 export async function GET(

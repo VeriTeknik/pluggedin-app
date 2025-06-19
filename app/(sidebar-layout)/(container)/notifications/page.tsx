@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { tr } from 'date-fns/locale';
+import { enUS, tr, nl, zhCN, ja, hi } from 'date-fns/locale';
 import { Bell, Check, Circle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -38,11 +38,23 @@ import { useToast } from '@/hooks/use-toast';
 export default function NotificationsPage() {
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation('notifications');
   const profileUuid = currentProfile?.uuid || '';
   const { notifications, refreshNotifications, unreadCount, markAllAsRead } =
     useNotifications();
   const [activeTab, setActiveTab] = useState('all');
+  
+  // Get date locale based on current language
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'tr': return tr;
+      case 'nl': return nl;
+      case 'zh': return zhCN;
+      case 'ja': return ja;
+      case 'hi': return hi;
+      default: return enUS;
+    }
+  };
 
   // Function to get badge color based on notification type
   const getBadgeVariant = (type: string): "default" | "destructive" | "secondary" | "outline" => {
@@ -263,7 +275,7 @@ export default function NotificationsPage() {
                                       variant="secondary"
                                       className="ml-2"
                                     >
-                                      Okunmadı
+                                      {t('status.unread')}
                                     </Badge>
                                   )}
                                 </div>
@@ -272,7 +284,7 @@ export default function NotificationsPage() {
                                     new Date(notification.created_at),
                                     {
                                       addSuffix: true,
-                                      locale: tr,
+                                      locale: getDateLocale(),
                                     }
                                   )}
                                 </span>
@@ -286,7 +298,7 @@ export default function NotificationsPage() {
                                     href={notification.link}
                                     className="text-sm text-primary hover:underline"
                                   >
-                                    Ayrıntıları görüntüle
+                                    {t('actions.viewDetails')}
                                   </Link>
                                 ) : (
                                   <div />
@@ -301,7 +313,7 @@ export default function NotificationsPage() {
                                       }
                                     >
                                       <Check className="h-4 w-4 mr-1" />
-                                      Okundu
+                                      {t('actions.markAsRead')}
                                     </Button>
                                   )}
                                   <Button
@@ -313,7 +325,7 @@ export default function NotificationsPage() {
                                     }
                                   >
                                     <Trash2 className="h-4 w-4 mr-1" />
-                                    Sil
+                                    {t('actions.delete')}
                                   </Button>
                                 </div>
                               </div>

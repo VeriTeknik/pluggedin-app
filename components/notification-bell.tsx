@@ -1,9 +1,10 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { tr } from 'date-fns/locale';
+import { enUS, tr, nl, zhCN, ja, hi } from 'date-fns/locale';
 import { Bell, Circle } from 'lucide-react';
 import Link from 'next/link';
+import { useTranslation } from 'react-i18next';
 
 import { useNotifications } from '@/components/providers/notification-provider';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,19 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { t, i18n } = useTranslation('notifications');
+  
+  // Get date locale based on current language
+  const getDateLocale = () => {
+    switch (i18n.language) {
+      case 'tr': return tr;
+      case 'nl': return nl;
+      case 'zh': return zhCN;
+      case 'ja': return ja;
+      case 'hi': return hi;
+      default: return enUS;
+    }
+  };
   
   // Removed unused getVariantByType function
   
@@ -67,7 +81,7 @@ export function NotificationBell() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-80">
         <div className="flex items-center justify-between p-4 border-b">
-          <div className="font-semibold">Bildirimler</div>
+          <div className="font-semibold">{t('notifications.title')}</div>
           {unreadCount > 0 && (
             <Button 
               variant="ghost" 
@@ -75,14 +89,14 @@ export function NotificationBell() {
               className="h-8 text-xs"
               onClick={() => markAllAsRead()}
             >
-              Tümünü okundu işaretle
+              {t('notifications.actions.markAllAsRead')}
             </Button>
           )}
         </div>
         <ScrollArea className="h-[400px]">
           {notifications.length === 0 ? (
             <div className="p-4 text-center text-muted-foreground">
-              Bildiriminiz bulunmuyor
+              {t('notifications.empty.title')}
             </div>
           ) : (
             notifications.map((notification) => (
@@ -104,7 +118,7 @@ export function NotificationBell() {
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(notification.created_at), { 
                         addSuffix: true,
-                        locale: tr 
+                        locale: getDateLocale() 
                       })}
                     </span>
                   </div>
@@ -116,13 +130,13 @@ export function NotificationBell() {
                       className="text-xs text-primary hover:underline mt-1"
                       onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
-                      Ayrıntıları görüntüle
+                      {t('notifications.actions.viewDetails')}
                     </Link>
                   )}
                   
                   {!notification.read && (
                     <div className="flex justify-end mt-1">
-                      <Badge variant="secondary" className="text-xs">Okunmadı</Badge>
+                      <Badge variant="secondary" className="text-xs">{t('notifications.status.unread')}</Badge>
                     </div>
                   )}
                 </div>
@@ -134,7 +148,7 @@ export function NotificationBell() {
         <div className="p-2">
           <Link href="/notifications" className="block w-full">
             <Button variant="outline" size="sm" className="w-full" onClick={() => {}}>
-              Tüm Bildirimleri Görüntüle
+              {t('notifications.actions.viewAll')}
             </Button>
           </Link>
         </div>

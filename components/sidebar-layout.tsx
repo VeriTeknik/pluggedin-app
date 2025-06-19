@@ -251,10 +251,10 @@ export default function SidebarLayout({
                   </SidebarMenuItem>
                   
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('docs.title')} className="group-data-[collapsible=icon]:justify-center">
-                      <Link href='/docs'>
+                    <SidebarMenuButton asChild tooltip={t('library.title')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/library'>
                         <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('docs.title')}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{t('library.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

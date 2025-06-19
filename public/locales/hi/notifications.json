@@ -2,10 +2,17 @@
   "notifications": {
     "title": "सूचनाएं",
     "description": "आप यहाँ सभी सिस्टम सूचनाएं देख सकते हैं",
+    "status": {
+      "unread": "अपठित"
+    },
     "actions": {
       "markAllAsRead": "सभी को पढ़ा हुआ चिह्नित करें",
       "actions": "कार्रवाइयाँ",
-      "deleteAll": "सभी सूचनाएं हटाएं"
+      "deleteAll": "सभी सूचनाएं हटाएं",
+      "viewDetails": "विवरण देखें",
+      "markAsRead": "पढ़ा हुआ चिह्नित करें",
+      "delete": "हटाएं",
+      "viewAll": "सभी सूचनाएं देखें"
     },
     "tabs": {
       "all": "सभी",

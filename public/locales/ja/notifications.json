@@ -2,10 +2,17 @@
   "notifications": {
     "title": "通知",
     "description": "すべてのシステム通知をここで確認できます",
+    "status": {
+      "unread": "未読"
+    },
     "actions": {
       "markAllAsRead": "すべて既読にする",
       "actions": "アクション",
-      "deleteAll": "すべての通知を削除"
+      "deleteAll": "すべての通知を削除",
+      "viewDetails": "詳細を表示",
+      "markAsRead": "既読にする",
+      "delete": "削除",
+      "viewAll": "すべての通知を表示"
     },
     "tabs": {
       "all": "すべて",

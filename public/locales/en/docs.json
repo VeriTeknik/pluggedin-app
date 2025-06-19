@@ -1,99 +1,43 @@
 {
-  "uploadDialog": {
-    "title": "Upload Document",
-    "description": "Upload a new document to your collection (Workspace limit: {{limit}})",
-    "button": "Upload Document",
-    "currentUsage": "Current Usage:",
-    "storageUsed": "{{percentage}}% of workspace storage used",
-    "exceedLimitWarning": "This file ({{fileSize}}) would exceed your workspace storage limit. Current usage: {{currentUsage}}. Please delete some documents or choose a smaller file.",
-    "nearLimitWarning": "Warning: You're approaching your storage limit. After uploading this file, you'll have used {{percentage}}% of your workspace storage.",
-    "fileTooLarge": "File too large for remaining storage",
-    "dropFileHere": "Drop the file here",
-    "clickToSelect": "Click to select or drag and drop",
-    "supportedFormats": "PDF, TXT, MD, DOCX, Images (max 10MB per file)",
-    "documentName": "Document Name",
-    "documentNamePlaceholder": "Enter document name",
-    "descriptionLabel": "Description (optional)",
-    "descriptionPlaceholder": "Enter document description",
-    "tags": "Tags (optional)",
-    "tagsPlaceholder": "Enter tags separated by commas",
-    "cancel": "Cancel",
-    "startingUpload": "Starting Upload...",
-    "uploadButton": "Upload Document"
+  "title": "Documentation",
+  "description": "Learn how to use Plugged.in, integrate MCP servers, and build AI-powered applications",
+  "search": {
+    "placeholder": "Search documentation...",
+    "noResults": "No results found for \"{{query}}\"",
+    "results": "{{count}} results found"
   },
-  "stats": {
-    "totalDocuments": "Total Documents",
-    "documentsInCollection": "Documents in your collection",
-    "storageUsed": "Storage Used",
-    "storageLimit": "{{limit}} limit",
-    "recentUploads": "Recent Uploads",
-    "uploadedInLast7Days": "Uploaded in last 7 days",
-    "percentageUsed": "{{percentage}}% used",
-    "limitExceeded": "Limit exceeded!",
-    "nearLimit": "Near limit!"
+  "categories": {
+    "getting-started": "Getting Started",
+    "tutorials": "Tutorials",
+    "api-reference": "API Reference",
+    "examples": "Examples",
+    "guides": "Guides",
+    "integrations": "Integrations"
   },
-  "page": {
-    "title": "Documents",
-    "description": "Upload, manage, and share your documentation files",
-    "loading": "Loading documents...",
-    "tableHeaders": {
-      "name": "Name",
-      "description": "Description",
-      "size": "Size",
-      "tags": "Tags",
-      "created": "Created",
-      "actions": "Actions"
-    }
+  "navigation": {
+    "previous": "Previous",
+    "next": "Next",
+    "backToTop": "Back to top",
+    "backToDocs": "Back to Documentation",
+    "editOnGitHub": "Edit on GitHub"
   },
-  "controls": {
-    "searchPlaceholder": "Search documents...",
-    "grid": "Grid",
-    "table": "Table"
+  "toc": {
+    "title": "On this page",
+    "empty": "No headings found"
   },
-  "grid": {
-    "noDocuments": "No documents found.",
-    "openMenu": "Open menu",
-    "download": "Download",
-    "delete": "Delete"
+  "metadata": {
+    "lastUpdated": "Last updated on {{date}}",
+    "readingTime": "{{minutes}} min read",
+    "author": "Written by {{author}}"
   },
-  "table": {
-    "noDocuments": "No documents found."
+  "feedback": {
+    "title": "Was this helpful?",
+    "yes": "Yes",
+    "no": "No",
+    "thanks": "Thanks for your feedback!"
   },
-  "deleteDialog": {
-    "title": "Delete Document",
-    "description": "Are you sure you want to delete \"{{name}}\"? This action cannot be undone.",
-    "cancel": "Cancel",
-    "delete": "Delete",
-    "deleting": "Deleting..."
-  },
-  "uploadProgress": {
-    "title": "Upload Progress",
-    "clearCompleted": "Clear Completed",
-    "processingComplete": "Processing Complete",
-    "processingFailed": "Processing Failed",
-    "step": "Step",
-    "of": "of",
-    "currentStepProgress": "Current Step Progress",
-    "chunksProcessed": "chunks processed",
-    "remaining": "remaining",
-    "processingSteps": "Processing Steps",
-    "completedMessage": "Document has been successfully added to your knowledge base",
-    "failedMessage": "An error occurred during processing",
-    "timeoutMessage": "Processing timeout - please check your documents",
-    "processingCompletedMessage": "Processing completed",
-    "steps": {
-      "textExtraction": "Extracting text content",
-      "chunking": "Breaking down content", 
-      "idGeneration": "Generating unique identifiers",
-      "embeddings": "Creating vector embeddings",
-      "databaseInsertion": "Storing in knowledge base"
-    },
-    "stepDescriptions": {
-      "textExtraction": "Reading and parsing document content",
-      "chunking": "Dividing content into manageable pieces",
-      "idGeneration": "Creating unique identifiers for content", 
-      "embeddings": "Converting text to vector representations",
-      "databaseInsertion": "Saving processed data to database"
-    }
+  "errors": {
+    "notFound": "Documentation page not found",
+    "loadFailed": "Failed to load documentation"
   }
-} 
+}

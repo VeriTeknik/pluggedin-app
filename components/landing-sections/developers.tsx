@@ -9,6 +9,7 @@ import {
   Puzzle, 
   Terminal
 } from 'lucide-react';
+import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -137,9 +138,9 @@ export function LandingDevelopersSection() {
 
         <div className="mt-12 text-center">
           <Button asChild size="lg">
-            <a href="/docs" target="_blank" rel="noopener noreferrer">
+            <Link href="/docs">
               {t('developers.action')}
-            </a>
+            </Link>
           </Button>
         </div>
       </div>

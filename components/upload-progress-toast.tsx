@@ -13,8 +13,8 @@ export function UploadProgressToast() {
   const router = useRouter();
   const pathname = usePathname();
 
-  // Don't show toast on docs page since it has detailed progress view
-  if (pathname === '/docs') {
+  // Don't show toast on library page since it has detailed progress view
+  if (pathname === '/library') {
     return null;
   }
 
@@ -41,7 +41,8 @@ export function UploadProgressToast() {
 
   const getOverallProgress = (upload: typeof displayUploads[0]) => {
     const stepProgress = (upload.progress.current - 1) / upload.progress.total * 100;
-    const currentStepProgress = upload.progress.step_progress.percentage / upload.progress.total;
+    const currentStepProgress = upload.progress.step_progress?.percentage ? 
+      upload.progress.step_progress.percentage / upload.progress.total : 0;
     return Math.min(100, stepProgress + currentStepProgress);
   };
 
@@ -59,7 +60,7 @@ export function UploadProgressToast() {
   };
 
   const handleViewDetails = () => {
-    router.push('/docs');
+    router.push('/library');
   };
 
   return (
