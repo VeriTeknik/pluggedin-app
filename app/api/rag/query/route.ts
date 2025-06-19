@@ -10,9 +10,22 @@ const RagQuerySchema = z.object({
   query: z.string()
     .min(1, 'Query cannot be empty')
     .max(1000, 'Query too long') // Prevent abuse with overly long queries
+    .transform((query) => {
+      // Remove all HTML/script tags and dangerous patterns
+      return query
+        .replace(/<[^>]*>/g, '') // Remove all HTML tags
+        .replace(/javascript:/gi, '') // Remove javascript: protocol
+        .replace(/on\w+\s*=/gi, '') // Remove event handlers
+        .replace(/data:.*?;base64/gi, '') // Remove data URIs
+        .trim();
+    })
     .refine(
-      (query) => !query.includes('<script>') && !query.includes('javascript:'),
-      'Invalid query content'
+      (query) => {
+        // Whitelist approach: only allow alphanumeric, spaces, and common punctuation
+        const allowedPattern = /^[a-zA-Z0-9\s\-_.,!?'"():;@#$%&*+=\/\\[\]{}|~`\u0080-\uFFFF]+$/;
+        return allowedPattern.test(query);
+      },
+      'Query contains invalid characters'
     ),
   // Removed ragIdentifier to prevent unauthorized access - always use authenticated user's project
 });

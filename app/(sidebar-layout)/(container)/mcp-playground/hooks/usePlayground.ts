@@ -118,6 +118,12 @@ export function usePlayground() {
 
   // Mutex to prevent concurrent model switching attempts
   const modelSwitchInProgress = useRef(false);
+  
+  // Mutex to prevent concurrent server status changes
+  const serverStatusChangeInProgress = useRef<Set<string>>(new Set());
+  
+  // Mutex to prevent concurrent session operations
+  const sessionOperationInProgress = useRef(false);
 
   // Fetch MCP servers
   const {
@@ -299,6 +305,14 @@ export function usePlayground() {
   const toggleServerStatus = useCallback(
     async (serverUuid: string, status: boolean) => {
       if (!profileUuid) return;
+      
+      // Prevent concurrent status changes for the same server
+      if (serverStatusChangeInProgress.current.has(serverUuid)) {
+        addLog('info', `Server ${serverUuid} status change already in progress`);
+        return;
+      }
+      
+      serverStatusChangeInProgress.current.add(serverUuid);
 
       try {
         setIsUpdatingServer(serverUuid);
@@ -326,6 +340,7 @@ export function usePlayground() {
         });
       } finally {
         setIsUpdatingServer(null);
+        serverStatusChangeInProgress.current.delete(serverUuid);
       }
     },
     [profileUuid, addLog, mutateServers, toast]
@@ -334,6 +349,14 @@ export function usePlayground() {
   // Start session
   const startSession = useCallback(async () => {
     if (!mcpServers) return;
+    
+    // Prevent concurrent session operations
+    if (sessionOperationInProgress.current) {
+      addLog('info', 'Session operation already in progress');
+      return;
+    }
+    
+    sessionOperationInProgress.current = true;
 
     setSessionError(null);
     setServerLogs([]);
@@ -416,6 +439,7 @@ export function usePlayground() {
       });
     } finally {
       setIsProcessing(false);
+      sessionOperationInProgress.current = false;
     }
   }, [
     profileUuid,
@@ -432,6 +456,15 @@ export function usePlayground() {
   // End session
   const endSession = useCallback(async () => {
     if (!profileUuid) return;
+    
+    // Prevent concurrent session operations
+    if (sessionOperationInProgress.current) {
+      addLog('info', 'Session operation already in progress');
+      return;
+    }
+    
+    sessionOperationInProgress.current = true;
+    
     try {
       setIsProcessing(true);
       addLog('info', 'Ending MCP playground session...');
@@ -467,12 +500,19 @@ export function usePlayground() {
       });
     } finally {
       setIsProcessing(false);
+      sessionOperationInProgress.current = false;
     }
   }, [profileUuid, addLog, stopLogPolling, toast]);
 
   // Send message
   const sendMessage = useCallback(async () => {
     if (!inputValue.trim() || !isSessionActive || !profileUuid) return;
+    
+    // Prevent sending messages while another is being processed
+    if (isProcessing) {
+      addLog('info', 'Message processing already in progress');
+      return;
+    }
 
     try {
       setIsProcessing(true);
@@ -577,6 +617,9 @@ export function usePlayground() {
     toast,
     messages, // Need current messages to filter duplicates
     updateMessages, // Added updateMessages
+    isProcessing,
+    llmConfig.model,
+    llmConfig.provider,
   ]);
 
   // Save settings with debounce using refs to avoid nested callbacks
@@ -837,6 +880,9 @@ export function usePlayground() {
 
   // Cleanup effect for all timers
   useEffect(() => {
+    // Copy ref to local variable to avoid stale closure warning
+    const serverStatusChangeRef = serverStatusChangeInProgress.current;
+    
     return () => {
       if (logsPollingRef.current) clearInterval(logsPollingRef.current);
       if (updateSettingsThrottledRef.current) clearTimeout(updateSettingsThrottledRef.current);
@@ -844,6 +890,10 @@ export function usePlayground() {
       sessionRestorationInProgress.current = false;
       // Reset model switching mutex on unmount
       modelSwitchInProgress.current = false;
+      // Reset session operation mutex on unmount
+      sessionOperationInProgress.current = false;
+      // Clear server status change tracking
+      serverStatusChangeRef.clear();
     };
   }, []);
 
@@ -852,6 +902,8 @@ export function usePlayground() {
     setSessionRestored(false);
     sessionRestorationInProgress.current = false;
     modelSwitchInProgress.current = false;
+    sessionOperationInProgress.current = false;
+    serverStatusChangeInProgress.current.clear();
   }, [profileUuid]);
 
   // Scroll guard effect - Keep this in the hook

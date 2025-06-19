@@ -33,8 +33,13 @@ export async function GET(
     const uploadsDir = resolve(process.cwd(), 'uploads');
     const requestedPath = normalize(join(uploadsDir, doc.file_path));
     
-    // Ensure the resolved path is within the uploads directory
-    if (!requestedPath.startsWith(uploadsDir)) {
+    // Ensure the resolved path is within the uploads directory (case-insensitive on Windows)
+    const normalizedUploadsDir = uploadsDir.toLowerCase();
+    const normalizedRequestedPath = requestedPath.toLowerCase();
+    
+    if (process.platform === 'win32' ? 
+        !normalizedRequestedPath.startsWith(normalizedUploadsDir) : 
+        !requestedPath.startsWith(uploadsDir)) {
       console.error('Path traversal attempt detected:', doc.file_path);
       return ErrorResponses.forbidden();
     }
@@ -43,10 +48,16 @@ export async function GET(
     try {
       const fileBuffer = await readFile(requestedPath);
       
+      // Sanitize filename to prevent header injection
+      const sanitizedFilename = doc.file_name
+        .replace(/[\r\n]/g, '') // Remove line breaks
+        .replace(/"/g, '\\"')   // Escape quotes
+        .replace(/[^\x20-\x7E]/g, ''); // Remove non-printable chars
+      
       // Set appropriate headers
       const headers = new Headers();
       headers.set('Content-Type', doc.mime_type);
-      headers.set('Content-Disposition', `attachment; filename="${doc.file_name}"`);
+      headers.set('Content-Disposition', `attachment; filename="${sanitizedFilename}"`);
       headers.set('Content-Length', doc.file_size.toString());
 
       return new NextResponse(fileBuffer, {

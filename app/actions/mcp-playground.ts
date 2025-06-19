@@ -920,11 +920,27 @@ Please answer the user's question using both the provided context and your avail
     let currentAiMessage = '';
     let isFirstToken = true;
 
+    // Check the agent's message history size before invoking
+    const MAX_AGENT_MESSAGES = 50; // Limit for LangChain agent's internal message history
+    
+    // Create a thread ID that includes message count to force new threads when needed
+    const threadId = session.messages.length > MAX_AGENT_MESSAGES 
+      ? `${profileUuid}_reset_${Date.now()}`  // Force new thread
+      : profileUuid;
+    
+    if (session.messages.length > MAX_AGENT_MESSAGES) {
+      await addServerLogForProfile(
+        profileUuid,
+        'info',
+        `[MEMORY] Creating new agent thread due to message limit (${session.messages.length} messages)`
+      );
+    }
+    
     // Execute query with streaming enabled (using finalQuery which may include RAG context)
     const agentFinalState = await session.agent.invoke(
       { messages: [new HumanMessage(finalQuery)] },
       {
-        configurable: { thread_id: profileUuid },
+        configurable: { thread_id: threadId },
         callbacks: [
           {
             handleLLMNewToken: async (token) => {
@@ -1067,8 +1083,25 @@ Please answer the user's question using both the provided context and your avail
     
     const messages = processedMessages;
 
-    // Store the messages in the session for persistence
-    session.messages = messages;
+    // Store the messages in the session for persistence with memory limit
+    const MAX_SESSION_MESSAGES = 100; // Limit session message history
+    
+    // Append new messages to existing ones
+    const allMessages = [...session.messages, ...messages];
+    
+    // Keep only the most recent messages if we exceed the limit
+    if (allMessages.length > MAX_SESSION_MESSAGES) {
+      session.messages = allMessages.slice(allMessages.length - MAX_SESSION_MESSAGES);
+      
+      // Log that we trimmed messages
+      await addServerLogForProfile(
+        profileUuid,
+        'info',
+        `[MEMORY] Trimmed session messages from ${allMessages.length} to ${MAX_SESSION_MESSAGES}`
+      );
+    } else {
+      session.messages = allMessages;
+    }
 
     return {
       success: true,
