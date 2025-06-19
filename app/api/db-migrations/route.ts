@@ -5,11 +5,21 @@ import { addMissingForeignKeyConstraint } from '@/app/actions/db-migrations';
 // This route is meant to be called manually by an administrator or during deployment
 // to apply database migrations that weren't properly applied through Drizzle
 export async function GET(req: NextRequest) {
-  // Basic auth check - in a real app, this would be more secure
+  // Secure authentication check using environment variable
   const authHeader = req.headers.get('authorization');
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  const adminSecret = process.env.ADMIN_MIGRATION_SECRET;
+  
+  if (!adminSecret) {
+    console.error('ADMIN_MIGRATION_SECRET not configured');
     return NextResponse.json(
-      { error: 'Unauthorized. This endpoint requires authentication.' },
+      { error: 'Service unavailable' },
+      { status: 503 }
+    );
+  }
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.substring(7) !== adminSecret) {
+    return NextResponse.json(
+      { error: 'Unauthorized' },
       { status: 401 }
     );
   }

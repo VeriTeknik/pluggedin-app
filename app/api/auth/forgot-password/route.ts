@@ -4,7 +4,9 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { passwordResetTokens } from '@/db/schema';
-import { generatePasswordResetEmail,sendEmail } from '@/lib/email';
+import { createErrorResponse } from '@/lib/api-errors';
+import { generatePasswordResetEmail, sendEmail } from '@/lib/email';
+import { RateLimiters } from '@/lib/rate-limiter';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
@@ -79,6 +81,16 @@ const forgotPasswordSchema = z.object({
  *                   example: Something went wrong
  */
 export async function POST(req: NextRequest) {
+  // Apply rate limiting - stricter for password reset
+  const rateLimitResult = await RateLimiters.sensitive(req);
+  if (!rateLimitResult.allowed) {
+    return createErrorResponse(
+      'Too many password reset attempts. Please try again later.',
+      429,
+      'RATE_LIMIT_EXCEEDED'
+    );
+  }
+  
   try {
     const body = await req.json();
     const { email } = forgotPasswordSchema.parse(body);
