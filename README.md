@@ -230,11 +230,31 @@ sequenceDiagram
 
 ### Security Considerations
 
-**MCP Server Sandboxing (Linux/Ubuntu)**
+**Enhanced Security Features**
 
-The plugged.in App automatically wraps the execution of STDIO MCP servers with `firejail --quiet` when running on a Linux system. This utilizes Firejail's default security profile to restrict the server's capabilities, notably limiting filesystem access.
+The plugged.in App implements comprehensive security measures to protect your data and prevent common vulnerabilities:
 
-To enable this security feature, install Firejail:
+1. **Input Sanitization**
+   - All user inputs are sanitized using industry-standard libraries
+   - RAG queries are processed through `sanitize-html` to prevent XSS attacks
+   - Environment variables are parsed securely using `dotenv` library
+
+2. **MCP Server Sandboxing (Linux/Ubuntu)**
+   - STDIO MCP servers are automatically wrapped with `firejail --quiet` on Linux systems
+   - Utilizes Firejail's default security profile to restrict server capabilities
+   - Limits filesystem access and prevents unauthorized system modifications
+
+3. **API Security**
+   - Rate limiting on all API endpoints to prevent abuse
+   - Authentication required for all sensitive operations
+   - Audit logging for security monitoring
+
+4. **Data Protection**
+   - Server-side encryption for sensitive data
+   - Secure session management with JWT tokens
+   - HTTPS enforcement in production environments
+
+To enable sandboxing, install Firejail:
 
 ```bash
 sudo apt update && sudo apt install firejail
@@ -287,3 +307,12 @@ The plugged.in project is actively developing several exciting features:
 - **Privacy-Focused Infrastructure (Phase 4)**: Dedicated RAG servers and distributed GPU services
 - **Retrieval-Augmented Generation (RAG)**: Integration with vector databases like Milvus
 - **Collaboration & Sharing**: Multi-user sessions and embeddable chat widgets
+
+## 📝 Recent Updates
+
+### Security Enhancements (Latest)
+
+- **Improved RAG Query Security**: Replaced custom sanitization with `sanitize-html` library for robust XSS protection
+- **Secure Environment Variable Parsing**: Implemented `dotenv` library for proper handling of quotes, multiline values, and special characters
+- **Enhanced Input Validation**: Added comprehensive validation for all user inputs across the application
+- **Strengthened API Security**: Implemented rate limiting and improved authentication checks
