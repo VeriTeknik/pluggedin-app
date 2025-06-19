@@ -113,6 +113,12 @@ export function usePlayground() {
   // Session restoration flag to prevent multiple restoration attempts
   const [sessionRestored, setSessionRestored] = useState(false);
 
+  // Mutex to prevent concurrent session restoration attempts
+  const sessionRestorationInProgress = useRef(false);
+
+  // Mutex to prevent concurrent model switching attempts
+  const modelSwitchInProgress = useRef(false);
+
   // Fetch MCP servers
   const {
     data: mcpServersData,
@@ -623,23 +629,36 @@ export function usePlayground() {
 
   // Model switching function
   const switchModel = useCallback(async (newLlmConfig: PlaygroundSettings) => {
-    if (!profileUuid || !isSessionActive) {
-      // If no session is active, update the config and save to database
-      setLlmConfig(newLlmConfig);
-      setLogLevel(newLlmConfig.logLevel);
-      
-      // Save to database for persistence
-      try {
-        await saveSettings();
-        addLog('info', 'Model configuration saved');
-      } catch (saveError) {
-        console.error('Failed to save model configuration:', saveError);
-        addLog('error', 'Failed to save model configuration to database');
-      }
+    if (!profileUuid) {
       return;
     }
 
+    // Prevent concurrent model switching attempts using a ref-based mutex
+    if (modelSwitchInProgress.current) {
+      addLog('info', 'Model switch already in progress, ignoring request');
+      return;
+    }
+
+    // Set the mutex flag immediately
+    modelSwitchInProgress.current = true;
+
     try {
+      if (!isSessionActive) {
+        // If no session is active, update the config and save to database
+        setLlmConfig(newLlmConfig);
+        setLogLevel(newLlmConfig.logLevel);
+        
+        // Save to database for persistence
+        try {
+          await saveSettings();
+          addLog('info', 'Model configuration saved');
+        } catch (saveError) {
+          console.error('Failed to save model configuration:', saveError);
+          addLog('error', 'Failed to save model configuration to database');
+        }
+        return;
+      }
+
       setIsProcessing(true);
       addLog('info', `Switching model to ${newLlmConfig.provider} ${newLlmConfig.model}...`);
 
@@ -689,8 +708,10 @@ export function usePlayground() {
       });
     } finally {
       setIsProcessing(false);
+      // Clear the mutex flag in finally block to ensure it's always cleared
+      modelSwitchInProgress.current = false;
     }
-  }, [profileUuid, isSessionActive, addLog, toast]);
+  }, [profileUuid, isSessionActive, addLog, toast, saveSettings]);
 
   // Session restoration effect
   useEffect(() => {
@@ -698,6 +719,14 @@ export function usePlayground() {
       if (!profileUuid || sessionRestored || isLoading) {
         return;
       }
+
+      // Prevent concurrent restoration attempts using a ref-based mutex
+      if (sessionRestorationInProgress.current) {
+        return;
+      }
+
+      // Set the mutex flag immediately
+      sessionRestorationInProgress.current = true;
 
       try {
         // Check localStorage for session hint
@@ -789,6 +818,8 @@ export function usePlayground() {
         localStorage.removeItem(`playground-session-${profileUuid}`);
       } finally {
         setSessionRestored(true);
+        // Clear the mutex flag in finally block to ensure it's always cleared
+        sessionRestorationInProgress.current = false;
       }
     };
 
@@ -809,8 +840,19 @@ export function usePlayground() {
     return () => {
       if (logsPollingRef.current) clearInterval(logsPollingRef.current);
       if (updateSettingsThrottledRef.current) clearTimeout(updateSettingsThrottledRef.current);
+      // Reset session restoration mutex on unmount
+      sessionRestorationInProgress.current = false;
+      // Reset model switching mutex on unmount
+      modelSwitchInProgress.current = false;
     };
   }, []);
+
+  // Reset session restoration state when profile changes
+  useEffect(() => {
+    setSessionRestored(false);
+    sessionRestorationInProgress.current = false;
+    modelSwitchInProgress.current = false;
+  }, [profileUuid]);
 
   // Scroll guard effect - Keep this in the hook
   useEffect(() => {

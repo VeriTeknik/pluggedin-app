@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
+import { getModelBadgeClass } from '@/lib/utils';
 
 interface Message {
   role: string;
@@ -131,15 +132,7 @@ export function PlaygroundChat({
                             <span className="mx-2">·</span>
                           </>
                         )}
-                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                          (message.model?.toLowerCase().includes('openai') || message.model?.toLowerCase().includes('gpt')) ? 
-                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' :
-                          (message.model?.toLowerCase().includes('anthropic') || message.model?.toLowerCase().includes('claude')) ?
-                            'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300' :
-                          (message.model?.toLowerCase().includes('google') || message.model?.toLowerCase().includes('gemini')) ?
-                            'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300' :
-                            'bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-300'
-                        }`}>
+                        <span className={`px-2 py-0.5 rounded text-xs font-medium ${getModelBadgeClass(message.model)}`}>
                           {message.model || 'AI Model'}
                         </span>
                         {message.isPartial && (
