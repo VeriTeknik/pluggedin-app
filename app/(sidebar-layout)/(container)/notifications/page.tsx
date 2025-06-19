@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { enUS, tr, nl, zhCN, ja, hi } from 'date-fns/locale';
+import { enUS, hi,ja, nl, tr, zhCN } from 'date-fns/locale';
 import { Bell, Check, Circle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';

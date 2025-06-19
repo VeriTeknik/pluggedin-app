@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 
 import { logAuditEvent } from '@/app/actions/audit-logger';
@@ -11,30 +12,13 @@ const RagQuerySchema = z.object({
     .min(1, 'Query cannot be empty')
     .max(1000, 'Query too long') // Prevent abuse with overly long queries
     .transform((query) => {
-      // Multi-pass sanitization to handle nested/overlapping malicious patterns
-      let sanitized = query;
-      let previousSanitized = '';
-      const maxPasses = 10; // Prevent infinite loops
-      let passCount = 0;
-      
-      while (sanitized !== previousSanitized && passCount < maxPasses) {
-        previousSanitized = sanitized;
-        
-        // Remove dangerous patterns in each pass
-        sanitized = sanitized
-          .replace(/<[^>]*>/g, '') // Remove all HTML tags
-          .replace(/javascript:/gi, '') // Remove javascript: protocol
-          .replace(/on\w+\s*=/gi, '') // Remove event handlers
-          .replace(/data:.*?;base64/gi, '') // Remove data URIs
-          .replace(/vbscript:/gi, '') // Remove vbscript: protocol
-          .replace(/&lt;/gi, '<') // Decode HTML entities that could become tags
-          .replace(/&gt;/gi, '>') // Decode HTML entities that could become tags
-          .replace(/&#(\d+);?/gi, '') // Remove numeric HTML entities
-          .replace(/&#x([0-9a-fA-F]+);?/gi, '') // Remove hex HTML entities
-          .replace(/\\/g, ''); // Remove backslashes that could be used for escaping
-          
-        passCount++;
-      }
+      // Use sanitize-html to remove all unsafe content
+      const sanitized = sanitizeHtml(query, {
+        allowedTags: [], // Disallow all HTML tags
+        allowedAttributes: {}, // Disallow all attributes
+        allowedSchemes: [], // Disallow all URL schemes (javascript:, data:, etc.)
+        disallowedTagsMode: 'discard' // Remove disallowed tags completely
+      });
       
       return sanitized.trim();
     })
