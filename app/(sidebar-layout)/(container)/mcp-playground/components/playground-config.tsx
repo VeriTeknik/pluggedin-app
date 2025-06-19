@@ -170,16 +170,16 @@ export function PlaygroundConfig({
   // Log rendering is handled inline within the 'logs' tab content below.
 
   return (
-    <Card className='shadow-sm h-[calc(100vh-12rem)] flex flex-col'>
-      <CardHeader className='pb-3 flex-shrink-0'>
-        <CardTitle>{t('playground.config.title')}</CardTitle>
-        <CardDescription>
+    <div className='h-[calc(100vh-10rem)] flex flex-col bg-background py-2'>
+      <div className='pb-3 flex-shrink-0 px-4'>
+        <h2 className="text-lg font-semibold">{t('playground.config.title')}</h2>
+        <p className="text-sm text-muted-foreground">
           {t('playground.config.subtitle')}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className='flex-1 overflow-hidden'>
-        <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-          <TabsList className='grid w-full grid-cols-3'>
+        </p>
+      </div>
+      <div className='flex-1 overflow-hidden'>
+        <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col px-4">
+          <TabsList className='grid w-full grid-cols-3 px-4'>
             <TabsTrigger value='servers'>{t('playground.config.tabs.servers')}</TabsTrigger>
             <TabsTrigger value='llm'>{t('playground.config.tabs.llm')}</TabsTrigger>
             <TabsTrigger value='logs' className="relative">
@@ -191,13 +191,13 @@ export function PlaygroundConfig({
           </TabsList>
 
           {/* Servers Tab */}
-          <TabsContent value='servers' className='flex-1 mt-4 overflow-y-auto pr-2'>
+          <TabsContent value='servers' className='flex-1 mt-4 overflow-y-auto px-4'>
             {isLoading ? (
               <div className='flex items-center justify-center py-8'>
                 <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary'></div>
               </div>
             ) : mcpServers?.length === 0 ? (
-              <div className='text-center p-6 bg-muted/50 rounded-lg'>
+              <div className='text-center p-6 bg-muted/30 rounded-lg'>
                 <Server className='h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50' />
                 <p className='text-muted-foreground font-medium'>
                   {t('playground.config.noServers.title')}
@@ -212,9 +212,9 @@ export function PlaygroundConfig({
             ) : (
               <div className='space-y-3'>
                 {sessionError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-md mb-4">
+                  <div className="p-3 bg-destructive/10 rounded-lg mb-4">
                     <div className="flex items-start">
-                      <div className="flex-shrink-0 text-red-500">
+                      <div className="flex-shrink-0 text-destructive">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <circle cx="12" cy="12" r="10"></circle>
                           <line x1="12" y1="8" x2="12" y2="12"></line>
@@ -222,8 +222,8 @@ export function PlaygroundConfig({
                         </svg>
                       </div>
                       <div className="ml-3">
-                        <h3 className="text-sm font-medium text-red-800">{t('playground.config.sessionError.title')}</h3>
-                        <div className="mt-1 text-sm text-red-700">
+                        <h3 className="text-sm font-medium text-destructive">{t('playground.config.sessionError.title')}</h3>
+                        <div className="mt-1 text-sm text-destructive/90">
                           {sessionError}
                         </div>
                         <div className="mt-2">
@@ -245,34 +245,32 @@ export function PlaygroundConfig({
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div
-                          className={`flex items-start justify-between p-3 rounded-lg border transition-colors ${
-                            server.status === 'ACTIVE'
-                              ? 'bg-secondary/50 border-primary/20'
-                              : 'hover:bg-muted/50 border-muted'
-                          }`}>
+                          className={`
+                            flex items-start justify-between p-3 rounded-lg
+                            transition-all duration-200
+                            ${server.status === 'ACTIVE'
+                              ? 'bg-primary/5 ring-1 ring-primary/20'
+                              : 'hover:bg-muted/50'
+                            }
+                          `}
+                        >
                           <div className='flex-1 min-w-0'>
                             <div className='flex items-center'>
                               <div className='font-medium truncate pr-2'>
                                 {server.name}
                               </div>
                               {server.status === 'ACTIVE' ? (
-                                <Badge
-                                  variant='outline'
-                                  className='ml-2 bg-green-500/10 text-green-700 border-green-200 flex-shrink-0'>
+                                <Badge variant='secondary' className='ml-2 bg-green-500/10 text-green-700 flex-shrink-0'>
                                   {t('playground.status.active')}
                                 </Badge>
                               ) : (
-                                <Badge
-                                  variant='outline'
-                                  className='ml-2 bg-amber-500/10 text-amber-700 border-amber-200 flex-shrink-0'>
+                                <Badge variant='secondary' className='ml-2 bg-amber-500/10 text-amber-700 flex-shrink-0'>
                                   {t('playground.status.inactive')}
                                 </Badge>
                               )}
                             </div>
-                            <div className='text-sm text-muted-foreground flex items-center'>
-                              <Badge
-                                variant='secondary'
-                                className='mr-1.5 py-0 px-1.5 h-5 font-normal flex-shrink-0'>
+                            <div className='text-sm text-muted-foreground flex items-center mt-1'>
+                              <Badge variant='secondary' className='mr-1.5 py-0 px-1.5 h-5 font-normal flex-shrink-0'>
                                 {server.type}
                               </Badge>
                               {server.description && (
@@ -282,36 +280,33 @@ export function PlaygroundConfig({
                           </div>
                           <Switch
                             checked={server.status === 'ACTIVE'}
-                            onCheckedChange={(checked) =>
-                              toggleServerStatus(server.uuid, checked)
-                            }
-                            disabled={
-                              isSessionActive ||
-                              isUpdatingServer === server.uuid
-                            }
+                            onCheckedChange={(checked) => toggleServerStatus(server.uuid, checked)}
+                            disabled={isSessionActive || isUpdatingServer === server.uuid}
                             className='ml-2'
                           />
                         </div>
                       </TooltipTrigger>
-                      <TooltipContent side='right'>
-                        <div className='space-y-1 max-w-xs'>
+                      <TooltipContent side='right' className="max-w-xs">
+                        <div className='space-y-2'>
                           <p className='font-medium'>{server.name}</p>
-                          <p className='text-xs'>{server.description}</p>
-                          <div className='text-xs flex items-center space-x-1'>
-                            <span>Type:</span>
-                            <Badge
-                              variant='secondary'
-                              className='py-0 px-1.5 h-4 font-normal'>
+                          {server.description && <p className='text-xs'>{server.description}</p>}
+                          <div className='text-xs flex items-center gap-1.5'>
+                            <span className="text-muted-foreground">Type:</span>
+                            <Badge variant='secondary' className='py-0 px-1.5 h-4 font-normal'>
                               {server.type}
                             </Badge>
                           </div>
                           {server.command && (
-                            <p className='text-xs'>
-                              Command: {server.command}
+                            <p className='text-xs flex gap-1.5'>
+                              <span className="text-muted-foreground">Command:</span>
+                              <span>{server.command}</span>
                             </p>
                           )}
                           {server.url && (
-                            <p className='text-xs'>URL: {server.url}</p>
+                            <p className='text-xs flex gap-1.5'>
+                              <span className="text-muted-foreground">URL:</span>
+                              <span>{server.url}</span>
+                            </p>
                           )}
                         </div>
                       </TooltipContent>
@@ -323,7 +318,7 @@ export function PlaygroundConfig({
           </TabsContent>
 
           {/* LLM Tab */}
-          <TabsContent value='llm' className='flex-1 mt-4 overflow-y-auto pr-2'>
+          <TabsContent value='llm' className='flex-1 mt-4 overflow-y-auto px-4'>
             <div className='space-y-6'>
               
               {/* Provider Selection */}
@@ -687,7 +682,7 @@ export function PlaygroundConfig({
           </TabsContent>
 
           {/* Logs Tab */}
-          <TabsContent value='logs' className='flex-1 mt-4 overflow-y-auto pr-2'>
+          <TabsContent value='logs' className='flex-1 mt-4 overflow-y-auto px-4'>
             <div className='space-y-4'>
               <div className='flex items-center justify-between mb-2'>
                 <div>
@@ -824,7 +819,7 @@ export function PlaygroundConfig({
             </div>
           </TabsContent>
         </Tabs>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
