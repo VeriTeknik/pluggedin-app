@@ -15,6 +15,62 @@
     "installation": {
       "title": "インストール方法",
       "apiKeysNotice": "注意：APIキーはAPIキーページで管理できます",
+      "claudeDesktop": {
+        "title": "Claude Desktopセットアップ",
+        "step1": {
+          "title": "ステップ1：Claude Desktop設定を開く",
+          "description": "Claude Desktopの設定歯車アイコンをクリックして、構成メニューにアクセスします。",
+          "imagePlaceholder": "[スクリーンショット：Claude Desktop設定ボタン]"
+        },
+        "step2": {
+          "title": "ステップ2：構成ファイルを見つける",
+          "description": "MCP構成セクションに移動します。構成ファイルは次の場所にあります：",
+          "imagePlaceholder": "[スクリーンショット：Claude Desktop MCP設定ページ]"
+        },
+        "step3": {
+          "title": "ステップ3：Plugged.in MCP構成を追加",
+          "description": "次の構成をClaude Desktop構成ファイルにコピーして貼り付けます：",
+          "imagePlaceholder": "[スクリーンショット：Plugged.in MCP設定を含む構成ファイル]"
+        },
+        "step4": {
+          "title": "ステップ4：保存して再起動",
+          "description": "構成ファイルを保存し、Claude Desktopを再起動して変更を有効にします。",
+          "imagePlaceholder": "[スクリーンショット：保存確認ダイアログ]"
+        },
+        "step5": {
+          "title": "ステップ5：接続を確認",
+          "description": "Claude DesktopのMCPインジケーターを確認して、Plugged.in MCPが正常に接続されているかチェックします。",
+          "imagePlaceholder": "[スクリーンショット：MCP接続インジケーター付きClaude Desktop]"
+        }
+      },
+      "claudeCode": {
+        "title": "Claude Codeセットアップ",
+        "step1": {
+          "title": "ステップ1：Claude Code設定を開く",
+          "description": "Claude Codeで、コマンドパレット（Cmd/Ctrl+Shift+P）を使用して「MCP Settings」を検索します。",
+          "imagePlaceholder": "[スクリーンショット：MCP設定付きClaude Codeコマンドパレット]"
+        },
+        "step2": {
+          "title": "ステップ2：MCP構成にアクセス",
+          "description": "Claude Code設定のMCPサーバー構成セクションに移動します。",
+          "imagePlaceholder": "[スクリーンショット：Claude Code MCP設定パネル]"
+        },
+        "step3": {
+          "title": "ステップ3：Plugged.in MCPサーバーを追加",
+          "description": "次の構成で新しいMCPサーバーを追加します：",
+          "imagePlaceholder": "[スクリーンショット：Claude Code MCPサーバー構成フォーム]"
+        },
+        "step4": {
+          "title": "ステップ4：構成を適用",
+          "description": "構成を保存し、変更を適用してPlugged.in MCPサーバーを有効化します。",
+          "imagePlaceholder": "[スクリーンショット：Claude Code構成保存確認]"
+        },
+        "step5": {
+          "title": "ステップ5：接続をテスト",
+          "description": "Claude CodeのMCPサーバーステータスを確認して接続を検証します。",
+          "imagePlaceholder": "[スクリーンショット：接続済みを示すClaude Code MCPサーバーステータス]"
+        }
+      },
       "manualConfig": {
         "title": "手動構成",
         "description": "Claude Desktopの場合、構成ファイルは次の場所にあります:",

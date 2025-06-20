@@ -15,6 +15,62 @@
     "installation": {
       "title": "安装方法",
       "apiKeysNotice": "注意：您可以在 API 密钥页面管理您的 API 密钥",
+      "claudeDesktop": {
+        "title": "Claude Desktop 设置",
+        "step1": {
+          "title": "步骤 1：打开 Claude Desktop 设置",
+          "description": "点击 Claude Desktop 中的设置齿轮图标来访问配置菜单。",
+          "imagePlaceholder": "[截图：Claude Desktop 设置按钮]"
+        },
+        "step2": {
+          "title": "步骤 2：定位配置文件",
+          "description": "导航到 MCP 配置部分。配置文件位于：",
+          "imagePlaceholder": "[截图：Claude Desktop MCP 设置页面]"
+        },
+        "step3": {
+          "title": "步骤 3：添加 Plugged.in MCP 配置",
+          "description": "将以下配置复制并粘贴到您的 Claude Desktop 配置文件中：",
+          "imagePlaceholder": "[截图：带有 Plugged.in MCP 设置的配置文件]"
+        },
+        "step4": {
+          "title": "步骤 4：保存并重启",
+          "description": "保存配置文件并重启 Claude Desktop 以使更改生效。",
+          "imagePlaceholder": "[截图：保存确认对话框]"
+        },
+        "step5": {
+          "title": "步骤 5：验证连接",
+          "description": "通过查看 Claude Desktop 中的 MCP 指示器来检查 Plugged.in MCP 是否成功连接。",
+          "imagePlaceholder": "[截图：Claude Desktop 已连接 MCP 指示器]"
+        }
+      },
+      "claudeCode": {
+        "title": "Claude Code 设置",
+        "step1": {
+          "title": "步骤 1：打开 Claude Code 设置",
+          "description": "在 Claude Code 中，使用命令面板（Cmd/Ctrl+Shift+P）并搜索 'MCP Settings'。",
+          "imagePlaceholder": "[截图：Claude Code 命令面板和 MCP 设置]"
+        },
+        "step2": {
+          "title": "步骤 2：访问 MCP 配置",
+          "description": "在 Claude Code 设置中导航到 MCP 服务器配置部分。",
+          "imagePlaceholder": "[截图：Claude Code MCP 设置面板]"
+        },
+        "step3": {
+          "title": "步骤 3：添加 Plugged.in MCP 服务器",
+          "description": "使用以下配置添加新的 MCP 服务器：",
+          "imagePlaceholder": "[截图：Claude Code MCP 服务器配置表单]"
+        },
+        "step4": {
+          "title": "步骤 4：应用配置",
+          "description": "保存配置并应用更改以启用 Plugged.in MCP 服务器。",
+          "imagePlaceholder": "[截图：Claude Code 配置已保存确认]"
+        },
+        "step5": {
+          "title": "步骤 5：测试连接",
+          "description": "通过检查 Claude Code 中的 MCP 服务器状态来验证连接。",
+          "imagePlaceholder": "[截图：Claude Code MCP 服务器状态显示已连接]"
+        }
+      },
       "manualConfig": {
         "title": "手动配置",
         "description": "对于 Claude Desktop，配置文件位于：",

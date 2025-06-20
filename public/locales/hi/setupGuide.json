@@ -15,6 +15,62 @@
     "installation": {
       "title": "इंस्टॉलेशन विधियाँ",
       "apiKeysNotice": "सूचना: आप अपनी API कुंजियों को API कुंजी पृष्ठ में प्रबंधित कर सकते हैं",
+      "claudeDesktop": {
+        "title": "Claude Desktop सेटअप",
+        "step1": {
+          "title": "चरण 1: Claude Desktop सेटिंग्स खोलें",
+          "description": "कॉन्फ़िगरेशन मेनू तक पहुंचने के लिए Claude Desktop में सेटिंग्स गियर आइकन पर क्लिक करें।",
+          "imagePlaceholder": "[स्क्रीनशॉट: Claude Desktop सेटिंग्स बटन]"
+        },
+        "step2": {
+          "title": "चरण 2: कॉन्फ़िगरेशन फ़ाइल खोजें",
+          "description": "MCP कॉन्फ़िगरेशन अनुभाग पर नेविगेट करें। कॉन्फ़िगरेशन फ़ाइल यहाँ स्थित है:",
+          "imagePlaceholder": "[स्क्रीनशॉट: Claude Desktop MCP सेटिंग्स पृष्ठ]"
+        },
+        "step3": {
+          "title": "चरण 3: Plugged.in MCP कॉन्फ़िगरेशन जोड़ें",
+          "description": "निम्नलिखित कॉन्फ़िगरेशन को कॉपी करें और अपनी Claude Desktop कॉन्फ़िग फ़ाइल में पेस्ट करें:",
+          "imagePlaceholder": "[स्क्रीनशॉट: Plugged.in MCP सेटिंग्स के साथ कॉन्फ़िगरेशन फ़ाइल]"
+        },
+        "step4": {
+          "title": "चरण 4: सेव करें और पुनः आरंभ करें",
+          "description": "कॉन्फ़िगरेशन फ़ाइल को सेव करें और परिवर्तनों को प्रभावी करने के लिए Claude Desktop को पुनः आरंभ करें।",
+          "imagePlaceholder": "[स्क्रीनशॉट: सेव पुष्टि डायलॉग]"
+        },
+        "step5": {
+          "title": "चरण 5: कनेक्शन सत्यापित करें",
+          "description": "Claude Desktop में MCP इंडिकेटर देखकर जांचें कि Plugged.in MCP सफलतापूर्वक कनेक्ट हो गया है।",
+          "imagePlaceholder": "[स्क्रीनशॉट: Claude Desktop MCP कनेक्ट इंडिकेटर के साथ]"
+        }
+      },
+      "claudeCode": {
+        "title": "Claude Code सेटअप",
+        "step1": {
+          "title": "चरण 1: Claude Code सेटिंग्स खोलें",
+          "description": "Claude Code में, कमांड पैलेट (Cmd/Ctrl+Shift+P) का उपयोग करें और 'MCP Settings' खोजें।",
+          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code कमांड पैलेट MCP सेटिंग्स के साथ]"
+        },
+        "step2": {
+          "title": "चरण 2: MCP कॉन्फ़िगरेशन तक पहुंचें",
+          "description": "Claude Code सेटिंग्स में MCP सर्वर कॉन्फ़िगरेशन अनुभाग पर नेविगेट करें।",
+          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code MCP सेटिंग्स पैनल]"
+        },
+        "step3": {
+          "title": "चरण 3: Plugged.in MCP सर्वर जोड़ें",
+          "description": "निम्नलिखित कॉन्फ़िगरेशन के साथ एक नया MCP सर्वर जोड़ें:",
+          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code MCP सर्वर कॉन्फ़िगरेशन फॉर्म]"
+        },
+        "step4": {
+          "title": "चरण 4: कॉन्फ़िगरेशन लागू करें",
+          "description": "कॉन्फ़िगरेशन को सेव करें और Plugged.in MCP सर्वर को सक्षम करने के लिए परिवर्तन लागू करें।",
+          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code कॉन्फ़iगरेशन सेव पुष्टि]"
+        },
+        "step5": {
+          "title": "चरण 5: कनेक्शन परीक्षण करें",
+          "description": "Claude Code में MCP सर्वर स्थिति जांचकर कनेक्शन सत्यापित करें।",
+          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code MCP सर्वर स्थिति कनेक्ट दिखा रहा है]"
+        }
+      },
       "manualConfig": {
         "title": "मैनुअल कॉन्फ़िगरेशन",
         "description": "Claude Desktop के लिए, कॉन्फ़िगरेशन फ़ाइल यहाँ स्थित है:",

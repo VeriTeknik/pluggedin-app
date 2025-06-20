@@ -15,6 +15,62 @@
     "installation": {
       "title": "Kurulum Yöntemleri",
       "apiKeysNotice": "Not: API Anahtarlarınızı API Anahtarları Sayfasında yönetebilirsiniz",
+      "claudeDesktop": {
+        "title": "Claude Desktop Kurulumu",
+        "step1": {
+          "title": "Adım 1: Claude Desktop Ayarlarını Açın",
+          "description": "Claude Desktop'ta yapılandırma menüsüne erişmek için ayarlar dişli simgesine tıklayın.",
+          "imagePlaceholder": "[Ekran görüntüsü: Claude Desktop ayarlar butonu]"
+        },
+        "step2": {
+          "title": "Adım 2: Yapılandırma Dosyasını Bulun",
+          "description": "MCP yapılandırma bölümüne gidin. Yapılandırma dosyası şu konumda bulunur:",
+          "imagePlaceholder": "[Ekran görüntüsü: Claude Desktop MCP ayarları sayfası]"
+        },
+        "step3": {
+          "title": "Adım 3: Plugged.in MCP Yapılandırmasını Ekleyin",
+          "description": "Aşağıdaki yapılandırmayı Claude Desktop yapılandırma dosyanıza kopyalayıp yapıştırın:",
+          "imagePlaceholder": "[Ekran görüntüsü: Plugged.in MCP ayarları ile yapılandırma dosyası]"
+        },
+        "step4": {
+          "title": "Adım 4: Kaydedin ve Yeniden Başlatın",
+          "description": "Yapılandırma dosyasını kaydedin ve değişikliklerin etkili olması için Claude Desktop'ı yeniden başlatın.",
+          "imagePlaceholder": "[Ekran görüntüsü: Kaydetme onay diyalogu]"
+        },
+        "step5": {
+          "title": "Adım 5: Bağlantıyı Doğrulayın",
+          "description": "Claude Desktop'ta MCP göstergesini arayarak Plugged.in MCP'nin başarıyla bağlandığını kontrol edin.",
+          "imagePlaceholder": "[Ekran görüntüsü: MCP bağlı göstergesi ile Claude Desktop]"
+        }
+      },
+      "claudeCode": {
+        "title": "Claude Code Kurulumu",
+        "step1": {
+          "title": "Adım 1: Claude Code Ayarlarını Açın",
+          "description": "Claude Code'da komut paletini (Cmd/Ctrl+Shift+P) kullanın ve 'MCP Settings' araması yapın.",
+          "imagePlaceholder": "[Ekran görüntüsü: MCP Ayarları ile Claude Code komut paleti]"
+        },
+        "step2": {
+          "title": "Adım 2: MCP Yapılandırmasına Erişin",
+          "description": "Claude Code ayarlarındaki MCP sunucuları yapılandırma bölümüne gidin.",
+          "imagePlaceholder": "[Ekran görüntüsü: Claude Code MCP ayarları paneli]"
+        },
+        "step3": {
+          "title": "Adım 3: Plugged.in MCP Sunucusu Ekleyin",
+          "description": "Aşağıdaki yapılandırma ile yeni bir MCP sunucusu ekleyin:",
+          "imagePlaceholder": "[Ekran görüntüsü: Claude Code MCP sunucu yapılandırma formu]"
+        },
+        "step4": {
+          "title": "Adım 4: Yapılandırmayı Uygulayın",
+          "description": "Yapılandırmayı kaydedin ve Plugged.in MCP sunucusunu etkinleştirmek için değişiklikleri uygulayın.",
+          "imagePlaceholder": "[Ekran görüntüsü: Claude Code yapılandırma kaydedildi onayı]"
+        },
+        "step5": {
+          "title": "Adım 5: Bağlantıyı Test Edin",
+          "description": "Claude Code'daki MCP sunucu durumunu kontrol ederek bağlantıyı doğrulayın.",
+          "imagePlaceholder": "[Ekran görüntüsü: Bağlı olarak gösteren Claude Code MCP sunucu durumu]"
+        }
+      },
       "manualConfig": {
         "title": "Manuel Yapılandırma",
         "description": "Claude Desktop için, yapılandırma dosyasını şu konumda bulun:",
