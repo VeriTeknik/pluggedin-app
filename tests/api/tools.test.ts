@@ -1,16 +1,15 @@
-import { and,eq } from 'drizzle-orm';
-import { beforeEach,describe, expect, it, vi } from 'vitest';
+import { and, eq } from 'drizzle-orm';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { authenticateApiKey } from '@/app/api/auth';
-import { GET as toolsGetHandler,POST as toolsPostHandler } from '@/app/api/tools/route';
+import { GET as toolsGetHandler, POST as toolsPostHandler } from '@/app/api/tools/route';
 import { db } from '@/db';
-import { mcpServersTable, McpServerStatus,ToggleStatus, toolsTable } from '@/db/schema';
-
-// --- Mocking Setup ---
+import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema';
+import { createMockRequest, createMockAuthResult, createMockDb } from '../utils/mocks';
 
 // Mock dependencies
 vi.mock('@/app/api/auth');
-vi.mock('@/db'); // Mock the entire db module
+vi.mock('@/db');
 
 // Get typed mocks
 const mockedAuthenticateApiKey = vi.mocked(authenticateApiKey);
@@ -24,7 +23,7 @@ const mockValues = vi.fn(); // Mock for the values method
 beforeEach(() => {
   vi.clearAllMocks();
   // Default successful authentication
-  mockedAuthenticateApiKey.mockResolvedValue({ activeProfile: { uuid: 'profile-uuid-123' } } as any);
+  mockedAuthenticateApiKey.mockResolvedValue(createMockAuthResult());
 
   // Reset and configure mocks for db methods before each test
   // Mock db.select chain
@@ -47,23 +46,12 @@ beforeEach(() => {
 });
 
 
-// Helper to create mock NextRequest
-function createMockRequest(method: string, body?: any, searchParams?: URLSearchParams): Request {
-  const url = `http://localhost/api/tools${searchParams ? '?' + searchParams.toString() : ''}`;
-  const requestOptions: RequestInit = { method };
-  if (body) {
-    requestOptions.body = JSON.stringify(body);
-    requestOptions.headers = { 'Content-Type': 'application/json' };
-  }
-  return new Request(url, requestOptions);
-}
 
 // --- Tests ---
 
 describe('Tools API (/api/tools)', () => {
-
-  const mockProfile = { uuid: 'profile-uuid-123' };
-  const mockValidServerUuid = 'server-uuid-abc';
+  const mockProfile = { uuid: 'test-profile-uuid' };
+  const mockValidServerUuid = 'test-server-uuid';
 
 
   describe('POST /api/tools', () => {

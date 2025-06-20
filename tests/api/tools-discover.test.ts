@@ -1,38 +1,23 @@
-import { exec } from 'child_process'; // Node built-in
-// import { promisify } from 'util'; // No longer needed due to mock
-import { beforeEach,describe, expect, it, vi } from 'vitest'; // Testing framework
+import { exec } from 'child_process';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { authenticateApiKey } from '@/app/api/auth'; // Local imports
+import { authenticateApiKey } from '@/app/api/auth';
 import { POST as discoverPostHandler } from '@/app/api/tools/discover/route';
+import { createMockRequest, createMockAuthResult } from '../utils/mocks';
 
 // Mock dependencies
 vi.mock('child_process');
-vi.mock('util', async (importOriginal) => {
-  const originalUtil = await importOriginal<typeof import('util')>();
-  return {
-    ...originalUtil,
-    promisify: vi.fn((fn) => fn), // Mock promisify to just return the function passed to it
-  };
-});
 vi.mock('@/app/api/auth');
 
 const mockedExec = vi.mocked(exec);
 const mockedAuthenticateApiKey = vi.mocked(authenticateApiKey);
 
-// Helper to create mock NextRequest
-function createMockRequest(method: string): Request {
-  const url = `http://localhost/api/tools/discover`;
-  const requestOptions: RequestInit = { method };
-  return new Request(url, requestOptions);
-}
 
 describe('Tools Discover API (/api/tools/discover)', () => {
-  const mockProfile = { uuid: 'profile-uuid-123' };
-
   beforeEach(() => {
     vi.clearAllMocks();
     // Default successful authentication
-    mockedAuthenticateApiKey.mockResolvedValue({ activeProfile: mockProfile } as any);
+    mockedAuthenticateApiKey.mockResolvedValue(createMockAuthResult());
     // Default successful exec mock
     mockedExec.mockImplementation((command, options, callback) => {
       if (callback) {
@@ -45,7 +30,9 @@ describe('Tools Discover API (/api/tools/discover)', () => {
   });
 
   it('should return 401 if authentication fails', async () => {
-    mockedAuthenticateApiKey.mockResolvedValue({ error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }) } as any);
+    mockedAuthenticateApiKey.mockResolvedValue({ 
+      error: new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 }) 
+    } as any);
     const mockReq = createMockRequest('POST');
     const response = await discoverPostHandler(mockReq);
     expect(response.status).toBe(401);

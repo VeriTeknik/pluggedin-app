@@ -1,20 +1,30 @@
-import path from 'path'; // Node built-in first
+import path from 'path';
 
-import react from '@vitejs/plugin-react'; // External package
-import { defineConfig } from 'vitest/config'; // External package
+import react from '@vitejs/plugin-react';
+import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
-  plugins: [react()], // Add if testing React components
+  plugins: [react()],
   test: {
-    globals: true, // Use global APIs like describe, it, expect
-    environment: 'node', // Or 'jsdom' if testing browser-specific features
-    setupFiles: [], // Add setup files if needed (e.g., './tests/setup.ts')
-    // Include test files (adjust pattern if needed)
+    globals: true,
+    environment: 'node',
+    setupFiles: ['./tests/setup.ts'],
     include: ['tests/**/*.{test,spec}.?(c|m)[jt]s?(x)'],
-    alias: {
-      // Setup path aliases to match tsconfig.json
-      '@/': path.resolve(__dirname, './'),
-      // Add other aliases from tsconfig.json if necessary
+    exclude: ['node_modules', '.next', 'dist'],
+    testTimeout: 10000,
+    hookTimeout: 10000,
+    environmentOptions: {
+      jsdom: {
+        resources: 'usable',
+      },
     },
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './'),
+    },
+  },
+  define: {
+    'process.env.NODE_ENV': '"test"',
   },
 });
