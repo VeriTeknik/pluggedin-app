@@ -8,6 +8,7 @@ import enAuth from '../public/locales/en/auth.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
 import enDocs from '../public/locales/en/docs.json';
+import enGuides from '../public/locales/en/guides.json';
 import enLibrary from '../public/locales/en/library.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
@@ -24,6 +25,7 @@ import hiAuth from '../public/locales/hi/auth.json';
 import hiCommon from '../public/locales/hi/common.json';
 import hiDiscover from '../public/locales/hi/discover.json';
 import hiDocs from '../public/locales/hi/docs.json';
+import hiGuides from '../public/locales/hi/guides.json';
 import hiLibrary from '../public/locales/hi/library.json';
 import hiLanding from '../public/locales/hi/landing.json';
 import hiLegal from '../public/locales/hi/legal.json';
@@ -40,6 +42,7 @@ import jaAuth from '../public/locales/ja/auth.json';
 import jaCommon from '../public/locales/ja/common.json';
 import jaDiscover from '../public/locales/ja/discover.json';
 import jaDocs from '../public/locales/ja/docs.json';
+import jaGuides from '../public/locales/ja/guides.json';
 import jaLibrary from '../public/locales/ja/library.json';
 import jaLanding from '../public/locales/ja/landing.json';
 import jaLegal from '../public/locales/ja/legal.json';
@@ -56,6 +59,7 @@ import nlAuth from '../public/locales/nl/auth.json';
 import nlCommon from '../public/locales/nl/common.json';
 import nlDiscover from '../public/locales/nl/discover.json';
 import nlDocs from '../public/locales/nl/docs.json';
+import nlGuides from '../public/locales/nl/guides.json';
 import nlLibrary from '../public/locales/nl/library.json';
 import nlLanding from '../public/locales/nl/landing.json';
 import nlLegal from '../public/locales/nl/legal.json';
@@ -72,6 +76,7 @@ import trAuth from '../public/locales/tr/auth.json';
 import trCommon from '../public/locales/tr/common.json';
 import trDiscover from '../public/locales/tr/discover.json';
 import trDocs from '../public/locales/tr/docs.json';
+import trGuides from '../public/locales/tr/guides.json';
 import trLibrary from '../public/locales/tr/library.json';
 import trLanding from '../public/locales/tr/landing.json';
 import trLegal from '../public/locales/tr/legal.json';
@@ -88,6 +93,7 @@ import zhAuth from '../public/locales/zh/auth.json';
 import zhCommon from '../public/locales/zh/common.json';
 import zhDiscover from '../public/locales/zh/discover.json';
 import zhDocs from '../public/locales/zh/docs.json';
+import zhGuides from '../public/locales/zh/guides.json';
 import zhLibrary from '../public/locales/zh/library.json';
 import zhLanding from '../public/locales/zh/landing.json';
 import zhLegal from '../public/locales/zh/legal.json';
@@ -125,6 +131,7 @@ const resources = {
     common: enCommon,
     discover: enDiscover,
     docs: enDocs,
+    guides: enGuides,
     library: enLibrary,
     landing: enLanding,
     legal: enLegal,
@@ -159,6 +166,7 @@ const resources = {
     common: hiCommon,
     discover: hiDiscover,
     docs: hiDocs,
+    guides: hiGuides,
     library: hiLibrary,
     landing: hiLanding,
     legal: hiLegal,
@@ -193,6 +201,7 @@ const resources = {
     common: jaCommon,
     discover: jaDiscover,
     docs: jaDocs,
+    guides: jaGuides,
     library: jaLibrary,
     landing: jaLanding,
     legal: jaLegal,
@@ -227,6 +236,7 @@ const resources = {
     common: nlCommon,
     discover: nlDiscover,
     docs: nlDocs,
+    guides: nlGuides,
     library: nlLibrary,
     landing: nlLanding,
     legal: nlLegal,
@@ -261,6 +271,7 @@ const resources = {
     common: trCommon,
     discover: trDiscover,
     docs: trDocs,
+    guides: trGuides,
     library: trLibrary,
     landing: trLanding,
     legal: trLegal,
@@ -295,6 +306,7 @@ const resources = {
     common: zhCommon,
     discover: zhDiscover,
     docs: zhDocs,
+    guides: zhGuides,
     library: zhLibrary,
     landing: zhLanding,
     legal: zhLegal,

@@ -23,6 +23,7 @@ import enAuth from '../public/locales/en/auth.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
 import enDocs from '../public/locales/en/docs.json';
+import enGuides from '../public/locales/en/guides.json';
 import enLibrary from '../public/locales/en/library.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
@@ -41,6 +42,7 @@ export const namespaces = [
   'common',
   'discover',
   'docs',
+  'guides',
   'landing',
   'legal',
   'library',
@@ -62,6 +64,7 @@ export type Messages = {
   common: typeof enCommon;
   discover: typeof enDiscover;
   docs: typeof enDocs;
+  guides: typeof enGuides;
   landing: typeof enLanding;
   legal: typeof enLegal;
   library: typeof enLibrary;

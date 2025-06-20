@@ -1,0 +1,41 @@
+{
+  "title": "セットアップガイド",
+  "description": "Plugged.in MCPを始めるために、お好みのAIクライアントを選択してください。各ガイドでは、MCPプロキシの設定と構成の手順を詳しく説明します。",
+  "benefits": {
+    "title": "Plugged.in MCPの利点",
+    "description": "Plugged.in MCPは、すべてのMCPサーバーの統一プロキシとして機能し、いくつかの利点を提供します：",
+    "items": [
+      "単一設定ポイント - 1つの中央設定でMCPサーバーをすべて管理",
+      "自動更新 - 最新機能とセキュリティ更新を自動取得",
+      "簡素化された認証 - すべてのMCPサーバーに単一のAPIキーを使用",
+      "強化されたセキュリティ - 組み込みセキュリティ機能とベストプラクティス",
+      "クロスプラットフォーム互換性 - 異なるオペレーティングシステムでシームレスに動作"
+    ]
+  },
+  "clients": {
+    "claudeDesktop": {
+      "title": "Claude Desktop",
+      "description": "Claude Desktopアプリケーションでplugged.in MCPを設定"
+    },
+    "claudeCode": {
+      "title": "Claude Code",
+      "description": "Claude Code CLIでPlugged.in MCPを設定"
+    },
+    "cursor": {
+      "title": "Cursor",
+      "description": "Cursor AIエディターとPlugged.in MCPを統合"
+    },
+    "smithery": {
+      "title": "Smithery",
+      "description": "Smitheryクラウドプラットフォームを使用してPlugged.in MCPをデプロイ"
+    }
+  },
+  "apiKeyNotice": "📝 注意：APIキーはこちらで管理できます：",
+  "apiKeysPage": "APIキーページ",
+  "help": {
+    "title": "ヘルプが必要ですか？",
+    "description": "セットアップでお困りですか？他のリソースをチェックするか、お問い合わせください。",
+    "completeGuide": "完全セットアップガイド",
+    "contactSupport": "サポートに連絡"
+  }
+}

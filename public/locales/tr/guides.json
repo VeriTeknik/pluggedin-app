@@ -1,0 +1,41 @@
+{
+  "title": "Kurulum Kılavuzları",
+  "description": "Plugged.in MCP ile başlamak için tercih ettiğiniz AI istemcisini seçin. Her kılavuz, MCP proxy'sini kurma ve yapılandırma için adım adım talimatlar sağlar.",
+  "benefits": {
+    "title": "Plugged.in MCP'nin Faydaları",
+    "description": "Plugged.in MCP, tüm MCP sunucularınız için birleşik bir proxy görevi görerek çeşitli avantajlar sağlar:",
+    "items": [
+      "Tek Yapılandırma Noktası - Tüm MCP sunucularınızı tek bir merkezi yapılandırma üzerinden yönetin",
+      "Otomatik Güncellemeler - En son özellikleri ve güvenlik güncellemelerini otomatik olarak alın",
+      "Basitleştirilmiş Kimlik Doğrulama - Tüm MCP sunucularınız için tek bir API anahtarı kullanın",
+      "Gelişmiş Güvenlik - Yerleşik güvenlik özellikleri ve en iyi uygulamalar",
+      "Çapraz Platform Uyumluluğu - Farklı işletim sistemlerinde sorunsuz çalışır"
+    ]
+  },
+  "clients": {
+    "claudeDesktop": {
+      "title": "Claude Desktop",
+      "description": "Claude Desktop uygulaması ile Plugged.in MCP kurulumu"
+    },
+    "claudeCode": {
+      "title": "Claude Code",
+      "description": "Claude Code CLI için Plugged.in MCP yapılandırması"
+    },
+    "cursor": {
+      "title": "Cursor",
+      "description": "Cursor AI editörü ile Plugged.in MCP entegrasyonu"
+    },
+    "smithery": {
+      "title": "Smithery",
+      "description": "Smithery bulut platformunu kullanarak Plugged.in MCP dağıtımı"
+    }
+  },
+  "apiKeyNotice": "📝 Not: API Anahtarlarınızı şurada yönetebilirsiniz:",
+  "apiKeysPage": "API Anahtarları Sayfası",
+  "help": {
+    "title": "Yardıma mı İhtiyacınız Var?",
+    "description": "Kurulumda sorun mu yaşıyorsunuz? Diğer kaynaklarımıza göz atın veya bizimle iletişime geçin.",
+    "completeGuide": "Tam Kurulum Kılavuzu",
+    "contactSupport": "Destek ile İletişim"
+  }
+}

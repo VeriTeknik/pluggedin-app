@@ -1,0 +1,41 @@
+{
+  "title": "设置指南",
+  "description": "选择您首选的AI客户端开始使用Plugged.in MCP。每个指南都提供了设置和配置MCP代理的分步说明。",
+  "benefits": {
+    "title": "Plugged.in MCP的优势",
+    "description": "Plugged.in MCP作为所有MCP服务器的统一代理，提供了几个优势：",
+    "items": [
+      "单一配置点 - 通过一个中央配置管理所有MCP服务器",
+      "自动更新 - 自动获取最新功能和安全更新",
+      "简化认证 - 为所有MCP服务器使用单一API密钥",
+      "增强安全性 - 内置安全功能和最佳实践",
+      "跨平台兼容性 - 在不同操作系统上无缝工作"
+    ]
+  },
+  "clients": {
+    "claudeDesktop": {
+      "title": "Claude Desktop",
+      "description": "使用Claude Desktop应用程序设置Plugged.in MCP"
+    },
+    "claudeCode": {
+      "title": "Claude Code",
+      "description": "为Claude Code CLI配置Plugged.in MCP"
+    },
+    "cursor": {
+      "title": "Cursor",
+      "description": "将Plugged.in MCP与Cursor AI编辑器集成"
+    },
+    "smithery": {
+      "title": "Smithery",
+      "description": "使用Smithery云平台部署Plugged.in MCP"
+    }
+  },
+  "apiKeyNotice": "📝 注意：您可以在以下位置管理您的API密钥：",
+  "apiKeysPage": "API密钥页面",
+  "help": {
+    "title": "需要帮助？",
+    "description": "设置遇到问题？查看我们的其他资源或联系我们。",
+    "completeGuide": "完整设置指南",
+    "contactSupport": "联系支持"
+  }
+}
