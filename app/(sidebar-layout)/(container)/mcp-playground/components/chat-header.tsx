@@ -87,40 +87,41 @@ export function ChatHeader({
   const { t } = useTranslation();
 
   return (
-    <div className="bg-background/95 backdrop-blur-sm border-b border-border px-6 py-4">
-      <div className="flex items-center justify-between max-w-full">
+    <div className="bg-background/95 backdrop-blur-sm border-b border-border px-4 py-[22px]">
+      <div className="flex items-center justify-between gap-4">
         {/* Left: Current Model Info */}
-        <div className="flex items-center space-x-4 min-w-0 flex-1">
-          <div className="flex items-center space-x-3 min-w-0">
+        <div className="flex items-center gap-3 min-w-0">
+          {/* Model Provider Info */}
+          <div className="flex items-center gap-2 min-w-0">
             <div className="flex-shrink-0">
               {PROVIDER_INFO[currentModel.provider].icon}
             </div>
-            <div className="min-w-0">
-              <div className="flex items-center space-x-2">
-                <h2 className="text-lg font-semibold truncate">
+            <div className="min-w-0 hidden sm:block">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold truncate">
                   {PROVIDER_INFO[currentModel.provider].name}
                 </h2>
-                <span className="text-sm font-medium px-2 py-1 bg-primary/10 text-primary rounded-full whitespace-nowrap">
+                <span className="text-xs font-medium px-1.5 py-0.5 bg-primary/10 text-primary rounded-full truncate">
                   {getModelDisplayName(currentModel.model)}
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground truncate">
                 {t('playground.chat.header.temperature')}: {currentModel.temperature || 0} • {t('playground.chat.header.maxTokens')}: {currentModel.maxTokens || 1000}
               </p>
             </div>
           </div>
 
           {/* Connection Status */}
-          <div className="flex items-center space-x-2 flex-shrink-0">
-            <div className={`w-2 h-2 rounded-full ${isSessionActive ? 'bg-green-500' : 'bg-gray-400'}`} />
-            <span className="text-sm text-muted-foreground">
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <div className={`w-1.5 h-1.5 rounded-full ${isSessionActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+            <span className="text-xs text-muted-foreground">
               {serverCount} {serverCount === 1 ? t('playground.chat.header.serverConnected') : t('playground.chat.header.serversConnected')}
             </span>
           </div>
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center space-x-3 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           {/* Quick Model Switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -128,23 +129,23 @@ export function ChatHeader({
                 variant="outline" 
                 size="sm"
                 disabled={isProcessing}
-                className="whitespace-nowrap"
+                className="whitespace-nowrap text-xs"
               >
-                <Zap className="w-4 h-4 mr-2" />
+                <Zap className="w-3 h-3 mr-1" />
                 {t('playground.chat.header.switchModel')}
-                <ChevronDown className="w-4 h-4 ml-2" />
+                <ChevronDown className="w-3 h-3 ml-1" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
+            <DropdownMenuContent align="end" className="w-48">
               {QUICK_MODELS.map((model) => (
                 <DropdownMenuItem
                   key={`${model.provider}-${model.model}`}
                   onClick={() => onModelSwitch(model.provider, model.model)}
-                  className="flex items-center justify-between"
+                  className="flex items-center justify-between text-xs"
                 >
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-2">
                     {PROVIDER_INFO[model.provider].icon}
-                    <span className="font-medium">{model.name}</span>
+                    <span className="font-medium truncate">{model.name}</span>
                   </div>
                   {currentModel.provider === model.provider && currentModel.model === model.model && (
                     <div className="w-2 h-2 rounded-full bg-primary" />
@@ -153,7 +154,7 @@ export function ChatHeader({
               ))}
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={onOpenSettings}>
-                <Settings className="w-4 h-4 mr-2" />
+                <Settings className="w-3 h-3 mr-1" />
                 {t('playground.chat.header.moreModels')}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -166,16 +167,16 @@ export function ChatHeader({
               size="sm"
               onClick={onEndSession}
               disabled={isProcessing}
-              className="whitespace-nowrap"
+                className="whitespace-nowrap text-xs"
             >
               {isProcessing ? (
                 <>
-                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   {t('playground.chat.header.stopping')}
                 </>
               ) : (
                 <>
-                  <X className="w-4 h-4 mr-2" />
+                  <X className="w-3 h-3 mr-1" />
                   {t('playground.chat.header.stopSession')}
                 </>
               )}
@@ -184,7 +185,7 @@ export function ChatHeader({
 
           {/* Settings Button */}
           <Button variant="ghost" size="sm" onClick={onOpenSettings}>
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3 h-3" />
           </Button>
         </div>
       </div>

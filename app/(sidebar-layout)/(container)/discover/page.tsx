@@ -194,7 +194,8 @@ export default function DiscoverPage() {
   }
 
   return (
-    <div className="container px-4 md:px-8 py-4 md:py-8">
+    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background py-4 space-y-4">
+
       <h1 className="text-2xl md:text-3xl font-bold mb-2">{t('title')}</h1>
       <p className="text-sm md:text-base text-muted-foreground mb-6 md:mb-8">
         {t('subtitle')}
@@ -291,7 +292,7 @@ export default function DiscoverPage() {
         </TabsContent>
 
         {/* MCP Servers Tab Content */}
-        <TabsContent value="servers" className="space-y-6 md:space-y-8">
+        <TabsContent value="servers" className="space-y-3">
           {isLoadingCommunityServers ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
               {[...Array(6)].map((_, i) => (
@@ -309,7 +310,7 @@ export default function DiscoverPage() {
                 installedServerMap={installedServerMap}
                 currentUsername={session?.user?.name || null}
               />
-              <div className="mt-6">
+              <div className="pb-3">
                 <PaginationUi
                   currentPage={Math.floor(serverOffset / PAGE_SIZE) + 1}
                   totalPages={Math.ceil((communityServersData?.total || 0) / PAGE_SIZE)}

@@ -206,23 +206,27 @@ function SearchContent() {
   };
 
   return (
-    <div className='container mx-auto py-8 space-y-6 flex flex-col items-center'>
-      <h1 className='text-2xl font-bold'>
-        {t('search.title')}
-      </h1>
-      <p className='text-muted-foreground text-center'>
-        {t('search.subtitle')}
-      </p>
-      
-      <div className="w-full max-w-xl mx-auto">
-        <Input
-          type='search'
-          placeholder={t('search.input.placeholder')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className='mb-6 h-10'
-        />
-        
+    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background py-4 space-y-4">
+
+    <div className="flex flex-col space-y-1.5">
+        <h1 className="text-2xl font-bold tracking-tight">{t('search.title')}</h1>
+        <p className="text-muted-foreground">
+          {t('search.subtitle')}
+        </p>
+      </div>
+
+      {/* Search Controls */}
+      <div className="flex flex-wrap gap-4">
+        <div className="w-full">
+          <Input
+            type='search'
+            placeholder={t('search.input.placeholder')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className='mb-6 h-10 max-w-xl'
+          />
+        </div>
+
         <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
           <Tabs defaultValue={source} onValueChange={handleSourceChange} className="w-full">
             <TabsList className="w-full h-10 flex rounded-lg">
@@ -411,13 +415,15 @@ function SearchContent() {
         />
       )}
 
-      {data && data.total > 0 && (
+   <div className='pb-3'>
+   {data && data.total > 0 && (
         <PaginationUi
           currentPage={Math.floor(offset / PAGE_SIZE) + 1}
           totalPages={Math.ceil(data.total / PAGE_SIZE)}
           onPageChange={handlePageChange}
         />
       )}
+   </div>
     </div>
   );
 }

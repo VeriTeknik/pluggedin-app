@@ -102,7 +102,7 @@ export default function McpPlaygroundPage() {
   const activeServerCount = mcpServers?.filter((s: McpServer) => s.status === 'ACTIVE').length || 0;
 
   return (
-    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background p-4 space-y-4">
+    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background py-4 space-y-4">
       <div className="flex-1 min-h-0 flex rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         {/* Mobile Overlay */}
         {isMobile && !sidebarCollapsed && (

@@ -158,7 +158,8 @@ export default function NotificationsPage() {
   });
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background py-4 space-y-4">
+
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>

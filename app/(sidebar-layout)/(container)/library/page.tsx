@@ -230,7 +230,8 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background py-4 space-y-4">
+
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
