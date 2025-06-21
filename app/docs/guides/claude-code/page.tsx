@@ -122,7 +122,7 @@ export default function ClaudeCodeGuidePage() {
               Run the following command to add Plugged.in MCP server to your Claude Code configuration:
             </p>
             <TerminalDisplay 
-              command={`claude mcp add PluggedIn @pluggedin/pluggedin-mcp-proxy -e PLUGGEDIN_API_KEY=${apiKeyValue}`}
+              command={`claude mcp add PluggedIn npx @pluggedin/pluggedin-mcp-proxy@latest -e PLUGGEDIN_API_KEY=${apiKeyValue}`}
               className="mb-4"
             />
             <div className="p-4 bg-blue-50 dark:bg-blue-950 border-l-4 border-blue-400 rounded-lg mb-4">

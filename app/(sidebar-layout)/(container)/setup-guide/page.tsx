@@ -97,7 +97,7 @@ export default function SetupGuidePage() {
                         mcpServers: {
                           PluggedinMCP: {
                             command: 'npx',
-                            args: ['-y', '@pluggedin/pluggedin-mcp-proxy'],
+                            args: ['-y', '@pluggedin/pluggedin-mcp-proxy@latest'],
                             env: {
                               PLUGGEDIN_API_KEY:
                                 apiKey?.api_key ?? '<create an api key first>',
@@ -123,7 +123,7 @@ export default function SetupGuidePage() {
   "mcpServers": {
     "PluggedinMCP": {
       "command": "npx",
-      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy"],
+      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy@latest"],
       "env": {
         "PLUGGEDIN_API_KEY": "${apiKey?.api_key ?? '<create an api key first>'}"
       }
@@ -199,7 +199,7 @@ export default function SetupGuidePage() {
               <div className='relative mb-4'>
                 <button
                   onClick={() => {
-                    const command = `claude mcp add PluggedIn @pluggedin/pluggedin-mcp-proxy -e PLUGGEDIN_API_KEY=${apiKey?.api_key ?? '<create an api key first>'}`;
+                    const command = `claude mcp add PluggedIn npx @pluggedin/pluggedin-mcp-proxy@latest -e PLUGGEDIN_API_KEY=${apiKey?.api_key ?? '<create an api key first>'}`;
                     navigator.clipboard.writeText(command);
                     toast({
                       description: 'Claude Code command copied to clipboard',
@@ -211,7 +211,7 @@ export default function SetupGuidePage() {
                 </button>
                 <Highlight
                   theme={theme === 'dark' ? themes.vsDark : themes.github}
-                  code={`claude mcp add PluggedIn @pluggedin/pluggedin-mcp-proxy -e PLUGGEDIN_API_KEY=${apiKey?.api_key ?? '<create an api key first>'}`}
+                  code={`claude mcp add PluggedIn npx @pluggedin/pluggedin-mcp-proxy@latest -e PLUGGEDIN_API_KEY=${apiKey?.api_key ?? '<create an api key first>'}`}
                   language='bash'>
                   {({ tokens, getLineProps, getTokenProps }) => (
                     <pre className='bg-[#f6f8fa] dark:bg-[#1e1e1e] text-[#24292f] dark:text-[#d4d4d4] p-4 rounded-md overflow-x-auto'>
@@ -278,7 +278,7 @@ export default function SetupGuidePage() {
         <div className='relative'>
           <button
             onClick={() => {
-              const command = `npx -y @pluggedin/pluggedin-mcp-proxy --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
+              const command = `npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
               navigator.clipboard.writeText(command);
               toast({
                 description: 'Cursor command copied to clipboard',
@@ -290,7 +290,7 @@ export default function SetupGuidePage() {
           </button>
           <Highlight
             theme={theme === 'dark' ? themes.vsDark : themes.github}
-            code={`npx -y @pluggedin/pluggedin-mcp-proxy --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`}
+            code={`npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`}
             language='bash'>
             {({ tokens, getLineProps, getTokenProps }) => (
               <pre className='bg-[#f6f8fa] dark:bg-[#1e1e1e] text-[#24292f] dark:text-[#d4d4d4] p-4 rounded-md overflow-x-auto'>

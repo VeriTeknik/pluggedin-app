@@ -111,7 +111,7 @@ export default function CursorGuidePage() {
               Use the following command to set up the Plugged.in MCP server:
             </p>
             <TerminalDisplay 
-              command={`npx -y @pluggedin/pluggedin-mcp-proxy --pluggedin-api-key ${apiKeyValue}`}
+              command={`npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key ${apiKeyValue}`}
               className="mb-4"
             />
             <div className="p-4 bg-blue-50 dark:bg-blue-950 border-l-4 border-blue-400 rounded-lg mb-4">

@@ -26,7 +26,7 @@ export default function ClaudeDesktopGuidePage() {
     mcpServers: {
       PluggedinMCP: {
         command: 'npx',
-        args: ['-y', '@pluggedin/pluggedin-mcp-proxy'],
+        args: ['-y', '@pluggedin/pluggedin-mcp-proxy@latest'],
         env: {
           PLUGGEDIN_API_KEY: apiKeyValue || '<YOUR_PLUGGEDIN_API_KEY>',
         },
