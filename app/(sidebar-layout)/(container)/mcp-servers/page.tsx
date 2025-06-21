@@ -87,7 +87,7 @@ export default function MCPServersPage() {
       header: 'Command',
     }),
     columnHelper.accessor('args', {
-      cell: (info) => info.getValue().join(' ') || '-',
+      cell: (info) => info.getValue()?.join(' ') || '-',
       header: 'Arguments',
     }),
     columnHelper.accessor('type', {

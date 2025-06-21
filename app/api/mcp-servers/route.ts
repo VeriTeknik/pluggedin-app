@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { mcpServersTable, McpServerStatus } from '@/db/schema';
+import { decryptServerData } from '@/lib/encryption';
 
 import { authenticateApiKey } from '../auth';
 
@@ -44,7 +45,13 @@ export async function GET(request: Request) {
           eq(mcpServersTable.profile_uuid, auth.activeProfile.uuid)
         )
       );
-    return NextResponse.json(activeMcpServers);
+    
+    // Decrypt sensitive fields before sending to MCP proxy
+    const decryptedServers = activeMcpServers.map(server => 
+      decryptServerData(server, auth.activeProfile.uuid)
+    );
+    
+    return NextResponse.json(decryptedServers);
   } catch (error) {
     console.error(error);
     return NextResponse.json(

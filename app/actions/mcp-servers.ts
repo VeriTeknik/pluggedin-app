@@ -13,6 +13,7 @@ import {
   projectsTable, 
   users 
 } from '@/db/schema';
+import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import type { McpServer } from '@/types/mcp-server';
 
 import { discoverSingleServerTools } from './discover-mcp-tools';
@@ -59,13 +60,16 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
   const serversWithMetrics = await Promise.all(
     servers.map(async ({ server, username }) => {
       try {
+        // Decrypt sensitive fields
+        const decryptedServer = decryptServerData(server, profileUuid);
+        
         const metrics = await getServerRatingMetrics({
           source: server.source || McpServerSource.PLUGGEDIN,
           externalId: server.external_id || server.uuid
         });
 
         return {
-          ...server,
+          ...decryptedServer,
           username,
           averageRating: metrics?.metrics?.averageRating,
           ratingCount: metrics?.metrics?.ratingCount,
@@ -91,12 +95,17 @@ export async function getMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<McpServer | undefined> {
-  return await db.query.mcpServersTable.findFirst({
+  const server = await db.query.mcpServersTable.findFirst({
       where: and(
         eq(mcpServersTable.uuid, uuid),
         eq(mcpServersTable.profile_uuid, profileUuid)
       ),
     });
+    
+  if (!server) return undefined;
+  
+  // Decrypt sensitive fields
+  return decryptServerData(server, profileUuid);
 }
 
 export async function deleteMcpServerByUuid(
@@ -145,14 +154,31 @@ export async function updateMcpServer(
 ): Promise<void> { // Changed return type to void as it doesn't explicitly return the server
   // Construct the update object carefully to handle undefined vs null
   const updateData: Partial<typeof mcpServersTable.$inferInsert> = {};
+  
+  // Non-sensitive fields can be updated directly
   if (data.name !== undefined) updateData.name = data.name;
-  if (data.description !== undefined) updateData.description = data.description; // Handles null
-  if (data.command !== undefined) updateData.command = data.command; // Handles null
-  if (data.args !== undefined) updateData.args = data.args;
-  if (data.env !== undefined) updateData.env = data.env;
-  if (data.url !== undefined) updateData.url = data.url; // Handles null
+  if (data.description !== undefined) updateData.description = data.description;
   if (data.type !== undefined) updateData.type = data.type;
-  if (data.notes !== undefined) updateData.notes = data.notes; // Handles null
+  if (data.notes !== undefined) updateData.notes = data.notes;
+  
+  // Handle sensitive fields that need encryption
+  const sensitiveData: any = {};
+  if (data.command !== undefined) sensitiveData.command = data.command;
+  if (data.args !== undefined) sensitiveData.args = data.args;
+  if (data.env !== undefined) sensitiveData.env = data.env;
+  if (data.url !== undefined) sensitiveData.url = data.url;
+  
+  // If we have sensitive data to update, encrypt it
+  if (Object.keys(sensitiveData).length > 0) {
+    const encryptedData = encryptServerData(sensitiveData, profileUuid);
+    Object.assign(updateData, encryptedData);
+    
+    // Always set the unencrypted fields to null when we have encrypted versions
+    updateData.command = null;
+    updateData.args = null;
+    updateData.env = null;
+    updateData.url = null;
+  }
 
   if (Object.keys(updateData).length === 0) {
     console.warn("updateMcpServer called with no fields to update.");
@@ -226,8 +252,8 @@ export async function createMcpServer({
       return { success: false, error: 'URL must be a valid HTTP/HTTPS URL' };
     }
 
-    // Insert and get the newly created server record
-    const inserted = await db.insert(mcpServersTable).values({
+    // Prepare data for encryption
+    const serverData = {
       name,
       description,
       type: serverType,
@@ -238,7 +264,13 @@ export async function createMcpServer({
       profile_uuid: profileUuid,
       source,
       external_id,
-    }).returning(); // Use returning() to get the inserted row
+    };
+    
+    // Encrypt sensitive fields
+    const encryptedData = encryptServerData(serverData, profileUuid);
+    
+    // Insert and get the newly created server record
+    const inserted = await db.insert(mcpServersTable).values(encryptedData).returning(); // Use returning() to get the inserted row
 
     const newServer = inserted[0]; // Get the first (and only) inserted row
 
@@ -431,8 +463,9 @@ export async function importSharedServer(
  * @returns A sanitized version for sharing
  */
 export async function createShareableTemplate(server: McpServer): Promise<any> {
-  // Deep clone the server to avoid modifying the original
-  const template = JSON.parse(JSON.stringify(server));
+  // Use the encryption utility to create a sanitized template
+  const { createSanitizedTemplate } = await import('@/lib/encryption');
+  const template = createSanitizedTemplate(server);
   
   // Add metadata about the source server
   template.originalServerUuid = server.uuid;

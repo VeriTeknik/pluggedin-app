@@ -6,10 +6,10 @@ export interface McpServer {
   created_at: Date;
   description: string | null;
   command: string | null;
-  args: string[];
+  args: string[] | null;
   env: {
     [key: string]: string;
-  };
+  } | null;
   profile_uuid: string;
   status: McpServerStatus;
   type: McpServerType;

@@ -110,8 +110,8 @@ export default function McpServerDetailPage({
         name: mcpServer.name,
         description: mcpServer.description || '',
         command: mcpServer.command || '',
-        args: mcpServer.args.join(' '),
-        env: Object.entries(mcpServer.env)
+        args: mcpServer.args?.join(' ') || '',
+        env: Object.entries(mcpServer.env || {})
           .map(([key, value]) => `${key}=${value}`)
           .join('\n'),
         url: mcpServer.url || '',
@@ -132,8 +132,8 @@ export default function McpServerDetailPage({
           value.description !== (mcpServer.description || '') ||
           (mcpServer.type === McpServerType.STDIO && (
             value.command !== (mcpServer.command || '') ||
-            value.args !== mcpServer.args.join(' ') ||
-            value.env !== Object.entries(mcpServer.env)
+            value.args !== (mcpServer.args?.join(' ') || '') ||
+            value.env !== Object.entries(mcpServer.env || {})
               .map(([key, value]) => `${key}=${value}`)
               .join('\n')
           )) ||
