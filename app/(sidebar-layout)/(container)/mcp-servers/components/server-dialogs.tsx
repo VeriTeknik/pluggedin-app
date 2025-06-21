@@ -70,6 +70,18 @@ export function ImportDialog({ open, onOpenChange, onImport, isSubmitting }: Imp
       "url": "https://example.com/sse",
       "description": "Optional description",
       "type": "sse" // optional, defaults to "stdio"
+    },
+    "StreamableHttpServerName": {
+      "url": "https://example.com/mcp",
+      "description": "Streamable HTTP server",
+      "type": "streamable_http",
+      "transport": "streamable_http",
+      "streamableHTTPOptions": {
+        "headers": {
+          "Authorization": "Bearer token"
+        },
+        "sessionId": "optional-session-id"
+      }
     }
   }
 }`}

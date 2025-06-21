@@ -7,7 +7,8 @@
       "totalServers": "कुल सर्वर",
       "active": "सक्रिय",
       "stdio": "STDIO",
-      "sse": "SSE"
+      "sse": "SSE",
+      "streamableHttp": "Streamable HTTP"
     },
     "actions": {
       "addServer": "सर्वर जोड़ें",
@@ -42,6 +43,7 @@
       "addDescription": "एक नया MCP सर्वर कॉन्फ़िगरेशन बनाएं। STDIO (कमांड-आधारित) या SSE (URL-आधारित) सर्वर प्रकार चुनें।",
       "commandBased": "कमांड-आधारित (STDIO)",
       "urlBased": "URL-आधारित (SSE)",
+      "streamableHttpBased": "URL-आधारित (Streamable HTTP)",
       "name": "नाम",
       "namePlaceholder": "उदा., mcp-server-time",
       "description": "विवरण",
@@ -53,6 +55,12 @@
       "envVars": "पर्यावरण चर",
       "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
       "envVarsHelp": "पर्यावरण चर KEY=value प्रारूप में दर्ज करें, प्रति पंक्ति एक",
+      "headers": "हेडर",
+      "headersPlaceholder": "Authorization: Bearer token\nX-Custom-Header: मान",
+      "headersHelp": "हेडर प्रति पंक्ति एक दर्ज करें, प्रारूप: हेडर-नाम: हेडर-मान",
+      "sessionId": "सेशन आईडी",
+      "sessionIdPlaceholder": "वैकल्पिक सेशन पहचानकर्ता",
+      "sessionIdHelp": "स्थितिपूर्ण कनेक्शन के लिए सेशन आईडी प्रदान करें (वैकल्पिक)",
       "serverUrl": "सर्वर यूआरएल",
       "serverUrlPlaceholder": "http://localhost:3000/sse",
       "serverUrlHelp": "एक मान्य HTTP/HTTPS यूआरएल होना चाहिए",

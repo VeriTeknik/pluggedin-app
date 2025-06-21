@@ -43,6 +43,8 @@ interface ServerCardProps {
 const getServerIcon = (server: McpServer) => {
   if (server.type === McpServerType.STDIO) {
     return <Terminal className="h-4 w-4 text-purple-500" />;
+  } else if (server.type === McpServerType.STREAMABLE_HTTP) {
+    return <Globe className="h-4 w-4 text-green-500" />;
   }
   return <Globe className="h-4 w-4 text-blue-500" />;
 };
@@ -221,7 +223,7 @@ export function ServerCard({
             </div>
           )}
           
-          {server.type === McpServerType.SSE && server.url && (
+          {(server.type === McpServerType.SSE || server.type === McpServerType.STREAMABLE_HTTP) && server.url && (
             <div className="col-span-2 mt-2">
               <p className="text-xs text-muted-foreground font-mono truncate">
                 {server.url}

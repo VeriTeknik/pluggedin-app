@@ -7,7 +7,8 @@
       "totalServers": "Toplam Sunucu",
       "active": "Aktif",
       "stdio": "STDIO",
-      "sse": "SSE"
+      "sse": "SSE",
+      "streamableHttp": "Streamable HTTP"
     },
     "actions": {
       "addServer": "Sunucu Ekle",
@@ -42,6 +43,7 @@
       "addDescription": "Yeni bir MCP sunucusu yapılandırması oluşturun. STDIO (komut tabanlı) veya SSE (URL tabanlı) sunucu türü arasından seçim yapın.",
       "commandBased": "Komut tabanlı (STDIO)",
       "urlBased": "URL tabanlı (SSE)",
+      "streamableHttpBased": "URL tabanlı (Streamable HTTP)",
       "name": "İsim",
       "namePlaceholder": "örn., mcp-server-time",
       "description": "Açıklama",
@@ -53,6 +55,12 @@
       "envVars": "Ortam Değişkenleri",
       "envVarsPlaceholder": "KEY=değer\nANOTHER_KEY=başka_değer",
       "envVarsHelp": "Ortam değişkenlerini KEY=değer formatında, her satıra bir tane olacak şekilde girin",
+      "headers": "Başlıklar",
+      "headersPlaceholder": "Authorization: Bearer token\nX-Custom-Header: değer",
+      "headersHelp": "Başlıkları her satıra bir tane olacak şekilde girin: Başlık-Adı: Başlık-Değeri",
+      "sessionId": "Oturum Kimliği",
+      "sessionIdPlaceholder": "İsteğe bağlı oturum tanımlayıcısı",
+      "sessionIdHelp": "Durum korumalı bağlantılar için oturum kimliği sağlayın (isteğe bağlı)",
       "serverUrl": "Sunucu URL'si",
       "serverUrlPlaceholder": "http://localhost:3000/sse",
       "serverUrlHelp": "Geçerli bir HTTP/HTTPS URL'si olmalıdır",

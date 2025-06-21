@@ -328,6 +328,7 @@ The plugged.in App implements comprehensive security measures to protect your da
    - STDIO MCP servers are automatically wrapped with `firejail --quiet` on Linux systems
    - Utilizes Firejail's default security profile to restrict server capabilities
    - Limits filesystem access and prevents unauthorized system modifications
+   - Supports all transport types: STDIO, SSE, and Streamable HTTP
 
 3. **API Security**
    - Rate limiting on all API endpoints to prevent abuse
@@ -364,7 +365,8 @@ The plugged.in App is designed to work seamlessly with the [plugged.in MCP Proxy
 - A unified interface for all MCP clients
 - Tool discovery and reporting
 - Request routing to the appropriate MCP servers
-- Support for the latest MCP specification
+- Support for the latest MCP specification including Streamable HTTP transport
+- Compatible with STDIO, SSE, and Streamable HTTP server types
 
 ## 📚 Related Resources
 
@@ -395,21 +397,35 @@ The plugged.in project is actively developing several exciting features:
 
 ## 📝 Recent Updates
 
+### Latest Development
+
+#### 🚀 Streamable HTTP Transport Support
+
+- **Full MCP Streamable HTTP Support**: Added support for the new MCP Streamable HTTP transport protocol
+- **OAuth 2.1 Integration**: Support for OAuth-based authentication flows
+- **Enhanced Configuration**: Custom headers and session management for Streamable HTTP servers
+- **Multi-Language Support**: Updated translations for all supported languages
+
+See [CHANGELOG.md](./CHANGELOG.md) for the latest updates.
+
 ### Version 2.1.0 (June 2025)
 
 #### 🎯 Major Features
+
 - **Document Library with RAG Integration**: Upload and manage documents that enhance AI context
 - **Real-Time Notification System**: Get instant updates on MCP activities with email support
 - **Progressive Server Initialization**: Faster, more resilient MCP server connections
 - **Enhanced Playground UI**: Redesigned layout with better responsiveness and streaming indicators
 
 #### 🔒 Security Enhancements
+
 - **Improved RAG Query Security**: Replaced custom sanitization with `sanitize-html` library for robust XSS protection
 - **Secure Environment Variable Parsing**: Implemented `dotenv` library for proper handling of quotes, multiline values, and special characters
 - **Enhanced Input Validation**: Added comprehensive validation for all user inputs across the application
 - **Strengthened API Security**: Implemented rate limiting and improved authentication checks
 
 #### 🐛 Bug Fixes
+
 - Fixed JSON-RPC protocol interference in MCP proxy
 - Resolved memory leaks in long-running playground sessions
 - Corrected streaming message handling

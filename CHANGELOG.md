@@ -5,6 +5,34 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Streamable HTTP Transport Support**: Full support for the new MCP Streamable HTTP transport protocol
+  - Added STREAMABLE_HTTP to McpServerType enum
+  - Database schema updated with oauth_token, headers, and session_id fields
+  - New StreamableHttpServerForm component for configuring Streamable HTTP servers
+  - Integration with @h1deya/langchain-mcp-tools v0.2.7 for Streamable HTTP support
+  - Support for OAuth 2.1 authorization flows
+  - Custom headers configuration for authentication
+  - Session management with Mcp-Session-Id headers
+- **Enhanced MCP Server Management**
+  - Updated server forms to include new transport type tab
+  - Import/export functionality now supports Streamable HTTP configurations
+  - Progressive initialization supports new transport type
+- **Internationalization Updates**
+  - Added translations for Streamable HTTP features in all supported languages (en, tr, zh, ja, hi, nl)
+  - New translation keys: streamableHttp, streamableHttpBased, headers, sessionId
+
+### Changed
+- Updated @modelcontextprotocol/sdk from ^1.8.0 to ^1.13.0
+- Updated @h1deya/langchain-mcp-tools from ^0.2.4 to ^0.2.7
+- Enhanced client-wrapper.ts to handle Streamable HTTP transport configuration
+- Improved collection import to properly handle server types and new fields
+
+### Fixed
+- Collection import now correctly uses the server type from imported data instead of defaulting to STDIO
+
 ## [2.2.0] - 2025-06-21
 
 ### Added

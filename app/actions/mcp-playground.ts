@@ -627,6 +627,14 @@ export async function getOrCreatePlaygroundSession(
           type: server.type,
           // Do not set cwd for non-filesystem servers unless specifically needed/configured
         };
+        
+        // Add transport and streamableHTTPOptions for Streamable HTTP servers
+        if (server.type === McpServerType.STREAMABLE_HTTP || server.transport === 'streamable_http') {
+          mcpServersConfig[server.name].transport = 'streamable_http';
+          if (server.streamableHTTPOptions) {
+            mcpServersConfig[server.name].streamableHTTPOptions = server.streamableHTTPOptions;
+          }
+        }
       }
 
       // Removed absolute path logic for uvx

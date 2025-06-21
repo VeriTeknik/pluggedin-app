@@ -43,7 +43,7 @@ import { McpServer } from '@/types/mcp-server';
 import { ServerCard } from './components/server-card';
 // Local components
 import { ExportDialog, ImportDialog } from './components/server-dialogs';
-import { SseServerForm, StdioServerForm } from './components/server-forms';
+import { SseServerForm, StdioServerForm, StreamableHttpServerForm } from './components/server-forms';
 import { ServerHero } from './components/server-hero';
 import { ServerStats } from './components/server-stats';
 import { ShareCollectionDialog } from './components/share-collection-dialog';
@@ -413,12 +413,15 @@ export default function MCPServersPage() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] p-4 sm:p-6">
           <Tabs defaultValue={McpServerType.STDIO} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value={McpServerType.STDIO} className="text-sm">
                 {t('mcpServers.form.commandBased')}
               </TabsTrigger>
               <TabsTrigger value={McpServerType.SSE} className="text-sm">
                 {t('mcpServers.form.urlBased')}
+              </TabsTrigger>
+              <TabsTrigger value={McpServerType.STREAMABLE_HTTP} className="text-sm">
+                {t('mcpServers.form.streamableHttpBased')}
               </TabsTrigger>
             </TabsList>
             <TabsContent value={McpServerType.STDIO}>
@@ -430,6 +433,13 @@ export default function MCPServersPage() {
             </TabsContent>
             <TabsContent value={McpServerType.SSE}>
               <SseServerForm
+                onSubmit={handleCreateServer}
+                onCancel={() => setOpen(false)}
+                isSubmitting={isSubmitting}
+              />
+            </TabsContent>
+            <TabsContent value={McpServerType.STREAMABLE_HTTP}>
+              <StreamableHttpServerForm
                 onSubmit={handleCreateServer}
                 onCancel={() => setOpen(false)}
                 isSubmitting={isSubmitting}

@@ -11,7 +11,7 @@ When you share an MCP server in Plugged.in, we prioritize security by ensuring t
 When you share a server, the following information is shared:
 
 - Server title and description (as you enter them when sharing)
-- Server type (STDIO or SSE)
+- Server type (STDIO, SSE, or Streamable HTTP)
 - Basic command and arguments structure
 - URL structure (with credentials removed)
 

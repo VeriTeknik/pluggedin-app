@@ -7,7 +7,8 @@
       "totalServers": "Totaal aantal servers",
       "active": "Actief",
       "stdio": "STDIO",
-      "sse": "SSE"
+      "sse": "SSE",
+      "streamableHttp": "Streamable HTTP"
     },
     "actions": {
       "addServer": "Server toevoegen",
@@ -42,6 +43,7 @@
       "addDescription": "Maak een nieuwe MCP-serverconfiguratie aan. Kies tussen STDIO (command-based) of SSE (URL-based) servertype.",
       "commandBased": "Command-based (STDIO)",
       "urlBased": "URL-based (SSE)",
+      "streamableHttpBased": "URL-based (Streamable HTTP)",
       "name": "Naam",
       "namePlaceholder": "bijv. mcp-server-time",
       "description": "Beschrijving",
@@ -53,6 +55,12 @@
       "envVars": "Omgevingsvariabelen",
       "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
       "envVarsHelp": "Voer omgevingsvariabelen in KEY=value formaat in, één per regel",
+      "headers": "Headers",
+      "headersPlaceholder": "Authorization: Bearer token\nX-Custom-Header: waarde",
+      "headersHelp": "Voer headers in, één per regel in het formaat: Header-Naam: Header-Waarde",
+      "sessionId": "Sessie ID",
+      "sessionIdPlaceholder": "Optionele sessie-identificatie",
+      "sessionIdHelp": "Geef een sessie-ID op voor stateful verbindingen (optioneel)",
       "serverUrl": "Server URL",
       "serverUrlPlaceholder": "http://localhost:3000/sse",
       "serverUrlHelp": "Moet een geldige HTTP/HTTPS URL zijn",

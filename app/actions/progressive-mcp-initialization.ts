@@ -31,8 +31,8 @@ async function performServerHealthChecks(
 ): Promise<Record<string, boolean>> {
   const results: Record<string, boolean> = {};
   const checkPromises = Object.entries(mcpServersConfig).map(async ([serverName, config]) => {
-    // Only check WebSocket (SSE) servers with a URL
-    if (config.type === 'SSE' && config.url) {
+    // Only check WebSocket (SSE) and Streamable HTTP servers with a URL
+    if ((config.type === 'SSE' || config.type === 'STREAMABLE_HTTP') && config.url) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second timeout for health check
@@ -131,7 +131,7 @@ async function initializeSingleServer(
       // Wait before retrying
       // Check serverConfig.type safely
       const serverType = typeof serverConfig === 'object' && serverConfig !== null ? serverConfig.type : undefined;
-      const delay = serverType === 'SSE' && lastError.message.includes('connect') ? 2000 : 1000;
+      const delay = (serverType === 'SSE' || serverType === 'STREAMABLE_HTTP') && lastError.message.includes('connect') ? 2000 : 1000;
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }

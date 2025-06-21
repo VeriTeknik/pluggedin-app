@@ -12,8 +12,8 @@ importers:
         specifier: ^1.8.0
         version: 1.8.0(nodemailer@6.10.0)
       '@h1deya/langchain-mcp-tools':
-        specifier: ^0.2.4
-        version: 0.2.4(openai@4.93.0(ws@8.18.2)(zod@3.24.2))
+        specifier: ^0.2.7
+        version: 0.2.7(openai@4.93.0(ws@8.18.2)(zod@3.24.2))
       '@hookform/resolvers':
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.55.0(react@19.1.0))
@@ -36,8 +36,8 @@ importers:
         specifier: ^0.4.9
         version: 0.4.9(@langchain/core@0.3.58(openai@4.93.0(ws@8.18.2)(zod@3.24.2)))(ws@8.18.2)
       '@modelcontextprotocol/sdk':
-        specifier: ^1.8.0
-        version: 1.9.0
+        specifier: ^1.13.0
+        version: 1.13.0
       '@monaco-editor/react':
         specifier: ^4.6.0
         version: 4.7.0(monaco-editor@0.52.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -1154,8 +1154,8 @@ packages:
     engines: {node: '>=6'}
     hasBin: true
 
-  '@h1deya/langchain-mcp-tools@0.2.4':
-    resolution: {integrity: sha512-JKnvx1GVg8v1CCYIiqjDoeBZRsKQKci/ER5WSvKlcsJzTiMrzxUx9jpoFVoOSHW95HMRAB1Dc078IisTbQngQg==}
+  '@h1deya/langchain-mcp-tools@0.2.7':
+    resolution: {integrity: sha512-zJyHP5OgidQt7pKWK/QtMsEZ0fjy3+M7v8oOq9TY/APc2pYrtJlcxjyShmS9gzqyKtGRkMQ3QnrW4CsZMcV+QA==}
 
   '@hookform/resolvers@3.10.0':
     resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
@@ -1875,8 +1875,8 @@ packages:
     resolution: {integrity: sha512-Yhlar6v9WQgUp/He7BdgzOz8lqMQ8sU+jkCq7Wx8Myc5YFJLbEe7lgui/V7G1qB1DJykHSGwreceSaD60Y0PUQ==}
     hasBin: true
 
-  '@modelcontextprotocol/sdk@1.9.0':
-    resolution: {integrity: sha512-Jq2EUCQpe0iyO5FGpzVYDNFR6oR53AIrwph9yWl7uSc7IWUMsrmpmSaTGra5hQNunXpM+9oit85p924jWuHzUA==}
+  '@modelcontextprotocol/sdk@1.13.0':
+    resolution: {integrity: sha512-P5FZsXU0kY881F6Hbk9GhsYx02/KgWK1DYf7/tyE/1lcFKhDYPQR9iYjhQXJn+Sg6hQleMo3DB7h7+p4wgp2Lw==}
     engines: {node: '>=18'}
 
   '@monaco-editor/loader@1.5.0':
@@ -8819,12 +8819,12 @@ snapshots:
       protobufjs: 7.5.3
       yargs: 17.7.2
 
-  '@h1deya/langchain-mcp-tools@0.2.4(openai@4.93.0(ws@8.18.2)(zod@3.24.2))':
+  '@h1deya/langchain-mcp-tools@0.2.7(openai@4.93.0(ws@8.18.2)(zod@3.24.2))':
     dependencies:
       '@langchain/core': 0.3.58(openai@4.93.0(ws@8.18.2)(zod@3.24.2))
-      '@modelcontextprotocol/sdk': 1.9.0
-      '@n8n/json-schema-to-zod': 1.1.0(zod@3.24.2)
-      zod: 3.24.2
+      '@modelcontextprotocol/sdk': 1.13.0
+      '@n8n/json-schema-to-zod': 1.1.0(zod@3.25.64)
+      zod: 3.25.64
     transitivePeerDependencies:
       - openai
       - supports-color
@@ -9307,8 +9307,9 @@ snapshots:
       - encoding
       - supports-color
 
-  '@modelcontextprotocol/sdk@1.9.0':
+  '@modelcontextprotocol/sdk@1.13.0':
     dependencies:
+      ajv: 6.12.6
       content-type: 1.0.5
       cors: 2.8.5
       cross-spawn: 7.0.6
@@ -9317,8 +9318,8 @@ snapshots:
       express-rate-limit: 7.5.0(express@5.1.0)
       pkce-challenge: 5.0.0
       raw-body: 3.0.0
-      zod: 3.24.2
-      zod-to-json-schema: 3.24.5(zod@3.24.2)
+      zod: 3.25.64
+      zod-to-json-schema: 3.24.5(zod@3.25.64)
     transitivePeerDependencies:
       - supports-color
 
@@ -9342,9 +9343,9 @@ snapshots:
       outvariant: 1.4.3
       strict-event-emitter: 0.5.1
 
-  '@n8n/json-schema-to-zod@1.1.0(zod@3.24.2)':
+  '@n8n/json-schema-to-zod@1.1.0(zod@3.25.64)':
     dependencies:
-      zod: 3.24.2
+      zod: 3.25.64
 
   '@napi-rs/wasm-runtime@0.2.8':
     dependencies:
@@ -11391,7 +11392,7 @@ snapshots:
     dependencies:
       bytes: 3.1.2
       content-type: 1.0.5
-      debug: 4.4.0
+      debug: 4.4.1
       http-errors: 2.0.0
       iconv-lite: 0.6.3
       on-finished: 2.4.1
@@ -12539,7 +12540,7 @@ snapshots:
       content-type: 1.0.5
       cookie: 0.7.2
       cookie-signature: 1.2.2
-      debug: 4.4.0
+      debug: 4.4.1
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1
@@ -12657,7 +12658,7 @@ snapshots:
 
   finalhandler@2.1.0:
     dependencies:
-      debug: 4.4.0
+      debug: 4.4.1
       encodeurl: 2.0.0
       escape-html: 1.0.3
       on-finished: 2.4.1
@@ -13083,7 +13084,7 @@ snapshots:
       isstream: 0.1.2
       jsonwebtoken: 9.0.2
       mime-types: 2.1.35
-      retry-axios: 2.6.0(axios@1.10.0(debug@4.4.1))
+      retry-axios: 2.6.0(axios@1.10.0)
       tough-cookie: 4.1.4
     transitivePeerDependencies:
       - supports-color
@@ -15466,7 +15467,7 @@ snapshots:
 
   ret@0.2.2: {}
 
-  retry-axios@2.6.0(axios@1.10.0(debug@4.4.1)):
+  retry-axios@2.6.0(axios@1.10.0):
     dependencies:
       axios: 1.10.0(debug@4.4.1)
 
@@ -15506,7 +15507,7 @@ snapshots:
 
   router@2.2.0:
     dependencies:
-      debug: 4.4.0
+      debug: 4.4.1
       depd: 2.0.0
       is-promise: 4.0.0
       parseurl: 1.3.3
@@ -15587,7 +15588,7 @@ snapshots:
 
   send@1.2.0:
     dependencies:
-      debug: 4.4.0
+      debug: 4.4.1
       encodeurl: 2.0.0
       escape-html: 1.0.3
       etag: 1.8.1

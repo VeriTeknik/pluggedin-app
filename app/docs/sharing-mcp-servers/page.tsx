@@ -40,7 +40,7 @@ export default function SharingMcpServersPage() {
         <p>When you share a server, the following information is shared:</p>
         <ul>
           <li>Server title and description (as you enter them when sharing)</li>
-          <li>Server type (STDIO or SSE)</li>
+          <li>Server type (STDIO, SSE, or Streamable HTTP)</li>
           <li>Basic command and arguments structure</li>
           <li>URL structure (with credentials removed)</li>
         </ul>

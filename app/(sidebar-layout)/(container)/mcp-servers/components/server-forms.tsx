@@ -254,3 +254,159 @@ export function SseServerForm({ onSubmit, onCancel, isSubmitting }: ServerFormPr
     </Form>
   );
 }
+
+export function StreamableHttpServerForm({ onSubmit, onCancel, isSubmitting }: ServerFormProps) {
+  const { t } = useTranslation();
+  const form = useForm({
+    defaultValues: {
+      name: '',
+      description: '',
+      url: '',
+      type: McpServerType.STREAMABLE_HTTP,
+      headers: '',
+      sessionId: '',
+    },
+  });
+
+  const handleSubmit = async (data: any) => {
+    // Parse headers from string format
+    const headers = Object.fromEntries(
+      data.headers
+        .split('\n')
+        .filter((line: string) => line.includes(':'))
+        .map((line: string) => {
+          const [key, ...values] = line.split(':');
+          return [key.trim(), values.join(':').trim()];
+        })
+    );
+
+    const processedData = {
+      ...data,
+      type: McpServerType.STREAMABLE_HTTP,
+      args: [],
+      env: {},
+      status: McpServerStatus.ACTIVE,
+      command: undefined,
+      transport: 'streamable_http',
+      streamableHTTPOptions: {
+        headers: Object.keys(headers).length > 0 ? headers : undefined,
+        sessionId: data.sessionId || undefined,
+      },
+    };
+
+    await onSubmit(processedData);
+    form.reset();
+  };
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-3 rounded-md">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            <strong>Note:</strong> Streamable HTTP support is experimental due to module resolution issues in Next.js. 
+            The server will fall back to SSE transport until this is resolved.
+          </p>
+        </div>
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('mcpServers.form.name')}</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder={t('mcpServers.form.namePlaceholder')} required />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('mcpServers.form.description')}</FormLabel>
+              <FormControl>
+                <Textarea
+                  {...field}
+                  placeholder={t('mcpServers.form.descriptionPlaceholder')}
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="url"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('mcpServers.form.serverUrl')}</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder={t('mcpServers.form.serverUrlPlaceholder')}
+                  required
+                  pattern="^(http|https)://[^\s/$.?#].[^\s]*$"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="headers"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('mcpServers.form.headers')}</FormLabel>
+              <FormControl>
+                <Textarea
+                  {...field}
+                  placeholder={t('mcpServers.form.headersPlaceholder')}
+                  className="font-mono text-sm"
+                />
+              </FormControl>
+              <p className="text-sm text-muted-foreground">
+                {t('mcpServers.form.headersHelp')}
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="sessionId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>{t('mcpServers.form.sessionId')}</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  placeholder={t('mcpServers.form.sessionIdPlaceholder')}
+                />
+              </FormControl>
+              <p className="text-sm text-muted-foreground">
+                {t('mcpServers.form.sessionIdHelp')}
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <div className="flex justify-end space-x-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isSubmitting}
+          >
+            {t('mcpServers.actions.cancel')}
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? t('mcpServers.actions.creating') : t('mcpServers.actions.create')}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
