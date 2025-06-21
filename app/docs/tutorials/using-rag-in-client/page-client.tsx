@@ -21,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 // Mock screenshot component
 function MockScreenshot({ title, description }: { title: string; description?: string }) {
