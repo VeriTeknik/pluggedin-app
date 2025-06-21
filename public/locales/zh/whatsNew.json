@@ -1,0 +1,220 @@
+{
+  "title": "最新动态",
+  "description": "探索 Plugged.in 的最新功能和更新。通过实用指南学习如何使用新功能。",
+  "searchPlaceholder": "搜索文章...",
+  "readTime": "阅读",
+  "new": "新",
+  "backToArticles": "返回最新动态",
+  "categories": {
+    "all": "全部",
+    "features": "功能", 
+    "security": "安全",
+    "integrations": "集成",
+    "feature": "功能",
+    "performance": "性能",
+    "social": "社交"
+  },
+  "articles": {
+    "send-notifications-from-ai": {
+      "title": "从任何 AI 模型发送通知",
+      "description": "通过通知和电子邮件从您的 AI 工作流程获取实时警报",
+      "content": {
+        "intro": "现在您可以直接从任何 AI 模型或 MCP 工具发送通知。无论您是在运行长时间任务、监控错误还是需要自定义警报，通知系统都会实时通知您。",
+        "howToTitle": "如何发送通知",
+        "emailSetupTitle": "电子邮件通知设置",
+        "emailStep1": "转到设置并启用电子邮件通知",
+        "emailStep2": "配置您的通知偏好",
+        "emailStep3": "使用示例通知进行测试",
+        "useCasesTitle": "使用案例",
+        "useCase1": "长时间运行任务完成警报",
+        "useCase2": "来自 AI 代理的错误通知",
+        "useCase3": "基于 AI 分析的自定义警报"
+      }
+    },
+    "document-context-rag": {
+      "title": "使用文档上下文构建 AI 应用",
+      "description": "上传文档并使用 RAG 技术通过 AI 查询它们",
+      "content": {
+        "intro": "将您的文档转换为 AI 可访问的知识。上传 PDF、文本文件等，创建一个可搜索的库，您的 AI 代理可以查询和引用。",
+        "uploadTitle": "上传和管理文档",
+        "uploadDescription": "只需拖放您的文件或使用上传按钮。文档会自动处理并建立索引以便快速检索。",
+        "queryTitle": "查询您的文档", 
+        "formatsTitle": "支持的格式"
+      }
+    },
+    "encryption-security": {
+      "title": "您的 MCP 服务器现已加密",
+      "description": "企业级加密保护您所有的敏感服务器配置",
+      "content": {
+        "intro": "所有敏感的 MCP 服务器数据现在都使用 AES-256-GCM 加密自动加密。您的 API 密钥、环境变量和命令在静态时受到保护。",
+        "howItWorksTitle": "工作原理",
+        "feature1": "自动加密 - 无需配置",
+        "feature2": "每个配置文件的密钥以获得最大安全性",
+        "feature3": "透明操作 - 无缝工作",
+        "sharingTitle": "安全共享",
+        "sharingDescription": "当您共享服务器时，只有经过清理的模板会被公开。敏感数据仍然是加密的，只属于您。"
+      }
+    },
+    "share-collections": {
+      "title": "共享您的 MCP 服务器集合",
+      "description": "创建并与社区共享精心策划的 MCP 服务器集合",
+      "content": {
+        "intro": "集合是分组相关 MCP 服务器并与他人共享的完美方式。无论您是创建开发工具包、数据科学工作流程还是生产力套件，集合都能让您轻松共享整个设置。",
+        "whatAreCollectionsTitle": "什么是集合？",
+        "whatAreCollectionsText": "集合是精心策划的协同工作良好的 MCP 服务器组。将它们想象成食谱 - 您收集原料（服务器）并与他人分享完整的菜肴（集合）。",
+        "createCollectionTitle": "创建集合",
+        "createStep1": "导航到您的 MCP 服务器页面",
+        "createStep2": "点击'创建集合'",
+        "createStep3": "为您的集合命名并添加描述",
+        "createStep4": "选择要包含在集合中的服务器",
+        "sharingTitle": "共享选项",
+        "sharingFeature1": "在您的个人资料上可见的公共集合",
+        "sharingFeature2": "个人使用的私有集合",
+        "sharingFeature3": "更新共享集合的版本控制",
+        "examplesTitle": "热门集合创意",
+        "example1": "全栈开发工具包 - 数据库、API 和测试服务器",
+        "example2": "AI 研究套件 - LLM 连接器、数据工具和笔记本",
+        "example3": "DevOps 工具包 - CI/CD、监控和部署服务器",
+        "example4": "内容创作包 - 写作、媒体和发布工具"
+      }
+    },
+    "activity-tracking": {
+      "title": "实时活动跟踪",
+      "description": "监控所有 MCP 操作并获得使用模式的洞察",
+      "content": {
+        "intro": "通过实时活动跟踪获得对 MCP 生态系统的完全可见性。监控操作、跟踪使用模式，并根据实际数据优化您的工作流程。",
+        "trackedOperationsTitle": "跟踪内容",
+        "operation1": "工具执行和性能指标",
+        "operation2": "资源访问模式",
+        "operation3": "提示使用和有效性",
+        "operation4": "服务器连接健康和正常运行时间",
+        "operation5": "错误日志和调试信息",
+        "insightsTitle": "可操作的洞察",
+        "insightsText": "将原始活动数据转换为有意义的洞察，帮助您更智能地工作：",
+        "insight1Title": "使用模式",
+        "insight1Text": "查看您最常使用的工具",
+        "insight2Title": "性能指标",
+        "insight2Text": "识别缓慢的操作和瓶颈",
+        "insight3Title": "错误分析",
+        "insight3Text": "跟踪和解决重复出现的问题",
+        "insight4Title": "成本优化",
+        "insight4Text": "监控资源使用以提高效率",
+        "privacyTitle": "隐私优先",
+        "privacyText": "所有活动数据都留在您的项目中。我们从不与第三方共享您的使用模式或操作数据。您可以完全控制记录什么以及记录多长时间。"
+      }
+    },
+    "customize-experience": {
+      "title": "自定义您的 MCP 体验", 
+      "description": "使用自定义指令、主题和语言个性化服务器",
+      "content": {
+        "intro": "让 Plugged.in 完全按照您的方式工作。从每个服务器的自定义指令到个性化主题和语言偏好，定制 MCP 体验的各个方面。",
+        "customInstructionsTitle": "自定义服务器指令",
+        "customInstructionsText": "向任何 MCP 服务器添加特定指令，以指导 AI 模型使用您的工具。这些指令在会话之间持续存在，有助于保持一致性。",
+        "themesTitle": "视觉主题",
+        "themesText": "从多个主题中选择或创建您自己的自定义外观：",
+        "workflowTitle": "工作流程自定义",
+        "workflow1": "为常用工具设置默认参数",
+        "workflow2": "为常见操作创建键盘快捷键",
+        "workflow3": "自定义通知偏好",
+        "workflow4": "配置自动保存和备份间隔",
+        "tipsTitle": "专业自定义提示",
+        "tip1": "在自定义指令中使用 markdown 以获得更好的格式",
+        "tip2": "导出您的自定义设置以与团队共享",
+        "tip3": "为不同类型的工作创建不同的配置文件"
+      }
+    },
+    "lightning-fast-startup": {
+      "title": "闪电般快速的 MCP 服务器启动",
+      "description": "通过渐进式初始化体验即时服务器连接",
+      "content": {
+        "intro": "告别等待缓慢的 MCP 服务器启动。渐进式服务器初始化意味着您的服务器立即连接，并从连接问题中自动恢复。",
+        "howItWorksTitle": "渐进式启动的工作原理",
+        "feature1": "服务器立即启动而不阻塞",
+        "feature2": "故障时自动重新连接",
+        "feature3": "对网络中断具有弹性",
+        "benefitsTitle": "您会注意到的好处",
+        "benefit1": "不再等待缓慢的服务器",
+        "benefit2": "更流畅的工作流程转换",
+        "benefit3": "在不稳定连接中更好的可靠性"
+      }
+    },
+    "public-profile": {
+      "title": "您的公开个人资料页面",
+      "description": "通过个性化的开发者资料展示您的 MCP 服务器和集合",
+      "content": {
+        "intro": "现在每个开发者都有一个位于 /to/username 的公开个人资料页面。分享您最好的 MCP 配置，展示您的集合，并与其他开发者联系。",
+        "featuresTitle": "个人资料功能",
+        "feature1": "自定义简介和头像",
+        "feature2": "显示您共享的服务器和集合",
+        "feature3": "关注其他开发者",
+        "feature4": "通过安装计数跟踪您的影响",
+        "setupTitle": "设置您的个人资料",
+        "setupStep1": "转到设置并选择一个唯一的用户名",
+        "setupStep2": "添加您的简介和个人资料图片",
+        "setupStep3": "共享服务器以在您的个人资料上展示"
+      }
+    },
+    "import-export-setup": {
+      "title": "导入和导出您的设置",
+      "description": "一键备份、共享和传输您的 MCP 配置",
+      "content": {
+        "intro": "永远不会再丢失您精心制作的 MCP 设置。导出整个集合以进行备份或与您的团队共享。",
+        "exportTitle": "导出集合",
+        "exportStep1": "导航到您的集合",
+        "exportStep2": "点击导出按钮",
+        "exportStep3": "保存 JSON 文件",
+        "importTitle": "导入集合",
+        "importStep1": "点击'导入集合'",
+        "importStep2": "选择您的 JSON 文件",
+        "importStep3": "查看并确认导入",
+        "useCasesTitle": "完美适用于",
+        "useCase1": "团队配置共享",
+        "useCase2": "重大更改前的备份",
+        "useCase3": "在帐户之间迁移"
+      }
+    },
+    "multilingual-support": {
+      "title": "说您的语言",
+      "description": "使用 Plugged.in 支持的 6 种语言中的首选语言",
+      "content": {
+        "intro": "Plugged.in 现在说您的语言！从英语、土耳其语、中文、印地语、日语或荷兰语中选择。",
+        "supportedLanguages": "支持的语言",
+        "changeLanguageTitle": "如何更改语言",
+        "step1": "转到设置",
+        "step2": "选择您的首选语言",
+        "step3": "整个界面立即更新",
+        "contributeTitle": "帮助我们改进",
+        "contributeText": "发现翻译问题？通过贡献我们的翻译工作来帮助我们改进。"
+      }
+    },
+    "discover-capabilities": {
+      "title": "发现服务器功能",
+      "description": "自动发现和探索来自 MCP 服务器的所有工具、资源和提示",
+      "content": {
+        "intro": "完整的 MCP 规范支持意味着您可以发现服务器提供的一切 - 工具、资源、提示和模板。",
+        "capabilitiesTitle": "发现的内容",
+        "capability1": "工具 - 所有可用功能",
+        "capability2": "资源 - 数据和文件",
+        "capability3": "提示 - 预配置的模板",
+        "capability4": "资源模板 - 动态资源",
+        "discoveryTitle": "手动发现",
+        "discoveryStep1": "转到您的 MCP 服务器详细信息",
+        "discoveryStep2": "点击'发现功能'",
+        "discoveryStep3": "在选项卡中查看所有发现的项目"
+      }
+    }
+  },
+  "tryItNow": {
+    "title": "准备尝试了吗？",
+    "description": "今天就在您的项目中开始使用这些新功能。",
+    "primaryCta": "转到 MCP 服务器",
+    "secondaryCta": "查看指南"
+  },
+  "relatedArticles": "相关文章",
+  "newsletter": {
+    "title": "保持更新",
+    "description": "获取有关新功能和更新的通知",
+    "placeholder": "输入您的电子邮件",
+    "subscribe": "订阅"
+  }
+}

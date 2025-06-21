@@ -1,0 +1,220 @@
+{
+  "title": "What's New",
+  "description": "Discover the latest features and updates in Plugged.in. Learn how to use new capabilities with practical guides.",
+  "searchPlaceholder": "Search articles...",
+  "readTime": "read",
+  "new": "NEW",
+  "backToArticles": "Back to What's New",
+  "categories": {
+    "all": "All",
+    "features": "Features", 
+    "security": "Security",
+    "integrations": "Integrations",
+    "feature": "Feature",
+    "performance": "Performance",
+    "social": "Social"
+  },
+  "articles": {
+    "send-notifications-from-ai": {
+      "title": "Send Notifications from Any AI Model",
+      "description": "Get real-time alerts from your AI workflows via notifications and email",
+      "content": {
+        "intro": "Now you can send notifications directly from any AI model or MCP tool. Whether you're running long tasks, monitoring errors, or need custom alerts, the notification system keeps you informed in real-time.",
+        "howToTitle": "How to Send Notifications",
+        "emailSetupTitle": "Email Notification Setup",
+        "emailStep1": "Go to Settings and enable email notifications",
+        "emailStep2": "Configure your notification preferences",
+        "emailStep3": "Test with a sample notification",
+        "useCasesTitle": "Use Cases",
+        "useCase1": "Long-running task completion alerts",
+        "useCase2": "Error notifications from AI agents",
+        "useCase3": "Custom alerts based on AI analysis"
+      }
+    },
+    "document-context-rag": {
+      "title": "Build AI Apps with Document Context",
+      "description": "Upload documents and query them with AI using RAG technology",
+      "content": {
+        "intro": "Transform your documents into AI-accessible knowledge. Upload PDFs, text files, and more to create a searchable library that your AI agents can query and reference.",
+        "uploadTitle": "Upload and Manage Documents",
+        "uploadDescription": "Simply drag and drop your files or use the upload button. Documents are automatically processed and indexed for fast retrieval.",
+        "queryTitle": "Query Your Documents", 
+        "formatsTitle": "Supported Formats"
+      }
+    },
+    "encryption-security": {
+      "title": "Your MCP Servers Are Now Encrypted",
+      "description": "Enterprise-grade encryption protects all your sensitive server configurations",
+      "content": {
+        "intro": "All sensitive MCP server data is now automatically encrypted using AES-256-GCM encryption. Your API keys, environment variables, and commands are protected at rest.",
+        "howItWorksTitle": "How It Works",
+        "feature1": "Automatic encryption - no configuration needed",
+        "feature2": "Per-profile keys for maximum security",
+        "feature3": "Transparent operation - works seamlessly",
+        "sharingTitle": "Safe Sharing",
+        "sharingDescription": "When you share servers, only sanitized templates are exposed. Sensitive data remains encrypted and private to you."
+      }
+    },
+    "share-collections": {
+      "title": "Share Your MCP Server Collections",
+      "description": "Create and share curated collections of MCP servers with the community",
+      "content": {
+        "intro": "Collections are the perfect way to group related MCP servers and share them with others. Whether you're creating a development toolkit, a data science workflow, or a productivity suite, collections make it easy to share your entire setup.",
+        "whatAreCollectionsTitle": "What Are Collections?",
+        "whatAreCollectionsText": "Collections are curated groups of MCP servers that work well together. Think of them as recipes - you gather the ingredients (servers) and share the complete dish (collection) with others.",
+        "createCollectionTitle": "Creating a Collection",
+        "createStep1": "Navigate to your MCP Servers page",
+        "createStep2": "Click 'Create Collection'",
+        "createStep3": "Name your collection and add a description",
+        "createStep4": "Select servers to include in the collection",
+        "sharingTitle": "Sharing Options",
+        "sharingFeature1": "Public collections visible on your profile",
+        "sharingFeature2": "Private collections for personal use",
+        "sharingFeature3": "Version control for updating shared collections",
+        "examplesTitle": "Popular Collection Ideas",
+        "example1": "Full-Stack Development Kit - Database, API, and testing servers",
+        "example2": "AI Research Suite - LLM connectors, data tools, and notebooks",
+        "example3": "DevOps Toolkit - CI/CD, monitoring, and deployment servers",
+        "example4": "Content Creation Bundle - Writing, media, and publishing tools"
+      }
+    },
+    "activity-tracking": {
+      "title": "Real-time Activity Tracking",
+      "description": "Monitor all MCP operations and get insights into usage patterns",
+      "content": {
+        "intro": "Get complete visibility into your MCP ecosystem with real-time activity tracking. Monitor operations, track usage patterns, and optimize your workflow based on actual data.",
+        "trackedOperationsTitle": "What Gets Tracked",
+        "operation1": "Tool executions and performance metrics",
+        "operation2": "Resource access patterns",
+        "operation3": "Prompt usage and effectiveness",
+        "operation4": "Server connection health and uptime",
+        "operation5": "Error logs and debugging information",
+        "insightsTitle": "Actionable Insights",
+        "insightsText": "Transform raw activity data into meaningful insights that help you work smarter:",
+        "insight1Title": "Usage Patterns",
+        "insight1Text": "See which tools you use most frequently",
+        "insight2Title": "Performance Metrics",
+        "insight2Text": "Identify slow operations and bottlenecks",
+        "insight3Title": "Error Analysis",
+        "insight3Text": "Track and resolve recurring issues",
+        "insight4Title": "Cost Optimization",
+        "insight4Text": "Monitor resource usage for efficiency",
+        "privacyTitle": "Privacy First",
+        "privacyText": "All activity data stays within your project. We never share your usage patterns or operational data with third parties. You have complete control over what gets logged and for how long."
+      }
+    },
+    "customize-experience": {
+      "title": "Customize Your MCP Experience", 
+      "description": "Personalize servers with custom instructions, themes, and languages",
+      "content": {
+        "intro": "Make Plugged.in work exactly how you want it to. From custom instructions for each server to personalized themes and language preferences, tailor every aspect of your MCP experience.",
+        "customInstructionsTitle": "Custom Server Instructions",
+        "customInstructionsText": "Add specific instructions to any MCP server to guide AI models in using your tools. These instructions persist across sessions and help maintain consistency.",
+        "themesTitle": "Visual Themes",
+        "themesText": "Choose from multiple themes or create your own custom appearance:",
+        "workflowTitle": "Workflow Customization",
+        "workflow1": "Set default parameters for frequently used tools",
+        "workflow2": "Create keyboard shortcuts for common actions",
+        "workflow3": "Customize notification preferences",
+        "workflow4": "Configure auto-save and backup intervals",
+        "tipsTitle": "Pro Customization Tips",
+        "tip1": "Use markdown in custom instructions for better formatting",
+        "tip2": "Export your customizations to share with your team",
+        "tip3": "Create different profiles for different types of work"
+      }
+    },
+    "lightning-fast-startup": {
+      "title": "Lightning-Fast MCP Server Startup",
+      "description": "Experience instant server connections with progressive initialization",
+      "content": {
+        "intro": "Say goodbye to waiting for slow MCP servers to start. Progressive server initialization means your servers connect instantly and recover automatically from connection issues.",
+        "howItWorksTitle": "How Progressive Startup Works",
+        "feature1": "Servers start immediately without blocking",
+        "feature2": "Automatic reconnection on failures",
+        "feature3": "Resilient to network interruptions",
+        "benefitsTitle": "Benefits You'll Notice",
+        "benefit1": "No more waiting for slow servers",
+        "benefit2": "Smoother workflow transitions",
+        "benefit3": "Better reliability in unstable connections"
+      }
+    },
+    "public-profile": {
+      "title": "Your Public Profile Page",
+      "description": "Showcase your MCP servers and collections with a personalized developer profile",
+      "content": {
+        "intro": "Every developer now has a public profile page at /to/username. Share your best MCP configurations, showcase your collections, and connect with other developers.",
+        "featuresTitle": "Profile Features",
+        "feature1": "Custom bio and avatar",
+        "feature2": "Display your shared servers and collections",
+        "feature3": "Follow other developers",
+        "feature4": "Track your impact with installation counts",
+        "setupTitle": "Setting Up Your Profile",
+        "setupStep1": "Go to Settings and choose a unique username",
+        "setupStep2": "Add your bio and profile picture",
+        "setupStep3": "Share servers to showcase on your profile"
+      }
+    },
+    "import-export-setup": {
+      "title": "Import & Export Your Setup",
+      "description": "Backup, share, and transfer your MCP configurations with one click",
+      "content": {
+        "intro": "Never lose your carefully crafted MCP setup again. Export entire collections for backup or sharing with your team.",
+        "exportTitle": "Exporting Collections",
+        "exportStep1": "Navigate to your collection",
+        "exportStep2": "Click the export button",
+        "exportStep3": "Save the JSON file",
+        "importTitle": "Importing Collections",
+        "importStep1": "Click 'Import Collection'",
+        "importStep2": "Select your JSON file",
+        "importStep3": "Review and confirm the import",
+        "useCasesTitle": "Perfect For",
+        "useCase1": "Team configuration sharing",
+        "useCase2": "Backup before major changes",
+        "useCase3": "Migrating between accounts"
+      }
+    },
+    "multilingual-support": {
+      "title": "Speak Your Language",
+      "description": "Use Plugged.in in your preferred language with support for 6 languages",
+      "content": {
+        "intro": "Plugged.in now speaks your language! Choose from English, Turkish, Chinese, Hindi, Japanese, or Dutch.",
+        "supportedLanguages": "Supported Languages",
+        "changeLanguageTitle": "How to Change Language",
+        "step1": "Go to Settings",
+        "step2": "Select your preferred language",
+        "step3": "The entire interface updates instantly",
+        "contributeTitle": "Help Us Improve",
+        "contributeText": "Found a translation issue? Help us improve by contributing to our translation efforts."
+      }
+    },
+    "discover-capabilities": {
+      "title": "Discover Server Capabilities",
+      "description": "Automatically discover and explore all tools, resources, and prompts from your MCP servers",
+      "content": {
+        "intro": "Full MCP specification support means you can discover everything your servers offer - tools, resources, prompts, and templates.",
+        "capabilitiesTitle": "What Gets Discovered",
+        "capability1": "Tools - All available functions",
+        "capability2": "Resources - Data and files",
+        "capability3": "Prompts - Pre-configured templates",
+        "capability4": "Resource Templates - Dynamic resources",
+        "discoveryTitle": "Manual Discovery",
+        "discoveryStep1": "Go to your MCP server details",
+        "discoveryStep2": "Click 'Discover Capabilities'",
+        "discoveryStep3": "View all discovered items in tabs"
+      }
+    }
+  },
+  "tryItNow": {
+    "title": "Ready to try it?",
+    "description": "Start using these new features in your projects today.",
+    "primaryCta": "Go to MCP Servers",
+    "secondaryCta": "View Guides"
+  },
+  "relatedArticles": "Related Articles",
+  "newsletter": {
+    "title": "Stay Updated",
+    "description": "Get notified about new features and updates",
+    "placeholder": "Enter your email",
+    "subscribe": "Subscribe"
+  }
+}

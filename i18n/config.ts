@@ -34,6 +34,7 @@ import enSearch from '../public/locales/en/search.json';
 import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
 import enSidebar from '../public/locales/en/sidebar.json';
+import enWhatsNew from '../public/locales/en/whatsNew.json';
 
 // Define namespaces
 export const namespaces = [
@@ -52,7 +53,8 @@ export const namespaces = [
   'search',
   'settings',
   'setupGuide',
-  'sidebar'
+  'sidebar',
+  'whatsNew'
 ] as const;
 
 export type Namespace = typeof namespaces[number];
@@ -75,6 +77,7 @@ export type Messages = {
   settings: typeof enSettings;
   setupGuide: typeof enSetupGuide;
   sidebar: typeof enSidebar;
+  whatsNew: typeof enWhatsNew;
 };
 
 export type MessageKey<NS extends Namespace> = keyof Messages[NS];
