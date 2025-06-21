@@ -5,6 +5,11 @@ export default function ContainerLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <div className='p-4'>{children}</div>;
-
+  return (
+    <div className="flex-1 flex flex-col min-h-0 p-4">
+      <div className="flex-1 flex flex-col min-h-0 bg-background space-y-4">
+        {children}
+      </div>
+    </div>
+  );
 }

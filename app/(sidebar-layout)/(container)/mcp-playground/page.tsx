@@ -102,7 +102,7 @@ export default function McpPlaygroundPage() {
   const activeServerCount = mcpServers?.filter((s: McpServer) => s.status === 'ACTIVE').length || 0;
 
   return (
-    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background py-4 space-y-4">
+    <div className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 min-h-0 flex rounded-xl border border-border bg-card shadow-sm overflow-hidden">
         {/* Mobile Overlay */}
         {isMobile && !sidebarCollapsed && (
@@ -121,11 +121,11 @@ export default function McpPlaygroundPage() {
           border-r border-border
         `}>
           {/* Sidebar Header */}
-          <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
+          <div className="bg-background/95 backdrop-blur-sm border-b border-border p-4 flex items-center justify-between flex-shrink-0">
             {!sidebarCollapsed && (
-              <div className="space-y-2.5">
-                <h2 className="text-lg font-semibold leading-none tracking-tight">{t('playground.config.title')}</h2>
-                <p className="text-sm text-muted-foreground">{t('playground.config.subtitle')}</p>
+              <div className="flex flex-col">
+                <h2 className="text-sm font-semibold">{t('playground.config.title')}</h2>
+                <p className="text-xs text-muted-foreground">{t('playground.config.subtitle')}</p>
               </div>
             )}
             <Button

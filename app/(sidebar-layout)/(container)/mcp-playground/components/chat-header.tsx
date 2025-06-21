@@ -87,7 +87,7 @@ export function ChatHeader({
   const { t } = useTranslation();
 
   return (
-    <div className="bg-background/95 backdrop-blur-sm border-b border-border px-4 py-[22px]">
+    <div className="bg-background/95 backdrop-blur-sm border-b border-border p-4">
       <div className="flex items-center justify-between gap-4">
         {/* Left: Current Model Info */}
         <div className="flex items-center gap-3 min-w-0">
@@ -101,7 +101,7 @@ export function ChatHeader({
                 <h2 className="text-sm font-semibold truncate">
                   {PROVIDER_INFO[currentModel.provider].name}
                 </h2>
-                <span className="text-xs font-medium px-1.5 py-0.5 bg-primary/10 text-primary rounded-full truncate">
+                <span className="text-xs font-medium px-2 py-0.5 bg-primary/10 text-primary rounded-full truncate">
                   {getModelDisplayName(currentModel.model)}
                 </span>
               </div>
@@ -112,8 +112,8 @@ export function ChatHeader({
           </div>
 
           {/* Connection Status */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <div className={`w-1.5 h-1.5 rounded-full ${isSessionActive ? 'bg-green-500' : 'bg-gray-400'}`} />
+          <div className="flex items-center gap-2">
+            <div className={`w-2 h-2 rounded-full ${isSessionActive ? 'bg-green-500' : 'bg-gray-400'}`} />
             <span className="text-xs text-muted-foreground">
               {serverCount} {serverCount === 1 ? t('playground.chat.header.serverConnected') : t('playground.chat.header.serversConnected')}
             </span>
@@ -131,9 +131,9 @@ export function ChatHeader({
                 disabled={isProcessing}
                 className="whitespace-nowrap text-xs"
               >
-                <Zap className="w-3 h-3 mr-1" />
+                <Zap className="h-4 w-4 mr-2" />
                 {t('playground.chat.header.switchModel')}
-                <ChevronDown className="w-3 h-3 ml-1" />
+                <ChevronDown className="h-4 w-4 ml-2" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -167,16 +167,16 @@ export function ChatHeader({
               size="sm"
               onClick={onEndSession}
               disabled={isProcessing}
-                className="whitespace-nowrap text-xs"
+              className="whitespace-nowrap text-xs"
             >
               {isProcessing ? (
                 <>
-                  <div className="w-3 h-3 mr-1 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
                   {t('playground.chat.header.stopping')}
                 </>
               ) : (
                 <>
-                  <X className="w-3 h-3 mr-1" />
+                  <X className="h-4 w-4 mr-2" />
                   {t('playground.chat.header.stopSession')}
                 </>
               )}
@@ -185,7 +185,7 @@ export function ChatHeader({
 
           {/* Settings Button */}
           <Button variant="ghost" size="sm" onClick={onOpenSettings}>
-            <Settings className="w-3 h-3" />
+            <Settings className="h-4 w-4" />
           </Button>
         </div>
       </div>

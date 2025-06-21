@@ -171,187 +171,186 @@ export default function DiscoverPage() {
     setServerOffset(newOffset);
   };
 
-  // If not authenticated, show login message
-  if (!session?.user) {
-    return (
-      <div className="container px-4 md:px-8 py-4 md:py-8">
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">{t('title')}</h1>
-        <p className="text-sm md:text-base text-muted-foreground mb-6 md:mb-8">
-          {t('subtitle')}
-        </p>
-        <Card className="p-6">
-          <p className="text-center text-muted-foreground">
-            {t('common:validation.required')} {/* Use correct key from common namespace */}
-          </p>
-          <div className="mt-4 flex justify-center">
-            <Button onClick={() => router.push('/login')}>
-              {t('auth:login.submitButton')} {/* Use key from auth namespace */}
-            </Button>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background py-4 space-y-4">
-
-      <h1 className="text-2xl md:text-3xl font-bold mb-2">{t('title')}</h1>
-      <p className="text-sm md:text-base text-muted-foreground mb-6 md:mb-8">
-        {t('subtitle')}
-      </p>
-
-      <Tabs defaultValue="people" className="space-y-4">
-        <TabsList className="w-full overflow-x-auto flex-nowrap">
-          <TabsTrigger value="people" className="flex-shrink-0">{t('tabs.people')}</TabsTrigger>
-          <TabsTrigger value="servers" className="flex-shrink-0">
-            {t('tabs.servers', { count: communityServersData?.total ?? 0 })}
-          </TabsTrigger>
-          <TabsTrigger value="collections" className="flex-shrink-0">
-            {t('tabs.collections', { count: collectionsData?.length ?? 0 })}
-          </TabsTrigger>
-          <TabsTrigger value="chats" className="flex-shrink-0">
-            {t('tabs.chats', { count: embeddedChats.length })}
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="people" className="space-y-6 md:space-y-8">
-          {/* Following Section */}
-          {isLoadingPeople ? (
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                {[...Array(3)].map((_, i) => (
-                  <Skeleton key={i} className="h-24" />
-                ))}
-              </div>
-          ) : followingUsers.length > 0 ? (
-            <div>
-              <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">{t('following.title')}</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                {followingUsers.map((user) => (
-                  <Card key={user.id} className="hover:bg-accent/50 transition-colors">
-                    <CardHeader className="flex flex-row items-center gap-3 md:gap-4 p-4">
-                      <Avatar className="h-10 w-10 md:h-12 md:w-12">
-                        <AvatarImage src={user.avatar_url || user.image || ''} />
-                        <AvatarFallback>{user.name?.[0] || user.email?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold truncate">{user.name || user.username}</h3>
-                        <Button variant="link" className="p-0 h-auto font-normal text-sm">
-                          {t('following.viewProfile')}
-                        </Button>
-                      </div>
-                    </CardHeader>
-                  </Card>
-                ))}
-              </div>
+    <>
+      {/* If not authenticated, show login message */}
+      {!session?.user ? (
+        <div className="px-4 py-4">
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground mb-6 md:mb-8">
+            {t('subtitle')}
+          </p>
+          <Card className="p-6">
+            <p className="text-center text-muted-foreground">
+              {t('common:validation.required')}
+            </p>
+            <div className="mt-4 flex justify-center">
+              <Button onClick={() => router.push('/login')}>
+                {t('auth:login.submitButton')}
+              </Button>
             </div>
-          ) : (
-            <p className="text-muted-foreground text-sm md:text-base">{t('following.empty')}</p>
-          )}
+          </Card>
+        </div>
+      ) : (
+        <>
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">{t('title')}</h1>
+          <p className="text-sm md:text-base text-muted-foreground mb-6 md:mb-8">
+            {t('subtitle')}
+          </p>
 
-          {/* Suggested Users Section */}
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">{t('suggested.title')}</h2>
-            {suggestedUsers.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                {suggestedUsers.map((user) => (
-                  <Card key={user.id} className="hover:bg-accent/50 transition-colors">
-                    <CardHeader className="flex flex-row items-center gap-3 md:gap-4 p-4">
-                      <Avatar className="h-10 w-10 md:h-12 md:w-12">
-                        <AvatarImage src={user.avatar_url || user.image || ''} />
-                        <AvatarFallback>{user.name?.[0] || user.email?.[0] || 'U'}</AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold truncate">{user.name || user.username}</h3>
-                        {user.username && (
-                          <p className="text-sm text-muted-foreground truncate">@{user.username}</p>
+          <Tabs defaultValue="people" className="flex-1 flex flex-col min-h-0">
+            <TabsList className="w-full overflow-x-auto flex-nowrap">
+              <TabsTrigger value="people" className="flex-shrink-0">{t('tabs.people')}</TabsTrigger>
+              <TabsTrigger value="servers" className="flex-shrink-0">
+                {t('tabs.servers', { count: communityServersData?.total ?? 0 })}
+              </TabsTrigger>
+              <TabsTrigger value="collections" className="flex-shrink-0">
+                {t('tabs.collections', { count: collectionsData?.length ?? 0 })}
+              </TabsTrigger>
+              <TabsTrigger value="chats" className="flex-shrink-0">
+                {t('tabs.chats', { count: embeddedChats.length })}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="people" className="space-y-6 md:space-y-8">
+              {/* Following Section */}
+              {isLoadingPeople ? (
+                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                    {[...Array(3)].map((_, i) => (
+                      <Skeleton key={i} className="h-24" />
+                    ))}
+                  </div>
+              ) : followingUsers.length > 0 ? (
+                <div>
+                  <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">{t('following.title')}</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                    {followingUsers.map((user) => (
+                      <Card key={user.id} className="hover:bg-accent/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center gap-3 md:gap-4 p-4">
+                          <Avatar className="h-10 w-10 md:h-12 md:w-12">
+                            <AvatarImage src={user.avatar_url || user.image || ''} />
+                            <AvatarFallback>{user.name?.[0] || user.email?.[0] || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold truncate">{user.name || user.username}</h3>
+                            <Button variant="link" className="p-0 h-auto font-normal text-sm">
+                              {t('following.viewProfile')}
+                            </Button>
+                          </div>
+                        </CardHeader>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm md:text-base">{t('following.empty')}</p>
+              )}
+
+              {/* Suggested Users Section */}
+              <div>
+                <h2 className="text-lg md:text-xl font-semibold mb-3 md:mb-4">{t('suggested.title')}</h2>
+                {suggestedUsers.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
+                    {suggestedUsers.map((user) => (
+                      <Card key={user.id} className="hover:bg-accent/50 transition-colors">
+                        <CardHeader className="flex flex-row items-center gap-3 md:gap-4 p-4">
+                          <Avatar className="h-10 w-10 md:h-12 md:w-12">
+                            <AvatarImage src={user.avatar_url || user.image || ''} />
+                            <AvatarFallback>{user.name?.[0] || user.email?.[0] || 'U'}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold truncate">{user.name || user.username}</h3>
+                            {user.username && (
+                              <p className="text-sm text-muted-foreground truncate">@{user.username}</p>
+                            )}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="ml-2"
+                            onClick={() => router.push(`/to/${user.username}`)}
+                            disabled={!user.username}
+                          >
+                            View
+                          </Button>
+                        </CardHeader>
+                        {user.bio && (
+                          <CardContent className="pt-0 px-4 pb-4">
+                            <p className="text-sm text-muted-foreground line-clamp-2">{user.bio}</p>
+                          </CardContent>
                         )}
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-2"
-                        onClick={() => router.push(`/to/${user.username}`)}
-                        disabled={!user.username}
-                      >
-                        View
-                      </Button>
-                    </CardHeader>
-                    {user.bio && (
-                      <CardContent className="pt-0 px-4 pb-4">
-                        <p className="text-sm text-muted-foreground line-clamp-2">{user.bio}</p>
-                      </CardContent>
-                    )}
-                  </Card>
-                ))}
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm md:text-base">{t('suggested.empty')}</p>
+                )}
               </div>
-            ) : (
-              <p className="text-muted-foreground text-sm md:text-base">{t('suggested.empty')}</p>
-            )}
-          </div>
-        </TabsContent>
+            </TabsContent>
 
-        {/* MCP Servers Tab Content */}
-        <TabsContent value="servers" className="space-y-3">
-          {isLoadingCommunityServers ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-              {[...Array(6)].map((_, i) => (
-                <Skeleton key={i} className="h-48" />
-              ))}
-            </div>
-          ) : communityServersError ? (
-            <p className="text-destructive text-sm md:text-base">
-              {t('servers.error')}
-            </p>
-          ) : communityServersData?.results && Object.keys(communityServersData.results).length > 0 ? (
-            <>
-              <CardGrid
-                items={communityServersData.results}
-                installedServerMap={installedServerMap}
-                currentUsername={session?.user?.name || null}
-              />
-              <div className="pb-3">
-                <PaginationUi
-                  currentPage={Math.floor(serverOffset / PAGE_SIZE) + 1}
-                  totalPages={Math.ceil((communityServersData?.total || 0) / PAGE_SIZE)}
-                  onPageChange={handleServerPageChange}
+            {/* MCP Servers Tab Content */}
+            <TabsContent value="servers" className="space-y-3">
+              {isLoadingCommunityServers ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  {[...Array(6)].map((_, i) => (
+                    <Skeleton key={i} className="h-48" />
+                  ))}
+                </div>
+              ) : communityServersError ? (
+                <p className="text-destructive text-sm md:text-base">
+                  {t('servers.error')}
+                </p>
+              ) : communityServersData?.results && Object.keys(communityServersData.results).length > 0 ? (
+                <>
+                  <CardGrid
+                    items={communityServersData.results}
+                    installedServerMap={installedServerMap}
+                    currentUsername={session?.user?.name || null}
+                  />
+                  <div className="pb-3">
+                    <PaginationUi
+                      currentPage={Math.floor(serverOffset / PAGE_SIZE) + 1}
+                      totalPages={Math.ceil((communityServersData?.total || 0) / PAGE_SIZE)}
+                      onPageChange={handleServerPageChange}
+                    />
+                  </div>
+                </>
+              ) : (
+                <p className="text-muted-foreground text-sm md:text-base">
+                  {t('servers.empty')}
+                </p>
+              )}
+            </TabsContent>
+
+            <TabsContent value="collections" className="space-y-6 md:space-y-8">
+              {collectionsError ? (
+                <p className="text-destructive text-sm md:text-base">
+                  {t('collections.error')}
+                </p>
+              ) : (
+                <SharedCollections 
+                  collections={collectionsData || []}
+                  isLoading={isLoadingCollections}
+                  currentUserId={currentUserId}
+                  onCollectionDeleted={() => mutateCollections()}
                 />
-              </div>
-            </>
-          ) : (
-            <p className="text-muted-foreground text-sm md:text-base">
-              {t('servers.empty')}
-            </p>
-          )}
-        </TabsContent>
+              )}
+            </TabsContent>
 
-        <TabsContent value="collections" className="space-y-6 md:space-y-8">
-          {collectionsError ? (
-            <p className="text-destructive text-sm md:text-base">
-              {t('collections.error')}
-            </p>
-          ) : (
-            <SharedCollections 
-              collections={collectionsData || []}
-              isLoading={isLoadingCollections}
-              currentUserId={currentUserId}
-              onCollectionDeleted={() => mutateCollections()}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="chats" className="space-y-6 md:space-y-8">
-          {embeddedChats.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-              <EmbeddedChats chats={embeddedChats} />
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm md:text-base">
-              {t('chats.empty')}
-            </p>
-          )}
-        </TabsContent>
-      </Tabs>
-    </div>
+            <TabsContent value="chats" className="space-y-6 md:space-y-8">
+              {embeddedChats.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
+                  <EmbeddedChats chats={embeddedChats} />
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm md:text-base">
+                  {t('chats.empty')}
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
+    </>
   );
 }

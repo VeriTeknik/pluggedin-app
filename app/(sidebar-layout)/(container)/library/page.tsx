@@ -220,7 +220,7 @@ export default function LibraryPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 flex items-center justify-center min-h-[400px]">
+      <div className="flex-1 flex items-center justify-center">
         <div className="flex items-center gap-2">
           <Loader2 className="h-6 w-6 animate-spin" />
           <span>{t('page.loading')}</span>
@@ -230,10 +230,9 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background py-4 space-y-4">
-
+    <div className="flex-1 flex flex-col min-h-0">
       {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between flex-shrink-0">
         <div>
           <h1 className="text-3xl font-bold">{t('page.title')}</h1>
           <p className="text-muted-foreground">
@@ -264,16 +263,18 @@ export default function LibraryPage() {
       />
 
       {/* Controls */}
+     <div className='py-4'>
       <DocsControls
-        searchTerm={globalFilter}
-        onSearchChange={setGlobalFilter}
-        viewMode={viewMode}
-        onViewModeChange={setViewMode}
-      />
+          searchTerm={globalFilter}
+          onSearchChange={setGlobalFilter}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
+     </div>
 
       {/* Content */}
-      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'grid' | 'table')}>
-        <TabsContent value="grid" className="space-y-4">
+      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'grid' | 'table')} className="flex-1 flex flex-col min-h-0">
+        <TabsContent value="grid" className="flex-1 overflow-auto">
           <DocsGrid
             docs={table.getFilteredRowModel().rows.map(row => row.original)}
             onDownload={handleDownload}
@@ -283,7 +284,7 @@ export default function LibraryPage() {
           />
         </TabsContent>
 
-        <TabsContent value="table">
+        <TabsContent value="table" className="flex-1 overflow-auto">
           <DocsTable
             table={table}
           />
