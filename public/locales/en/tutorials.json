@@ -1,0 +1,83 @@
+{
+  "title": "Tutorials",
+  "description": "Step-by-step tutorials to help you master Plugged.in features - from basic MCP server setup to advanced RAG integration and custom development.",
+  "minutes": "min",
+  "search": {
+    "placeholder": "Search tutorials by keyword or tag...",
+    "noResults": "No tutorials found matching your search"
+  },
+  "difficulty": {
+    "all": "All Levels",
+    "beginner": "Beginner",
+    "intermediate": "Intermediate",
+    "advanced": "Advanced"
+  },
+  "sections": {
+    "beginner": "Getting Started",
+    "intermediate": "Building Skills",
+    "advanced": "Advanced Topics"
+  },
+  "first-mcp-server": {
+    "title": "Your First MCP Server",
+    "description": "Learn how to set up and configure your first MCP server. Perfect for beginners to understand the basics of the Model Context Protocol."
+  },
+  "sharing-with-community": {
+    "title": "Sharing with the Community",
+    "description": "Discover how to share your MCP servers and collections with the Plugged.in community. Build your reputation and help others."
+  },
+  "rag-knowledge-base": {
+    "title": "Building a RAG Knowledge Base",
+    "description": "Create a powerful knowledge base by uploading documents and enabling AI to query your information using RAG technology."
+  },
+  "using-rag-in-client": {
+    "title": "Using RAG in Your MCP Client",
+    "description": "Learn how to query your RAG knowledge base directly from Claude, Cursor, or any MCP client using the pluggedin_rag_query tool."
+  },
+  "notifications-system": {
+    "title": "Sending Notifications from AI",
+    "description": "Set up automated notifications from your AI assistant. Learn to use pluggedin_send_notification for alerts and updates."
+  },
+  "team-collaboration": {
+    "title": "Team Collaboration Setup",
+    "description": "Configure workspaces for your team, manage profiles, and share private collections for seamless collaboration."
+  },
+  "custom-mcp-server": {
+    "title": "Creating Custom MCP Servers",
+    "description": "Dive deep into MCP protocol and build your own custom servers using TypeScript or Python. Includes publishing to npm."
+  },
+  "api-integration": {
+    "title": "API Integration Guide",
+    "description": "Master the Plugged.in REST API for building external integrations, automation, and custom applications."
+  },
+  "self-hosting": {
+    "title": "Self-Hosting Plugged.in",
+    "description": "Complete guide to deploying your own Plugged.in instance using Docker, including database setup and configuration."
+  },
+  "security-best-practices": {
+    "title": "Security Best Practices",
+    "description": "Learn about encryption features, API key management, sandboxing, and other security configurations to protect your data."
+  },
+  "featured": {
+    "title": "Featured Tutorial Series",
+    "ragAndNotifications": {
+      "title": "RAG + Notifications Workflow",
+      "description": "Master the powerful combination of knowledge queries and automated notifications",
+      "tutorial1": "Build your knowledge base",
+      "tutorial2": "Query from MCP clients",
+      "tutorial3": "Automate notifications"
+    },
+    "security": {
+      "title": "Security & Deployment",
+      "description": "Secure your instance and deploy with confidence",
+      "tutorial1": "Security configuration",
+      "tutorial2": "Self-hosting guide"
+    }
+  },
+  "help": {
+    "title": "Need Help?",
+    "description": "Can't find what you're looking for? Check out these resources:",
+    "gettingStarted": "Getting Started Guide",
+    "guides": "Browse All Guides",
+    "contact": "Contact Support"
+  }
+}

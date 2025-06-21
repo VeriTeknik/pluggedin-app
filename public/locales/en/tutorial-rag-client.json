@@ -1,0 +1,94 @@
+{
+  "backToTutorials": "Back to Tutorials",
+  "title": "Using RAG in Your MCP Client",
+  "difficulty": "Intermediate",
+  "duration": "25 minutes",
+  "overview": {
+    "title": "What You'll Learn",
+    "description": "In this tutorial, you'll learn how to leverage your RAG knowledge base directly from your MCP client (Claude, Cursor, etc.) to enhance your AI assistant with your own documentation and knowledge.",
+    "learn1": "How to use the pluggedin_rag_query tool",
+    "learn2": "Writing effective queries for your knowledge base",
+    "learn3": "Combining RAG queries with other MCP tools",
+    "learn4": "Best practices for contextual information retrieval"
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "item1": "Plugged.in account with MCP proxy configured",
+    "item2": "At least one document uploaded to your Library",
+    "item3": "MCP client (Claude Desktop, Cursor, etc.) connected",
+    "item4": "Basic understanding of RAG from the 'Building a RAG Knowledge Base' tutorial"
+  },
+  "step1": {
+    "title": "Understanding the pluggedin_rag_query Tool",
+    "description": "The pluggedin_rag_query tool is automatically available in your MCP client when connected through Plugged.in. It allows you to search through all documents in your current project's library.",
+    "tip": "The RAG system uses vector similarity search, so it can find relevant information even if you don't use exact keywords from your documents.",
+    "screenshot": "Screenshot: Claude Desktop showing pluggedin_rag_query in available tools",
+    "screenshotDesc": "The tool appears in your MCP client's tool list"
+  },
+  "step2": {
+    "title": "Basic RAG Queries",
+    "description": "Start with simple queries to search your knowledge base. The tool will return the most relevant chunks from your documents.",
+    "example1": {
+      "title": "Simple Keyword Search",
+      "screenshot": "Screenshot: Claude using RAG query tool",
+      "screenshotDesc": "Shows the query being executed and results returned"
+    },
+    "example2": {
+      "title": "Question-Based Query"
+    },
+    "example3": {
+      "title": "Topic Search"
+    }
+  },
+  "step3": {
+    "title": "Advanced Query Techniques",
+    "description": "Learn how to craft more sophisticated queries to get better results from your knowledge base.",
+    "contextual": {
+      "title": "Contextual Queries",
+      "description": "The AI will search for database indexing best practices in your documentation"
+    },
+    "comparison": {
+      "title": "Comparison Queries",
+      "description": "Great for finding information across multiple documents"
+    },
+    "screenshot": "Screenshot: Complex RAG query with detailed results",
+    "screenshotDesc": "Shows how the AI processes and returns relevant information"
+  },
+  "step4": {
+    "title": "Best Practices",
+    "specific": {
+      "title": "Be Specific",
+      "description": "More specific queries yield better results",
+      "good": "Good: 'PostgreSQL connection pooling configuration'",
+      "bad": "Too broad: 'database'"
+    },
+    "context": {
+      "title": "Provide Context",
+      "description": "Include context about what you're trying to achieve for better results"
+    },
+    "combine": {
+      "title": "Combine with Other Tools",
+      "description": "Use RAG queries alongside other MCP tools for powerful workflows:"
+    }
+  },
+  "issues": {
+    "title": "Common Issues & Solutions",
+    "noResults": {
+      "title": "No results found:",
+      "solution1": "Check if documents are uploaded and processed",
+      "solution2": "Try different keywords or rephrase your query",
+      "solution3": "Ensure you're in the correct project/profile"
+    },
+    "toolNotAvailable": {
+      "title": "Tool not available:",
+      "solution1": "Restart your MCP client",
+      "solution2": "Check if Plugged.in proxy is running correctly"
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "description": "Now that you can query your knowledge base, explore these related tutorials:",
+    "notifications": "Sending Notifications from AI",
+    "buildingRag": "Building a RAG Knowledge Base"
+  }
+}

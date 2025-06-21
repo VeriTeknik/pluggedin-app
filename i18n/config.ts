@@ -35,6 +35,10 @@ import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
 import enSidebar from '../public/locales/en/sidebar.json';
 import enWhatsNew from '../public/locales/en/whatsNew.json';
+import enGettingStarted from '../public/locales/en/getting-started.json';
+import enTutorials from '../public/locales/en/tutorials.json';
+import enTutorialRagClient from '../public/locales/en/tutorial-rag-client.json';
+import enTutorialNotifications from '../public/locales/en/tutorial-notifications.json';
 
 // Define namespaces
 export const namespaces = [
@@ -54,7 +58,11 @@ export const namespaces = [
   'settings',
   'setupGuide',
   'sidebar',
-  'whatsNew'
+  'whatsNew',
+  'getting-started',
+  'tutorials',
+  'tutorial-rag-client',
+  'tutorial-notifications'
 ] as const;
 
 export type Namespace = typeof namespaces[number];
@@ -78,6 +86,10 @@ export type Messages = {
   setupGuide: typeof enSetupGuide;
   sidebar: typeof enSidebar;
   whatsNew: typeof enWhatsNew;
+  'getting-started': typeof enGettingStarted;
+  tutorials: typeof enTutorials;
+  'tutorial-rag-client': typeof enTutorialRagClient;
+  'tutorial-notifications': typeof enTutorialNotifications;
 };
 
 export type MessageKey<NS extends Namespace> = keyof Messages[NS];

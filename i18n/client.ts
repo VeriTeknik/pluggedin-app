@@ -20,6 +20,10 @@ import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
 import enSidebar from '../public/locales/en/sidebar.json';
 import enWhatsNew from '../public/locales/en/whatsNew.json';
+import enGettingStarted from '../public/locales/en/getting-started.json';
+import enTutorials from '../public/locales/en/tutorials.json';
+import enTutorialRagClient from '../public/locales/en/tutorial-rag-client.json';
+import enTutorialNotifications from '../public/locales/en/tutorial-notifications.json';
 // Import Hindi chunks
 import hiApiKeys from '../public/locales/hi/apiKeys.json';
 import hiAuth from '../public/locales/hi/auth.json';
@@ -38,6 +42,7 @@ import hiSettings from '../public/locales/hi/settings.json';
 import hiSetupGuide from '../public/locales/hi/setupGuide.json';
 import hiSidebar from '../public/locales/hi/sidebar.json';
 import hiWhatsNew from '../public/locales/hi/whatsNew.json';
+import hiGettingStarted from '../public/locales/hi/getting-started.json';
 // Import Japanese chunks
 import jaApiKeys from '../public/locales/ja/apiKeys.json';
 import jaAuth from '../public/locales/ja/auth.json';
@@ -56,6 +61,7 @@ import jaSettings from '../public/locales/ja/settings.json';
 import jaSetupGuide from '../public/locales/ja/setupGuide.json';
 import jaSidebar from '../public/locales/ja/sidebar.json';
 import jaWhatsNew from '../public/locales/ja/whatsNew.json';
+import jaGettingStarted from '../public/locales/ja/getting-started.json';
 // Import Dutch chunks
 import nlApiKeys from '../public/locales/nl/apiKeys.json';
 import nlAuth from '../public/locales/nl/auth.json';
@@ -74,6 +80,7 @@ import nlSettings from '../public/locales/nl/settings.json';
 import nlSetupGuide from '../public/locales/nl/setupGuide.json';
 import nlSidebar from '../public/locales/nl/sidebar.json';
 import nlWhatsNew from '../public/locales/nl/whatsNew.json';
+import nlGettingStarted from '../public/locales/nl/getting-started.json';
 // Import Turkish chunks
 import trApiKeys from '../public/locales/tr/apiKeys.json';
 import trAuth from '../public/locales/tr/auth.json';
@@ -92,6 +99,7 @@ import trSettings from '../public/locales/tr/settings.json';
 import trSetupGuide from '../public/locales/tr/setupGuide.json';
 import trSidebar from '../public/locales/tr/sidebar.json';
 import trWhatsNew from '../public/locales/tr/whatsNew.json';
+import trGettingStarted from '../public/locales/tr/getting-started.json';
 // Import Chinese chunks
 import zhApiKeys from '../public/locales/zh/apiKeys.json';
 import zhAuth from '../public/locales/zh/auth.json';
@@ -110,6 +118,7 @@ import zhSettings from '../public/locales/zh/settings.json';
 import zhSetupGuide from '../public/locales/zh/setupGuide.json';
 import zhSidebar from '../public/locales/zh/sidebar.json';
 import zhWhatsNew from '../public/locales/zh/whatsNew.json';
+import zhGettingStarted from '../public/locales/zh/getting-started.json';
 import { defaultLocale, locales, namespaces } from './config';
 
 // Resources object with all translations loaded statically
@@ -149,7 +158,11 @@ const resources = {
     settings: enSettings,
     setupGuide: enSetupGuide,
     sidebar: enSidebar,
-    whatsNew: enWhatsNew
+    whatsNew: enWhatsNew,
+    'getting-started': enGettingStarted,
+    tutorials: enTutorials,
+    'tutorial-rag-client': enTutorialRagClient,
+    'tutorial-notifications': enTutorialNotifications
   },
   hi: {
     translation: {
@@ -186,7 +199,8 @@ const resources = {
     settings: hiSettings,
     setupGuide: hiSetupGuide,
     sidebar: hiSidebar,
-    whatsNew: hiWhatsNew
+    whatsNew: hiWhatsNew,
+    'getting-started': hiGettingStarted
   },
   ja: {
     translation: {
@@ -223,7 +237,8 @@ const resources = {
     settings: jaSettings,
     setupGuide: jaSetupGuide,
     sidebar: jaSidebar,
-    whatsNew: jaWhatsNew
+    whatsNew: jaWhatsNew,
+    'getting-started': jaGettingStarted
   },
   nl: {
     translation: {
@@ -260,7 +275,8 @@ const resources = {
     settings: nlSettings,
     setupGuide: nlSetupGuide,
     sidebar: nlSidebar,
-    whatsNew: nlWhatsNew
+    whatsNew: nlWhatsNew,
+    'getting-started': nlGettingStarted
   },
   tr: {
     translation: {
@@ -297,7 +313,8 @@ const resources = {
     settings: trSettings,
     setupGuide: trSetupGuide,
     sidebar: trSidebar,
-    whatsNew: trWhatsNew
+    whatsNew: trWhatsNew,
+    'getting-started': trGettingStarted
   },
   zh: {
     translation: {
@@ -334,7 +351,8 @@ const resources = {
     settings: zhSettings,
     setupGuide: zhSetupGuide,
     sidebar: zhSidebar,
-    whatsNew: zhWhatsNew
+    whatsNew: zhWhatsNew,
+    'getting-started': zhGettingStarted
   }
 };
 
