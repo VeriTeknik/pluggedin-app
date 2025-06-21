@@ -246,7 +246,7 @@ export function PlaygroundConfig({
                       <TooltipTrigger asChild>
                         <div
                           className={`
-                            flex items-start justify-between p-3 rounded-lg
+                            flex items-start justify-between p-3 my-2 rounded-lg
                             transition-all duration-200
                             ${server.status === 'ACTIVE'
                               ? 'bg-primary/5 ring-1 ring-primary/20'

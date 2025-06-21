@@ -70,7 +70,8 @@ export function PlaygroundChat({
   }, [messages.length, rowVirtualizer]);
 
   return (
-    <div className='flex flex-col h-[calc(100vh-9rem)] bg-background'>
+    <div className='flex flex-col h-full bg-background'>
+
       {/* Chat Messages Area */}
       <div ref={parentRef} className='flex-1 overflow-y-auto p-4'>
         <div 
