@@ -1,12 +1,11 @@
 'use client';
 
-import { ArrowLeft, Copy } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { getFirstApiKey } from '@/app/actions/api-keys';
-import { Button } from '@/components/ui/button';
 import { ApiKeyDisplay } from '@/components/docs/api-key-display';
 import { ConfigDisplay } from '@/components/docs/config-display';
 import { useAuth } from '@/hooks/use-auth';

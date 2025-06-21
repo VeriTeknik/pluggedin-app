@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+
 import DocsPageClient from './page-client';
 
 export const metadata: Metadata = {

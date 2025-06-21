@@ -3,8 +3,8 @@
 import { Copy } from 'lucide-react';
 import { Highlight, themes } from 'prism-react-renderer';
 
-import { Button } from '@/components/ui/button';
 import { useTheme } from '@/components/providers/theme-provider';
+import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 interface ConfigDisplayProps {
