@@ -65,9 +65,9 @@ export default function McpPlaygroundPage() {
     isProcessing,
     isThinking,
     clientLogs,
-    setClientLogs,
+    setClientLogs: _setClientLogs,
     serverLogs,
-    setServerLogs,
+    setServerLogs: _setServerLogs,
     isLoading,
     mcpServers,
     

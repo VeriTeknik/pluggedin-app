@@ -69,7 +69,7 @@ export function ShareCollectionDialog({
           })
         );
         setSharedServers(sharedInfo.filter((info): info is SharedServerInfo => info !== null));
-      } catch (error) {
+      } catch (_error) {
         toast({
           title: t('common.error'),
           description: t('mcpServers.shareCollection.error.fetchSharedFailed'),
@@ -81,7 +81,7 @@ export function ShareCollectionDialog({
     }
 
     fetchSharedServers();
-  }, [open, profileUuid, servers]);
+  }, [open, profileUuid, servers, t, toast]);
 
   const handleShare = async () => {
     if (!title.trim()) {

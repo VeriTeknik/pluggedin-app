@@ -145,7 +145,7 @@ export function ExportDialog({ open, onOpenChange, exportJson }: ExportDialogPro
         });
         setTimeout(() => setCopiedToClipboard(false), 2000);
       },
-      (err) => {
+      (_err) => {
         toast({
           title: t('common.error'),
           description: t('mcpServers.export.error.copyFailed'),

@@ -75,7 +75,7 @@ export function ServerCard({
         const result = await isServerShared(currentProfile.uuid, server.uuid);
         setIsShared(result.isShared);
         setSharedUuid(result.server?.uuid || null);
-      } catch (error) {
+      } catch (_error) {
       } finally {
         setIsCheckingShareStatus(false);
       }

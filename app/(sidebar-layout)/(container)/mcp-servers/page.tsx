@@ -138,7 +138,7 @@ export default function MCPServersPage() {
         title: t('common.success'),
         description: t('mcpServers.form.success'),
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: t('common.error'),
         description: t('mcpServers.form.error.createFailed'),
@@ -211,7 +211,7 @@ export default function MCPServersPage() {
         description: t('mcpServers.import.success', { count: result.count }),
         variant: 'default',
       });
-    } catch (error) {
+    } catch (_error) {
       throw error;
     } finally {
       setIsSubmitting(false);

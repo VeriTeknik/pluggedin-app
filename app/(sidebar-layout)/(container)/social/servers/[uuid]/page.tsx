@@ -20,7 +20,7 @@ type PageProps = {
 
 export default async function Page({ params, searchParams }: PageProps) {
   const { uuid } = await params;
-  const searchParamsResolved = await searchParams;
+  const _searchParamsResolved = await searchParams;
   const sharedServer = await getSharedMcpServer(uuid);
 
   if (!sharedServer || !sharedServer.server) {

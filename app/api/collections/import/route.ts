@@ -4,8 +4,8 @@ import { NextResponse } from 'next/server';
 import { getSharedCollection } from '@/app/actions/social';
 import { db } from '@/db';
 import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType, projectsTable } from '@/db/schema';
-import { encryptServerData } from '@/lib/encryption';
 import { getAuthSession } from '@/lib/auth';
+import { encryptServerData } from '@/lib/encryption';
 
 /**
  * @swagger
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { collectionUuid, importType } = body;
+    const { collectionUuid } = body;
 
     if (!collectionUuid) {
       return NextResponse.json({ error: 'Collection UUID is required' }, { status: 400 });
