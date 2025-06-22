@@ -1,9 +1,10 @@
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { getSharedCollection } from '@/app/actions/social';
 import { db } from '@/db';
-import { McpServerSource, mcpServersTable,McpServerStatus, McpServerType } from '@/db/schema';
+import { McpServerSource, mcpServersTable,McpServerStatus, McpServerType, profilesTable, projectsTable } from '@/db/schema';
+import { encryptServerData } from '@/lib/encryption';
 import { getAuthSession } from '@/lib/auth';
 
 /**
@@ -108,33 +109,59 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Collection not found' }, { status: 404 });
     }
 
+    // Get the user's active project and profile
+    const project = await db.query.projectsTable.findFirst({
+      where: eq(projectsTable.user_id, session.user.id),
+      with: {
+        profiles: {
+          columns: { uuid: true },
+          limit: 1
+        }
+      }
+    });
+
+    if (!project || !project.profiles || project.profiles.length === 0) {
+      return NextResponse.json({ error: 'No active profile found' }, { status: 400 });
+    }
+
+    const profileUuid = project.active_profile_uuid || project.profiles[0].uuid;
+
     // TODO: Handle importType === 'new' by creating a new workspace
     // For now, we'll just import to the current workspace
 
     // Import each server from the collection
     const importedServers = [];
     for (const [serverName, serverConfig] of Object.entries(collection.content)) {
-      // Check if server already exists
+      // Check if server already exists in this profile
       const existingServer = await db.query.mcpServersTable.findFirst({
-        where: eq(mcpServersTable.name, serverName)
+        where: and(
+          eq(mcpServersTable.name, serverName),
+          eq(mcpServersTable.profile_uuid, profileUuid)
+        )
       });
 
       if (!existingServer) {
-        // Create new server
-        const newServer = await db.insert(mcpServersTable).values({
+        // Prepare server data
+        const serverData = {
           name: serverName,
           description: (serverConfig as any).description || '',
-          type: McpServerType.STDIO,
-          command: (serverConfig as any).command || '',
+          type: (serverConfig as any).type || McpServerType.STDIO,
+          command: (serverConfig as any).command || null,
           args: (serverConfig as any).args || [],
           env: (serverConfig as any).env || {},
-          url: (serverConfig as any).url || '',
-          profile_uuid: session.user.id,
+          url: (serverConfig as any).url || null,
+          profile_uuid: profileUuid,
           status: McpServerStatus.ACTIVE,
           source: McpServerSource.PLUGGEDIN,
           external_id: (serverConfig as any).external_id || null,
           notes: (serverConfig as any).notes || '',
-        }).returning();
+        };
+
+        // Encrypt sensitive fields before insertion
+        const encryptedData = encryptServerData(serverData, profileUuid);
+
+        // Create new server
+        const newServer = await db.insert(mcpServersTable).values(encryptedData).returning();
         importedServers.push(newServer[0]);
       }
     }
