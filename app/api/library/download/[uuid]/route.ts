@@ -30,7 +30,8 @@ export async function GET(
     }
 
     // Sanitize and validate the file path
-    const uploadsDir = resolve(process.cwd(), 'uploads');
+    // Use same uploads directory as in library.ts
+    const uploadsDir = resolve(process.env.UPLOADS_DIR || '/home/pluggedin/uploads');
     const requestedPath = normalize(join(uploadsDir, doc.file_path));
     
     // Ensure the resolved path is within the uploads directory (case-insensitive on Windows)

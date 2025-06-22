@@ -212,7 +212,7 @@ export default function MCPServersPage() {
         variant: 'default',
       });
     } catch (_error) {
-      throw error;
+      throw _error;
     } finally {
       setIsSubmitting(false);
     }
