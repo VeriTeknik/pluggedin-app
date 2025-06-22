@@ -292,18 +292,16 @@ export default function NotificationsPage() {
                                   <h3 className={`font-medium text-base ${notification.completed ? 'line-through opacity-60' : ''}`}>
                                     {notification.title}
                                   </h3>
-                                  <Badge
-                                    variant={getBadgeVariant(
-                                      notification.type
-                                    )}
-                                    className={`ml-2 ${
-                                      notification.type === 'CUSTOM' 
-                                        ? 'border-yellow-500 text-yellow-700 dark:text-yellow-400' 
-                                        : ''
-                                    }`}
-                                  >
-                                    {notification.type}
-                                  </Badge>
+                                  {notification.type !== 'CUSTOM' && (
+                                    <Badge
+                                      variant={getBadgeVariant(
+                                        notification.type
+                                      )}
+                                      className="ml-2"
+                                    >
+                                      {notification.type}
+                                    </Badge>
+                                  )}
                                   {notification.type === 'CUSTOM' && notification.severity && (
                                     <Badge
                                       variant={getBadgeVariant(notification.severity)}
