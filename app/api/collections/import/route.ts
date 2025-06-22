@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { getSharedCollection } from '@/app/actions/social';
 import { db } from '@/db';
-import { McpServerSource, mcpServersTable,McpServerStatus, McpServerType, profilesTable, projectsTable } from '@/db/schema';
+import { McpServerSource, mcpServersTable, McpServerStatus, McpServerType, projectsTable } from '@/db/schema';
 import { encryptServerData } from '@/lib/encryption';
 import { getAuthSession } from '@/lib/auth';
 
