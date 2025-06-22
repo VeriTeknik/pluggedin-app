@@ -77,8 +77,7 @@ export function ServerCard({
         const result = await isServerShared(currentProfile.uuid, server.uuid);
         setIsShared(result.isShared);
         setSharedUuid(result.server?.uuid || null);
-      } catch (error) {
-        console.error('Error checking if server is shared:', error);
+      } catch (_error) {
       } finally {
         setIsCheckingShareStatus(false);
       }
@@ -215,7 +214,7 @@ export function ServerCard({
             )}
           </div>
           
-          {server.type === McpServerType.STDIO && (
+          {server.type === McpServerType.STDIO && server.command && (
             <div className="col-span-2 mt-2">
               <p className="text-xs text-muted-foreground font-mono truncate">
                 $ {server.command} {server.args?.join(' ') || ''}

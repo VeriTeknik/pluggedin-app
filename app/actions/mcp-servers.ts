@@ -353,8 +353,11 @@ export async function bulkImportMcpServers(
       status: McpServerStatus.ACTIVE,
     };
 
+    // Encrypt sensitive fields before insertion
+    const encryptedData = encryptServerData(serverData, profileUuid);
+
     // Insert the server into the database
-    const inserted = await db.insert(mcpServersTable).values(serverData).returning({ uuid: mcpServersTable.uuid });
+    const inserted = await db.insert(mcpServersTable).values(encryptedData).returning({ uuid: mcpServersTable.uuid });
     if (inserted[0]?.uuid) {
         createdServerUuids.push(inserted[0].uuid);
     }
@@ -409,9 +412,12 @@ export async function importSharedServer(
         : `Imported from shared server originally created by ${serverData.profile_uuid}`,
     };
 
+    // Encrypt sensitive fields before insertion
+    const encryptedServerData = encryptServerData(serverToImport, profileUuid);
+
     // Create new server based on shared server data
     const [newServer] = await db.insert(mcpServersTable)
-      .values(serverToImport)
+      .values(encryptedServerData)
       .returning();
 
     if (!newServer) {

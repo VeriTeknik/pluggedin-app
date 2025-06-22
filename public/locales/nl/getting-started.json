@@ -1,0 +1,192 @@
+{
+  "title": "Aan de slag met Plugged.in",
+  "subtitle": "Start binnen 5 minuten. Leer hoe je MCP-servers instelt, clients configureert en AI-gestuurde applicaties bouwt.",
+  "prerequisites": {
+    "title": "Vereisten",
+    "nodejs": "Node.js v18 of hoger (v20+ aanbevolen)",
+    "account": "Een GitHub of e-mailaccount voor authenticatie",
+    "mcpClient": "Een MCP-compatibele client (Claude Desktop, Cursor, Cline, etc.)",
+    "commandLine": "Basiskennis van command-line interfaces"
+  },
+  "quickStart": {
+    "title": "Snelstart (5 minuten)",
+    "createAccount": {
+      "title": "Maak je account aan",
+      "description": "Bezoek plugged.in en meld je aan met GitHub (aanbevolen voor ontwikkelaars) of e-mail met wachtwoord.",
+      "screenshot": "Screenshot: Plugged.in aanmeldpagina",
+      "screenshotDesc": "Toont de inlogpagina met GitHub en e-mail opties",
+      "action": "Gratis beginnen"
+    },
+    "generateKey": {
+      "title": "Genereer je API-sleutel",
+      "description": "Na het inloggen, navigeer naar Instellingen → API-sleutels. Klik op 'Nieuwe API-sleutel genereren' en geef het een beschrijvende naam.",
+      "screenshot": "Screenshot: API-sleutel generatie interface",
+      "screenshotDesc": "Toont de API-sleutels instellingenpagina met de genereer knop",
+      "warning": "⚠️ Kopieer de gegenereerde sleutel onmiddellijk - je ziet deze niet meer!"
+    },
+    "installProxy": {
+      "title": "Installeer de MCP Proxy",
+      "description": "Open je terminal en voer het volgende commando uit om de Plugged.in MCP Proxy te installeren:",
+      "note": "Dit toont je de beschikbare opties. De proxy fungeert als een brug tussen je MCP-client en al je geconfigureerde servers."
+    },
+    "configureClient": {
+      "title": "Configureer je MCP Client",
+      "description": "Voeg de Plugged.in proxy toe aan je MCP client configuratie. Kies je client hieronder:",
+      "claude": {
+        "path": "Configuratiebestand locatie: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) of %APPDATA%\\Claude\\claude_desktop_config.json (Windows)"
+      },
+      "cursor": {
+        "instruction": "Voor Cursor, gebruik command-line argumenten:"
+      }
+    },
+    "testConnection": {
+      "title": "Test je verbinding",
+      "description": "Herstart je MCP-client en zoek naar de pluggedin tools om te bevestigen dat de verbinding werkt:",
+      "tools": [
+        "pluggedin_discover_tools - Ontdek mogelijkheden van je servers",
+        "pluggedin_rag_query - Doorzoek je documentbibliotheek",
+        "pluggedin_send_notification - Verstuur aangepaste meldingen"
+      ],
+      "screenshot": "Screenshot: MCP-client toont pluggedin tools",
+      "screenshotDesc": "Toont de beschikbare tools in je MCP-client"
+    }
+  },
+  "concepts": {
+    "title": "Kernconcepten",
+    "mcpServers": {
+      "title": "MCP Servers",
+      "description": "MCP-servers breiden AI-mogelijkheden uit door tools (functies die de AI kan aanroepen), bronnen (data die de AI kan benaderen), prompts (gespreksstarters) en aangepaste instructies (server-specifieke begeleiding) te bieden."
+    },
+    "projectsProfiles": {
+      "title": "Projecten & Profielen",
+      "description": "Projecten zijn topniveau containers voor je werk. Profielen zijn werkruimtes binnen projecten - zie ze als omgevingen (dev, staging, productie) met geïsoleerde serverconfiguraties."
+    },
+    "collections": {
+      "title": "Collecties",
+      "description": "Collecties zijn samengestelde groepen MCP-servers die goed samenwerken. Ze zijn versiebeheerd, deelbaar met de gemeenschap en houden installatiestatistieken bij."
+    },
+    "mcpProxy": {
+      "title": "De MCP Proxy",
+      "description": "Je enkele verbindingspunt dat verzoeken naar de juiste servers routeert, authenticatie afhandelt, uniforme logging biedt en geavanceerde functies zoals RAG en meldingen mogelijk maakt."
+    }
+  },
+  "firstSteps": {
+    "title": "Je eerste stappen",
+    "addServer": {
+      "title": "1. Voeg je eerste MCP Server toe",
+      "description": "Navigeer naar 'MCP Servers' in de zijbalk en klik op 'Nieuwe Server Toevoegen'. Kies een servertype (NPX, Docker, Binary, of Overig).",
+      "screenshot": "Screenshot: MCP Server toevoegen interface",
+      "screenshotDesc": "Toont het server configuratieformulier",
+      "example": "Voorbeeld - Voeg de bestandssysteemserver toe:"
+    },
+    "playground": {
+      "title": "2. Test in de Playground",
+      "description": "De MCP Playground laat je servers testen met elk AI-model. Ga naar 'Playground' in de zijbalk, selecteer je profiel en AI-model, en begin met chatten!",
+      "screenshot": "Screenshot: MCP Playground interface",
+      "screenshotDesc": "Toont de playground met chat interface en server tools",
+      "features": [
+        "Multi-model ondersteuning via Langchain",
+        "Virtueel scrollen voor lange gesprekken",
+        "Real-time operatie logging",
+        "Aangepaste model instructies"
+      ]
+    },
+    "collection": {
+      "title": "3. Maak een Collectie",
+      "description": "Organiseer gerelateerde servers in collecties. Navigeer naar 'Collecties', klik op 'Nieuwe Collectie Maken', voeg servers toe vanuit je profiel en stel zichtbaarheidsvoorkeuren in."
+    },
+    "share": {
+      "title": "4. Deel met de Gemeenschap",
+      "description": "Maak je servers vindbaar door op 'Server Delen' te klikken bij elke geconfigureerde server. Kies zichtbaarheidsinstellingen, voeg nuttige notities en voorbeelden toe, en volg installaties en beoordelingen."
+    }
+  },
+  "advanced": {
+    "title": "Geavanceerde functies",
+    "documentLibrary": {
+      "title": "Documentbibliotheek & RAG",
+      "description": "Upload documenten om AI-context te verbeteren. Navigeer naar 'Bibliotheek', upload PDF's, tekstbestanden of code. Documenten worden automatisch geïndexeerd en doorzoekbaar via pluggedin_rag_query."
+    },
+    "notifications": {
+      "title": "Real-time Meldingen",
+      "description": "Blijf op de hoogte van MCP-activiteiten. Klik op het belpictogram om voorkeuren te configureren, schakel e-mailbezorging in voor belangrijke waarschuwingen, en volg alle operaties."
+    },
+    "customInstructions": {
+      "title": "Aangepaste Instructies",
+      "description": "Voeg server-specifieke begeleiding toe door naar de detailpagina van een MCP-server te gaan. Deze instructies begeleiden AI-gedrag en worden beschikbaar als MCP-prompts."
+    },
+    "security": {
+      "title": "Beveiligingsfuncties",
+      "description": "Enterprise-grade beveiliging met end-to-end encryptie (AES-256-GCM), automatische Firejail sandboxing op Linux, API rate limiting, en volledige project data isolatie."
+    }
+  },
+  "troubleshooting": {
+    "title": "Probleemoplossing",
+    "sessionNotFound": {
+      "title": "\"Sessie niet gevonden\" fout",
+      "solutions": [
+        "Zorg ervoor dat je API-sleutel geldig is",
+        "Controleer of de MCP proxy draait",
+        "Verifieer je client configuratie"
+      ]
+    },
+    "serversNotInit": {
+      "title": "Servers initialiseren niet",
+      "solutions": [
+        "Controleer server logs in de Playground",
+        "Verifieer commando paden en argumenten",
+        "Zorg ervoor dat vereiste afhankelijkheden geïnstalleerd zijn"
+      ]
+    },
+    "ragNotWorking": {
+      "title": "RAG queries werken niet",
+      "solutions": [
+        "Bevestig dat documenten geüpload en verwerkt zijn",
+        "Controleer of RAG ingeschakeld is in Playground instellingen",
+        "Verifieer dat je abonnement RAG-functies bevat"
+      ]
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende stappen",
+    "guides": {
+      "title": "Ontdek meer handleidingen",
+      "links": [
+        { "text": "MCP Server Configuratie Handleiding", "href": "/docs/guides" },
+        { "text": "Collecties Best Practices", "href": "/docs/collections" },
+        { "text": "Beveiliging & Zelf-hosten", "href": "/docs/security" }
+      ]
+    },
+    "api": {
+      "title": "API Documentatie",
+      "links": [
+        { "text": "REST API Referentie", "href": "/docs/api-reference" },
+        { "text": "TypeScript SDK", "href": "/docs/typescript-sdk" },
+        { "text": "Webhook Integratie", "href": "/docs/webhooks" }
+      ]
+    },
+    "community": {
+      "title": "Word lid van de Gemeenschap",
+      "links": [
+        { "text": "GitHub - pluggedin-app", "href": "https://github.com/VeriTeknik/pluggedin-app", "external": true },
+        { "text": "GitHub - pluggedin-mcp", "href": "https://github.com/VeriTeknik/pluggedin-mcp", "external": true },
+        { "text": "Discord Server", "href": "https://discord.gg/pluggedin", "external": true }
+      ]
+    }
+  },
+  "quickReference": {
+    "title": "Snelle Referentie",
+    "commands": {
+      "title": "Essentiële Commando's"
+    },
+    "config": {
+      "title": "Configuratie Voorbeelden",
+      "basic": "Basis",
+      "advanced": "Geavanceerd"
+    }
+  },
+  "cta": {
+    "title": "Welkom bij de Plugged.in gemeenschap! 🚀",
+    "getStarted": "Nu Beginnen",
+    "browseDocs": "Documentatie Bekijken"
+  }
+}

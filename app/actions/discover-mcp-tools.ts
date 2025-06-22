@@ -6,6 +6,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/db';
 // Import promptsTable and Prompt type
 import { mcpServersTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema'; // Sorted
+import { decryptServerData } from '@/lib/encryption';
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Sorted
 // Removed getUserData import
 // import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
@@ -48,9 +49,27 @@ export async function discoverSingleServerTools(
     }
 
     console.log(`[Action] Found server config for ${serverConfig.name || serverUuid}`);
+    console.log(`[Action] Server config has encrypted fields:`, {
+      hasCommandEncrypted: !!serverConfig.command_encrypted,
+      hasArgsEncrypted: !!serverConfig.args_encrypted,
+      hasEnvEncrypted: !!serverConfig.env_encrypted,
+      hasUrlEncrypted: !!serverConfig.url_encrypted,
+      hasPlainCommand: !!serverConfig.command,
+      hasPlainArgs: !!serverConfig.args,
+      hasPlainEnv: !!serverConfig.env,
+      hasPlainUrl: !!serverConfig.url
+    });
 
-    // Reverted: No longer modifying command path here. Relying on PATH.
-    const discoveryServerConfig = { ...serverConfig }; // Keep using a copy
+    // Decrypt the server configuration
+    const decryptedServerConfig = decryptServerData(serverConfig, profileUuid);
+    console.log(`[Action] After decryption:`, {
+      hasCommand: !!decryptedServerConfig.command,
+      hasArgs: !!decryptedServerConfig.args,
+      hasEnv: !!decryptedServerConfig.env,
+      hasUrl: !!decryptedServerConfig.url,
+      serverType: decryptedServerConfig.type
+    });
+    const discoveryServerConfig = { ...decryptedServerConfig };
 
     let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = [];
     let discoveredTemplates: Awaited<ReturnType<typeof listResourceTemplatesFromServer>> = [];

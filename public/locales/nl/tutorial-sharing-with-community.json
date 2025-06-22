@@ -1,0 +1,91 @@
+{
+  "title": "Delen met de Community",
+  "description": "Leer hoe je je MCP servers en collecties deelt met de Plugged.in community",
+  "overview": {
+    "title": "Overzicht",
+    "introduction": "Plugged.in stelt je in staat om je MCP server configuraties en collecties te delen met de community, wat samenwerking en kennisdeling bevordert.",
+    "features": {
+      "servers": {
+        "title": "Deel MCP Servers",
+        "description": "Maak je serverconfiguraties beschikbaar voor anderen om te ontdekken en gebruiken"
+      },
+      "collections": {
+        "title": "Maak Collecties",
+        "description": "Groepeer gerelateerde servers in thematische collecties voor eenvoudiger delen"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "account": "Actief Plugged.in account",
+    "servers": "Minimaal één geconfigureerde MCP server",
+    "profile": "Publiek profiel ingeschakeld in instellingen"
+  },
+  "steps": {
+    "shareServer": {
+      "title": "Stap 1: Deel een MCP Server",
+      "badge": "Essentieel",
+      "description": "Maak je MCP server configuratie beschikbaar voor de community",
+      "navigate": {
+        "title": "Navigeer naar Je Server",
+        "description": "Ga naar je MCP Servers pagina en selecteer de server die je wilt delen:",
+        "code": "MCP Servers → Selecteer Server → Deel Opties"
+      },
+      "visibility": {
+        "title": "Stel Zichtbaarheid In",
+        "description": "Kies wie je server kan zien en installeren:",
+        "public": "Publiek - Iedereen kan ontdekken en installeren",
+        "private": "Privé - Alleen toegankelijk via directe link"
+      },
+      "tip": "Voeg gedetailleerde notities en documentatie toe om anderen te helpen het doel en de configuratie van je server te begrijpen."
+    },
+    "createCollection": {
+      "title": "Stap 2: Maak een Collectie",
+      "badge": "Aanbevolen",
+      "description": "Groepeer gerelateerde servers in een thematische collectie",
+      "create": {
+        "title": "Nieuwe Collectie Maken",
+        "description": "Navigeer naar de Collecties pagina en maak een nieuwe collectie:",
+        "code": "Sociaal → Collecties → Collectie Maken"
+      },
+      "organize": {
+        "title": "Voeg Servers toe aan Collectie",
+        "description": "Selecteer servers uit je profiel om in de collectie op te nemen. Collecties kunnen versiebeheer hebben en in de loop der tijd worden bijgewerkt."
+      }
+    },
+    "manageSharing": {
+      "title": "Stap 3: Beheer Gedeelde Content",
+      "badge": "Beheer",
+      "description": "Monitor en beheer je gedeelde servers en collecties",
+      "profile": {
+        "title": "Bekijk Je Publieke Profiel",
+        "description": "Controleer hoe je gedeelde content aan anderen verschijnt:",
+        "code": "/to/jouw-gebruikersnaam"
+      },
+      "stats": {
+        "title": "Volg Installatiestatistieken",
+        "description": "Monitor hoeveel gebruikers je servers en collecties hebben geïnstalleerd vanuit het deel-dashboard."
+      }
+    },
+    "discoverContent": {
+      "title": "Stap 4: Ontdek Community Content",
+      "badge": "Community",
+      "description": "Vind en gebruik servers gedeeld door andere community leden",
+      "browse": {
+        "title": "Blader door Ontdek Feed",
+        "description": "Bezoek de Ontdek pagina om populaire servers en collecties te vinden die door de community zijn gedeeld."
+      },
+      "follow": {
+        "title": "Volg Makers",
+        "description": "Volg gebruikers wiens servers je waardevol vindt om op de hoogte te blijven van hun laatste bijdragen."
+      },
+      "tip": "Gebruik de zoekfunctionaliteit om servers te vinden voor specifieke use cases of technologieën."
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "team": "Leer over team samenwerkingsfuncties",
+    "api": "Integreer met de Plugged.in API",
+    "custom": "Ontwikkel je eigen custom MCP servers"
+  }
+}

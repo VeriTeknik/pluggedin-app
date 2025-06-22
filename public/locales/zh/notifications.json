@@ -19,7 +19,8 @@
       "unread": "未读",
       "alerts": "警报",
       "info": "信息",
-      "success": "成功"
+      "success": "成功",
+      "notes": "笔记"
     },
     "empty": {
       "title": "无通知",
@@ -30,7 +31,8 @@
       "deleteSuccess": "通知已删除",
       "deleteError": "删除通知失败",
       "deleteAllSuccess": "所有通知已删除",
-      "deleteAllError": "删除所有通知失败"
+      "deleteAllError": "删除所有通知失败",
+      "toggleCompleteError": "无法更新笔记状态"
     }
   }
 }

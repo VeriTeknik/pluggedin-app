@@ -1,0 +1,89 @@
+{
+  "title": "自托管 Plugged.in",
+  "description": "学习如何自托管 Plugged.in 以完全控制您的 MCP 基础设施",
+  "overview": {
+    "title": "概述",
+    "introduction": "自托管 Plugged.in 让您完全控制您的 MCP 基础设施、数据主权和自定义选项。本指南涵盖从设置到生产的部署。",
+    "features": {
+      "control": {
+        "title": "完全控制",
+        "description": "完全控制您的基础设施和配置"
+      },
+      "data": {
+        "title": "数据主权",
+        "description": "将所有数据保留在您自己的基础设施中"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "server": "Linux 服务器（Ubuntu 20.04+ 或类似）",
+    "docker": "已安装 Docker 和 Docker Compose",
+    "postgresql": "PostgreSQL 15+（或 Docker）",
+    "domain": "具有 DNS 访问权限的域名"
+  },
+  "steps": {
+    "prepare": {
+      "title": "步骤 1：准备环境",
+      "badge": "设置",
+      "description": "克隆存储库并准备您的服务器",
+      "clone": {
+        "title": "克隆存储库",
+        "description": "获取最新源代码："
+      },
+      "requirements": {
+        "title": "系统要求",
+        "description": "推荐最低规格：",
+        "cpu": "2 个 CPU 核心",
+        "ram": "4GB 内存",
+        "storage": "20GB 存储"
+      }
+    },
+    "database": {
+      "title": "步骤 2：设置数据库",
+      "badge": "数据库",
+      "description": "为 Plugged.in 配置 PostgreSQL",
+      "setup": {
+        "title": "PostgreSQL 设置",
+        "description": "使用 Docker 部署 PostgreSQL："
+      },
+      "migrations": {
+        "title": "运行迁移",
+        "description": "初始化数据库架构："
+      }
+    },
+    "configure": {
+      "title": "步骤 3：配置应用程序",
+      "badge": "配置",
+      "description": "设置环境变量和安全设置",
+      "env": {
+        "title": "环境变量",
+        "description": "创建生产环境配置："
+      },
+      "tip": "使用以下命令生成安全密钥：openssl rand -base64 32"
+    },
+    "deploy": {
+      "title": "步骤 4：部署服务",
+      "badge": "部署",
+      "description": "使用 Docker Compose 部署 Plugged.in",
+      "docker": {
+        "title": "Docker Compose 设置",
+        "description": "创建 docker-compose.yml 文件："
+      },
+      "nginx": {
+        "title": "反向代理",
+        "description": "配置 Nginx 作为反向代理，具有正确的标头和 WebSocket 支持。"
+      },
+      "ssl": {
+        "title": "SSL/TLS 设置",
+        "description": "使用 Let's Encrypt 获取免费的 SSL 证书并自动续期。"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "monitoring": "设置监控和日志记录",
+    "backup": "配置自动备份",
+    "security": "查看安全配置指南"
+  }
+}

@@ -1,0 +1,107 @@
+{
+  "backToTutorial": "返回教程",
+  "title": "从AI发送通知",
+  "difficulty": "中级",
+  "duration": "20分钟",
+  "overview": {
+    "title": "您将学到什么",
+    "description": "本教程将教您如何在Plugged.in中设置和使用通知系统，让您的AI助手能够发送实时警报和更新。",
+    "learn1": "如何在您的配置文件中启用通知",
+    "learn2": "使用pluggedin_send_notification工具",
+    "learn3": "为关键警报设置电子邮件通知",
+    "learn4": "通知严重性级别的最佳实践"
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "item1": "已配置MCP代理的Plugged.in账户",
+    "item2": "已连接的MCP客户端（Claude Desktop、Cursor等）",
+    "item3": "在设置中配置的电子邮件（可选，用于电子邮件通知）"
+  },
+  "step1": {
+    "title": "启用通知",
+    "description": "首先，确保为您当前的配置文件启用了通知。这允许MCP代理记录活动并发送通知。",
+    "screenshot": "截图：带有通知切换的配置文件设置",
+    "screenshotDesc": "显示您配置文件中的通知设置",
+    "note": "新配置文件默认启用通知。您可以检查导航中的铃铛图标以查看您的通知计数。"
+  },
+  "step2": {
+    "title": "配置电子邮件通知（可选）",
+    "description": "对于关键警报，您可以启用电子邮件投递。这确保即使在不积极使用Plugged.in时也能收到重要通知。",
+    "emailSetup": {
+      "title": "电子邮件设置步骤",
+      "step1": "转到设置→通知",
+      "step2": "打开\"电子邮件通知\"开关",
+      "step3": "如果尚未完成，请验证您的电子邮件地址"
+    },
+    "screenshot": "截图：电子邮件通知设置",
+    "screenshotDesc": "显示电子邮件配置选项"
+  },
+  "step3": {
+    "title": "使用通知工具",
+    "description": "pluggedin_send_notification工具在您的MCP客户端中可用。以下是有效使用它的方法：",
+    "tabs": {
+      "basic": "基本用法",
+      "severity": "严重性级别",
+      "email": "带电子邮件"
+    },
+    "basic": {
+      "title": "简单通知",
+      "description": "发送出现在Plugged.in通知中心的基本通知：",
+      "screenshot": "截图：通知出现在铃铛菜单中",
+      "screenshotDesc": "显示通知如何在UI中出现"
+    },
+    "severity": {
+      "title": "使用严重性级别",
+      "description": "为您的通知选择适当的严重性级别："
+    },
+    "email": {
+      "title": "电子邮件通知",
+      "description": "对于关键警报，启用电子邮件投递：",
+      "note": "电子邮件通知仅在WARNING和ALERT严重性级别时发送，或在明确启用时发送。"
+    }
+  },
+  "step4": {
+    "title": "实用示例",
+    "example1": {
+      "title": "部署通知",
+      "description": "通知团队成员部署状态："
+    },
+    "example2": {
+      "title": "分析结果",
+      "description": "基于分析结果发送通知："
+    },
+    "example3": {
+      "title": "系统监控",
+      "description": "系统资源使用警报："
+    }
+  },
+  "bestPractices": {
+    "title": "最佳实践",
+    "meaningful": {
+      "title": "保持有意义",
+      "description": "包括具体细节，如计数、百分比或状态代码"
+    },
+    "severity": {
+      "title": "使用适当的严重性",
+      "description": "将ALERT保留用于需要立即关注的关键问题"
+    },
+    "email": {
+      "title": "谨慎使用电子邮件",
+      "description": "仅为离开应用时需要采取行动的通知启用电子邮件"
+    },
+    "context": {
+      "title": "添加上下文",
+      "description": "包括时间戳、受影响的系统或相关标识符"
+    }
+  },
+  "tip": {
+    "title": "专业提示",
+    "description": "将通知与RAG查询结合使用以实现智能警报。例如，查询您的文档以获取阈值，然后在超过这些阈值时发送通知。"
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "description": "通过这些相关教程增强您的自动化工作流：",
+    "api": "API集成指南",
+    "team": "团队协作设置"
+  }
+}

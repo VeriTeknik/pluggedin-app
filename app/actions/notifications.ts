@@ -7,6 +7,7 @@ import { db } from '@/db';
 import { notificationsTable } from '@/db/schema';
 
 export type NotificationType = 'SYSTEM' | 'ALERT' | 'INFO' | 'SUCCESS' | 'WARNING' | 'CUSTOM';
+export type NotificationSeverity = 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT';
 
 interface CreateNotificationOptions {
   profileUuid: string;
@@ -15,6 +16,7 @@ interface CreateNotificationOptions {
   message: string;
   link?: string;
   expiresInDays?: number;
+  severity?: NotificationSeverity;
 }
 
 export async function createNotification(options: CreateNotificationOptions) {
@@ -29,6 +31,7 @@ export async function createNotification(options: CreateNotificationOptions) {
       title: options.title,
       message: options.message,
       link: options.link,
+      severity: options.severity,
       created_at: new Date(),
       expires_at: expiresAt,
     });
@@ -149,6 +152,47 @@ export async function deleteAllNotifications(profileUuid: string) {
     return { success: true };
   } catch (error) {
     console.error('Delete all notifications error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+export async function toggleNotificationCompleted(id: string, profileUuid: string) {
+  try {
+    // First get the current completed status
+    const notification = await db.select()
+      .from(notificationsTable)
+      .where(
+        and(
+          eq(notificationsTable.id, id),
+          eq(notificationsTable.profile_uuid, profileUuid)
+        )
+      )
+      .limit(1);
+    
+    if (notification.length === 0) {
+      return { 
+        success: false, 
+        error: 'Notification not found' 
+      };
+    }
+    
+    // Toggle the completed status
+    await db.update(notificationsTable)
+      .set({ completed: !notification[0].completed })
+      .where(
+        and(
+          eq(notificationsTable.id, id),
+          eq(notificationsTable.profile_uuid, profileUuid)
+        )
+      );
+    
+    revalidatePath('/notifications');
+    return { success: true };
+  } catch (error) {
+    console.error('Toggle notification completed error:', error);
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 

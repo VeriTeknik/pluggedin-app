@@ -1,0 +1,94 @@
+{
+  "backToTutorials": "Eğitimlere Dön",
+  "title": "MCP İstemcinizde RAG Kullanımı",
+  "difficulty": "Orta",
+  "duration": "25 dakika",
+  "overview": {
+    "title": "Neler Öğreneceksiniz",
+    "description": "Bu eğitimde, AI asistanınızı kendi belgeleriniz ve bilginizle geliştirmek için RAG bilgi tabanınızı doğrudan MCP istemcinizden (Claude, Cursor, vb.) nasıl kullanacağınızı öğreneceksiniz.",
+    "learn1": "pluggedin_rag_query aracını nasıl kullanacağınız",
+    "learn2": "Bilgi tabanınız için etkili sorgular yazma",
+    "learn3": "RAG sorgularını diğer MCP araçlarıyla birleştirme",
+    "learn4": "Bağlamsal bilgi alma için en iyi uygulamalar"
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "item1": "MCP proxy yapılandırılmış Plugged.in hesabı",
+    "item2": "Kütüphanenize yüklenmiş en az bir belge",
+    "item3": "Bağlanmış MCP istemcisi (Claude Desktop, Cursor, vb.)",
+    "item4": "'RAG Bilgi Tabanı Oluşturma' eğitiminden RAG'ın temel anlayışı"
+  },
+  "step1": {
+    "title": "pluggedin_rag_query Aracını Anlama",
+    "description": "pluggedin_rag_query aracı, Plugged.in üzerinden bağlandığınızda MCP istemcinizde otomatik olarak kullanılabilir. Mevcut projenizin kütüphanesindeki tüm belgelerde arama yapmanızı sağlar.",
+    "tip": "RAG sistemi vektör benzerlik araması kullanır, bu nedenle belgelerinizden tam anahtar kelimeler kullanmasanız bile ilgili bilgileri bulabilir.",
+    "screenshot": "Ekran görüntüsü: Kullanılabilir araçlarda pluggedin_rag_query gösteren Claude Desktop",
+    "screenshotDesc": "Araç, MCP istemcinizin araç listesinde görünür"
+  },
+  "step2": {
+    "title": "Temel RAG Sorguları",
+    "description": "Bilgi tabanınızı aramak için basit sorgularla başlayın. Araç, belgelerinizden en ilgili parçaları döndürür.",
+    "example1": {
+      "title": "Basit Anahtar Kelime Araması",
+      "screenshot": "Ekran görüntüsü: RAG sorgu aracını kullanan Claude",
+      "screenshotDesc": "Sorgunun yürütülmesini ve dönen sonuçları gösterir"
+    },
+    "example2": {
+      "title": "Soru Tabanlı Sorgu"
+    },
+    "example3": {
+      "title": "Konu Araması"
+    }
+  },
+  "step3": {
+    "title": "Gelişmiş Sorgu Teknikleri",
+    "description": "Bilgi tabanınızdan daha iyi sonuçlar almak için daha sofistike sorgular oluşturmayı öğrenin.",
+    "contextual": {
+      "title": "Bağlamsal Sorgular",
+      "description": "AI belgelerinizde veritabanı indeksleme en iyi uygulamalarını arayacak"
+    },
+    "comparison": {
+      "title": "Karşılaştırma Sorguları",
+      "description": "Birden fazla belge arasında bilgi bulmak için harika"
+    },
+    "screenshot": "Ekran görüntüsü: Ayrıntılı sonuçlarla karmaşık RAG sorgusu",
+    "screenshotDesc": "AI'nın ilgili bilgileri nasıl işlediğini ve döndürdüğünü gösterir"
+  },
+  "step4": {
+    "title": "En İyi Uygulamalar",
+    "specific": {
+      "title": "Spesifik Olun",
+      "description": "Daha spesifik sorgular daha iyi sonuçlar verir",
+      "good": "İyi: 'PostgreSQL bağlantı havuzu yapılandırması'",
+      "bad": "Çok geniş: 'veritabanı'"
+    },
+    "context": {
+      "title": "Bağlam Sağlayın",
+      "description": "Daha iyi sonuçlar için neyi başarmaya çalıştığınız hakkında bağlam ekleyin"
+    },
+    "combine": {
+      "title": "Diğer Araçlarla Birleştirin",
+      "description": "Güçlü iş akışları için RAG sorgularını diğer MCP araçlarıyla birlikte kullanın:"
+    }
+  },
+  "issues": {
+    "title": "Yaygın Sorunlar ve Çözümler",
+    "noResults": {
+      "title": "Sonuç bulunamadı:",
+      "solution1": "Belgelerin yüklendiğini ve işlendiğini kontrol edin",
+      "solution2": "Farklı anahtar kelimeler deneyin veya sorgunuzu yeniden ifade edin",
+      "solution3": "Doğru proje/profilde olduğunuzdan emin olun"
+    },
+    "toolNotAvailable": {
+      "title": "Araç kullanılamıyor:",
+      "solution1": "MCP istemcinizi yeniden başlatın",
+      "solution2": "Plugged.in proxy'nin doğru çalışıp çalışmadığını kontrol edin"
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "description": "Bilgi tabanınızı sorgulayabildiğinize göre, ilgili bu eğitimleri keşfedin:",
+    "notifications": "AI'dan Bildirim Gönderme",
+    "buildingRag": "RAG Bilgi Tabanı Oluşturma"
+  }
+}

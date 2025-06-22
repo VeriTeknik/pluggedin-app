@@ -1,0 +1,85 @@
+{
+  "title": "开发自定义 MCP 服务器",
+  "description": "学习如何开发和部署您自己的自定义 MCP 服务器以实现专门功能",
+  "overview": {
+    "title": "概述",
+    "introduction": "模型上下文协议（MCP）允许您创建自定义服务器，通过专门的工具和资源扩展 AI 功能。本指南涵盖从设置到部署的服务器开发。",
+    "features": {
+      "tools": {
+        "title": "自定义工具",
+        "description": "创建 AI 可以调用的专门函数"
+      },
+      "resources": {
+        "title": "资源和提示",
+        "description": "提供数据和上下文以增强 AI 交互"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "programming": "TypeScript 或 Python 的基础知识",
+    "nodejs": "已安装 Node.js 18+ 或 Python 3.8+",
+    "mcp": "理解 MCP 概念"
+  },
+  "steps": {
+    "setup": {
+      "title": "步骤 1：设置开发环境",
+      "badge": "设置",
+      "description": "安装 MCP SDK 并创建您的项目结构",
+      "sdk": {
+        "title": "安装 MCP SDK",
+        "description": "选择您喜欢的语言并安装 SDK："
+      },
+      "structure": {
+        "title": "项目结构",
+        "description": "创建基本的项目结构："
+      }
+    },
+    "implement": {
+      "title": "步骤 2：实现您的服务器",
+      "badge": "开发",
+      "description": "创建您的 MCP 服务器的核心功能",
+      "basic": {
+        "title": "基本服务器实现",
+        "description": "创建一个带有自定义工具的最小 MCP 服务器："
+      },
+      "tip": "从一个简单的工具开始，逐渐添加更复杂的功能。在开发过程中频繁测试。"
+    },
+    "test": {
+      "title": "步骤 3：测试您的服务器",
+      "badge": "测试",
+      "description": "在部署前验证您的服务器是否正常工作",
+      "inspector": {
+        "title": "MCP 检查器",
+        "description": "使用 MCP 检查器测试您的服务器："
+      },
+      "pluggedin": {
+        "title": "使用 Plugged.in 测试",
+        "description": "将您的服务器作为本地 STDIO 服务器添加到 Plugged.in 进行实际测试。"
+      }
+    },
+    "deploy": {
+      "title": "步骤 4：部署和分享",
+      "badge": "部署",
+      "description": "打包并与他人分享您的服务器",
+      "package": {
+        "title": "包配置",
+        "description": "配置您的 package.json 以进行分发："
+      },
+      "share": {
+        "title": "在 Plugged.in 上分享",
+        "description": "在 Plugged.in 上创建服务器配置并与社区分享。"
+      },
+      "registry": {
+        "title": "发布到注册表",
+        "description": "考虑发布到 npm 或 PyPI 以进行更广泛的分发。"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "advanced": "探索高级 MCP 功能，如资源和提示",
+    "share": "与 Plugged.in 社区分享您的服务器",
+    "security": "查看生产服务器的安全最佳实践"
+  }
+}

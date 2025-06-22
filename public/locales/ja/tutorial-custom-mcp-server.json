@@ -1,0 +1,85 @@
+{
+  "title": "カスタムMCPサーバーの開発",
+  "description": "特殊な機能のための独自のカスタムMCPサーバーを開発およびデプロイする方法を学ぶ",
+  "overview": {
+    "title": "概要",
+    "introduction": "Model Context Protocol（MCP）により、専門的なツールとリソースでAI機能を拡張するカスタムサーバーを作成できます。このガイドでは、セットアップからデプロイメントまでのサーバー開発をカバーします。",
+    "features": {
+      "tools": {
+        "title": "カスタムツール",
+        "description": "AIが呼び出せる特殊な機能を作成"
+      },
+      "resources": {
+        "title": "リソースとプロンプト",
+        "description": "AIインタラクションを強化するためのデータとコンテキストを提供"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "前提条件",
+    "programming": "TypeScriptまたはPythonの基本的な知識",
+    "nodejs": "Node.js 18+またはPython 3.8+がインストール済み",
+    "mcp": "MCPコンセプトの理解"
+  },
+  "steps": {
+    "setup": {
+      "title": "ステップ1：開発環境のセットアップ",
+      "badge": "セットアップ",
+      "description": "MCP SDKをインストールし、プロジェクト構造を作成",
+      "sdk": {
+        "title": "MCP SDKのインストール",
+        "description": "お好みの言語を選択してSDKをインストール："
+      },
+      "structure": {
+        "title": "プロジェクト構造",
+        "description": "基本的なプロジェクト構造を作成："
+      }
+    },
+    "implement": {
+      "title": "ステップ2：サーバーの実装",
+      "badge": "開発",
+      "description": "MCPサーバーのコア機能を作成",
+      "basic": {
+        "title": "基本的なサーバー実装",
+        "description": "カスタムツールを持つ最小限のMCPサーバーを作成："
+      },
+      "tip": "シンプルなツールから始めて、徐々により複雑な機能を追加します。開発中は頻繁にテストしてください。"
+    },
+    "test": {
+      "title": "ステップ3：サーバーのテスト",
+      "badge": "テスト",
+      "description": "デプロイメント前にサーバーが正しく動作することを検証",
+      "inspector": {
+        "title": "MCPインスペクター",
+        "description": "MCPインスペクターを使用してサーバーをテスト："
+      },
+      "pluggedin": {
+        "title": "Plugged.inでテスト",
+        "description": "実際のテストのために、サーバーをローカルSTDIOサーバーとしてPlugged.inに追加します。"
+      }
+    },
+    "deploy": {
+      "title": "ステップ4：デプロイと共有",
+      "badge": "デプロイメント",
+      "description": "サーバーをパッケージ化して他の人と共有",
+      "package": {
+        "title": "パッケージ設定",
+        "description": "配布用にpackage.jsonを設定："
+      },
+      "share": {
+        "title": "Plugged.inで共有",
+        "description": "Plugged.inでサーバー構成を作成し、コミュニティと共有します。"
+      },
+      "registry": {
+        "title": "レジストリに公開",
+        "description": "より広い配布のために、npmまたはPyPIへの公開を検討してください。"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "次のステップ",
+    "advanced": "リソースやプロンプトなどの高度なMCP機能を探索",
+    "share": "Plugged.inコミュニティとサーバーを共有",
+    "security": "本番サーバーのセキュリティベストプラクティスを確認"
+  }
+}

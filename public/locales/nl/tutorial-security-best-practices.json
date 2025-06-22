@@ -1,0 +1,98 @@
+{
+  "title": "Security Best Practices",
+  "description": "Leer security best practices voor het veilig configureren en gebruiken van Plugged.in in productieomgevingen",
+  "overview": {
+    "title": "Overzicht",
+    "introduction": "Beveiliging is van het grootste belang bij het beheren van MCP servers en gevoelige data. Deze gids behandelt essentiële beveiligingspraktijken voor Plugged.in deployments.",
+    "features": {
+      "encryption": {
+        "title": "End-to-End Encryptie",
+        "description": "Bescherm gevoelige configuratie en credentials"
+      },
+      "access": {
+        "title": "Toegangscontrole",
+        "description": "Implementeer juiste authenticatie en autorisatie"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "admin": "Administratieve toegang tot je Plugged.in instantie",
+    "understanding": "Basiskennis van beveiligingsconcepten",
+    "access": "Toegang tot serverconfiguratie"
+  },
+  "steps": {
+    "authentication": {
+      "title": "Stap 1: Versterk Authenticatie",
+      "badge": "Kritiek",
+      "description": "Implementeer robuuste authenticatiemechanismen",
+      "mfa": {
+        "title": "Schakel Multi-Factor Authenticatie In",
+        "description": "Vereist MFA voor alle gebruikersaccounts:",
+        "code": "Instellingen → Beveiliging → 2FA Vereiste Inschakelen"
+      },
+      "sessions": {
+        "title": "Sessiebeheer",
+        "description": "Configureer passende sessie time-outs en implementeer veilig sessiebeheer met juiste invalidatie."
+      },
+      "warning": "Deel nooit authenticatiegegevens of API keys. Elke gebruiker moet eigen unieke credentials hebben."
+    },
+    "apikeys": {
+      "title": "Stap 2: API Key Beveiliging",
+      "badge": "Belangrijk",
+      "description": "Beheer en beveilig API keys op de juiste manier",
+      "rotation": {
+        "title": "Key Rotatie Beleid",
+        "description": "Implementeer regelmatige API key rotatie:",
+        "quarterly": "Roteer keys minimaal elk kwartaal",
+        "compromise": "Onmiddellijke rotatie bij vermoeden van compromis",
+        "employee": "Roteer wanneer teamleden wijzigen"
+      },
+      "storage": {
+        "title": "Veilige Opslag",
+        "description": "Bewaar API keys veilig:"
+      }
+    },
+    "encryption": {
+      "title": "Stap 3: Data Encryptie",
+      "badge": "Essentieel",
+      "description": "Zorg ervoor dat alle gevoelige data goed is versleuteld",
+      "e2e": {
+        "title": "End-to-End Encryptie",
+        "description": "MCP server configuraties zijn end-to-end versleuteld, zodat alleen geautoriseerde gebruikers kunnen ontsleutelen."
+      },
+      "transit": {
+        "title": "Encryptie in Transit",
+        "description": "Gebruik altijd HTTPS/TLS voor alle communicatie. Verstuur nooit gevoelige data over onversleutelde verbindingen."
+      },
+      "rest": {
+        "title": "Encryptie at Rest",
+        "description": "Database encryptie moet ingeschakeld zijn voor productie deployments om opgeslagen data te beschermen."
+      }
+    },
+    "monitoring": {
+      "title": "Stap 4: Security Monitoring",
+      "badge": "Doorlopend",
+      "description": "Implementeer uitgebreide security monitoring",
+      "audit": {
+        "title": "Audit Logging",
+        "description": "Monitor en log beveiligingsrelevante gebeurtenissen:",
+        "logins": "Authenticatiepogingen (succes/mislukking)",
+        "apikey": "API key gebruik en generatie",
+        "server": "MCP server configuratie wijzigingen",
+        "permissions": "Permissie en rol wijzigingen"
+      },
+      "alerts": {
+        "title": "Security Waarschuwingen",
+        "description": "Stel waarschuwingen in voor verdachte activiteiten zoals meerdere mislukte inlogpogingen of ongewone API gebruikspatronen."
+      },
+      "tip": "Bekijk regelmatig security logs en onderzoek anomalieën direct."
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "review": "Voer regelmatige security reviews en audits uit",
+    "training": "Bied security training voor alle teamleden",
+    "incident": "Ontwikkel een incident response plan"
+  }
+}

@@ -4,8 +4,9 @@ import { sql } from 'drizzle-orm'; // Import sql for excluded
 import { db } from '@/db';
 // Re-import toolsTable and use ToggleStatus
 import { mcpServersTable, ToggleStatus,toolsTable } from '@/db/schema';
+import { decryptServerData } from '@/lib/encryption';
 
-export async function refreshSseTools(serverUuid: string) {
+export async function refreshSseTools(serverUuid: string, profileUuid: string) {
   try {
     const server = await db
       .select()
@@ -17,12 +18,15 @@ export async function refreshSseTools(serverUuid: string) {
       throw new Error('Server not found');
     }
 
-    if (!server[0].url) {
+    // Decrypt the server data
+    const decryptedServer = decryptServerData(server[0], profileUuid);
+
+    if (!decryptedServer.url) {
       throw new Error('Server URL not found');
     }
 
     // Fetch tools from SSE server
-    const response = await fetch(server[0].url);
+    const response = await fetch(decryptedServer.url);
     if (!response.ok) {
       throw new Error('Failed to fetch tools from SSE server');
     }

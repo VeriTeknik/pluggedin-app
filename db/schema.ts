@@ -579,6 +579,8 @@ export const notificationsTable = pgTable("notifications", {
   message: text("message").notNull(),
   read: boolean("read").default(false).notNull(),
   link: text("link"),
+  severity: text("severity"), // For MCP notifications: INFO, SUCCESS, WARNING, ALERT
+  completed: boolean("completed").default(false).notNull(), // For todo-style checkmarks on custom notifications
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   expires_at: timestamp("expires_at", { withTimezone: true }),
 },

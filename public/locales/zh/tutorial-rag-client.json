@@ -1,0 +1,94 @@
+{
+  "backToTutorial": "返回教程",
+  "title": "在MCP客户端中使用RAG",
+  "difficulty": "中级",
+  "duration": "25分钟",
+  "overview": {
+    "title": "您将学到什么",
+    "description": "在本教程中，您将学习如何直接从MCP客户端（Claude、Cursor等）利用您的RAG知识库，使用您自己的文档和知识增强AI助手。",
+    "learn1": "如何使用pluggedin_rag_query工具",
+    "learn2": "为您的知识库编写有效的查询",
+    "learn3": "将RAG查询与其他MCP工具结合使用",
+    "learn4": "上下文信息检索的最佳实践"
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "item1": "已配置MCP代理的Plugged.in账户",
+    "item2": "至少有一个文档上传到您的库",
+    "item3": "已连接的MCP客户端（Claude Desktop、Cursor等）",
+    "item4": "对\"构建RAG知识库\"教程中RAG的基本了解"
+  },
+  "step1": {
+    "title": "了解pluggedin_rag_query工具",
+    "description": "当通过Plugged.in连接时，pluggedin_rag_query工具会自动在您的MCP客户端中可用。它允许您搜索当前项目库中的所有文档。",
+    "tip": "RAG系统使用向量相似性搜索，因此即使您不使用文档中的确切关键词，它也可以找到相关信息。",
+    "screenshot": "截图：Claude Desktop在可用工具中显示pluggedin_rag_query",
+    "screenshotDesc": "该工具出现在您的MCP客户端的工具列表中"
+  },
+  "step2": {
+    "title": "基本RAG查询",
+    "description": "从简单的查询开始搜索您的知识库。该工具将从您的文档中返回最相关的片段。",
+    "example1": {
+      "title": "简单关键词搜索",
+      "screenshot": "截图：Claude使用RAG查询工具",
+      "screenshotDesc": "显示正在执行的查询和返回的结果"
+    },
+    "example2": {
+      "title": "基于问题的查询"
+    },
+    "example3": {
+      "title": "主题搜索"
+    }
+  },
+  "step3": {
+    "title": "高级查询技巧",
+    "description": "学习如何构建更复杂的查询以从您的知识库获得更好的结果。",
+    "contextual": {
+      "title": "上下文查询",
+      "description": "AI将在您的文档中搜索数据库索引最佳实践"
+    },
+    "comparison": {
+      "title": "比较查询",
+      "description": "非常适合跨多个文档查找信息"
+    },
+    "screenshot": "截图：带有详细结果的复杂RAG查询",
+    "screenshotDesc": "显示AI如何处理并返回相关信息"
+  },
+  "step4": {
+    "title": "最佳实践",
+    "specific": {
+      "title": "保持具体",
+      "description": "更具体的查询会产生更好的结果",
+      "good": "好的：\"PostgreSQL连接池配置\"",
+      "bad": "太宽泛：\"数据库\""
+    },
+    "context": {
+      "title": "提供上下文",
+      "description": "包含有关您想要实现的目标的上下文以获得更好的结果"
+    },
+    "combine": {
+      "title": "与其他工具结合",
+      "description": "将RAG查询与其他MCP工具一起使用以实现强大的工作流："
+    }
+  },
+  "issues": {
+    "title": "常见问题与解决方案",
+    "noResults": {
+      "title": "未找到结果：",
+      "solution1": "检查文档是否已上传并处理",
+      "solution2": "尝试不同的关键词或重新表述您的查询",
+      "solution3": "确保您在正确的项目/配置文件中"
+    },
+    "toolNotAvailable": {
+      "title": "工具不可用：",
+      "solution1": "重启您的MCP客户端",
+      "solution2": "检查Plugged.in代理是否正常运行"
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "description": "现在您可以查询您的知识库了，探索这些相关教程：",
+    "notifications": "从AI发送通知",
+    "buildingRag": "构建RAG知识库"
+  }
+}

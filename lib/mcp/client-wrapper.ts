@@ -189,14 +189,16 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
         env: {
           // Start with parent process env
           ...(process.env as Record<string, string>),
-          // Add potentially missing vars needed by uvx/python, using defaults
-          // Note: Reading paths again here, could be refactored later if needed
-          PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin'}:${process.env.PATH}`, // Prepend local bin
-          HOME: process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin',
-          UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin'}/.local/uv`,
-          PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace'}/lib/python`,
-          PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace',
-          UV_SYSTEM_PYTHON: 'true',
+          // Only add Linux-specific paths on Linux systems
+          ...(process.platform === 'linux' ? {
+            // Add potentially missing vars needed by uvx/python on Linux
+            PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin'}:${process.env.PATH}`, // Prepend local bin
+            HOME: process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin',
+            UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin'}/.local/uv`,
+            PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace'}/lib/python`,
+            PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace',
+            UV_SYSTEM_PYTHON: 'true',
+          } : {}),
           // Apply server-specific env vars, overriding anything above
           ...(serverConfig.env || {})
         }

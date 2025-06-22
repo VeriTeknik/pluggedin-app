@@ -1,0 +1,98 @@
+{
+  "title": "安全最佳实践",
+  "description": "学习在生产环境中安全配置和使用 Plugged.in 的安全最佳实践",
+  "overview": {
+    "title": "概述",
+    "introduction": "管理 MCP 服务器和敏感数据时，安全性至关重要。本指南涵盖 Plugged.in 部署的基本安全实践。",
+    "features": {
+      "encryption": {
+        "title": "端到端加密",
+        "description": "保护敏感配置和凭据"
+      },
+      "access": {
+        "title": "访问控制",
+        "description": "实施适当的身份验证和授权"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "admin": "对您的 Plugged.in 实例的管理访问权限",
+    "understanding": "对安全概念的基本理解",
+    "access": "访问服务器配置"
+  },
+  "steps": {
+    "authentication": {
+      "title": "步骤 1：加强身份验证",
+      "badge": "关键",
+      "description": "实施强大的身份验证机制",
+      "mfa": {
+        "title": "启用多因素身份验证",
+        "description": "要求所有用户账户使用 MFA：",
+        "code": "设置 → 安全 → 启用 2FA 要求"
+      },
+      "sessions": {
+        "title": "会话管理",
+        "description": "配置适当的会话超时并实施安全的会话处理与正确的失效机制。"
+      },
+      "warning": "永远不要共享身份验证凭据或 API 密钥。每个用户都应该有自己独特的凭据。"
+    },
+    "apikeys": {
+      "title": "步骤 2：API 密钥安全",
+      "badge": "重要",
+      "description": "正确管理和保护 API 密钥",
+      "rotation": {
+        "title": "密钥轮换策略",
+        "description": "实施定期的 API 密钥轮换：",
+        "quarterly": "至少每季度轮换密钥",
+        "compromise": "如怀疑泄露立即轮换",
+        "employee": "团队成员变动时轮换"
+      },
+      "storage": {
+        "title": "安全存储",
+        "description": "安全存储 API 密钥："
+      }
+    },
+    "encryption": {
+      "title": "步骤 3：数据加密",
+      "badge": "必要",
+      "description": "确保所有敏感数据都得到适当加密",
+      "e2e": {
+        "title": "端到端加密",
+        "description": "MCP 服务器配置是端到端加密的，确保只有授权用户才能解密。"
+      },
+      "transit": {
+        "title": "传输加密",
+        "description": "始终对所有通信使用 HTTPS/TLS。永远不要通过未加密的连接传输敏感数据。"
+      },
+      "rest": {
+        "title": "静态加密",
+        "description": "生产部署应启用数据库加密以保护存储的数据。"
+      }
+    },
+    "monitoring": {
+      "title": "步骤 4：安全监控",
+      "badge": "持续",
+      "description": "实施全面的安全监控",
+      "audit": {
+        "title": "审计日志",
+        "description": "监控和记录与安全相关的事件：",
+        "logins": "身份验证尝试（成功/失败）",
+        "apikey": "API 密钥使用和生成",
+        "server": "MCP 服务器配置更改",
+        "permissions": "权限和角色更改"
+      },
+      "alerts": {
+        "title": "安全警报",
+        "description": "为可疑活动设置警报，如多次登录失败尝试或异常的 API 使用模式。"
+      },
+      "tip": "定期审查安全日志并及时调查任何异常情况。"
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "review": "进行定期的安全审查和审计",
+    "training": "为所有团队成员提供安全培训",
+    "incident": "制定事件响应计划"
+  }
+}

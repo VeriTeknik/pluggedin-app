@@ -1,0 +1,89 @@
+{
+  "title": "Using the Plugged.in API",
+  "description": "Learn how to integrate with the Plugged.in API for programmatic access to your MCP servers",
+  "overview": {
+    "title": "Overview",
+    "introduction": "The Plugged.in API provides programmatic access to manage MCP servers, query RAG knowledge bases, and automate workflows. This guide covers authentication, endpoints, and best practices.",
+    "features": {
+      "automation": {
+        "title": "Automation",
+        "description": "Automate server management and deployments"
+      },
+      "security": {
+        "title": "Secure Access",
+        "description": "API key authentication with rate limiting"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "account": "Active Plugged.in account",
+    "programming": "Basic programming knowledge",
+    "http": "Understanding of REST APIs"
+  },
+  "steps": {
+    "authentication": {
+      "title": "Step 1: Authentication Setup",
+      "badge": "Required",
+      "description": "Generate and configure API keys for secure access",
+      "generate": {
+        "title": "Generate API Key",
+        "description": "Create a new API key from your account settings:",
+        "code": "Settings → API Keys → Generate New Key"
+      },
+      "usage": {
+        "title": "Using Your API Key",
+        "description": "Include your API key in the Authorization header:"
+      },
+      "tip": "Store API keys securely and never commit them to version control. Use environment variables for production applications."
+    },
+    "endpoints": {
+      "title": "Step 2: Core API Endpoints",
+      "badge": "Endpoints",
+      "description": "Explore the main API endpoints for server management",
+      "servers": {
+        "title": "Server Management",
+        "description": "Manage your MCP servers programmatically:"
+      },
+      "rag": {
+        "title": "RAG Queries",
+        "description": "Query your knowledge base:"
+      }
+    },
+    "examples": {
+      "title": "Step 3: Implementation Examples",
+      "badge": "Code",
+      "description": "Practical examples in different programming languages",
+      "javascript": {
+        "title": "JavaScript/Node.js",
+        "description": "Example using fetch API:"
+      },
+      "python": {
+        "title": "Python",
+        "description": "Example using requests library:"
+      }
+    },
+    "ratelimits": {
+      "title": "Step 4: Rate Limits & Best Practices",
+      "badge": "Important",
+      "description": "Understand rate limiting and optimize your API usage",
+      "tiers": {
+        "title": "Rate Limit Tiers",
+        "description": "Different endpoints have different rate limits:",
+        "standard": "Standard endpoints: 60 requests/minute",
+        "sensitive": "Sensitive operations: 10 requests/hour",
+        "public": "Public endpoints: 100 requests/minute"
+      },
+      "headers": {
+        "title": "Rate Limit Headers",
+        "description": "Monitor your usage with response headers:"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "webhooks": "Set up webhooks for real-time notifications",
+    "sdks": "Explore community SDKs for your language",
+    "security": "Review security best practices for API usage"
+  }
+}

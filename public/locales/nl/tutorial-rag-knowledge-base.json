@@ -1,0 +1,92 @@
+{
+  "title": "Een RAG Kennisbank Bouwen",
+  "description": "Leer hoe je een RAG kennisbank bouwt en beheert met Plugged.in voor verbeterde AI interacties",
+  "overview": {
+    "title": "Overzicht",
+    "introduction": "Retrieval-Augmented Generation (RAG) stelt je in staat om AI interacties te verbeteren door relevante context uit je documenten te bieden. De documentbibliotheek van Plugged.in maakt het mogelijk om een projectspecifieke kennisbank op te bouwen.",
+    "features": {
+      "documents": {
+        "title": "Documentbeheer",
+        "description": "Upload en organiseer documenten voor vector-gebaseerde retrieval"
+      },
+      "search": {
+        "title": "Semantisch Zoeken",
+        "description": "Bevraag je kennisbank met natuurlijke taal"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "account": "Actief Plugged.in account met RAG functies ingeschakeld",
+    "project": "Minimaal één project aangemaakt",
+    "documents": "Documenten om te uploaden (PDF, TXT, MD, DOCX)"
+  },
+  "steps": {
+    "setupLibrary": {
+      "title": "Stap 1: Documentbibliotheek Instellen",
+      "badge": "Setup",
+      "description": "Initialiseer de documentbibliotheek van je project voor RAG",
+      "navigate": {
+        "title": "Toegang tot Documentbibliotheek",
+        "description": "Navigeer naar de documentbibliotheek van je project:",
+        "code": "Project → Bibliotheek → Documentbibliotheek"
+      },
+      "formats": {
+        "title": "Ondersteunde Formaten",
+        "description": "De bibliotheek ondersteunt verschillende documentformaten:"
+      }
+    },
+    "uploadDocuments": {
+      "title": "Stap 2: Documenten Uploaden",
+      "badge": "Content",
+      "description": "Voeg documenten toe om je kennisbank op te bouwen",
+      "upload": {
+        "title": "Upload Proces",
+        "description": "Sleep en laat vallen of klik om documenten te uploaden:",
+        "action": "Sleep bestanden hierheen of klik om te bladeren"
+      },
+      "organize": {
+        "title": "Documenten Organiseren",
+        "description": "Gebruik tags en categorieën om je documenten te organiseren voor betere retrieval nauwkeurigheid."
+      },
+      "tip": "Documenten worden automatisch verwerkt en geïndexeerd voor vector zoeken. Verwerkingstijd hangt af van documentgrootte en complexiteit."
+    },
+    "queryKnowledge": {
+      "title": "Stap 3: Bevraag Je Kennisbank",
+      "badge": "Gebruik",
+      "description": "Gebruik de RAG query tool om relevante informatie op te halen",
+      "mcp": {
+        "title": "MCP Tool Gebruiken",
+        "description": "Bevraag je kennisbank via de MCP proxy:",
+        "code": "pluggedin_rag_query(\"Je vraag over de documenten\")"
+      },
+      "api": {
+        "title": "API Gebruiken",
+        "description": "Bevraag via de REST API voor integratie:"
+      }
+    },
+    "advanced": {
+      "title": "Stap 4: Geavanceerde Functies",
+      "badge": "Geavanceerd",
+      "description": "Optimaliseer je RAG kennisbank voor betere resultaten",
+      "chunking": {
+        "title": "Document Chunking",
+        "description": "Documenten worden automatisch opgedeeld voor optimale retrieval. Grotere documenten worden gesplitst in semantische segmenten."
+      },
+      "metadata": {
+        "title": "Metadata Verrijking",
+        "description": "Voeg metadata toe aan documenten om zoekrelevantie en filtermogelijkheden te verbeteren."
+      },
+      "isolation": {
+        "title": "Project Isolatie",
+        "description": "De documenten van elk project zijn geïsoleerd, zodat queries alleen uit de kennisbank van het huidige project ophalen."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "api": "Integreer RAG queries in je applicaties via API",
+    "team": "Deel kennisbanken met teamleden",
+    "security": "Configureer beveiligingsinstellingen voor gevoelige documenten"
+  }
+}

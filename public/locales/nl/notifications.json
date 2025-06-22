@@ -19,7 +19,8 @@
       "unread": "Ongelezen",
       "alerts": "Waarschuwingen",
       "info": "Informatie",
-      "success": "Succes"
+      "success": "Succes",
+      "notes": "Notities"
     },
     "empty": {
       "title": "Geen notificaties",
@@ -30,7 +31,8 @@
       "deleteSuccess": "Notificatie verwijderd",
       "deleteError": "Verwijderen van notificatie mislukt",
       "deleteAllSuccess": "Alle notificaties verwijderd",
-      "deleteAllError": "Verwijderen van alle notificaties mislukt"
+      "deleteAllError": "Verwijderen van alle notificaties mislukt",
+      "toggleCompleteError": "Bijwerken van notitie status mislukt"
     }
   }
 }

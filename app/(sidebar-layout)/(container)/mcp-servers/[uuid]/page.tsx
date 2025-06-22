@@ -85,9 +85,9 @@ export default function McpServerDetailPage({
 
   // SWR hook for fetching resource templates
   const {
-    data: resourceTemplates,
-    error: templatesError,
-    isLoading: isLoadingTemplates,
+    data: _resourceTemplates,
+    error: _templatesError,
+    isLoading: _isLoadingTemplates,
   } = useSWR(
     uuid ? `/api/mcp-servers/${uuid}/resource-templates` : null,
     (url: string) => fetch(url).then((res) => res.json()) as Promise<ResourceTemplate[]>

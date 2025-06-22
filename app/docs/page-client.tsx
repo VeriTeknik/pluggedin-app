@@ -2,6 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { 
+  Bell,
   BookOpen, 
   Code2, 
   FileText, 
@@ -17,6 +18,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 
 const categories = [
+  {
+    id: 'whats-new',
+    icon: Bell,
+    color: 'text-red-500',
+    bgColor: 'bg-red-500/10',
+    href: '/docs/whats-new',
+  },
   {
     id: 'getting-started',
     icon: Rocket,

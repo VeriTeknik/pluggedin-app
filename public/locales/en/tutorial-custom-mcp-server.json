@@ -1,0 +1,85 @@
+{
+  "title": "Developing Custom MCP Servers",
+  "description": "Learn how to develop and deploy your own custom MCP servers for specialized functionality",
+  "overview": {
+    "title": "Overview",
+    "introduction": "The Model Context Protocol (MCP) allows you to create custom servers that extend AI capabilities with specialized tools and resources. This guide covers server development from setup to deployment.",
+    "features": {
+      "tools": {
+        "title": "Custom Tools",
+        "description": "Create specialized functions that AI can call"
+      },
+      "resources": {
+        "title": "Resources & Prompts",
+        "description": "Provide data and context to enhance AI interactions"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "programming": "Basic knowledge of TypeScript or Python",
+    "nodejs": "Node.js 18+ or Python 3.8+ installed",
+    "mcp": "Understanding of MCP concepts"
+  },
+  "steps": {
+    "setup": {
+      "title": "Step 1: Set Up Development Environment",
+      "badge": "Setup",
+      "description": "Install the MCP SDK and create your project structure",
+      "sdk": {
+        "title": "Install MCP SDK",
+        "description": "Choose your preferred language and install the SDK:"
+      },
+      "structure": {
+        "title": "Project Structure",
+        "description": "Create a basic project structure:"
+      }
+    },
+    "implement": {
+      "title": "Step 2: Implement Your Server",
+      "badge": "Development",
+      "description": "Create the core functionality of your MCP server",
+      "basic": {
+        "title": "Basic Server Implementation",
+        "description": "Create a minimal MCP server with a custom tool:"
+      },
+      "tip": "Start with a simple tool and gradually add more complex functionality. Test frequently during development."
+    },
+    "test": {
+      "title": "Step 3: Test Your Server",
+      "badge": "Testing",
+      "description": "Validate your server works correctly before deployment",
+      "inspector": {
+        "title": "MCP Inspector",
+        "description": "Use the MCP Inspector to test your server:"
+      },
+      "pluggedin": {
+        "title": "Test with Plugged.in",
+        "description": "Add your server to Plugged.in as a local STDIO server for real-world testing."
+      }
+    },
+    "deploy": {
+      "title": "Step 4: Deploy and Share",
+      "badge": "Deployment",
+      "description": "Package and share your server with others",
+      "package": {
+        "title": "Package Configuration",
+        "description": "Configure your package.json for distribution:"
+      },
+      "share": {
+        "title": "Share on Plugged.in",
+        "description": "Create a server configuration on Plugged.in and share it with the community."
+      },
+      "registry": {
+        "title": "Publish to Registry",
+        "description": "Consider publishing to npm or PyPI for wider distribution."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "advanced": "Explore advanced MCP features like resources and prompts",
+    "share": "Share your server with the Plugged.in community",
+    "security": "Review security best practices for production servers"
+  }
+}

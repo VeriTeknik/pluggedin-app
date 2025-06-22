@@ -1,0 +1,83 @@
+{
+  "title": "Tutorials",
+  "description": "Stap-voor-stap tutorials om je te helpen de Plugged.in functies onder de knie te krijgen - van basis MCP server setup tot geavanceerde RAG integratie en custom ontwikkeling.",
+  "minutes": "min",
+  "search": {
+    "placeholder": "Zoek tutorials op trefwoord of tag...",
+    "noResults": "Geen tutorials gevonden die overeenkomen met je zoekopdracht"
+  },
+  "difficulty": {
+    "all": "Alle Niveaus",
+    "beginner": "Beginner",
+    "intermediate": "Gevorderd",
+    "advanced": "Expert"
+  },
+  "sections": {
+    "beginner": "Aan de Slag",
+    "intermediate": "Vaardigheden Opbouwen",
+    "advanced": "Geavanceerde Onderwerpen"
+  },
+  "first-mcp-server": {
+    "title": "Je Eerste MCP Server",
+    "description": "Leer hoe je je eerste MCP server instelt en configureert. Perfect voor beginners om de basis van het Model Context Protocol te begrijpen."
+  },
+  "sharing-with-community": {
+    "title": "Delen met de Community",
+    "description": "Ontdek hoe je je MCP servers en collecties kunt delen met de Plugged.in community. Bouw je reputatie op en help anderen."
+  },
+  "rag-knowledge-base": {
+    "title": "Een RAG Kennisbank Bouwen",
+    "description": "Creëer een krachtige kennisbank door documenten te uploaden en AI je informatie te laten bevragen met RAG technologie."
+  },
+  "using-rag-in-client": {
+    "title": "RAG Gebruiken in je MCP Client",
+    "description": "Leer hoe je je RAG kennisbank direct kunt bevragen vanuit Claude, Cursor of elke MCP client met de pluggedin_rag_query tool."
+  },
+  "notifications-system": {
+    "title": "Notificaties Versturen vanuit AI",
+    "description": "Stel geautomatiseerde notificaties in vanuit je AI assistent. Leer pluggedin_send_notification gebruiken voor waarschuwingen en updates."
+  },
+  "team-collaboration": {
+    "title": "Team Samenwerking Instellen",
+    "description": "Configureer werkruimtes voor je team, beheer profielen en deel privé collecties voor naadloze samenwerking."
+  },
+  "custom-mcp-server": {
+    "title": "Custom MCP Servers Maken",
+    "description": "Duik diep in het MCP protocol en bouw je eigen custom servers met TypeScript of Python. Inclusief publiceren naar npm."
+  },
+  "api-integration": {
+    "title": "API Integratie Gids",
+    "description": "Beheers de Plugged.in REST API voor het bouwen van externe integraties, automatisering en custom applicaties."
+  },
+  "self-hosting": {
+    "title": "Plugged.in Zelf Hosten",
+    "description": "Complete gids voor het deployen van je eigen Plugged.in instantie met Docker, inclusief database setup en configuratie."
+  },
+  "security-best-practices": {
+    "title": "Security Best Practices",
+    "description": "Leer over encryptie functies, API key beheer, sandboxing en andere beveiligingsconfiguraties om je data te beschermen."
+  },
+  "featured": {
+    "title": "Uitgelichte Tutorial Series",
+    "ragAndNotifications": {
+      "title": "RAG + Notificaties Workflow",
+      "description": "Beheers de krachtige combinatie van kennisbevragingen en geautomatiseerde notificaties",
+      "tutorial1": "Bouw je kennisbank",
+      "tutorial2": "Bevraag vanuit MCP clients",
+      "tutorial3": "Automatiseer notificaties"
+    },
+    "security": {
+      "title": "Beveiliging & Deployment",
+      "description": "Beveilig je instantie en deploy met vertrouwen",
+      "tutorial1": "Beveiligingsconfiguratie",
+      "tutorial2": "Zelf-hosting gids"
+    }
+  },
+  "help": {
+    "title": "Hulp Nodig?",
+    "description": "Kan je niet vinden wat je zoekt? Bekijk deze bronnen:",
+    "gettingStarted": "Aan de Slag Gids",
+    "guides": "Bekijk Alle Gidsen",
+    "contact": "Contact Support"
+  }
+}

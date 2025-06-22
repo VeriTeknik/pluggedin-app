@@ -1,0 +1,107 @@
+{
+  "backToTutorials": "Eğitimlere Dön",
+  "title": "AI'dan Bildirim Gönderme",
+  "difficulty": "Orta",
+  "duration": "20 dakika",
+  "overview": {
+    "title": "Neler Öğreneceksiniz",
+    "description": "Bu eğitim, AI asistanınızın gerçek zamanlı uyarılar ve güncellemeler göndermesine olanak tanıyarak Plugged.in'de bildirim sistemini nasıl kuracağınızı ve kullanacağınızı öğretecek.",
+    "learn1": "Profilinizde bildirimleri nasıl etkinleştireceğiniz",
+    "learn2": "pluggedin_send_notification aracını kullanma",
+    "learn3": "Kritik uyarılar için e-posta bildirimlerini ayarlama",
+    "learn4": "Bildirim önem seviyeleri için en iyi uygulamalar"
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "item1": "MCP proxy yapılandırılmış Plugged.in hesabı",
+    "item2": "Bağlanmış MCP istemcisi (Claude Desktop, Cursor, vb.)",
+    "item3": "Ayarlarda yapılandırılmış e-posta (isteğe bağlı, e-posta bildirimleri için)"
+  },
+  "step1": {
+    "title": "Bildirimleri Etkinleştir",
+    "description": "İlk olarak, mevcut profiliniz için bildirimlerin etkinleştirildiğinden emin olun. Bu, MCP proxy'nin aktiviteleri günlüklemesine ve bildirim göndermesine olanak tanır.",
+    "screenshot": "Ekran görüntüsü: Bildirim açma/kapama düğmeli profil ayarları",
+    "screenshotDesc": "Profilinizde bildirim ayarlarını gösterir",
+    "note": "Bildirimler yeni profiller için varsayılan olarak etkindir. Bildirim sayınızı görmek için navigasyondaki zil simgesini kontrol edebilirsiniz."
+  },
+  "step2": {
+    "title": "E-posta Bildirimlerini Yapılandır (İsteğe Bağlı)",
+    "description": "Kritik uyarılar için e-posta teslimatını etkinleştirebilirsiniz. Bu, Plugged.in'i aktif olarak kullanmadığınızda bile önemli bildirimleri almanızı sağlar.",
+    "emailSetup": {
+      "title": "E-posta Kurulum Adımları",
+      "step1": "Ayarlar → Bildirimler'e gidin",
+      "step2": "'E-posta Bildirimleri'ni açın",
+      "step3": "Henüz yapılmadıysa e-posta adresinizi doğrulayın"
+    },
+    "screenshot": "Ekran görüntüsü: E-posta bildirim ayarları",
+    "screenshotDesc": "E-posta yapılandırma seçeneklerini gösterir"
+  },
+  "step3": {
+    "title": "Bildirim Aracını Kullanma",
+    "description": "pluggedin_send_notification aracı MCP istemcinizde kullanılabilir. İşte etkili kullanım şekli:",
+    "tabs": {
+      "basic": "Temel Kullanım",
+      "severity": "Önem Seviyeleri",
+      "email": "E-posta ile"
+    },
+    "basic": {
+      "title": "Basit Bildirim",
+      "description": "Plugged.in bildirim merkezinde görünen temel bir bildirim gönderin:",
+      "screenshot": "Ekran görüntüsü: Zil menüsünde görünen bildirim",
+      "screenshotDesc": "Bildirimin UI'da nasıl göründüğünü gösterir"
+    },
+    "severity": {
+      "title": "Önem Seviyelerini Kullanma",
+      "description": "Bildirimleriniz için uygun önem seviyesini seçin:"
+    },
+    "email": {
+      "title": "E-posta Bildirimleri",
+      "description": "Kritik uyarılar için e-posta teslimatını etkinleştirin:",
+      "note": "E-posta bildirimleri yalnızca WARNING ve ALERT önem seviyeleri için veya açıkça etkinleştirildiğinde gönderilir."
+    }
+  },
+  "step4": {
+    "title": "Pratik Örnekler",
+    "example1": {
+      "title": "Dağıtım Bildirimleri",
+      "description": "Takım üyelerini dağıtım durumu hakkında bilgilendirin:"
+    },
+    "example2": {
+      "title": "Analiz Sonuçları",
+      "description": "Analiz sonuçlarına göre bildirim gönderin:"
+    },
+    "example3": {
+      "title": "Sistem İzleme",
+      "description": "Sistem kaynak kullanımı hakkında uyarı verin:"
+    }
+  },
+  "bestPractices": {
+    "title": "En İyi Uygulamalar",
+    "meaningful": {
+      "title": "Anlamlı Tutun",
+      "description": "Sayılar, yüzdeler veya durum kodları gibi spesifik detayları ekleyin"
+    },
+    "severity": {
+      "title": "Uygun Önem Kullanın",
+      "description": "ALERT'i yalnızca hemen dikkat gerektiren kritik sorunlar için saklayın"
+    },
+    "email": {
+      "title": "E-postayı Dikkatli Kullanın",
+      "description": "E-postayı yalnızca uygulamadan uzaktayken aksiyon gerektiren bildirimler için etkinleştirin"
+    },
+    "context": {
+      "title": "Bağlam Ekleyin",
+      "description": "Zaman damgası, etkilenen sistemler veya ilgili tanımlayıcıları ekleyin"
+    }
+  },
+  "tip": {
+    "title": "Profesyonel İpucu",
+    "description": "Akıllı uyarılar için bildirimleri RAG sorguları ile birleştirin. Örneğin, eşik değerler için belgelerinizi sorgulayın, ardından bu eşikler aşıldığında bildirim gönderin."
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "description": "İlgili bu eğitimlerle otomasyon iş akışlarınızı geliştirin:",
+    "api": "API Entegrasyon Kılavuzu",
+    "team": "Takım İşbirliği Kurulumu"
+  }
+}
