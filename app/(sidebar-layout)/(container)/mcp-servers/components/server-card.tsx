@@ -76,7 +76,6 @@ export function ServerCard({
         setIsShared(result.isShared);
         setSharedUuid(result.server?.uuid || null);
       } catch (error) {
-        console.error('Error checking if server is shared:', error);
       } finally {
         setIsCheckingShareStatus(false);
       }

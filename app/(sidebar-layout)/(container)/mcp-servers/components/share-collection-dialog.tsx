@@ -70,7 +70,6 @@ export function ShareCollectionDialog({
         );
         setSharedServers(sharedInfo.filter((info): info is SharedServerInfo => info !== null));
       } catch (error) {
-        console.error('Error fetching shared servers:', error);
         toast({
           title: t('common.error'),
           description: t('mcpServers.shareCollection.error.fetchSharedFailed'),

@@ -69,7 +69,7 @@ function CodeSnippet({ code, language = 'text' }: { code: string; language?: str
   );
 }
 
-export default function NotificationsSystemPageClient() {
+export function NotificationsSystemPageClient() {
   const { t } = useTranslation('tutorial-notifications');
 
   return (

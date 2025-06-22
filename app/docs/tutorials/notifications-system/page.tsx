@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 
-import NotificationsSystemPageClient from './page-client';
+import { NotificationsSystemPageClient } from './page-client';
 
 export const metadata: Metadata = {
   title: 'Sending Notifications from AI - Plugged.in Tutorial',

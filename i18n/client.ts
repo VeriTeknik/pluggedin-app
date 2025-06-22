@@ -24,6 +24,14 @@ import enGettingStarted from '../public/locales/en/getting-started.json';
 import enTutorials from '../public/locales/en/tutorials.json';
 import enTutorialRagClient from '../public/locales/en/tutorial-rag-client.json';
 import enTutorialNotifications from '../public/locales/en/tutorial-notifications.json';
+import enTutorialFirstMcpServer from '../public/locales/en/tutorial-first-mcp-server.json';
+import enTutorialSharingCommunity from '../public/locales/en/tutorial-sharing-with-community.json';
+import enTutorialRagKnowledge from '../public/locales/en/tutorial-rag-knowledge-base.json';
+import enTutorialTeamCollab from '../public/locales/en/tutorial-team-collaboration.json';
+import enTutorialCustomMcp from '../public/locales/en/tutorial-custom-mcp-server.json';
+import enTutorialApiIntegration from '../public/locales/en/tutorial-api-integration.json';
+import enTutorialSelfHosting from '../public/locales/en/tutorial-self-hosting.json';
+import enTutorialSecurity from '../public/locales/en/tutorial-security-best-practices.json';
 // Import Hindi chunks
 import hiApiKeys from '../public/locales/hi/apiKeys.json';
 import hiAuth from '../public/locales/hi/auth.json';
@@ -43,6 +51,17 @@ import hiSetupGuide from '../public/locales/hi/setupGuide.json';
 import hiSidebar from '../public/locales/hi/sidebar.json';
 import hiWhatsNew from '../public/locales/hi/whatsNew.json';
 import hiGettingStarted from '../public/locales/hi/getting-started.json';
+import hiTutorials from '../public/locales/hi/tutorials.json';
+import hiTutorialFirstMcpServer from '../public/locales/hi/tutorial-first-mcp-server.json';
+import hiTutorialSharingCommunity from '../public/locales/hi/tutorial-sharing-with-community.json';
+import hiTutorialRagKnowledge from '../public/locales/hi/tutorial-rag-knowledge-base.json';
+import hiTutorialRagClient from '../public/locales/hi/tutorial-rag-client.json';
+import hiTutorialNotifications from '../public/locales/hi/tutorial-notifications.json';
+import hiTutorialTeamCollab from '../public/locales/hi/tutorial-team-collaboration.json';
+import hiTutorialCustomMcp from '../public/locales/hi/tutorial-custom-mcp-server.json';
+import hiTutorialApiIntegration from '../public/locales/hi/tutorial-api-integration.json';
+import hiTutorialSelfHosting from '../public/locales/hi/tutorial-self-hosting.json';
+import hiTutorialSecurity from '../public/locales/hi/tutorial-security-best-practices.json';
 // Import Japanese chunks
 import jaApiKeys from '../public/locales/ja/apiKeys.json';
 import jaAuth from '../public/locales/ja/auth.json';
@@ -62,6 +81,17 @@ import jaSetupGuide from '../public/locales/ja/setupGuide.json';
 import jaSidebar from '../public/locales/ja/sidebar.json';
 import jaWhatsNew from '../public/locales/ja/whatsNew.json';
 import jaGettingStarted from '../public/locales/ja/getting-started.json';
+import jaTutorials from '../public/locales/ja/tutorials.json';
+import jaTutorialFirstMcpServer from '../public/locales/ja/tutorial-first-mcp-server.json';
+import jaTutorialSharingCommunity from '../public/locales/ja/tutorial-sharing-with-community.json';
+import jaTutorialRagKnowledge from '../public/locales/ja/tutorial-rag-knowledge-base.json';
+import jaTutorialRagClient from '../public/locales/ja/tutorial-rag-client.json';
+import jaTutorialNotifications from '../public/locales/ja/tutorial-notifications.json';
+import jaTutorialTeamCollab from '../public/locales/ja/tutorial-team-collaboration.json';
+import jaTutorialCustomMcp from '../public/locales/ja/tutorial-custom-mcp-server.json';
+import jaTutorialApiIntegration from '../public/locales/ja/tutorial-api-integration.json';
+import jaTutorialSelfHosting from '../public/locales/ja/tutorial-self-hosting.json';
+import jaTutorialSecurity from '../public/locales/ja/tutorial-security-best-practices.json';
 // Import Dutch chunks
 import nlApiKeys from '../public/locales/nl/apiKeys.json';
 import nlAuth from '../public/locales/nl/auth.json';
@@ -81,6 +111,17 @@ import nlSetupGuide from '../public/locales/nl/setupGuide.json';
 import nlSidebar from '../public/locales/nl/sidebar.json';
 import nlWhatsNew from '../public/locales/nl/whatsNew.json';
 import nlGettingStarted from '../public/locales/nl/getting-started.json';
+import nlTutorials from '../public/locales/nl/tutorials.json';
+import nlTutorialFirstMcpServer from '../public/locales/nl/tutorial-first-mcp-server.json';
+import nlTutorialSharingCommunity from '../public/locales/nl/tutorial-sharing-with-community.json';
+import nlTutorialRagKnowledge from '../public/locales/nl/tutorial-rag-knowledge-base.json';
+import nlTutorialRagClient from '../public/locales/nl/tutorial-rag-client.json';
+import nlTutorialNotifications from '../public/locales/nl/tutorial-notifications.json';
+import nlTutorialTeamCollab from '../public/locales/nl/tutorial-team-collaboration.json';
+import nlTutorialCustomMcp from '../public/locales/nl/tutorial-custom-mcp-server.json';
+import nlTutorialApiIntegration from '../public/locales/nl/tutorial-api-integration.json';
+import nlTutorialSelfHosting from '../public/locales/nl/tutorial-self-hosting.json';
+import nlTutorialSecurity from '../public/locales/nl/tutorial-security-best-practices.json';
 // Import Turkish chunks
 import trApiKeys from '../public/locales/tr/apiKeys.json';
 import trAuth from '../public/locales/tr/auth.json';
@@ -100,6 +141,17 @@ import trSetupGuide from '../public/locales/tr/setupGuide.json';
 import trSidebar from '../public/locales/tr/sidebar.json';
 import trWhatsNew from '../public/locales/tr/whatsNew.json';
 import trGettingStarted from '../public/locales/tr/getting-started.json';
+import trTutorials from '../public/locales/tr/tutorials.json';
+import trTutorialFirstMcpServer from '../public/locales/tr/tutorial-first-mcp-server.json';
+import trTutorialSharingCommunity from '../public/locales/tr/tutorial-sharing-with-community.json';
+import trTutorialRagKnowledge from '../public/locales/tr/tutorial-rag-knowledge-base.json';
+import trTutorialRagClient from '../public/locales/tr/tutorial-rag-client.json';
+import trTutorialNotifications from '../public/locales/tr/tutorial-notifications.json';
+import trTutorialTeamCollab from '../public/locales/tr/tutorial-team-collaboration.json';
+import trTutorialCustomMcp from '../public/locales/tr/tutorial-custom-mcp-server.json';
+import trTutorialApiIntegration from '../public/locales/tr/tutorial-api-integration.json';
+import trTutorialSelfHosting from '../public/locales/tr/tutorial-self-hosting.json';
+import trTutorialSecurity from '../public/locales/tr/tutorial-security-best-practices.json';
 // Import Chinese chunks
 import zhApiKeys from '../public/locales/zh/apiKeys.json';
 import zhAuth from '../public/locales/zh/auth.json';
@@ -119,6 +171,17 @@ import zhSetupGuide from '../public/locales/zh/setupGuide.json';
 import zhSidebar from '../public/locales/zh/sidebar.json';
 import zhWhatsNew from '../public/locales/zh/whatsNew.json';
 import zhGettingStarted from '../public/locales/zh/getting-started.json';
+import zhTutorials from '../public/locales/zh/tutorials.json';
+import zhTutorialFirstMcpServer from '../public/locales/zh/tutorial-first-mcp-server.json';
+import zhTutorialSharingCommunity from '../public/locales/zh/tutorial-sharing-with-community.json';
+import zhTutorialRagKnowledge from '../public/locales/zh/tutorial-rag-knowledge-base.json';
+import zhTutorialRagClient from '../public/locales/zh/tutorial-rag-client.json';
+import zhTutorialNotifications from '../public/locales/zh/tutorial-notifications.json';
+import zhTutorialTeamCollab from '../public/locales/zh/tutorial-team-collaboration.json';
+import zhTutorialCustomMcp from '../public/locales/zh/tutorial-custom-mcp-server.json';
+import zhTutorialApiIntegration from '../public/locales/zh/tutorial-api-integration.json';
+import zhTutorialSelfHosting from '../public/locales/zh/tutorial-self-hosting.json';
+import zhTutorialSecurity from '../public/locales/zh/tutorial-security-best-practices.json';
 import { defaultLocale, locales, namespaces } from './config';
 
 // Resources object with all translations loaded statically
@@ -162,7 +225,15 @@ const resources = {
     'getting-started': enGettingStarted,
     tutorials: enTutorials,
     'tutorial-rag-client': enTutorialRagClient,
-    'tutorial-notifications': enTutorialNotifications
+    'tutorial-notifications': enTutorialNotifications,
+    'tutorial-first-mcp-server': enTutorialFirstMcpServer,
+    'tutorial-sharing-with-community': enTutorialSharingCommunity,
+    'tutorial-rag-knowledge-base': enTutorialRagKnowledge,
+    'tutorial-team-collaboration': enTutorialTeamCollab,
+    'tutorial-custom-mcp-server': enTutorialCustomMcp,
+    'tutorial-api-integration': enTutorialApiIntegration,
+    'tutorial-self-hosting': enTutorialSelfHosting,
+    'tutorial-security-best-practices': enTutorialSecurity
   },
   hi: {
     translation: {
@@ -200,7 +271,18 @@ const resources = {
     setupGuide: hiSetupGuide,
     sidebar: hiSidebar,
     whatsNew: hiWhatsNew,
-    'getting-started': hiGettingStarted
+    'getting-started': hiGettingStarted,
+    tutorials: hiTutorials,
+    'tutorial-first-mcp-server': hiTutorialFirstMcpServer,
+    'tutorial-sharing-with-community': hiTutorialSharingCommunity,
+    'tutorial-rag-knowledge-base': hiTutorialRagKnowledge,
+    'tutorial-rag-client': hiTutorialRagClient,
+    'tutorial-notifications': hiTutorialNotifications,
+    'tutorial-team-collaboration': hiTutorialTeamCollab,
+    'tutorial-custom-mcp-server': hiTutorialCustomMcp,
+    'tutorial-api-integration': hiTutorialApiIntegration,
+    'tutorial-self-hosting': hiTutorialSelfHosting,
+    'tutorial-security-best-practices': hiTutorialSecurity
   },
   ja: {
     translation: {
@@ -238,7 +320,18 @@ const resources = {
     setupGuide: jaSetupGuide,
     sidebar: jaSidebar,
     whatsNew: jaWhatsNew,
-    'getting-started': jaGettingStarted
+    'getting-started': jaGettingStarted,
+    tutorials: jaTutorials,
+    'tutorial-first-mcp-server': jaTutorialFirstMcpServer,
+    'tutorial-sharing-with-community': jaTutorialSharingCommunity,
+    'tutorial-rag-knowledge-base': jaTutorialRagKnowledge,
+    'tutorial-rag-client': jaTutorialRagClient,
+    'tutorial-notifications': jaTutorialNotifications,
+    'tutorial-team-collaboration': jaTutorialTeamCollab,
+    'tutorial-custom-mcp-server': jaTutorialCustomMcp,
+    'tutorial-api-integration': jaTutorialApiIntegration,
+    'tutorial-self-hosting': jaTutorialSelfHosting,
+    'tutorial-security-best-practices': jaTutorialSecurity
   },
   nl: {
     translation: {
@@ -276,7 +369,18 @@ const resources = {
     setupGuide: nlSetupGuide,
     sidebar: nlSidebar,
     whatsNew: nlWhatsNew,
-    'getting-started': nlGettingStarted
+    'getting-started': nlGettingStarted,
+    tutorials: nlTutorials,
+    'tutorial-first-mcp-server': nlTutorialFirstMcpServer,
+    'tutorial-sharing-with-community': nlTutorialSharingCommunity,
+    'tutorial-rag-knowledge-base': nlTutorialRagKnowledge,
+    'tutorial-rag-client': nlTutorialRagClient,
+    'tutorial-notifications': nlTutorialNotifications,
+    'tutorial-team-collaboration': nlTutorialTeamCollab,
+    'tutorial-custom-mcp-server': nlTutorialCustomMcp,
+    'tutorial-api-integration': nlTutorialApiIntegration,
+    'tutorial-self-hosting': nlTutorialSelfHosting,
+    'tutorial-security-best-practices': nlTutorialSecurity
   },
   tr: {
     translation: {
@@ -314,7 +418,18 @@ const resources = {
     setupGuide: trSetupGuide,
     sidebar: trSidebar,
     whatsNew: trWhatsNew,
-    'getting-started': trGettingStarted
+    'getting-started': trGettingStarted,
+    tutorials: trTutorials,
+    'tutorial-first-mcp-server': trTutorialFirstMcpServer,
+    'tutorial-sharing-with-community': trTutorialSharingCommunity,
+    'tutorial-rag-knowledge-base': trTutorialRagKnowledge,
+    'tutorial-rag-client': trTutorialRagClient,
+    'tutorial-notifications': trTutorialNotifications,
+    'tutorial-team-collaboration': trTutorialTeamCollab,
+    'tutorial-custom-mcp-server': trTutorialCustomMcp,
+    'tutorial-api-integration': trTutorialApiIntegration,
+    'tutorial-self-hosting': trTutorialSelfHosting,
+    'tutorial-security-best-practices': trTutorialSecurity
   },
   zh: {
     translation: {
@@ -352,7 +467,18 @@ const resources = {
     setupGuide: zhSetupGuide,
     sidebar: zhSidebar,
     whatsNew: zhWhatsNew,
-    'getting-started': zhGettingStarted
+    'getting-started': zhGettingStarted,
+    tutorials: zhTutorials,
+    'tutorial-first-mcp-server': zhTutorialFirstMcpServer,
+    'tutorial-sharing-with-community': zhTutorialSharingCommunity,
+    'tutorial-rag-knowledge-base': zhTutorialRagKnowledge,
+    'tutorial-rag-client': zhTutorialRagClient,
+    'tutorial-notifications': zhTutorialNotifications,
+    'tutorial-team-collaboration': zhTutorialTeamCollab,
+    'tutorial-custom-mcp-server': zhTutorialCustomMcp,
+    'tutorial-api-integration': zhTutorialApiIntegration,
+    'tutorial-self-hosting': zhTutorialSelfHosting,
+    'tutorial-security-best-practices': zhTutorialSecurity
   }
 };
 

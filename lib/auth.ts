@@ -138,11 +138,9 @@ export const authOptions: NextAuthOptions = {
           const isPasswordValid = await compare(credentials.password, user.password);
 
           if (!isPasswordValid) {
-            console.log('Invalid password');
             return null;
           }
 
-          console.log('Login successful for:', user.email);
           return {
             id: user.id,
             name: user.name,
@@ -151,7 +149,6 @@ export const authOptions: NextAuthOptions = {
             emailVerified: user.emailVerified,
           };
         } catch (error) {
-          console.error('Auth error:', error);
           return null;
         }
       }

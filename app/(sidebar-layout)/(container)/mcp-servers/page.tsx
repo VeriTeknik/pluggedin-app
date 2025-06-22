@@ -139,7 +139,6 @@ export default function MCPServersPage() {
         description: t('mcpServers.form.success'),
       });
     } catch (error) {
-      console.error('Error creating MCP server:', error);
       toast({
         title: t('common.error'),
         description: t('mcpServers.form.error.createFailed'),

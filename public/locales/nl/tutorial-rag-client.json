@@ -1,0 +1,94 @@
+{
+  "backToTutorials": "Terug naar Tutorials",
+  "title": "RAG Gebruiken in je MCP Client",
+  "difficulty": "Gevorderd",
+  "duration": "25 minuten",
+  "overview": {
+    "title": "Wat Je Gaat Leren",
+    "description": "In deze tutorial leer je hoe je je RAG kennisbank direct vanuit je MCP client (Claude, Cursor, etc.) kunt benutten om je AI assistent te verrijken met je eigen documentatie en kennis.",
+    "learn1": "Hoe je de pluggedin_rag_query tool gebruikt",
+    "learn2": "Effectieve queries schrijven voor je kennisbank",
+    "learn3": "RAG queries combineren met andere MCP tools",
+    "learn4": "Best practices voor contextuele informatie retrieval"
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "item1": "Plugged.in account met geconfigureerde MCP proxy",
+    "item2": "Minimaal één document geüpload naar je Bibliotheek",
+    "item3": "MCP client (Claude Desktop, Cursor, etc.) verbonden",
+    "item4": "Basiskennis van RAG uit de 'Een RAG Kennisbank Bouwen' tutorial"
+  },
+  "step1": {
+    "title": "De pluggedin_rag_query Tool Begrijpen",
+    "description": "De pluggedin_rag_query tool is automatisch beschikbaar in je MCP client wanneer verbonden via Plugged.in. Het stelt je in staat om door alle documenten in de bibliotheek van je huidige project te zoeken.",
+    "tip": "Het RAG systeem gebruikt vector similarity search, dus het kan relevante informatie vinden zelfs als je niet de exacte trefwoorden uit je documenten gebruikt.",
+    "screenshot": "Screenshot: Claude Desktop toont pluggedin_rag_query in beschikbare tools",
+    "screenshotDesc": "De tool verschijnt in de toollijst van je MCP client"
+  },
+  "step2": {
+    "title": "Basis RAG Queries",
+    "description": "Begin met eenvoudige queries om je kennisbank te doorzoeken. De tool retourneert de meest relevante delen uit je documenten.",
+    "example1": {
+      "title": "Eenvoudige Trefwoord Zoeken",
+      "screenshot": "Screenshot: Claude gebruikt RAG query tool",
+      "screenshotDesc": "Toont de query die wordt uitgevoerd en resultaten die worden geretourneerd"
+    },
+    "example2": {
+      "title": "Vraag-gebaseerde Query"
+    },
+    "example3": {
+      "title": "Onderwerp Zoeken"
+    }
+  },
+  "step3": {
+    "title": "Geavanceerde Query Technieken",
+    "description": "Leer hoe je meer geavanceerde queries opstelt om betere resultaten uit je kennisbank te halen.",
+    "contextual": {
+      "title": "Contextuele Queries",
+      "description": "De AI zal zoeken naar database indexering best practices in je documentatie"
+    },
+    "comparison": {
+      "title": "Vergelijkende Queries",
+      "description": "Uitstekend voor het vinden van informatie over meerdere documenten"
+    },
+    "screenshot": "Screenshot: Complexe RAG query met gedetailleerde resultaten",
+    "screenshotDesc": "Toont hoe de AI informatie verwerkt en relevante informatie retourneert"
+  },
+  "step4": {
+    "title": "Best Practices",
+    "specific": {
+      "title": "Wees Specifiek",
+      "description": "Meer specifieke queries leveren betere resultaten op",
+      "good": "Goed: 'PostgreSQL connection pooling configuratie'",
+      "bad": "Te breed: 'database'"
+    },
+    "context": {
+      "title": "Geef Context",
+      "description": "Voeg context toe over wat je probeert te bereiken voor betere resultaten"
+    },
+    "combine": {
+      "title": "Combineer met Andere Tools",
+      "description": "Gebruik RAG queries samen met andere MCP tools voor krachtige workflows:"
+    }
+  },
+  "issues": {
+    "title": "Veelvoorkomende Problemen & Oplossingen",
+    "noResults": {
+      "title": "Geen resultaten gevonden:",
+      "solution1": "Controleer of documenten zijn geüpload en verwerkt",
+      "solution2": "Probeer andere trefwoorden of herformuleer je query",
+      "solution3": "Zorg ervoor dat je in het juiste project/profiel zit"
+    },
+    "toolNotAvailable": {
+      "title": "Tool niet beschikbaar:",
+      "solution1": "Herstart je MCP client",
+      "solution2": "Controleer of Plugged.in proxy correct draait"
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "description": "Nu je je kennisbank kunt bevragen, verken deze gerelateerde tutorials:",
+    "notifications": "Notificaties Versturen vanuit AI",
+    "buildingRag": "Een RAG Kennisbank Bouwen"
+  }
+}

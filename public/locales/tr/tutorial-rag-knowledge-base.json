@@ -1,0 +1,92 @@
+{
+  "title": "RAG Bilgi Tabanı Oluşturma",
+  "description": "Gelişmiş AI etkileşimleri için Plugged.in ile RAG bilgi tabanı oluşturmayı ve yönetmeyi öğrenin",
+  "overview": {
+    "title": "Genel Bakış",
+    "introduction": "Retrieval-Augmented Generation (RAG), belgelerinizden ilgili bağlamı sağlayarak AI etkileşimlerini geliştirmenizi sağlar. Plugged.in'in belge kütüphanesi, projeye özel bir bilgi tabanı oluşturmanızı sağlar.",
+    "features": {
+      "documents": {
+        "title": "Belge Yönetimi",
+        "description": "Vektör tabanlı alma için belgeleri yükleyin ve düzenleyin"
+      },
+      "search": {
+        "title": "Anlamsal Arama",
+        "description": "Doğal dil kullanarak bilgi tabanınızı sorgulayın"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "account": "RAG özellikleri etkinleştirilmiş aktif Plugged.in hesabı",
+    "project": "En az bir proje oluşturulmuş",
+    "documents": "Yüklenecek belgeler (PDF, TXT, MD, DOCX)"
+  },
+  "steps": {
+    "setupLibrary": {
+      "title": "Adım 1: Belge Kütüphanesini Kur",
+      "badge": "Kurulum",
+      "description": "RAG için projenizin belge kütüphanesini başlatın",
+      "navigate": {
+        "title": "Belge Kütüphanesine Eriş",
+        "description": "Projenizin belge kütüphanesine gidin:",
+        "code": "Proje → Kütüphane → Belge Kütüphanesi"
+      },
+      "formats": {
+        "title": "Desteklenen Formatlar",
+        "description": "Kütüphane çeşitli belge formatlarını destekler:"
+      }
+    },
+    "uploadDocuments": {
+      "title": "Adım 2: Belgeleri Yükle",
+      "badge": "İçerik",
+      "description": "Bilgi tabanınızı oluşturmak için belgeler ekleyin",
+      "upload": {
+        "title": "Yükleme İşlemi",
+        "description": "Belgeleri sürükleyip bırakın veya yüklemek için tıklayın:",
+        "action": "Dosyaları buraya sürükleyin veya göz atmak için tıklayın"
+      },
+      "organize": {
+        "title": "Belgeleri Düzenle",
+        "description": "Daha iyi alma doğruluğu için belgelerinizi düzenlemek için etiketler ve kategoriler kullanın."
+      },
+      "tip": "Belgeler otomatik olarak işlenir ve vektör araması için indekslenir. İşleme süresi belge boyutuna ve karmaşıklığına bağlıdır."
+    },
+    "queryKnowledge": {
+      "title": "Adım 3: Bilgi Tabanınızı Sorgula",
+      "badge": "Kullanım",
+      "description": "İlgili bilgileri almak için RAG sorgu aracını kullanın",
+      "mcp": {
+        "title": "MCP Aracını Kullanma",
+        "description": "MCP proxy üzerinden bilgi tabanınızı sorgulayın:",
+        "code": "pluggedin_rag_query(\"Belgelerle ilgili sorunuz\")"
+      },
+      "api": {
+        "title": "API Kullanma",
+        "description": "Entegrasyon için REST API üzerinden sorgulayın:"
+      }
+    },
+    "advanced": {
+      "title": "Adım 4: Gelişmiş Özellikler",
+      "badge": "Gelişmiş",
+      "description": "Daha iyi sonuçlar için RAG bilgi tabanınızı optimize edin",
+      "chunking": {
+        "title": "Belge Parçalama",
+        "description": "Belgeler optimal alma için otomatik olarak parçalanır. Büyük belgeler anlamsal segmentlere bölünür."
+      },
+      "metadata": {
+        "title": "Meta Veri Zenginleştirme",
+        "description": "Arama alaka düzeyini ve filtreleme yeteneklerini geliştirmek için belgelere meta veri ekleyin."
+      },
+      "isolation": {
+        "title": "Proje İzolasyonu",
+        "description": "Her projenin belgeleri izole edilmiştir, sorguların yalnızca mevcut projenin bilgi tabanından almasını sağlar."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "api": "API aracılığıyla RAG sorgularını uygulamalarınıza entegre edin",
+    "team": "Bilgi tabanlarını takım üyeleriyle paylaşın",
+    "security": "Hassas belgeler için güvenlik ayarlarını yapılandırın"
+  }
+}

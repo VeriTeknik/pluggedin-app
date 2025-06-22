@@ -1,0 +1,108 @@
+{
+  "backToTutorials": "Back to Tutorials",
+  "title": "Your First MCP Server",
+  "difficulty": "Beginner",
+  "duration": "15 minutes",
+  "overview": {
+    "title": "What You'll Learn",
+    "description": "This tutorial will guide you through adding your first MCP server to Plugged.in. MCP servers extend your AI's capabilities by providing access to tools, resources, and integrations.",
+    "learn1": "What MCP servers are and how they work",
+    "learn2": "How to browse and add official MCP servers",
+    "learn3": "How to configure server settings and environment variables",
+    "learn4": "How to test your server connection and use its tools"
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "item1": "Plugged.in account (free tier is sufficient)",
+    "item2": "Basic understanding of the command line (for custom servers)",
+    "item3": "Node.js installed (optional, for custom servers)"
+  },
+  "step1": {
+    "title": "Understanding MCP Servers",
+    "description": "Before we add our first server, let's understand what MCP servers are and why they're powerful.",
+    "whatIs": {
+      "title": "What is an MCP Server?",
+      "description": "MCP (Model Context Protocol) servers are programs that provide additional capabilities to AI assistants. Think of them as plugins that extend what your AI can do.",
+      "point1": "Tools: Functions the AI can call (e.g., read files, search web, send emails)",
+      "point2": "Resources: Data the AI can access (e.g., documents, databases, APIs)",
+      "point3": "Prompts: Pre-configured instructions for specific tasks"
+    }
+  },
+  "step2": {
+    "title": "Navigating to MCP Servers",
+    "description": "Let's start by navigating to the MCP Servers section in Plugged.in.",
+    "screenshot": "Screenshot: Plugged.in dashboard with MCP Servers menu highlighted",
+    "screenshotDesc": "The MCP Servers option in the sidebar navigation",
+    "tip": "You can also use the keyboard shortcut Cmd/Ctrl + K and search for 'MCP Servers' to quickly navigate there."
+  },
+  "step3": {
+    "title": "Adding Your First Server",
+    "description": "Now let's add your first MCP server. You can choose between official servers or custom ones.",
+    "tabs": {
+      "official": "Official Servers",
+      "custom": "Custom Server"
+    },
+    "official": {
+      "title": "Adding an Official Server",
+      "step1": "Click the 'Add Server' button",
+      "step2": "Browse through the official server catalog",
+      "step3": "Select 'Filesystem' server (a good starter server)",
+      "step4": "Click 'Install' to add it to your profile",
+      "screenshot": "Screenshot: Official server catalog with Filesystem server",
+      "screenshotDesc": "The official server catalog showing various MCP servers"
+    },
+    "custom": {
+      "title": "Adding a Custom Server",
+      "description": "For more control, you can add a custom MCP server:",
+      "step1": "Click 'Add Custom Server'",
+      "step2": "Enter a name for your server",
+      "step3": "Configure the command and arguments"
+    }
+  },
+  "step4": {
+    "title": "Configuring Your Server",
+    "description": "Each server can be configured with specific settings and environment variables.",
+    "settings": {
+      "title": "Basic Configuration",
+      "description": "Configure how your server runs:"
+    },
+    "env": {
+      "title": "Environment Variables",
+      "description": "Some servers require API keys or other configuration through environment variables.",
+      "note": "Environment variables are encrypted and stored securely in Plugged.in"
+    }
+  },
+  "step5": {
+    "title": "Testing Your Server",
+    "description": "Let's make sure your server is working correctly.",
+    "test": {
+      "title": "Connection Test",
+      "step1": "Save your server configuration",
+      "step2": "Click the 'Test Connection' button",
+      "step3": "Wait for the connection to establish",
+      "step4": "Check the discovered tools and resources"
+    },
+    "screenshot": "Screenshot: Successful server connection with tools listed",
+    "screenshotDesc": "A successfully connected server showing available tools"
+  },
+  "issues": {
+    "title": "Common Issues & Solutions",
+    "connection": {
+      "title": "Server won't connect",
+      "description": "If your server fails to connect:",
+      "solution1": "Check that all required fields are filled",
+      "solution2": "Verify environment variables are set correctly",
+      "solution3": "Ensure the server command/path is correct"
+    },
+    "tools": {
+      "title": "No tools appearing",
+      "description": "This usually means the server connected but isn't configured properly. Check the server's documentation for required setup."
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "description": "Congratulations! You've added your first MCP server. Here's what to explore next:",
+    "sharing": "Share Your Servers with the Community",
+    "custom": "Build a Custom MCP Server"
+  }
+}

@@ -1,0 +1,89 @@
+{
+  "title": "Plugged.in API'sini Kullanma",
+  "description": "MCP sunucularınıza programatik erişim için Plugged.in API'si ile nasıl entegre olacağınızı öğrenin",
+  "overview": {
+    "title": "Genel Bakış",
+    "introduction": "Plugged.in API'si, MCP sunucularını yönetmek, RAG bilgi tabanlarını sorgulamak ve iş akışlarını otomatikleştirmek için programatik erişim sağlar. Bu kılavuz kimlik doğrulama, uç noktalar ve en iyi uygulamaları kapsar.",
+    "features": {
+      "automation": {
+        "title": "Otomasyon",
+        "description": "Sunucu yönetimini ve dağıtımları otomatikleştirin"
+      },
+      "security": {
+        "title": "Güvenli Erişim",
+        "description": "Hız sınırlama ile API anahtarı kimlik doğrulaması"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "account": "Aktif Plugged.in hesabı",
+    "programming": "Temel programlama bilgisi",
+    "http": "REST API'lerin anlaşılması"
+  },
+  "steps": {
+    "authentication": {
+      "title": "Adım 1: Kimlik Doğrulama Kurulumu",
+      "badge": "Gerekli",
+      "description": "Güvenli erişim için API anahtarları oluşturun ve yapılandırın",
+      "generate": {
+        "title": "API Anahtarı Oluştur",
+        "description": "Hesap ayarlarınızdan yeni bir API anahtarı oluşturun:",
+        "code": "Ayarlar → API Anahtarları → Yeni Anahtar Oluştur"
+      },
+      "usage": {
+        "title": "API Anahtarınızı Kullanma",
+        "description": "API anahtarınızı Authorization başlığına ekleyin:"
+      },
+      "tip": "API anahtarlarını güvenli bir şekilde saklayın ve asla sürüm kontrolüne işlemeyin. Üretim uygulamaları için ortam değişkenlerini kullanın."
+    },
+    "endpoints": {
+      "title": "Adım 2: Temel API Uç Noktaları",
+      "badge": "Uç Noktalar",
+      "description": "Sunucu yönetimi için ana API uç noktalarını keşfedin",
+      "servers": {
+        "title": "Sunucu Yönetimi",
+        "description": "MCP sunucularınızı programatik olarak yönetin:"
+      },
+      "rag": {
+        "title": "RAG Sorguları",
+        "description": "Bilgi tabanınızı sorgulayın:"
+      }
+    },
+    "examples": {
+      "title": "Adım 3: Uygulama Örnekleri",
+      "badge": "Kod",
+      "description": "Farklı programlama dillerinde pratik örnekler",
+      "javascript": {
+        "title": "JavaScript/Node.js",
+        "description": "Fetch API kullanarak örnek:"
+      },
+      "python": {
+        "title": "Python",
+        "description": "Requests kütüphanesi kullanarak örnek:"
+      }
+    },
+    "ratelimits": {
+      "title": "Adım 4: Hız Limitleri ve En İyi Uygulamalar",
+      "badge": "Önemli",
+      "description": "Hız sınırlamayı anlayın ve API kullanımınızı optimize edin",
+      "tiers": {
+        "title": "Hız Limiti Seviyeleri",
+        "description": "Farklı uç noktaların farklı hız limitleri vardır:",
+        "standard": "Standart uç noktalar: 60 istek/dakika",
+        "sensitive": "Hassas işlemler: 10 istek/saat",
+        "public": "Genel uç noktalar: 100 istek/dakika"
+      },
+      "headers": {
+        "title": "Hız Limiti Başlıkları",
+        "description": "Yanıt başlıklarıyla kullanımınızı izleyin:"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "webhooks": "Gerçek zamanlı bildirimler için webhook'lar kurun",
+    "sdks": "Diliniz için topluluk SDK'larını keşfedin",
+    "security": "API kullanımı için güvenlik en iyi uygulamalarını inceleyin"
+  }
+}

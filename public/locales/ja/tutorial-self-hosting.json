@@ -1,0 +1,89 @@
+{
+  "title": "Plugged.inのセルフホスティング",
+  "description": "MCPインフラストラクチャを完全に制御するためのPlugged.inのセルフホスト方法を学ぶ",
+  "overview": {
+    "title": "概要",
+    "introduction": "Plugged.inのセルフホスティングにより、MCPインフラストラクチャ、データ主権、カスタマイズオプションを完全に制御できます。このガイドでは、セットアップから本番環境までのデプロイメントをカバーします。",
+    "features": {
+      "control": {
+        "title": "完全な制御",
+        "description": "インフラストラクチャと構成を完全に制御"
+      },
+      "data": {
+        "title": "データ主権",
+        "description": "すべてのデータを独自のインフラストラクチャ内に保持"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "前提条件",
+    "server": "Linuxサーバー（Ubuntu 20.04+または同様）",
+    "docker": "DockerとDocker Composeがインストール済み",
+    "postgresql": "PostgreSQL 15+（またはDocker）",
+    "domain": "DNSアクセス可能なドメイン名"
+  },
+  "steps": {
+    "prepare": {
+      "title": "ステップ1：環境の準備",
+      "badge": "セットアップ",
+      "description": "リポジトリのクローンとサーバーの準備",
+      "clone": {
+        "title": "リポジトリのクローン",
+        "description": "最新のソースコードを取得："
+      },
+      "requirements": {
+        "title": "システム要件",
+        "description": "推奨最小仕様：",
+        "cpu": "2 CPUコア",
+        "ram": "4GB RAM",
+        "storage": "20GBストレージ"
+      }
+    },
+    "database": {
+      "title": "ステップ2：データベースのセットアップ",
+      "badge": "データベース",
+      "description": "Plugged.in用のPostgreSQLを構成",
+      "setup": {
+        "title": "PostgreSQLセットアップ",
+        "description": "Dockerを使用してPostgreSQLをデプロイ："
+      },
+      "migrations": {
+        "title": "マイグレーションの実行",
+        "description": "データベーススキーマを初期化："
+      }
+    },
+    "configure": {
+      "title": "ステップ3：アプリケーションの構成",
+      "badge": "構成",
+      "description": "環境変数とセキュリティ設定のセットアップ",
+      "env": {
+        "title": "環境変数",
+        "description": "本番環境の構成を作成："
+      },
+      "tip": "セキュアキーの生成には次を使用：openssl rand -base64 32"
+    },
+    "deploy": {
+      "title": "ステップ4：サービスのデプロイ",
+      "badge": "デプロイメント",
+      "description": "Docker Composeを使用してPlugged.inをデプロイ",
+      "docker": {
+        "title": "Docker Composeセットアップ",
+        "description": "docker-compose.ymlファイルを作成："
+      },
+      "nginx": {
+        "title": "リバースプロキシ",
+        "description": "適切なヘッダーとWebSocketサポートを含むリバースプロキシとしてNginxを構成。"
+      },
+      "ssl": {
+        "title": "SSL/TLSセットアップ",
+        "description": "自動更新付きの無料SSL証明書にLet's Encryptを使用。"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "次のステップ",
+    "monitoring": "監視とロギングを設定",
+    "backup": "自動バックアップを構成",
+    "security": "セキュリティ構成ガイドを確認"
+  }
+}

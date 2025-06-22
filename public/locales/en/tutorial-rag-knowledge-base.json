@@ -1,0 +1,92 @@
+{
+  "title": "Building a RAG Knowledge Base",
+  "description": "Learn how to build and manage a RAG knowledge base with Plugged.in for enhanced AI interactions",
+  "overview": {
+    "title": "Overview",
+    "introduction": "Retrieval-Augmented Generation (RAG) allows you to enhance AI interactions by providing relevant context from your documents. Plugged.in's document library enables you to build a project-specific knowledge base.",
+    "features": {
+      "documents": {
+        "title": "Document Management",
+        "description": "Upload and organize documents for vector-based retrieval"
+      },
+      "search": {
+        "title": "Semantic Search",
+        "description": "Query your knowledge base using natural language"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "account": "Active Plugged.in account with RAG features enabled",
+    "project": "At least one project created",
+    "documents": "Documents to upload (PDF, TXT, MD, DOCX)"
+  },
+  "steps": {
+    "setupLibrary": {
+      "title": "Step 1: Set Up Document Library",
+      "badge": "Setup",
+      "description": "Initialize your project's document library for RAG",
+      "navigate": {
+        "title": "Access Document Library",
+        "description": "Navigate to your project's document library:",
+        "code": "Project → Library → Document Library"
+      },
+      "formats": {
+        "title": "Supported Formats",
+        "description": "The library supports various document formats:"
+      }
+    },
+    "uploadDocuments": {
+      "title": "Step 2: Upload Documents",
+      "badge": "Content",
+      "description": "Add documents to build your knowledge base",
+      "upload": {
+        "title": "Upload Process",
+        "description": "Drag and drop or click to upload documents:",
+        "action": "Drag files here or click to browse"
+      },
+      "organize": {
+        "title": "Organize Documents",
+        "description": "Use tags and categories to organize your documents for better retrieval accuracy."
+      },
+      "tip": "Documents are automatically processed and indexed for vector search. Processing time depends on document size and complexity."
+    },
+    "queryKnowledge": {
+      "title": "Step 3: Query Your Knowledge Base",
+      "badge": "Usage",
+      "description": "Use the RAG query tool to retrieve relevant information",
+      "mcp": {
+        "title": "Using MCP Tool",
+        "description": "Query your knowledge base through the MCP proxy:",
+        "code": "pluggedin_rag_query(\"Your question about the documents\")"
+      },
+      "api": {
+        "title": "Using API",
+        "description": "Query via the REST API for integration:"
+      }
+    },
+    "advanced": {
+      "title": "Step 4: Advanced Features",
+      "badge": "Advanced",
+      "description": "Optimize your RAG knowledge base for better results",
+      "chunking": {
+        "title": "Document Chunking",
+        "description": "Documents are automatically chunked for optimal retrieval. Larger documents are split into semantic segments."
+      },
+      "metadata": {
+        "title": "Metadata Enrichment",
+        "description": "Add metadata to documents to improve search relevance and filtering capabilities."
+      },
+      "isolation": {
+        "title": "Project Isolation",
+        "description": "Each project's documents are isolated, ensuring queries only retrieve from the current project's knowledge base."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "api": "Integrate RAG queries into your applications via API",
+    "team": "Share knowledge bases with team members",
+    "security": "Configure security settings for sensitive documents"
+  }
+}

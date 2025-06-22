@@ -1,0 +1,89 @@
+{
+  "title": "Plugged.in Zelf Hosten",
+  "description": "Leer hoe je Plugged.in zelf host voor volledige controle over je MCP infrastructuur",
+  "overview": {
+    "title": "Overzicht",
+    "introduction": "Het zelf hosten van Plugged.in geeft je volledige controle over je MCP infrastructuur, data soevereiniteit en aanpassingsopties. Deze gids behandelt deployment van setup tot productie.",
+    "features": {
+      "control": {
+        "title": "Volledige Controle",
+        "description": "Complete controle over je infrastructuur en configuratie"
+      },
+      "data": {
+        "title": "Data Soevereiniteit",
+        "description": "Houd alle data binnen je eigen infrastructuur"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "server": "Linux server (Ubuntu 20.04+ of vergelijkbaar)",
+    "docker": "Docker en Docker Compose geïnstalleerd",
+    "postgresql": "PostgreSQL 15+ (of Docker)",
+    "domain": "Domeinnaam met DNS toegang"
+  },
+  "steps": {
+    "prepare": {
+      "title": "Stap 1: Omgeving Voorbereiden",
+      "badge": "Setup",
+      "description": "Clone repositories en bereid je server voor",
+      "clone": {
+        "title": "Clone Repositories",
+        "description": "Haal de laatste broncode op:"
+      },
+      "requirements": {
+        "title": "Systeemvereisten",
+        "description": "Aanbevolen minimum specificaties:",
+        "cpu": "2 CPU cores",
+        "ram": "4GB RAM",
+        "storage": "20GB opslag"
+      }
+    },
+    "database": {
+      "title": "Stap 2: Database Instellen",
+      "badge": "Database",
+      "description": "Configureer PostgreSQL voor Plugged.in",
+      "setup": {
+        "title": "PostgreSQL Setup",
+        "description": "Deploy PostgreSQL met Docker:"
+      },
+      "migrations": {
+        "title": "Migraties Uitvoeren",
+        "description": "Initialiseer het database schema:"
+      }
+    },
+    "configure": {
+      "title": "Stap 3: Applicatie Configureren",
+      "badge": "Configuratie",
+      "description": "Stel omgevingsvariabelen en beveiligingsinstellingen in",
+      "env": {
+        "title": "Omgevingsvariabelen",
+        "description": "Maak productie omgevingsconfiguratie:"
+      },
+      "tip": "Genereer veilige sleutels met: openssl rand -base64 32"
+    },
+    "deploy": {
+      "title": "Stap 4: Services Deployen",
+      "badge": "Deployment",
+      "description": "Deploy Plugged.in met Docker Compose",
+      "docker": {
+        "title": "Docker Compose Setup",
+        "description": "Maak een docker-compose.yml bestand:"
+      },
+      "nginx": {
+        "title": "Reverse Proxy",
+        "description": "Configureer Nginx als reverse proxy met de juiste headers en WebSocket ondersteuning."
+      },
+      "ssl": {
+        "title": "SSL/TLS Setup",
+        "description": "Gebruik Let's Encrypt voor gratis SSL certificaten met automatische vernieuwing."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "monitoring": "Stel monitoring en logging in",
+    "backup": "Configureer geautomatiseerde backups",
+    "security": "Bekijk de beveiligingsconfiguratie gids"
+  }
+}

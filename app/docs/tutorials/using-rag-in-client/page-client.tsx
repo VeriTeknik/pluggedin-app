@@ -67,7 +67,7 @@ function CodeSnippet({ code, language = 'text' }: { code: string; language?: str
   );
 }
 
-export default function UsingRAGInClientPageClient() {
+export function UsingRAGInClientPageClient() {
   const { t } = useTranslation('tutorial-rag-client');
 
   return (

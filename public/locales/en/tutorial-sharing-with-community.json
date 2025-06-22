@@ -1,0 +1,91 @@
+{
+  "title": "Sharing with Community",
+  "description": "Learn how to share your MCP servers and collections with the Plugged.in community",
+  "overview": {
+    "title": "Overview",
+    "introduction": "Plugged.in enables you to share your MCP server configurations and collections with the community, fostering collaboration and knowledge sharing.",
+    "features": {
+      "servers": {
+        "title": "Share MCP Servers",
+        "description": "Make your server configurations available for others to discover and use"
+      },
+      "collections": {
+        "title": "Create Collections",
+        "description": "Group related servers into themed collections for easier sharing"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "account": "Active Plugged.in account",
+    "servers": "At least one configured MCP server",
+    "profile": "Public profile enabled in settings"
+  },
+  "steps": {
+    "shareServer": {
+      "title": "Step 1: Share an MCP Server",
+      "badge": "Essential",
+      "description": "Make your MCP server configuration available to the community",
+      "navigate": {
+        "title": "Navigate to Your Server",
+        "description": "Go to your MCP Servers page and select the server you want to share:",
+        "code": "MCP Servers → Select Server → Share Options"
+      },
+      "visibility": {
+        "title": "Set Visibility",
+        "description": "Choose who can see and install your server:",
+        "public": "Public - Anyone can discover and install",
+        "private": "Private - Only accessible via direct link"
+      },
+      "tip": "Add detailed notes and documentation to help others understand your server's purpose and configuration."
+    },
+    "createCollection": {
+      "title": "Step 2: Create a Collection",
+      "badge": "Recommended",
+      "description": "Group related servers into a themed collection",
+      "create": {
+        "title": "Create New Collection",
+        "description": "Navigate to the Collections page and create a new collection:",
+        "code": "Social → Collections → Create Collection"
+      },
+      "organize": {
+        "title": "Add Servers to Collection",
+        "description": "Select servers from your profile to include in the collection. Collections can be versioned and updated over time."
+      }
+    },
+    "manageSharing": {
+      "title": "Step 3: Manage Shared Content",
+      "badge": "Management",
+      "description": "Monitor and manage your shared servers and collections",
+      "profile": {
+        "title": "View Your Public Profile",
+        "description": "Check how your shared content appears to others:",
+        "code": "/to/your-username"
+      },
+      "stats": {
+        "title": "Track Installation Stats",
+        "description": "Monitor how many users have installed your servers and collections from the sharing dashboard."
+      }
+    },
+    "discoverContent": {
+      "title": "Step 4: Discover Community Content",
+      "badge": "Community",
+      "description": "Find and use servers shared by other community members",
+      "browse": {
+        "title": "Browse Discover Feed",
+        "description": "Visit the Discover page to find popular servers and collections shared by the community."
+      },
+      "follow": {
+        "title": "Follow Creators",
+        "description": "Follow users whose servers you find valuable to stay updated on their latest contributions."
+      },
+      "tip": "Use the search functionality to find servers for specific use cases or technologies."
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "team": "Learn about team collaboration features",
+    "api": "Integrate with the Plugged.in API",
+    "custom": "Develop your own custom MCP servers"
+  }
+}

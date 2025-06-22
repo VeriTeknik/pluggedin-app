@@ -1,0 +1,95 @@
+{
+  "title": "Takım İşbirliği",
+  "description": "Plugged.in çalışma alanları ve profilleri kullanarak takımınızla nasıl işbirliği yapacağınızı öğrenin",
+  "overview": {
+    "title": "Genel Bakış",
+    "introduction": "Plugged.in'in çoklu profil sistemi, güvenlik ve izolasyonu korurken MCP sunucularını ayrı çalışma alanlarına organize ederek takımların etkili bir şekilde işbirliği yapmasını sağlar.",
+    "features": {
+      "workspaces": {
+        "title": "Çoklu Profiller",
+        "description": "Farklı ortamlar veya takımlar için ayrı profiller oluşturun"
+      },
+      "permissions": {
+        "title": "Erişim Kontrolü",
+        "description": "Belirli sunuculara ve koleksiyonlara kimlerin erişebileceğini yönetin"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "account": "Aktif Plugged.in hesabı",
+    "project": "En az bir proje oluşturulmuş",
+    "team": "Plugged.in hesapları olan takım üyeleri"
+  },
+  "steps": {
+    "createWorkspace": {
+      "title": "Adım 1: Takım Çalışma Alanları Oluştur",
+      "badge": "Temel",
+      "description": "Farklı takım ortamları için profiller ayarlayın",
+      "profiles": {
+        "title": "Profiller Oluştur",
+        "description": "Farklı amaçlar için ayrı profiller oluşturun:",
+        "code": "Ayarlar → Profiller → Yeni Profil Oluştur"
+      },
+      "organize": {
+        "title": "Amaca Göre Organize Et",
+        "description": "Takımlar için yaygın profil desenleri:",
+        "development": "Geliştirme - Deneysel sunucular ve araçlar",
+        "staging": "Hazırlık - Üretim öncesi yapılandırmalar",
+        "production": "Üretim - Kararlı, test edilmiş sunucular"
+      }
+    },
+    "inviteMembers": {
+      "title": "Adım 2: Takım Üyeleriyle Paylaş",
+      "badge": "Paylaşım",
+      "description": "Sunucularınızı ve koleksiyonlarınızı takım üyelerine açık hale getirin",
+      "share": {
+        "title": "Sunucuları Paylaş",
+        "description": "Bireysel sunucuları veya tüm koleksiyonları paylaşın:",
+        "code": "Sunucu → Paylaş → Bağlantıyı Kopyala veya Herkese Açık Yap"
+      },
+      "collections": {
+        "title": "Takım Koleksiyonları Oluştur",
+        "description": "İlgili sunucuları daha kolay takım katılımı ve standardizasyon için koleksiyonlarda gruplayın."
+      },
+      "tip": "Takım üyelerinin her sunucunun amacını ve yapılandırmasını anlamasına yardımcı olmak için açıklayıcı isimler ve kapsamlı notlar kullanın."
+    },
+    "manageAccess": {
+      "title": "Adım 3: Erişim Kontrolünü Yönet",
+      "badge": "Güvenlik",
+      "description": "Paylaşılan kaynaklarınıza kimlerin erişebileceğini ve kullanabileceğini kontrol edin",
+      "visibility": {
+        "title": "Görünürlük Ayarları",
+        "description": "Sunucuların herkese açık (keşfedilebilir) veya özel (yalnızca bağlantı ile erişim) olup olmadığını yapılandırın."
+      },
+      "apikeys": {
+        "title": "API Anahtarı Yönetimi",
+        "description": "Programatik erişim için API anahtarları oluşturun ve yönetin:",
+        "code": "Ayarlar → API Anahtarları → Yeni Anahtar Oluştur"
+      }
+    },
+    "bestPractices": {
+      "title": "Adım 4: Takım En İyi Uygulamaları",
+      "badge": "Yönergeler",
+      "description": "Etkili takım işbirliği için bu uygulamaları takip edin",
+      "naming": {
+        "title": "Tutarlı İsimlendirme",
+        "description": "Tüm takım profilleri ve sunucuları genelinde net, tutarlı isimlendirme kuralları kullanın."
+      },
+      "documentation": {
+        "title": "Her Şeyi Belgeleyin",
+        "description": "Sunuculara yapılandırma, kullanım durumları ve özel gereksinimleri açıklayan ayrıntılı notlar ekleyin."
+      },
+      "versioning": {
+        "title": "Koleksiyonları Sürümleyin",
+        "description": "Değişiklikleri takip etmek ve takım ortamları arasında uyumluluğu korumak için koleksiyon sürümlendirmeyi kullanın."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "security": "Takım dağıtımları için güvenlik en iyi uygulamalarını inceleyin",
+    "api": "Takım iş akışlarını Plugged.in API ile entegre edin",
+    "selfhost": "Gelişmiş takım kontrolü için kendi sunucunuzda barındırmayı düşünün"
+  }
+}

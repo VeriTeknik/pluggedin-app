@@ -1,0 +1,95 @@
+{
+  "title": "Team Collaboration",
+  "description": "Learn how to collaborate with your team using Plugged.in workspaces and profiles",
+  "overview": {
+    "title": "Overview",
+    "introduction": "Plugged.in's multi-profile system enables teams to collaborate effectively by organizing MCP servers into separate workspaces while maintaining security and isolation.",
+    "features": {
+      "workspaces": {
+        "title": "Multiple Profiles",
+        "description": "Create separate profiles for different environments or teams"
+      },
+      "permissions": {
+        "title": "Access Control",
+        "description": "Manage who can access specific servers and collections"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "account": "Active Plugged.in account",
+    "project": "At least one project created",
+    "team": "Team members with Plugged.in accounts"
+  },
+  "steps": {
+    "createWorkspace": {
+      "title": "Step 1: Create Team Workspaces",
+      "badge": "Foundation",
+      "description": "Set up profiles for different team environments",
+      "profiles": {
+        "title": "Create Profiles",
+        "description": "Create separate profiles for different purposes:",
+        "code": "Settings → Profiles → Create New Profile"
+      },
+      "organize": {
+        "title": "Organize by Purpose",
+        "description": "Common profile patterns for teams:",
+        "development": "Development - Experimental servers and tools",
+        "staging": "Staging - Pre-production configurations",
+        "production": "Production - Stable, tested servers"
+      }
+    },
+    "inviteMembers": {
+      "title": "Step 2: Share with Team Members",
+      "badge": "Sharing",
+      "description": "Make your servers and collections available to team members",
+      "share": {
+        "title": "Share Servers",
+        "description": "Share individual servers or entire collections:",
+        "code": "Server → Share → Copy Link or Make Public"
+      },
+      "collections": {
+        "title": "Create Team Collections",
+        "description": "Group related servers into collections for easier team onboarding and standardization."
+      },
+      "tip": "Use descriptive names and comprehensive notes to help team members understand each server's purpose and configuration."
+    },
+    "manageAccess": {
+      "title": "Step 3: Manage Access Control",
+      "badge": "Security",
+      "description": "Control who can access and use your shared resources",
+      "visibility": {
+        "title": "Visibility Settings",
+        "description": "Configure whether servers are public (discoverable) or private (link-only access)."
+      },
+      "apikeys": {
+        "title": "API Key Management",
+        "description": "Generate and manage API keys for programmatic access:",
+        "code": "Settings → API Keys → Generate New Key"
+      }
+    },
+    "bestPractices": {
+      "title": "Step 4: Team Best Practices",
+      "badge": "Guidelines",
+      "description": "Follow these practices for effective team collaboration",
+      "naming": {
+        "title": "Consistent Naming",
+        "description": "Use clear, consistent naming conventions across all team profiles and servers."
+      },
+      "documentation": {
+        "title": "Document Everything",
+        "description": "Add detailed notes to servers explaining configuration, use cases, and any special requirements."
+      },
+      "versioning": {
+        "title": "Version Collections",
+        "description": "Use collection versioning to track changes and maintain compatibility across team environments."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "security": "Review security best practices for team deployments",
+    "api": "Integrate team workflows with the Plugged.in API",
+    "selfhost": "Consider self-hosting for enhanced team control"
+  }
+}

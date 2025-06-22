@@ -1,0 +1,89 @@
+{
+  "title": "Plugged.in APIの使用",
+  "description": "MCPサーバーへのプログラマティックアクセスのためのPlugged.in APIとの統合方法を学ぶ",
+  "overview": {
+    "title": "概要",
+    "introduction": "Plugged.in APIは、MCPサーバーの管理、RAGナレッジベースのクエリ、ワークフローの自動化のためのプログラマティックアクセスを提供します。このガイドでは、認証、エンドポイント、ベストプラクティスをカバーします。",
+    "features": {
+      "automation": {
+        "title": "自動化",
+        "description": "サーバー管理とデプロイメントを自動化"
+      },
+      "security": {
+        "title": "セキュアアクセス",
+        "description": "レート制限付きのAPIキー認証"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "前提条件",
+    "account": "アクティブなPlugged.inアカウント",
+    "programming": "基本的なプログラミング知識",
+    "http": "REST APIの理解"
+  },
+  "steps": {
+    "authentication": {
+      "title": "ステップ1：認証設定",
+      "badge": "必須",
+      "description": "セキュアアクセスのためのAPIキーの生成と設定",
+      "generate": {
+        "title": "APIキーの生成",
+        "description": "アカウント設定から新しいAPIキーを作成：",
+        "code": "設定 → APIキー → 新しいキーを生成"
+      },
+      "usage": {
+        "title": "APIキーの使用",
+        "description": "AuthorizationヘッダーにAPIキーを含める："
+      },
+      "tip": "APIキーを安全に保存し、バージョン管理にコミットしないでください。本番アプリケーションでは環境変数を使用します。"
+    },
+    "endpoints": {
+      "title": "ステップ2：コアAPIエンドポイント",
+      "badge": "エンドポイント",
+      "description": "サーバー管理のための主要なAPIエンドポイントを探索",
+      "servers": {
+        "title": "サーバー管理",
+        "description": "MCPサーバーをプログラマティックに管理："
+      },
+      "rag": {
+        "title": "RAGクエリ",
+        "description": "ナレッジベースをクエリ："
+      }
+    },
+    "examples": {
+      "title": "ステップ3：実装例",
+      "badge": "コード",
+      "description": "さまざまなプログラミング言語での実用的な例",
+      "javascript": {
+        "title": "JavaScript/Node.js",
+        "description": "Fetch APIを使用した例："
+      },
+      "python": {
+        "title": "Python",
+        "description": "requestsライブラリを使用した例："
+      }
+    },
+    "ratelimits": {
+      "title": "ステップ4：レート制限とベストプラクティス",
+      "badge": "重要",
+      "description": "レート制限を理解し、API使用を最適化",
+      "tiers": {
+        "title": "レート制限ティア",
+        "description": "異なるエンドポイントには異なるレート制限があります：",
+        "standard": "標準エンドポイント：60リクエスト/分",
+        "sensitive": "機密操作：10リクエスト/時間",
+        "public": "パブリックエンドポイント：100リクエスト/分"
+      },
+      "headers": {
+        "title": "レート制限ヘッダー",
+        "description": "レスポンスヘッダーで使用状況を監視："
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "次のステップ",
+    "webhooks": "リアルタイム通知のためのWebhookを設定",
+    "sdks": "お使いの言語用のコミュニティSDKを探索",
+    "security": "API使用のセキュリティベストプラクティスを確認"
+  }
+}

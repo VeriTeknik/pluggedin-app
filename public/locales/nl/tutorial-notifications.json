@@ -1,0 +1,107 @@
+{
+  "backToTutorials": "Terug naar Tutorials",
+  "title": "Notificaties Versturen vanuit AI",
+  "difficulty": "Gevorderd",
+  "duration": "20 minuten",
+  "overview": {
+    "title": "Wat Je Gaat Leren",
+    "description": "Deze tutorial leert je hoe je het notificatiesysteem in Plugged.in instelt en gebruikt, waardoor je AI assistent real-time waarschuwingen en updates kan versturen.",
+    "learn1": "Hoe je notificaties inschakelt in je profiel",
+    "learn2": "De pluggedin_send_notification tool gebruiken",
+    "learn3": "E-mail notificaties instellen voor kritieke waarschuwingen",
+    "learn4": "Best practices voor notificatie ernstniveaus"
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "item1": "Plugged.in account met geconfigureerde MCP proxy",
+    "item2": "MCP client (Claude Desktop, Cursor, etc.) verbonden",
+    "item3": "E-mail geconfigureerd in instellingen (optioneel, voor e-mail notificaties)"
+  },
+  "step1": {
+    "title": "Notificaties Inschakelen",
+    "description": "Zorg er eerst voor dat notificaties zijn ingeschakeld voor je huidige profiel. Dit stelt de MCP proxy in staat om activiteiten te loggen en notificaties te versturen.",
+    "screenshot": "Screenshot: Profielinstellingen met notificatie schakelaar",
+    "screenshotDesc": "Toont de notificatie-instellingen in je profiel",
+    "note": "Notificaties zijn standaard ingeschakeld voor nieuwe profielen. Je kunt het bel-icoon in de navigatie controleren om je notificatietelling te zien."
+  },
+  "step2": {
+    "title": "E-mail Notificaties Configureren (Optioneel)",
+    "description": "Voor kritieke waarschuwingen kun je e-mail bezorging inschakelen. Dit zorgt ervoor dat je belangrijke notificaties ontvangt, zelfs wanneer je Plugged.in niet actief gebruikt.",
+    "emailSetup": {
+      "title": "E-mail Setup Stappen",
+      "step1": "Ga naar Instellingen → Notificaties",
+      "step2": "Zet 'E-mail Notificaties' aan",
+      "step3": "Verifieer je e-mailadres als dit nog niet is gedaan"
+    },
+    "screenshot": "Screenshot: E-mail notificatie-instellingen",
+    "screenshotDesc": "Toont e-mail configuratie opties"
+  },
+  "step3": {
+    "title": "De Notificatie Tool Gebruiken",
+    "description": "De pluggedin_send_notification tool is beschikbaar in je MCP client. Hier is hoe je het effectief gebruikt:",
+    "tabs": {
+      "basic": "Basis Gebruik",
+      "severity": "Ernstniveaus",
+      "email": "Met E-mail"
+    },
+    "basic": {
+      "title": "Eenvoudige Notificatie",
+      "description": "Verstuur een basis notificatie die verschijnt in het Plugged.in notificatiecentrum:",
+      "screenshot": "Screenshot: Notificatie verschijnt in het bel-menu",
+      "screenshotDesc": "Toont hoe de notificatie in de UI verschijnt"
+    },
+    "severity": {
+      "title": "Ernstniveaus Gebruiken",
+      "description": "Kies het juiste ernstniveau voor je notificaties:"
+    },
+    "email": {
+      "title": "E-mail Notificaties",
+      "description": "Voor kritieke waarschuwingen, schakel e-mail bezorging in:",
+      "note": "E-mail notificaties worden alleen verstuurd voor WARNING en ALERT ernstniveaus, of wanneer expliciet ingeschakeld."
+    }
+  },
+  "step4": {
+    "title": "Praktische Voorbeelden",
+    "example1": {
+      "title": "Deployment Notificaties",
+      "description": "Informeer teamleden over deployment status:"
+    },
+    "example2": {
+      "title": "Analyse Resultaten",
+      "description": "Verstuur notificaties op basis van analyse uitkomsten:"
+    },
+    "example3": {
+      "title": "Systeem Monitoring",
+      "description": "Waarschuw bij systeem resource gebruik:"
+    }
+  },
+  "bestPractices": {
+    "title": "Best Practices",
+    "meaningful": {
+      "title": "Houd het Zinvol",
+      "description": "Voeg specifieke details toe zoals aantallen, percentages of statuscodes"
+    },
+    "severity": {
+      "title": "Gebruik Passende Ernst",
+      "description": "Reserveer ALERT voor kritieke problemen die onmiddellijke aandacht vereisen"
+    },
+    "email": {
+      "title": "E-mail Spaarzaam",
+      "description": "Schakel e-mail alleen in voor notificaties die actie vereisen wanneer je niet in de app bent"
+    },
+    "context": {
+      "title": "Voeg Context Toe",
+      "description": "Voeg tijdstempel, betrokken systemen of relevante identificatoren toe"
+    }
+  },
+  "tip": {
+    "title": "Pro Tip",
+    "description": "Combineer notificaties met RAG queries voor intelligente waarschuwingen. Bijvoorbeeld, bevraag je documentatie voor drempelwaarden, verstuur dan notificaties wanneer die drempelwaarden worden overschreden."
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "description": "Verbeter je automatiseringsworkflows met deze gerelateerde tutorials:",
+    "api": "API Integratie Gids",
+    "team": "Team Samenwerking Instellen"
+  }
+}

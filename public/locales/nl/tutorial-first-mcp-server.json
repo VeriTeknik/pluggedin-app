@@ -1,0 +1,108 @@
+{
+  "backToTutorials": "Terug naar Tutorials",
+  "title": "Je Eerste MCP Server",
+  "difficulty": "Beginner",
+  "duration": "15 minuten",
+  "overview": {
+    "title": "Wat Je Gaat Leren",
+    "description": "Deze tutorial begeleidt je bij het toevoegen van je eerste MCP server aan Plugged.in. MCP servers breiden de mogelijkheden van je AI uit door toegang te bieden tot tools, resources en integraties.",
+    "learn1": "Wat MCP servers zijn en hoe ze werken",
+    "learn2": "Hoe je officiële MCP servers kunt browsen en toevoegen",
+    "learn3": "Hoe je serverinstellingen en omgevingsvariabelen configureert",
+    "learn4": "Hoe je je serververbinding test en de tools gebruikt"
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "item1": "Plugged.in account (gratis tier is voldoende)",
+    "item2": "Basiskennis van de command line (voor custom servers)",
+    "item3": "Node.js geïnstalleerd (optioneel, voor custom servers)"
+  },
+  "step1": {
+    "title": "MCP Servers Begrijpen",
+    "description": "Voordat we onze eerste server toevoegen, laten we begrijpen wat MCP servers zijn en waarom ze krachtig zijn.",
+    "whatIs": {
+      "title": "Wat is een MCP Server?",
+      "description": "MCP (Model Context Protocol) servers zijn programma's die extra mogelijkheden bieden aan AI assistenten. Zie ze als plugins die uitbreiden wat je AI kan doen.",
+      "point1": "Tools: Functies die de AI kan aanroepen (bijv. bestanden lezen, web zoeken, e-mails versturen)",
+      "point2": "Resources: Data waar de AI toegang toe heeft (bijv. documenten, databases, API's)",
+      "point3": "Prompts: Vooraf geconfigureerde instructies voor specifieke taken"
+    }
+  },
+  "step2": {
+    "title": "Navigeren naar MCP Servers",
+    "description": "Laten we beginnen met navigeren naar de MCP Servers sectie in Plugged.in.",
+    "screenshot": "Screenshot: Plugged.in dashboard met MCP Servers menu gemarkeerd",
+    "screenshotDesc": "De MCP Servers optie in de zijbalk navigatie",
+    "tip": "Je kunt ook de toetsencombinatie Cmd/Ctrl + K gebruiken en zoeken naar 'MCP Servers' om er snel naartoe te navigeren."
+  },
+  "step3": {
+    "title": "Je Eerste Server Toevoegen",
+    "description": "Nu gaan we je eerste MCP server toevoegen. Je kunt kiezen tussen officiële servers of custom servers.",
+    "tabs": {
+      "official": "Officiële Servers",
+      "custom": "Custom Server"
+    },
+    "official": {
+      "title": "Een Officiële Server Toevoegen",
+      "step1": "Klik op de 'Server Toevoegen' knop",
+      "step2": "Blader door de officiële server catalogus",
+      "step3": "Selecteer 'Filesystem' server (een goede starter server)",
+      "step4": "Klik op 'Installeren' om het aan je profiel toe te voegen",
+      "screenshot": "Screenshot: Officiële server catalogus met Filesystem server",
+      "screenshotDesc": "De officiële server catalogus toont verschillende MCP servers"
+    },
+    "custom": {
+      "title": "Een Custom Server Toevoegen",
+      "description": "Voor meer controle kun je een custom MCP server toevoegen:",
+      "step1": "Klik op 'Custom Server Toevoegen'",
+      "step2": "Voer een naam in voor je server",
+      "step3": "Configureer het commando en de argumenten"
+    }
+  },
+  "step4": {
+    "title": "Je Server Configureren",
+    "description": "Elke server kan geconfigureerd worden met specifieke instellingen en omgevingsvariabelen.",
+    "settings": {
+      "title": "Basisconfiguratie",
+      "description": "Configureer hoe je server draait:"
+    },
+    "env": {
+      "title": "Omgevingsvariabelen",
+      "description": "Sommige servers vereisen API keys of andere configuratie via omgevingsvariabelen.",
+      "note": "Omgevingsvariabelen worden versleuteld en veilig opgeslagen in Plugged.in"
+    }
+  },
+  "step5": {
+    "title": "Je Server Testen",
+    "description": "Laten we controleren of je server correct werkt.",
+    "test": {
+      "title": "Verbindingstest",
+      "step1": "Sla je serverconfiguratie op",
+      "step2": "Klik op de 'Test Verbinding' knop",
+      "step3": "Wacht tot de verbinding tot stand is gebracht",
+      "step4": "Controleer de ontdekte tools en resources"
+    },
+    "screenshot": "Screenshot: Succesvolle serververbinding met tools lijst",
+    "screenshotDesc": "Een succesvol verbonden server met beschikbare tools"
+  },
+  "issues": {
+    "title": "Veelvoorkomende Problemen & Oplossingen",
+    "connection": {
+      "title": "Server wil niet verbinden",
+      "description": "Als je server niet wil verbinden:",
+      "solution1": "Controleer of alle vereiste velden zijn ingevuld",
+      "solution2": "Verifieer dat omgevingsvariabelen correct zijn ingesteld",
+      "solution3": "Zorg ervoor dat het servercommando/pad correct is"
+    },
+    "tools": {
+      "title": "Geen tools verschijnen",
+      "description": "Dit betekent meestal dat de server verbonden is maar niet goed is geconfigureerd. Controleer de documentatie van de server voor vereiste setup."
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "description": "Gefeliciteerd! Je hebt je eerste MCP server toegevoegd. Dit kun je hierna verkennen:",
+    "sharing": "Deel Je Servers met de Community",
+    "custom": "Bouw een Custom MCP Server"
+  }
+}
