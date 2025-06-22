@@ -2,7 +2,7 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, hi,ja, nl, tr, zhCN } from 'date-fns/locale';
-import { Bell, Check, Circle, Trash2 } from 'lucide-react';
+import { Bell, Check, Circle, Trash2, Square, CheckSquare } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,7 +10,8 @@ import { useTranslation } from 'react-i18next';
 import { 
   deleteAllNotifications, 
   deleteNotification, 
-  markNotificationAsRead 
+  markNotificationAsRead,
+  toggleNotificationCompleted
 } from '@/app/actions/notifications';
 import { useNotifications } from '@/components/providers/notification-provider';
 import { Badge } from '@/components/ui/badge';
@@ -146,6 +147,24 @@ export default function NotificationsPage() {
     }
   };
 
+  // Handle toggle completed for custom notifications
+  const handleToggleCompleted = async (id: string) => {
+    if (!profileUuid) {
+      return;
+    }
+
+    try {
+      await toggleNotificationCompleted(id, profileUuid);
+      refreshNotifications();
+    } catch (_error) {
+      toast({
+        title: t('common.error'),
+        description: t('notifications.toast.toggleCompleteError'),
+        variant: 'destructive',
+      });
+    }
+  };
+
   // Filter notifications based on active tab
   const filteredNotifications = notifications.filter((notification) => {
     if (activeTab === 'all') {
@@ -211,6 +230,7 @@ export default function NotificationsPage() {
               <TabsTrigger value="ALERT">{t('notifications.tabs.alerts')}</TabsTrigger>
               <TabsTrigger value="INFO">{t('notifications.tabs.info')}</TabsTrigger>
               <TabsTrigger value="SUCCESS">{t('notifications.tabs.success')}</TabsTrigger>
+              <TabsTrigger value="CUSTOM">{t('notifications.tabs.notes')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value={activeTab}>
@@ -254,8 +274,22 @@ export default function NotificationsPage() {
                             <div className="flex-1 p-4">
                               <div className="flex items-center justify-between mb-1">
                                 <div className="flex items-center">
+                                  {notification.type === 'CUSTOM' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="p-0 h-auto mr-2"
+                                      onClick={() => handleToggleCompleted(notification.id)}
+                                    >
+                                      {notification.completed ? (
+                                        <CheckSquare className="h-5 w-5" />
+                                      ) : (
+                                        <Square className="h-5 w-5" />
+                                      )}
+                                    </Button>
+                                  )}
                                   {getNotificationIcon(notification.type)}
-                                  <h3 className="font-medium text-base">
+                                  <h3 className={`font-medium text-base ${notification.completed ? 'line-through opacity-60' : ''}`}>
                                     {notification.title}
                                   </h3>
                                   <Badge
@@ -270,6 +304,14 @@ export default function NotificationsPage() {
                                   >
                                     {notification.type}
                                   </Badge>
+                                  {notification.type === 'CUSTOM' && notification.severity && (
+                                    <Badge
+                                      variant={getBadgeVariant(notification.severity)}
+                                      className="ml-2"
+                                    >
+                                      {notification.severity}
+                                    </Badge>
+                                  )}
                                   {!notification.read && (
                                     <Badge
                                       variant="secondary"
@@ -289,7 +331,7 @@ export default function NotificationsPage() {
                                   )}
                                 </span>
                               </div>
-                              <p className="text-muted-foreground">
+                              <p className={`text-muted-foreground ${notification.completed ? 'line-through opacity-60' : ''}`}>
                                 {notification.message}
                               </p>
                               <div className="flex justify-between items-center mt-3">

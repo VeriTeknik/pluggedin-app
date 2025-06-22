@@ -19,7 +19,8 @@
       "unread": "Unread",
       "alerts": "Alerts",
       "info": "Information",
-      "success": "Success"
+      "success": "Success",
+      "notes": "Notes"
     },
     "empty": {
       "title": "No Notifications",
@@ -30,7 +31,8 @@
       "deleteSuccess": "Notification deleted",
       "deleteError": "Failed to delete notification",
       "deleteAllSuccess": "All notifications deleted",
-      "deleteAllError": "Failed to delete all notifications"
+      "deleteAllError": "Failed to delete all notifications",
+      "toggleCompleteError": "Failed to update note status"
     }
   }
 }

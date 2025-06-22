@@ -19,7 +19,8 @@
       "unread": "अपठित",
       "alerts": "अलर्ट",
       "info": "जानकारी",
-      "success": "सफलता"
+      "success": "सफलता",
+      "notes": "नोट्स"
     },
     "empty": {
       "title": "कोई सूचना नहीं",
@@ -30,7 +31,8 @@
       "deleteSuccess": "सूचना हटाई गई",
       "deleteError": "सूचना हटाने में विफल",
       "deleteAllSuccess": "सभी सूचनाएं हटाई गईं",
-      "deleteAllError": "सभी सूचनाएं हटाने में विफल"
+      "deleteAllError": "सभी सूचनाएं हटाने में विफल",
+      "toggleCompleteError": "नोट स्थिति अपडेट करने में विफल"
     }
   }
 }
