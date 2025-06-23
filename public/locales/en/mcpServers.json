@@ -36,6 +36,8 @@
     },
     "form": {
       "success": "MCP server created successfully.",
+      "multipleSuccess": "Successfully created {{count}} MCP server(s).",
+      "partialSuccess": "Created {{success}} server(s), but {{failed}} failed.",
       "error": {
         "createFailed": "Failed to create MCP server."
       },

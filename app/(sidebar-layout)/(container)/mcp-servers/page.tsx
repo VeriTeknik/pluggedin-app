@@ -27,9 +27,8 @@ import {
 } from '@/app/actions/mcp-servers';
 // Internal UI components
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // Internal DB schema
 import { McpServerStatus, McpServerType } from '@/db/schema';
 // Internal hooks
@@ -43,10 +42,10 @@ import { McpServer } from '@/types/mcp-server';
 import { ServerCard } from './components/server-card';
 // Local components
 import { ExportDialog, ImportDialog } from './components/server-dialogs';
-import { SseServerForm, StdioServerForm, StreamableHttpServerForm } from './components/server-forms';
 import { ServerHero } from './components/server-hero';
 import { ServerStats } from './components/server-stats';
 import { ShareCollectionDialog } from './components/share-collection-dialog';
+import { SmartServerDialog } from './components/smart-server-dialog';
 
 
 // Removed DiscoverToolsButton Component Definition
@@ -122,7 +121,7 @@ export default function MCPServersPage() {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  const handleCreateServer = async (data: any) => {
+  const _handleCreateServer = async (data: any) => {
     if (!currentProfile?.uuid) {
       return;
     }
@@ -138,6 +137,55 @@ export default function MCPServersPage() {
         title: t('common.success'),
         description: t('mcpServers.form.success'),
       });
+    } catch (_error) {
+      toast({
+        title: t('common.error'),
+        description: t('mcpServers.form.error.createFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateMultipleServers = async (configs: any[]) => {
+    if (!currentProfile?.uuid) {
+      return;
+    }
+    setIsSubmitting(true);
+    let successCount = 0;
+    let failedCount = 0;
+    
+    try {
+      for (const config of configs) {
+        try {
+          await createMcpServer({
+            ...config,
+            profileUuid: currentProfile.uuid
+          });
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to create server ${config.name}:`, error);
+          failedCount++;
+        }
+      }
+      
+      await mutate();
+      
+      if (successCount > 0 && failedCount === 0) {
+        toast({
+          title: t('common.success'),
+          description: t('mcpServers.form.multipleSuccess', { count: successCount }),
+        });
+      } else if (successCount > 0 && failedCount > 0) {
+        toast({
+          title: t('common.warning'),
+          description: t('mcpServers.form.partialSuccess', { success: successCount, failed: failedCount }),
+          variant: 'default',
+        });
+      } else {
+        throw new Error('All servers failed to create');
+      }
     } catch (_error) {
       toast({
         title: t('common.error'),
@@ -455,45 +503,13 @@ export default function MCPServersPage() {
         </div>
       )}
 
-      {/* Add Server Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] p-4 sm:p-6">
-          <Tabs defaultValue={McpServerType.STDIO} className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value={McpServerType.STDIO} className="text-sm">
-                {t('mcpServers.form.commandBased')}
-              </TabsTrigger>
-              <TabsTrigger value={McpServerType.SSE} className="text-sm">
-                {t('mcpServers.form.urlBased')}
-              </TabsTrigger>
-              <TabsTrigger value={McpServerType.STREAMABLE_HTTP} className="text-sm">
-                {t('mcpServers.form.streamableHttpBased')}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value={McpServerType.STDIO}>
-              <StdioServerForm
-                onSubmit={handleCreateServer}
-                onCancel={() => setOpen(false)}
-                isSubmitting={isSubmitting}
-              />
-            </TabsContent>
-            <TabsContent value={McpServerType.SSE}>
-              <SseServerForm
-                onSubmit={handleCreateServer}
-                onCancel={() => setOpen(false)}
-                isSubmitting={isSubmitting}
-              />
-            </TabsContent>
-            <TabsContent value={McpServerType.STREAMABLE_HTTP}>
-              <StreamableHttpServerForm
-                onSubmit={handleCreateServer}
-                onCancel={() => setOpen(false)}
-                isSubmitting={isSubmitting}
-              />
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
+      {/* Smart Add Server Dialog */}
+      <SmartServerDialog
+        open={open}
+        onOpenChange={setOpen}
+        onSubmit={handleCreateMultipleServers}
+        isSubmitting={isSubmitting}
+      />
 
       {/* Import/Export Dialogs */}
       <ImportDialog

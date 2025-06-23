@@ -45,6 +45,29 @@ interface ConnectedMcpClient {
 
 // --- Helper Functions ---
 
+/**
+ * Safely cleanup a connected MCP client, handling expected abort errors for Streamable HTTP
+ */
+async function safeCleanup(connectedClient: ConnectedMcpClient | undefined, serverConfig: McpServer) {
+  if (!connectedClient) return;
+  
+  try {
+    await connectedClient.cleanup();
+  } catch (cleanupError: any) {
+    // For Streamable HTTP, completely suppress abort errors
+    if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
+      // Only log non-abort errors at debug level
+      if (cleanupError?.code !== 20 && cleanupError?.name !== 'AbortError' && !cleanupError?.message?.includes('abort')) {
+        console.debug(`[MCP Wrapper] Cleanup warning for ${serverConfig.name}:`, cleanupError.message);
+      }
+      // Don't re-throw or log abort errors at all
+      return;
+    }
+    // For other transport types, log the error
+    console.error(`[MCP Wrapper] Cleanup error for ${serverConfig.name}:`, cleanupError);
+  }
+}
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Add this function to handle firejail configuration
@@ -315,8 +338,40 @@ async function connectMcpClient(
         client,
         cleanup: async () => {
           try {
-            await currentTransport.close();
-            await client.close();
+            // For StreamableHTTPClientTransport, we need to be very careful about cleanup
+            // as it may throw abort errors when the underlying fetch is cancelled
+            if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
+              // Wrap each close in a separate try-catch and continue regardless
+              const closeTransport = async () => {
+                try {
+                  await currentTransport.close();
+                } catch (e: any) {
+                  // Silently ignore all errors for Streamable HTTP transport
+                  // as abort errors are expected when fetch is cancelled
+                  if (e?.code !== 20 && e?.name !== 'AbortError') {
+                    console.debug(`[MCP Wrapper] Transport cleanup warning for ${serverName}:`, e.message);
+                  }
+                }
+              };
+              
+              const closeClient = async () => {
+                try {
+                  await client.close();
+                } catch (e: any) {
+                  // Silently ignore all errors for Streamable HTTP client
+                  if (e?.code !== 20 && e?.name !== 'AbortError') {
+                    console.debug(`[MCP Wrapper] Client cleanup warning for ${serverName}:`, e.message);
+                  }
+                }
+              };
+              
+              // Run both closes in parallel to minimize wait time
+              await Promise.all([closeTransport(), closeClient()]);
+            } else {
+              // For other transport types, use normal cleanup
+              await currentTransport.close();
+              await client.close();
+            }
             console.log(`[MCP Wrapper] Cleaned up connection for ${serverName}.`);
           } catch (cleanupError) {
             console.error(`[MCP Wrapper] Error during cleanup for ${serverName}:`, cleanupError);
@@ -327,8 +382,27 @@ async function connectMcpClient(
       lastError = error instanceof Error ? error : new Error(String(error));
       console.warn(`[MCP Wrapper] Connection attempt ${attempt + 1} failed for ${serverName}: ${lastError.message}`);
       // Ensure client/transport are closed before retry
-      try { await currentTransport.close(); } catch { /* ignore */ }
-      try { await client.close(); } catch { /* ignore */ }
+      if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
+        try { 
+          await currentTransport.close(); 
+        } catch (e: any) { 
+          // Ignore abort errors for Streamable HTTP
+          if (e?.code !== 20) {
+            console.error(`[MCP Wrapper] Error closing transport during retry:`, e);
+          }
+        }
+        try { 
+          await client.close(); 
+        } catch (e: any) { 
+          // Ignore abort errors for Streamable HTTP
+          if (e?.code !== 20) {
+            console.error(`[MCP Wrapper] Error closing client during retry:`, e);
+          }
+        }
+      } else {
+        try { await currentTransport.close(); } catch { /* ignore */ }
+        try { await client.close(); } catch { /* ignore */ }
+      }
     }
   }
   throw lastError || new Error(`Failed to connect to ${serverName} after ${retries + 1} attempts.`);
@@ -372,7 +446,7 @@ export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool
     console.error(`[MCP Wrapper] Error listing tools from ${serverConfig.name || serverConfig.uuid}:`, error);
     throw error; // Re-throw the error to be handled by the caller
   } finally {
-    await connectedClient?.cleanup();
+    await safeCleanup(connectedClient, serverConfig);
   }
 }
 
@@ -415,7 +489,7 @@ export async function listResourceTemplatesFromServer(serverConfig: McpServer): 
         console.error(`[MCP Wrapper] Error listing resource templates from ${serverConfig.name || serverConfig.uuid}:`, error);
         throw error; // Re-throw the error to be handled by the caller
     } finally {
-        await connectedClient?.cleanup();
+        await safeCleanup(connectedClient, serverConfig);
     }
 }
 
@@ -458,7 +532,7 @@ export async function listResourcesFromServer(serverConfig: McpServer): Promise<
         console.error(`[MCP Wrapper] Error listing resources from ${serverConfig.name || serverConfig.uuid}:`, error);
         throw error; // Re-throw the error to be handled by the caller
     } finally {
-        await connectedClient?.cleanup();
+        await safeCleanup(connectedClient, serverConfig);
     }
 }
 
@@ -501,7 +575,7 @@ export async function listPromptsFromServer(serverConfig: McpServer): Promise<Pr
         console.error(`[MCP Wrapper] Error listing prompts from ${serverConfig.name || serverConfig.uuid}:`, error);
         throw error; // Re-throw the error to be handled by the caller
     } finally {
-        await connectedClient?.cleanup();
+        await safeCleanup(connectedClient, serverConfig);
     }
 }
 

@@ -3,6 +3,7 @@
     "or": "OR",
     "error": "Error",
     "success": "Success",
+    "warning": "Warning",
     "releaseCandidate": "Release Candidate v{{version}}",
     "validation": {
       "required": "This field is required",

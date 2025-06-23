@@ -615,6 +615,7 @@ export async function getOrCreatePlaygroundSession(
           env: server.env,
           url: server.url,
           type: server.type,
+          transport: 'stdio', // Add explicit transport field
           cwd: mcpWorkspacePath // Explicitly set the CWD for the server process
         };
       } else {
@@ -628,8 +629,12 @@ export async function getOrCreatePlaygroundSession(
           // Do not set cwd for non-filesystem servers unless specifically needed/configured
         };
         
-        // Add transport and streamableHTTPOptions for Streamable HTTP servers
-        if (server.type === McpServerType.STREAMABLE_HTTP) {
+        // Add transport field based on server type
+        if (server.type === McpServerType.STDIO) {
+          mcpServersConfig[server.name].transport = 'stdio';
+        } else if (server.type === McpServerType.SSE) {
+          mcpServersConfig[server.name].transport = 'sse';
+        } else if (server.type === McpServerType.STREAMABLE_HTTP) {
           mcpServersConfig[server.name].transport = 'streamable_http';
           // Cast server to any to access dynamically added fields
           const serverWithOptions = server as any;
