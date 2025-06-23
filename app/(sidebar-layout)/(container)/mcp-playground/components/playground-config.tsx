@@ -170,7 +170,7 @@ export function PlaygroundConfig({
   // Log rendering is handled inline within the 'logs' tab content below.
 
   return (
-    <div className='h-[calc(100vh-10rem)] flex flex-col bg-background py-2'>
+    <div className='h-[var(--playground-content)] flex flex-col bg-background py-2'>
       <div className='pb-3 flex-shrink-0 px-4'>
         <h2 className="text-lg font-semibold">{t('playground.config.title')}</h2>
         <p className="text-sm text-muted-foreground">
@@ -246,7 +246,7 @@ export function PlaygroundConfig({
                       <TooltipTrigger asChild>
                         <div
                           className={`
-                            flex items-start justify-between p-3 rounded-lg
+                            flex items-start justify-between p-3 my-2 rounded-lg
                             transition-all duration-200
                             ${server.status === 'ACTIVE'
                               ? 'bg-primary/5 ring-1 ring-primary/20'
@@ -580,7 +580,7 @@ export function PlaygroundConfig({
                           temperature: parseFloat(e.target.value),
                         })
                       }
-                      className='mt-1.5'
+                      className='mt-1.5 w-full appearance-none bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-blue-200 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-blue-200 [&::-moz-range-track]:h-2 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:border-0'
                     />
                     <div className='flex justify-between text-xs text-muted-foreground mt-2'>
                       <span>🎯 {t('playground.config.model.temperatureHints.precise')}</span>
@@ -616,7 +616,7 @@ export function PlaygroundConfig({
                           maxTokens: parseInt(e.target.value),
                         })
                       }
-                      className='mt-1.5'
+                      className='mt-1.5 w-full appearance-none bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-blue-200 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-blue-200 [&::-moz-range-track]:h-2 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:border-0'
                     />
                     <div className='flex justify-between text-xs text-muted-foreground mt-2'>
                       <span>Short (100)</span>
@@ -717,7 +717,7 @@ export function PlaygroundConfig({
                 </div>
               </div>
 
-              <div className="h-[calc(100vh-25rem)] rounded-md border">
+              <div className="h-[var(--playground-content)] rounded-md border">
                 {serverLogs.length === 0 && clientLogs.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     {t('playground.config.logs.empty')}

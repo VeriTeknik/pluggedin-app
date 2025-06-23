@@ -1,9 +1,15 @@
 'use client';
 
+import { PageContainer } from '@/components/ui/page-container';
+
 export default function ContainerLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return <div className='container mx-auto py-10 px-6'>{children}</div>;
+  return (
+    <PageContainer className="p-4 bg-background space-y-4">
+      {children}
+    </PageContainer>
+  );
 }
