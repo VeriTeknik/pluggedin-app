@@ -580,7 +580,7 @@ export function PlaygroundConfig({
                           temperature: parseFloat(e.target.value),
                         })
                       }
-                      className='mt-1.5'
+                      className='mt-1.5 w-full appearance-none bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-blue-200 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-blue-200 [&::-moz-range-track]:h-2 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:border-0'
                     />
                     <div className='flex justify-between text-xs text-muted-foreground mt-2'>
                       <span>🎯 {t('playground.config.model.temperatureHints.precise')}</span>
@@ -616,7 +616,7 @@ export function PlaygroundConfig({
                           maxTokens: parseInt(e.target.value),
                         })
                       }
-                      className='mt-1.5'
+                      className='mt-1.5 w-full appearance-none bg-transparent [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-blue-200 [&::-webkit-slider-runnable-track]:h-2 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-blue-500 [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-blue-200 [&::-moz-range-track]:h-2 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-blue-500 [&::-moz-range-thumb]:border-0'
                     />
                     <div className='flex justify-between text-xs text-muted-foreground mt-2'>
                       <span>Short (100)</span>
