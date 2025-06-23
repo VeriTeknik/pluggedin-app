@@ -23,7 +23,8 @@ export interface ProgressiveInitResult {
 }
 
 /**
- * Performs health checks on WebSocket (SSE) servers before initialization
+ * Performs health checks on SSE servers before initialization
+ * Note: Streamable HTTP servers are skipped as they may require special auth handling
  */
 async function performServerHealthChecks(
   mcpServersConfig: Record<string, any>,
@@ -31,8 +32,9 @@ async function performServerHealthChecks(
 ): Promise<Record<string, boolean>> {
   const results: Record<string, boolean> = {};
   const checkPromises = Object.entries(mcpServersConfig).map(async ([serverName, config]) => {
-    // Only check WebSocket (SSE) and Streamable HTTP servers with a URL
-    if ((config.type === 'SSE' || config.type === 'STREAMABLE_HTTP') && config.url) {
+    // Only check WebSocket (SSE) servers with a URL
+    // Skip health checks for Streamable HTTP servers as they may require special auth handling
+    if (config.type === 'SSE' && config.url) {
       try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 3000); // 3-second timeout for health check
@@ -59,7 +61,7 @@ async function performServerHealthChecks(
         );
       }
     } else {
-      // STDIO servers are assumed to be healthy for initialization purposes
+      // STDIO and STREAMABLE_HTTP servers are assumed to be healthy for initialization purposes
       results[serverName] = true;
     }
   });
@@ -99,6 +101,11 @@ async function initializeSingleServer(
       // Construct the config object expected by the library
       // Type assertion needed here because we reverted the specific types
       const configForTool: McpServersConfig = { [serverName]: serverConfig as any };
+      
+      // Debug log for Streamable HTTP servers
+      if (serverConfig.type === 'STREAMABLE_HTTP' || serverConfig.transport === 'streamable_http') {
+        console.log(`[MCP] Initializing Streamable HTTP server "${serverName}" with config:`, JSON.stringify(serverConfig, null, 2));
+      }
 
       const initPromise = convertMcpToLangchainTools(
         configForTool, // Pass the correctly typed config

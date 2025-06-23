@@ -4,8 +4,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport, StdioServerParameters } from '@modelcontextprotocol/sdk/client/stdio.js';
-// Note: StreamableHTTPClientTransport is imported dynamically in the STREAMABLE_HTTP case
-// due to module resolution issues in Next.js environments
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import {
   ListPromptsResultSchema, // Added
@@ -67,7 +66,7 @@ export function createFirejailConfig(
   // Only apply firejail to STDIO servers with a command
   if (serverConfig.type !== McpServerType.STDIO || !serverConfig.command) return null;
 
-  const isUvCommand = serverConfig.command === 'uv' || serverConfig.command === 'uvenv' || serverConfig.command === 'uvx';
+  const _isUvCommand = serverConfig.command === 'uv' || serverConfig.command === 'uvenv' || serverConfig.command === 'uvx';
 
   // Restore stricter firejail config
   const baseFirejailArgs = [
@@ -220,20 +219,51 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
       const url = new URL(serverConfig.url);
       
       try {
-        // Try to use Streamable HTTP transport if available
-        // This is a workaround for module resolution issues in Next.js
-        // See: https://github.com/modelcontextprotocol/typescript-sdk/issues/460
-        console.warn(`[MCP Wrapper] Streamable HTTP transport is not yet fully supported in Next.js environments.`);
-        console.warn(`[MCP Wrapper] Falling back to SSE transport for server ${serverConfig.name}.`);
+        // Extract streamable HTTP options from env or directly from serverConfig
+        let streamableOptions: any = {};
         
-        // Fall back to SSE transport which has similar capabilities
-        transport = new SSEClientTransport(url);
+        // Check if options are in env (from database storage)
+        if (serverConfig.env?.__streamableHTTPOptions) {
+          try {
+            streamableOptions = JSON.parse(serverConfig.env.__streamableHTTPOptions);
+          } catch (e) {
+            console.error('[MCP Wrapper] Failed to parse streamableHTTPOptions from env:', e);
+          }
+        }
+        
+        // Or use directly from serverConfig (from playground/runtime)
+        if (serverConfig.streamableHTTPOptions) {
+          streamableOptions = serverConfig.streamableHTTPOptions;
+        }
+        
+        // Create StreamableHTTPClientTransport with options
+        const transportOptions: any = {};
+        
+        // Add headers if provided
+        if (streamableOptions.headers) {
+          transportOptions.requestInit = {
+            headers: streamableOptions.headers
+          };
+        }
+        
+        // Add session ID if provided
+        if (streamableOptions.sessionId) {
+          transportOptions.sessionId = streamableOptions.sessionId;
+        }
+        
+        console.log(`[MCP Wrapper] Creating Streamable HTTP transport for server ${serverConfig.name}`);
+        transport = new StreamableHTTPClientTransport(url, transportOptions);
       } catch (error) {
-        console.error(`[MCP Wrapper] Failed to create transport for Streamable HTTP server:`, error);
-        return null;
+        console.error(`[MCP Wrapper] Failed to create Streamable HTTP transport:`, error);
+        throw error; // Propagate the error instead of falling back
       }
     } else {
       console.error(`[MCP Wrapper] Unsupported server type: ${serverConfig.type} for server ${serverConfig.name}`);
+      return null;
+    }
+
+    if (!transport) {
+      console.error(`[MCP Wrapper] Failed to create transport for ${serverConfig.name}`);
       return null;
     }
 
@@ -257,23 +287,35 @@ async function connectMcpClient(
   client: Client,
   transport: Transport,
   serverName: string,
+  serverConfig: McpServer,
   retries = 2,
   delay = 1000
 ): Promise<ConnectedMcpClient> {
   let lastError: Error | null = null;
+  let currentTransport = transport;
+  
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       if (attempt > 0) {
         console.log(`[MCP Wrapper] Retrying connection to ${serverName} (Attempt ${attempt})...`);
         await sleep(delay);
+        
+        // For StreamableHTTP, we need to create a new transport for retry
+        if (serverConfig.type === McpServerType.STREAMABLE_HTTP && serverConfig.url) {
+          const newClientData = createMcpClientAndTransport(serverConfig);
+          if (newClientData?.transport) {
+            currentTransport = newClientData.transport;
+          }
+        }
       }
-      await client.connect(transport);
+      
+      await client.connect(currentTransport);
       console.log(`[MCP Wrapper] Connected to ${serverName}.`);
       return {
         client,
         cleanup: async () => {
           try {
-            await transport.close();
+            await currentTransport.close();
             await client.close();
             console.log(`[MCP Wrapper] Cleaned up connection for ${serverName}.`);
           } catch (cleanupError) {
@@ -285,7 +327,7 @@ async function connectMcpClient(
       lastError = error instanceof Error ? error : new Error(String(error));
       console.warn(`[MCP Wrapper] Connection attempt ${attempt + 1} failed for ${serverName}: ${lastError.message}`);
       // Ensure client/transport are closed before retry
-      try { await transport.close(); } catch { /* ignore */ }
+      try { await currentTransport.close(); } catch { /* ignore */ }
       try { await client.close(); } catch { /* ignore */ }
     }
   }
@@ -308,7 +350,7 @@ export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool
 
   let connectedClient: ConnectedMcpClient | undefined;
   try {
-    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid, serverConfig);
 
     // Check capabilities *after* connecting
     const capabilities = connectedClient.client.getServerCapabilities();
@@ -348,7 +390,7 @@ export async function listResourceTemplatesFromServer(serverConfig: McpServer): 
 
     let connectedClient: ConnectedMcpClient | undefined;
     try {
-    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid, serverConfig);
 
     // Check capabilities *after* connecting
     const capabilities = connectedClient.client.getServerCapabilities();
@@ -391,7 +433,7 @@ export async function listResourcesFromServer(serverConfig: McpServer): Promise<
 
     let connectedClient: ConnectedMcpClient | undefined;
     try {
-        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid, serverConfig);
 
         // Check capabilities *after* connecting
         const capabilities = connectedClient.client.getServerCapabilities();
@@ -434,7 +476,7 @@ export async function listPromptsFromServer(serverConfig: McpServer): Promise<Pr
 
     let connectedClient: ConnectedMcpClient | undefined;
     try {
-        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid, serverConfig);
 
         // Check capabilities *after* connecting
         const capabilities = connectedClient.client.getServerCapabilities();

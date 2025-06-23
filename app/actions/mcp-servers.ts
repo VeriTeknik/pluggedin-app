@@ -63,13 +63,31 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
         // Decrypt sensitive fields
         const decryptedServer = decryptServerData(server, profileUuid);
         
+        // Extract streamable HTTP options from env if present
+        const processedServer: any = { ...decryptedServer };
+        if (server.type === McpServerType.STREAMABLE_HTTP && decryptedServer.env) {
+          const { __transport, __streamableHTTPOptions, ...cleanEnv } = decryptedServer.env;
+          
+          processedServer.env = cleanEnv;
+          if (__transport) {
+            processedServer.transport = __transport;
+          }
+          if (__streamableHTTPOptions) {
+            try {
+              processedServer.streamableHTTPOptions = JSON.parse(__streamableHTTPOptions);
+            } catch (e) {
+              console.error('Failed to parse streamableHTTPOptions:', e);
+            }
+          }
+        }
+        
         const metrics = await getServerRatingMetrics({
           source: server.source || McpServerSource.PLUGGEDIN,
           externalId: server.external_id || server.uuid
         });
 
         return {
-          ...decryptedServer,
+          ...processedServer,
           username,
           averageRating: metrics?.metrics?.averageRating,
           ratingCount: metrics?.metrics?.ratingCount,
@@ -105,7 +123,32 @@ export async function getMcpServerByUuid(
   if (!server) return undefined;
   
   // Decrypt sensitive fields
-  return decryptServerData(server, profileUuid);
+  const decryptedServer = decryptServerData(server, profileUuid);
+  
+  // Extract streamable HTTP options from env if present
+  if (server.type === McpServerType.STREAMABLE_HTTP && decryptedServer.env) {
+    const { __transport, __streamableHTTPOptions, ...cleanEnv } = decryptedServer.env;
+    
+    const processedServer: any = {
+      ...decryptedServer,
+      env: cleanEnv
+    };
+    
+    if (__transport) {
+      processedServer.transport = __transport;
+    }
+    if (__streamableHTTPOptions) {
+      try {
+        processedServer.streamableHTTPOptions = JSON.parse(__streamableHTTPOptions);
+      } catch (e) {
+        console.error('Failed to parse streamableHTTPOptions:', e);
+      }
+    }
+    
+    return processedServer;
+  }
+  
+  return decryptedServer;
 }
 
 export async function deleteMcpServerByUuid(
@@ -150,6 +193,11 @@ export async function updateMcpServer(
     url?: string | null; // Allow null
     type?: McpServerType;
     notes?: string | null;
+    transport?: 'streamable_http' | 'sse' | 'stdio';
+    streamableHTTPOptions?: {
+      sessionId?: string;
+      headers?: Record<string, string>;
+    };
   }
 ): Promise<void> { // Changed return type to void as it doesn't explicitly return the server
   // Construct the update object carefully to handle undefined vs null
@@ -165,7 +213,16 @@ export async function updateMcpServer(
   const sensitiveData: any = {};
   if (data.command !== undefined) sensitiveData.command = data.command;
   if (data.args !== undefined) sensitiveData.args = data.args;
-  if (data.env !== undefined) sensitiveData.env = data.env;
+  if (data.env !== undefined || data.streamableHTTPOptions !== undefined) {
+    // Merge env with streamable HTTP options if present
+    sensitiveData.env = {
+      ...(data.env || {}),
+      ...(data.type === McpServerType.STREAMABLE_HTTP && data.streamableHTTPOptions ? {
+        __transport: data.transport || 'streamable_http',
+        __streamableHTTPOptions: JSON.stringify(data.streamableHTTPOptions),
+      } : {}),
+    };
+  }
   if (data.url !== undefined) sensitiveData.url = data.url;
   
   // If we have sensitive data to update, encrypt it
@@ -223,6 +280,8 @@ export async function createMcpServer({
   url,
   source,
   external_id,
+  transport,
+  streamableHTTPOptions,
 }: {
   name: string;
   profileUuid: string;
@@ -234,6 +293,11 @@ export async function createMcpServer({
   url?: string;
   source?: McpServerSource;
   external_id?: string;
+  transport?: 'streamable_http' | 'sse' | 'stdio';
+  streamableHTTPOptions?: {
+    sessionId?: string;
+    headers?: Record<string, string>;
+  };
 }) { // Removed explicit return type to match actual returns
   try {
     const serverType = type || McpServerType.STDIO;
@@ -243,12 +307,12 @@ export async function createMcpServer({
       return { success: false, error: 'Command is required for STDIO servers' };
     }
 
-    if (serverType === McpServerType.SSE && !url) {
-      return { success: false, error: 'URL is required for SSE servers' };
+    if ((serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) && !url) {
+      return { success: false, error: 'URL is required for SSE and Streamable HTTP servers' };
     }
 
     const urlIsValid = url ? /^https?:\/\/.+/.test(url) : false;
-    if (serverType === McpServerType.SSE && !urlIsValid) {
+    if ((serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) && !urlIsValid) {
       return { success: false, error: 'URL must be a valid HTTP/HTTPS URL' };
     }
 
@@ -259,8 +323,15 @@ export async function createMcpServer({
       type: serverType,
       command: serverType === McpServerType.STDIO ? command : null,
       args: args || [],
-      env: env || {},
-      url: serverType === McpServerType.SSE ? url : null,
+      env: {
+        ...(env || {}),
+        // Store streamable HTTP options in env for now
+        ...(serverType === McpServerType.STREAMABLE_HTTP && streamableHTTPOptions ? {
+          __transport: transport || 'streamable_http',
+          __streamableHTTPOptions: JSON.stringify(streamableHTTPOptions),
+        } : {}),
+      },
+      url: (serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) ? url : null,
       profile_uuid: profileUuid,
       source,
       external_id,

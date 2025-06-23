@@ -10,14 +10,14 @@ import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
 import { eq } from 'drizzle-orm';
 
-import { logAuditEvent } from '@/app/actions/audit-logger'; // Correct path alias
-import { ensureLogDirectories } from '@/app/actions/log-retention'; // Correct path alias
-import { createEnhancedMcpLogger } from '@/app/actions/mcp-server-logger'; // Correct path alias
-import { getMcpServers } from '@/app/actions/mcp-servers'; // Correct path alias
-import { getPlaygroundSettings } from '@/app/actions/playground-settings'; // Add this import
 import { db } from '@/db';
-import { profilesTable } from '@/db/schema';
+import { McpServerType, profilesTable } from '@/db/schema';
 
+import { logAuditEvent } from './audit-logger'; // Correct path alias
+import { ensureLogDirectories } from './log-retention'; // Correct path alias
+import { createEnhancedMcpLogger } from './mcp-server-logger'; // Correct path alias
+import { getMcpServers } from './mcp-servers'; // Correct path alias
+import { getPlaygroundSettings } from './playground-settings'; // Add this import
 import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization'; // Import the new function
 
 // Cache for Anthropic models with last fetch time
@@ -598,7 +598,7 @@ export async function getOrCreatePlaygroundSession(
 
     // Read workspace and local bin paths from env or use defaults
     const mcpWorkspacePath = process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace';
-    const localBinPath = process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin'; // Needed for uvx path
+    const _localBinPath = process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin'; // Needed for uvx path
 
     // Format servers for conversion and apply sandboxing for STDIO using firejail
     const mcpServersConfig: Record<string, any> = {};
@@ -629,10 +629,12 @@ export async function getOrCreatePlaygroundSession(
         };
         
         // Add transport and streamableHTTPOptions for Streamable HTTP servers
-        if (server.type === McpServerType.STREAMABLE_HTTP || server.transport === 'streamable_http') {
+        if (server.type === McpServerType.STREAMABLE_HTTP) {
           mcpServersConfig[server.name].transport = 'streamable_http';
-          if (server.streamableHTTPOptions) {
-            mcpServersConfig[server.name].streamableHTTPOptions = server.streamableHTTPOptions;
+          // Cast server to any to access dynamically added fields
+          const serverWithOptions = server as any;
+          if (serverWithOptions.streamableHTTPOptions) {
+            mcpServersConfig[server.name].streamableHTTPOptions = serverWithOptions.streamableHTTPOptions;
           }
         }
       }

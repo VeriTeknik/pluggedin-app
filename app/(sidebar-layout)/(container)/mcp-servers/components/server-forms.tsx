@@ -269,8 +269,35 @@ export function StreamableHttpServerForm({ onSubmit, onCancel, isSubmitting }: S
   });
 
   const handleSubmit = async (data: any) => {
+    // Parse the URL to check for API key in query params
+    let url = data.url;
+    const extractedHeaders: Record<string, string> = {};
+    
+    try {
+      const urlObj = new URL(url);
+      const apiKey = urlObj.searchParams.get('api_key') || urlObj.searchParams.get('apiKey');
+      
+      if (apiKey) {
+        // Smithery requires the API key to remain in the URL, not in headers
+        if (url.includes('server.smithery.ai')) {
+          // Keep the API key in the URL for Smithery
+          console.log('Smithery server detected, keeping API key in URL');
+        } else {
+          // For other services, move API key to Authorization header
+          extractedHeaders['Authorization'] = `Bearer ${apiKey}`;
+          
+          // Remove the API key from the URL for security
+          urlObj.searchParams.delete('api_key');
+          urlObj.searchParams.delete('apiKey');
+          url = urlObj.toString();
+        }
+      }
+    } catch (_e) {
+      // Invalid URL, will be caught by validation
+    }
+    
     // Parse headers from string format
-    const headers = Object.fromEntries(
+    const userHeaders = Object.fromEntries(
       data.headers
         .split('\n')
         .filter((line: string) => line.includes(':'))
@@ -279,9 +306,13 @@ export function StreamableHttpServerForm({ onSubmit, onCancel, isSubmitting }: S
           return [key.trim(), values.join(':').trim()];
         })
     );
+    
+    // Merge extracted headers with user-provided headers (user headers take precedence)
+    const headers = { ...extractedHeaders, ...userHeaders };
 
     const processedData = {
       ...data,
+      url, // Use the cleaned URL
       type: McpServerType.STREAMABLE_HTTP,
       args: [],
       env: {},
@@ -301,10 +332,17 @@ export function StreamableHttpServerForm({ onSubmit, onCancel, isSubmitting }: S
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-        <div className="bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 p-3 rounded-md">
-          <p className="text-sm text-amber-800 dark:text-amber-200">
-            <strong>Note:</strong> Streamable HTTP support is experimental due to module resolution issues in Next.js. 
-            The server will fall back to SSE transport until this is resolved.
+        <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 p-3 rounded-md">
+          <p className="text-sm text-blue-800 dark:text-blue-200 mb-2">
+            <strong>Examples:</strong>
+          </p>
+          <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1 list-disc list-inside">
+            <li>Smithery: <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">https://server.smithery.ai/@owner/server-name/mcp?api_key=YOUR_KEY</code></li>
+            <li>GitHub Copilot: <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">https://api.githubcopilot.com/mcp/</code></li>
+            <li>Local: <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">http://localhost:8080/mcp</code></li>
+          </ul>
+          <p className="text-xs text-blue-700 dark:text-blue-300 mt-2">
+            <strong>Note:</strong> For most services, API keys in URLs will be automatically extracted and moved to headers for security. Smithery servers require the API key to remain in the URL.
           </p>
         </div>
         <FormField
@@ -345,7 +383,7 @@ export function StreamableHttpServerForm({ onSubmit, onCancel, isSubmitting }: S
               <FormControl>
                 <Input
                   {...field}
-                  placeholder={t('mcpServers.form.serverUrlPlaceholder')}
+                  placeholder="https://server.smithery.ai/@owner/server/mcp?api_key=..."
                   required
                   pattern="^(http|https)://[^\s/$.?#].[^\s]*$"
                 />
@@ -363,12 +401,14 @@ export function StreamableHttpServerForm({ onSubmit, onCancel, isSubmitting }: S
               <FormControl>
                 <Textarea
                   {...field}
-                  placeholder={t('mcpServers.form.headersPlaceholder')}
+                  placeholder="Authorization: Bearer YOUR_TOKEN
+X-API-Key: your-api-key
+Content-Type: application/json"
                   className="font-mono text-sm"
                 />
               </FormControl>
               <p className="text-sm text-muted-foreground">
-                {t('mcpServers.form.headersHelp')}
+                One header per line in format: Header-Name: Header-Value
               </p>
               <FormMessage />
             </FormItem>

@@ -174,6 +174,8 @@ export default function MCPServersPage() {
           const config = serverConfig as any;
           const serverType = config.type?.toLowerCase() === 'sse'
             ? McpServerType.SSE
+            : config.type?.toLowerCase() === 'streamable_http'
+            ? McpServerType.STREAMABLE_HTTP
             : McpServerType.STDIO;
 
           // Create server config based on type
@@ -184,6 +186,51 @@ export default function MCPServersPage() {
               url: config.url,
               type: serverType,
               status: McpServerStatus.ACTIVE,
+            };
+          } else if (serverType === McpServerType.STREAMABLE_HTTP) {
+            // Extract API key from URL if present
+            let url = config.url;
+            let extractedHeaders = {};
+            
+            try {
+              const urlObj = new URL(url);
+              const apiKey = urlObj.searchParams.get('api_key') || urlObj.searchParams.get('apiKey');
+              
+              if (apiKey) {
+                // Smithery requires the API key to remain in the URL
+                if (url.includes('server.smithery.ai')) {
+                  // Keep the API key in the URL for Smithery
+                  console.log('Smithery server detected during import, keeping API key in URL');
+                } else {
+                  // For other services, extract and remove API key from URL
+                  extractedHeaders = { 'Authorization': `Bearer ${apiKey}` };
+                  urlObj.searchParams.delete('api_key');
+                  urlObj.searchParams.delete('apiKey');
+                  url = urlObj.toString();
+                }
+              }
+            } catch (_e) {
+              // Invalid URL, use as is
+            }
+            
+            // Merge extracted headers with existing ones
+            const streamableOptions = config.streamableHTTPOptions || {};
+            const headers = {
+              ...extractedHeaders,
+              ...(streamableOptions.headers || {})
+            };
+            
+            acc[name] = {
+              name,
+              description: config.description || '',
+              url,
+              type: serverType,
+              status: McpServerStatus.ACTIVE,
+              transport: config.transport || 'streamable_http',
+              streamableHTTPOptions: {
+                ...streamableOptions,
+                headers: Object.keys(headers).length > 0 ? headers : undefined,
+              },
             };
           } else {
             // STDIO type
