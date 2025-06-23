@@ -245,7 +245,7 @@ export default function NotificationsPage() {
                   </p>
                 </div>
               ) : (
-                <ScrollArea className="h-[calc(100vh-20rem)]">
+                <ScrollArea className="h-[var(--notification-content)]">
                   <div className="space-y-2">
                     {filteredNotifications.map((notification) => (
                       <Card
