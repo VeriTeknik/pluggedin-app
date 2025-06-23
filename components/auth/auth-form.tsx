@@ -53,8 +53,13 @@ type RegisterFormValues = z.infer<ReturnType<typeof createRegisterSchema>>;
 type ForgotPasswordFormValues = z.infer<ReturnType<typeof createForgotPasswordSchema>>;
 type ResetPasswordFormValues = z.infer<ReturnType<typeof createResetPasswordSchema>>;
 
-// Union type of all possible form values
-type FormValues = LoginFormValues | RegisterFormValues | ForgotPasswordFormValues | ResetPasswordFormValues;
+// Create a base type that includes all possible fields
+type FormValues = {
+  email?: string;
+  password?: string;
+  name?: string;
+  password_confirm?: string;
+};
 
 interface AuthFormProps {
   type: 'login' | 'register' | 'forgot-password' | 'reset-password';
@@ -89,6 +94,7 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
 
   // Initialize form with the appropriate schema and type
   const form = useForm<FormValues>({
+    // @ts-expect-error - zodResolver v5 has type issues with union schemas
     resolver: zodResolver(schema),
     defaultValues: defaultValues || {
       email: '',
