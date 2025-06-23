@@ -41,7 +41,7 @@ export function LegalDoc({ title, description, lastUpdated, children }: LegalDoc
       </div>
 
       <Card className="overflow-hidden">
-        <ScrollArea className="h-[calc(100vh-260px)] w-full p-6">
+        <ScrollArea className="h-[var(--legal-content)] w-full p-6">
           <div className="prose prose-neutral dark:prose-invert max-w-none">
             {children}
           </div>

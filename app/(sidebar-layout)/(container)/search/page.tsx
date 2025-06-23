@@ -206,7 +206,7 @@ function SearchContent() {
   };
 
   return (
-    <div className="container-fluid h-[calc(100vh-2rem)] flex flex-col bg-background py-4 space-y-4">
+    <div className="container-fluid h-[var(--search-content)] flex flex-col bg-background py-4 space-y-4">
 
     <div className="flex flex-col space-y-1.5">
         <h1 className="text-2xl font-bold tracking-tight">{t('search.title')}</h1>

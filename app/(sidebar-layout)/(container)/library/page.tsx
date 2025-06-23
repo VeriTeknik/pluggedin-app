@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 // Internal components
 import { Button } from '@/components/ui/button';
+import { PageContainer } from '@/components/ui/page-container';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 // Internal hooks and types
 import { useLibrary } from '@/hooks/use-library';
@@ -230,75 +231,77 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between flex-shrink-0">
-        <div>
-          <h1 className="text-3xl font-bold">{t('page.title')}</h1>
-          <p className="text-muted-foreground">
-            {t('page.description')}
-          </p>
+    <PageContainer>
+      <div className="flex-1 flex flex-col min-h-0">
+        {/* Header */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between flex-shrink-0">
+          <div>
+            <h1 className="text-3xl font-bold">{t('page.title')}</h1>
+            <p className="text-muted-foreground">
+              {t('page.description')}
+            </p>
+          </div>
+          <UploadDialog
+            open={uploadDialogOpen}
+            onOpenChange={setUploadDialogOpen}
+            form={uploadForm}
+            setForm={setUploadForm}
+            isUploading={isUploading}
+            onUpload={handleUpload}
+            formatFileSize={formatFileSize}
+            storageUsage={storageUsage}
+          />
         </div>
-        <UploadDialog
-          open={uploadDialogOpen}
-          onOpenChange={setUploadDialogOpen}
-          form={uploadForm}
-          setForm={setUploadForm}
-          isUploading={isUploading}
-          onUpload={handleUpload}
+
+        {/* Upload Progress */}
+        <UploadProgress />
+
+        {/* Stats */}
+        <DocsStats
+          totalDocs={docs.length}
+          totalSize={totalSize}
+          recentUploads={recentUploads}
           formatFileSize={formatFileSize}
-          storageUsage={storageUsage}
+        />
+
+        {/* Controls */}
+        <div className='py-4'>
+          <DocsControls
+            searchTerm={globalFilter}
+            onSearchChange={setGlobalFilter}
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+          />
+        </div>
+
+        {/* Content */}
+        <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'grid' | 'table')} className="flex-1">
+          <TabsContent value="grid" className="flex-1 overflow-auto">
+            <DocsGrid
+              docs={table.getFilteredRowModel().rows.map(row => row.original)}
+              onDownload={handleDownload}
+              onDelete={handleDelete}
+              formatFileSize={formatFileSize}
+              getMimeTypeIcon={getMimeTypeIcon}
+            />
+          </TabsContent>
+
+          <TabsContent value="table" className="flex-1 overflow-auto">
+            <DocsTable
+              table={table}
+            />
+          </TabsContent>
+        </Tabs>
+
+        {/* Delete Dialog */}
+        <DeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          doc={selectedDoc}
+          onConfirm={confirmDelete}
+          isDeleting={isDeleting}
         />
       </div>
-
-      {/* Upload Progress */}
-      <UploadProgress />
-
-      {/* Stats */}
-      <DocsStats
-        totalDocs={docs.length}
-        totalSize={totalSize}
-        recentUploads={recentUploads}
-        formatFileSize={formatFileSize}
-      />
-
-      {/* Controls */}
-     <div className='py-4'>
-      <DocsControls
-          searchTerm={globalFilter}
-          onSearchChange={setGlobalFilter}
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
-     </div>
-
-      {/* Content */}
-      <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'grid' | 'table')} className="flex-1 flex flex-col min-h-0">
-        <TabsContent value="grid" className="flex-1 overflow-auto">
-          <DocsGrid
-            docs={table.getFilteredRowModel().rows.map(row => row.original)}
-            onDownload={handleDownload}
-            onDelete={handleDelete}
-            formatFileSize={formatFileSize}
-            getMimeTypeIcon={getMimeTypeIcon}
-          />
-        </TabsContent>
-
-        <TabsContent value="table" className="flex-1 overflow-auto">
-          <DocsTable
-            table={table}
-          />
-        </TabsContent>
-      </Tabs>
-
-      {/* Delete Dialog */}
-      <DeleteDialog
-        open={deleteDialogOpen}
-        onOpenChange={setDeleteDialogOpen}
-        doc={selectedDoc}
-        onConfirm={confirmDelete}
-        isDeleting={isDeleting}
-      />
-    </div>
+    </PageContainer>
   );
 } 

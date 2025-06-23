@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
+import { PageContainer } from '@/components/ui/page-container';
 import { McpServer } from '@/types/mcp-server';
 
 import { ChatHeader } from './components/chat-header';
@@ -102,132 +103,136 @@ export default function McpPlaygroundPage() {
   const activeServerCount = mcpServers?.filter((s: McpServer) => s.status === 'ACTIVE').length || 0;
 
   return (
-    <div className="flex-1 flex flex-col min-h-0">
-      <div className="flex-1 min-h-0 flex rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-        {/* Mobile Overlay */}
-        {isMobile && !sidebarCollapsed && (
-          <div 
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-            onClick={() => setSidebarCollapsed(true)}
-          />
-        )}
-
-        {/* Sidebar */}
-        <aside className={`
-          ${isMobile ? 'fixed inset-y-0 left-0 z-50' : 'relative'}
-          ${sidebarCollapsed ? (isMobile ? '-translate-x-full' : 'w-16') : 'w-[480px]'}
-          transition-all duration-300 ease-in-out
-          bg-card flex flex-col flex-shrink-0
-          border-r border-border
-        `}>
-          {/* Sidebar Header */}
-          <div className="bg-background/95 backdrop-blur-sm border-b border-border p-4 flex items-center justify-between flex-shrink-0">
-            {!sidebarCollapsed && (
-              <div className="flex flex-col">
-                <h2 className="text-sm font-semibold">{t('playground.config.title')}</h2>
-                <p className="text-xs text-muted-foreground">{t('playground.config.subtitle')}</p>
-              </div>
+    <div className="flex h-full">
+      <PageContainer>
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 min-h-0 flex rounded-xl border border-border bg-card shadow-sm overflow-hidden">
+            {/* Mobile Overlay */}
+            {isMobile && !sidebarCollapsed && (
+              <div 
+                className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+                onClick={() => setSidebarCollapsed(true)}
+              />
             )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleSidebar}
-              className={`${sidebarCollapsed ? 'w-full justify-center' : 'ml-auto'} h-8 w-8 p-0 hover:bg-muted`}
-            >
-              {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
-            </Button>
-          </div>
 
-          {/* Sidebar Content */}
-          <div className={`
-            flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-border
-            ${sidebarCollapsed ? 'hidden' : 'block'}
-          `}>
-            <PlaygroundConfig
-              logsEndRef={logsEndRef}
-              isLoading={isLoading}
-              mcpServers={mcpServers}
-              clearLogs={clearLogs}
-              saveSettings={saveSettings}
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              isSessionActive={isSessionActive}
-              isProcessing={isProcessing}
-              isUpdatingServer={isUpdatingServer}
-              sessionError={sessionError}
-              setSessionError={setSessionError}
-              toggleServerStatus={toggleServerStatus}
-              llmConfig={llmConfig}
-              setLlmConfig={setLlmConfig}
-              switchModel={switchModel}
-              logLevel={logLevel}
-              setLogLevel={setLogLevel}
-              clientLogs={clientLogs}
-              serverLogs={serverLogs}
-            />
-          </div>
-
-          {/* Collapsed Sidebar Actions */}
-          {sidebarCollapsed && !isMobile && (
-            <div className="p-2 space-y-2 flex-shrink-0 border-t border-border bg-card/50">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={startSession}
-                disabled={isProcessing || isSessionActive || activeServerCount === 0}
-                className="w-full h-8 p-0 rounded-md hover:bg-muted"
-                title={t('playground.actions.start')}
-              >
-                <div className="w-2 h-2 rounded-full bg-green-500" />
-              </Button>
-              {isSessionActive && (
+            {/* Sidebar */}
+            <aside className={`
+              ${isMobile ? 'fixed inset-y-0 left-0 z-50' : 'relative'}
+              ${sidebarCollapsed ? (isMobile ? '-translate-x-full' : 'w-16') : 'w-[480px]'}
+              transition-all duration-300 ease-in-out
+              bg-card flex flex-col flex-shrink-0
+              border-r border-border
+            `}>
+              {/* Sidebar Header */}
+              <div className="bg-background/95 backdrop-blur-sm border-b border-border p-4 flex items-center justify-between flex-shrink-0">
+                {!sidebarCollapsed && (
+                  <div className="flex flex-col">
+                    <h2 className="text-sm font-semibold">{t('playground.config.title')}</h2>
+                    <p className="text-xs text-muted-foreground">{t('playground.config.subtitle')}</p>
+                  </div>
+                )}
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={endSession}
-                  className="w-full h-8 p-0 rounded-md text-red-500 hover:bg-muted hover:text-red-600"
-                  title={t('playground.actions.end')}
+                  onClick={toggleSidebar}
+                  className={`${sidebarCollapsed ? 'w-full justify-center' : 'ml-auto'} h-8 w-8 p-0 hover:bg-muted`}
                 >
-                  <div className="w-2 h-2 rounded-full bg-red-500" />
+                  {sidebarCollapsed ? <Menu className="h-4 w-4" /> : <X className="h-4 w-4" />}
                 </Button>
+              </div>
+
+              {/* Sidebar Content */}
+              <div className={`
+                flex-1 min-h-0 overflow-y-auto scrollbar-thin scrollbar-thumb-border
+                ${sidebarCollapsed ? 'hidden' : 'block'}
+              `}>
+                <PlaygroundConfig
+                  logsEndRef={logsEndRef}
+                  isLoading={isLoading}
+                  mcpServers={mcpServers}
+                  clearLogs={clearLogs}
+                  saveSettings={saveSettings}
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  isSessionActive={isSessionActive}
+                  isProcessing={isProcessing}
+                  isUpdatingServer={isUpdatingServer}
+                  sessionError={sessionError}
+                  setSessionError={setSessionError}
+                  toggleServerStatus={toggleServerStatus}
+                  llmConfig={llmConfig}
+                  setLlmConfig={setLlmConfig}
+                  switchModel={switchModel}
+                  logLevel={logLevel}
+                  setLogLevel={setLogLevel}
+                  clientLogs={clientLogs}
+                  serverLogs={serverLogs}
+                />
+              </div>
+
+              {/* Collapsed Sidebar Actions */}
+              {sidebarCollapsed && !isMobile && (
+                <div className="p-2 space-y-2 flex-shrink-0 border-t border-border bg-card/50">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={startSession}
+                    disabled={isProcessing || isSessionActive || activeServerCount === 0}
+                    className="w-full h-8 p-0 rounded-md hover:bg-muted"
+                    title={t('playground.actions.start')}
+                  >
+                    <div className="w-2 h-2 rounded-full bg-green-500" />
+                  </Button>
+                  {isSessionActive && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={endSession}
+                      className="w-full h-8 p-0 rounded-md text-red-500 hover:bg-muted hover:text-red-600"
+                      title={t('playground.actions.end')}
+                    >
+                      <div className="w-2 h-2 rounded-full bg-red-500" />
+                    </Button>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-        </aside>
+            </aside>
 
-        {/* Main Chat Area */}
-        <main className="flex-1 flex flex-col min-w-0 bg-card">
-          {/* Chat Header */}
-          <div>
-            <ChatHeader
-              currentModel={llmConfig}
-              serverCount={activeServerCount}
-              isSessionActive={isSessionActive}
-              onModelSwitch={handleModelSwitch}
-              onOpenSettings={() => setSidebarCollapsed(false)}
-              onEndSession={endSession}
-              isProcessing={isProcessing}
-            />
-          </div>
+            {/* Main Chat Area */}
+            <main className="flex-1 flex flex-col min-w-0 bg-card">
+              {/* Chat Header */}
+              <div>
+                <ChatHeader
+                  currentModel={llmConfig}
+                  serverCount={activeServerCount}
+                  isSessionActive={isSessionActive}
+                  onModelSwitch={handleModelSwitch}
+                  onOpenSettings={() => setSidebarCollapsed(false)}
+                  onEndSession={endSession}
+                  isProcessing={isProcessing}
+                />
+              </div>
 
-          {/* Chat Interface */}
-          <div className="flex-1 min-h-0 relative">
-            <PlaygroundChat
-              messages={messages}
-              inputValue={inputValue}
-              setInputValue={setInputValue}
-              isSessionActive={isSessionActive}
-              isProcessing={isProcessing}
-              isThinking={isThinking}
-              sendMessage={sendMessage}
-              startSession={startSession}
-              messagesEndRef={messagesEndRef}
-              mcpServers={mcpServers}
-              llmConfig={llmConfig}
-            />
+              {/* Chat Interface */}
+              <div className="flex-1 min-h-0 relative">
+                <PlaygroundChat
+                  messages={messages}
+                  inputValue={inputValue}
+                  setInputValue={setInputValue}
+                  isSessionActive={isSessionActive}
+                  isProcessing={isProcessing}
+                  isThinking={isThinking}
+                  sendMessage={sendMessage}
+                  startSession={startSession}
+                  messagesEndRef={messagesEndRef}
+                  mcpServers={mcpServers}
+                  llmConfig={llmConfig}
+                />
+              </div>
+            </main>
           </div>
-        </main>
-      </div>
+        </div>
+      </PageContainer>
     </div>
   );
 }

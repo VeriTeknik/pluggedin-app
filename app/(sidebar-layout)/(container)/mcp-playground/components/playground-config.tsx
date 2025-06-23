@@ -170,7 +170,7 @@ export function PlaygroundConfig({
   // Log rendering is handled inline within the 'logs' tab content below.
 
   return (
-    <div className='h-[calc(100vh-10rem)] flex flex-col bg-background py-2'>
+    <div className='h-[var(--playground-content)] flex flex-col bg-background py-2'>
       <div className='pb-3 flex-shrink-0 px-4'>
         <h2 className="text-lg font-semibold">{t('playground.config.title')}</h2>
         <p className="text-sm text-muted-foreground">
@@ -717,7 +717,7 @@ export function PlaygroundConfig({
                 </div>
               </div>
 
-              <div className="h-[calc(100vh-25rem)] rounded-md border">
+              <div className="h-[var(--playground-content)] rounded-md border">
                 {serverLogs.length === 0 && clientLogs.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     {t('playground.config.logs.empty')}
