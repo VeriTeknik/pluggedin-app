@@ -18,14 +18,14 @@
       "claudeDesktop": {
         "title": "Claude Desktop Setup",
         "step1": {
-          "title": "Step 1: Open Claude Desktop Settings",
-          "description": "Click on the settings gear icon in Claude Desktop to access the configuration menu.",
-          "imagePlaceholder": "[Screenshot: Claude Desktop settings button]"
+          "imageAlt": "Claude Desktop settings menu location",
+          "title": "Open Settings",
+          "description": "Open Claude Desktop and click on the settings menu in the top right corner."
         },
         "step2": {
-          "title": "Step 2: Locate Configuration File",
-          "description": "Navigate to the MCP configuration section. The configuration file is located at:",
-          "imagePlaceholder": "[Screenshot: Claude Desktop MCP settings page]"
+          "imageAlt": "Configuration file location in file explorer",
+          "title": "Locate Configuration",
+          "description": "Navigate to the configuration file location based on your operating system."
         },
         "step3": {
           "title": "Step 3: Add Plugged.in MCP Configuration",
@@ -33,14 +33,14 @@
           "imagePlaceholder": "[Screenshot: Configuration file with Plugged.in MCP settings]"
         },
         "step4": {
-          "title": "Step 4: Save and Restart",
-          "description": "Save the configuration file and restart Claude Desktop for changes to take effect.",
-          "imagePlaceholder": "[Screenshot: Save confirmation dialog]"
+          "imageAlt": "Restarting Claude Desktop application",
+          "title": "Restart Application",
+          "description": "Restart Claude Desktop to apply the changes."
         },
         "step5": {
-          "title": "Step 5: Verify Connection",
-          "description": "Check that Plugged.in MCP is successfully connected by looking for the MCP indicator in Claude Desktop.",
-          "imagePlaceholder": "[Screenshot: Claude Desktop with MCP connected indicator]"
+          "imageAlt": "Verifying successful MCP server setup",
+          "title": "Verify Setup",
+          "description": "Check that the MCP server is properly configured and running."
         }
       },
       "claudeCode": {

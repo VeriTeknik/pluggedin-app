@@ -1,6 +1,7 @@
 'use client';
 
 import { Copy } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Highlight, themes } from 'prism-react-renderer';
 import { useTranslation } from 'react-i18next';
@@ -60,9 +61,13 @@ export default function SetupGuidePage() {
               <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeDesktop.step1.title')}</h4>
               <p className='mb-4'>{t('setupGuide.installation.claudeDesktop.step1.description')}</p>
               <div className='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4'>
-                <div className='w-full h-48 bg-gray-200 dark:bg-gray-700 rounded border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400'>
-                  {t('setupGuide.installation.claudeDesktop.step1.imagePlaceholder')}
-                </div>
+                <Image
+                  src="/images/setup-guide/claude-desktop/step1-settings-menu.png"
+                  alt={t('setupGuide.installation.claudeDesktop.step1.imageAlt')}
+                  width={800}
+                  height={400}
+                  className="rounded-lg"
+                />
               </div>
             </div>
 
@@ -80,9 +85,13 @@ export default function SetupGuidePage() {
                 </li>
               </ul>
               <div className='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4'>
-                <div className='w-full h-48 bg-gray-200 dark:bg-gray-700 rounded border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400'>
-                  {t('setupGuide.installation.claudeDesktop.step2.imagePlaceholder')}
-                </div>
+                <Image
+                  src="/images/setup-guide/claude-desktop/step2-config-location.png"
+                  alt={t('setupGuide.installation.claudeDesktop.step2.imageAlt')}
+                  width={800}
+                  height={400}
+                  className="rounded-lg"
+                />
               </div>
             </div>
 
@@ -150,9 +159,13 @@ export default function SetupGuidePage() {
               <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeDesktop.step4.title')}</h4>
               <p className='mb-4'>{t('setupGuide.installation.claudeDesktop.step4.description')}</p>
               <div className='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4'>
-                <div className='w-full h-48 bg-gray-200 dark:bg-gray-700 rounded border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400'>
-                  {t('setupGuide.installation.claudeDesktop.step4.imagePlaceholder')}
-                </div>
+                <Image
+                  src="/images/setup-guide/claude-desktop/step4-restart.png"
+                  alt={t('setupGuide.installation.claudeDesktop.step4.imageAlt')}
+                  width={800}
+                  height={400}
+                  className="rounded-lg"
+                />
               </div>
             </div>
 
@@ -160,9 +173,13 @@ export default function SetupGuidePage() {
               <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeDesktop.step5.title')}</h4>
               <p className='mb-4'>{t('setupGuide.installation.claudeDesktop.step5.description')}</p>
               <div className='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4'>
-                <div className='w-full h-48 bg-gray-200 dark:bg-gray-700 rounded border-2 border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center text-gray-500 dark:text-gray-400'>
-                  {t('setupGuide.installation.claudeDesktop.step5.imagePlaceholder')}
-                </div>
+                <Image
+                  src="/images/setup-guide/claude-desktop/step5-verification.png"
+                  alt={t('setupGuide.installation.claudeDesktop.step5.imageAlt')}
+                  width={800}
+                  height={400}
+                  className="rounded-lg"
+                />
               </div>
             </div>
           </div>
