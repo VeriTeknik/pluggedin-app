@@ -1,15 +1,17 @@
 'use client';
 
+import { PageContainer } from '@/components/ui/page-container';
+
 export default function ContainerLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex-1 flex flex-col min-h-0 p-4">
-      <div className="flex-1 flex flex-col min-h-0 bg-background space-y-4">
+    <PageContainer className="p-4">
+      <PageContainer className="bg-background space-y-4">
         {children}
-      </div>
-    </div>
+      </PageContainer>
+    </PageContainer>
   );
 }
