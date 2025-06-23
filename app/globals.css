@@ -4,6 +4,13 @@
 
 body {
   font-family: 'Comfortaa', Arial, Helvetica, sans-serif;
+  min-height: 100vh;
+  /* Prevent content shift on mobile when address bar shows/hides */
+  min-height: -webkit-fill-available;
+}
+
+html {
+  height: -webkit-fill-available;
 }
 
 @layer base {
@@ -57,6 +64,15 @@ body {
     
     --legal-offset: 65px;
     --legal-content: calc(100vh - var(--legal-offset));
+
+    @media (max-width: 640px) {
+      --header-height: 3.5rem;
+      --footer-height: 3.5rem;
+      --playground-header: 2rem;
+      --playground-footer: 2rem;
+      --notification-offset: 4rem;
+      --legal-offset: 50px;
+    }
   }
   .dark {
     --background: 240 10% 3.9%;

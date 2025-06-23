@@ -8,10 +8,8 @@ export default function ContainerLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <PageContainer className="p-4">
-      <PageContainer className="bg-background space-y-4">
-        {children}
-      </PageContainer>
+    <PageContainer className="p-4 bg-background space-y-4">
+      {children}
     </PageContainer>
   );
 }
