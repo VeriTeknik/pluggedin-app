@@ -19,7 +19,8 @@
       "unread": "Okunmamış",
       "alerts": "Uyarılar",
       "info": "Bilgiler",
-      "success": "Başarılar"
+      "success": "Başarılar",
+      "notes": "Notlar"
     },
     "empty": {
       "title": "Bildirim Bulunmuyor",
@@ -30,7 +31,8 @@
       "deleteSuccess": "Bildirim silindi",
       "deleteError": "Bildirim silinemedi",
       "deleteAllSuccess": "Tüm bildirimler silindi",
-      "deleteAllError": "Tüm bildirimler silinemedi"
+      "deleteAllError": "Tüm bildirimler silinemedi",
+      "toggleCompleteError": "Not durumu güncellenemedi"
     }
   }
 }

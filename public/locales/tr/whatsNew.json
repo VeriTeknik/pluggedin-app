@@ -1,0 +1,220 @@
+{
+  "title": "Yenilikler",
+  "description": "Plugged.in'deki en son özellikleri ve güncellemeleri keşfedin. Pratik rehberlerle yeni yetenekleri nasıl kullanacağınızı öğrenin.",
+  "searchPlaceholder": "Makale ara...",
+  "readTime": "okuma",
+  "new": "YENİ",
+  "backToArticles": "Yeniliklere Dön",
+  "categories": {
+    "all": "Tümü",
+    "features": "Özellikler", 
+    "security": "Güvenlik",
+    "integrations": "Entegrasyonlar",
+    "feature": "Özellik",
+    "performance": "Performans",
+    "social": "Sosyal"
+  },
+  "articles": {
+    "send-notifications-from-ai": {
+      "title": "Herhangi Bir AI Modelinden Bildirim Gönderin",
+      "description": "AI iş akışlarınızdan bildirimler ve e-postalar aracılığıyla gerçek zamanlı uyarılar alın",
+      "content": {
+        "intro": "Artık herhangi bir AI modeli veya MCP aracından doğrudan bildirim gönderebilirsiniz. Uzun süren görevler, hata izleme veya özel uyarılar için bildirim sistemi sizi gerçek zamanlı olarak bilgilendirir.",
+        "howToTitle": "Bildirim Nasıl Gönderilir",
+        "emailSetupTitle": "E-posta Bildirimi Kurulumu",
+        "emailStep1": "Ayarlara gidin ve e-posta bildirimlerini etkinleştirin",
+        "emailStep2": "Bildirim tercihlerinizi yapılandırın",
+        "emailStep3": "Örnek bir bildirimle test edin",
+        "useCasesTitle": "Kullanım Senaryoları",
+        "useCase1": "Uzun süren görev tamamlama uyarıları",
+        "useCase2": "AI ajanlarından hata bildirimleri",
+        "useCase3": "AI analizine dayalı özel uyarılar"
+      }
+    },
+    "document-context-rag": {
+      "title": "Belge Bağlamı ile AI Uygulamaları Oluşturun",
+      "description": "Belgeleri yükleyin ve RAG teknolojisini kullanarak AI ile sorgulayın",
+      "content": {
+        "intro": "Belgelerinizi AI erişilebilir bilgiye dönüştürün. PDF'leri, metin dosyalarını ve daha fazlasını yükleyerek AI ajanlarınızın sorgulayabileceği ve başvurabileceği aranabilir bir kütüphane oluşturun.",
+        "uploadTitle": "Belgeleri Yükleyin ve Yönetin",
+        "uploadDescription": "Dosyalarınızı sürükleyip bırakın veya yükleme düğmesini kullanın. Belgeler otomatik olarak işlenir ve hızlı erişim için indekslenir.",
+        "queryTitle": "Belgelerinizi Sorgulayın", 
+        "formatsTitle": "Desteklenen Formatlar"
+      }
+    },
+    "encryption-security": {
+      "title": "MCP Sunucularınız Artık Şifreli",
+      "description": "Kurumsal düzeyde şifreleme tüm hassas sunucu yapılandırmalarınızı korur",
+      "content": {
+        "intro": "Tüm hassas MCP sunucu verileri artık AES-256-GCM şifreleme kullanılarak otomatik olarak şifrelenir. API anahtarlarınız, ortam değişkenleriniz ve komutlarınız beklemede korunur.",
+        "howItWorksTitle": "Nasıl Çalışır",
+        "feature1": "Otomatik şifreleme - yapılandırma gerekmez",
+        "feature2": "Maksimum güvenlik için profil başına anahtarlar",
+        "feature3": "Şeffaf işlem - sorunsuz çalışır",
+        "sharingTitle": "Güvenli Paylaşım",
+        "sharingDescription": "Sunucuları paylaştığınızda, yalnızca temizlenmiş şablonlar açığa çıkar. Hassas veriler şifreli kalır ve size özel kalır."
+      }
+    },
+    "share-collections": {
+      "title": "MCP Sunucu Koleksiyonlarınızı Paylaşın",
+      "description": "Toplulukla özenle seçilmiş MCP sunucu koleksiyonları oluşturun ve paylaşın",
+      "content": {
+        "intro": "Koleksiyonlar, ilgili MCP sunucularını gruplamak ve başkalarıyla paylaşmak için mükemmel bir yoldur. İster bir geliştirme araç seti, ister bir veri bilimi iş akışı veya üretkenlik paketi oluşturun, koleksiyonlar tüm kurulumunuzu paylaşmanızı kolaylaştırır.",
+        "whatAreCollectionsTitle": "Koleksiyonlar Nedir?",
+        "whatAreCollectionsText": "Koleksiyonlar, birlikte iyi çalışan MCP sunucularının özenle seçilmiş gruplarıdır. Onları tarifler gibi düşünün - malzemeleri (sunucuları) toplar ve tam yemeği (koleksiyon) başkalarıyla paylaşırsınız.",
+        "createCollectionTitle": "Koleksiyon Oluşturma",
+        "createStep1": "MCP Sunucuları sayfanıza gidin",
+        "createStep2": "'Koleksiyon Oluştur'a tıklayın",
+        "createStep3": "Koleksiyonunuza isim verin ve açıklama ekleyin",
+        "createStep4": "Koleksiyona dahil edilecek sunucuları seçin",
+        "sharingTitle": "Paylaşım Seçenekleri",
+        "sharingFeature1": "Profilinizde görünen herkese açık koleksiyonlar",
+        "sharingFeature2": "Kişisel kullanım için özel koleksiyonlar",
+        "sharingFeature3": "Paylaşılan koleksiyonları güncellemek için sürüm kontrolü",
+        "examplesTitle": "Popüler Koleksiyon Fikirleri",
+        "example1": "Full-Stack Geliştirme Kiti - Veritabanı, API ve test sunucuları",
+        "example2": "AI Araştırma Paketi - LLM bağlayıcıları, veri araçları ve not defterleri",
+        "example3": "DevOps Araç Seti - CI/CD, izleme ve dağıtım sunucuları",
+        "example4": "İçerik Oluşturma Paketi - Yazma, medya ve yayınlama araçları"
+      }
+    },
+    "activity-tracking": {
+      "title": "Gerçek Zamanlı Aktivite Takibi",
+      "description": "Tüm MCP işlemlerini izleyin ve kullanım kalıpları hakkında bilgi edinin",
+      "content": {
+        "intro": "Gerçek zamanlı aktivite takibi ile MCP ekosistemine tam görünürlük kazanın. İşlemleri izleyin, kullanım kalıplarını takip edin ve gerçek verilere dayalı iş akışınızı optimize edin.",
+        "trackedOperationsTitle": "Neleri Takip Ediyoruz",
+        "operation1": "Araç yürütmeleri ve performans metrikleri",
+        "operation2": "Kaynak erişim kalıpları",
+        "operation3": "İstem kullanımı ve etkinliği",
+        "operation4": "Sunucu bağlantı sağlığı ve çalışma süresi",
+        "operation5": "Hata günlükleri ve hata ayıklama bilgileri",
+        "insightsTitle": "İşlem Yapılabilir İçgörüler",
+        "insightsText": "Ham aktivite verilerini daha akıllı çalışmanıza yardımcı olan anlamlı içgörülere dönüştürün:",
+        "insight1Title": "Kullanım Kalıpları",
+        "insight1Text": "En sık kullandığınız araçları görün",
+        "insight2Title": "Performans Metrikleri",
+        "insight2Text": "Yavaş işlemleri ve darboğazları belirleyin",
+        "insight3Title": "Hata Analizi",
+        "insight3Text": "Tekrarlayan sorunları takip edin ve çözün",
+        "insight4Title": "Maliyet Optimizasyonu",
+        "insight4Text": "Verimlilik için kaynak kullanımını izleyin",
+        "privacyTitle": "Önce Gizlilik",
+        "privacyText": "Tüm aktivite verileri projenizde kalır. Kullanım kalıplarınızı veya operasyonel verilerinizi asla üçüncü taraflarla paylaşmayız. Neyin ne kadar süreyle kaydedileceği üzerinde tam kontrole sahipsiniz."
+      }
+    },
+    "customize-experience": {
+      "title": "MCP Deneyiminizi Özelleştirin", 
+      "description": "Sunucuları özel talimatlar, temalar ve dillerle kişiselleştirin",
+      "content": {
+        "intro": "Plugged.in'i tam olarak istediğiniz gibi çalıştırın. Her sunucu için özel talimatlardan kişiselleştirilmiş temalara ve dil tercihlerine kadar MCP deneyiminizin her yönünü özelleştirin.",
+        "customInstructionsTitle": "Özel Sunucu Talimatları",
+        "customInstructionsText": "Araçlarınızı kullanmada AI modellerine rehberlik etmek için herhangi bir MCP sunucusuna özel talimatlar ekleyin. Bu talimatlar oturumlar arasında kalıcıdır ve tutarlılığı korumaya yardımcı olur.",
+        "themesTitle": "Görsel Temalar",
+        "themesText": "Birden fazla tema arasından seçim yapın veya kendi özel görünümünüzü oluşturun:",
+        "workflowTitle": "İş Akışı Özelleştirme",
+        "workflow1": "Sık kullanılan araçlar için varsayılan parametreleri ayarlayın",
+        "workflow2": "Yaygın eylemler için klavye kısayolları oluşturun",
+        "workflow3": "Bildirim tercihlerini özelleştirin",
+        "workflow4": "Otomatik kaydetme ve yedekleme aralıklarını yapılandırın",
+        "tipsTitle": "Profesyonel Özelleştirme İpuçları",
+        "tip1": "Daha iyi biçimlendirme için özel talimatlarda markdown kullanın",
+        "tip2": "Özelleştirmelerinizi dışa aktararak ekibinizle paylaşın",
+        "tip3": "Farklı iş türleri için farklı profiller oluşturun"
+      }
+    },
+    "lightning-fast-startup": {
+      "title": "Işık Hızında MCP Sunucu Başlatma",
+      "description": "Aşamalı başlatma ile anında sunucu bağlantıları deneyimleyin",
+      "content": {
+        "intro": "Yavaş MCP sunucularının başlamasını beklemeye veda edin. Aşamalı sunucu başlatma, sunucularınızın anında bağlanması ve bağlantı sorunlarından otomatik olarak kurtulması anlamına gelir.",
+        "howItWorksTitle": "Aşamalı Başlatma Nasıl Çalışır",
+        "feature1": "Sunucular engellemeden hemen başlar",
+        "feature2": "Arızalarda otomatik yeniden bağlantı",
+        "feature3": "Ağ kesintilerine karşı dayanıklı",
+        "benefitsTitle": "Fark Edeceğiniz Faydalar",
+        "benefit1": "Artık yavaş sunucuları beklemek yok",
+        "benefit2": "Daha sorunsuz iş akışı geçişleri",
+        "benefit3": "Kararsız bağlantılarda daha iyi güvenilirlik"
+      }
+    },
+    "public-profile": {
+      "title": "Herkese Açık Profil Sayfanız",
+      "description": "MCP sunucularınızı ve koleksiyonlarınızı kişiselleştirilmiş bir geliştirici profiliyle sergileyin",
+      "content": {
+        "intro": "Artık her geliştiricinin /to/kullanıcıadı adresinde herkese açık bir profil sayfası var. En iyi MCP yapılandırmalarınızı paylaşın, koleksiyonlarınızı sergileyin ve diğer geliştiricilerle bağlantı kurun.",
+        "featuresTitle": "Profil Özellikleri",
+        "feature1": "Özel biyografi ve avatar",
+        "feature2": "Paylaşılan sunucularınızı ve koleksiyonlarınızı görüntüleyin",
+        "feature3": "Diğer geliştiricileri takip edin",
+        "feature4": "Kurulum sayılarıyla etkinizi takip edin",
+        "setupTitle": "Profilinizi Kurma",
+        "setupStep1": "Ayarlara gidin ve benzersiz bir kullanıcı adı seçin",
+        "setupStep2": "Biyografinizi ve profil resminizi ekleyin",
+        "setupStep3": "Profilinizde sergilemek için sunucuları paylaşın"
+      }
+    },
+    "import-export-setup": {
+      "title": "Kurulumunuzu İçe ve Dışa Aktarın",
+      "description": "MCP yapılandırmalarınızı tek tıkla yedekleyin, paylaşın ve aktarın",
+      "content": {
+        "intro": "Özenle hazırlanmış MCP kurulumunuzu bir daha asla kaybetmeyin. Tüm koleksiyonları yedekleme veya ekibinizle paylaşmak için dışa aktarın.",
+        "exportTitle": "Koleksiyonları Dışa Aktarma",
+        "exportStep1": "Koleksiyonunuza gidin",
+        "exportStep2": "Dışa aktar düğmesine tıklayın",
+        "exportStep3": "JSON dosyasını kaydedin",
+        "importTitle": "Koleksiyonları İçe Aktarma",
+        "importStep1": "'Koleksiyon İçe Aktar'a tıklayın",
+        "importStep2": "JSON dosyanızı seçin",
+        "importStep3": "İçe aktarmayı gözden geçirin ve onaylayın",
+        "useCasesTitle": "Şunlar İçin Mükemmel",
+        "useCase1": "Takım yapılandırma paylaşımı",
+        "useCase2": "Büyük değişikliklerden önce yedekleme",
+        "useCase3": "Hesaplar arasında geçiş"
+      }
+    },
+    "multilingual-support": {
+      "title": "Kendi Dilinizde Konuşun",
+      "description": "6 dil desteğiyle Plugged.in'i tercih ettiğiniz dilde kullanın",
+      "content": {
+        "intro": "Plugged.in artık sizin dilinizi konuşuyor! İngilizce, Türkçe, Çince, Hintçe, Japonca veya Felemenkçe arasından seçim yapın.",
+        "supportedLanguages": "Desteklenen Diller",
+        "changeLanguageTitle": "Dil Nasıl Değiştirilir",
+        "step1": "Ayarlara gidin",
+        "step2": "Tercih ettiğiniz dili seçin",
+        "step3": "Tüm arayüz anında güncellenir",
+        "contributeTitle": "Bize Yardım Edin",
+        "contributeText": "Bir çeviri sorunu mu buldunuz? Çeviri çabalarımıza katkıda bulunarak bize yardımcı olun."
+      }
+    },
+    "discover-capabilities": {
+      "title": "Sunucu Yeteneklerini Keşfedin",
+      "description": "MCP sunucularınızdan tüm araçları, kaynakları ve istemleri otomatik olarak keşfedin ve keşfedin",
+      "content": {
+        "intro": "Tam MCP belirtimi desteği, sunucularınızın sunduğu her şeyi keşfedebileceğiniz anlamına gelir - araçlar, kaynaklar, istemler ve şablonlar.",
+        "capabilitiesTitle": "Neler Keşfedilir",
+        "capability1": "Araçlar - Tüm kullanılabilir işlevler",
+        "capability2": "Kaynaklar - Veri ve dosyalar",
+        "capability3": "İstemler - Önceden yapılandırılmış şablonlar",
+        "capability4": "Kaynak Şablonları - Dinamik kaynaklar",
+        "discoveryTitle": "Manuel Keşif",
+        "discoveryStep1": "MCP sunucu ayrıntılarınıza gidin",
+        "discoveryStep2": "'Yetenekleri Keşfet'e tıklayın",
+        "discoveryStep3": "Keşfedilen tüm öğeleri sekmelerde görüntüleyin"
+      }
+    }
+  },
+  "tryItNow": {
+    "title": "Denemeye hazır mısınız?",
+    "description": "Bu yeni özellikleri bugün projelerinizde kullanmaya başlayın.",
+    "primaryCta": "MCP Sunucularına Git",
+    "secondaryCta": "Rehberleri Görüntüle"
+  },
+  "relatedArticles": "İlgili Makaleler",
+  "newsletter": {
+    "title": "Güncel Kalın",
+    "description": "Yeni özellikler ve güncellemeler hakkında bildirim alın",
+    "placeholder": "E-postanızı girin",
+    "subscribe": "Abone Ol"
+  }
+}

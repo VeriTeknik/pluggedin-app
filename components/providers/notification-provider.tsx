@@ -14,6 +14,8 @@ export interface Notification {
   message: string;
   read: boolean;
   link?: string | null;
+  severity?: string | null;
+  completed: boolean;
   created_at: Date;
 }
 

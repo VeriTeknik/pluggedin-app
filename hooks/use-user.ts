@@ -8,13 +8,9 @@ class FetchError extends Error {
 }
 
 export function useUser() {
-  const { data: session, status } = useSession(); // Also get status for logging
-
-  // Log the session object received from useSession
-  console.log('useUser Hook: Session data from useSession:', { session, status });
+  const { data: session } = useSession();
 
   const swrKey = session?.user?.id ? `/api/users/${session.user.id}` : null;
-  console.log('useUser Hook: SWR Key:', swrKey); // Log the key being used for SWR
 
   // Define a simple fetcher function
   const fetcher = async (url: string) => {
@@ -35,9 +31,6 @@ export function useUser() {
 
   // Pass the fetcher function to useSWR
   const { data: user, error, mutate } = useSWR(swrKey, fetcher);
-
-  // Log the result of the SWR fetch
-  console.log('useUser Hook: SWR Result:', { user, error });
 
   return {
     user,

@@ -16,7 +16,8 @@ import type {
 } from '@/types/library';
 
 // Create uploads directory if it doesn't exist
-const UPLOADS_BASE_DIR = join(process.cwd(), 'uploads');
+// Use environment variable or fallback to /home/pluggedin/uploads (outside project directory)
+const UPLOADS_BASE_DIR = process.env.UPLOADS_DIR || '/home/pluggedin/uploads';
 
 // Workspace storage limit: 100 MB
 const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
@@ -403,9 +404,9 @@ export async function deleteDoc(
         )
       );
 
-    // Delete file from disk (new uploads directory)
+    // Delete file from disk (using same base directory as uploads)
     try {
-      const fullPath = join(process.cwd(), 'uploads', doc.file_path);
+      const fullPath = join(UPLOADS_BASE_DIR, doc.file_path);
       await unlink(fullPath);
     } catch (fileError) {
       console.warn('Failed to delete file from disk:', fileError);

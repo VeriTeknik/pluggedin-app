@@ -317,14 +317,15 @@ export const mcpServersTable = pgTable(
     type: mcpServerTypeEnum('type').notNull().default(McpServerType.STDIO),
     command: text('command'),
     args: text('args')
-      .array()
-      .notNull()
-      .default(sql`'{}'::text[]`),
+      .array(),
     env: jsonb('env')
-      .$type<{ [key: string]: string }>()
-      .notNull()
-      .default(sql`'{}'::jsonb`),
+      .$type<{ [key: string]: string }>(),
     url: text('url'),
+    // Encrypted fields
+    command_encrypted: text('command_encrypted'),
+    args_encrypted: text('args_encrypted'),
+    env_encrypted: text('env_encrypted'),
+    url_encrypted: text('url_encrypted'),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -577,6 +578,8 @@ export const notificationsTable = pgTable("notifications", {
   message: text("message").notNull(),
   read: boolean("read").default(false).notNull(),
   link: text("link"),
+  severity: text("severity"), // For MCP notifications: INFO, SUCCESS, WARNING, ALERT
+  completed: boolean("completed").default(false).notNull(), // For todo-style checkmarks on custom notifications
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   expires_at: timestamp("expires_at", { withTimezone: true }),
 },
@@ -939,6 +942,7 @@ export const sharedMcpServersTable = pgTable(
       .$type<any>()
       .notNull()
       .default(sql`'{}'::jsonb`),
+    requires_credentials: boolean('requires_credentials').default(false).notNull(),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

@@ -51,7 +51,7 @@ function SearchUsersContent() {
         title: t('social.follow.success'),
         description: t('social.follow.successDescription'),
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: t('social.follow.error'),
         description: t('social.follow.errorDescription'),
@@ -67,7 +67,7 @@ function SearchUsersContent() {
         title: t('social.unfollow.success'),
         description: t('social.unfollow.successDescription'),
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: t('social.unfollow.error'),
         description: t('social.unfollow.errorDescription'),

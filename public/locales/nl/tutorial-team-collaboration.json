@@ -1,0 +1,95 @@
+{
+  "title": "Team Samenwerking",
+  "description": "Leer hoe je samenwerkt met je team met behulp van Plugged.in werkruimtes en profielen",
+  "overview": {
+    "title": "Overzicht",
+    "introduction": "Het multi-profiel systeem van Plugged.in stelt teams in staat om effectief samen te werken door MCP servers te organiseren in aparte werkruimtes terwijl beveiliging en isolatie behouden blijven.",
+    "features": {
+      "workspaces": {
+        "title": "Meerdere Profielen",
+        "description": "Maak aparte profielen voor verschillende omgevingen of teams"
+      },
+      "permissions": {
+        "title": "Toegangscontrole",
+        "description": "Beheer wie toegang heeft tot specifieke servers en collecties"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "account": "Actief Plugged.in account",
+    "project": "Minimaal één project aangemaakt",
+    "team": "Teamleden met Plugged.in accounts"
+  },
+  "steps": {
+    "createWorkspace": {
+      "title": "Stap 1: Maak Team Werkruimtes",
+      "badge": "Fundament",
+      "description": "Stel profielen in voor verschillende team omgevingen",
+      "profiles": {
+        "title": "Maak Profielen",
+        "description": "Maak aparte profielen voor verschillende doeleinden:",
+        "code": "Instellingen → Profielen → Nieuw Profiel Maken"
+      },
+      "organize": {
+        "title": "Organiseer op Doel",
+        "description": "Veelvoorkomende profielpatronen voor teams:",
+        "development": "Development - Experimentele servers en tools",
+        "staging": "Staging - Pre-productie configuraties",
+        "production": "Production - Stabiele, geteste servers"
+      }
+    },
+    "inviteMembers": {
+      "title": "Stap 2: Deel met Teamleden",
+      "badge": "Delen",
+      "description": "Maak je servers en collecties beschikbaar voor teamleden",
+      "share": {
+        "title": "Deel Servers",
+        "description": "Deel individuele servers of hele collecties:",
+        "code": "Server → Delen → Kopieer Link of Maak Publiek"
+      },
+      "collections": {
+        "title": "Maak Team Collecties",
+        "description": "Groepeer gerelateerde servers in collecties voor eenvoudiger team onboarding en standaardisatie."
+      },
+      "tip": "Gebruik beschrijvende namen en uitgebreide notities om teamleden te helpen het doel en de configuratie van elke server te begrijpen."
+    },
+    "manageAccess": {
+      "title": "Stap 3: Beheer Toegangscontrole",
+      "badge": "Beveiliging",
+      "description": "Beheer wie toegang heeft tot en gebruik kan maken van je gedeelde resources",
+      "visibility": {
+        "title": "Zichtbaarheidsinstellingen",
+        "description": "Configureer of servers publiek (vindbaar) of privé (alleen link-toegang) zijn."
+      },
+      "apikeys": {
+        "title": "API Key Beheer",
+        "description": "Genereer en beheer API keys voor programmatische toegang:",
+        "code": "Instellingen → API Keys → Nieuwe Key Genereren"
+      }
+    },
+    "bestPractices": {
+      "title": "Stap 4: Team Best Practices",
+      "badge": "Richtlijnen",
+      "description": "Volg deze praktijken voor effectieve team samenwerking",
+      "naming": {
+        "title": "Consistente Naamgeving",
+        "description": "Gebruik duidelijke, consistente naamgevingsconventies voor alle teamprofielen en servers."
+      },
+      "documentation": {
+        "title": "Documenteer Alles",
+        "description": "Voeg gedetailleerde notities toe aan servers die configuratie, use cases en speciale vereisten uitleggen."
+      },
+      "versioning": {
+        "title": "Versiebeheer Collecties",
+        "description": "Gebruik collectie versiebeheer om wijzigingen bij te houden en compatibiliteit te behouden in team omgevingen."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "security": "Bekijk security best practices voor team deployments",
+    "api": "Integreer team workflows met de Plugged.in API",
+    "selfhost": "Overweeg zelf-hosting voor verbeterde team controle"
+  }
+}

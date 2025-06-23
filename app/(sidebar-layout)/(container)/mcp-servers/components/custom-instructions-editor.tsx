@@ -59,7 +59,7 @@ export function CustomInstructionsEditor({ serverUuid, profileUuid }: CustomInst
         // Basic validation: check if it's an array
         // More specific validation based on McpMessage type could be added here
         return Array.isArray(parsed);
-      } catch (e) {
+      } catch (_e) {
         return false;
       }
     }, { message: t('settings.validation.invalidJsonArray') }), // Now 't' is accessible

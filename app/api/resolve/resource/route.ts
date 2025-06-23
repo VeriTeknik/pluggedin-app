@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { authenticateApiKey } from '@/app/api/auth'; // Adjust path if needed
 import { db } from '@/db';
 import { mcpServersTable, resourcesTable } from '@/db/schema';
+import { decryptServerData } from '@/lib/encryption';
 
 export const dynamic = 'force-dynamic';
 
@@ -36,10 +37,10 @@ export async function GET(request: Request) {
         serverUuid: mcpServersTable.uuid,
         serverName: mcpServersTable.name,
         serverType: mcpServersTable.type,
-        serverCommand: mcpServersTable.command,
-        serverArgs: mcpServersTable.args,
-        serverEnv: mcpServersTable.env,
-        serverUrl: mcpServersTable.url,
+        serverCommand: mcpServersTable.command_encrypted,
+        serverArgs: mcpServersTable.args_encrypted,
+        serverEnv: mcpServersTable.env_encrypted,
+        serverUrl: mcpServersTable.url_encrypted,
         // Include resource URI for confirmation if needed
         resourceUri: resourcesTable.uri,
       })
@@ -58,17 +59,26 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: `Resource URI not found or not associated with the active profile: ${uri}` }, { status: 404 });
     }
 
-    // 4. Return the server details needed by the proxy
+    // 4. Decrypt and return the server details needed by the proxy
     const serverDetails = resourceAndServer[0];
+    
+    // Decrypt the server data
+    const decryptedServer = decryptServerData({
+      command_encrypted: serverDetails.serverCommand,
+      args_encrypted: serverDetails.serverArgs,
+      env_encrypted: serverDetails.serverEnv,
+      url_encrypted: serverDetails.serverUrl
+    }, profileUuid);
+    
     return NextResponse.json({
         // Reconstruct a partial ServerParameters object for the proxy
         uuid: serverDetails.serverUuid,
         name: serverDetails.serverName,
         type: serverDetails.serverType,
-        command: serverDetails.serverCommand,
-        args: serverDetails.serverArgs,
-        env: serverDetails.serverEnv,
-        url: serverDetails.serverUrl,
+        command: decryptedServer.command,
+        args: decryptedServer.args,
+        env: decryptedServer.env,
+        url: decryptedServer.url,
     });
 
   } catch (error) {

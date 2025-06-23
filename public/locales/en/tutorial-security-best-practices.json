@@ -1,0 +1,98 @@
+{
+  "title": "Security Best Practices",
+  "description": "Learn security best practices for configuring and using Plugged.in safely in production environments",
+  "overview": {
+    "title": "Overview",
+    "introduction": "Security is paramount when managing MCP servers and sensitive data. This guide covers essential security practices for Plugged.in deployments.",
+    "features": {
+      "encryption": {
+        "title": "End-to-End Encryption",
+        "description": "Protect sensitive configuration and credentials"
+      },
+      "access": {
+        "title": "Access Control",
+        "description": "Implement proper authentication and authorization"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "admin": "Administrative access to your Plugged.in instance",
+    "understanding": "Basic understanding of security concepts",
+    "access": "Access to server configuration"
+  },
+  "steps": {
+    "authentication": {
+      "title": "Step 1: Strengthen Authentication",
+      "badge": "Critical",
+      "description": "Implement robust authentication mechanisms",
+      "mfa": {
+        "title": "Enable Multi-Factor Authentication",
+        "description": "Require MFA for all user accounts:",
+        "code": "Settings → Security → Enable 2FA Requirement"
+      },
+      "sessions": {
+        "title": "Session Management",
+        "description": "Configure appropriate session timeouts and implement secure session handling with proper invalidation."
+      },
+      "warning": "Never share authentication credentials or API keys. Each user should have their own unique credentials."
+    },
+    "apikeys": {
+      "title": "Step 2: API Key Security",
+      "badge": "Important",
+      "description": "Properly manage and secure API keys",
+      "rotation": {
+        "title": "Key Rotation Policy",
+        "description": "Implement regular API key rotation:",
+        "quarterly": "Rotate keys quarterly at minimum",
+        "compromise": "Immediate rotation if compromise suspected",
+        "employee": "Rotate when team members change"
+      },
+      "storage": {
+        "title": "Secure Storage",
+        "description": "Store API keys securely:"
+      }
+    },
+    "encryption": {
+      "title": "Step 3: Data Encryption",
+      "badge": "Essential",
+      "description": "Ensure all sensitive data is properly encrypted",
+      "e2e": {
+        "title": "End-to-End Encryption",
+        "description": "MCP server configurations are encrypted end-to-end, ensuring only authorized users can decrypt."
+      },
+      "transit": {
+        "title": "Encryption in Transit",
+        "description": "Always use HTTPS/TLS for all communications. Never transmit sensitive data over unencrypted connections."
+      },
+      "rest": {
+        "title": "Encryption at Rest",
+        "description": "Database encryption should be enabled for production deployments to protect stored data."
+      }
+    },
+    "monitoring": {
+      "title": "Step 4: Security Monitoring",
+      "badge": "Ongoing",
+      "description": "Implement comprehensive security monitoring",
+      "audit": {
+        "title": "Audit Logging",
+        "description": "Monitor and log security-relevant events:",
+        "logins": "Authentication attempts (success/failure)",
+        "apikey": "API key usage and generation",
+        "server": "MCP server configuration changes",
+        "permissions": "Permission and role changes"
+      },
+      "alerts": {
+        "title": "Security Alerts",
+        "description": "Set up alerts for suspicious activities like multiple failed login attempts or unusual API usage patterns."
+      },
+      "tip": "Regularly review security logs and investigate any anomalies promptly."
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "review": "Conduct regular security reviews and audits",
+    "training": "Provide security training for all team members",
+    "incident": "Develop an incident response plan"
+  }
+}

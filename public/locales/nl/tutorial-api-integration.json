@@ -1,0 +1,89 @@
+{
+  "title": "De Plugged.in API Gebruiken",
+  "description": "Leer hoe je integreert met de Plugged.in API voor programmatische toegang tot je MCP servers",
+  "overview": {
+    "title": "Overzicht",
+    "introduction": "De Plugged.in API biedt programmatische toegang om MCP servers te beheren, RAG kennisbanken te bevragen en workflows te automatiseren. Deze gids behandelt authenticatie, endpoints en best practices.",
+    "features": {
+      "automation": {
+        "title": "Automatisering",
+        "description": "Automatiseer server beheer en deployments"
+      },
+      "security": {
+        "title": "Beveiligde Toegang",
+        "description": "API key authenticatie met rate limiting"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "account": "Actief Plugged.in account",
+    "programming": "Basis programmeerkennis",
+    "http": "Begrip van REST API's"
+  },
+  "steps": {
+    "authentication": {
+      "title": "Stap 1: Authenticatie Setup",
+      "badge": "Vereist",
+      "description": "Genereer en configureer API keys voor beveiligde toegang",
+      "generate": {
+        "title": "Genereer API Key",
+        "description": "Maak een nieuwe API key vanuit je accountinstellingen:",
+        "code": "Instellingen → API Keys → Nieuwe Key Genereren"
+      },
+      "usage": {
+        "title": "Je API Key Gebruiken",
+        "description": "Voeg je API key toe in de Authorization header:"
+      },
+      "tip": "Bewaar API keys veilig en commit ze nooit naar version control. Gebruik omgevingsvariabelen voor productie applicaties."
+    },
+    "endpoints": {
+      "title": "Stap 2: Kern API Endpoints",
+      "badge": "Endpoints",
+      "description": "Verken de belangrijkste API endpoints voor server beheer",
+      "servers": {
+        "title": "Server Beheer",
+        "description": "Beheer je MCP servers programmatisch:"
+      },
+      "rag": {
+        "title": "RAG Queries",
+        "description": "Bevraag je kennisbank:"
+      }
+    },
+    "examples": {
+      "title": "Stap 3: Implementatie Voorbeelden",
+      "badge": "Code",
+      "description": "Praktische voorbeelden in verschillende programmeertalen",
+      "javascript": {
+        "title": "JavaScript/Node.js",
+        "description": "Voorbeeld met fetch API:"
+      },
+      "python": {
+        "title": "Python",
+        "description": "Voorbeeld met requests library:"
+      }
+    },
+    "ratelimits": {
+      "title": "Stap 4: Rate Limits & Best Practices",
+      "badge": "Belangrijk",
+      "description": "Begrijp rate limiting en optimaliseer je API gebruik",
+      "tiers": {
+        "title": "Rate Limit Niveaus",
+        "description": "Verschillende endpoints hebben verschillende rate limits:",
+        "standard": "Standaard endpoints: 60 requests/minuut",
+        "sensitive": "Gevoelige operaties: 10 requests/uur",
+        "public": "Publieke endpoints: 100 requests/minuut"
+      },
+      "headers": {
+        "title": "Rate Limit Headers",
+        "description": "Monitor je gebruik met response headers:"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "webhooks": "Stel webhooks in voor real-time notificaties",
+    "sdks": "Verken community SDK's voor jouw taal",
+    "security": "Bekijk security best practices voor API gebruik"
+  }
+}

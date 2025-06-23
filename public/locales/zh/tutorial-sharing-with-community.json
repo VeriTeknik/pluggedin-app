@@ -1,0 +1,91 @@
+{
+  "title": "与社区分享",
+  "description": "学习如何与 Plugged.in 社区分享您的 MCP 服务器和集合",
+  "overview": {
+    "title": "概述",
+    "introduction": "Plugged.in 使您能够与社区分享您的 MCP 服务器配置和集合，促进协作和知识共享。",
+    "features": {
+      "servers": {
+        "title": "分享 MCP 服务器",
+        "description": "让他人能够发现并使用您的服务器配置"
+      },
+      "collections": {
+        "title": "创建集合",
+        "description": "将相关服务器分组到主题集合中以便于分享"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "account": "活跃的 Plugged.in 账户",
+    "servers": "至少一个已配置的 MCP 服务器",
+    "profile": "在设置中启用公开配置文件"
+  },
+  "steps": {
+    "shareServer": {
+      "title": "步骤 1：分享 MCP 服务器",
+      "badge": "必要",
+      "description": "让您的 MCP 服务器配置对社区可用",
+      "navigate": {
+        "title": "导航到您的服务器",
+        "description": "转到您的 MCP 服务器页面并选择要分享的服务器：",
+        "code": "MCP 服务器 → 选择服务器 → 分享选项"
+      },
+      "visibility": {
+        "title": "设置可见性",
+        "description": "选择谁可以查看和安装您的服务器：",
+        "public": "公开 - 任何人都可以发现和安装",
+        "private": "私有 - 仅可通过直接链接访问"
+      },
+      "tip": "添加详细的注释和文档，帮助他人理解您的服务器的用途和配置。"
+    },
+    "createCollection": {
+      "title": "步骤 2：创建集合",
+      "badge": "推荐",
+      "description": "将相关服务器分组到主题集合中",
+      "create": {
+        "title": "创建新集合",
+        "description": "导航到集合页面并创建新集合：",
+        "code": "社交 → 集合 → 创建集合"
+      },
+      "organize": {
+        "title": "向集合添加服务器",
+        "description": "从您的配置文件中选择要包含在集合中的服务器。集合可以进行版本控制并随时间更新。"
+      }
+    },
+    "manageSharing": {
+      "title": "步骤 3：管理共享内容",
+      "badge": "管理",
+      "description": "监控和管理您的共享服务器和集合",
+      "profile": {
+        "title": "查看您的公开配置文件",
+        "description": "检查您的共享内容如何向他人显示：",
+        "code": "/to/您的用户名"
+      },
+      "stats": {
+        "title": "跟踪安装统计",
+        "description": "从共享仪表板监控有多少用户安装了您的服务器和集合。"
+      }
+    },
+    "discoverContent": {
+      "title": "步骤 4：发现社区内容",
+      "badge": "社区",
+      "description": "查找并使用其他社区成员分享的服务器",
+      "browse": {
+        "title": "浏览发现动态",
+        "description": "访问发现页面查找社区分享的热门服务器和集合。"
+      },
+      "follow": {
+        "title": "关注创作者",
+        "description": "关注您认为有价值的服务器的用户，以便及时了解他们的最新贡献。"
+      },
+      "tip": "使用搜索功能查找特定用例或技术的服务器。"
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "team": "了解团队协作功能",
+    "api": "与 Plugged.in API 集成",
+    "custom": "开发您自己的自定义 MCP 服务器"
+  }
+}

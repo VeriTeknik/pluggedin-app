@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { AuthForm } from '@/components/auth/auth-form';
 
@@ -17,33 +18,35 @@ type LinkConfigType = {
 };
 
 export function AuthLayout({ type, children }: AuthLayoutProps) {
+  const { t } = useTranslation();
+  
   // Define the link configuration for each auth type
   const getLinkConfig = (): LinkConfigType | LinkConfigType[] => {
     switch (type) {
       case 'login':
         return [
           {
-            text: "Don't have an account?",
-            linkText: "Sign up",
+            text: t('auth.links.login.noAccount'),
+            linkText: t('auth.links.login.signUp'),
             href: "/register",
           },
           {
             text: "",
-            linkText: "Forgot your password?",
+            linkText: t('auth.links.login.forgotPassword'),
             href: "/forgot-password",
           },
         ];
       case 'register':
         return {
-          text: "Already have an account?",
-          linkText: "Sign in",
+          text: t('auth.links.register.hasAccount'),
+          linkText: t('auth.links.register.signIn'),
           href: "/login",
         };
       case 'forgot-password':
       case 'reset-password':
         return {
-          text: "Remember your password?",
-          linkText: "Back to login",
+          text: t('auth.links.forgotPassword.rememberPassword'),
+          linkText: t('auth.links.forgotPassword.backToLogin'),
           href: "/login",
         };
       default:

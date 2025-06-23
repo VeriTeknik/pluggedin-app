@@ -1,0 +1,92 @@
+{
+  "title": "构建 RAG 知识库",
+  "description": "学习如何使用 Plugged.in 构建和管理 RAG 知识库以增强 AI 交互",
+  "overview": {
+    "title": "概述",
+    "introduction": "检索增强生成（RAG）允许您通过从文档中提供相关上下文来增强 AI 交互。Plugged.in 的文档库使您能够构建特定于项目的知识库。",
+    "features": {
+      "documents": {
+        "title": "文档管理",
+        "description": "上传和组织文档以进行基于向量的检索"
+      },
+      "search": {
+        "title": "语义搜索",
+        "description": "使用自然语言查询您的知识库"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "account": "启用了 RAG 功能的活跃 Plugged.in 账户",
+    "project": "至少创建了一个项目",
+    "documents": "要上传的文档（PDF、TXT、MD、DOCX）"
+  },
+  "steps": {
+    "setupLibrary": {
+      "title": "步骤 1：设置文档库",
+      "badge": "设置",
+      "description": "为 RAG 初始化您项目的文档库",
+      "navigate": {
+        "title": "访问文档库",
+        "description": "导航到您项目的文档库：",
+        "code": "项目 → 库 → 文档库"
+      },
+      "formats": {
+        "title": "支持的格式",
+        "description": "库支持各种文档格式："
+      }
+    },
+    "uploadDocuments": {
+      "title": "步骤 2：上传文档",
+      "badge": "内容",
+      "description": "添加文档以构建您的知识库",
+      "upload": {
+        "title": "上传过程",
+        "description": "拖放或点击上传文档：",
+        "action": "将文件拖到此处或点击浏览"
+      },
+      "organize": {
+        "title": "组织文档",
+        "description": "使用标签和类别来组织您的文档，以获得更好的检索准确性。"
+      },
+      "tip": "文档会自动处理并为向量搜索建立索引。处理时间取决于文档大小和复杂性。"
+    },
+    "queryKnowledge": {
+      "title": "步骤 3：查询您的知识库",
+      "badge": "使用",
+      "description": "使用 RAG 查询工具检索相关信息",
+      "mcp": {
+        "title": "使用 MCP 工具",
+        "description": "通过 MCP 代理查询您的知识库：",
+        "code": "pluggedin_rag_query('您关于文档的问题')"
+      },
+      "api": {
+        "title": "使用 API",
+        "description": "通过 REST API 查询以进行集成："
+      }
+    },
+    "advanced": {
+      "title": "步骤 4：高级功能",
+      "badge": "高级",
+      "description": "优化您的 RAG 知识库以获得更好的结果",
+      "chunking": {
+        "title": "文档分块",
+        "description": "文档会自动分块以实现最佳检索。较大的文档会被分割成语义片段。"
+      },
+      "metadata": {
+        "title": "元数据增强",
+        "description": "向文档添加元数据以提高搜索相关性和过滤功能。"
+      },
+      "isolation": {
+        "title": "项目隔离",
+        "description": "每个项目的文档都是隔离的，确保查询仅从当前项目的知识库中检索。"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "api": "通过 API 将 RAG 查询集成到您的应用程序中",
+    "team": "与团队成员共享知识库",
+    "security": "为敏感文档配置安全设置"
+  }
+}

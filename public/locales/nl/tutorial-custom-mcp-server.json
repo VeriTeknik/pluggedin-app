@@ -1,0 +1,85 @@
+{
+  "title": "Custom MCP Servers Ontwikkelen",
+  "description": "Leer hoe je je eigen custom MCP servers ontwikkelt en deployt voor gespecialiseerde functionaliteit",
+  "overview": {
+    "title": "Overzicht",
+    "introduction": "Het Model Context Protocol (MCP) stelt je in staat om custom servers te maken die AI mogelijkheden uitbreiden met gespecialiseerde tools en resources. Deze gids behandelt server ontwikkeling van setup tot deployment.",
+    "features": {
+      "tools": {
+        "title": "Custom Tools",
+        "description": "Maak gespecialiseerde functies die AI kan aanroepen"
+      },
+      "resources": {
+        "title": "Resources & Prompts",
+        "description": "Bied data en context om AI interacties te verbeteren"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Vereisten",
+    "programming": "Basiskennis van TypeScript of Python",
+    "nodejs": "Node.js 18+ of Python 3.8+ geïnstalleerd",
+    "mcp": "Begrip van MCP concepten"
+  },
+  "steps": {
+    "setup": {
+      "title": "Stap 1: Ontwikkelomgeving Instellen",
+      "badge": "Setup",
+      "description": "Installeer de MCP SDK en maak je projectstructuur",
+      "sdk": {
+        "title": "Installeer MCP SDK",
+        "description": "Kies je voorkeurstaal en installeer de SDK:"
+      },
+      "structure": {
+        "title": "Projectstructuur",
+        "description": "Maak een basis projectstructuur:"
+      }
+    },
+    "implement": {
+      "title": "Stap 2: Implementeer Je Server",
+      "badge": "Ontwikkeling",
+      "description": "Maak de kernfunctionaliteit van je MCP server",
+      "basic": {
+        "title": "Basis Server Implementatie",
+        "description": "Maak een minimale MCP server met een custom tool:"
+      },
+      "tip": "Begin met een eenvoudige tool en voeg geleidelijk complexere functionaliteit toe. Test regelmatig tijdens ontwikkeling."
+    },
+    "test": {
+      "title": "Stap 3: Test Je Server",
+      "badge": "Testen",
+      "description": "Valideer dat je server correct werkt voor deployment",
+      "inspector": {
+        "title": "MCP Inspector",
+        "description": "Gebruik de MCP Inspector om je server te testen:"
+      },
+      "pluggedin": {
+        "title": "Test met Plugged.in",
+        "description": "Voeg je server toe aan Plugged.in als lokale STDIO server voor real-world testen."
+      }
+    },
+    "deploy": {
+      "title": "Stap 4: Deploy en Deel",
+      "badge": "Deployment",
+      "description": "Verpak en deel je server met anderen",
+      "package": {
+        "title": "Package Configuratie",
+        "description": "Configureer je package.json voor distributie:"
+      },
+      "share": {
+        "title": "Deel op Plugged.in",
+        "description": "Maak een server configuratie op Plugged.in en deel het met de community."
+      },
+      "registry": {
+        "title": "Publiceer naar Registry",
+        "description": "Overweeg publicatie naar npm of PyPI voor bredere distributie."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Volgende Stappen",
+    "advanced": "Verken geavanceerde MCP functies zoals resources en prompts",
+    "share": "Deel je server met de Plugged.in community",
+    "security": "Bekijk security best practices voor productie servers"
+  }
+}

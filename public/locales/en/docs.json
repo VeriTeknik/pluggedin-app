@@ -7,6 +7,7 @@
     "results": "{{count}} results found"
   },
   "categories": {
+    "whats-new": "What's New",
     "getting-started": "Getting Started",
     "tutorials": "Tutorials",
     "api-reference": "API Reference",

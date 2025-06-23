@@ -1,0 +1,91 @@
+{
+  "title": "Toplulukla Paylaşım",
+  "description": "MCP sunucularınızı ve koleksiyonlarınızı Plugged.in topluluğuyla nasıl paylaşacağınızı öğrenin",
+  "overview": {
+    "title": "Genel Bakış",
+    "introduction": "Plugged.in, MCP sunucu yapılandırmalarınızı ve koleksiyonlarınızı toplulukla paylaşmanızı sağlayarak işbirliği ve bilgi paylaşımını teşvik eder.",
+    "features": {
+      "servers": {
+        "title": "MCP Sunucularını Paylaş",
+        "description": "Sunucu yapılandırmalarınızı başkalarının keşfetmesi ve kullanması için erişilebilir hale getirin"
+      },
+      "collections": {
+        "title": "Koleksiyonlar Oluştur",
+        "description": "İlgili sunucuları daha kolay paylaşım için temalı koleksiyonlarda gruplayın"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "account": "Aktif Plugged.in hesabı",
+    "servers": "En az bir yapılandırılmış MCP sunucusu",
+    "profile": "Ayarlarda etkinleştirilmiş herkese açık profil"
+  },
+  "steps": {
+    "shareServer": {
+      "title": "Adım 1: MCP Sunucusu Paylaş",
+      "badge": "Temel",
+      "description": "MCP sunucu yapılandırmanızı topluluğa açık hale getirin",
+      "navigate": {
+        "title": "Sunucunuza Gidin",
+        "description": "MCP Sunucuları sayfasına gidin ve paylaşmak istediğiniz sunucuyu seçin:",
+        "code": "MCP Sunucuları → Sunucu Seç → Paylaşım Seçenekleri"
+      },
+      "visibility": {
+        "title": "Görünürlüğü Ayarla",
+        "description": "Sunucunuzu kimlerin görebileceğini ve yükleyebileceğini seçin:",
+        "public": "Herkese Açık - Herkes keşfedebilir ve yükleyebilir",
+        "private": "Özel - Yalnızca doğrudan bağlantı ile erişilebilir"
+      },
+      "tip": "Başkalarının sunucunuzun amacını ve yapılandırmasını anlamasına yardımcı olmak için ayrıntılı notlar ve belgeler ekleyin."
+    },
+    "createCollection": {
+      "title": "Adım 2: Koleksiyon Oluştur",
+      "badge": "Önerilen",
+      "description": "İlgili sunucuları temalı bir koleksiyonda gruplayın",
+      "create": {
+        "title": "Yeni Koleksiyon Oluştur",
+        "description": "Koleksiyonlar sayfasına gidin ve yeni bir koleksiyon oluşturun:",
+        "code": "Sosyal → Koleksiyonlar → Koleksiyon Oluştur"
+      },
+      "organize": {
+        "title": "Koleksiyona Sunucular Ekle",
+        "description": "Profilinizden koleksiyona dahil edilecek sunucuları seçin. Koleksiyonlar sürümlenebilir ve zamanla güncellenebilir."
+      }
+    },
+    "manageSharing": {
+      "title": "Adım 3: Paylaşılan İçeriği Yönet",
+      "badge": "Yönetim",
+      "description": "Paylaşılan sunucularınızı ve koleksiyonlarınızı izleyin ve yönetin",
+      "profile": {
+        "title": "Herkese Açık Profilinizi Görüntüleyin",
+        "description": "Paylaşılan içeriğinizin başkalarına nasıl göründüğünü kontrol edin:",
+        "code": "/to/kullanici-adiniz"
+      },
+      "stats": {
+        "title": "Yükleme İstatistiklerini Takip Et",
+        "description": "Paylaşım kontrol panelinden sunucularınızı ve koleksiyonlarınızı kaç kullanıcının yüklediğini izleyin."
+      }
+    },
+    "discoverContent": {
+      "title": "Adım 4: Topluluk İçeriğini Keşfet",
+      "badge": "Topluluk",
+      "description": "Diğer topluluk üyeleri tarafından paylaşılan sunucuları bulun ve kullanın",
+      "browse": {
+        "title": "Keşif Akışına Göz At",
+        "description": "Topluluk tarafından paylaşılan popüler sunucuları ve koleksiyonları bulmak için Keşfet sayfasını ziyaret edin."
+      },
+      "follow": {
+        "title": "İçerik Üreticilerini Takip Et",
+        "description": "Sunucularını değerli bulduğunuz kullanıcıları takip ederek en son katkılarından haberdar olun."
+      },
+      "tip": "Belirli kullanım durumları veya teknolojiler için sunucular bulmak için arama işlevini kullanın."
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "team": "Takım işbirliği özelliklerini öğrenin",
+    "api": "Plugged.in API ile entegre olun",
+    "custom": "Kendi özel MCP sunucularınızı geliştirin"
+  }
+}

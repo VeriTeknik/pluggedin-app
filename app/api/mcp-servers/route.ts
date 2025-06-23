@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { mcpServersTable, McpServerStatus } from '@/db/schema';
+import { decryptServerData, encryptServerData } from '@/lib/encryption';
 
 import { authenticateApiKey } from '../auth';
 
@@ -44,7 +45,13 @@ export async function GET(request: Request) {
           eq(mcpServersTable.profile_uuid, auth.activeProfile.uuid)
         )
       );
-    return NextResponse.json(activeMcpServers);
+    
+    // Decrypt sensitive fields before sending to MCP proxy
+    const decryptedServers = activeMcpServers.map(server => 
+      decryptServerData(server, auth.activeProfile.uuid)
+    );
+    
+    return NextResponse.json(decryptedServers);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
@@ -116,7 +123,15 @@ export async function POST(request: Request) {
     if (auth.error) return auth.error;
 
     const body = await request.json();
-    const { uuid, name, description, command, args, env, status } = body;
+    const { uuid, name, description, command, args, env, status, type, url } = body;
+
+    // Encrypt sensitive fields
+    const encryptedData = encryptServerData({
+      command,
+      args,
+      env,
+      url
+    }, auth.activeProfile.uuid);
 
     const newMcpServer = await db
       .insert(mcpServersTable)
@@ -124,11 +139,14 @@ export async function POST(request: Request) {
         uuid,
         name,
         description,
-        command,
-        args,
-        env,
+        type,
         status,
         profile_uuid: auth.activeProfile.uuid,
+        // Use encrypted fields
+        command_encrypted: encryptedData.command_encrypted,
+        args_encrypted: encryptedData.args_encrypted,
+        env_encrypted: encryptedData.env_encrypted,
+        url_encrypted: encryptedData.url_encrypted,
       })
       .returning();
 

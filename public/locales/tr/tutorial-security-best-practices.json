@@ -1,0 +1,98 @@
+{
+  "title": "Güvenlik En İyi Uygulamaları",
+  "description": "Plugged.in'i üretim ortamlarında güvenli bir şekilde yapılandırmak ve kullanmak için güvenlik en iyi uygulamalarını öğrenin",
+  "overview": {
+    "title": "Genel Bakış",
+    "introduction": "MCP sunucularını ve hassas verileri yönetirken güvenlik çok önemlidir. Bu kılavuz, Plugged.in dağıtımları için temel güvenlik uygulamalarını kapsar.",
+    "features": {
+      "encryption": {
+        "title": "Uçtan Uca Şifreleme",
+        "description": "Hassas yapılandırma ve kimlik bilgilerini koruyun"
+      },
+      "access": {
+        "title": "Erişim Kontrolü",
+        "description": "Uygun kimlik doğrulama ve yetkilendirme uygulayın"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "admin": "Plugged.in örneğinize yönetici erişimi",
+    "understanding": "Güvenlik kavramlarının temel anlayışı",
+    "access": "Sunucu yapılandırmasına erişim"
+  },
+  "steps": {
+    "authentication": {
+      "title": "Adım 1: Kimlik Doğrulamayı Güçlendirin",
+      "badge": "Kritik",
+      "description": "Sağlam kimlik doğrulama mekanizmaları uygulayın",
+      "mfa": {
+        "title": "Çok Faktörlü Kimlik Doğrulamayı Etkinleştir",
+        "description": "Tüm kullanıcı hesapları için MFA gerektirin:",
+        "code": "Ayarlar → Güvenlik → 2FA Gereksinimini Etkinleştir"
+      },
+      "sessions": {
+        "title": "Oturum Yönetimi",
+        "description": "Uygun oturum zaman aşımlarını yapılandırın ve düzgün geçersizleştirme ile güvenli oturum işleme uygulayın."
+      },
+      "warning": "Kimlik doğrulama bilgilerini veya API anahtarlarını asla paylaşmayın. Her kullanıcının kendi benzersiz kimlik bilgileri olmalıdır."
+    },
+    "apikeys": {
+      "title": "Adım 2: API Anahtarı Güvenliği",
+      "badge": "Önemli",
+      "description": "API anahtarlarını düzgün yönetin ve güvence altına alın",
+      "rotation": {
+        "title": "Anahtar Rotasyon Politikası",
+        "description": "Düzenli API anahtarı rotasyonu uygulayın:",
+        "quarterly": "En az üç ayda bir anahtarları değiştirin",
+        "compromise": "Güvenlik ihlali şüphesinde hemen değiştirin",
+        "employee": "Takım üyeleri değiştiğinde değiştirin"
+      },
+      "storage": {
+        "title": "Güvenli Saklama",
+        "description": "API anahtarlarını güvenli bir şekilde saklayın:"
+      }
+    },
+    "encryption": {
+      "title": "Adım 3: Veri Şifreleme",
+      "badge": "Temel",
+      "description": "Tüm hassas verilerin düzgün şekilde şifrelendiğinden emin olun",
+      "e2e": {
+        "title": "Uçtan Uca Şifreleme",
+        "description": "MCP sunucu yapılandırmaları uçtan uca şifrelenir, yalnızca yetkili kullanıcıların şifre çözmesini sağlar."
+      },
+      "transit": {
+        "title": "İletimde Şifreleme",
+        "description": "Tüm iletişimler için her zaman HTTPS/TLS kullanın. Hassas verileri asla şifrelenmemiş bağlantılar üzerinden iletmeyin."
+      },
+      "rest": {
+        "title": "Depolamada Şifreleme",
+        "description": "Saklanan verileri korumak için üretim dağıtımlarında veritabanı şifrelemesi etkinleştirilmelidir."
+      }
+    },
+    "monitoring": {
+      "title": "Adım 4: Güvenlik İzleme",
+      "badge": "Sürekli",
+      "description": "Kapsamlı güvenlik izleme uygulayın",
+      "audit": {
+        "title": "Denetim Günlüğü",
+        "description": "Güvenlikle ilgili olayları izleyin ve günlükleyin:",
+        "logins": "Kimlik doğrulama girişimleri (başarılı/başarısız)",
+        "apikey": "API anahtarı kullanımı ve oluşturma",
+        "server": "MCP sunucu yapılandırma değişiklikleri",
+        "permissions": "İzin ve rol değişiklikleri"
+      },
+      "alerts": {
+        "title": "Güvenlik Uyarıları",
+        "description": "Birden fazla başarısız giriş denemesi veya olağandışı API kullanım kalıpları gibi şüpheli aktiviteler için uyarılar ayarlayın."
+      },
+      "tip": "Güvenlik günlüklerini düzenli olarak inceleyin ve anormallikleri hemen araştırın."
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "review": "Düzenli güvenlik incelemeleri ve denetimleri yapın",
+    "training": "Tüm takım üyelerine güvenlik eğitimi sağlayın",
+    "incident": "Bir olay müdahale planı geliştirin"
+  }
+}

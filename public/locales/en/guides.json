@@ -1,0 +1,41 @@
+{
+  "title": "Setup Guides",
+  "description": "Choose your preferred AI client to get started with Plugged.in MCP. Each guide provides step-by-step instructions for setting up and configuring the MCP proxy.",
+  "benefits": {
+    "title": "Benefits of Plugged.in MCP",
+    "description": "Plugged.in MCP acts as a unified proxy for all your MCP servers, providing several advantages:",
+    "items": [
+      "Single Configuration Point - Manage all your MCP servers through one central configuration",
+      "Automatic Updates - Get the latest features and security updates automatically",
+      "Simplified Authentication - Use a single API key for all your MCP servers",
+      "Enhanced Security - Built-in security features and best practices",
+      "Cross-Platform Compatibility - Works seamlessly across different operating systems"
+    ]
+  },
+  "clients": {
+    "claudeDesktop": {
+      "title": "Claude Desktop",
+      "description": "Set up Plugged.in MCP with Claude Desktop application"
+    },
+    "claudeCode": {
+      "title": "Claude Code",
+      "description": "Configure Plugged.in MCP for Claude Code CLI"
+    },
+    "cursor": {
+      "title": "Cursor",
+      "description": "Integrate Plugged.in MCP with Cursor AI editor"
+    },
+    "smithery": {
+      "title": "Smithery", 
+      "description": "Deploy Plugged.in MCP using Smithery cloud platform"
+    }
+  },
+  "apiKeyNotice": "📝 Notice: You can manage your API Keys in the",
+  "apiKeysPage": "API Keys Page",
+  "help": {
+    "title": "Need Help?",
+    "description": "Having trouble with setup? Check out our other resources or get in touch.",
+    "completeGuide": "Complete Setup Guide",
+    "contactSupport": "Contact Support"
+  }
+}

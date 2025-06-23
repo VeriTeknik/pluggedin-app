@@ -1,0 +1,220 @@
+{
+  "title": "Wat is er nieuw",
+  "description": "Ontdek de nieuwste functies en updates in Plugged.in. Leer hoe u nieuwe mogelijkheden kunt gebruiken met praktische handleidingen.",
+  "searchPlaceholder": "Zoek artikelen...",
+  "readTime": "lezen",
+  "new": "NIEUW",
+  "backToArticles": "Terug naar Wat is er nieuw",
+  "categories": {
+    "all": "Alle",
+    "features": "Functies", 
+    "security": "Beveiliging",
+    "integrations": "Integraties",
+    "feature": "Functie",
+    "performance": "Prestaties",
+    "social": "Sociaal"
+  },
+  "articles": {
+    "send-notifications-from-ai": {
+      "title": "Stuur meldingen vanaf elk AI-model",
+      "description": "Ontvang realtime waarschuwingen van uw AI-workflows via meldingen en e-mail",
+      "content": {
+        "intro": "Nu kunt u rechtstreeks meldingen verzenden vanuit elk AI-model of MCP-tool. Of u nu langlopende taken uitvoert, fouten bewaakt of aangepaste waarschuwingen nodig heeft, het meldingssysteem houdt u in realtime op de hoogte.",
+        "howToTitle": "Hoe meldingen te verzenden",
+        "emailSetupTitle": "E-mailmelding instellen",
+        "emailStep1": "Ga naar Instellingen en schakel e-mailmeldingen in",
+        "emailStep2": "Configureer uw meldingsvoorkeuren",
+        "emailStep3": "Test met een voorbeeldmelding",
+        "useCasesTitle": "Gebruikscases",
+        "useCase1": "Waarschuwingen voor voltooiing van langlopende taken",
+        "useCase2": "Foutmeldingen van AI-agenten",
+        "useCase3": "Aangepaste waarschuwingen op basis van AI-analyse"
+      }
+    },
+    "document-context-rag": {
+      "title": "Bouw AI-apps met documentcontext",
+      "description": "Upload documenten en doorzoek ze met AI met behulp van RAG-technologie",
+      "content": {
+        "intro": "Transformeer uw documenten in AI-toegankelijke kennis. Upload PDF's, tekstbestanden en meer om een doorzoekbare bibliotheek te creëren die uw AI-agenten kunnen doorzoeken en raadplegen.",
+        "uploadTitle": "Documenten uploaden en beheren",
+        "uploadDescription": "Sleep uw bestanden gewoon en laat ze vallen of gebruik de uploadknop. Documenten worden automatisch verwerkt en geïndexeerd voor snelle opvraging.",
+        "queryTitle": "Doorzoek uw documenten", 
+        "formatsTitle": "Ondersteunde formaten"
+      }
+    },
+    "encryption-security": {
+      "title": "Uw MCP-servers zijn nu versleuteld",
+      "description": "Enterprise-grade encryptie beschermt al uw gevoelige serverconfiguraties",
+      "content": {
+        "intro": "Alle gevoelige MCP-servergegevens worden nu automatisch versleuteld met AES-256-GCM-encryptie. Uw API-sleutels, omgevingsvariabelen en opdrachten zijn in rust beschermd.",
+        "howItWorksTitle": "Hoe het werkt",
+        "feature1": "Automatische encryptie - geen configuratie nodig",
+        "feature2": "Per-profielsleutels voor maximale beveiliging",
+        "feature3": "Transparante werking - werkt naadloos",
+        "sharingTitle": "Veilig delen",
+        "sharingDescription": "Wanneer u servers deelt, worden alleen gezuiverde sjablonen blootgesteld. Gevoelige gegevens blijven versleuteld en privé voor u."
+      }
+    },
+    "share-collections": {
+      "title": "Deel uw MCP-servercollecties",
+      "description": "Maak en deel samengestelde collecties van MCP-servers met de gemeenschap",
+      "content": {
+        "intro": "Collecties zijn de perfecte manier om gerelateerde MCP-servers te groeperen en met anderen te delen. Of u nu een ontwikkelingstoolkit, een data science-workflow of een productiviteitssuite maakt, collecties maken het gemakkelijk om uw volledige opstelling te delen.",
+        "whatAreCollectionsTitle": "Wat zijn collecties?",
+        "whatAreCollectionsText": "Collecties zijn samengestelde groepen MCP-servers die goed samenwerken. Beschouw ze als recepten - u verzamelt de ingrediënten (servers) en deelt het complete gerecht (collectie) met anderen.",
+        "createCollectionTitle": "Een collectie maken",
+        "createStep1": "Navigeer naar uw MCP-serverspagina",
+        "createStep2": "Klik op 'Collectie maken'",
+        "createStep3": "Geef uw collectie een naam en voeg een beschrijving toe",
+        "createStep4": "Selecteer servers om in de collectie op te nemen",
+        "sharingTitle": "Deelopties",
+        "sharingFeature1": "Openbare collecties zichtbaar op uw profiel",
+        "sharingFeature2": "Privécollecties voor persoonlijk gebruik",
+        "sharingFeature3": "Versiebeheer voor het bijwerken van gedeelde collecties",
+        "examplesTitle": "Populaire collectie-ideeën",
+        "example1": "Full-Stack Development Kit - Database-, API- en testservers",
+        "example2": "AI Research Suite - LLM-connectors, datatools en notebooks",
+        "example3": "DevOps Toolkit - CI/CD-, monitoring- en deploymentservers",
+        "example4": "Content Creation Bundle - Schrijf-, media- en publicatietools"
+      }
+    },
+    "activity-tracking": {
+      "title": "Realtime activiteitstracking",
+      "description": "Monitor alle MCP-operaties en krijg inzicht in gebruikspatronen",
+      "content": {
+        "intro": "Krijg volledige zichtbaarheid in uw MCP-ecosysteem met realtime activiteitstracking. Monitor operaties, volg gebruikspatronen en optimaliseer uw workflow op basis van werkelijke gegevens.",
+        "trackedOperationsTitle": "Wat wordt gevolgd",
+        "operation1": "Tooluitvoeringen en prestatiemetingen",
+        "operation2": "Toegangspatronen voor bronnen",
+        "operation3": "Promptgebruik en effectiviteit",
+        "operation4": "Serververbindingsgezondheid en uptime",
+        "operation5": "Foutenlogboeken en debuginformatie",
+        "insightsTitle": "Bruikbare inzichten",
+        "insightsText": "Transformeer ruwe activiteitsgegevens in zinvolle inzichten die u helpen slimmer te werken:",
+        "insight1Title": "Gebruikspatronen",
+        "insight1Text": "Zie welke tools u het meest gebruikt",
+        "insight2Title": "Prestatiemetingen",
+        "insight2Text": "Identificeer trage operaties en knelpunten",
+        "insight3Title": "Foutenanalyse",
+        "insight3Text": "Volg en los terugkerende problemen op",
+        "insight4Title": "Kostenoptimalisatie",
+        "insight4Text": "Monitor brongebruik voor efficiëntie",
+        "privacyTitle": "Privacy eerst",
+        "privacyText": "Alle activiteitsgegevens blijven binnen uw project. We delen uw gebruikspatronen of operationele gegevens nooit met derden. U heeft volledige controle over wat wordt gelogd en voor hoe lang."
+      }
+    },
+    "customize-experience": {
+      "title": "Pas uw MCP-ervaring aan", 
+      "description": "Personaliseer servers met aangepaste instructies, thema's en talen",
+      "content": {
+        "intro": "Laat Plugged.in precies werken zoals u wilt. Van aangepaste instructies voor elke server tot gepersonaliseerde thema's en taalvoorkeuren, pas elk aspect van uw MCP-ervaring aan.",
+        "customInstructionsTitle": "Aangepaste serverinstructies",
+        "customInstructionsText": "Voeg specifieke instructies toe aan elke MCP-server om AI-modellen te begeleiden bij het gebruik van uw tools. Deze instructies blijven behouden tussen sessies en helpen consistentie te behouden.",
+        "themesTitle": "Visuele thema's",
+        "themesText": "Kies uit meerdere thema's of maak uw eigen aangepaste uiterlijk:",
+        "workflowTitle": "Workflow-aanpassing",
+        "workflow1": "Stel standaardparameters in voor veelgebruikte tools",
+        "workflow2": "Maak toetsenbordsnelkoppelingen voor veelvoorkomende acties",
+        "workflow3": "Pas meldingsvoorkeuren aan",
+        "workflow4": "Configureer auto-save en back-upintervallen",
+        "tipsTitle": "Pro-aanpassingstips",
+        "tip1": "Gebruik markdown in aangepaste instructies voor betere opmaak",
+        "tip2": "Exporteer uw aanpassingen om met uw team te delen",
+        "tip3": "Maak verschillende profielen voor verschillende soorten werk"
+      }
+    },
+    "lightning-fast-startup": {
+      "title": "Bliksemsnelle MCP-serveropstart",
+      "description": "Ervaar directe serververbindingen met progressieve initialisatie",
+      "content": {
+        "intro": "Zeg vaarwel tegen het wachten op trage MCP-servers om op te starten. Progressieve serverinitialisatie betekent dat uw servers direct verbinding maken en automatisch herstellen van verbindingsproblemen.",
+        "howItWorksTitle": "Hoe progressieve opstart werkt",
+        "feature1": "Servers starten direct zonder te blokkeren",
+        "feature2": "Automatische herverbinding bij storingen",
+        "feature3": "Bestand tegen netwerkonderbrekingen",
+        "benefitsTitle": "Voordelen die u zult merken",
+        "benefit1": "Niet meer wachten op trage servers",
+        "benefit2": "Soepelere workflowtransities",
+        "benefit3": "Betere betrouwbaarheid bij onstabiele verbindingen"
+      }
+    },
+    "public-profile": {
+      "title": "Uw openbare profielpagina",
+      "description": "Toon uw MCP-servers en collecties met een gepersonaliseerd ontwikkelaarsprofiel",
+      "content": {
+        "intro": "Elke ontwikkelaar heeft nu een openbare profielpagina op /to/gebruikersnaam. Deel uw beste MCP-configuraties, toon uw collecties en maak verbinding met andere ontwikkelaars.",
+        "featuresTitle": "Profielfuncties",
+        "feature1": "Aangepaste bio en avatar",
+        "feature2": "Toon uw gedeelde servers en collecties",
+        "feature3": "Volg andere ontwikkelaars",
+        "feature4": "Volg uw impact met installatietellingen",
+        "setupTitle": "Uw profiel instellen",
+        "setupStep1": "Ga naar Instellingen en kies een unieke gebruikersnaam",
+        "setupStep2": "Voeg uw bio en profielfoto toe",
+        "setupStep3": "Deel servers om op uw profiel te tonen"
+      }
+    },
+    "import-export-setup": {
+      "title": "Importeer en exporteer uw opstelling",
+      "description": "Back-up, deel en verplaats uw MCP-configuraties met één klik",
+      "content": {
+        "intro": "Verlies nooit meer uw zorgvuldig samengestelde MCP-opstelling. Exporteer hele collecties voor back-up of om met uw team te delen.",
+        "exportTitle": "Collecties exporteren",
+        "exportStep1": "Navigeer naar uw collectie",
+        "exportStep2": "Klik op de exportknop",
+        "exportStep3": "Sla het JSON-bestand op",
+        "importTitle": "Collecties importeren",
+        "importStep1": "Klik op 'Collectie importeren'",
+        "importStep2": "Selecteer uw JSON-bestand",
+        "importStep3": "Bekijk en bevestig de import",
+        "useCasesTitle": "Perfect voor",
+        "useCase1": "Teamconfiguratie delen",
+        "useCase2": "Back-up voor grote wijzigingen",
+        "useCase3": "Migreren tussen accounts"
+      }
+    },
+    "multilingual-support": {
+      "title": "Spreek uw taal",
+      "description": "Gebruik Plugged.in in uw voorkeurstaal met ondersteuning voor 6 talen",
+      "content": {
+        "intro": "Plugged.in spreekt nu uw taal! Kies uit Engels, Turks, Chinees, Hindi, Japans of Nederlands.",
+        "supportedLanguages": "Ondersteunde talen",
+        "changeLanguageTitle": "Hoe taal te wijzigen",
+        "step1": "Ga naar Instellingen",
+        "step2": "Selecteer uw voorkeurstaal",
+        "step3": "De hele interface wordt direct bijgewerkt",
+        "contributeTitle": "Help ons te verbeteren",
+        "contributeText": "Een vertaalprobleem gevonden? Help ons te verbeteren door bij te dragen aan onze vertaalinspanningen."
+      }
+    },
+    "discover-capabilities": {
+      "title": "Ontdek servermogelijkheden",
+      "description": "Ontdek en verken automatisch alle tools, bronnen en prompts van uw MCP-servers",
+      "content": {
+        "intro": "Volledige MCP-specificatieondersteuning betekent dat u alles kunt ontdekken wat uw servers bieden - tools, bronnen, prompts en sjablonen.",
+        "capabilitiesTitle": "Wat wordt ontdekt",
+        "capability1": "Tools - Alle beschikbare functies",
+        "capability2": "Bronnen - Gegevens en bestanden",
+        "capability3": "Prompts - Vooraf geconfigureerde sjablonen",
+        "capability4": "Bronsjablonen - Dynamische bronnen",
+        "discoveryTitle": "Handmatige ontdekking",
+        "discoveryStep1": "Ga naar uw MCP-serverdetails",
+        "discoveryStep2": "Klik op 'Mogelijkheden ontdekken'",
+        "discoveryStep3": "Bekijk alle ontdekte items in tabbladen"
+      }
+    }
+  },
+  "tryItNow": {
+    "title": "Klaar om het te proberen?",
+    "description": "Begin vandaag met het gebruik van deze nieuwe functies in uw projecten.",
+    "primaryCta": "Ga naar MCP-servers",
+    "secondaryCta": "Bekijk handleidingen"
+  },
+  "relatedArticles": "Gerelateerde artikelen",
+  "newsletter": {
+    "title": "Blijf op de hoogte",
+    "description": "Ontvang meldingen over nieuwe functies en updates",
+    "placeholder": "Voer uw e-mail in",
+    "subscribe": "Abonneren"
+  }
+}

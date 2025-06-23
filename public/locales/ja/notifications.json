@@ -19,7 +19,8 @@
       "unread": "未読",
       "alerts": "アラート",
       "info": "情報",
-      "success": "成功"
+      "success": "成功",
+      "notes": "ノート"
     },
     "empty": {
       "title": "通知はありません",
@@ -30,7 +31,8 @@
       "deleteSuccess": "通知が削除されました",
       "deleteError": "通知の削除に失敗しました",
       "deleteAllSuccess": "すべての通知が削除されました",
-      "deleteAllError": "すべての通知の削除に失敗しました"
+      "deleteAllError": "すべての通知の削除に失敗しました",
+      "toggleCompleteError": "ノートのステータスを更新できませんでした"
     }
   }
 }

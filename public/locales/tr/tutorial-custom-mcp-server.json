@@ -1,0 +1,85 @@
+{
+  "title": "Özel MCP Sunucuları Geliştirme",
+  "description": "Özelleşmiş işlevsellik için kendi özel MCP sunucularınızı nasıl geliştireceğinizi ve dağıtacağınızı öğrenin",
+  "overview": {
+    "title": "Genel Bakış",
+    "introduction": "Model Context Protocol (MCP), özel araçlar ve kaynaklarla AI yeteneklerini genişleten özel sunucular oluşturmanıza olanak tanır. Bu kılavuz, kurulumdan dağıtıma kadar sunucu geliştirmeyi kapsar.",
+    "features": {
+      "tools": {
+        "title": "Özel Araçlar",
+        "description": "AI'nın çağırabileceği özelleşmiş fonksiyonlar oluşturun"
+      },
+      "resources": {
+        "title": "Kaynaklar ve İstemler",
+        "description": "AI etkileşimlerini geliştirmek için veri ve bağlam sağlayın"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "programming": "TypeScript veya Python'un temel bilgisi",
+    "nodejs": "Node.js 18+ veya Python 3.8+ kurulu",
+    "mcp": "MCP kavramlarının anlaşılması"
+  },
+  "steps": {
+    "setup": {
+      "title": "Adım 1: Geliştirme Ortamını Kur",
+      "badge": "Kurulum",
+      "description": "MCP SDK'yı yükleyin ve proje yapınızı oluşturun",
+      "sdk": {
+        "title": "MCP SDK'yı Yükle",
+        "description": "Tercih ettiğiniz dili seçin ve SDK'yı yükleyin:"
+      },
+      "structure": {
+        "title": "Proje Yapısı",
+        "description": "Temel bir proje yapısı oluşturun:"
+      }
+    },
+    "implement": {
+      "title": "Adım 2: Sunucunuzu Uygulayın",
+      "badge": "Geliştirme",
+      "description": "MCP sunucunuzun temel işlevselliğini oluşturun",
+      "basic": {
+        "title": "Temel Sunucu Uygulaması",
+        "description": "Özel bir araçla minimal bir MCP sunucusu oluşturun:"
+      },
+      "tip": "Basit bir araçla başlayın ve yavaş yavaş daha karmaşık işlevsellik ekleyin. Geliştirme sırasında sık sık test edin."
+    },
+    "test": {
+      "title": "Adım 3: Sunucunuzu Test Edin",
+      "badge": "Test",
+      "description": "Dağıtımdan önce sunucunuzun doğru çalıştığını doğrulayın",
+      "inspector": {
+        "title": "MCP Inspector",
+        "description": "Sunucunuzu test etmek için MCP Inspector'ı kullanın:"
+      },
+      "pluggedin": {
+        "title": "Plugged.in ile Test",
+        "description": "Gerçek dünya testi için sunucunuzu Plugged.in'e yerel bir STDIO sunucusu olarak ekleyin."
+      }
+    },
+    "deploy": {
+      "title": "Adım 4: Dağıt ve Paylaş",
+      "badge": "Dağıtım",
+      "description": "Sunucunuzu paketleyin ve başkalarıyla paylaşın",
+      "package": {
+        "title": "Paket Yapılandırması",
+        "description": "Dağıtım için package.json'ınızı yapılandırın:"
+      },
+      "share": {
+        "title": "Plugged.in'de Paylaş",
+        "description": "Plugged.in'de bir sunucu yapılandırması oluşturun ve toplulukla paylaşın."
+      },
+      "registry": {
+        "title": "Registry'ye Yayınla",
+        "description": "Daha geniş dağıtım için npm veya PyPI'ye yayınlamayı düşünün."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "advanced": "Kaynaklar ve istemler gibi gelişmiş MCP özelliklerini keşfedin",
+    "share": "Sunucunuzu Plugged.in topluluğuyla paylaşın",
+    "security": "Üretim sunucuları için güvenlik en iyi uygulamalarını inceleyin"
+  }
+}

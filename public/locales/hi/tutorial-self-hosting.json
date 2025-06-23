@@ -1,0 +1,89 @@
+{
+  "title": "Plugged.in को सेल्फ-होस्ट करना",
+  "description": "अपने MCP इन्फ्रास्ट्रक्चर पर पूर्ण नियंत्रण के लिए Plugged.in को सेल्फ-होस्ट करना सीखें",
+  "overview": {
+    "title": "अवलोकन",
+    "introduction": "Plugged.in को सेल्फ-होस्ट करना आपको अपने MCP इन्फ्रास्ट्रक्चर, डेटा संप्रभुता और अनुकूलन विकल्पों पर पूर्ण नियंत्रण देता है। यह गाइड सेटअप से उत्पादन तक तैनाती को कवर करती है।",
+    "features": {
+      "control": {
+        "title": "पूर्ण नियंत्रण",
+        "description": "अपने इन्फ्रास्ट्रक्चर और कॉन्फ़िगरेशन पर पूर्ण नियंत्रण"
+      },
+      "data": {
+        "title": "डेटा संप्रभुता",
+        "description": "सभी डेटा को अपने स्वयं के इन्फ्रास्ट्रक्चर में रखें"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "पूर्वापेक्षाएं",
+    "server": "Linux सर्वर (Ubuntu 20.04+ या समान)",
+    "docker": "Docker और Docker Compose इंस्टॉल किया गया",
+    "postgresql": "PostgreSQL 15+ (या Docker)",
+    "domain": "DNS एक्सेस के साथ डोमेन नाम"
+  },
+  "steps": {
+    "prepare": {
+      "title": "चरण 1: वातावरण तैयार करें",
+      "badge": "सेटअप",
+      "description": "रिपॉज़िटरी क्लोन करें और अपने सर्वर को तैयार करें",
+      "clone": {
+        "title": "रिपॉज़िटरी क्लोन करें",
+        "description": "नवीनतम सोर्स कोड प्राप्त करें:"
+      },
+      "requirements": {
+        "title": "सिस्टम आवश्यकताएं",
+        "description": "अनुशंसित न्यूनतम विनिर्देश:",
+        "cpu": "2 CPU कोर",
+        "ram": "4GB RAM",
+        "storage": "20GB स्टोरेज"
+      }
+    },
+    "database": {
+      "title": "चरण 2: डेटाबेस सेट करें",
+      "badge": "डेटाबेस",
+      "description": "Plugged.in के लिए PostgreSQL कॉन्फ़िगर करें",
+      "setup": {
+        "title": "PostgreSQL सेटअप",
+        "description": "Docker का उपयोग करके PostgreSQL तैनात करें:"
+      },
+      "migrations": {
+        "title": "माइग्रेशन चलाएं",
+        "description": "डेटाबेस स्कीमा को इनिशियलाइज़ करें:"
+      }
+    },
+    "configure": {
+      "title": "चरण 3: एप्लिकेशन कॉन्फ़िगर करें",
+      "badge": "कॉन्फ़िगरेशन",
+      "description": "Environment variables और सुरक्षा सेटिंग्स सेट करें",
+      "env": {
+        "title": "Environment Variables",
+        "description": "उत्पादन वातावरण कॉन्फ़िगरेशन बनाएं:"
+      },
+      "tip": "सुरक्षित keys जेनरेट करने के लिए उपयोग करें: openssl rand -base64 32"
+    },
+    "deploy": {
+      "title": "चरण 4: सेवाएं तैनात करें",
+      "badge": "तैनाती",
+      "description": "Docker Compose का उपयोग करके Plugged.in तैनात करें",
+      "docker": {
+        "title": "Docker Compose सेटअप",
+        "description": "एक docker-compose.yml फ़ाइल बनाएं:"
+      },
+      "nginx": {
+        "title": "रिवर्स प्रॉक्सी",
+        "description": "उचित हेडर और WebSocket समर्थन के साथ Nginx को रिवर्स प्रॉक्सी के रूप में कॉन्फ़िगर करें।"
+      },
+      "ssl": {
+        "title": "SSL/TLS सेटअप",
+        "description": "स्वचालित नवीनीकरण के साथ मुफ्त SSL प्रमाणपत्रों के लिए Let's Encrypt का उपयोग करें।"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "अगले चरण",
+    "monitoring": "मॉनिटरिंग और लॉगिंग सेट करें",
+    "backup": "स्वचालित बैकअप कॉन्फ़िगर करें",
+    "security": "सुरक्षा कॉन्फ़िगरेशन गाइड की समीक्षा करें"
+  }
+}

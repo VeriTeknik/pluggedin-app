@@ -15,6 +15,62 @@
     "installation": {
       "title": "Installatiemethoden",
       "apiKeysNotice": "Opmerking: u kunt uw API-sleutels beheren op de API-sleutelpagina",
+      "claudeDesktop": {
+        "title": "Claude Desktop Setup",
+        "step1": {
+          "title": "Stap 1: Open Claude Desktop Instellingen",
+          "description": "Klik op het instellingen tandwiel pictogram in Claude Desktop om het configuratiemenu te openen.",
+          "imagePlaceholder": "[Screenshot: Claude Desktop instellingen knop]"
+        },
+        "step2": {
+          "title": "Stap 2: Configuratiebestand Lokaliseren",
+          "description": "Navigeer naar de MCP configuratie sectie. Het configuratiebestand bevindt zich op:",
+          "imagePlaceholder": "[Screenshot: Claude Desktop MCP instellingen pagina]"
+        },
+        "step3": {
+          "title": "Stap 3: Plugged.in MCP Configuratie Toevoegen",
+          "description": "Kopieer en plak de volgende configuratie in uw Claude Desktop configuratiebestand:",
+          "imagePlaceholder": "[Screenshot: Configuratiebestand met Plugged.in MCP instellingen]"
+        },
+        "step4": {
+          "title": "Stap 4: Opslaan en Herstarten",
+          "description": "Sla het configuratiebestand op en herstart Claude Desktop om de wijzigingen van kracht te laten worden.",
+          "imagePlaceholder": "[Screenshot: Opslaan bevestigingsdialoog]"
+        },
+        "step5": {
+          "title": "Stap 5: Verbinding Verifiëren",
+          "description": "Controleer of Plugged.in MCP succesvol is verbonden door te kijken naar de MCP indicator in Claude Desktop.",
+          "imagePlaceholder": "[Screenshot: Claude Desktop met MCP verbonden indicator]"
+        }
+      },
+      "claudeCode": {
+        "title": "Claude Code Setup",
+        "step1": {
+          "title": "Stap 1: Open Claude Code Instellingen",
+          "description": "Gebruik in Claude Code het commandopalet (Cmd/Ctrl+Shift+P) en zoek naar 'MCP Settings'.",
+          "imagePlaceholder": "[Screenshot: Claude Code commandopalet met MCP Settings]"
+        },
+        "step2": {
+          "title": "Stap 2: Toegang tot MCP Configuratie",
+          "description": "Navigeer naar de MCP servers configuratie sectie in Claude Code instellingen.",
+          "imagePlaceholder": "[Screenshot: Claude Code MCP instellingen paneel]"
+        },
+        "step3": {
+          "title": "Stap 3: Plugged.in MCP Server Toevoegen",
+          "description": "Voeg een nieuwe MCP server toe met de volgende configuratie:",
+          "imagePlaceholder": "[Screenshot: Claude Code MCP server configuratie formulier]"
+        },
+        "step4": {
+          "title": "Stap 4: Configuratie Toepassen",
+          "description": "Sla de configuratie op en pas wijzigingen toe om de Plugged.in MCP server in te schakelen.",
+          "imagePlaceholder": "[Screenshot: Claude Code configuratie opgeslagen bevestiging]"
+        },
+        "step5": {
+          "title": "Stap 5: Verbinding Testen",
+          "description": "Verifieer de verbinding door de MCP server status in Claude Code te controleren.",
+          "imagePlaceholder": "[Screenshot: Claude Code MCP server status toont verbonden]"
+        }
+      },
       "manualConfig": {
         "title": "Handmatige configuratie",
         "description": "Voor Claude Desktop vindt u het configuratiebestand op:",

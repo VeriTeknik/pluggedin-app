@@ -239,6 +239,27 @@
       "when": 1750196398920,
       "tag": "0033_add_rag_support",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1750501686252,
+      "tag": "0034_steep_boomer",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1750502470275,
+      "tag": "0035_blushing_synch",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1750613499625,
+      "tag": "0036_productive_living_lightning",
+      "breakpoints": true
     }
   ]
 }

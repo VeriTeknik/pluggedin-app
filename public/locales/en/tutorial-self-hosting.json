@@ -1,0 +1,89 @@
+{
+  "title": "Self-Hosting Plugged.in",
+  "description": "Learn how to self-host Plugged.in for complete control over your MCP infrastructure",
+  "overview": {
+    "title": "Overview",
+    "introduction": "Self-hosting Plugged.in gives you complete control over your MCP infrastructure, data sovereignty, and customization options. This guide covers deployment from setup to production.",
+    "features": {
+      "control": {
+        "title": "Full Control",
+        "description": "Complete control over your infrastructure and configuration"
+      },
+      "data": {
+        "title": "Data Sovereignty",
+        "description": "Keep all data within your own infrastructure"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "server": "Linux server (Ubuntu 20.04+ or similar)",
+    "docker": "Docker and Docker Compose installed",
+    "postgresql": "PostgreSQL 15+ (or Docker)",
+    "domain": "Domain name with DNS access"
+  },
+  "steps": {
+    "prepare": {
+      "title": "Step 1: Prepare Environment",
+      "badge": "Setup",
+      "description": "Clone repositories and prepare your server",
+      "clone": {
+        "title": "Clone Repositories",
+        "description": "Get the latest source code:"
+      },
+      "requirements": {
+        "title": "System Requirements",
+        "description": "Recommended minimum specifications:",
+        "cpu": "2 CPU cores",
+        "ram": "4GB RAM",
+        "storage": "20GB storage"
+      }
+    },
+    "database": {
+      "title": "Step 2: Set Up Database",
+      "badge": "Database",
+      "description": "Configure PostgreSQL for Plugged.in",
+      "setup": {
+        "title": "PostgreSQL Setup",
+        "description": "Deploy PostgreSQL using Docker:"
+      },
+      "migrations": {
+        "title": "Run Migrations",
+        "description": "Initialize the database schema:"
+      }
+    },
+    "configure": {
+      "title": "Step 3: Configure Application",
+      "badge": "Configuration",
+      "description": "Set up environment variables and security settings",
+      "env": {
+        "title": "Environment Variables",
+        "description": "Create production environment configuration:"
+      },
+      "tip": "Generate secure keys using: openssl rand -base64 32"
+    },
+    "deploy": {
+      "title": "Step 4: Deploy Services",
+      "badge": "Deployment",
+      "description": "Deploy Plugged.in using Docker Compose",
+      "docker": {
+        "title": "Docker Compose Setup",
+        "description": "Create a docker-compose.yml file:"
+      },
+      "nginx": {
+        "title": "Reverse Proxy",
+        "description": "Configure Nginx as a reverse proxy with proper headers and WebSocket support."
+      },
+      "ssl": {
+        "title": "SSL/TLS Setup",
+        "description": "Use Let's Encrypt for free SSL certificates with automatic renewal."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "monitoring": "Set up monitoring and logging",
+    "backup": "Configure automated backups",
+    "security": "Review security configuration guide"
+  }
+}

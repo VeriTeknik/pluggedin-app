@@ -5,7 +5,7 @@
   <h3>The Crossroads for AI Data Exchanges</h3>
   <p>A unified management interface for all your MCP servers with RAG capabilities</p>
 
-  [![Version](https://img.shields.io/badge/version-2.1.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+  [![Version](https://img.shields.io/badge/version-2.2.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
   [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
   [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
   [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -28,7 +28,13 @@ This application enables seamless integration with any MCP client (Claude, Cline
 - **Custom Instructions**: Add server-specific instructions that can be used as MCP prompts
 - **Prompt Management**: Discover and manage prompts from connected MCP servers
 
-### 📚 New in v2.1.0
+### 🔐 New in v2.2.0
+- **End-to-End Encryption**: All sensitive MCP server configuration data (commands, arguments, environment variables, URLs) is now encrypted at rest using AES-256-GCM
+- **Per-Profile Encryption**: Each profile has its own derived encryption key, ensuring complete isolation between workspaces
+- **Secure Server Sharing**: Shared servers use sanitized templates that don't expose sensitive credentials
+- **Transparent Operation**: Encryption and decryption happen automatically without affecting the user experience
+
+### 📚 Features from v2.1.0
 - **Document Library with RAG**: Upload and manage documents that serve as knowledge context for AI interactions
 - **Real-Time Notifications**: Get instant notifications for MCP activities with optional email delivery
 - **Progressive Server Initialization**: Faster startup with resilient server connections
@@ -63,12 +69,19 @@ Then open http://localhost:12005 in your browser to access the plugged.in App.
 
 ### 🔄 Upgrading to v2.1.0
 
-For existing installations, see our [Migration Guide](./MIGRATION_GUIDE_v2.1.0.md) for detailed upgrade instructions.
+For existing installations upgrading to v2.2.0:
 
 ```bash
 # Quick upgrade for Docker users
-docker pull ghcr.io/veriteknik/pluggedin-app:v2.1.0
+docker pull ghcr.io/veriteknik/pluggedin-app:v2.2.0
 docker-compose down && docker-compose up -d
+
+# The encryption will be applied automatically to existing servers
+```
+
+**Note**: Ensure you have the `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` environment variable set. If not present, generate one:
+```bash
+pnpm generate-encryption-key
 ```
 
 ## 🔌 Connecting MCP Clients

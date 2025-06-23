@@ -15,6 +15,62 @@
     "installation": {
       "title": "Installation Methods",
       "apiKeysNotice": "Notice: you can manage your API Keys in the API Keys Page",
+      "claudeDesktop": {
+        "title": "Claude Desktop Setup",
+        "step1": {
+          "title": "Step 1: Open Claude Desktop Settings",
+          "description": "Click on the settings gear icon in Claude Desktop to access the configuration menu.",
+          "imagePlaceholder": "[Screenshot: Claude Desktop settings button]"
+        },
+        "step2": {
+          "title": "Step 2: Locate Configuration File",
+          "description": "Navigate to the MCP configuration section. The configuration file is located at:",
+          "imagePlaceholder": "[Screenshot: Claude Desktop MCP settings page]"
+        },
+        "step3": {
+          "title": "Step 3: Add Plugged.in MCP Configuration",
+          "description": "Copy and paste the following configuration into your Claude Desktop config file:",
+          "imagePlaceholder": "[Screenshot: Configuration file with Plugged.in MCP settings]"
+        },
+        "step4": {
+          "title": "Step 4: Save and Restart",
+          "description": "Save the configuration file and restart Claude Desktop for changes to take effect.",
+          "imagePlaceholder": "[Screenshot: Save confirmation dialog]"
+        },
+        "step5": {
+          "title": "Step 5: Verify Connection",
+          "description": "Check that Plugged.in MCP is successfully connected by looking for the MCP indicator in Claude Desktop.",
+          "imagePlaceholder": "[Screenshot: Claude Desktop with MCP connected indicator]"
+        }
+      },
+      "claudeCode": {
+        "title": "Claude Code Setup",
+        "step1": {
+          "title": "Step 1: Open Claude Code Settings",
+          "description": "In Claude Code, use the command palette (Cmd/Ctrl+Shift+P) and search for 'MCP Settings'.",
+          "imagePlaceholder": "[Screenshot: Claude Code command palette with MCP Settings]"
+        },
+        "step2": {
+          "title": "Step 2: Access MCP Configuration",
+          "description": "Navigate to the MCP servers configuration section in Claude Code settings.",
+          "imagePlaceholder": "[Screenshot: Claude Code MCP settings panel]"
+        },
+        "step3": {
+          "title": "Step 3: Add Plugged.in MCP Server",
+          "description": "Add a new MCP server with the following configuration:",
+          "imagePlaceholder": "[Screenshot: Claude Code MCP server configuration form]"
+        },
+        "step4": {
+          "title": "Step 4: Apply Configuration",
+          "description": "Save the configuration and apply changes to enable the Plugged.in MCP server.",
+          "imagePlaceholder": "[Screenshot: Claude Code configuration saved confirmation]"
+        },
+        "step5": {
+          "title": "Step 5: Test Connection",
+          "description": "Verify the connection by checking the MCP server status in Claude Code.",
+          "imagePlaceholder": "[Screenshot: Claude Code MCP server status showing connected]"
+        }
+      },
       "manualConfig": {
         "title": "Manual Configuration",
         "description": "For Claude Desktop, locate the configuration file at:",

@@ -1,0 +1,192 @@
+{
+  "title": "Plugged.in ile Başlarken",
+  "subtitle": "5 dakikada çalışır duruma gelin. MCP sunucularını nasıl kuracağınızı, istemcileri yapılandıracağınızı ve AI destekli uygulamalar oluşturmaya başlayacağınızı öğrenin.",
+  "prerequisites": {
+    "title": "Önkoşullar",
+    "nodejs": "Node.js v18 veya üzeri (v20+ önerilir)",
+    "account": "Kimlik doğrulama için GitHub veya e-posta hesabı",
+    "mcpClient": "MCP uyumlu bir istemci (Claude Desktop, Cursor, Cline, vb.)",
+    "commandLine": "Komut satırı arayüzlerine temel aşinalık"
+  },
+  "quickStart": {
+    "title": "Hızlı Başlangıç (5 Dakika)",
+    "createAccount": {
+      "title": "Hesabınızı Oluşturun",
+      "description": "plugged.in'i ziyaret edin ve GitHub (geliştiriciler için önerilir) veya e-posta ile şifre kullanarak kaydolun.",
+      "screenshot": "Ekran görüntüsü: Plugged.in kayıt sayfası",
+      "screenshotDesc": "GitHub ve e-posta seçenekleriyle giriş sayfasını gösterir",
+      "action": "Ücretsiz Başlayın"
+    },
+    "generateKey": {
+      "title": "API Anahtarınızı Oluşturun",
+      "description": "Giriş yaptıktan sonra, Ayarlar → API Anahtarları'na gidin. 'Yeni API Anahtarı Oluştur'a tıklayın ve açıklayıcı bir isim verin.",
+      "screenshot": "Ekran görüntüsü: API Anahtarı oluşturma arayüzü",
+      "screenshotDesc": "Oluştur düğmesiyle API Anahtarları ayarlar sayfasını gösterir",
+      "warning": "⚠️ Oluşturulan anahtarı hemen kopyalayın - bir daha göremezsiniz!"
+    },
+    "installProxy": {
+      "title": "MCP Proxy'yi Yükleyin",
+      "description": "Terminalinizi açın ve Plugged.in MCP Proxy'yi yüklemek için aşağıdaki komutu çalıştırın:",
+      "note": "Bu size mevcut seçenekleri gösterecektir. Proxy, MCP istemciniz ile yapılandırılmış tüm sunucularınız arasında bir köprü görevi görür."
+    },
+    "configureClient": {
+      "title": "MCP İstemcinizi Yapılandırın",
+      "description": "Plugged.in proxy'yi MCP istemci yapılandırmanıza ekleyin. Aşağıdan istemcinizi seçin:",
+      "claude": {
+        "path": "Yapılandırma dosyası konumu: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) veya %APPDATA%\\Claude\\claude_desktop_config.json (Windows)"
+      },
+      "cursor": {
+        "instruction": "Cursor için komut satırı argümanlarını kullanın:"
+      }
+    },
+    "testConnection": {
+      "title": "Bağlantınızı Test Edin",
+      "description": "MCP istemcinizi yeniden başlatın ve bağlantının çalıştığını doğrulamak için pluggedin araçlarını arayın:",
+      "tools": [
+        "pluggedin_discover_tools - Sunucularınızdan yetenekleri keşfedin",
+        "pluggedin_rag_query - Belge kitaplığınızı sorgulayın",
+        "pluggedin_send_notification - Özel bildirimler gönderin"
+      ],
+      "screenshot": "Ekran görüntüsü: pluggedin araçlarını gösteren MCP istemcisi",
+      "screenshotDesc": "MCP istemcinizde mevcut araçları gösterir"
+    }
+  },
+  "concepts": {
+    "title": "Temel Kavramlar",
+    "mcpServers": {
+      "title": "MCP Sunucuları",
+      "description": "MCP sunucuları, araçlar (AI'nın çağırabileceği fonksiyonlar), kaynaklar (AI'nın erişebileceği veriler), komut istemleri (konuşma başlatıcıları) ve özel talimatlar (sunucuya özgü rehberlik) sağlayarak AI yeteneklerini genişletir."
+    },
+    "projectsProfiles": {
+      "title": "Projeler ve Profiller",
+      "description": "Projeler, çalışmalarınız için üst düzey kapsayıcılardır. Profiller, projeler içindeki çalışma alanlarıdır - bunları izole sunucu yapılandırmalarına sahip ortamlar (geliştirme, hazırlık, üretim) olarak düşünün."
+    },
+    "collections": {
+      "title": "Koleksiyonlar",
+      "description": "Koleksiyonlar, birlikte iyi çalışan MCP sunucularının düzenlenmiş gruplarıdır. Sürüm kontrolüne sahiptirler, toplulukla paylaşılabilirler ve kurulum istatistiklerini takip ederler."
+    },
+    "mcpProxy": {
+      "title": "MCP Proxy",
+      "description": "İstekleri uygun sunuculara yönlendiren, kimlik doğrulamasını yöneten, birleşik günlük kaydı sağlayan ve RAG ve bildirimler gibi gelişmiş özellikleri etkinleştiren tek bağlantı noktanız."
+    }
+  },
+  "firstSteps": {
+    "title": "İlk Adımlarınız",
+    "addServer": {
+      "title": "1. İlk MCP Sunucunuzu Ekleyin",
+      "description": "Kenar çubuğunda 'MCP Sunucuları'na gidin ve 'Yeni Sunucu Ekle'ye tıklayın. Bir sunucu türü seçin (NPX, Docker, Binary veya Diğer).",
+      "screenshot": "Ekran görüntüsü: MCP Sunucu ekleme arayüzü",
+      "screenshotDesc": "Sunucu yapılandırma formunu gösterir",
+      "example": "Örnek - Dosya sistemi sunucusunu ekleyin:"
+    },
+    "playground": {
+      "title": "2. Oyun Alanında Test Edin",
+      "description": "MCP Oyun Alanı, sunucuları herhangi bir AI modeliyle test etmenizi sağlar. Kenar çubuğunda 'Oyun Alanı'na gidin, profilinizi ve AI modelinizi seçin, ardından sohbete başlayın!",
+      "screenshot": "Ekran görüntüsü: MCP Oyun Alanı arayüzü",
+      "screenshotDesc": "Sohbet arayüzü ve sunucu araçlarıyla oyun alanını gösterir",
+      "features": [
+        "Langchain aracılığıyla çoklu model desteği",
+        "Uzun konuşmalar için sanal kaydırma",
+        "Gerçek zamanlı işlem günlüğü",
+        "Özel model talimatları"
+      ]
+    },
+    "collection": {
+      "title": "3. Bir Koleksiyon Oluşturun",
+      "description": "İlgili sunucuları koleksiyonlar halinde düzenleyin. 'Koleksiyonlar'a gidin, 'Yeni Koleksiyon Oluştur'a tıklayın, profilinizden sunucular ekleyin ve görünürlük tercihlerini ayarlayın."
+    },
+    "share": {
+      "title": "4. Toplulukla Paylaşın",
+      "description": "Yapılandırılmış herhangi bir sunucuda 'Sunucuyu Paylaş'a tıklayarak sunucularınızı keşfedilebilir hale getirin. Görünürlük ayarlarını seçin, yararlı notlar ve örnekler ekleyin, ardından kurulumları ve derecelendirmeleri takip edin."
+    }
+  },
+  "advanced": {
+    "title": "Gelişmiş Özellikler",
+    "documentLibrary": {
+      "title": "Belge Kitaplığı ve RAG",
+      "description": "AI bağlamını geliştirmek için belgeler yükleyin. 'Kitaplık'a gidin, PDF'ler, metin dosyaları veya kod yükleyin. Belgeler otomatik olarak dizinlenir ve pluggedin_rag_query ile sorgulanabilir."
+    },
+    "notifications": {
+      "title": "Gerçek Zamanlı Bildirimler",
+      "description": "MCP etkinlikleri hakkında bilgi sahibi olun. Tercihleri yapılandırmak için zil simgesine tıklayın, önemli uyarılar için e-posta teslimatını etkinleştirin ve tüm işlemleri takip edin."
+    },
+    "customInstructions": {
+      "title": "Özel Talimatlar",
+      "description": "Herhangi bir MCP sunucusunun detay sayfasına giderek sunucuya özgü rehberlik ekleyin. Bu talimatlar AI davranışını yönlendirir ve MCP komut istemleri olarak kullanılabilir hale gelir."
+    },
+    "security": {
+      "title": "Güvenlik Özellikleri",
+      "description": "Uçtan uca şifreleme (AES-256-GCM), Linux'ta otomatik Firejail sandboxing, API hız sınırlama ve eksiksiz proje veri izolasyonu ile kurumsal düzeyde güvenlik."
+    }
+  },
+  "troubleshooting": {
+    "title": "Sorun Giderme",
+    "sessionNotFound": {
+      "title": "\"Oturum bulunamadı\" hatası",
+      "solutions": [
+        "API anahtarınızın geçerli olduğundan emin olun",
+        "MCP proxy'nin çalışıp çalışmadığını kontrol edin",
+        "İstemci yapılandırmanızı doğrulayın"
+      ]
+    },
+    "serversNotInit": {
+      "title": "Sunucular başlatılamıyor",
+      "solutions": [
+        "Oyun Alanında sunucu günlüklerini kontrol edin",
+        "Komut yollarını ve argümanlarını doğrulayın",
+        "Gerekli bağımlılıkların yüklü olduğundan emin olun"
+      ]
+    },
+    "ragNotWorking": {
+      "title": "RAG sorguları çalışmıyor",
+      "solutions": [
+        "Belgelerin yüklendiğini ve işlendiğini onaylayın",
+        "Oyun Alanı ayarlarında RAG'nin etkin olup olmadığını kontrol edin",
+        "Aboneliğinizin RAG özelliklerini içerdiğini doğrulayın"
+      ]
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "guides": {
+      "title": "Daha Fazla Kılavuz Keşfedin",
+      "links": [
+        { "text": "MCP Sunucu Yapılandırma Kılavuzu", "href": "/docs/guides" },
+        { "text": "Koleksiyon En İyi Uygulamaları", "href": "/docs/collections" },
+        { "text": "Güvenlik ve Kendi Kendine Barındırma", "href": "/docs/security" }
+      ]
+    },
+    "api": {
+      "title": "API Belgeleri",
+      "links": [
+        { "text": "REST API Referansı", "href": "/docs/api-reference" },
+        { "text": "TypeScript SDK", "href": "/docs/typescript-sdk" },
+        { "text": "Webhook Entegrasyonu", "href": "/docs/webhooks" }
+      ]
+    },
+    "community": {
+      "title": "Topluluğa Katılın",
+      "links": [
+        { "text": "GitHub - pluggedin-app", "href": "https://github.com/VeriTeknik/pluggedin-app", "external": true },
+        { "text": "GitHub - pluggedin-mcp", "href": "https://github.com/VeriTeknik/pluggedin-mcp", "external": true },
+        { "text": "Discord Sunucusu", "href": "https://discord.gg/pluggedin", "external": true }
+      ]
+    }
+  },
+  "quickReference": {
+    "title": "Hızlı Referans",
+    "commands": {
+      "title": "Temel Komutlar"
+    },
+    "config": {
+      "title": "Yapılandırma Örnekleri",
+      "basic": "Temel",
+      "advanced": "Gelişmiş"
+    }
+  },
+  "cta": {
+    "title": "Plugged.in topluluğuna hoş geldiniz! 🚀",
+    "getStarted": "Şimdi Başlayın",
+    "browseDocs": "Belgelere Göz Atın"
+  }
+}

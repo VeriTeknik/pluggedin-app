@@ -1,0 +1,192 @@
+{
+  "title": "Plugged.inを始める",
+  "subtitle": "5分で起動して実行。MCPサーバーの設定、クライアントの構成、AI駆動アプリケーションの構築方法を学びましょう。",
+  "prerequisites": {
+    "title": "前提条件",
+    "nodejs": "Node.js v18以上（v20+推奨）",
+    "account": "認証用のGitHubまたはメールアカウント",
+    "mcpClient": "MCP互換クライアント（Claude Desktop、Cursor、Clineなど）",
+    "commandLine": "コマンドラインインターフェースの基本的な知識"
+  },
+  "quickStart": {
+    "title": "クイックスタート（5分）",
+    "createAccount": {
+      "title": "アカウントを作成",
+      "description": "plugged.inにアクセスし、GitHub（開発者推奨）またはパスワード付きメールを使用してサインアップします。",
+      "screenshot": "スクリーンショット：Plugged.inサインアップページ",
+      "screenshotDesc": "GitHubとメールのオプションを含むログインページを表示",
+      "action": "無料で始める"
+    },
+    "generateKey": {
+      "title": "APIキーを生成",
+      "description": "ログイン後、設定→APIキーに移動します。「新しいAPIキーを生成」をクリックし、説明的な名前を付けます。",
+      "screenshot": "スクリーンショット：APIキー生成インターフェース",
+      "screenshotDesc": "生成ボタンがあるAPIキー設定ページを表示",
+      "warning": "⚠️ 生成されたキーをすぐにコピーしてください - 二度と表示されません！"
+    },
+    "installProxy": {
+      "title": "MCPプロキシをインストール",
+      "description": "ターミナルを開き、以下のコマンドを実行してPlugged.in MCPプロキシをインストールします：",
+      "note": "これにより利用可能なオプションが表示されます。プロキシは、MCPクライアントと設定されたすべてのサーバー間のブリッジとして機能します。"
+    },
+    "configureClient": {
+      "title": "MCPクライアントを設定",
+      "description": "Plugged.inプロキシをMCPクライアント設定に追加します。以下からクライアントを選択してください：",
+      "claude": {
+        "path": "設定ファイルの場所：~/Library/Application Support/Claude/claude_desktop_config.json（macOS）または %APPDATA%\\Claude\\claude_desktop_config.json（Windows）"
+      },
+      "cursor": {
+        "instruction": "Cursorの場合、コマンドライン引数を使用します："
+      }
+    },
+    "testConnection": {
+      "title": "接続をテスト",
+      "description": "MCPクライアントを再起動し、接続が機能していることを確認するためにpluggedinツールを探します：",
+      "tools": [
+        "pluggedin_discover_tools - サーバーから機能を発見",
+        "pluggedin_rag_query - ドキュメントライブラリをクエリ",
+        "pluggedin_send_notification - カスタム通知を送信"
+      ],
+      "screenshot": "スクリーンショット：pluggedinツールを表示するMCPクライアント",
+      "screenshotDesc": "MCPクライアントで利用可能なツールを表示"
+    }
+  },
+  "concepts": {
+    "title": "コアコンセプト",
+    "mcpServers": {
+      "title": "MCPサーバー",
+      "description": "MCPサーバーは、ツール（AIが呼び出せる関数）、リソース（AIがアクセスできるデータ）、プロンプト（会話スターター）、カスタム指示（サーバー固有のガイダンス）を提供することでAI機能を拡張します。"
+    },
+    "projectsProfiles": {
+      "title": "プロジェクトとプロファイル",
+      "description": "プロジェクトは作業のトップレベルコンテナです。プロファイルはプロジェクト内のワークスペースです - 分離されたサーバー構成を持つ環境（開発、ステージング、本番）として考えてください。"
+    },
+    "collections": {
+      "title": "コレクション",
+      "description": "コレクションは、うまく連携するMCPサーバーのキュレーションされたグループです。バージョン管理され、コミュニティと共有でき、インストール統計を追跡します。"
+    },
+    "mcpProxy": {
+      "title": "MCPプロキシ",
+      "description": "適切なサーバーにリクエストをルーティングし、認証を処理し、統一されたログを提供し、RAGや通知などの高度な機能を有効にする単一接続ポイント。"
+    }
+  },
+  "firstSteps": {
+    "title": "最初のステップ",
+    "addServer": {
+      "title": "1. 最初のMCPサーバーを追加",
+      "description": "サイドバーの「MCPサーバー」に移動し、「新しいサーバーを追加」をクリックします。サーバータイプ（NPX、Docker、Binary、またはその他）を選択します。",
+      "screenshot": "スクリーンショット：MCPサーバー追加インターフェース",
+      "screenshotDesc": "サーバー設定フォームを表示",
+      "example": "例 - ファイルシステムサーバーを追加："
+    },
+    "playground": {
+      "title": "2. プレイグラウンドでテスト",
+      "description": "MCPプレイグラウンドでは、任意のAIモデルでサーバーをテストできます。サイドバーの「プレイグラウンド」に移動し、プロファイルとAIモデルを選択してチャットを開始！",
+      "screenshot": "スクリーンショット：MCPプレイグラウンドインターフェース",
+      "screenshotDesc": "チャットインターフェースとサーバーツールを備えたプレイグラウンドを表示",
+      "features": [
+        "Langchain経由のマルチモデルサポート",
+        "長い会話のための仮想スクロール",
+        "リアルタイム操作ログ",
+        "カスタムモデル指示"
+      ]
+    },
+    "collection": {
+      "title": "3. コレクションを作成",
+      "description": "関連するサーバーをコレクションに整理します。「コレクション」に移動し、「新しいコレクションを作成」をクリックし、プロファイルからサーバーを追加し、表示設定を設定します。"
+    },
+    "share": {
+      "title": "4. コミュニティと共有",
+      "description": "設定済みサーバーで「サーバーを共有」をクリックして、サーバーを発見可能にします。表示設定を選択し、役立つメモと例を追加し、インストールと評価を追跡します。"
+    }
+  },
+  "advanced": {
+    "title": "高度な機能",
+    "documentLibrary": {
+      "title": "ドキュメントライブラリとRAG",
+      "description": "AIコンテキストを強化するためにドキュメントをアップロードします。「ライブラリ」に移動し、PDF、テキストファイル、またはコードをアップロードします。ドキュメントは自動的にインデックス化され、pluggedin_rag_queryでクエリ可能になります。"
+    },
+    "notifications": {
+      "title": "リアルタイム通知",
+      "description": "MCPアクティビティについて情報を得ます。ベルアイコンをクリックして設定を構成し、重要なアラートのメール配信を有効にし、すべての操作を追跡します。"
+    },
+    "customInstructions": {
+      "title": "カスタム指示",
+      "description": "任意のMCPサーバーの詳細ページに移動して、サーバー固有のガイダンスを追加します。これらの指示はAIの動作をガイドし、MCPプロンプトとして利用可能になります。"
+    },
+    "security": {
+      "title": "セキュリティ機能",
+      "description": "エンドツーエンド暗号化（AES-256-GCM）、Linux上の自動Firejailサンドボックス、APIレート制限、完全なプロジェクトデータ分離を備えたエンタープライズグレードのセキュリティ。"
+    }
+  },
+  "troubleshooting": {
+    "title": "トラブルシューティング",
+    "sessionNotFound": {
+      "title": "「セッションが見つかりません」エラー",
+      "solutions": [
+        "APIキーが有効であることを確認",
+        "MCPプロキシが実行されているか確認",
+        "クライアント設定を検証"
+      ]
+    },
+    "serversNotInit": {
+      "title": "サーバーが初期化されない",
+      "solutions": [
+        "プレイグラウンドでサーバーログを確認",
+        "コマンドパスと引数を検証",
+        "必要な依存関係がインストールされていることを確認"
+      ]
+    },
+    "ragNotWorking": {
+      "title": "RAGクエリが機能しない",
+      "solutions": [
+        "ドキュメントがアップロードされ処理されたことを確認",
+        "プレイグラウンド設定でRAGが有効になっているか確認",
+        "サブスクリプションにRAG機能が含まれていることを確認"
+      ]
+    }
+  },
+  "nextSteps": {
+    "title": "次のステップ",
+    "guides": {
+      "title": "その他のガイドを探索",
+      "links": [
+        { "text": "MCPサーバー設定ガイド", "href": "/docs/guides" },
+        { "text": "コレクションのベストプラクティス", "href": "/docs/collections" },
+        { "text": "セキュリティとセルフホスティング", "href": "/docs/security" }
+      ]
+    },
+    "api": {
+      "title": "APIドキュメント",
+      "links": [
+        { "text": "REST APIリファレンス", "href": "/docs/api-reference" },
+        { "text": "TypeScript SDK", "href": "/docs/typescript-sdk" },
+        { "text": "Webhook統合", "href": "/docs/webhooks" }
+      ]
+    },
+    "community": {
+      "title": "コミュニティに参加",
+      "links": [
+        { "text": "GitHub - pluggedin-app", "href": "https://github.com/VeriTeknik/pluggedin-app", "external": true },
+        { "text": "GitHub - pluggedin-mcp", "href": "https://github.com/VeriTeknik/pluggedin-mcp", "external": true },
+        { "text": "Discordサーバー", "href": "https://discord.gg/pluggedin", "external": true }
+      ]
+    }
+  },
+  "quickReference": {
+    "title": "クイックリファレンス",
+    "commands": {
+      "title": "必須コマンド"
+    },
+    "config": {
+      "title": "設定例",
+      "basic": "基本",
+      "advanced": "高度"
+    }
+  },
+  "cta": {
+    "title": "Plugged.inコミュニティへようこそ！🚀",
+    "getStarted": "今すぐ始める",
+    "browseDocs": "ドキュメントを閲覧"
+  }
+}

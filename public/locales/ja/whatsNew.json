@@ -1,0 +1,220 @@
+{
+  "title": "新機能",
+  "description": "Plugged.inの最新機能とアップデートをご紹介します。実践的なガイドで新しい機能の使い方を学びましょう。",
+  "searchPlaceholder": "記事を検索...",
+  "readTime": "読む",
+  "new": "新着",
+  "backToArticles": "新機能一覧に戻る",
+  "categories": {
+    "all": "すべて",
+    "features": "機能", 
+    "security": "セキュリティ",
+    "integrations": "統合",
+    "feature": "機能",
+    "performance": "パフォーマンス",
+    "social": "ソーシャル"
+  },
+  "articles": {
+    "send-notifications-from-ai": {
+      "title": "あらゆるAIモデルから通知を送信",
+      "description": "AIワークフローからの通知とメールでリアルタイムアラートを受信",
+      "content": {
+        "intro": "AIモデルやMCPツールから直接通知を送信できるようになりました。長時間のタスク実行、エラー監視、カスタムアラートが必要な場合でも、通知システムがリアルタイムでお知らせします。",
+        "howToTitle": "通知の送信方法",
+        "emailSetupTitle": "メール通知の設定",
+        "emailStep1": "設定に移動してメール通知を有効化",
+        "emailStep2": "通知の設定をカスタマイズ",
+        "emailStep3": "サンプル通知でテスト",
+        "useCasesTitle": "ユースケース",
+        "useCase1": "長時間実行タスクの完了アラート",
+        "useCase2": "AIエージェントからのエラー通知",
+        "useCase3": "AI分析に基づくカスタムアラート"
+      }
+    },
+    "document-context-rag": {
+      "title": "ドキュメントコンテキストでAIアプリを構築",
+      "description": "ドキュメントをアップロードしてRAG技術でAIクエリを実行",
+      "content": {
+        "intro": "ドキュメントをAIアクセス可能な知識に変換します。PDF、テキストファイルなどをアップロードして、AIエージェントがクエリや参照できる検索可能なライブラリを作成します。",
+        "uploadTitle": "ドキュメントのアップロードと管理",
+        "uploadDescription": "ファイルをドラッグ＆ドロップするか、アップロードボタンを使用してください。ドキュメントは自動的に処理され、高速検索のためにインデックス化されます。",
+        "queryTitle": "ドキュメントをクエリ", 
+        "formatsTitle": "対応フォーマット"
+      }
+    },
+    "encryption-security": {
+      "title": "MCPサーバーが暗号化されました",
+      "description": "エンタープライズグレードの暗号化がすべての機密サーバー設定を保護",
+      "content": {
+        "intro": "すべての機密MCPサーバーデータは、AES-256-GCM暗号化を使用して自動的に暗号化されるようになりました。APIキー、環境変数、コマンドが保存時に保護されます。",
+        "howItWorksTitle": "仕組み",
+        "feature1": "自動暗号化 - 設定不要",
+        "feature2": "最大のセキュリティのためのプロファイル別キー",
+        "feature3": "透過的な動作 - シームレスに機能",
+        "sharingTitle": "安全な共有",
+        "sharingDescription": "サーバーを共有する際は、サニタイズされたテンプレートのみが公開されます。機密データは暗号化されたまま、あなただけのものです。"
+      }
+    },
+    "share-collections": {
+      "title": "MCPサーバーコレクションを共有",
+      "description": "コミュニティと共有するためのMCPサーバーの厳選コレクションを作成",
+      "content": {
+        "intro": "コレクションは、関連するMCPサーバーをグループ化して他の人と共有する完璧な方法です。開発ツールキット、データサイエンスワークフロー、生産性スイートのいずれを作成する場合でも、コレクションを使えば簡単に全体のセットアップを共有できます。",
+        "whatAreCollectionsTitle": "コレクションとは？",
+        "whatAreCollectionsText": "コレクションは、うまく連携するMCPサーバーの厳選されたグループです。レシピのように考えてください - 材料（サーバー）を集めて、完成した料理（コレクション）を他の人と共有します。",
+        "createCollectionTitle": "コレクションの作成",
+        "createStep1": "MCPサーバーページに移動",
+        "createStep2": "「コレクションを作成」をクリック",
+        "createStep3": "コレクションに名前を付けて説明を追加",
+        "createStep4": "コレクションに含めるサーバーを選択",
+        "sharingTitle": "共有オプション",
+        "sharingFeature1": "プロフィールに表示される公開コレクション",
+        "sharingFeature2": "個人利用のためのプライベートコレクション",
+        "sharingFeature3": "共有コレクションを更新するためのバージョン管理",
+        "examplesTitle": "人気のコレクションアイデア",
+        "example1": "フルスタック開発キット - データベース、API、テストサーバー",
+        "example2": "AI研究スイート - LLMコネクタ、データツール、ノートブック",
+        "example3": "DevOpsツールキット - CI/CD、監視、デプロイメントサーバー",
+        "example4": "コンテンツ作成バンドル - ライティング、メディア、パブリッシングツール"
+      }
+    },
+    "activity-tracking": {
+      "title": "リアルタイムアクティビティトラッキング",
+      "description": "すべてのMCP操作を監視し、使用パターンの洞察を取得",
+      "content": {
+        "intro": "リアルタイムアクティビティトラッキングでMCPエコシステムの完全な可視性を獲得します。操作を監視し、使用パターンを追跡し、実際のデータに基づいてワークフローを最適化します。",
+        "trackedOperationsTitle": "追跡される内容",
+        "operation1": "ツールの実行とパフォーマンスメトリクス",
+        "operation2": "リソースアクセスパターン",
+        "operation3": "プロンプトの使用と効果",
+        "operation4": "サーバー接続の健全性とアップタイム",
+        "operation5": "エラーログとデバッグ情報",
+        "insightsTitle": "アクションにつながる洞察",
+        "insightsText": "生のアクティビティデータを、より賢く働くのに役立つ意味のある洞察に変換します：",
+        "insight1Title": "使用パターン",
+        "insight1Text": "最も頻繁に使用するツールを確認",
+        "insight2Title": "パフォーマンスメトリクス",
+        "insight2Text": "遅い操作とボトルネックを特定",
+        "insight3Title": "エラー分析",
+        "insight3Text": "繰り返し発生する問題を追跡して解決",
+        "insight4Title": "コスト最適化",
+        "insight4Text": "効率化のためにリソース使用量を監視",
+        "privacyTitle": "プライバシー優先",
+        "privacyText": "すべてのアクティビティデータはプロジェクト内に留まります。使用パターンや操作データを第三者と共有することはありません。何をどのくらいの期間ログに記録するかを完全に制御できます。"
+      }
+    },
+    "customize-experience": {
+      "title": "MCP体験をカスタマイズ", 
+      "description": "カスタム指示、テーマ、言語でサーバーをパーソナライズ",
+      "content": {
+        "intro": "Plugged.inを完全にあなたの望むように動作させます。各サーバーのカスタム指示から、パーソナライズされたテーマや言語設定まで、MCP体験のあらゆる側面をカスタマイズできます。",
+        "customInstructionsTitle": "カスタムサーバー指示",
+        "customInstructionsText": "ツールの使用方法についてAIモデルをガイドするために、任意のMCPサーバーに特定の指示を追加します。これらの指示はセッション間で保持され、一貫性の維持に役立ちます。",
+        "themesTitle": "ビジュアルテーマ",
+        "themesText": "複数のテーマから選択するか、独自のカスタム外観を作成：",
+        "workflowTitle": "ワークフローのカスタマイズ",
+        "workflow1": "頻繁に使用するツールのデフォルトパラメータを設定",
+        "workflow2": "よく使うアクションのキーボードショートカットを作成",
+        "workflow3": "通知設定をカスタマイズ",
+        "workflow4": "自動保存とバックアップの間隔を設定",
+        "tipsTitle": "プロのカスタマイズのヒント",
+        "tip1": "より良いフォーマットのためにカスタム指示でマークダウンを使用",
+        "tip2": "カスタマイズをエクスポートしてチームと共有",
+        "tip3": "異なる種類の作業用に異なるプロファイルを作成"
+      }
+    },
+    "lightning-fast-startup": {
+      "title": "超高速MCPサーバー起動",
+      "description": "プログレッシブ初期化で瞬時のサーバー接続を体験",
+      "content": {
+        "intro": "遅いMCPサーバーの起動を待つ必要はもうありません。プログレッシブサーバー初期化により、サーバーは即座に接続し、接続の問題から自動的に回復します。",
+        "howItWorksTitle": "プログレッシブ起動の仕組み",
+        "feature1": "サーバーはブロックせずに即座に起動",
+        "feature2": "障害時の自動再接続",
+        "feature3": "ネットワーク中断に対する耐性",
+        "benefitsTitle": "実感できるメリット",
+        "benefit1": "遅いサーバーを待つ必要がない",
+        "benefit2": "よりスムーズなワークフローの移行",
+        "benefit3": "不安定な接続でのより良い信頼性"
+      }
+    },
+    "public-profile": {
+      "title": "あなたの公開プロフィールページ",
+      "description": "パーソナライズされた開発者プロフィールでMCPサーバーとコレクションを紹介",
+      "content": {
+        "intro": "すべての開発者が/to/usernameに公開プロフィールページを持つようになりました。最高のMCP設定を共有し、コレクションを紹介し、他の開発者とつながりましょう。",
+        "featuresTitle": "プロフィール機能",
+        "feature1": "カスタムバイオとアバター",
+        "feature2": "共有したサーバーとコレクションを表示",
+        "feature3": "他の開発者をフォロー",
+        "feature4": "インストール数で影響を追跡",
+        "setupTitle": "プロフィールの設定",
+        "setupStep1": "設定に移動してユニークなユーザー名を選択",
+        "setupStep2": "バイオとプロフィール画像を追加",
+        "setupStep3": "プロフィールに表示するサーバーを共有"
+      }
+    },
+    "import-export-setup": {
+      "title": "設定をインポート＆エクスポート",
+      "description": "ワンクリックでMCP設定をバックアップ、共有、転送",
+      "content": {
+        "intro": "慎重に作成したMCP設定を二度と失うことはありません。バックアップやチームとの共有のために、コレクション全体をエクスポートできます。",
+        "exportTitle": "コレクションのエクスポート",
+        "exportStep1": "コレクションに移動",
+        "exportStep2": "エクスポートボタンをクリック",
+        "exportStep3": "JSONファイルを保存",
+        "importTitle": "コレクションのインポート",
+        "importStep1": "「コレクションをインポート」をクリック",
+        "importStep2": "JSONファイルを選択",
+        "importStep3": "インポートを確認して承認",
+        "useCasesTitle": "こんな時に最適",
+        "useCase1": "チーム設定の共有",
+        "useCase2": "大きな変更前のバックアップ",
+        "useCase3": "アカウント間の移行"
+      }
+    },
+    "multilingual-support": {
+      "title": "あなたの言語で話そう",
+      "description": "6言語対応でお好みの言語でPlugged.inを使用",
+      "content": {
+        "intro": "Plugged.inがあなたの言語を話すようになりました！英語、トルコ語、中国語、ヒンディー語、日本語、オランダ語から選択できます。",
+        "supportedLanguages": "対応言語",
+        "changeLanguageTitle": "言語の変更方法",
+        "step1": "設定に移動",
+        "step2": "お好みの言語を選択",
+        "step3": "インターフェース全体が即座に更新",
+        "contributeTitle": "改善にご協力ください",
+        "contributeText": "翻訳の問題を見つけましたか？翻訳作業に貢献して改善にご協力ください。"
+      }
+    },
+    "discover-capabilities": {
+      "title": "サーバー機能を発見",
+      "description": "MCPサーバーのすべてのツール、リソース、プロンプトを自動的に発見して探索",
+      "content": {
+        "intro": "完全なMCP仕様サポートにより、サーバーが提供するすべてのもの - ツール、リソース、プロンプト、テンプレートを発見できます。",
+        "capabilitiesTitle": "発見される内容",
+        "capability1": "ツール - すべての利用可能な機能",
+        "capability2": "リソース - データとファイル",
+        "capability3": "プロンプト - 事前設定されたテンプレート",
+        "capability4": "リソーステンプレート - 動的リソース",
+        "discoveryTitle": "手動での発見",
+        "discoveryStep1": "MCPサーバーの詳細に移動",
+        "discoveryStep2": "「機能を発見」をクリック",
+        "discoveryStep3": "発見されたすべてのアイテムをタブで表示"
+      }
+    }
+  },
+  "tryItNow": {
+    "title": "試してみる準備はできましたか？",
+    "description": "これらの新機能を今日からプロジェクトで使い始めましょう。",
+    "primaryCta": "MCPサーバーへ移動",
+    "secondaryCta": "ガイドを見る"
+  },
+  "relatedArticles": "関連記事",
+  "newsletter": {
+    "title": "最新情報を入手",
+    "description": "新機能とアップデートの通知を受け取る",
+    "placeholder": "メールアドレスを入力",
+    "subscribe": "購読"
+  }
+}

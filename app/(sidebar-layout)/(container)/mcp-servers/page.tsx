@@ -87,7 +87,7 @@ export default function MCPServersPage() {
       header: 'Command',
     }),
     columnHelper.accessor('args', {
-      cell: (info) => info.getValue().join(' ') || '-',
+      cell: (info) => info.getValue()?.join(' ') || '-',
       header: 'Arguments',
     }),
     columnHelper.accessor('type', {
@@ -138,8 +138,7 @@ export default function MCPServersPage() {
         title: t('common.success'),
         description: t('mcpServers.form.success'),
       });
-    } catch (error) {
-      console.error('Error creating MCP server:', error);
+    } catch (_error) {
       toast({
         title: t('common.error'),
         description: t('mcpServers.form.error.createFailed'),
@@ -212,8 +211,8 @@ export default function MCPServersPage() {
         description: t('mcpServers.import.success', { count: result.count }),
         variant: 'default',
       });
-    } catch (error) {
-      throw error;
+    } catch (_error) {
+      throw _error;
     } finally {
       setIsSubmitting(false);
     }

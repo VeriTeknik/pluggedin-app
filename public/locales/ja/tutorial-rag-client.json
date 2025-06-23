@@ -1,0 +1,94 @@
+{
+  "backToTutorials": "チュートリアルに戻る",
+  "title": "MCPクライアントでのRAGの使用",
+  "difficulty": "中級",
+  "duration": "25分",
+  "overview": {
+    "title": "学習内容",
+    "description": "このチュートリアルでは、MCPクライアント（Claude、Cursorなど）から直接RAGナレッジベースを活用して、独自のドキュメントと知識でAIアシスタントを強化する方法を学びます。",
+    "learn1": "pluggedin_rag_queryツールの使用方法",
+    "learn2": "ナレッジベースへの効果的なクエリの作成",
+    "learn3": "RAGクエリと他のMCPツールの組み合わせ",
+    "learn4": "コンテキスト情報検索のベストプラクティス"
+  },
+  "prerequisites": {
+    "title": "前提条件",
+    "item1": "MCPプロキシが設定されたPlugged.inアカウント",
+    "item2": "ライブラリに少なくとも1つのドキュメントがアップロード済み",
+    "item3": "接続されたMCPクライアント（Claude Desktop、Cursorなど）",
+    "item4": "「RAGナレッジベースの構築」チュートリアルからのRAGの基本的な理解"
+  },
+  "step1": {
+    "title": "pluggedin_rag_queryツールの理解",
+    "description": "pluggedin_rag_queryツールは、Plugged.in経由で接続されている場合、MCPクライアントで自動的に利用可能になります。現在のプロジェクトのライブラリ内のすべてのドキュメントを検索できます。",
+    "tip": "RAGシステムはベクトル類似性検索を使用するため、ドキュメントの正確なキーワードを使用しなくても関連情報を見つけることができます。",
+    "screenshot": "スクリーンショット：利用可能なツールにplugged.in_rag_queryを表示するClaude Desktop",
+    "screenshotDesc": "ツールはMCPクライアントのツールリストに表示されます"
+  },
+  "step2": {
+    "title": "基本的なRAGクエリ",
+    "description": "ナレッジベースを検索する簡単なクエリから始めます。ツールはドキュメントから最も関連性の高いチャンクを返します。",
+    "example1": {
+      "title": "シンプルなキーワード検索",
+      "screenshot": "スクリーンショット：RAGクエリツールを使用するClaude",
+      "screenshotDesc": "クエリが実行され、結果が返される様子を表示"
+    },
+    "example2": {
+      "title": "質問ベースのクエリ"
+    },
+    "example3": {
+      "title": "トピック検索"
+    }
+  },
+  "step3": {
+    "title": "高度なクエリテクニック",
+    "description": "ナレッジベースからより良い結果を得るために、より洗練されたクエリを作成する方法を学びます。",
+    "contextual": {
+      "title": "コンテキストクエリ",
+      "description": "AIはドキュメント内のデータベースインデックスのベストプラクティスを検索します"
+    },
+    "comparison": {
+      "title": "比較クエリ",
+      "description": "複数のドキュメントにまたがる情報を見つけるのに最適"
+    },
+    "screenshot": "スクリーンショット：詳細な結果を含む複雑なRAGクエリ",
+    "screenshotDesc": "AIが関連情報を処理して返す方法を表示"
+  },
+  "step4": {
+    "title": "ベストプラクティス",
+    "specific": {
+      "title": "具体的に",
+      "description": "より具体的なクエリはより良い結果をもたらします",
+      "good": "良い例：「PostgreSQL接続プーリング設定」",
+      "bad": "広すぎる：「データベース」"
+    },
+    "context": {
+      "title": "コンテキストを提供",
+      "description": "より良い結果を得るために、達成しようとしていることについてのコンテキストを含める"
+    },
+    "combine": {
+      "title": "他のツールと組み合わせる",
+      "description": "強力なワークフローのために、他のMCPツールと一緒にRAGクエリを使用："
+    }
+  },
+  "issues": {
+    "title": "一般的な問題と解決策",
+    "noResults": {
+      "title": "結果が見つからない：",
+      "solution1": "ドキュメントがアップロードされ、処理されていることを確認",
+      "solution2": "異なるキーワードを試すか、クエリを言い換える",
+      "solution3": "正しいプロジェクト/プロファイルにいることを確認"
+    },
+    "toolNotAvailable": {
+      "title": "ツールが利用できない：",
+      "solution1": "MCPクライアントを再起動",
+      "solution2": "Plugged.inプロキシが正しく実行されていることを確認"
+    }
+  },
+  "nextSteps": {
+    "title": "次のステップ",
+    "description": "ナレッジベースをクエリできるようになったので、これらの関連チュートリアルを探索してください：",
+    "notifications": "AIからの通知送信",
+    "buildingRag": "RAGナレッジベースの構築"
+  }
+}

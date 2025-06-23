@@ -1,0 +1,107 @@
+{
+  "backToTutorials": "Back to Tutorials",
+  "title": "Sending Notifications from AI",
+  "difficulty": "Intermediate",
+  "duration": "20 minutes",
+  "overview": {
+    "title": "What You'll Learn",
+    "description": "This tutorial will teach you how to set up and use the notification system in Plugged.in, allowing your AI assistant to send real-time alerts and updates.",
+    "learn1": "How to enable notifications in your profile",
+    "learn2": "Using the pluggedin_send_notification tool",
+    "learn3": "Setting up email notifications for critical alerts",
+    "learn4": "Best practices for notification severity levels"
+  },
+  "prerequisites": {
+    "title": "Prerequisites",
+    "item1": "Plugged.in account with MCP proxy configured",
+    "item2": "MCP client (Claude Desktop, Cursor, etc.) connected",
+    "item3": "Email configured in settings (optional, for email notifications)"
+  },
+  "step1": {
+    "title": "Enable Notifications",
+    "description": "First, ensure notifications are enabled for your current profile. This allows the MCP proxy to log activities and send notifications.",
+    "screenshot": "Screenshot: Profile settings with notifications toggle",
+    "screenshotDesc": "Shows the notification settings in your profile",
+    "note": "Notifications are enabled by default for new profiles. You can check the bell icon in the navigation to see your notification count."
+  },
+  "step2": {
+    "title": "Configure Email Notifications (Optional)",
+    "description": "For critical alerts, you can enable email delivery. This ensures you receive important notifications even when not actively using Plugged.in.",
+    "emailSetup": {
+      "title": "Email Setup Steps",
+      "step1": "Go to Settings → Notifications",
+      "step2": "Toggle 'Email Notifications' on",
+      "step3": "Verify your email address if not already done"
+    },
+    "screenshot": "Screenshot: Email notification settings",
+    "screenshotDesc": "Shows email configuration options"
+  },
+  "step3": {
+    "title": "Using the Notification Tool",
+    "description": "The pluggedin_send_notification tool is available in your MCP client. Here's how to use it effectively:",
+    "tabs": {
+      "basic": "Basic Usage",
+      "severity": "Severity Levels",
+      "email": "With Email"
+    },
+    "basic": {
+      "title": "Simple Notification",
+      "description": "Send a basic notification that appears in the Plugged.in notification center:",
+      "screenshot": "Screenshot: Notification appearing in the bell menu",
+      "screenshotDesc": "Shows how the notification appears in the UI"
+    },
+    "severity": {
+      "title": "Using Severity Levels",
+      "description": "Choose the appropriate severity level for your notifications:"
+    },
+    "email": {
+      "title": "Email Notifications",
+      "description": "For critical alerts, enable email delivery:",
+      "note": "Email notifications are only sent for WARNING and ALERT severity levels, or when explicitly enabled."
+    }
+  },
+  "step4": {
+    "title": "Practical Examples",
+    "example1": {
+      "title": "Deployment Notifications",
+      "description": "Notify team members about deployment status:"
+    },
+    "example2": {
+      "title": "Analysis Results",
+      "description": "Send notifications based on analysis outcomes:"
+    },
+    "example3": {
+      "title": "System Monitoring",
+      "description": "Alert on system resource usage:"
+    }
+  },
+  "bestPractices": {
+    "title": "Best Practices",
+    "meaningful": {
+      "title": "Keep it Meaningful",
+      "description": "Include specific details like counts, percentages, or status codes"
+    },
+    "severity": {
+      "title": "Use Appropriate Severity",
+      "description": "Reserve ALERT for critical issues that need immediate attention"
+    },
+    "email": {
+      "title": "Email Sparingly",
+      "description": "Only enable email for notifications that require action when away from the app"
+    },
+    "context": {
+      "title": "Add Context",
+      "description": "Include timestamp, affected systems, or relevant identifiers"
+    }
+  },
+  "tip": {
+    "title": "Pro Tip",
+    "description": "Combine notifications with RAG queries for intelligent alerting. For example, query your documentation for thresholds, then send notifications when those thresholds are exceeded."
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "description": "Enhance your automation workflows with these related tutorials:",
+    "api": "API Integration Guide",
+    "team": "Team Collaboration Setup"
+  }
+}

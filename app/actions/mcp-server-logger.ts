@@ -104,8 +104,8 @@ export async function createEnhancedMcpLogger(
             db.insert(systemLogsTable).values({
               level,
               message,
-              details: serverName ? { serverName } : undefined,
-              created_at: new Date(),
+              context: serverName ? { serverName } : undefined,
+              timestamp: new Date(),
             } as any).catch(fallbackErr => console.error('Fallback log storage also failed:', fallbackErr));
           }
         });
@@ -151,8 +151,8 @@ export async function createEnhancedMcpLogger(
             db.insert(systemLogsTable).values({
               level,
               message,
-              details: serverName ? { serverName } : undefined,
-              created_at: new Date(),
+              context: serverName ? { serverName } : undefined,
+              timestamp: new Date(),
             } as any).catch(fallbackErr => console.error('Fallback log storage also failed:', fallbackErr));
           }
         });

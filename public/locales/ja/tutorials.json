@@ -1,0 +1,83 @@
+{
+  "title": "チュートリアル",
+  "description": "基本的なMCPサーバーのセットアップから高度なRAG統合やカスタム開発まで、Plugged.inの機能をマスターするためのステップバイステップのチュートリアル。",
+  "minutes": "分",
+  "search": {
+    "placeholder": "キーワードやタグでチュートリアルを検索...",
+    "noResults": "検索条件に一致するチュートリアルが見つかりません"
+  },
+  "difficulty": {
+    "all": "すべてのレベル",
+    "beginner": "初級",
+    "intermediate": "中級",
+    "advanced": "上級"
+  },
+  "sections": {
+    "beginner": "はじめに",
+    "intermediate": "スキルの構築",
+    "advanced": "高度なトピック"
+  },
+  "first-mcp-server": {
+    "title": "はじめてのMCPサーバー",
+    "description": "MCPサーバーの設定と構成方法を学びます。Model Context Protocolの基本を理解したい初心者に最適です。"
+  },
+  "sharing-with-community": {
+    "title": "コミュニティとの共有",
+    "description": "MCPサーバーとコレクションをPlugged.inコミュニティと共有する方法を学びます。評判を築き、他の人を助けましょう。"
+  },
+  "rag-knowledge-base": {
+    "title": "RAGナレッジベースの構築",
+    "description": "ドキュメントをアップロードしてRAG技術を使用してAIが情報をクエリできる強力なナレッジベースを作成します。"
+  },
+  "using-rag-in-client": {
+    "title": "MCPクライアントでのRAGの使用",
+    "description": "pluggedin_rag_queryツールを使用して、Claude、Cursor、または任意のMCPクライアントから直接RAGナレッジベースをクエリする方法を学びます。"
+  },
+  "notifications-system": {
+    "title": "AIからの通知送信",
+    "description": "AIアシスタントからの自動通知を設定します。アラートや更新のためのplugged.in_send_notificationの使用方法を学びます。"
+  },
+  "team-collaboration": {
+    "title": "チームコラボレーションの設定",
+    "description": "チーム用のワークスペースを構成し、プロファイルを管理し、シームレスなコラボレーションのためのプライベートコレクションを共有します。"
+  },
+  "custom-mcp-server": {
+    "title": "カスタムMCPサーバーの作成",
+    "description": "MCPプロトコルを深く理解し、TypeScriptまたはPythonを使用して独自のカスタムサーバーを構築します。npmへの公開も含まれます。"
+  },
+  "api-integration": {
+    "title": "API統合ガイド",
+    "description": "外部統合、自動化、カスタムアプリケーションを構築するためのPlugged.in REST APIをマスターします。"
+  },
+  "self-hosting": {
+    "title": "Plugged.inのセルフホスティング",
+    "description": "Dockerを使用して独自のPlugged.inインスタンスをデプロイするための完全ガイド。データベースのセットアップと設定を含みます。"
+  },
+  "security-best-practices": {
+    "title": "セキュリティベストプラクティス",
+    "description": "暗号化機能、APIキー管理、サンドボックス化、およびデータを保護するためのその他のセキュリティ設定について学びます。"
+  },
+  "featured": {
+    "title": "注目のチュートリアルシリーズ",
+    "ragAndNotifications": {
+      "title": "RAG + 通知ワークフロー",
+      "description": "ナレッジクエリと自動通知の強力な組み合わせをマスター",
+      "tutorial1": "ナレッジベースを構築",
+      "tutorial2": "MCPクライアントからクエリ",
+      "tutorial3": "通知を自動化"
+    },
+    "security": {
+      "title": "セキュリティとデプロイメント",
+      "description": "インスタンスを保護し、自信を持ってデプロイ",
+      "tutorial1": "セキュリティ設定",
+      "tutorial2": "セルフホスティングガイド"
+    }
+  },
+  "help": {
+    "title": "ヘルプが必要ですか？",
+    "description": "お探しのものが見つからない場合は、これらのリソースをご確認ください：",
+    "gettingStarted": "スタートガイド",
+    "guides": "すべてのガイドを見る",
+    "contact": "サポートに連絡"
+  }
+}

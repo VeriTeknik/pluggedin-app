@@ -1,0 +1,83 @@
+{
+  "title": "教程",
+  "description": "循序渐进的教程帮助您掌握 Plugged.in 功能 - 从基础的 MCP 服务器设置到高级的 RAG 集成和自定义开发。",
+  "minutes": "分钟",
+  "search": {
+    "placeholder": "按关键词或标签搜索教程...",
+    "noResults": "没有找到匹配的教程"
+  },
+  "difficulty": {
+    "all": "所有级别",
+    "beginner": "初学者",
+    "intermediate": "中级",
+    "advanced": "高级"
+  },
+  "sections": {
+    "beginner": "入门教程",
+    "intermediate": "技能进阶",
+    "advanced": "高级主题"
+  },
+  "first-mcp-server": {
+    "title": "您的第一个 MCP 服务器",
+    "description": "学习如何设置和配置您的第一个 MCP 服务器。非常适合初学者了解模型上下文协议的基础知识。"
+  },
+  "sharing-with-community": {
+    "title": "与社区分享",
+    "description": "了解如何与 Plugged.in 社区分享您的 MCP 服务器和集合。建立您的声誉并帮助他人。"
+  },
+  "rag-knowledge-base": {
+    "title": "构建 RAG 知识库",
+    "description": "通过上传文档并使用 RAG 技术让 AI 查询您的信息来创建强大的知识库。"
+  },
+  "using-rag-in-client": {
+    "title": "在 MCP 客户端中使用 RAG",
+    "description": "学习如何使用 pluggedin_rag_query 工具直接从 Claude、Cursor 或任何 MCP 客户端查询您的 RAG 知识库。"
+  },
+  "notifications-system": {
+    "title": "从 AI 发送通知",
+    "description": "设置您的 AI 助手的自动通知。学习使用 pluggedin_send_notification 进行警报和更新。"
+  },
+  "team-collaboration": {
+    "title": "团队协作设置",
+    "description": "为您的团队配置工作空间，管理配置文件，并共享私有集合以实现无缝协作。"
+  },
+  "custom-mcp-server": {
+    "title": "创建自定义 MCP 服务器",
+    "description": "深入了解 MCP 协议并使用 TypeScript 或 Python 构建您自己的自定义服务器。包括发布到 npm。"
+  },
+  "api-integration": {
+    "title": "API 集成指南",
+    "description": "掌握 Plugged.in REST API，用于构建外部集成、自动化和自定义应用程序。"
+  },
+  "self-hosting": {
+    "title": "自托管 Plugged.in",
+    "description": "使用 Docker 部署您自己的 Plugged.in 实例的完整指南，包括数据库设置和配置。"
+  },
+  "security-best-practices": {
+    "title": "安全最佳实践",
+    "description": "了解加密功能、API 密钥管理、沙盒和其他安全配置以保护您的数据。"
+  },
+  "featured": {
+    "title": "精选教程系列",
+    "ragAndNotifications": {
+      "title": "RAG + 通知工作流",
+      "description": "掌握知识查询和自动通知的强大组合",
+      "tutorial1": "构建您的知识库",
+      "tutorial2": "从 MCP 客户端查询",
+      "tutorial3": "自动化通知"
+    },
+    "security": {
+      "title": "安全与部署",
+      "description": "保护您的实例并自信地部署",
+      "tutorial1": "安全配置",
+      "tutorial2": "自托管指南"
+    }
+  },
+  "help": {
+    "title": "需要帮助？",
+    "description": "找不到您要找的内容？查看这些资源：",
+    "gettingStarted": "入门指南",
+    "guides": "浏览所有指南",
+    "contact": "联系支持"
+  }
+}

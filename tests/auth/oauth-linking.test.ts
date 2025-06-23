@@ -1,34 +1,39 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { mockReset } from 'vitest-mock-extended';
 
 import { db } from '@/db';
 import { accounts } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
+import { createMockUser, createMockDb } from '../utils/mocks';
 
 // Mock the DB client
-vi.mock('@/db', () => ({
-  db: {
-    query: {
-      users: {
-        findFirst: vi.fn(),
-      },
-      accounts: {
-        findFirst: vi.fn(),
-      },
-    },
-    insert: vi.fn(() => ({ values: vi.fn(() => Promise.resolve()) })),
-  },
-}));
+vi.mock('@/db');
 
 // Mock bcrypt
 vi.mock('bcrypt', () => ({
   compare: vi.fn(),
 }));
 
+const mockedDb = vi.mocked(db);
+
 describe('OAuth Account Linking', () => {
   beforeEach(() => {
-    mockReset(db);
     vi.clearAllMocks();
+    
+    // Setup default mock implementations
+    mockedDb.query = {
+      users: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
+      accounts: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
+    } as any;
+    
+    mockedDb.insert = vi.fn(() => ({ 
+      values: vi.fn(() => Promise.resolve()) 
+    })) as any;
   });
 
   describe('signIn callback behavior', () => {
@@ -77,11 +82,11 @@ describe('OAuth Account Linking', () => {
       const signInCallback = authOptions.callbacks?.signIn;
       if (!signInCallback) return;
       
-      const mockUser = { id: 'db-123', email: 'test@example.com', emailVerified: new Date() };
+      const mockUser = createMockUser({ id: 'db-123', email: 'test@example.com', emailVerified: new Date() });
       
       // Mock DB queries
-      db.query.users.findFirst.mockResolvedValue(mockUser);
-      db.query.accounts.findFirst.mockResolvedValue(null);
+      mockedDb.query.users.findFirst.mockResolvedValue(mockUser);
+      mockedDb.query.accounts.findFirst.mockResolvedValue(null);
       
       const user = { id: 'oauth-456', email: 'test@example.com' };
       const account = { 
@@ -100,7 +105,7 @@ describe('OAuth Account Linking', () => {
       
       expect(result).toBe(true);
       expect(user.id).toBe(mockUser.id);
-      expect(db.insert).toHaveBeenCalledWith(accounts);
+      expect(mockedDb.insert).toHaveBeenCalledWith(accounts);
     });
     
     it('should not create a duplicate account link if one already exists', async () => {
@@ -110,8 +115,8 @@ describe('OAuth Account Linking', () => {
       const mockUser = { id: 'db-123', email: 'test@example.com', emailVerified: new Date() };
       
       // Mock existing account link
-      db.query.users.findFirst.mockResolvedValue(mockUser);
-      db.query.accounts.findFirst.mockResolvedValue({
+      mockedDb.query.users.findFirst.mockResolvedValue(mockUser);
+      mockedDb.query.accounts.findFirst.mockResolvedValue({
         userId: mockUser.id,
         provider: 'github',
       });
@@ -133,7 +138,7 @@ describe('OAuth Account Linking', () => {
       
       expect(result).toBe(true);
       expect(user.id).toBe(mockUser.id);
-      expect(db.insert).not.toHaveBeenCalled();
+      expect(mockedDb.insert).not.toHaveBeenCalled();
     });
     
     it('should handle different OAuth providers for the same user', async () => {
@@ -143,8 +148,8 @@ describe('OAuth Account Linking', () => {
       const mockUser = { id: 'db-123', email: 'test@example.com', emailVerified: new Date() };
       
       // User exists but no Google account linked yet
-      db.query.users.findFirst.mockResolvedValue(mockUser);
-      db.query.accounts.findFirst.mockResolvedValue(null);
+      mockedDb.query.users.findFirst.mockResolvedValue(mockUser);
+      mockedDb.query.accounts.findFirst.mockResolvedValue(null);
       
       const user = { id: 'oauth-456', email: 'test@example.com' };
       const account = { 
@@ -163,7 +168,7 @@ describe('OAuth Account Linking', () => {
       
       expect(result).toBe(true);
       expect(user.id).toBe(mockUser.id);
-      expect(db.insert).toHaveBeenCalledWith(accounts);
+      expect(mockedDb.insert).toHaveBeenCalledWith(accounts);
     });
     
     it('should handle database errors gracefully', async () => {
@@ -171,7 +176,7 @@ describe('OAuth Account Linking', () => {
       if (!signInCallback) return;
       
       // Force DB query to throw an error
-      db.query.users.findFirst.mockRejectedValue(new Error('Database error'));
+      mockedDb.query.users.findFirst.mockRejectedValue(new Error('Database error'));
       
       const result = await signInCallback({
         user: { id: '123', email: 'test@example.com' },
@@ -193,8 +198,8 @@ describe('OAuth Account Linking', () => {
       if (!signInCallback || !jwtCallback) return;
       
       const mockUser = { id: 'db-123', email: 'test@example.com', name: 'Test User', emailVerified: new Date() };
-      db.query.users.findFirst.mockResolvedValue(mockUser);
-      db.query.accounts.findFirst.mockResolvedValue(null);
+      mockedDb.query.users.findFirst.mockResolvedValue(mockUser);
+      mockedDb.query.accounts.findFirst.mockResolvedValue(null);
       
       const user = { id: 'oauth-456', email: 'test@example.com', name: 'OAuth User' };
       const account = { 

@@ -1,0 +1,89 @@
+{
+  "title": "Plugged.in'i Kendi Sunucunuzda Barındırma",
+  "description": "MCP altyapınız üzerinde tam kontrol için Plugged.in'i kendi sunucunuzda nasıl barındıracağınızı öğrenin",
+  "overview": {
+    "title": "Genel Bakış",
+    "introduction": "Plugged.in'i kendi sunucunuzda barındırmak, MCP altyapınız, veri egemenliği ve özelleştirme seçenekleri üzerinde tam kontrol sağlar. Bu kılavuz, kurulumdan üretime kadar dağıtımı kapsar.",
+    "features": {
+      "control": {
+        "title": "Tam Kontrol",
+        "description": "Altyapınız ve yapılandırmanız üzerinde tam kontrol"
+      },
+      "data": {
+        "title": "Veri Egemenliği",
+        "description": "Tüm verileri kendi altyapınızda tutun"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "server": "Linux sunucu (Ubuntu 20.04+ veya benzeri)",
+    "docker": "Docker ve Docker Compose kurulu",
+    "postgresql": "PostgreSQL 15+ (veya Docker)",
+    "domain": "DNS erişimli alan adı"
+  },
+  "steps": {
+    "prepare": {
+      "title": "Adım 1: Ortamı Hazırla",
+      "badge": "Kurulum",
+      "description": "Depoları klonlayın ve sunucunuzu hazırlayın",
+      "clone": {
+        "title": "Depoları Klonla",
+        "description": "En son kaynak kodunu alın:"
+      },
+      "requirements": {
+        "title": "Sistem Gereksinimleri",
+        "description": "Önerilen minimum özellikler:",
+        "cpu": "2 CPU çekirdeği",
+        "ram": "4GB RAM",
+        "storage": "20GB depolama"
+      }
+    },
+    "database": {
+      "title": "Adım 2: Veritabanını Kur",
+      "badge": "Veritabanı",
+      "description": "Plugged.in için PostgreSQL'i yapılandırın",
+      "setup": {
+        "title": "PostgreSQL Kurulumu",
+        "description": "Docker kullanarak PostgreSQL'i dağıtın:"
+      },
+      "migrations": {
+        "title": "Göçleri Çalıştır",
+        "description": "Veritabanı şemasını başlatın:"
+      }
+    },
+    "configure": {
+      "title": "Adım 3: Uygulamayı Yapılandır",
+      "badge": "Yapılandırma",
+      "description": "Ortam değişkenlerini ve güvenlik ayarlarını kurun",
+      "env": {
+        "title": "Ortam Değişkenleri",
+        "description": "Üretim ortamı yapılandırmasını oluşturun:"
+      },
+      "tip": "Güvenli anahtarlar oluşturun: openssl rand -base64 32"
+    },
+    "deploy": {
+      "title": "Adım 4: Servisleri Dağıt",
+      "badge": "Dağıtım",
+      "description": "Docker Compose kullanarak Plugged.in'i dağıtın",
+      "docker": {
+        "title": "Docker Compose Kurulumu",
+        "description": "Bir docker-compose.yml dosyası oluşturun:"
+      },
+      "nginx": {
+        "title": "Ters Proxy",
+        "description": "Nginx'i uygun başlıklar ve WebSocket desteği ile ters proxy olarak yapılandırın."
+      },
+      "ssl": {
+        "title": "SSL/TLS Kurulumu",
+        "description": "Otomatik yenileme ile ücretsiz SSL sertifikaları için Let's Encrypt kullanın."
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "monitoring": "İzleme ve günlükleme kurun",
+    "backup": "Otomatik yedeklemeleri yapılandırın",
+    "security": "Güvenlik yapılandırma kılavuzunu inceleyin"
+  }
+}

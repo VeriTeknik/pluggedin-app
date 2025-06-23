@@ -1,0 +1,108 @@
+{
+  "backToTutorials": "Eğitimlere Dön",
+  "title": "İlk MCP Sunucunuz",
+  "difficulty": "Başlangıç",
+  "duration": "15 dakika",
+  "overview": {
+    "title": "Neler Öğreneceksiniz",
+    "description": "Bu eğitim, Plugged.in'e ilk MCP sunucunuzu ekleme konusunda size rehberlik edecek. MCP sunucuları, araçlara, kaynaklara ve entegrasyonlara erişim sağlayarak AI'nızın yeteneklerini genişletir.",
+    "learn1": "MCP sunucularının ne olduğu ve nasıl çalıştığı",
+    "learn2": "Resmi MCP sunucularına nasıl göz atılacağı ve eklenileceği",
+    "learn3": "Sunucu ayarlarının ve ortam değişkenlerinin nasıl yapılandırılacağı",
+    "learn4": "Sunucu bağlantınızın nasıl test edileceği ve araçlarının nasıl kullanılacağı"
+  },
+  "prerequisites": {
+    "title": "Ön Koşullar",
+    "item1": "Plugged.in hesabı (ücretsiz plan yeterlidir)",
+    "item2": "Komut satırının temel anlayışı (özel sunucular için)",
+    "item3": "Node.js kurulu (isteğe bağlı, özel sunucular için)"
+  },
+  "step1": {
+    "title": "MCP Sunucularını Anlamak",
+    "description": "İlk sunucumuzu eklemeden önce, MCP sunucularının ne olduğunu ve neden güçlü olduklarını anlayalım.",
+    "whatIs": {
+      "title": "MCP Sunucusu Nedir?",
+      "description": "MCP (Model Context Protocol) sunucuları, AI asistanlarına ek yetenekler sağlayan programlardır. Bunları AI'nızın yapabileceklerini genişleten eklentiler olarak düşünün.",
+      "point1": "Araçlar: AI'nın çağırabileceği fonksiyonlar (örn. dosya okuma, web arama, e-posta gönderme)",
+      "point2": "Kaynaklar: AI'nın erişebileceği veriler (örn. belgeler, veritabanları, API'ler)",
+      "point3": "İstemler: Belirli görevler için önceden yapılandırılmış talimatlar"
+    }
+  },
+  "step2": {
+    "title": "MCP Sunucularına Gitme",
+    "description": "Plugged.in'de MCP Sunucuları bölümüne giderek başlayalım.",
+    "screenshot": "Ekran görüntüsü: MCP Sunucuları menüsü vurgulanmış Plugged.in kontrol paneli",
+    "screenshotDesc": "Kenar çubuğu navigasyonundaki MCP Sunucuları seçeneği",
+    "tip": "Ayrıca Cmd/Ctrl + K klavye kısayolunu kullanabilir ve oraya hızlıca gitmek için 'MCP Sunucuları' araması yapabilirsiniz."
+  },
+  "step3": {
+    "title": "İlk Sunucunuzu Ekleme",
+    "description": "Şimdi ilk MCP sunucunuzu ekleyelim. Resmi sunucular veya özel sunucular arasından seçim yapabilirsiniz.",
+    "tabs": {
+      "official": "Resmi Sunucular",
+      "custom": "Özel Sunucu"
+    },
+    "official": {
+      "title": "Resmi Sunucu Ekleme",
+      "step1": "'Sunucu Ekle' düğmesine tıklayın",
+      "step2": "Resmi sunucu kataloğuna göz atın",
+      "step3": "'Filesystem' sunucusunu seçin (başlangıç için iyi bir sunucu)",
+      "step4": "Profilinize eklemek için 'Yükle' düğmesine tıklayın",
+      "screenshot": "Ekran görüntüsü: Filesystem sunucusu ile resmi sunucu kataloğu",
+      "screenshotDesc": "Çeşitli MCP sunucularını gösteren resmi sunucu kataloğu"
+    },
+    "custom": {
+      "title": "Özel Sunucu Ekleme",
+      "description": "Daha fazla kontrol için özel bir MCP sunucusu ekleyebilirsiniz:",
+      "step1": "'Özel Sunucu Ekle' düğmesine tıklayın",
+      "step2": "Sunucunuz için bir ad girin",
+      "step3": "Komutu ve argümanları yapılandırın"
+    }
+  },
+  "step4": {
+    "title": "Sunucunuzu Yapılandırma",
+    "description": "Her sunucu belirli ayarlar ve ortam değişkenleri ile yapılandırılabilir.",
+    "settings": {
+      "title": "Temel Yapılandırma",
+      "description": "Sunucunuzun nasıl çalışacağını yapılandırın:"
+    },
+    "env": {
+      "title": "Ortam Değişkenleri",
+      "description": "Bazı sunucular API anahtarları veya ortam değişkenleri aracılığıyla diğer yapılandırmaları gerektirir.",
+      "note": "Ortam değişkenleri şifrelenir ve Plugged.in'de güvenli bir şekilde saklanır"
+    }
+  },
+  "step5": {
+    "title": "Sunucunuzu Test Etme",
+    "description": "Sunucunuzun doğru çalıştığından emin olalım.",
+    "test": {
+      "title": "Bağlantı Testi",
+      "step1": "Sunucu yapılandırmanızı kaydedin",
+      "step2": "'Bağlantıyı Test Et' düğmesine tıklayın",
+      "step3": "Bağlantının kurulmasını bekleyin",
+      "step4": "Keşfedilen araçları ve kaynakları kontrol edin"
+    },
+    "screenshot": "Ekran görüntüsü: Araçlar listelenen başarılı sunucu bağlantısı",
+    "screenshotDesc": "Kullanılabilir araçları gösteren başarıyla bağlanmış bir sunucu"
+  },
+  "issues": {
+    "title": "Yaygın Sorunlar ve Çözümler",
+    "connection": {
+      "title": "Sunucu bağlanmıyor",
+      "description": "Sunucunuz bağlanmazsa:",
+      "solution1": "Tüm gerekli alanların doldurulduğunu kontrol edin",
+      "solution2": "Ortam değişkenlerinin doğru ayarlandığını doğrulayın",
+      "solution3": "Sunucu komutunun/yolunun doğru olduğundan emin olun"
+    },
+    "tools": {
+      "title": "Araçlar görünmüyor",
+      "description": "Bu genellikle sunucunun bağlandığı ancak düzgün yapılandırılmadığı anlamına gelir. Gerekli kurulum için sunucunun belgelerini kontrol edin."
+    }
+  },
+  "nextSteps": {
+    "title": "Sonraki Adımlar",
+    "description": "Tebrikler! İlk MCP sunucunuzu eklediniz. İşte keşfedilecek sonraki konular:",
+    "sharing": "Sunucularınızı Toplulukla Paylaşın",
+    "custom": "Özel MCP Sunucusu Oluşturun"
+  }
+}

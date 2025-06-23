@@ -1,0 +1,89 @@
+{
+  "title": "使用 Plugged.in API",
+  "description": "学习如何与 Plugged.in API 集成以程序化访问您的 MCP 服务器",
+  "overview": {
+    "title": "概述",
+    "introduction": "Plugged.in API 提供程序化访问来管理 MCP 服务器、查询 RAG 知识库和自动化工作流。本指南涵盖身份验证、端点和最佳实践。",
+    "features": {
+      "automation": {
+        "title": "自动化",
+        "description": "自动化服务器管理和部署"
+      },
+      "security": {
+        "title": "安全访问",
+        "description": "带有速率限制的 API 密钥身份验证"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "account": "活跃的 Plugged.in 账户",
+    "programming": "基础编程知识",
+    "http": "理解 REST API"
+  },
+  "steps": {
+    "authentication": {
+      "title": "步骤 1：身份验证设置",
+      "badge": "必需",
+      "description": "生成和配置 API 密钥以进行安全访问",
+      "generate": {
+        "title": "生成 API 密钥",
+        "description": "从您的账户设置创建新的 API 密钥：",
+        "code": "设置 → API 密钥 → 生成新密钥"
+      },
+      "usage": {
+        "title": "使用您的 API 密钥",
+        "description": "在 Authorization 标头中包含您的 API 密钥："
+      },
+      "tip": "安全存储 API 密钥，永远不要将它们提交到版本控制。为生产应用程序使用环境变量。"
+    },
+    "endpoints": {
+      "title": "步骤 2：核心 API 端点",
+      "badge": "端点",
+      "description": "探索用于服务器管理的主要 API 端点",
+      "servers": {
+        "title": "服务器管理",
+        "description": "程序化管理您的 MCP 服务器："
+      },
+      "rag": {
+        "title": "RAG 查询",
+        "description": "查询您的知识库："
+      }
+    },
+    "examples": {
+      "title": "步骤 3：实现示例",
+      "badge": "代码",
+      "description": "不同编程语言的实用示例",
+      "javascript": {
+        "title": "JavaScript/Node.js",
+        "description": "使用 fetch API 的示例："
+      },
+      "python": {
+        "title": "Python",
+        "description": "使用 requests 库的示例："
+      }
+    },
+    "ratelimits": {
+      "title": "步骤 4：速率限制和最佳实践",
+      "badge": "重要",
+      "description": "了解速率限制并优化您的 API 使用",
+      "tiers": {
+        "title": "速率限制层级",
+        "description": "不同端点有不同的速率限制：",
+        "standard": "标准端点：60 请求/分钟",
+        "sensitive": "敏感操作：10 请求/小时",
+        "public": "公开端点：100 请求/分钟"
+      },
+      "headers": {
+        "title": "速率限制标头",
+        "description": "使用响应标头监控您的使用情况："
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "webhooks": "设置 webhooks 以进行实时通知",
+    "sdk": "探索您的语言的社区 SDK",
+    "security": "查看 API 使用的安全最佳实践"
+  }
+}

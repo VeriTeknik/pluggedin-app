@@ -1,0 +1,83 @@
+{
+  "title": "Eğitimler",
+  "description": "Plugged.in özelliklerinde uzmanlaşmanıza yardımcı olacak adım adım eğitimler - temel MCP sunucu kurulumundan gelişmiş RAG entegrasyonuna ve özel geliştirmeye kadar.",
+  "minutes": "dk",
+  "search": {
+    "placeholder": "Anahtar kelime veya etikete göre eğitim ara...",
+    "noResults": "Aramanıza uygun eğitim bulunamadı"
+  },
+  "difficulty": {
+    "all": "Tüm Seviyeler",
+    "beginner": "Başlangıç",
+    "intermediate": "Orta",
+    "advanced": "İleri"
+  },
+  "sections": {
+    "beginner": "Başlarken",
+    "intermediate": "Beceriler Geliştirme",
+    "advanced": "İleri Konular"
+  },
+  "first-mcp-server": {
+    "title": "İlk MCP Sunucunuz",
+    "description": "İlk MCP sunucunuzu nasıl kurup yapılandıracağınızı öğrenin. Model Context Protocol'ün temellerini anlamak için başlangıç seviyesindekiler için mükemmel."
+  },
+  "sharing-with-community": {
+    "title": "Toplulukla Paylaşım",
+    "description": "MCP sunucularınızı ve koleksiyonlarınızı Plugged.in topluluğuyla nasıl paylaşacağınızı keşfedin. İtibarınızı artırın ve başkalarına yardım edin."
+  },
+  "rag-knowledge-base": {
+    "title": "RAG Bilgi Tabanı Oluşturma",
+    "description": "Belgeleri yükleyerek ve AI'nın RAG teknolojisi kullanarak bilgilerinizi sorgulamasını sağlayarak güçlü bir bilgi tabanı oluşturun."
+  },
+  "using-rag-in-client": {
+    "title": "MCP İstemcinizde RAG Kullanımı",
+    "description": "pluggedin_rag_query aracını kullanarak doğrudan Claude, Cursor veya herhangi bir MCP istemcisinden RAG bilgi tabanınızı nasıl sorgulayacağınızı öğrenin."
+  },
+  "notifications-system": {
+    "title": "AI'dan Bildirim Gönderme",
+    "description": "AI asistanınızdan otomatik bildirimler ayarlayın. Uyarılar ve güncellemeler için pluggedin_send_notification kullanmayı öğrenin."
+  },
+  "team-collaboration": {
+    "title": "Takım İşbirliği Kurulumu",
+    "description": "Takımınız için çalışma alanlarını yapılandırın, profilleri yönetin ve sorunsuz işbirliği için özel koleksiyonları paylaşın."
+  },
+  "custom-mcp-server": {
+    "title": "Özel MCP Sunucuları Oluşturma",
+    "description": "MCP protokolüne derinlemesine dalın ve TypeScript veya Python kullanarak kendi özel sunucularınızı oluşturun. npm'e yayınlama dahil."
+  },
+  "api-integration": {
+    "title": "API Entegrasyon Kılavuzu",
+    "description": "Harici entegrasyonlar, otomasyon ve özel uygulamalar oluşturmak için Plugged.in REST API'sinde uzmanlaşın."
+  },
+  "self-hosting": {
+    "title": "Plugged.in'i Kendi Sunucunuzda Barındırma",
+    "description": "Docker kullanarak kendi Plugged.in örneğinizi dağıtmak için eksiksiz kılavuz, veritabanı kurulumu ve yapılandırma dahil."
+  },
+  "security-best-practices": {
+    "title": "Güvenlik En İyi Uygulamaları",
+    "description": "Verilerinizi korumak için şifreleme özellikleri, API anahtarı yönetimi, sandbox ve diğer güvenlik yapılandırmaları hakkında bilgi edinin."
+  },
+  "featured": {
+    "title": "Öne Çıkan Eğitim Serileri",
+    "ragAndNotifications": {
+      "title": "RAG + Bildirim İş Akışı",
+      "description": "Bilgi sorguları ve otomatik bildirimlerin güçlü kombinasyonunda uzmanlaşın",
+      "tutorial1": "Bilgi tabanınızı oluşturun",
+      "tutorial2": "MCP istemcilerinden sorgulayın",
+      "tutorial3": "Bildirimleri otomatikleştirin"
+    },
+    "security": {
+      "title": "Güvenlik ve Dağıtım",
+      "description": "Örneğinizi güvenli hale getirin ve güvenle dağıtın",
+      "tutorial1": "Güvenlik yapılandırması",
+      "tutorial2": "Kendi sunucunuzda barındırma kılavuzu"
+    }
+  },
+  "help": {
+    "title": "Yardıma mı İhtiyacınız Var?",
+    "description": "Aradığınızı bulamıyor musunuz? Şu kaynaklara göz atın:",
+    "gettingStarted": "Başlangıç Kılavuzu",
+    "guides": "Tüm Kılavuzlara Göz At",
+    "contact": "Destek İle İletişime Geç"
+  }
+}

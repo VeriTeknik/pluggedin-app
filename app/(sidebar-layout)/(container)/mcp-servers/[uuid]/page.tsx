@@ -85,9 +85,9 @@ export default function McpServerDetailPage({
 
   // SWR hook for fetching resource templates
   const {
-    data: resourceTemplates,
-    error: templatesError,
-    isLoading: isLoadingTemplates,
+    data: _resourceTemplates,
+    error: _templatesError,
+    isLoading: _isLoadingTemplates,
   } = useSWR(
     uuid ? `/api/mcp-servers/${uuid}/resource-templates` : null,
     (url: string) => fetch(url).then((res) => res.json()) as Promise<ResourceTemplate[]>
@@ -110,8 +110,8 @@ export default function McpServerDetailPage({
         name: mcpServer.name,
         description: mcpServer.description || '',
         command: mcpServer.command || '',
-        args: mcpServer.args.join(' '),
-        env: Object.entries(mcpServer.env)
+        args: mcpServer.args?.join(' ') || '',
+        env: Object.entries(mcpServer.env || {})
           .map(([key, value]) => `${key}=${value}`)
           .join('\n'),
         url: mcpServer.url || '',
@@ -132,8 +132,8 @@ export default function McpServerDetailPage({
           value.description !== (mcpServer.description || '') ||
           (mcpServer.type === McpServerType.STDIO && (
             value.command !== (mcpServer.command || '') ||
-            value.args !== mcpServer.args.join(' ') ||
-            value.env !== Object.entries(mcpServer.env)
+            value.args !== (mcpServer.args?.join(' ') || '') ||
+            value.env !== Object.entries(mcpServer.env || {})
               .map(([key, value]) => `${key}=${value}`)
               .join('\n')
           )) ||

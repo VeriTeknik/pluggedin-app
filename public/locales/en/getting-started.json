@@ -1,0 +1,192 @@
+{
+  "title": "Getting Started with Plugged.in",
+  "subtitle": "Get up and running in 5 minutes. Learn how to set up MCP servers, configure clients, and start building AI-powered applications.",
+  "prerequisites": {
+    "title": "Prerequisites",
+    "nodejs": "Node.js v18 or higher (v20+ recommended)",
+    "account": "A GitHub or email account for authentication",
+    "mcpClient": "An MCP-compatible client (Claude Desktop, Cursor, Cline, etc.)",
+    "commandLine": "Basic familiarity with command-line interfaces"
+  },
+  "quickStart": {
+    "title": "Quick Start (5 Minutes)",
+    "createAccount": {
+      "title": "Create Your Account",
+      "description": "Visit plugged.in and sign up using GitHub (recommended for developers) or email with password.",
+      "screenshot": "Screenshot: Plugged.in signup page",
+      "screenshotDesc": "Shows the login page with GitHub and email options",
+      "action": "Get Started Free"
+    },
+    "generateKey": {
+      "title": "Generate Your API Key",
+      "description": "After logging in, navigate to Settings → API Keys. Click 'Generate New API Key' and give it a descriptive name.",
+      "screenshot": "Screenshot: API Key generation interface",
+      "screenshotDesc": "Shows the API Keys settings page with the generate button",
+      "warning": "⚠️ Copy the generated key immediately - you won't see it again!"
+    },
+    "installProxy": {
+      "title": "Install the MCP Proxy",
+      "description": "Open your terminal and run the following command to install the Plugged.in MCP Proxy:",
+      "note": "This will show you the available options. The proxy acts as a bridge between your MCP client and all your configured servers."
+    },
+    "configureClient": {
+      "title": "Configure Your MCP Client",
+      "description": "Add the Plugged.in proxy to your MCP client configuration. Choose your client below:",
+      "claude": {
+        "path": "Configuration file location: ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%\\Claude\\claude_desktop_config.json (Windows)"
+      },
+      "cursor": {
+        "instruction": "For Cursor, use command-line arguments:"
+      }
+    },
+    "testConnection": {
+      "title": "Test Your Connection",
+      "description": "Restart your MCP client and look for the pluggedin tools to confirm the connection is working:",
+      "tools": [
+        "pluggedin_discover_tools - Discover capabilities from your servers",
+        "pluggedin_rag_query - Query your document library",
+        "pluggedin_send_notification - Send custom notifications"
+      ],
+      "screenshot": "Screenshot: MCP client showing pluggedin tools",
+      "screenshotDesc": "Shows the available tools in your MCP client"
+    }
+  },
+  "concepts": {
+    "title": "Core Concepts",
+    "mcpServers": {
+      "title": "MCP Servers",
+      "description": "MCP servers extend AI capabilities by providing tools (functions the AI can call), resources (data the AI can access), prompts (conversation starters), and custom instructions (server-specific guidance)."
+    },
+    "projectsProfiles": {
+      "title": "Projects & Profiles",
+      "description": "Projects are top-level containers for your work. Profiles are workspaces within projects - think of them as environments (dev, staging, production) with isolated server configurations."
+    },
+    "collections": {
+      "title": "Collections",
+      "description": "Collections are curated groups of MCP servers that work well together. They're version controlled, shareable with the community, and track installation statistics."
+    },
+    "mcpProxy": {
+      "title": "The MCP Proxy",
+      "description": "Your single connection point that routes requests to appropriate servers, handles authentication, provides unified logging, and enables advanced features like RAG and notifications."
+    }
+  },
+  "firstSteps": {
+    "title": "Your First Steps",
+    "addServer": {
+      "title": "1. Add Your First MCP Server",
+      "description": "Navigate to 'MCP Servers' in the sidebar and click 'Add New Server'. Choose a server type (NPX, Docker, Binary, or Other).",
+      "screenshot": "Screenshot: Add MCP Server interface",
+      "screenshotDesc": "Shows the server configuration form",
+      "example": "Example - Add the filesystem server:"
+    },
+    "playground": {
+      "title": "2. Test in the Playground",
+      "description": "The MCP Playground lets you test servers with any AI model. Go to 'Playground' in the sidebar, select your profile and AI model, then start chatting!",
+      "screenshot": "Screenshot: MCP Playground interface",
+      "screenshotDesc": "Shows the playground with chat interface and server tools",
+      "features": [
+        "Multi-model support via Langchain",
+        "Virtual scrolling for long conversations",
+        "Real-time operation logging",
+        "Custom model instructions"
+      ]
+    },
+    "collection": {
+      "title": "3. Create a Collection",
+      "description": "Organize related servers into collections. Navigate to 'Collections', click 'Create New Collection', add servers from your profile, and set visibility preferences."
+    },
+    "share": {
+      "title": "4. Share with the Community",
+      "description": "Make your servers discoverable by clicking 'Share Server' on any configured server. Choose visibility settings, add helpful notes and examples, then track installations and ratings."
+    }
+  },
+  "advanced": {
+    "title": "Advanced Features",
+    "documentLibrary": {
+      "title": "Document Library & RAG",
+      "description": "Upload documents to enhance AI context. Navigate to 'Library', upload PDFs, text files, or code. Documents are automatically indexed and queryable via pluggedin_rag_query."
+    },
+    "notifications": {
+      "title": "Real-Time Notifications",
+      "description": "Stay informed about MCP activities. Click the bell icon to configure preferences, enable email delivery for important alerts, and track all operations."
+    },
+    "customInstructions": {
+      "title": "Custom Instructions",
+      "description": "Add server-specific guidance by going to any MCP server's detail page. These instructions guide AI behavior and become available as MCP prompts."
+    },
+    "security": {
+      "title": "Security Features",
+      "description": "Enterprise-grade security with end-to-end encryption (AES-256-GCM), automatic Firejail sandboxing on Linux, API rate limiting, and complete project data isolation."
+    }
+  },
+  "troubleshooting": {
+    "title": "Troubleshooting",
+    "sessionNotFound": {
+      "title": "\"Session not found\" error",
+      "solutions": [
+        "Ensure your API key is valid",
+        "Check if the MCP proxy is running",
+        "Verify your client configuration"
+      ]
+    },
+    "serversNotInit": {
+      "title": "Servers not initializing",
+      "solutions": [
+        "Check server logs in the Playground",
+        "Verify command paths and arguments",
+        "Ensure required dependencies are installed"
+      ]
+    },
+    "ragNotWorking": {
+      "title": "RAG queries not working",
+      "solutions": [
+        "Confirm documents are uploaded and processed",
+        "Check if RAG is enabled in Playground settings",
+        "Verify your subscription includes RAG features"
+      ]
+    }
+  },
+  "nextSteps": {
+    "title": "Next Steps",
+    "guides": {
+      "title": "Explore More Guides",
+      "links": [
+        { "text": "MCP Server Configuration Guide", "href": "/docs/guides" },
+        { "text": "Collections Best Practices", "href": "/docs/collections" },
+        { "text": "Security & Self-Hosting", "href": "/docs/security" }
+      ]
+    },
+    "api": {
+      "title": "API Documentation",
+      "links": [
+        { "text": "REST API Reference", "href": "/docs/api-reference" },
+        { "text": "TypeScript SDK", "href": "/docs/typescript-sdk" },
+        { "text": "Webhook Integration", "href": "/docs/webhooks" }
+      ]
+    },
+    "community": {
+      "title": "Join the Community",
+      "links": [
+        { "text": "GitHub - pluggedin-app", "href": "https://github.com/VeriTeknik/pluggedin-app", "external": true },
+        { "text": "GitHub - pluggedin-mcp", "href": "https://github.com/VeriTeknik/pluggedin-mcp", "external": true },
+        { "text": "Discord Server", "href": "https://discord.gg/pluggedin", "external": true }
+      ]
+    }
+  },
+  "quickReference": {
+    "title": "Quick Reference",
+    "commands": {
+      "title": "Essential Commands"
+    },
+    "config": {
+      "title": "Configuration Examples",
+      "basic": "Basic",
+      "advanced": "Advanced"
+    }
+  },
+  "cta": {
+    "title": "Welcome to the Plugged.in community! 🚀",
+    "getStarted": "Get Started Now",
+    "browseDocs": "Browse Documentation"
+  }
+}

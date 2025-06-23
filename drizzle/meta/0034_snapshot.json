@@ -1,6 +1,6 @@
 {
-  "id": "3ffc58e7-ca23-4a12-b8d0-4c33a747ca38",
-  "prevId": "4eec1bd1-e2fc-4d95-8861-1e7e6223dae1",
+  "id": "a977ef1c-7a9b-480d-9a55-8e2ebe6ca6f6",
+  "prevId": "3ffc58e7-ca23-4a12-b8d0-4c33a747ca38",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1218,6 +1218,30 @@
         },
         "url": {
           "name": "url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "command_encrypted": {
+          "name": "command_encrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "args_encrypted": {
+          "name": "args_encrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "env_encrypted": {
+          "name": "env_encrypted",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "url_encrypted": {
+          "name": "url_encrypted",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -2704,6 +2728,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
+        },
+        "requires_credentials": {
+          "name": "requires_credentials",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",

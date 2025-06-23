@@ -1,0 +1,41 @@
+{
+  "title": "Setup Gidsen",
+  "description": "Kies uw favoriete AI-client om aan de slag te gaan met Plugged.in MCP. Elke gids biedt stapsgewijze instructies voor het instellen en configureren van de MCP-proxy.",
+  "benefits": {
+    "title": "Voordelen van Plugged.in MCP",
+    "description": "Plugged.in MCP werkt als een uniforme proxy voor al uw MCP-servers en biedt verschillende voordelen:",
+    "items": [
+      "Enkel configuratiepunt - Beheer al uw MCP-servers via één centrale configuratie",
+      "Automatische updates - Krijg automatisch de nieuwste functies en beveiligingsupdates",
+      "Vereenvoudigde authenticatie - Gebruik één API-sleutel voor al uw MCP-servers",
+      "Verbeterde beveiliging - Ingebouwde beveiligingsfuncties en best practices",
+      "Cross-platform compatibiliteit - Werkt naadloos op verschillende besturingssystemen"
+    ]
+  },
+  "clients": {
+    "claudeDesktop": {
+      "title": "Claude Desktop",
+      "description": "Stel Plugged.in MCP in met de Claude Desktop applicatie"
+    },
+    "claudeCode": {
+      "title": "Claude Code",
+      "description": "Configureer Plugged.in MCP voor Claude Code CLI"
+    },
+    "cursor": {
+      "title": "Cursor",
+      "description": "Integreer Plugged.in MCP met Cursor AI editor"
+    },
+    "smithery": {
+      "title": "Smithery",
+      "description": "Deploy Plugged.in MCP met het Smithery cloudplatform"
+    }
+  },
+  "apiKeyNotice": "📝 Let op: U kunt uw API-sleutels beheren in de",
+  "apiKeysPage": "API-sleutels Pagina",
+  "help": {
+    "title": "Hulp nodig?",
+    "description": "Problemen met de setup? Bekijk onze andere bronnen of neem contact met ons op.",
+    "completeGuide": "Volledige Setup Gids",
+    "contactSupport": "Contact opnemen met Support"
+  }
+}

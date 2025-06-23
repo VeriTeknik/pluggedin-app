@@ -1,0 +1,108 @@
+{
+  "backToTutorial": "返回教程",
+  "title": "您的第一个MCP服务器",
+  "difficulty": "初学者",
+  "duration": "15分钟",
+  "overview": {
+    "title": "您将学到什么",
+    "description": "本教程将指导您向Plugged.in添加您的第一个MCP服务器。MCP服务器通过提供对工具、资源和集成的访问来扩展您的AI的能力。",
+    "learn1": "什么是MCP服务器以及它们如何工作",
+    "learn2": "如何浏览和添加官方MCP服务器",
+    "learn3": "如何配置服务器设置和环境变量",
+    "learn4": "如何测试您的服务器连接并使用其工具"
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "item1": "Plugged.in账户（免费套餐即可）",
+    "item2": "对命令行的基本了解（用于自定义服务器）",
+    "item3": "已安装Node.js（可选，用于自定义服务器）"
+  },
+  "step1": {
+    "title": "了解MCP服务器",
+    "description": "在添加第一个服务器之前，让我们了解什么是MCP服务器以及它们为什么强大。",
+    "whatIs": {
+      "title": "什么是MCP服务器？",
+      "description": "MCP（模型上下文协议）服务器是为AI助手提供额外功能的程序。可以将它们视为扩展AI功能的插件。",
+      "point1": "工具：AI可以调用的函数（例如，读取文件、搜索网络、发送电子邮件）",
+      "point2": "资源：AI可以访问的数据（例如，文档、数据库、API）",
+      "point3": "提示：用于特定任务的预配置指令"
+    }
+  },
+  "step2": {
+    "title": "导航到MCP服务器",
+    "description": "让我们首先导航到Plugged.in中的MCP服务器部分。",
+    "screenshot": "截图：突出显示MCP服务器菜单的Plugged.in仪表板",
+    "screenshotDesc": "侧边栏导航中的MCP服务器选项",
+    "tip": "您还可以使用键盘快捷键Cmd/Ctrl+K并搜索\"MCP服务器\"以快速导航到那里。"
+  },
+  "step3": {
+    "title": "添加您的第一个服务器",
+    "description": "现在让我们添加您的第一个MCP服务器。您可以选择官方服务器或自定义服务器。",
+    "tabs": {
+      "official": "官方服务器",
+      "custom": "自定义服务器"
+    },
+    "official": {
+      "title": "添加官方服务器",
+      "step1": "点击\"添加服务器\"按钮",
+      "step2": "浏览官方服务器目录",
+      "step3": "选择\"文件系统\"服务器（一个很好的入门服务器）",
+      "step4": "点击\"安装\"将其添加到您的配置文件",
+      "screenshot": "截图：显示文件系统服务器的官方服务器目录",
+      "screenshotDesc": "显示各种MCP服务器的官方服务器目录"
+    },
+    "custom": {
+      "title": "添加自定义服务器",
+      "description": "为了获得更多控制权，您可以添加自定义MCP服务器：",
+      "step1": "点击\"添加自定义服务器\"",
+      "step2": "为您的服务器输入名称",
+      "step3": "配置命令和参数"
+    }
+  },
+  "step4": {
+    "title": "配置您的服务器",
+    "description": "每个服务器都可以配置特定的设置和环境变量。",
+    "settings": {
+      "title": "基本配置",
+      "description": "配置您的服务器如何运行："
+    },
+    "env": {
+      "title": "环境变量",
+      "description": "某些服务器需要通过环境变量提供API密钥或其他配置。",
+      "note": "环境变量在Plugged.in中加密并安全存储"
+    }
+  },
+  "step5": {
+    "title": "测试您的服务器",
+    "description": "让我们确保您的服务器正常工作。",
+    "test": {
+      "title": "连接测试",
+      "step1": "保存您的服务器配置",
+      "step2": "点击\"测试连接\"按钮",
+      "step3": "等待连接建立",
+      "step4": "检查发现的工具和资源"
+    },
+    "screenshot": "截图：成功的服务器连接显示可用工具",
+    "screenshotDesc": "成功连接的服务器显示可用工具"
+  },
+  "issues": {
+    "title": "常见问题与解决方案",
+    "connection": {
+      "title": "服务器无法连接",
+      "description": "如果您的服务器无法连接：",
+      "solution1": "检查所有必填字段是否已填写",
+      "solution2": "验证环境变量是否正确设置",
+      "solution3": "确保服务器命令/路径正确"
+    },
+    "tools": {
+      "title": "没有出现工具",
+      "description": "这通常意味着服务器已连接但未正确配置。查看服务器文档以了解所需的设置。"
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "description": "恭喜！您已添加了第一个MCP服务器。接下来要探索的内容：",
+    "sharing": "与社区分享您的服务器",
+    "custom": "构建自定义MCP服务器"
+  }
+}

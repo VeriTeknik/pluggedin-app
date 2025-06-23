@@ -1,0 +1,192 @@
+{
+  "title": "Plugged.in 入门指南",
+  "subtitle": "5分钟内启动并运行。了解如何设置MCP服务器、配置客户端并开始构建AI驱动的应用程序。",
+  "prerequisites": {
+    "title": "先决条件",
+    "nodejs": "Node.js v18或更高版本（推荐v20+）",
+    "account": "用于身份验证的GitHub或电子邮件帐户",
+    "mcpClient": "兼容MCP的客户端（Claude Desktop、Cursor、Cline等）",
+    "commandLine": "对命令行界面的基本熟悉"
+  },
+  "quickStart": {
+    "title": "快速开始（5分钟）",
+    "createAccount": {
+      "title": "创建您的帐户",
+      "description": "访问plugged.in并使用GitHub（推荐开发者使用）或带密码的电子邮件注册。",
+      "screenshot": "截图：Plugged.in注册页面",
+      "screenshotDesc": "显示带有GitHub和电子邮件选项的登录页面",
+      "action": "免费开始"
+    },
+    "generateKey": {
+      "title": "生成您的API密钥",
+      "description": "登录后，导航到设置→API密钥。单击\"生成新API密钥\"并提供描述性名称。",
+      "screenshot": "截图：API密钥生成界面",
+      "screenshotDesc": "显示带有生成按钮的API密钥设置页面",
+      "warning": "⚠️ 立即复制生成的密钥 - 您将无法再次看到它！"
+    },
+    "installProxy": {
+      "title": "安装MCP代理",
+      "description": "打开您的终端并运行以下命令以安装Plugged.in MCP代理：",
+      "note": "这将向您显示可用选项。代理充当您的MCP客户端与所有配置的服务器之间的桥梁。"
+    },
+    "configureClient": {
+      "title": "配置您的MCP客户端",
+      "description": "将Plugged.in代理添加到您的MCP客户端配置中。从下面选择您的客户端：",
+      "claude": {
+        "path": "配置文件位置：~/Library/Application Support/Claude/claude_desktop_config.json（macOS）或 %APPDATA%\\Claude\\claude_desktop_config.json（Windows）"
+      },
+      "cursor": {
+        "instruction": "对于Cursor，使用命令行参数："
+      }
+    },
+    "testConnection": {
+      "title": "测试您的连接",
+      "description": "重新启动您的MCP客户端并查找pluggedin工具以确认连接正常工作：",
+      "tools": [
+        "pluggedin_discover_tools - 从您的服务器发现功能",
+        "pluggedin_rag_query - 查询您的文档库",
+        "pluggedin_send_notification - 发送自定义通知"
+      ],
+      "screenshot": "截图：显示pluggedin工具的MCP客户端",
+      "screenshotDesc": "显示您的MCP客户端中可用的工具"
+    }
+  },
+  "concepts": {
+    "title": "核心概念",
+    "mcpServers": {
+      "title": "MCP服务器",
+      "description": "MCP服务器通过提供工具（AI可以调用的函数）、资源（AI可以访问的数据）、提示（对话启动器）和自定义指令（特定于服务器的指导）来扩展AI功能。"
+    },
+    "projectsProfiles": {
+      "title": "项目和配置文件",
+      "description": "项目是您工作的顶级容器。配置文件是项目中的工作区 - 将它们视为具有隔离服务器配置的环境（开发、暂存、生产）。"
+    },
+    "collections": {
+      "title": "集合",
+      "description": "集合是一起工作良好的MCP服务器的精选组。它们受版本控制，可与社区共享，并跟踪安装统计信息。"
+    },
+    "mcpProxy": {
+      "title": "MCP代理",
+      "description": "您的单一连接点，将请求路由到适当的服务器，处理身份验证，提供统一日志记录，并启用RAG和通知等高级功能。"
+    }
+  },
+  "firstSteps": {
+    "title": "您的第一步",
+    "addServer": {
+      "title": "1. 添加您的第一个MCP服务器",
+      "description": "导航到侧边栏中的\"MCP服务器\"，然后单击\"添加新服务器\"。选择服务器类型（NPX、Docker、Binary或其他）。",
+      "screenshot": "截图：添加MCP服务器界面",
+      "screenshotDesc": "显示服务器配置表单",
+      "example": "示例 - 添加文件系统服务器："
+    },
+    "playground": {
+      "title": "2. 在游乐场中测试",
+      "description": "MCP游乐场允许您使用任何AI模型测试服务器。转到侧边栏中的\"游乐场\"，选择您的配置文件和AI模型，然后开始聊天！",
+      "screenshot": "截图：MCP游乐场界面",
+      "screenshotDesc": "显示带有聊天界面和服务器工具的游乐场",
+      "features": [
+        "通过Langchain实现多模型支持",
+        "长对话的虚拟滚动",
+        "实时操作日志记录",
+        "自定义模型说明"
+      ]
+    },
+    "collection": {
+      "title": "3. 创建集合",
+      "description": "将相关服务器组织成集合。导航到\"集合\"，单击\"创建新集合\"，从您的配置文件添加服务器，并设置可见性首选项。"
+    },
+    "share": {
+      "title": "4. 与社区分享",
+      "description": "通过在任何配置的服务器上单击\"共享服务器\"使您的服务器可被发现。选择可见性设置，添加有用的注释和示例，然后跟踪安装和评级。"
+    }
+  },
+  "advanced": {
+    "title": "高级功能",
+    "documentLibrary": {
+      "title": "文档库和RAG",
+      "description": "上传文档以增强AI上下文。导航到\"库\"，上传PDF、文本文件或代码。文档会自动编入索引，并可通过pluggedin_rag_query进行查询。"
+    },
+    "notifications": {
+      "title": "实时通知",
+      "description": "随时了解MCP活动。单击铃铛图标配置首选项，为重要警报启用电子邮件传递，并跟踪所有操作。"
+    },
+    "customInstructions": {
+      "title": "自定义说明",
+      "description": "通过转到任何MCP服务器的详细信息页面添加特定于服务器的指导。这些说明指导AI行为并作为MCP提示可用。"
+    },
+    "security": {
+      "title": "安全功能",
+      "description": "企业级安全性，包括端到端加密（AES-256-GCM）、Linux上的自动Firejail沙箱、API速率限制和完整的项目数据隔离。"
+    }
+  },
+  "troubleshooting": {
+    "title": "故障排除",
+    "sessionNotFound": {
+      "title": "\"会话未找到\"错误",
+      "solutions": [
+        "确保您的API密钥有效",
+        "检查MCP代理是否正在运行",
+        "验证您的客户端配置"
+      ]
+    },
+    "serversNotInit": {
+      "title": "服务器未初始化",
+      "solutions": [
+        "在游乐场中检查服务器日志",
+        "验证命令路径和参数",
+        "确保已安装所需的依赖项"
+      ]
+    },
+    "ragNotWorking": {
+      "title": "RAG查询不工作",
+      "solutions": [
+        "确认文档已上传并处理",
+        "检查游乐场设置中是否启用了RAG",
+        "验证您的订阅包含RAG功能"
+      ]
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "guides": {
+      "title": "探索更多指南",
+      "links": [
+        { "text": "MCP服务器配置指南", "href": "/docs/guides" },
+        { "text": "集合最佳实践", "href": "/docs/collections" },
+        { "text": "安全与自托管", "href": "/docs/security" }
+      ]
+    },
+    "api": {
+      "title": "API文档",
+      "links": [
+        { "text": "REST API参考", "href": "/docs/api-reference" },
+        { "text": "TypeScript SDK", "href": "/docs/typescript-sdk" },
+        { "text": "Webhook集成", "href": "/docs/webhooks" }
+      ]
+    },
+    "community": {
+      "title": "加入社区",
+      "links": [
+        { "text": "GitHub - pluggedin-app", "href": "https://github.com/VeriTeknik/pluggedin-app", "external": true },
+        { "text": "GitHub - pluggedin-mcp", "href": "https://github.com/VeriTeknik/pluggedin-mcp", "external": true },
+        { "text": "Discord服务器", "href": "https://discord.gg/pluggedin", "external": true }
+      ]
+    }
+  },
+  "quickReference": {
+    "title": "快速参考",
+    "commands": {
+      "title": "基本命令"
+    },
+    "config": {
+      "title": "配置示例",
+      "basic": "基本",
+      "advanced": "高级"
+    }
+  },
+  "cta": {
+    "title": "欢迎加入Plugged.in社区！🚀",
+    "getStarted": "立即开始",
+    "browseDocs": "浏览文档"
+  }
+}

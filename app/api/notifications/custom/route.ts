@@ -82,6 +82,7 @@ export async function POST(request: Request) {
       type: 'CUSTOM', // Always use CUSTOM type for custom notifications
       title,
       message,
+      severity, // Pass the severity for MCP notifications
       expiresInDays: 30, // Custom notifications expire in 30 days
     });
 

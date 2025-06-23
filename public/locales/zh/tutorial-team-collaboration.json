@@ -1,0 +1,95 @@
+{
+  "title": "团队协作",
+  "description": "学习如何使用 Plugged.in 工作空间和配置文件与您的团队协作",
+  "overview": {
+    "title": "概述",
+    "introduction": "Plugged.in 的多配置文件系统使团队能够通过将 MCP 服务器组织到单独的工作空间中来有效协作，同时保持安全性和隔离性。",
+    "features": {
+      "workspaces": {
+        "title": "多个配置文件",
+        "description": "为不同的环境或团队创建单独的配置文件"
+      },
+      "permissions": {
+        "title": "访问控制",
+        "description": "管理谁可以访问特定的服务器和集合"
+      }
+    }
+  },
+  "prerequisites": {
+    "title": "先决条件",
+    "account": "活跃的 Plugged.in 账户",
+    "project": "至少创建了一个项目",
+    "team": "拥有 Plugged.in 账户的团队成员"
+  },
+  "steps": {
+    "createWorkspace": {
+      "title": "步骤 1：创建团队工作空间",
+      "badge": "基础",
+      "description": "为不同的团队环境设置配置文件",
+      "profiles": {
+        "title": "创建配置文件",
+        "description": "为不同目的创建单独的配置文件：",
+        "code": "设置 → 配置文件 → 创建新配置文件"
+      },
+      "organize": {
+        "title": "按目的组织",
+        "description": "团队的常见配置文件模式：",
+        "development": "开发 - 实验性服务器和工具",
+        "staging": "预发布 - 预生产配置",
+        "production": "生产 - 稳定、经过测试的服务器"
+      }
+    },
+    "inviteMembers": {
+      "title": "步骤 2：与团队成员共享",
+      "badge": "共享",
+      "description": "让您的服务器和集合对团队成员可用",
+      "share": {
+        "title": "共享服务器",
+        "description": "共享单个服务器或整个集合：",
+        "code": "服务器 → 共享 → 复制链接或设为公开"
+      },
+      "collections": {
+        "title": "创建团队集合",
+        "description": "将相关服务器分组到集合中，以便于团队入职和标准化。"
+      },
+      "tip": "使用描述性名称和全面的注释来帮助团队成员了解每个服务器的用途和配置。"
+    },
+    "manageAccess": {
+      "title": "步骤 3：管理访问控制",
+      "badge": "安全",
+      "description": "控制谁可以访问和使用您的共享资源",
+      "visibility": {
+        "title": "可见性设置",
+        "description": "配置服务器是公开的（可发现）还是私有的（仅限链接访问）。"
+      },
+      "apikeys": {
+        "title": "API 密钥管理",
+        "description": "生成和管理用于程序化访问的 API 密钥：",
+        "code": "设置 → API 密钥 → 生成新密钥"
+      }
+    },
+    "bestPractices": {
+      "title": "步骤 4：团队最佳实践",
+      "badge": "指南",
+      "description": "遵循这些实践以实现有效的团队协作",
+      "naming": {
+        "title": "一致的命名",
+        "description": "在所有团队配置文件和服务器中使用清晰、一致的命名约定。"
+      },
+      "documentation": {
+        "title": "记录一切",
+        "description": "向服务器添加详细注释，说明配置、用例和任何特殊要求。"
+      },
+      "versioning": {
+        "title": "版本化集合",
+        "description": "使用集合版本控制来跟踪更改并保持团队环境间的兼容性。"
+      }
+    }
+  },
+  "nextSteps": {
+    "title": "下一步",
+    "security": "查看团队部署的安全最佳实践",
+    "api": "将团队工作流与 Plugged.in API 集成",
+    "selfhost": "考虑自托管以增强团队控制"
+  }
+}

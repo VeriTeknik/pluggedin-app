@@ -1,6 +1,6 @@
 'use client';
 
-import { FileText, Info, Key, LogOut, Newspaper, Settings, User } from 'lucide-react';
+import { BookOpen, FileText, Info, Key, LogOut, Newspaper, Settings, User } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next'; // Import useTranslation
 
@@ -64,6 +64,12 @@ export function UserMenu() {
           <Link href="/settings" className="flex items-center cursor-pointer">
             <Settings className="mr-2 h-4 w-4" />
             <span>{t('settings.title', 'Settings')}</span>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/docs" className="flex items-center cursor-pointer">
+            <BookOpen className="mr-2 h-4 w-4" />
+            <span>{t('docs.title', 'Documentation')}</span>
           </Link>
         </DropdownMenuItem>
          <DropdownMenuItem asChild>
