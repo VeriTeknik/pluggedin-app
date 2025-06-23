@@ -1,13 +1,30 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowLeft, Bell, BookOpen, Clock, Download, Globe, Lock, Package, Search, Sparkles, TrendingUp, User, Zap } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bell,
+  BookOpen,
+  ChevronLeft,
+  Clock,
+  Download,
+  Globe,
+  Lock,
+  Package,
+  Search,
+  Sparkles,
+  TrendingUp,
+  User,
+  Zap
+} from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface Props {
   slug: string;
@@ -103,9 +120,15 @@ export default function WhatsNewArticleClient({ slug }: Props) {
       case 'send-notifications-from-ai':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Notification received in email]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/send-notifications-from-ai/email-notification.png"
+                alt="Email notification example"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -125,9 +148,15 @@ Parameters:
               </pre>
             </div>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: MCP tool being used in Claude/Cursor]</p>
+            {/* MCP Tool Usage Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/send-notifications-from-ai/mcp-tool-usage.png"
+                alt="MCP notification tool being used in Claude/Cursor"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.send-notifications-from-ai.content.emailSetupTitle')}</h2>
@@ -137,9 +166,22 @@ Parameters:
               <li>{t('whatsNew:articles.send-notifications-from-ai.content.emailStep3')}</li>
             </ol>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Email settings page]</p>
+            <h3 className="text-xl font-semibold mb-2">Email Notification Setup</h3>
+            <ol className="list-decimal list-inside mb-4 space-y-2">
+              <li>Go to Settings and enable email notifications</li>
+              <li>Configure your notification preferences</li>
+              <li>Test with a sample notification</li>
+            </ol>
+
+            {/* Email Settings Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/send-notifications-from-ai/email-settings.png"
+                alt="Email notification settings configuration page"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.send-notifications-from-ai.content.useCasesTitle')}</h2>
@@ -149,9 +191,34 @@ Parameters:
               <li>{t('whatsNew:articles.send-notifications-from-ai.content.useCase3')}</li>
             </ul>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Notification bell with count]</p>
+            <h2 className="text-2xl font-semibold mb-4">Viewing Notifications</h2>
+            <p className="mb-4">
+              All notifications will appear in your notification center, accessible via the bell icon in the top navigation bar.
+              You can filter notifications by type and mark them as read.
+            </p>
+
+            {/* Notification Bell Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/send-notifications-from-ai/notification-bell.png"
+                alt="Notification center showing different types of notifications"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
+            </div>
+
+            <div className="flex items-center justify-between mt-8 pt-4 border-t">
+              <Link
+                href="/docs/whats-new"
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "text-muted-foreground"
+                )}
+              >
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Back to What&apos;s New
+              </Link>
             </div>
           </>
         );
