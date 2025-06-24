@@ -63,20 +63,25 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
         // Decrypt sensitive fields
         const decryptedServer = decryptServerData(server, profileUuid);
         
-        // Extract streamable HTTP options from env if present
+        // Process server data - transport options should now be separate from env
         const processedServer: any = { ...decryptedServer };
+        
+        // For backward compatibility, check if transport options are still in env
         if (server.type === McpServerType.STREAMABLE_HTTP && decryptedServer.env) {
           const { __transport, __streamableHTTPOptions, ...cleanEnv } = decryptedServer.env;
           
+          // Clean up env from transport options
           processedServer.env = cleanEnv;
-          if (__transport) {
+          
+          // If transport options are in env (legacy), extract them
+          if (__transport && !processedServer.transport) {
             processedServer.transport = __transport;
           }
-          if (__streamableHTTPOptions) {
+          if (__streamableHTTPOptions && !processedServer.streamableHTTPOptions) {
             try {
               processedServer.streamableHTTPOptions = JSON.parse(__streamableHTTPOptions);
             } catch (e) {
-              console.error('Failed to parse streamableHTTPOptions:', e);
+              console.error('Failed to parse streamableHTTPOptions from env:', e);
             }
           }
         }
@@ -125,23 +130,27 @@ export async function getMcpServerByUuid(
   // Decrypt sensitive fields
   const decryptedServer = decryptServerData(server, profileUuid);
   
-  // Extract streamable HTTP options from env if present
-  if (server.type === McpServerType.STREAMABLE_HTTP && decryptedServer.env) {
-    const { __transport, __streamableHTTPOptions, ...cleanEnv } = decryptedServer.env;
+  // Process server data - transport options should now be separate from env
+  if (server.type === McpServerType.STREAMABLE_HTTP) {
+    const processedServer: any = { ...decryptedServer };
     
-    const processedServer: any = {
-      ...decryptedServer,
-      env: cleanEnv
-    };
-    
-    if (__transport) {
-      processedServer.transport = __transport;
-    }
-    if (__streamableHTTPOptions) {
-      try {
-        processedServer.streamableHTTPOptions = JSON.parse(__streamableHTTPOptions);
-      } catch (e) {
-        console.error('Failed to parse streamableHTTPOptions:', e);
+    // For backward compatibility, check if transport options are still in env
+    if (decryptedServer.env) {
+      const { __transport, __streamableHTTPOptions, ...cleanEnv } = decryptedServer.env;
+      
+      // Clean up env from transport options
+      processedServer.env = cleanEnv;
+      
+      // If transport options are in env (legacy), extract them
+      if (__transport && !processedServer.transport) {
+        processedServer.transport = __transport;
+      }
+      if (__streamableHTTPOptions && !processedServer.streamableHTTPOptions) {
+        try {
+          processedServer.streamableHTTPOptions = JSON.parse(__streamableHTTPOptions);
+        } catch (e) {
+          console.error('Failed to parse streamableHTTPOptions from env:', e);
+        }
       }
     }
     
@@ -213,17 +222,12 @@ export async function updateMcpServer(
   const sensitiveData: any = {};
   if (data.command !== undefined) sensitiveData.command = data.command;
   if (data.args !== undefined) sensitiveData.args = data.args;
-  if (data.env !== undefined || data.streamableHTTPOptions !== undefined) {
-    // Merge env with streamable HTTP options if present
-    sensitiveData.env = {
-      ...(data.env || {}),
-      ...(data.type === McpServerType.STREAMABLE_HTTP && data.streamableHTTPOptions ? {
-        __transport: data.transport || 'streamable_http',
-        __streamableHTTPOptions: JSON.stringify(data.streamableHTTPOptions),
-      } : {}),
-    };
-  }
+  if (data.env !== undefined) sensitiveData.env = data.env;
   if (data.url !== undefined) sensitiveData.url = data.url;
+  
+  // Handle transport-specific options separately
+  if (data.transport !== undefined) sensitiveData.transport = data.transport;
+  if (data.streamableHTTPOptions !== undefined) sensitiveData.streamableHTTPOptions = data.streamableHTTPOptions;
   
   // If we have sensitive data to update, encrypt it
   if (Object.keys(sensitiveData).length > 0) {
@@ -323,18 +327,14 @@ export async function createMcpServer({
       type: serverType,
       command: serverType === McpServerType.STDIO ? command : null,
       args: args || [],
-      env: {
-        ...(env || {}),
-        // Store streamable HTTP options in env for now
-        ...(serverType === McpServerType.STREAMABLE_HTTP && streamableHTTPOptions ? {
-          __transport: transport || 'streamable_http',
-          __streamableHTTPOptions: JSON.stringify(streamableHTTPOptions),
-        } : {}),
-      },
+      env: env || {},
       url: (serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) ? url : null,
       profile_uuid: profileUuid,
       source,
       external_id,
+      // Store transport-specific options separately
+      transport: (serverType === McpServerType.STREAMABLE_HTTP) ? (transport || 'streamable_http') : undefined,
+      streamableHTTPOptions: (serverType === McpServerType.STREAMABLE_HTTP && streamableHTTPOptions) ? streamableHTTPOptions : undefined,
     };
     
     // Encrypt sensitive fields

@@ -36,9 +36,20 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
 
       try {
         // For known MCP endpoints that support POST, try the initialize method
-        if (config.url.includes('mcp.context7.com') || 
-            config.url.includes('server.smithery.ai') ||
-            config.type === McpServerType.STREAMABLE_HTTP) {
+        let shouldTryInitialize = config.type === McpServerType.STREAMABLE_HTTP;
+        
+        // Check for known MCP endpoints using proper URL parsing
+        if (!shouldTryInitialize) {
+          try {
+            const urlObj = new URL(config.url);
+            const hostname = urlObj.hostname.toLowerCase();
+            shouldTryInitialize = hostname === 'mcp.context7.com' || hostname === 'server.smithery.ai';
+          } catch {
+            // Invalid URL, skip initialization attempt
+          }
+        }
+        
+        if (shouldTryInitialize) {
           
           // Try to send an initialize request
           const initResponse = await fetch(config.url, {
