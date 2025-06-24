@@ -166,13 +166,6 @@ Parameters:
               <li>{t('whatsNew:articles.send-notifications-from-ai.content.emailStep3')}</li>
             </ol>
 
-            <h3 className="text-xl font-semibold mb-2">Email Notification Setup</h3>
-            <ol className="list-decimal list-inside mb-4 space-y-2">
-              <li>Go to Settings and enable email notifications</li>
-              <li>Configure your notification preferences</li>
-              <li>Test with a sample notification</li>
-            </ol>
-
             {/* Email Settings Screenshot */}
             <div className="bg-muted rounded-lg p-8 mb-8">
               <Image
