@@ -219,9 +219,16 @@ Parameters:
       case 'document-context-rag':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Document library interface]</p>
+            {/* Document Library Interface */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/document-context-rag/library-interface.png"
+                alt="Document library interface showing uploaded files and search"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -230,9 +237,16 @@ Parameters:
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.document-context-rag.content.uploadTitle')}</h2>
             
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Upload dialog]</p>
+            {/* Upload Dialog */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/document-context-rag/upload-dialog.png"
+                alt="Document upload dialog with drag and drop interface"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <p className="mb-6">{t('whatsNew:articles.document-context-rag.content.uploadDescription')}</p>
@@ -248,9 +262,15 @@ Example:
               </pre>
             </div>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: RAG query in action]</p>
+            {/* RAG Query Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/document-context-rag/rag-query.png"
+                alt="RAG query being executed and showing results"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.document-context-rag.content.formatsTitle')}</h2>
