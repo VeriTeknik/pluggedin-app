@@ -1,6 +1,7 @@
 'use server';
 
 import { McpServerType } from '@/db/schema';
+import { validateHeaders } from '@/lib/security/validators';
 
 interface TestConfig {
   name: string;
@@ -29,10 +30,27 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
     // For URL-based servers (SSE and Streamable HTTP)
     if (config.url && (config.type === McpServerType.SSE || config.type === McpServerType.STREAMABLE_HTTP)) {
       // Try to make a HEAD request to check if the endpoint is reachable
-      const headers: HeadersInit = {
+      let headers: HeadersInit = {
         'User-Agent': 'Plugged.in MCP Client',
-        ...config.streamableHTTPOptions?.headers,
       };
+      
+      // Validate and add custom headers if provided
+      if (config.streamableHTTPOptions?.headers) {
+        const headerValidation = validateHeaders(config.streamableHTTPOptions.headers);
+        if (!headerValidation.valid) {
+          return {
+            success: false,
+            message: 'Invalid headers provided',
+            details: {
+              error: headerValidation.error,
+            },
+          };
+        }
+        headers = {
+          ...headers,
+          ...headerValidation.sanitizedHeaders,
+        };
+      }
 
       try {
         // For known MCP endpoints that support POST, try the initialize method
