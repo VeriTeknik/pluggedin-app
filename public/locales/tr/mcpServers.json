@@ -32,7 +32,8 @@
       "unshareConfirmTitle": "Sunucu Paylaşımını Kaldır",
       "unshareConfirmDesc": "Bu sunucunun paylaşımını kaldırmak istediğinizden emin misiniz? Diğer kullanıcılar artık buna erişemeyecek.",
       "shared": "Paylaşıldı",
-      "share": "Paylaş"
+      "share": "Paylaş",
+      "selectForCollection": "Koleksiyon için Seç"
     },
     "form": {
       "success": "MCP sunucusu başarıyla oluşturuldu.",
@@ -130,7 +131,8 @@
       "fetchTemplatesFailed": "Kaynak şablonları yüklenemedi.",
       "fetchPromptsFailed": "İstemler yüklenemedi.",
       "fetchToolsFailed": "Araçlar yüklenemedi.",
-      "fetchInstructionsFailed": "Özel talimatlar alınamadı."
+      "fetchInstructionsFailed": "Özel talimatlar alınamadı.",
+      "mustBeSharedForCollection": "Sunucu bir koleksiyona dahil edilmek için paylaşılmalıdır."
     },
     "tabs": {
       "details": "Sunucu Detayları",

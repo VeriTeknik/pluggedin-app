@@ -32,7 +32,8 @@
       "unshareConfirmTitle": "सर्वर साझा करना बंद करें",
       "unshareConfirmDesc": "क्या आप वाकई इस सर्वर को साझा करना बंद करना चाहते हैं? अन्य उपयोगकर्ता अब इसे एक्सेस नहीं कर पाएंगे।",
       "shared": "साझा किया गया",
-      "share": "साझा करें"
+      "share": "साझा करें",
+      "selectForCollection": "संग्रह के लिए चुनें"
     },
     "form": {
       "success": "MCP सर्वर सफलतापूर्वक बनाया गया।",
@@ -130,7 +131,8 @@
       "fetchTemplatesFailed": "संसाधन टेम्पलेट लोड करने में विफल।",
       "fetchPromptsFailed": "प्रॉम्प्ट लोड करने में विफल।",
       "fetchToolsFailed": "टूल लोड करने में विफल।",
-      "fetchInstructionsFailed": "कस्टम निर्देश प्राप्त करने में विफल।"
+      "fetchInstructionsFailed": "कस्टम निर्देश प्राप्त करने में विफल।",
+      "mustBeSharedForCollection": "सर्वर को संग्रह में शामिल करने के लिए साझा किया जाना चाहिए।"
     },
     "tabs": {
       "details": "सर्वर विवरण",

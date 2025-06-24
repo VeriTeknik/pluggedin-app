@@ -540,9 +540,36 @@ export async function importSharedServer(
  * @returns A sanitized version for sharing
  */
 export async function createShareableTemplate(server: McpServer): Promise<any> {
-  // Use the encryption utility to create a sanitized template
-  const { createSanitizedTemplate } = await import('@/lib/encryption');
-  const template = createSanitizedTemplate(server);
+  // Cast server to any to access encrypted fields
+  const serverAny = server as any;
+  
+  // First, ensure we have decrypted data to work with
+  let decryptedServer = server;
+  
+  // Check if server has encrypted fields and decrypt them if necessary
+  if (serverAny.command_encrypted || serverAny.args_encrypted || serverAny.env_encrypted || serverAny.url_encrypted) {
+    const { decryptServerData } = await import('@/lib/encryption');
+    decryptedServer = decryptServerData(serverAny, server.profile_uuid);
+  }
+  
+  // Create template with basic server information (non-sensitive fields)
+  const template: any = {
+    uuid: decryptedServer.uuid,
+    name: decryptedServer.name,
+    description: decryptedServer.description,
+    type: decryptedServer.type,
+    source: decryptedServer.source,
+    transport: (decryptedServer as any).transport,
+    streamableHTTPOptions: (decryptedServer as any).streamableHTTPOptions,
+    status: decryptedServer.status,
+    created_at: decryptedServer.created_at,
+    updated_at: (decryptedServer as any).updated_at,
+    // Add the decrypted sensitive fields so they can be edited in the dialog
+    command: decryptedServer.command,
+    args: decryptedServer.args,
+    env: decryptedServer.env,
+    url: decryptedServer.url,
+  };
   
   // Add metadata about the source server
   template.originalServerUuid = server.uuid;

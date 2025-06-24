@@ -75,16 +75,7 @@ export function ShareServerDialog({
   // Removed the redundant useEffect hook that fetched user data again.
   // We now rely on the `currentUser` and `isFetchingUser` provided by the `useUser` hook.
 
-  // Log user data from hook when dialog opens or data changes
-  useEffect(() => {
-    if (open) {
-      console.log('ShareServerDialog: Dialog opened. User data from useUser hook:', {
-        currentUser,
-        isFetchingUser,
-        isUserError,
-      });
-    }
-  }, [open, currentUser, isFetchingUser, isUserError]);
+
 
 
   // Check if the server is already shared when component mounts
@@ -762,16 +753,7 @@ export function ShareServerDialog({
           </Button>
         )}
       </DialogTrigger>
-      {/* Log the state right before rendering */}
-      {(() => {
-        console.log(`ShareServerDialog: Rendering check - isFetchingUser: ${isFetchingUser}, currentUser:`, currentUser);
-        if (!isFetchingUser && !currentUser?.username) {
-          console.log(`ShareServerDialog: Rendering username prompt because !currentUser?.username is true. currentUser:`, currentUser);
-        } else if (!isFetchingUser && currentUser?.username) {
-          console.log(`ShareServerDialog: Rendering main dialog content because currentUser?.username is truthy. Username: ${currentUser.username}`);
-        }
-        return null; // Return null so it doesn't render anything
-      })()}
+
       {/* Show username prompt if loading or no username is set on fetched user from useUser hook */}
       {isFetchingUser ? (
          <DialogContent><div className="flex justify-center items-center p-8">Loading user data...</div></DialogContent> // Show loading state

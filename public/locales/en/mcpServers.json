@@ -32,7 +32,8 @@
       "unshareConfirmTitle": "Unshare Server",
       "unshareConfirmDesc": "Are you sure you want to unshare this server? Other users will no longer be able to access it.",
       "shared": "Shared",
-      "share": "Share"
+      "share": "Share",
+      "selectForCollection": "Select for Collection"
     },
     "form": {
       "success": "MCP server created successfully.",
@@ -133,7 +134,8 @@
       "fetchTemplatesFailed": "Failed to load resource templates.",
       "fetchPromptsFailed": "Failed to load prompts.",
       "fetchToolsFailed": "Failed to load tools.",
-      "fetchInstructionsFailed": "Failed to fetch custom instructions."
+      "fetchInstructionsFailed": "Failed to fetch custom instructions.",
+      "mustBeSharedForCollection": "Server must be shared to be included in a collection."
     },
     "tabs": {
       "details": "Server Details",

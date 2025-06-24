@@ -270,7 +270,7 @@ export function StreamableHttpServerForm({ onSubmit, onCancel, isSubmitting }: S
 
   const handleSubmit = async (data: any) => {
     // Parse the URL to check for API key in query params
-    let url = data.url;
+    let { url } = data;
     const extractedHeaders: Record<string, string> = {};
     
     try {

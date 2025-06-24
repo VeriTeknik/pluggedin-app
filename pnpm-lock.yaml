@@ -12,8 +12,8 @@ importers:
         specifier: ^1.10.0
         version: 1.10.0(nodemailer@7.0.3)
       '@h1deya/langchain-mcp-tools':
-        specifier: ^0.2.8
-        version: 0.2.8(openai@5.7.0(ws@8.18.2)(zod@3.25.67))
+        specifier: ^0.2.9
+        version: 0.2.9(openai@5.7.0(ws@8.18.2)(zod@3.25.67))
       '@hookform/resolvers':
         specifier: ^5.1.1
         version: 5.1.1(react-hook-form@7.58.1(react@19.1.0))
@@ -1066,8 +1066,15 @@ packages:
     resolution: {integrity: sha512-MqO+MLfM6kjxcKoy0p1wRzG3b4ZZXtPI+z2IE26UogS2Cm/XHO+7gGRBh6gcJsOiIVoH93UwKvW4HdgiOZCy9Q==}
     engines: {node: '>=18.0.0'}
 
-  '@h1deya/langchain-mcp-tools@0.2.8':
-    resolution: {integrity: sha512-TxloutlX/97vNIm3MxFMZEFpuW+L2iO29pZYN02xJ81z+f/N9kY+12u3+RMuZqJshqUMC+hnLFIfqGvgP84nQw==}
+  '@h1deya/json-schema-to-zod@0.1.0':
+    resolution: {integrity: sha512-WeC1Xi5fSQy2E0OxNPyxO88Zryj9FHLrBTjGnefaS4dhoHooELMYuahiaYkVes/4QvXHojBSq+d85+4Obqsytg==}
+    engines: {node: '>=18.0.0'}
+    peerDependencies:
+      zod: ^3.0.0
+
+  '@h1deya/langchain-mcp-tools@0.2.9':
+    resolution: {integrity: sha512-Ft4S6d3D7aTyg8p7D7gQvLyBFtTJ5p2vKUcemDd3VMA9tUt3bF8Dbwaglx1+V8luEiiKx+LCyfzZDjY3H+zm9Q==}
+    engines: {node: '>=18.0.0'}
 
   '@hookform/resolvers@5.1.1':
     resolution: {integrity: sha512-J/NVING3LMAEvexJkyTLjruSm7aOFx7QX21pzkiJfMoNG0wl5aFEjLTl7ay7IQb9EWY6AkrBy7tHL2Alijpdcg==}
@@ -1335,11 +1342,6 @@ packages:
   '@mswjs/interceptors@0.39.2':
     resolution: {integrity: sha512-RuzCup9Ct91Y7V79xwCb146RaBRHZ7NBbrIUySumd1rpKqHL5OonaqrGIbug5hNwP/fRyxFMA6ISgw4FTtYFYg==}
     engines: {node: '>=18'}
-
-  '@n8n/json-schema-to-zod@1.1.0':
-    resolution: {integrity: sha512-HfL3jq5NSb0Mng56QCfUnzD09F4wxWR543jYJZ+XBQpb0f9B102r6K3qEtdXVTs1mwHVnxz5KBaesqipFYPjww==}
-    peerDependencies:
-      zod: ^3.0.0
 
   '@napi-rs/wasm-runtime@0.2.11':
     resolution: {integrity: sha512-9DPkXtvHydrcOsopiYpUgPHpmj0HWZKMUnL2dZqpvC42lsratuBG06V5ipyno0fUek5VlFsNQ+AcFATSrJXgMA==}
@@ -7501,11 +7503,15 @@ snapshots:
 
   '@google/generative-ai@0.24.1': {}
 
-  '@h1deya/langchain-mcp-tools@0.2.8(openai@5.7.0(ws@8.18.2)(zod@3.25.67))':
+  '@h1deya/json-schema-to-zod@0.1.0(zod@3.25.67)':
     dependencies:
+      zod: 3.25.67
+
+  '@h1deya/langchain-mcp-tools@0.2.9(openai@5.7.0(ws@8.18.2)(zod@3.25.67))':
+    dependencies:
+      '@h1deya/json-schema-to-zod': 0.1.0(zod@3.25.67)
       '@langchain/core': 0.3.61(openai@5.7.0(ws@8.18.2)(zod@3.25.67))
       '@modelcontextprotocol/sdk': 1.13.1
-      '@n8n/json-schema-to-zod': 1.1.0(zod@3.25.67)
       zod: 3.25.67
     transitivePeerDependencies:
       - openai
@@ -7774,10 +7780,6 @@ snapshots:
       outvariant: 1.4.3
       strict-event-emitter: 0.5.1
     optional: true
-
-  '@n8n/json-schema-to-zod@1.1.0(zod@3.25.67)':
-    dependencies:
-      zod: 3.25.67
 
   '@napi-rs/wasm-runtime@0.2.11':
     dependencies:

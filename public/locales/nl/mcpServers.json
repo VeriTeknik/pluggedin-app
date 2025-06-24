@@ -32,7 +32,8 @@
       "unshareConfirmTitle": "Server delen ongedaan maken",
       "unshareConfirmDesc": "Weet u zeker dat u het delen van deze server ongedaan wilt maken? Andere gebruikers hebben er dan geen toegang meer toe.",
       "shared": "Gedeeld",
-      "share": "Delen"
+      "share": "Delen",
+      "selectForCollection": "Selecteren voor Collectie"
     },
     "form": {
       "success": "MCP-server succesvol aangemaakt.",
@@ -130,7 +131,8 @@
       "fetchTemplatesFailed": "Laden van bronsjablonen mislukt.",
       "fetchPromptsFailed": "Laden van prompts mislukt.",
       "fetchToolsFailed": "Laden van tools mislukt.",
-      "fetchInstructionsFailed": "Ophalen van aangepaste instructies mislukt."
+      "fetchInstructionsFailed": "Ophalen van aangepaste instructies mislukt.",
+      "mustBeSharedForCollection": "Server moet gedeeld worden om opgenomen te worden in een collectie."
     },
     "tabs": {
       "details": "Serverdetails",

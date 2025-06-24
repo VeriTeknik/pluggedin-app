@@ -32,7 +32,8 @@
       "unshareConfirmTitle": "取消共享服务器",
       "unshareConfirmDesc": "您确定要取消共享此服务器吗？其他用户将无法再访问它。",
       "shared": "已共享",
-      "share": "共享"
+      "share": "共享",
+      "selectForCollection": "选择为集合"
     },
     "form": {
       "success": "MCP 服务器创建成功。",
@@ -130,7 +131,8 @@
       "fetchTemplatesFailed": "加载资源模板失败。",
       "fetchPromptsFailed": "加载提示失败。",
       "fetchToolsFailed": "加载工具失败。",
-      "fetchInstructionsFailed": "获取自定义指令失败。"
+      "fetchInstructionsFailed": "获取自定义指令失败。",
+      "mustBeSharedForCollection": "服务器必须共享才能包含在集合中。"
     },
     "tabs": {
       "details": "服务器详细信息",

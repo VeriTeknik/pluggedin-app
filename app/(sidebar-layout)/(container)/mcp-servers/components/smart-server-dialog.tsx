@@ -231,45 +231,62 @@ export function SmartServerDialog({
   };
 
   const detectServerTypeFromUrl = (url: string): McpServerType => {
-    const urlLower = url.toLowerCase();
-    
-    // Smithery servers
-    if (urlLower.includes('server.smithery.ai')) {
+    try {
+      const urlObj = new URL(url);
+      const hostname = urlObj.hostname.toLowerCase();
+      const pathname = urlObj.pathname.toLowerCase();
+      
+      // Smithery servers - check exact hostname
+      if (hostname === 'server.smithery.ai') {
+        return McpServerType.STREAMABLE_HTTP;
+      }
+      
+      // GitHub Copilot - check exact hostname
+      if (hostname === 'api.githubcopilot.com') {
+        return McpServerType.STREAMABLE_HTTP;
+      }
+      
+      // Context7 - check exact hostname
+      if (hostname === 'mcp.context7.com') {
+        return McpServerType.STREAMABLE_HTTP;
+      }
+      
+      // SSE endpoints (check path patterns more precisely)
+      if (pathname.endsWith('/sse') || 
+          pathname.includes('/sse/') ||
+          pathname.endsWith('/events') || 
+          pathname.includes('/events/') ||
+          pathname.endsWith('/stream') || 
+          pathname.includes('/stream/')) {
+        return McpServerType.SSE;
+      }
+      
+      // Default to Streamable HTTP for HTTP(S) URLs
+      return McpServerType.STREAMABLE_HTTP;
+    } catch (error) {
+      // If URL parsing fails, default to Streamable HTTP
       return McpServerType.STREAMABLE_HTTP;
     }
-    
-    // GitHub Copilot
-    if (urlLower.includes('api.githubcopilot.com')) {
-      return McpServerType.STREAMABLE_HTTP;
-    }
-    
-    // Context7
-    if (urlLower.includes('mcp.context7.com')) {
-      return McpServerType.STREAMABLE_HTTP;
-    }
-    
-    // SSE endpoints (common patterns)
-    if (urlLower.includes('/sse') || urlLower.includes('/events') || urlLower.includes('/stream')) {
-      return McpServerType.SSE;
-    }
-    
-    // Default to Streamable HTTP for HTTP(S) URLs
-    return McpServerType.STREAMABLE_HTTP;
   };
 
   const parseUrlInput = (url: string, serverType: McpServerType): ParsedConfig => {
     const urlObj = new URL(url);
-    let name = urlObj.hostname.replace(/\./g, '-');
+    const hostname = urlObj.hostname.toLowerCase();
+    let name = hostname.replace(/\./g, '-');
     
-    // Create better names for known services
-    if (url.includes('mcp.context7.com')) {
+    // Create better names for known services based on exact hostname matching
+    if (hostname === 'mcp.context7.com') {
       name = 'context7';
-    } else if (url.includes('server.smithery.ai')) {
-      // Extract server name from Smithery URL
-      const match = url.match(/@[^/]+\/([^/]+)\//);;
-      if (match) {
-        name = match[1];
+    } else if (hostname === 'server.smithery.ai') {
+      // Extract server name from Smithery URL path
+      const pathMatch = urlObj.pathname.match(/@[^/]+\/([^/]+)\//);
+      if (pathMatch && pathMatch[1]) {
+        name = pathMatch[1];
+      } else {
+        name = 'smithery-server';
       }
+    } else if (hostname === 'api.githubcopilot.com') {
+      name = 'github-copilot';
     } else {
       name += '-server';
     }
@@ -284,11 +301,11 @@ export function SmartServerDialog({
       status: McpServerStatus.ACTIVE
     };
     
-    // For Smithery, keep API key in URL
-    if (url.includes('server.smithery.ai')) {
-      // API key stays in URL
+    // For Smithery, keep API key in URL (their expected format)
+    if (hostname === 'server.smithery.ai') {
+      // API key stays in URL for Smithery servers
     } else if (apiKey && serverType === McpServerType.STREAMABLE_HTTP) {
-      // For other services, move API key to headers
+      // For other services, move API key to headers for better security
       const cleanUrl = new URL(url);
       cleanUrl.searchParams.delete('api_key');
       cleanUrl.searchParams.delete('apiKey');

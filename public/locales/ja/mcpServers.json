@@ -32,7 +32,8 @@
       "unshareConfirmTitle": "サーバーの共有を解除",
       "unshareConfirmDesc": "このサーバーの共有を解除してもよろしいですか？他のユーザーはアクセスできなくなります。",
       "shared": "共有済み",
-      "share": "共有"
+      "share": "共有",
+      "selectForCollection": "コレクション用に選択"
     },
     "form": {
       "success": "MCPサーバーが正常に作成されました。",
@@ -130,7 +131,8 @@
       "fetchTemplatesFailed": "リソーステンプレートの読み込みに失敗しました。",
       "fetchPromptsFailed": "プロンプトの読み込みに失敗しました。",
       "fetchToolsFailed": "ツールの読み込みに失敗しました。",
-      "fetchInstructionsFailed": "カスタム指示の取得に失敗しました。"
+      "fetchInstructionsFailed": "カスタム指示の取得に失敗しました。",
+      "mustBeSharedForCollection": "サーバーはコレクションに含めるために共有される必要があります。"
     },
     "tabs": {
       "details": "サーバー詳細",
