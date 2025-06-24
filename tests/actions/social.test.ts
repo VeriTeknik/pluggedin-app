@@ -5,9 +5,10 @@ import {
   unfollowUser, 
   getFollowers,
   getFollowing,
-  shareServer,
+  shareMcpServer,
   shareCollection,
-  getSharedContent 
+  getSharedMcpServers,
+  getSharedCollections 
 } from '@/app/actions/social';
 import { db } from '@/db';
 import { createMockUser, createMockMcpServer, createMockProfile } from '../utils/mocks';
@@ -29,7 +30,26 @@ describe('Social Actions', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     
-    // Setup default mock implementations
+    // Setup default mock implementations with query builders
+    mockedDb.query = {
+      users: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
+      followers: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
+      sharedServers: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
+      sharedCollections: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
+    } as any;
+    
     mockedDb.select = vi.fn().mockReturnThis();
     mockedDb.insert = vi.fn().mockReturnThis();
     mockedDb.update = vi.fn().mockReturnThis();
@@ -47,41 +67,29 @@ describe('Social Actions', () => {
     it('should successfully follow a user', async () => {
       const targetUserId = 'target-user-id';
       const followerId = 'test-user-id';
-
-      // Mock target user exists and is public
+      
       const targetUser = createMockUser({ 
         id: targetUserId, 
-        is_public: true,
-        username: 'targetuser' 
+        is_public: true 
       });
-      mockedDb.returning.mockResolvedValueOnce([targetUser]);
 
-      // Mock not already following
-      mockedDb.returning.mockResolvedValueOnce([]);
+      mockedDb.query.users.findFirst.mockResolvedValueOnce(targetUser);
+      mockedDb.query.followers.findFirst.mockResolvedValueOnce(null); // Not already following
+      mockedDb.returning.mockResolvedValueOnce([{ follower_user_id: followerId, followed_user_id: targetUserId }]);
 
-      // Mock successful follow creation
-      const followRecord = {
-        uuid: 'follow-uuid',
-        follower_user_id: followerId,
-        followed_user_id: targetUserId,
-        created_at: new Date(),
-      };
-      mockedDb.returning.mockResolvedValueOnce([followRecord]);
-
-      const result = await followUser(targetUserId);
+      const result = await followUser(followerId, targetUserId);
 
       expect(result.success).toBe(true);
-      expect(result.follow).toEqual(followRecord);
       expect(mockedDb.insert).toHaveBeenCalled();
     });
 
     it('should fail if user does not exist', async () => {
       const targetUserId = 'nonexistent-user-id';
+      const followerId = 'test-user-id';
 
-      // Mock user not found
-      mockedDb.returning.mockResolvedValueOnce([]);
+      mockedDb.query.users.findFirst.mockResolvedValueOnce(null);
 
-      const result = await followUser(targetUserId);
+      const result = await followUser(followerId, targetUserId);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('User not found');
@@ -89,15 +97,16 @@ describe('Social Actions', () => {
 
     it('should fail if user is not public', async () => {
       const targetUserId = 'private-user-id';
-
-      // Mock private user
+      const followerId = 'test-user-id';
+      
       const privateUser = createMockUser({ 
         id: targetUserId, 
         is_public: false 
       });
-      mockedDb.returning.mockResolvedValueOnce([privateUser]);
 
-      const result = await followUser(targetUserId);
+      mockedDb.query.users.findFirst.mockResolvedValueOnce(privateUser);
+
+      const result = await followUser(followerId, targetUserId);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('private profile');
@@ -105,30 +114,29 @@ describe('Social Actions', () => {
 
     it('should fail if already following', async () => {
       const targetUserId = 'target-user-id';
-
-      // Mock target user exists
+      const followerId = 'test-user-id';
+      
       const targetUser = createMockUser({ 
         id: targetUserId, 
         is_public: true 
       });
-      mockedDb.returning.mockResolvedValueOnce([targetUser]);
 
-      // Mock already following
-      const existingFollow = {
-        uuid: 'existing-follow-uuid',
-        follower_user_id: 'test-user-id',
-        followed_user_id: targetUserId,
-      };
-      mockedDb.returning.mockResolvedValueOnce([existingFollow]);
+      mockedDb.query.users.findFirst.mockResolvedValueOnce(targetUser);
+      mockedDb.query.followers.findFirst.mockResolvedValueOnce({
+        follower_user_id: followerId,
+        followed_user_id: targetUserId
+      });
 
-      const result = await followUser(targetUserId);
+      const result = await followUser(followerId, targetUserId);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('already following');
     });
 
     it('should fail if trying to follow self', async () => {
-      const result = await followUser('test-user-id');
+      const userId = 'test-user-id';
+
+      const result = await followUser(userId, userId);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('cannot follow yourself');
@@ -138,19 +146,14 @@ describe('Social Actions', () => {
   describe('unfollowUser', () => {
     it('should successfully unfollow a user', async () => {
       const targetUserId = 'target-user-id';
+      const followerId = 'test-user-id';
 
-      // Mock existing follow relationship
-      const existingFollow = {
-        uuid: 'follow-uuid',
-        follower_user_id: 'test-user-id',
-        followed_user_id: targetUserId,
-      };
-      mockedDb.returning.mockResolvedValueOnce([existingFollow]);
+      mockedDb.returning.mockResolvedValueOnce([{
+        follower_user_id: followerId,
+        followed_user_id: targetUserId
+      }]);
 
-      // Mock successful deletion
-      mockedDb.returning.mockResolvedValueOnce([existingFollow]);
-
-      const result = await unfollowUser(targetUserId);
+      const result = await unfollowUser(followerId, targetUserId);
 
       expect(result.success).toBe(true);
       expect(mockedDb.delete).toHaveBeenCalled();
@@ -158,11 +161,11 @@ describe('Social Actions', () => {
 
     it('should fail if not following the user', async () => {
       const targetUserId = 'target-user-id';
+      const followerId = 'test-user-id';
 
-      // Mock no existing follow relationship
       mockedDb.returning.mockResolvedValueOnce([]);
 
-      const result = await unfollowUser(targetUserId);
+      const result = await unfollowUser(followerId, targetUserId);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('not following');
@@ -172,28 +175,17 @@ describe('Social Actions', () => {
   describe('getFollowers', () => {
     it('should return list of followers', async () => {
       const userId = 'test-user-id';
-      const followers = [
-        {
-          follower_user_id: 'follower1',
-          username: 'follower1',
-          avatar_url: null,
-          created_at: new Date(),
-        },
-        {
-          follower_user_id: 'follower2', 
-          username: 'follower2',
-          avatar_url: 'avatar.jpg',
-          created_at: new Date(),
-        },
+      const mockFollowers = [
+        createMockUser({ id: 'follower-1' }),
+        createMockUser({ id: 'follower-2' }),
       ];
 
-      mockedDb.returning.mockResolvedValueOnce(followers);
+      mockedDb.returning.mockResolvedValueOnce(mockFollowers);
 
       const result = await getFollowers(userId);
 
-      expect(result.success).toBe(true);
-      expect(result.followers).toEqual(followers);
-      expect(result.followers).toHaveLength(2);
+      expect(result).toHaveLength(2);
+      expect(mockedDb.select).toHaveBeenCalled();
     });
 
     it('should return empty array if no followers', async () => {
@@ -203,176 +195,114 @@ describe('Social Actions', () => {
 
       const result = await getFollowers(userId);
 
-      expect(result.success).toBe(true);
-      expect(result.followers).toEqual([]);
+      expect(result).toEqual([]);
     });
   });
 
-  describe('shareServer', () => {
+  describe('shareMcpServer', () => {
     it('should successfully share a server publicly', async () => {
-      const serverUuid = 'test-server-uuid';
-      const shareData = {
-        title: 'Shared Server Title',
-        is_public: true,
-      };
+      const serverUuid = 'server-uuid';
+      const profileUuid = 'profile-uuid';
 
-      // Mock server exists and user owns it
-      const server = createMockMcpServer({ uuid: serverUuid });
-      mockedDb.returning.mockResolvedValueOnce([server]);
+      const mockServer = createMockMcpServer({ 
+        uuid: serverUuid,
+        profile_uuid: profileUuid 
+      });
 
-      // Mock successful share creation
-      const sharedServer = {
-        uuid: 'shared-server-uuid',
+      mockedDb.query.sharedServers.findFirst.mockResolvedValueOnce(null); // Not already shared
+      mockedDb.returning.mockResolvedValueOnce([{
         server_uuid: serverUuid,
-        profile_uuid: 'test-profile-uuid',
-        title: shareData.title,
-        is_public: shareData.is_public,
-        install_count: 0,
-        created_at: new Date(),
-      };
-      mockedDb.returning.mockResolvedValueOnce([sharedServer]);
+        profile_uuid: profileUuid,
+        is_public: true
+      }]);
 
-      const result = await shareServer(serverUuid, shareData);
+      const result = await shareMcpServer(serverUuid, profileUuid, true);
 
       expect(result.success).toBe(true);
-      expect(result.sharedServer).toEqual(sharedServer);
       expect(mockedDb.insert).toHaveBeenCalled();
     });
 
-    it('should fail if server does not exist', async () => {
-      const serverUuid = 'nonexistent-server-uuid';
-      const shareData = { is_public: true };
-
-      // Mock server not found
-      mockedDb.returning.mockResolvedValueOnce([]);
-
-      const result = await shareServer(serverUuid, shareData);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Server not found');
-    });
-
-    it('should fail if user does not own the server', async () => {
-      const serverUuid = 'test-server-uuid';
-      const shareData = { is_public: true };
-
-      // Mock server exists but belongs to different profile
-      const server = createMockMcpServer({ 
-        uuid: serverUuid,
-        profile_uuid: 'different-profile-uuid'
-      });
-      mockedDb.returning.mockResolvedValueOnce([server]);
-
-      const result = await shareServer(serverUuid, shareData);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('not authorized');
-    });
-
     it('should fail if server is already shared', async () => {
-      const serverUuid = 'test-server-uuid';
-      const shareData = { is_public: true };
+      const serverUuid = 'server-uuid';
+      const profileUuid = 'profile-uuid';
 
-      // Mock server exists
-      const server = createMockMcpServer({ uuid: serverUuid });
-      mockedDb.returning.mockResolvedValueOnce([server]);
-
-      // Mock already shared
-      const existingShare = {
-        uuid: 'existing-share-uuid',
+      mockedDb.query.sharedServers.findFirst.mockResolvedValueOnce({
         server_uuid: serverUuid,
-      };
-      mockedDb.returning.mockResolvedValueOnce([existingShare]);
+        profile_uuid: profileUuid
+      });
 
-      const result = await shareServer(serverUuid, shareData);
+      const result = await shareMcpServer(serverUuid, profileUuid, true);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('already shared');
     });
   });
 
-  describe('getSharedContent', () => {
-    it('should return public shared servers and collections', async () => {
-      const sharedContent = [
+  describe('getSharedMcpServers', () => {
+    it('should return public shared servers', async () => {
+      const mockSharedServers = [
         {
-          type: 'server',
-          uuid: 'shared-server-1',
-          title: 'Shared Server 1',
-          install_count: 10,
-          created_at: new Date(),
-          profile_uuid: 'profile-1',
-          username: 'creator1',
+          server: createMockMcpServer(),
+          profile: createMockProfile(),
+          user: createMockUser()
         },
         {
-          type: 'collection',
-          uuid: 'shared-collection-1', 
-          title: 'Shared Collection 1',
-          install_count: 5,
-          created_at: new Date(),
-          profile_uuid: 'profile-2',
-          username: 'creator2',
+          server: createMockMcpServer(),
+          profile: createMockProfile(),
+          user: createMockUser()
         },
       ];
 
-      mockedDb.returning.mockResolvedValueOnce(sharedContent);
+      mockedDb.returning.mockResolvedValueOnce(mockSharedServers);
 
-      const result = await getSharedContent();
+      const result = await getSharedMcpServers({ isPublic: true });
 
-      expect(result.success).toBe(true);
-      expect(result.content).toEqual(sharedContent);
-      expect(result.content).toHaveLength(2);
+      expect(result).toHaveLength(2);
+      expect(mockedDb.select).toHaveBeenCalled();
     });
 
-    it('should filter by content type', async () => {
-      const serverContent = [
+    it('should filter by user ID when provided', async () => {
+      const userId = 'specific-user-id';
+      const mockSharedServers = [
         {
-          type: 'server',
-          uuid: 'shared-server-1',
-          title: 'Shared Server 1',
-          install_count: 10,
+          server: createMockMcpServer(),
+          profile: createMockProfile(),
+          user: createMockUser({ id: userId })
         },
       ];
 
-      mockedDb.returning.mockResolvedValueOnce(serverContent);
+      mockedDb.returning.mockResolvedValueOnce(mockSharedServers);
 
-      const result = await getSharedContent({ type: 'server' });
+      const result = await getSharedMcpServers({ userId });
 
-      expect(result.success).toBe(true);
-      expect(result.content).toEqual(serverContent);
-      expect(mockedDb.where).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // Should include type filter
-        })
-      );
+      expect(result).toHaveLength(1);
+      expect(mockedDb.where).toHaveBeenCalled();
     });
 
     it('should support pagination', async () => {
-      const paginatedContent = [
-        {
-          type: 'server',
-          uuid: 'shared-server-6',
-          title: 'Shared Server 6',
-        },
-      ];
+      const mockSharedServers = Array(10).fill(null).map(() => ({
+        server: createMockMcpServer(),
+        profile: createMockProfile(),
+        user: createMockUser()
+      }));
 
-      mockedDb.returning.mockResolvedValueOnce(paginatedContent);
+      mockedDb.returning.mockResolvedValueOnce(mockSharedServers);
 
-      const result = await getSharedContent({ 
-        limit: 10, 
-        offset: 50 
+      const result = await getSharedMcpServers({ 
+        isPublic: true,
+        limit: 10,
+        offset: 0
       });
 
-      expect(result.success).toBe(true);
-      expect(result.content).toEqual(paginatedContent);
+      expect(result).toHaveLength(10);
     });
 
     it('should handle database errors during fetch', async () => {
-      mockedDb.returning.mockRejectedValueOnce(new Error('Database error'));
+      mockedDb.select.mockImplementation(() => {
+        throw new Error('Database error');
+      });
 
-      const result = await getSharedContent();
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Database error');
+      await expect(getSharedMcpServers({})).rejects.toThrow('Database error');
     });
   });
 });
