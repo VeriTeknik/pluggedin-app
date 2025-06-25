@@ -504,9 +504,16 @@ Example:
       case 'discover-capabilities':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Server capabilities tabs view]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/discover-capabilities/plugin-management.png"
+                alt="Plugin Management interface showing MCP servers overview"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -521,9 +528,16 @@ Example:
               <li>{t('whatsNew:articles.discover-capabilities.content.capability4')}</li>
             </ul>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Discover Capabilities button]</p>
+            {/* Server Details Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/discover-capabilities/server-details.png"
+                alt="Individual server details showing capabilities and actions"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.discover-capabilities.content.discoveryTitle')}</h2>
@@ -532,11 +546,6 @@ Example:
               <li>{t('whatsNew:articles.discover-capabilities.content.discoveryStep2')}</li>
               <li>{t('whatsNew:articles.discover-capabilities.content.discoveryStep3')}</li>
             </ol>
-
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Discovered tools and resources in tabs]</p>
-            </div>
           </>
         );
 
