@@ -552,9 +552,16 @@ Example:
       case 'share-collections':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Collection sharing interface]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/share-collections/collections-overview.png"
+                alt="Collection sharing interface showing multiple collections"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -564,9 +571,16 @@ Example:
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.share-collections.content.whatAreCollectionsTitle')}</h2>
             <p className="mb-6">{t('whatsNew:articles.share-collections.content.whatAreCollectionsText')}</p>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Creating a collection]</p>
+            {/* Create Collection Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/share-collections/create-collection.png"
+                alt="Interface for creating a new collection"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.share-collections.content.createCollectionTitle')}</h2>
@@ -577,9 +591,16 @@ Example:
               <li>{t('whatsNew:articles.share-collections.content.createStep4')}</li>
             </ol>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Share collection dialog]</p>
+            {/* Share Dialog Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/share-collections/share-dialog.png"
+                alt="Dialog for sharing a collection with others"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.share-collections.content.sharingTitle')}</h2>
