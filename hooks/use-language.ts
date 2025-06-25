@@ -4,6 +4,7 @@ import { useCallback, useRef } from 'react';
 import debounce from 'lodash/debounce';
 import { useTranslation } from 'react-i18next';
 
+import { useAuth } from '@/hooks/use-auth';
 import { isRTL, type Locale } from '@/i18n/config';
 
 class LanguageStorage {
@@ -26,10 +27,16 @@ class LanguageStorage {
 
 export function useLanguage() {
   const { i18n } = useTranslation();
+  const { isAuthenticated } = useAuth();
   
   // Create a persistent debounced function using useRef
   const updateLanguageDebounced = useRef(
-    debounce(async (language: string) => {
+    debounce(async (language: string, isAuth: boolean) => {
+      // Only attempt to update database if user is authenticated
+      if (!isAuth) {
+        return;
+      }
+      
       try {
         const response = await fetch('/api/settings/profile', {
           method: 'PATCH',
@@ -65,15 +72,15 @@ export function useLanguage() {
       // Update direction for RTL support
       document.documentElement.dir = isRTL(language) ? 'rtl' : 'ltr';
 
-      // Update language in database (debounced)
-      updateLanguageDebounced(language);
+      // Update language in database (debounced) - only if authenticated
+      updateLanguageDebounced(language, isAuthenticated);
     } catch (error) {
       console.error('Failed to update language:', error);
       // Revert to previous language if update fails
       const prevLang = i18n.language;
       await i18n.changeLanguage(prevLang);
     }
-  }, [i18n, updateLanguageDebounced]);
+  }, [i18n, updateLanguageDebounced, isAuthenticated]);
 
   return {
     currentLanguage: i18n.language as Locale,

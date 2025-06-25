@@ -53,7 +53,7 @@ function NetworkAnimation() {
     { id: 'gpt', name: 'GPT' },
     { id: 'claude', name: 'Claude' },
     { id: 'llama', name: 'Llama' },
-    { id: 'palm', name: 'PaLM' },
+    { id: 'xai', name: 'xAI' },
     { id: 'gemini', name: 'Gemini' },
     { id: 'mistral', name: 'Mistral' }
   ], []);

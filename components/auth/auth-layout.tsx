@@ -1,14 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { AuthForm } from '@/components/auth/auth-form';
 
 type AuthLayoutProps = {
   type: 'login' | 'register' | 'forgot-password' | 'reset-password';
-  children?: ReactNode;
 };
 
 type LinkConfigType = {
@@ -24,53 +22,52 @@ type LinkConfigType = {
   };
 };
 
-export function AuthLayout({ type, children }: AuthLayoutProps) {
+// Static mapping for link configurations
+const LINK_CONFIGS: Record<AuthLayoutProps['type'], (t: any) => LinkConfigType> = {
+  'login': (t) => ({
+    primary: {
+      text: t('auth.links.login.noAccount'),
+      linkText: t('auth.links.login.signUp'),
+      href: "/register",
+    },
+    secondary: {
+      linkText: t('auth.links.login.forgotPassword'),
+      href: "/forgot-password",
+    }
+  }),
+  'register': (t) => ({
+    primary: {
+      text: t('auth.links.register.hasAccount'),
+      linkText: t('auth.links.register.signIn'),
+      href: "/login",
+    }
+  }),
+  'forgot-password': (t) => ({
+    primary: {
+      text: t('auth.links.forgotPassword.rememberPassword'),
+      linkText: t('auth.links.forgotPassword.backToLogin'),
+      href: "/login",
+    }
+  }),
+  'reset-password': (t) => ({
+    primary: {
+      text: t('auth.links.forgotPassword.rememberPassword'),
+      linkText: t('auth.links.forgotPassword.backToLogin'),
+      href: "/login",
+    }
+  }),
+};
+
+export function AuthLayout({ type }: AuthLayoutProps) {
   const { t } = useTranslation();
   
-  // Define the link configuration for each auth type
-  const getLinkConfig = (): LinkConfigType => {
-    switch (type) {
-      case 'login':
-        return {
-          primary: {
-            text: t('auth.links.login.noAccount'),
-            linkText: t('auth.links.login.signUp'),
-            href: "/register",
-          },
-          secondary: {
-            linkText: t('auth.login.forgotPassword'),
-            href: "/forgot-password",
-          }
-        };
-      case 'register':
-        return {
-          primary: {
-            text: t('auth.links.register.hasAccount'),
-            linkText: t('auth.links.register.signIn'),
-            href: "/login",
-          }
-        };
-      case 'forgot-password':
-      case 'reset-password':
-        return {
-          primary: {
-            text: t('auth.links.forgotPassword.rememberPassword'),
-            linkText: t('auth.links.forgotPassword.backToLogin'),
-            href: "/login",
-          }
-        };
-      default:
-        return {
-          primary: {
-            text: "",
-            linkText: "",
-            href: "/",
-          }
-        };
+  const linkConfig = LINK_CONFIGS[type]?.(t) || {
+    primary: {
+      text: "",
+      linkText: "",
+      href: "/",
     }
   };
-
-  const linkConfig = getLinkConfig();
 
   return (
     <div className="space-y-6">
@@ -103,8 +100,6 @@ export function AuthLayout({ type, children }: AuthLayoutProps) {
           </p>
         )}
       </div>
-
-      {children}
     </div>
   );
 } 
