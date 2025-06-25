@@ -11,6 +11,7 @@ services:
       - '12005:3000'
     environment:
       - NODE_ENV=production
+      - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
     depends_on:
       - pluggedin-postgres
 
