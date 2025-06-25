@@ -1,6 +1,6 @@
 services:
-  metatool-web:
-    container_name: metatool-web
+  pluggedin-app:
+    container_name: pluggedin-app
     build:
       context: .
       dockerfile: Dockerfile
@@ -12,23 +12,23 @@ services:
     environment:
       - NODE_ENV=production
     depends_on:
-      - metatool-postgres
+      - pluggedin-postgres
 
-  metatool-postgres:
-    container_name: metatool-postgres
+  pluggedin-postgres:
+    container_name: pluggedin-postgres
     image: postgres:16.2-alpine3.18
     restart: always
     environment:
-      POSTGRES_DB: metatool
-      POSTGRES_USER: metatool
-      POSTGRES_PASSWORD: m3t4t00l
+      POSTGRES_DB: pluggedin
+      POSTGRES_USER: pluggedin
+      POSTGRES_PASSWORD: pluggedin_secure_password
     ports:
-      - '8432:5432'
+      - '5432:5432'
     volumes:
-      - metatool-postgres:/var/lib/postgresql/data
+      - pluggedin-postgres:/var/lib/postgresql/data
 
   drizzle-migrate:
-    container_name: drizzle-migrate
+    container_name: pluggedin-migrate
     build:
       context: .
       dockerfile: Dockerfile
@@ -37,8 +37,8 @@ services:
     env_file:
       - .env
     depends_on:
-      - metatool-postgres
+      - pluggedin-postgres
 
 volumes:
-  metatool-postgres:
+  pluggedin-postgres:
     driver: local

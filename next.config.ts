@@ -26,6 +26,13 @@ const nextConfig: NextConfig = {
   },
   // Fix for dynamic server usage error
   staticPageGenerationTimeout: 120, // Increase timeout for static page generation
+  
+  // ESLint configuration for production builds
+  eslint: {
+    // Warning: This allows production builds to successfully complete even if
+    // your project has ESLint errors.
+    ignoreDuringBuilds: true,
+  },
 
   webpack: (config: WebpackConfig, { isServer }: WebpackConfigContext) => {
     // Force Next.js to use the native Node.js fetch

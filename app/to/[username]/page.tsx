@@ -1,10 +1,8 @@
-import { sql } from 'drizzle-orm';
 import { Metadata } from 'next';
 
 import { getUserByUsername, getUserFollowerCount, getUserFollowingCount, isFollowingUser } from '@/app/actions/social';
 import { ProfileHeader } from '@/components/profile/profile-header';
 import { ProfileTabs } from '@/components/profile/profile-tabs';
-import { db } from '@/db';
 import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
@@ -78,7 +76,7 @@ export async function generateMetadata({
 }
 
 // --- Async Page Component ---
-export default async function ProfilePage({ params, searchParams }: PageProps) {
+export default async function ProfilePage({ params }: PageProps) {
   const { username } = await params;
   const user = await getUserByUsername(username);
   const session = await getAuthSession();

@@ -1,17 +1,17 @@
 services:
-  metatool-postgres:
-    container_name: metatool-postgres
+  pluggedin-postgres-dev:
+    container_name: pluggedin-postgres-dev
     image: postgres:16.2-alpine3.18
     restart: always
     environment:
-      POSTGRES_DB: metatool
-      POSTGRES_USER: metatool
-      POSTGRES_PASSWORD: m3t4t00l
+      POSTGRES_DB: pluggedin_dev
+      POSTGRES_USER: pluggedin
+      POSTGRES_PASSWORD: pluggedin_dev_password
     ports:
-      - '8432:5432'
+      - '5432:5432'
     volumes:
-      - metatool-postgres:/var/lib/postgresql/data
+      - pluggedin-postgres-dev:/var/lib/postgresql/data
 
 volumes:
-  metatool-postgres:
+  pluggedin-postgres-dev:
     driver: local
