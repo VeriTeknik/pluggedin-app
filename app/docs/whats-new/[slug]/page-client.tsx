@@ -355,9 +355,15 @@ Example:
       case 'public-profile':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Example public profile page]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/public-profile/profile-page.png"
+                alt="Example public profile page showing user information and shared content"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -372,9 +378,15 @@ Example:
               <li>{t('whatsNew:articles.public-profile.content.feature4')}</li>
             </ul>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Profile settings page]</p>
+            {/* Settings Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/public-profile/profile-settings.png"
+                alt="Profile settings page showing customization options"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.public-profile.content.setupTitle')}</h2>
@@ -389,9 +401,15 @@ Example:
       case 'import-export-setup':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Export/Import buttons in collection view]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/import-export-setup/collection-actions.png"
+                alt="Export and Import buttons in collection view"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -405,9 +423,15 @@ Example:
               <li>{t('whatsNew:articles.import-export-setup.content.exportStep3')}</li>
             </ol>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Import dialog with file selection]</p>
+            {/* Import Dialog Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/import-export-setup/import-dialog.png"
+                alt="Import collection dialog showing file selection interface"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.import-export-setup.content.importTitle')}</h2>
