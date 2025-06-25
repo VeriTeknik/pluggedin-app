@@ -1,7 +1,11 @@
 'use client';
 
-import { AuthLayout } from '@/components/auth/auth-layout';
+import { AuthForm } from '@/components/auth/auth-form';
 
 export default function ForgotPasswordPage() {
-  return <AuthLayout type="forgot-password" />;
+  return (
+    <div className="animate-in fade-in duration-500">
+      <AuthForm type="forgot-password" />
+    </div>
+  );
 } 

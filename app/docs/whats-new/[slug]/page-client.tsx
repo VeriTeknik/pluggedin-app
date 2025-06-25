@@ -1,13 +1,30 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowLeft, Bell, BookOpen, Clock, Download, Globe, Lock, Package, Search, Sparkles, TrendingUp, User, Zap } from 'lucide-react';
+import {
+  ArrowLeft,
+  Bell,
+  BookOpen,
+  ChevronLeft,
+  Clock,
+  Download,
+  Globe,
+  Lock,
+  Package,
+  Search,
+  Sparkles,
+  TrendingUp,
+  User,
+  Zap
+} from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 
 interface Props {
   slug: string;
@@ -103,9 +120,15 @@ export default function WhatsNewArticleClient({ slug }: Props) {
       case 'send-notifications-from-ai':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Notification received in email]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/send-notifications-from-ai/email-notification.png"
+                alt="Email notification example"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -125,9 +148,15 @@ Parameters:
               </pre>
             </div>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: MCP tool being used in Claude/Cursor]</p>
+            {/* MCP Tool Usage Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/send-notifications-from-ai/mcp-tool-usage.png"
+                alt="MCP notification tool being used in Claude/Cursor"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.send-notifications-from-ai.content.emailSetupTitle')}</h2>
@@ -137,9 +166,15 @@ Parameters:
               <li>{t('whatsNew:articles.send-notifications-from-ai.content.emailStep3')}</li>
             </ol>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Email settings page]</p>
+            {/* Email Settings Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/send-notifications-from-ai/email-settings.png"
+                alt="Email notification settings configuration page"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.send-notifications-from-ai.content.useCasesTitle')}</h2>
@@ -149,9 +184,34 @@ Parameters:
               <li>{t('whatsNew:articles.send-notifications-from-ai.content.useCase3')}</li>
             </ul>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Notification bell with count]</p>
+            <h2 className="text-2xl font-semibold mb-4">Viewing Notifications</h2>
+            <p className="mb-4">
+              All notifications will appear in your notification center, accessible via the bell icon in the top navigation bar.
+              You can filter notifications by type and mark them as read.
+            </p>
+
+            {/* Notification Bell Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/send-notifications-from-ai/notification-bell.png"
+                alt="Notification center showing different types of notifications"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
+            </div>
+
+            <div className="flex items-center justify-between mt-8 pt-4 border-t">
+              <Link
+                href="/docs/whats-new"
+                className={cn(
+                  buttonVariants({ variant: "ghost" }),
+                  "text-muted-foreground"
+                )}
+              >
+                <ChevronLeft className="mr-2 h-4 w-4" />
+                Back to What&apos;s New
+              </Link>
             </div>
           </>
         );
@@ -159,9 +219,16 @@ Parameters:
       case 'document-context-rag':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Document library interface]</p>
+            {/* Document Library Interface */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/document-context-rag/library-interface.png"
+                alt="Document library interface showing uploaded files and search"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -170,9 +237,16 @@ Parameters:
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.document-context-rag.content.uploadTitle')}</h2>
             
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Upload dialog]</p>
+            {/* Upload Dialog */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/document-context-rag/upload-dialog.png"
+                alt="Document upload dialog with drag and drop interface"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <p className="mb-6">{t('whatsNew:articles.document-context-rag.content.uploadDescription')}</p>
@@ -188,9 +262,15 @@ Example:
               </pre>
             </div>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: RAG query in action]</p>
+            {/* RAG Query Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/document-context-rag/rag-query.png"
+                alt="RAG query being executed and showing results"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.document-context-rag.content.formatsTitle')}</h2>
@@ -275,9 +355,15 @@ Example:
       case 'public-profile':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Example public profile page]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/public-profile/profile-page.png"
+                alt="Example public profile page showing user information and shared content"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -292,9 +378,15 @@ Example:
               <li>{t('whatsNew:articles.public-profile.content.feature4')}</li>
             </ul>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Profile settings page]</p>
+            {/* Settings Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/public-profile/profile-settings.png"
+                alt="Profile settings page showing customization options"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.public-profile.content.setupTitle')}</h2>
@@ -309,9 +401,15 @@ Example:
       case 'import-export-setup':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Export/Import buttons in collection view]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/import-export-setup/collection-actions.png"
+                alt="Export and Import buttons in collection view"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -325,9 +423,15 @@ Example:
               <li>{t('whatsNew:articles.import-export-setup.content.exportStep3')}</li>
             </ol>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Import dialog with file selection]</p>
+            {/* Import Dialog Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/import-export-setup/import-dialog.png"
+                alt="Import collection dialog showing file selection interface"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.import-export-setup.content.importTitle')}</h2>
@@ -349,9 +453,15 @@ Example:
       case 'multilingual-support':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Language selector with 6 language options]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/multilingual-support/language-selector.png"
+                alt="Language selector showing 6 available languages"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -375,9 +485,15 @@ Example:
               <li>{t('whatsNew:articles.multilingual-support.content.step3')}</li>
             </ol>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Settings page with language selector]</p>
+            {/* Settings Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/multilingual-support/language-settings.png"
+                alt="Settings page showing language selection options"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.multilingual-support.content.contributeTitle')}</h2>
@@ -388,9 +504,16 @@ Example:
       case 'discover-capabilities':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Server capabilities tabs view]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/discover-capabilities/plugin-management.png"
+                alt="Plugin Management interface showing MCP servers overview"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -405,9 +528,16 @@ Example:
               <li>{t('whatsNew:articles.discover-capabilities.content.capability4')}</li>
             </ul>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Discover Capabilities button]</p>
+            {/* Server Details Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/discover-capabilities/server-details.png"
+                alt="Individual server details showing capabilities and actions"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.discover-capabilities.content.discoveryTitle')}</h2>
@@ -416,20 +546,22 @@ Example:
               <li>{t('whatsNew:articles.discover-capabilities.content.discoveryStep2')}</li>
               <li>{t('whatsNew:articles.discover-capabilities.content.discoveryStep3')}</li>
             </ol>
-
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Discovered tools and resources in tabs]</p>
-            </div>
           </>
         );
 
       case 'share-collections':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Collection sharing interface]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/share-collections/collections-overview.png"
+                alt="Collection sharing interface showing multiple collections"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -439,9 +571,16 @@ Example:
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.share-collections.content.whatAreCollectionsTitle')}</h2>
             <p className="mb-6">{t('whatsNew:articles.share-collections.content.whatAreCollectionsText')}</p>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Creating a collection]</p>
+            {/* Create Collection Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/share-collections/create-collection.png"
+                alt="Interface for creating a new collection"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.share-collections.content.createCollectionTitle')}</h2>
@@ -452,9 +591,16 @@ Example:
               <li>{t('whatsNew:articles.share-collections.content.createStep4')}</li>
             </ol>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Share collection dialog]</p>
+            {/* Share Dialog Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/share-collections/share-dialog.png"
+                alt="Dialog for sharing a collection with others"
+                width={1920}
+                height={1080}
+                className="rounded-lg w-full"
+                quality={100}
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.share-collections.content.sharingTitle')}</h2>

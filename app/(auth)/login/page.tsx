@@ -1,7 +1,11 @@
 'use client';
 
-import { AuthLayout } from '@/components/auth/auth-layout';
+import { AuthForm } from '@/components/auth/auth-form';
 
 export default function LoginPage() {
-  return <AuthLayout type="login" />;
+  return (
+    <div className="animate-in fade-in duration-500">
+      <AuthForm type="login" />
+    </div>
+  );
 } 

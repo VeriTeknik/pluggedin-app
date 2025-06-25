@@ -43,7 +43,7 @@ export function DocsGrid({
       {docs.map((doc) => (
         <Card
           key={doc.uuid}
-          className="hover:shadow-lg transition-shadow h-full flex flex-col justify-between bg-zinc-900/80 border-zinc-800"
+          className="hover:shadow-lg transition-shadow h-full flex flex-col justify-between bg-card border-border"
         >
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
