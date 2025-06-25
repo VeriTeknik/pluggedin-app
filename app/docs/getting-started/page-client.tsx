@@ -19,6 +19,7 @@ import {
   UserPlus,
   Zap
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -194,10 +195,15 @@ export default function GettingStartedPageClient() {
                   {/* Step-specific content */}
                   {step.key === 'createAccount' && (
                     <div className="space-y-4">
-                      <MockScreenshot 
-                        title={t('quickStart.createAccount.screenshot')}
-                        description={t('quickStart.createAccount.screenshotDesc')}
-                      />
+                      <div className="bg-muted rounded-lg p-8">
+                        <Image
+                          src="/images/setup-guide/getting-started/signup-page.png"
+                          alt="Plugged.in signup page showing GitHub and email options"
+                          width={800}
+                          height={400}
+                          className="rounded-lg w-full"
+                        />
+                      </div>
                       <div className="flex gap-2">
                         <Button asChild>
                           <Link href="/login">{t('quickStart.createAccount.action')}</Link>
@@ -208,10 +214,15 @@ export default function GettingStartedPageClient() {
                   
                   {step.key === 'generateKey' && (
                     <div className="space-y-4">
-                      <MockScreenshot 
-                        title={t('quickStart.generateKey.screenshot')}
-                        description={t('quickStart.generateKey.screenshotDesc')}
-                      />
+                      <div className="bg-muted rounded-lg p-8">
+                        <Image
+                          src="/images/setup-guide/getting-started/generate-key.png"
+                          alt="API key generation interface showing where to create and copy your API key"
+                          width={800}
+                          height={400}
+                          className="rounded-lg w-full"
+                        />
+                      </div>
                       <p className="text-sm text-yellow-600 dark:text-yellow-400">
                         {t('quickStart.generateKey.warning')}
                       </p>
@@ -270,10 +281,15 @@ export default function GettingStartedPageClient() {
                           <li key={idx}>{tool}</li>
                         ))}
                       </ul>
-                      <MockScreenshot 
-                        title={t('quickStart.testConnection.screenshot')}
-                        description={t('quickStart.testConnection.screenshotDesc')}
-                      />
+                      <div className="bg-muted rounded-lg p-8">
+                        <Image
+                          src="/images/setup-guide/getting-started/mcp-tools.png"
+                          alt="MCP client showing available plugged.in tools"
+                          width={800}
+                          height={400}
+                          className="rounded-lg w-full"
+                        />
+                      </div>
                     </div>
                   )}
                 </CardContent>
@@ -329,10 +345,15 @@ export default function GettingStartedPageClient() {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground">{t('firstSteps.addServer.description')}</p>
-              <MockScreenshot 
-                title={t('firstSteps.addServer.screenshot')}
-                description={t('firstSteps.addServer.screenshotDesc')}
-              />
+              <div className="bg-muted rounded-lg p-8">
+                <Image
+                  src="/images/setup-guide/getting-started/add-server.png"
+                  alt="MCP Server configuration form showing how to add a new server"
+                  width={800}
+                  height={400}
+                  className="rounded-lg w-full"
+                />
+              </div>
               <div className="bg-muted p-4 rounded-lg">
                 <p className="text-sm font-medium mb-2">{t('firstSteps.addServer.example')}</p>
                 <CodeSnippet 
@@ -353,10 +374,15 @@ Arguments: /path/to/allowed/directory`}
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground">{t('firstSteps.playground.description')}</p>
-              <MockScreenshot 
-                title={t('firstSteps.playground.screenshot')}
-                description={t('firstSteps.playground.screenshotDesc')}
-              />
+              <div className="bg-muted rounded-lg p-8">
+                <Image
+                  src="/images/setup-guide/getting-started/playground.png"
+                  alt="MCP Playground interface showing chat interface and server tools"
+                  width={800}
+                  height={400}
+                  className="rounded-lg w-full"
+                />
+              </div>
               <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
                 {(t('firstSteps.playground.features', { returnObjects: true }) as string[]).map((feature: string, idx: number) => (
                   <li key={idx}>{feature}</li>
