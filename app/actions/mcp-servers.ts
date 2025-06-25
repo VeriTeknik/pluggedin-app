@@ -14,6 +14,7 @@ import {
   users 
 } from '@/db/schema';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
+import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server';
 
 import { discoverSingleServerTools } from './discover-mcp-tools';
@@ -209,6 +210,50 @@ export async function updateMcpServer(
     };
   }
 ): Promise<void> { // Changed return type to void as it doesn't explicitly return the server
+  // Only validate if we're updating type-specific fields
+  let serverType: McpServerType | undefined = data.type;
+  
+  // If type is not being updated but we need to validate type-specific fields, get current server type
+  if (!serverType && (data.url !== undefined || data.command !== undefined || data.streamableHTTPOptions !== undefined)) {
+    const currentServer = await getMcpServerByUuid(profileUuid, uuid);
+    if (currentServer) {
+      serverType = currentServer.type;
+    }
+  }
+  
+  // Validate URL for SSE and StreamableHTTP servers
+  if (serverType && (serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) && data.url && data.url !== null) {
+    const urlValidation = validateMcpUrl(data.url);
+    if (!urlValidation.valid) {
+      throw new Error(urlValidation.error);
+    }
+  }
+  
+  // Validate STDIO command if updating
+  if (serverType && serverType === McpServerType.STDIO && data.command && data.command !== null) {
+    const commandValidation = validateCommand(data.command);
+    if (!commandValidation.valid) {
+      throw new Error(commandValidation.error);
+    }
+  }
+  
+  // Validate command arguments if updating
+  if (data.args && data.args.length > 0) {
+    const argsValidation = validateCommandArgs(data.args);
+    if (!argsValidation.valid) {
+      throw new Error(argsValidation.error);
+    }
+  }
+  
+  // Validate headers for StreamableHTTP
+  if (serverType && serverType === McpServerType.STREAMABLE_HTTP && data.streamableHTTPOptions?.headers) {
+    const headerValidation = validateHeaders(data.streamableHTTPOptions.headers);
+    if (!headerValidation.valid) {
+      throw new Error(headerValidation.error);
+    }
+    // Use sanitized headers
+    data.streamableHTTPOptions.headers = headerValidation.sanitizedHeaders;
+  }
   // Construct the update object carefully to handle undefined vs null
   const updateData: Partial<typeof mcpServersTable.$inferInsert> = {};
   
@@ -315,9 +360,38 @@ export async function createMcpServer({
       return { success: false, error: 'URL is required for SSE and Streamable HTTP servers' };
     }
 
-    const urlIsValid = url ? /^https?:\/\/.+/.test(url) : false;
-    if ((serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) && !urlIsValid) {
-      return { success: false, error: 'URL must be a valid HTTP/HTTPS URL' };
+    // Validate URL for SSE and StreamableHTTP servers
+    if ((serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) && url) {
+      const urlValidation = validateMcpUrl(url);
+      if (!urlValidation.valid) {
+        return { success: false, error: urlValidation.error };
+      }
+    }
+
+    // Validate STDIO command
+    if (serverType === McpServerType.STDIO && command) {
+      const commandValidation = validateCommand(command);
+      if (!commandValidation.valid) {
+        return { success: false, error: commandValidation.error };
+      }
+      
+      // Validate command arguments
+      if (args && args.length > 0) {
+        const argsValidation = validateCommandArgs(args);
+        if (!argsValidation.valid) {
+          return { success: false, error: argsValidation.error };
+        }
+      }
+    }
+
+    // Validate headers for StreamableHTTP
+    if (serverType === McpServerType.STREAMABLE_HTTP && streamableHTTPOptions?.headers) {
+      const headerValidation = validateHeaders(streamableHTTPOptions.headers);
+      if (!headerValidation.valid) {
+        return { success: false, error: headerValidation.error };
+      }
+      // Use sanitized headers
+      streamableHTTPOptions.headers = headerValidation.sanitizedHeaders;
     }
 
     // Prepare data for encryption
@@ -382,7 +456,7 @@ export async function createMcpServer({
     console.error('Error creating MCP server:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: `Failed to create MCP server: ${error instanceof Error ? error.message : 'Unknown error'}`,
     };
   }
 }
@@ -412,6 +486,35 @@ export async function bulkImportMcpServers(
   const createdServerUuids: string[] = []; // Keep track of created UUIDs
 
   for (const [name, serverConfig] of serverEntries) {
+    const serverType = serverConfig.type || McpServerType.STDIO;
+    
+    // Validate URL for SSE and StreamableHTTP servers
+    if ((serverType === McpServerType.SSE || serverType === McpServerType.STREAMABLE_HTTP) && serverConfig.url) {
+      const urlValidation = validateMcpUrl(serverConfig.url);
+      if (!urlValidation.valid) {
+        console.error(`Skipping server '${name}': ${urlValidation.error}`);
+        continue;
+      }
+    }
+    
+    // Validate STDIO command
+    if (serverType === McpServerType.STDIO && serverConfig.command) {
+      const commandValidation = validateCommand(serverConfig.command);
+      if (!commandValidation.valid) {
+        console.error(`Skipping server '${name}': ${commandValidation.error}`);
+        continue;
+      }
+      
+      // Validate command arguments
+      if (serverConfig.args && serverConfig.args.length > 0) {
+        const argsValidation = validateCommandArgs(serverConfig.args);
+        if (!argsValidation.valid) {
+          console.error(`Skipping server '${name}': ${argsValidation.error}`);
+          continue;
+        }
+      }
+    }
+    
     const serverData = {
       name,
       description: serverConfig.description || '',
@@ -419,7 +522,7 @@ export async function bulkImportMcpServers(
       args: serverConfig.args || [],
       env: serverConfig.env || {},
       url: serverConfig.url || null,
-      type: serverConfig.type || McpServerType.STDIO,
+      type: serverType,
       profile_uuid: profileUuid,
       status: McpServerStatus.ACTIVE,
     };

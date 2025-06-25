@@ -72,7 +72,7 @@ const ALLOWED_COMMANDS = [
  */
 const DANGEROUS_HEADERS = [
   'host',
-  'authorization',
+  // 'authorization', // Allow for API authentication
   'cookie',
   'set-cookie',
   'x-forwarded-for',
