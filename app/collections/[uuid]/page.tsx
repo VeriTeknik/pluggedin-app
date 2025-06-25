@@ -6,6 +6,8 @@ import { McpServer } from '@/types/mcp-server';
 
 import { CollectionContent } from './collection-content';
 
+export const dynamic = 'force-dynamic';
+
 interface CollectionPageProps {
   params: Promise<{
     uuid: string;

@@ -432,7 +432,7 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
                   )}
                   {(type === 'register' || type === 'reset-password' || type === 'login') && (
                     <PasswordRequirements 
-                      password={field.value} 
+                      password={field.value || ''} 
                       isDirty={form.getFieldState('password').isDirty}
                     />
                   )}

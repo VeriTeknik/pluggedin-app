@@ -9,6 +9,8 @@ import { getConnectedAccounts } from './actions';
 import { SettingsForm } from './components/settings-form';
 import { SettingsTitle } from './components/settings-title';
 
+export const dynamic = 'force-dynamic';
+
 export default async function SettingsPage() {
   const session = await getAuthSession();
 

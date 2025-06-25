@@ -5,6 +5,32 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2025-01-26
+
+### Added
+- **Enhanced Authentication UI**
+  - New `AuthLayout` component with network animation background
+  - Unified authentication form component (`AuthForm`) across all auth pages
+  - Loading indicators and improved user feedback on email verification
+  - Consistent link configuration across authentication flows
+- **Documentation Updates**
+  - New images for What's New pages showcasing latest features
+  - Enhanced Getting Started page with updated setup guide images
+  - Visual guides for collection sharing, server capabilities, and multilingual support
+  - Updated screenshots for public profiles and import/export functionality
+
+### Changed
+- Refactored all authentication pages (login, register, forgot-password, etc.) to use shared `AuthLayout`
+- Improved language update logic in authentication flows
+- Enhanced error handling and user feedback across authentication forms
+- Updated all language translations for authentication pages
+- Removed obsolete start script and added dynamic exports to WhatsNew pages
+
+### Fixed
+- Language persistence issues during authentication flows
+- Form validation and error display consistency
+- Loading state management in authentication forms
+
 ## [2.3.0] - 2025-01-25
 
 ### Added
