@@ -470,7 +470,7 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
           </Button>
 
           {type === 'login' && (
-            <div className="text-center">
+            <div className="text-center mt-2">
               <Link 
                 href="/forgot-password"
                 className="text-sm text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
@@ -484,7 +484,7 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
 
       {(type === 'login' || type === 'register') && (
         <>
-          <div className="relative">
+          <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
               <span className="w-full border-t border-zinc-200 dark:border-zinc-800" />
             </div>
