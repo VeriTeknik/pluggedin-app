@@ -33,6 +33,7 @@
       "deleteAllSuccess": "सभी सूचनाएं हटाई गईं",
       "deleteAllError": "सभी सूचनाएं हटाने में विफल",
       "toggleCompleteError": "नोट स्थिति अपडेट करने में विफल"
-    }
+    },
+    "customNotificationTitle": "कस्टम सूचना"
   }
 }

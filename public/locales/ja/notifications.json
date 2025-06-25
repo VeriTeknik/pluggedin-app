@@ -33,6 +33,7 @@
       "deleteAllSuccess": "すべての通知が削除されました",
       "deleteAllError": "すべての通知の削除に失敗しました",
       "toggleCompleteError": "ノートのステータスを更新できませんでした"
-    }
+    },
+    "customNotificationTitle": "カスタム通知"
   }
 }

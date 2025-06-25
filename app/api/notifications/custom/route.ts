@@ -6,6 +6,7 @@ import { authenticateApiKey } from '@/app/api/auth';
 import { sendEmail as sendEmailHelper } from '@/lib/email';
 
 const customNotificationSchema = z.object({
+  title: z.string().optional(),
   message: z.string().min(1, "Message cannot be empty"),
   severity: z.enum(['INFO', 'SUCCESS', 'WARNING', 'ALERT']).default('INFO'),
   sendEmail: z.boolean().optional().default(false),
@@ -30,8 +31,10 @@ const customNotificationSchema = z.object({
  *             type: object
  *             required:
  *               - message
- *               - severity
  *             properties:
+ *               title:
+ *                 type: string
+ *                 description: Optional notification title. If not provided, a localized default will be used.
  *               message:
  *                 type: string
  *                 description: The notification message content
@@ -72,10 +75,11 @@ export async function POST(request: Request) {
     if (auth.error) return auth.error;
 
     const body = await request.json();
-    const { message, severity, sendEmail } = customNotificationSchema.parse(body);
+    const { title: providedTitle, message, severity, sendEmail } = customNotificationSchema.parse(body);
 
     // Create the notification in the database
-    const title = `Custom notification`;
+    // Use provided title or default English title (localization handled by UI)
+    const title = providedTitle || "Custom notification";
     
     await createNotification({
       profileUuid: auth.activeProfile.uuid,

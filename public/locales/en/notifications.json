@@ -33,6 +33,18 @@
       "deleteAllSuccess": "All notifications deleted",
       "deleteAllError": "Failed to delete all notifications",
       "toggleCompleteError": "Failed to update note status"
+    },
+    "customNotificationTitle": "Custom notification",
+    "search": {
+      "placeholder": "Search notifications..."
+    },
+    "filter": {
+      "severity": "Filter by severity",
+      "allSeverities": "All severities"
+    },
+    "sort": {
+      "newest": "Newest first",
+      "oldest": "Oldest first"
     }
   }
 }
