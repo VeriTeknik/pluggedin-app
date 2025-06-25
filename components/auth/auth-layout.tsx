@@ -12,86 +12,93 @@ type AuthLayoutProps = {
 };
 
 type LinkConfigType = {
-  text: string;
-  linkText: string;
-  href: string;
+  primary: {
+    text: string;
+    linkText: string;
+    href: string;
+  };
+  secondary?: {
+    text?: string;
+    linkText: string;
+    href: string;
+  };
 };
 
 export function AuthLayout({ type, children }: AuthLayoutProps) {
   const { t } = useTranslation();
   
   // Define the link configuration for each auth type
-  const getLinkConfig = (): LinkConfigType | LinkConfigType[] => {
+  const getLinkConfig = (): LinkConfigType => {
     switch (type) {
       case 'login':
-        return [
-          {
+        return {
+          primary: {
             text: t('auth.links.login.noAccount'),
             linkText: t('auth.links.login.signUp'),
             href: "/register",
           },
-          {
-            text: "",
-            linkText: t('auth.links.login.forgotPassword'),
+          secondary: {
+            linkText: t('auth.login.forgotPassword'),
             href: "/forgot-password",
-          },
-        ];
+          }
+        };
       case 'register':
         return {
-          text: t('auth.links.register.hasAccount'),
-          linkText: t('auth.links.register.signIn'),
-          href: "/login",
+          primary: {
+            text: t('auth.links.register.hasAccount'),
+            linkText: t('auth.links.register.signIn'),
+            href: "/login",
+          }
         };
       case 'forgot-password':
       case 'reset-password':
         return {
-          text: t('auth.links.forgotPassword.rememberPassword'),
-          linkText: t('auth.links.forgotPassword.backToLogin'),
-          href: "/login",
+          primary: {
+            text: t('auth.links.forgotPassword.rememberPassword'),
+            linkText: t('auth.links.forgotPassword.backToLogin'),
+            href: "/login",
+          }
         };
       default:
         return {
-          text: "",
-          linkText: "",
-          href: "/",
+          primary: {
+            text: "",
+            linkText: "",
+            href: "/",
+          }
         };
     }
   };
 
   const linkConfig = getLinkConfig();
-  const hasMultipleLinks = Array.isArray(linkConfig);
 
   return (
     <div className="space-y-6">
       <AuthForm type={type} />
       
-      <div className={`text-center ${hasMultipleLinks ? 'space-y-2' : ''}`}>
-        {hasMultipleLinks ? (
-          // Render multiple links (login page case)
-          linkConfig.map((config, index) => (
-            <p key={index} className="text-sm text-muted-foreground">
-              {config.text && (
-                <>{config.text}{' '}</>
-              )}
-              <Link
-                href={config.href}
-                className="underline underline-offset-4 hover:text-primary"
-              >
-                {config.linkText}
-              </Link>
-            </p>
-          ))
-        ) : (
-          // Render single link (register, forgot-password, reset-password)
+      <div className="space-y-2 text-center">
+        <p className="text-sm text-muted-foreground">
+          {linkConfig.primary.text && (
+            <>{linkConfig.primary.text}{' '}</>
+          )}
+          <Link
+            href={linkConfig.primary.href}
+            className="underline underline-offset-4 hover:text-primary"
+          >
+            {linkConfig.primary.linkText}
+          </Link>
+        </p>
+
+        {linkConfig.secondary && (
           <p className="text-sm text-muted-foreground">
-            {linkConfig.text && (
-              <>{linkConfig.text}{' '}</>
+            {linkConfig.secondary.text && (
+              <>{linkConfig.secondary.text}{' '}</>
             )}
             <Link
-              href={linkConfig.href}
+              href={linkConfig.secondary.href}
               className="underline underline-offset-4 hover:text-primary"
             >
-              {linkConfig.linkText}
+              {linkConfig.secondary.linkText}
             </Link>
           </p>
         )}
