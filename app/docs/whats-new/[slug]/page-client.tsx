@@ -453,9 +453,15 @@ Example:
       case 'multilingual-support':
         return (
           <>
-            {/* Hero Image Placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Language selector with 6 language options]</p>
+            {/* Hero Image */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/multilingual-support/language-selector.png"
+                alt="Language selector showing 6 available languages"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <p className="text-lg mb-6">
@@ -479,9 +485,15 @@ Example:
               <li>{t('whatsNew:articles.multilingual-support.content.step3')}</li>
             </ol>
 
-            {/* Screenshot placeholder */}
-            <div className="bg-muted rounded-lg p-8 mb-8 text-center">
-              <p className="text-muted-foreground">[SCREENSHOT: Settings page with language selector]</p>
+            {/* Settings Screenshot */}
+            <div className="bg-muted rounded-lg p-8 mb-8">
+              <Image
+                src="/images/whats-new/multilingual-support/language-settings.png"
+                alt="Settings page showing language selection options"
+                width={800}
+                height={400}
+                className="rounded-lg w-full"
+              />
             </div>
 
             <h2 className="text-2xl font-semibold mb-4">{t('whatsNew:articles.multilingual-support.content.contributeTitle')}</h2>
