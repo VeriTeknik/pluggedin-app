@@ -5,6 +5,58 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2025-01-25
+
+### Added
+- **Security Validations for MCP Servers**
+  - URL validation with SSRF protection for SSE and Streamable HTTP servers
+  - Command allowlisting for STDIO servers (node, npx, python, python3, uv, uvx, uvenv)  
+  - Header validation and sanitization for Streamable HTTP configurations
+  - Centralized security validators in `lib/security/validators.ts`
+  - Validation in createMcpServer, updateMcpServer, and bulkImportMcpServers
+- **Enhanced Notifications System**
+  - Custom notification titles with localization support
+  - Filtering and sorting capabilities (by severity, date)
+  - Search functionality for notifications
+  - Refresh button for instant updates (RefreshCw icon)
+  - Protection for custom notifications from bulk deletion
+  - Faster polling interval reduced from 60 to 15 seconds
+  - Improved UI with better spacing and controls
+- **Streamable HTTP Transport Improvements**
+  - Better support for session management options
+  - Improved transport configuration UI
+  - Enhanced error messages for connection failures
+  - Backward compatibility for legacy transport options
+
+### Changed
+- Updated notification provider polling interval for better responsiveness
+- Improved Turkish and other language localizations for notifications
+- Enhanced error handling in MCP server creation and updates
+- Better separation of transport options from environment variables
+- Refined bulk import to validate and skip invalid servers
+- Updated test infrastructure to work with new validations
+- Improved error messages to be more user-friendly
+
+### Fixed
+- Missing translation keys in notifications page:
+  - `notifications.status.unread` instead of `status.unread`
+  - `notifications.actions.markAsRead` instead of `actions.markAsRead`
+  - `notifications.actions.delete` instead of `actions.delete`
+- Turkish localization not working for custom notifications
+- Docker build issues with NextJS static generation
+- Notification translation namespace consistency
+- Streamable HTTP integration tests compatibility
+- Test failures after security validation implementation
+
+### Security
+- All MCP server URLs now validated against SSRF attacks
+- Command injection protection through strict allowlisting
+- Header injection prevention for Streamable HTTP
+- Input sanitization for all server configurations
+- Protection against private IP access and dangerous ports
+- RFC 7230 compliant header validation
+- Control character detection in headers
+
 ## [2.2.0] - 2025-06-21
 
 ### Added

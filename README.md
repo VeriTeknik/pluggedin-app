@@ -5,7 +5,7 @@
   <h3>The Crossroads for AI Data Exchanges</h3>
   <p>A unified management interface for all your MCP servers with RAG capabilities</p>
 
-  [![Version](https://img.shields.io/badge/version-2.2.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+  [![Version](https://img.shields.io/badge/version-2.3.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
   [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
   [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
   [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -319,26 +319,30 @@ FIREJAIL_MCP_WORKSPACE=/home/pluggedin/mcp-workspace
 
 The plugged.in App implements comprehensive security measures to protect your data and prevent common vulnerabilities:
 
-1. **Input Sanitization**
-   - All user inputs are sanitized using industry-standard libraries
-   - RAG queries are processed through `sanitize-html` to prevent XSS attacks
-   - Environment variables are parsed securely using `dotenv` library
+1. **Input Validation & Sanitization**
+   - **URL Validation**: SSRF protection blocks private IPs, localhost, and dangerous ports
+   - **Command Allowlisting**: Only approved commands (node, npx, python, python3, uv, uvx, uvenv)
+   - **Header Validation**: RFC 7230 compliant with injection prevention
+   - **HTML Sanitization**: All user inputs sanitized with `sanitize-html`
+   - **Environment Variables**: Secure parsing with proper quote handling
 
-2. **MCP Server Sandboxing (Linux/Ubuntu)**
-   - STDIO MCP servers are automatically wrapped with `firejail --quiet` on Linux systems
-   - Utilizes Firejail's default security profile to restrict server capabilities
-   - Limits filesystem access and prevents unauthorized system modifications
-   - Supports all transport types: STDIO, SSE, and Streamable HTTP
+2. **MCP Server Security**
+   - **Sandboxing (Linux/Ubuntu)**: STDIO servers wrapped with `firejail --quiet`
+   - **Transport Validation**: Security checks for STDIO, SSE, and Streamable HTTP
+   - **Session Management**: Secure session handling for Streamable HTTP
+   - **Error Sanitization**: Prevents information disclosure
 
 3. **API Security**
-   - Rate limiting on all API endpoints to prevent abuse
-   - Authentication required for all sensitive operations
-   - Audit logging for security monitoring
+   - **Rate Limiting**: Tiered limits for different endpoint types
+   - **Authentication**: JWT-based with 30-day session expiry
+   - **CORS Protection**: Properly configured for all endpoints
+   - **Audit Logging**: Comprehensive activity tracking
 
 4. **Data Protection**
-   - Server-side encryption for sensitive data
-   - Secure session management with JWT tokens
-   - HTTPS enforcement in production environments
+   - **Encryption at Rest**: AES-256-GCM for sensitive server data
+   - **Per-Profile Keys**: Isolated encryption per workspace
+   - **Secure Sharing**: Sanitized templates without credentials
+   - **HTTPS Enforcement**: Required in production
 
 To enable sandboxing, install Firejail:
 
