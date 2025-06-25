@@ -15,6 +15,9 @@ interface PublicUser {
   image: string | null;
 }
 
+// Force dynamic rendering since this page queries the database
+export const dynamic = 'force-dynamic';
+
 export default async function ToDirectoryPage() {
   // Fetch top 6 public community MCP servers
   const communityServers = await getTopCommunitySharedServers(6);

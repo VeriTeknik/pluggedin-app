@@ -53,26 +53,8 @@ type PageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-// --- Generate Static Params ---
-export async function generateStaticParams() {
-  try {
-    const allUsers = await db
-      .select({ username: users.username })
-      .from(users)
-      .where(sql`${users.username} IS NOT NULL`);
-
-    return allUsers
-      .filter((u: { username: string | null }): u is { username: string } => Boolean(u.username))
-      .map((user: { username: string }) => ({
-        username: user.username,
-      }));
-  } catch (error) {
-    console.error("Error fetching usernames for generateStaticParams:", error);
-    return [];
-  }
-}
-
 // Force dynamic rendering for this page since it uses headers() via getAuthSession()
+// This also prevents database queries during build time
 export const dynamic = 'force-dynamic';
 export const dynamicParams = true;
 
