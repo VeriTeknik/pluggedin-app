@@ -108,8 +108,8 @@ export function NotificationProvider({
   useEffect(() => {
     refreshNotifications();
     
-    // Poll for new notifications every minute
-    const interval = setInterval(refreshNotifications, 60000);
+    // Poll for new notifications every 15 seconds
+    const interval = setInterval(refreshNotifications, 15000);
     return () => clearInterval(interval);
   }, [profileUuid, refreshNotifications]); // Add refreshNotifications to dependency array
   

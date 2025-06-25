@@ -9,18 +9,11 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./tests/setup.ts'],
-    include: ['tests/**/demo.test.ts', 'tests/actions/social-real.test.ts'],
+    include: ['tests/**/*.test.ts'],
     exclude: [
       'node_modules', 
       '.next', 
-      'dist',
-      'tests/actions/auth.test.ts',
-      'tests/actions/mcp-servers.test.ts', 
-      'tests/actions/social.test.ts',
-      'tests/api/tools-current.test.ts',
-      'tests/api/tools-discover.test.ts',
-      'tests/api/tools.test.ts',
-      'tests/auth/oauth-linking.test.ts'
+      'dist'
     ],
     testTimeout: 10000,
     hookTimeout: 10000,

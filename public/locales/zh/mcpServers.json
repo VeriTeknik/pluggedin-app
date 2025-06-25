@@ -7,7 +7,8 @@
       "totalServers": "总服务器数",
       "active": "活动",
       "stdio": "STDIO",
-      "sse": "SSE"
+      "sse": "SSE",
+      "streamableHttp": "Streamable HTTP"
     },
     "actions": {
       "addServer": "添加服务器",
@@ -31,7 +32,8 @@
       "unshareConfirmTitle": "取消共享服务器",
       "unshareConfirmDesc": "您确定要取消共享此服务器吗？其他用户将无法再访问它。",
       "shared": "已共享",
-      "share": "共享"
+      "share": "共享",
+      "selectForCollection": "选择为集合"
     },
     "form": {
       "success": "MCP 服务器创建成功。",
@@ -42,6 +44,7 @@
       "addDescription": "创建一个新的 MCP 服务器配置。选择 STDIO（基于命令）或 SSE（基于 URL）服务器类型。",
       "commandBased": "基于命令 (STDIO)",
       "urlBased": "基于 URL (SSE)",
+      "streamableHttpBased": "基于 URL (Streamable HTTP)",
       "name": "名称",
       "namePlaceholder": "例如，mcp-server-time",
       "description": "描述",
@@ -53,6 +56,12 @@
       "envVars": "环境变量",
       "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
       "envVarsHelp": "以 KEY=value 格式输入环境变量，每行一个",
+      "headers": "请求头",
+      "headersPlaceholder": "Authorization: Bearer token\nX-Custom-Header: 值",
+      "headersHelp": "每行输入一个请求头，格式：请求头名称: 请求头值",
+      "sessionId": "会话 ID",
+      "sessionIdPlaceholder": "可选的会话标识符",
+      "sessionIdHelp": "为有状态连接提供会话 ID（可选）",
       "serverUrl": "服务器 URL",
       "serverUrlPlaceholder": "http://localhost:3000/sse",
       "serverUrlHelp": "必须是有效的 HTTP/HTTPS URL",
@@ -122,7 +131,8 @@
       "fetchTemplatesFailed": "加载资源模板失败。",
       "fetchPromptsFailed": "加载提示失败。",
       "fetchToolsFailed": "加载工具失败。",
-      "fetchInstructionsFailed": "获取自定义指令失败。"
+      "fetchInstructionsFailed": "获取自定义指令失败。",
+      "mustBeSharedForCollection": "服务器必须共享才能包含在集合中。"
     },
     "tabs": {
       "details": "服务器详细信息",

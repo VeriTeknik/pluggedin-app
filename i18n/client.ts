@@ -496,7 +496,7 @@ const i18nConfig: InitOptions = {
   ns: ['translation', ...namespaces],
   defaultNS: 'translation',
   load: 'languageOnly',
-  debug: process.env.NODE_ENV === 'development',
+  debug: false,
   detection: detectionOptions,
   interpolation: {
     escapeValue: false

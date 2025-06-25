@@ -4,6 +4,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport, StdioServerParameters } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import {
   ListPromptsResultSchema, // Added
@@ -18,6 +19,7 @@ import {
 
 // Internal application imports
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
+import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
 
 // --- Configuration & Types ---
@@ -44,6 +46,29 @@ interface ConnectedMcpClient {
 
 // --- Helper Functions ---
 
+/**
+ * Safely cleanup a connected MCP client, handling expected abort errors for Streamable HTTP
+ */
+async function safeCleanup(connectedClient: ConnectedMcpClient | undefined, serverConfig: McpServer) {
+  if (!connectedClient) return;
+  
+  try {
+    await connectedClient.cleanup();
+  } catch (cleanupError: any) {
+    // For Streamable HTTP, completely suppress abort errors
+    if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
+      // Only log non-abort errors at debug level
+      if (cleanupError?.code !== 20 && cleanupError?.name !== 'AbortError' && !cleanupError?.message?.includes('abort')) {
+        console.debug(`[MCP Wrapper] Cleanup warning for ${serverConfig.name}:`, cleanupError.message);
+      }
+      // Don't re-throw or log abort errors at all
+      return;
+    }
+    // For other transport types, log the error
+    console.error(`[MCP Wrapper] Cleanup error for ${serverConfig.name}:`, cleanupError);
+  }
+}
+
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Add this function to handle firejail configuration
@@ -65,7 +90,7 @@ export function createFirejailConfig(
   // Only apply firejail to STDIO servers with a command
   if (serverConfig.type !== McpServerType.STDIO || !serverConfig.command) return null;
 
-  const isUvCommand = serverConfig.command === 'uv' || serverConfig.command === 'uvenv' || serverConfig.command === 'uvx';
+  const _isUvCommand = serverConfig.command === 'uv' || serverConfig.command === 'uvenv' || serverConfig.command === 'uvx';
 
   // Restore stricter firejail config
   const baseFirejailArgs = [
@@ -168,6 +193,22 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
         return null;
       }
 
+      // Validate command for security
+      const commandValidation = validateCommand(serverConfig.command);
+      if (!commandValidation.valid) {
+        console.error(`[MCP Wrapper] Invalid command for ${serverConfig.name}: ${commandValidation.error}`);
+        throw new Error(`Invalid command: ${commandValidation.error}`);
+      }
+
+      // Validate command arguments
+      if (serverConfig.args) {
+        const argsValidation = validateCommandArgs(serverConfig.args);
+        if (!argsValidation.valid) {
+          console.error(`[MCP Wrapper] Invalid arguments for ${serverConfig.name}: ${argsValidation.error}`);
+          throw new Error(`Invalid arguments: ${argsValidation.error}`);
+        }
+      }
+
       // Apply firejail sandboxing only if explicitly requested and applicable
       let firejailConfig: FirejailConfig | null = null;
       if (serverConfig.applySandboxing === true) { // Check for the flag
@@ -208,9 +249,92 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
         console.error(`[MCP Wrapper] SSE server ${serverConfig.name} is missing URL.`);
         return null;
       }
-      transport = new SSEClientTransport(new URL(serverConfig.url));
+      
+      // Validate URL for security
+      const urlValidation = validateMcpUrl(serverConfig.url);
+      if (!urlValidation.valid) {
+        console.error(`[MCP Wrapper] Invalid URL for ${serverConfig.name}: ${urlValidation.error}`);
+        throw new Error(`Invalid URL: ${urlValidation.error}`);
+      }
+      
+      transport = new SSEClientTransport(urlValidation.parsedUrl!);
+    } else if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
+      if (!serverConfig.url) {
+        console.error(`[MCP Wrapper] Streamable HTTP server ${serverConfig.name} is missing URL.`);
+        return null;
+      }
+      
+      // Validate URL for security
+      const urlValidation = validateMcpUrl(serverConfig.url);
+      if (!urlValidation.valid) {
+        console.error(`[MCP Wrapper] Invalid URL for ${serverConfig.name}: ${urlValidation.error}`);
+        throw new Error(`Invalid URL: ${urlValidation.error}`);
+      }
+      
+      const url = urlValidation.parsedUrl!;
+      
+      try {
+        // Extract streamable HTTP options from env or directly from serverConfig
+        let streamableOptions: any = {};
+        
+        // Check if options are in env (from database storage)
+        if (serverConfig.env?.__streamableHTTPOptions) {
+          try {
+            const parsed = JSON.parse(serverConfig.env.__streamableHTTPOptions);
+            // Validate the parsed options have expected structure
+            if (parsed && typeof parsed === 'object') {
+              streamableOptions = parsed;
+            } else {
+              console.warn(`[MCP Wrapper] Invalid streamableHTTPOptions format for ${serverConfig.name}, using defaults`);
+              streamableOptions = {};
+            }
+          } catch (e) {
+            console.error(`[MCP Wrapper] Failed to parse streamableHTTPOptions from env for ${serverConfig.name}:`, e);
+            // Provide explicit fallback instead of silent failure
+            console.warn(`[MCP Wrapper] Using default streamableHTTPOptions for ${serverConfig.name}`);
+            streamableOptions = {};
+          }
+        }
+        
+        // Or use directly from serverConfig (from playground/runtime)
+        if (serverConfig.streamableHTTPOptions) {
+          streamableOptions = serverConfig.streamableHTTPOptions;
+        }
+        
+        // Create StreamableHTTPClientTransport with options
+        const transportOptions: any = {};
+        
+        // Add headers if provided with validation
+        if (streamableOptions?.headers && typeof streamableOptions.headers === 'object') {
+          const headerValidation = validateHeaders(streamableOptions.headers);
+          if (!headerValidation.valid) {
+            console.error(`[MCP Wrapper] Invalid headers for ${serverConfig.name}: ${headerValidation.error}`);
+            throw new Error(`Invalid headers: ${headerValidation.error}`);
+          }
+          
+          transportOptions.requestInit = {
+            headers: headerValidation.sanitizedHeaders
+          };
+        }
+        
+        // Add session ID if provided
+        if (streamableOptions?.sessionId && typeof streamableOptions.sessionId === 'string') {
+          transportOptions.sessionId = streamableOptions.sessionId;
+        }
+        
+        console.log(`[MCP Wrapper] Creating Streamable HTTP transport for server ${serverConfig.name}`);
+        transport = new StreamableHTTPClientTransport(url, transportOptions);
+      } catch (error) {
+        console.error(`[MCP Wrapper] Failed to create Streamable HTTP transport:`, error);
+        throw error; // Propagate the error instead of falling back
+      }
     } else {
       console.error(`[MCP Wrapper] Unsupported server type: ${serverConfig.type} for server ${serverConfig.name}`);
+      return null;
+    }
+
+    if (!transport) {
+      console.error(`[MCP Wrapper] Failed to create transport for ${serverConfig.name}`);
       return null;
     }
 
@@ -234,24 +358,80 @@ async function connectMcpClient(
   client: Client,
   transport: Transport,
   serverName: string,
+  serverConfig: McpServer,
   retries = 2,
   delay = 1000
 ): Promise<ConnectedMcpClient> {
   let lastError: Error | null = null;
+  let currentTransport = transport;
+  
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       if (attempt > 0) {
         console.log(`[MCP Wrapper] Retrying connection to ${serverName} (Attempt ${attempt})...`);
         await sleep(delay);
+        
+        // For StreamableHTTP, we need to create a new transport for retry
+        if (serverConfig.type === McpServerType.STREAMABLE_HTTP && serverConfig.url) {
+          // Close the old transport before creating a new one to prevent resource leaks
+          try {
+            await currentTransport.close();
+          } catch (e: any) {
+            // Ignore abort errors for Streamable HTTP
+            if (e?.code !== 20 && e?.name !== 'AbortError') {
+              console.debug(`[MCP Wrapper] Warning closing old transport during retry for ${serverName}:`, e.message);
+            }
+          }
+          
+          const newClientData = createMcpClientAndTransport(serverConfig);
+          if (newClientData?.transport) {
+            currentTransport = newClientData.transport;
+          } else {
+            throw new Error(`Failed to create new transport for retry attempt ${attempt}`);
+          }
+        }
       }
-      await client.connect(transport);
+      
+      await client.connect(currentTransport);
       console.log(`[MCP Wrapper] Connected to ${serverName}.`);
       return {
         client,
         cleanup: async () => {
           try {
-            await transport.close();
-            await client.close();
+            // For StreamableHTTPClientTransport, we need to be very careful about cleanup
+            // as it may throw abort errors when the underlying fetch is cancelled
+            if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
+              // Wrap each close in a separate try-catch and continue regardless
+              const closeTransport = async () => {
+                try {
+                  await currentTransport.close();
+                } catch (e: any) {
+                  // Silently ignore all errors for Streamable HTTP transport
+                  // as abort errors are expected when fetch is cancelled
+                  if (e?.code !== 20 && e?.name !== 'AbortError') {
+                    console.debug(`[MCP Wrapper] Transport cleanup warning for ${serverName}:`, e.message);
+                  }
+                }
+              };
+              
+              const closeClient = async () => {
+                try {
+                  await client.close();
+                } catch (e: any) {
+                  // Silently ignore all errors for Streamable HTTP client
+                  if (e?.code !== 20 && e?.name !== 'AbortError') {
+                    console.debug(`[MCP Wrapper] Client cleanup warning for ${serverName}:`, e.message);
+                  }
+                }
+              };
+              
+              // Run both closes in parallel to minimize wait time
+              await Promise.all([closeTransport(), closeClient()]);
+            } else {
+              // For other transport types, use normal cleanup
+              await currentTransport.close();
+              await client.close();
+            }
             console.log(`[MCP Wrapper] Cleaned up connection for ${serverName}.`);
           } catch (cleanupError) {
             console.error(`[MCP Wrapper] Error during cleanup for ${serverName}:`, cleanupError);
@@ -262,8 +442,27 @@ async function connectMcpClient(
       lastError = error instanceof Error ? error : new Error(String(error));
       console.warn(`[MCP Wrapper] Connection attempt ${attempt + 1} failed for ${serverName}: ${lastError.message}`);
       // Ensure client/transport are closed before retry
-      try { await transport.close(); } catch { /* ignore */ }
-      try { await client.close(); } catch { /* ignore */ }
+      if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
+        try { 
+          await currentTransport.close(); 
+        } catch (e: any) { 
+          // Ignore abort errors for Streamable HTTP
+          if (e?.code !== 20) {
+            console.error(`[MCP Wrapper] Error closing transport during retry:`, e);
+          }
+        }
+        try { 
+          await client.close(); 
+        } catch (e: any) { 
+          // Ignore abort errors for Streamable HTTP
+          if (e?.code !== 20) {
+            console.error(`[MCP Wrapper] Error closing client during retry:`, e);
+          }
+        }
+      } else {
+        try { await currentTransport.close(); } catch { /* ignore */ }
+        try { await client.close(); } catch { /* ignore */ }
+      }
     }
   }
   throw lastError || new Error(`Failed to connect to ${serverName} after ${retries + 1} attempts.`);
@@ -278,19 +477,25 @@ async function connectMcpClient(
  * @returns A promise resolving to the list of tools or throwing an error.
  */
 export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool[]> {
+  // Validate required server config fields
+  if (!serverConfig) {
+    throw new Error('Server configuration is required');
+  }
+  
+  const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
   const clientData = createMcpClientAndTransport(serverConfig);
   if (!clientData) {
-    throw new Error(`Failed to create client/transport for server ${serverConfig.name || serverConfig.uuid}`);
+    throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
   }
 
   let connectedClient: ConnectedMcpClient | undefined;
   try {
-    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig);
 
     // Check capabilities *after* connecting
     const capabilities = connectedClient.client.getServerCapabilities();
     if (!capabilities?.tools) {
-        // console.log(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not advertise tool support.`); // Removed console log
+        // console.log(`[MCP Wrapper] Server ${serverIdentifier} does not advertise tool support.`); // Removed console log
         return []; // Return empty list if tools are not supported
     }
 
@@ -300,14 +505,14 @@ export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool
       ListToolsResultSchema
     );
     
-    // Return tools as-is without transforming names
+    // Return tools as-is without transforming names, with additional safety check
     // This ensures compatibility with clients that expect original tool names
-    return result.tools || [];
+    return Array.isArray(result?.tools) ? result.tools : [];
   } catch (error) {
-    console.error(`[MCP Wrapper] Error listing tools from ${serverConfig.name || serverConfig.uuid}:`, error);
+    console.error(`[MCP Wrapper] Error listing tools from ${serverIdentifier}:`, error);
     throw error; // Re-throw the error to be handled by the caller
   } finally {
-    await connectedClient?.cleanup();
+    await safeCleanup(connectedClient, serverConfig);
   }
 }
 
@@ -318,19 +523,25 @@ export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool
  * @returns A promise resolving to the list of resource templates or throwing an error.
  */
 export async function listResourceTemplatesFromServer(serverConfig: McpServer): Promise<ResourceTemplate[]> {
+    // Validate required server config fields
+    if (!serverConfig) {
+        throw new Error('Server configuration is required');
+    }
+    
+    const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
     const clientData = createMcpClientAndTransport(serverConfig);
     if (!clientData) {
-        throw new Error(`Failed to create client/transport for server ${serverConfig.name || serverConfig.uuid}`);
+        throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
     }
 
     let connectedClient: ConnectedMcpClient | undefined;
     try {
-    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig);
 
     // Check capabilities *after* connecting
     const capabilities = connectedClient.client.getServerCapabilities();
     if (!capabilities?.resources) {
-        // console.log(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not advertise resource support (needed for templates).`); // Removed console log
+        // console.log(`[MCP Wrapper] Server ${serverIdentifier} does not advertise resource support (needed for templates).`); // Removed console log
         return []; // Return empty list if resources are not supported
     }
 
@@ -339,18 +550,18 @@ export async function listResourceTemplatesFromServer(serverConfig: McpServer): 
             { method: 'resources/templates/list', params: {} },
             ListResourceTemplatesResultSchema
         );
-        return result.resourceTemplates || [];
+        return Array.isArray(result?.resourceTemplates) ? result.resourceTemplates : [];
     } catch (error: any) { // Add type to error
         // Specifically handle "Method not found" for templates list as non-critical
         if (error?.code === -32601 && error?.message?.includes('Method not found')) {
-             console.warn(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not implement resources/templates/list. Returning empty array.`);
+             console.warn(`[MCP Wrapper] Server ${serverIdentifier} does not implement resources/templates/list. Returning empty array.`);
              return [];
         }
         // Log and re-throw other errors
-        console.error(`[MCP Wrapper] Error listing resource templates from ${serverConfig.name || serverConfig.uuid}:`, error);
+        console.error(`[MCP Wrapper] Error listing resource templates from ${serverIdentifier}:`, error);
         throw error; // Re-throw the error to be handled by the caller
     } finally {
-        await connectedClient?.cleanup();
+        await safeCleanup(connectedClient, serverConfig);
     }
 }
 
@@ -361,19 +572,25 @@ export async function listResourceTemplatesFromServer(serverConfig: McpServer): 
  * @returns A promise resolving to the list of resources or throwing an error.
  */
 export async function listResourcesFromServer(serverConfig: McpServer): Promise<Resource[]> {
+    // Validate required server config fields
+    if (!serverConfig) {
+        throw new Error('Server configuration is required');
+    }
+    
+    const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
     const clientData = createMcpClientAndTransport(serverConfig);
     if (!clientData) {
-        throw new Error(`Failed to create client/transport for server ${serverConfig.name || serverConfig.uuid}`);
+        throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
     }
 
     let connectedClient: ConnectedMcpClient | undefined;
     try {
-        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig);
 
         // Check capabilities *after* connecting
         const capabilities = connectedClient.client.getServerCapabilities();
         if (!capabilities?.resources) {
-            // console.log(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not advertise resource support.`); // Removed console log
+            // console.log(`[MCP Wrapper] Server ${serverIdentifier} does not advertise resource support.`); // Removed console log
             return []; // Return empty list if resources are not supported
         }
 
@@ -382,18 +599,18 @@ export async function listResourcesFromServer(serverConfig: McpServer): Promise<
             { method: 'resources/list', params: {} },
             ListResourcesResultSchema // Use the correct schema
         );
-        return result.resources || [];
+        return Array.isArray(result?.resources) ? result.resources : [];
     } catch (error: any) { // Add type to error
         // Specifically handle "Method not found" for resources list as non-critical
         if (error?.code === -32601 && error?.message?.includes('Method not found')) {
-             console.warn(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not implement resources/list. Returning empty array.`);
+             console.warn(`[MCP Wrapper] Server ${serverIdentifier} does not implement resources/list. Returning empty array.`);
              return [];
         }
         // Log and re-throw other errors
-        console.error(`[MCP Wrapper] Error listing resources from ${serverConfig.name || serverConfig.uuid}:`, error);
+        console.error(`[MCP Wrapper] Error listing resources from ${serverIdentifier}:`, error);
         throw error; // Re-throw the error to be handled by the caller
     } finally {
-        await connectedClient?.cleanup();
+        await safeCleanup(connectedClient, serverConfig);
     }
 }
 
@@ -404,19 +621,25 @@ export async function listResourcesFromServer(serverConfig: McpServer): Promise<
  * @returns A promise resolving to the list of prompts or throwing an error.
  */
 export async function listPromptsFromServer(serverConfig: McpServer): Promise<Prompt[]> {
+    // Validate required server config fields
+    if (!serverConfig) {
+        throw new Error('Server configuration is required');
+    }
+    
+    const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
     const clientData = createMcpClientAndTransport(serverConfig);
     if (!clientData) {
-        throw new Error(`Failed to create client/transport for server ${serverConfig.name || serverConfig.uuid}`);
+        throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
     }
 
     let connectedClient: ConnectedMcpClient | undefined;
     try {
-        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverConfig.name || serverConfig.uuid);
+        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig);
 
         // Check capabilities *after* connecting
         const capabilities = connectedClient.client.getServerCapabilities();
         if (!capabilities?.prompts) {
-            // console.log(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not advertise prompt support.`);
+            // console.log(`[MCP Wrapper] Server ${serverIdentifier} does not advertise prompt support.`);
             return []; // Return empty list if prompts are not supported
         }
 
@@ -425,18 +648,18 @@ export async function listPromptsFromServer(serverConfig: McpServer): Promise<Pr
             { method: 'prompts/list', params: {} },
             ListPromptsResultSchema // Use the correct schema
         );
-        return result.prompts || [];
+        return Array.isArray(result?.prompts) ? result.prompts : [];
     } catch (error: any) {
         // Specifically handle "Method not found" for prompts list as non-critical
         if (error?.code === -32601 && error?.message?.includes('Method not found')) {
-             console.warn(`[MCP Wrapper] Server ${serverConfig.name || serverConfig.uuid} does not implement prompts/list. Returning empty array.`);
+             console.warn(`[MCP Wrapper] Server ${serverIdentifier} does not implement prompts/list. Returning empty array.`);
              return [];
         }
         // Log and re-throw other errors
-        console.error(`[MCP Wrapper] Error listing prompts from ${serverConfig.name || serverConfig.uuid}:`, error);
+        console.error(`[MCP Wrapper] Error listing prompts from ${serverIdentifier}:`, error);
         throw error; // Re-throw the error to be handled by the caller
     } finally {
-        await connectedClient?.cleanup();
+        await safeCleanup(connectedClient, serverConfig);
     }
 }
 

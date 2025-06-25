@@ -27,9 +27,8 @@ import {
 } from '@/app/actions/mcp-servers';
 // Internal UI components
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // Internal DB schema
 import { McpServerStatus, McpServerType } from '@/db/schema';
 // Internal hooks
@@ -43,10 +42,10 @@ import { McpServer } from '@/types/mcp-server';
 import { ServerCard } from './components/server-card';
 // Local components
 import { ExportDialog, ImportDialog } from './components/server-dialogs';
-import { SseServerForm, StdioServerForm } from './components/server-forms';
 import { ServerHero } from './components/server-hero';
 import { ServerStats } from './components/server-stats';
 import { ShareCollectionDialog } from './components/share-collection-dialog';
+import { SmartServerDialog } from './components/smart-server-dialog';
 
 
 // Removed DiscoverToolsButton Component Definition
@@ -122,7 +121,7 @@ export default function MCPServersPage() {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  const handleCreateServer = async (data: any) => {
+  const _handleCreateServer = async (data: any) => {
     if (!currentProfile?.uuid) {
       return;
     }
@@ -138,6 +137,55 @@ export default function MCPServersPage() {
         title: t('common.success'),
         description: t('mcpServers.form.success'),
       });
+    } catch (_error) {
+      toast({
+        title: t('common.error'),
+        description: t('mcpServers.form.error.createFailed'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleCreateMultipleServers = async (configs: any[]) => {
+    if (!currentProfile?.uuid) {
+      return;
+    }
+    setIsSubmitting(true);
+    let successCount = 0;
+    let failedCount = 0;
+    
+    try {
+      for (const config of configs) {
+        try {
+          await createMcpServer({
+            ...config,
+            profileUuid: currentProfile.uuid
+          });
+          successCount++;
+        } catch (error) {
+          console.error(`Failed to create server ${config.name}:`, error);
+          failedCount++;
+        }
+      }
+      
+      await mutate();
+      
+      if (successCount > 0 && failedCount === 0) {
+        toast({
+          title: t('common.success'),
+          description: t('mcpServers.form.multipleSuccess', { count: successCount }),
+        });
+      } else if (successCount > 0 && failedCount > 0) {
+        toast({
+          title: t('common.warning'),
+          description: t('mcpServers.form.partialSuccess', { success: successCount, failed: failedCount }),
+          variant: 'default',
+        });
+      } else {
+        throw new Error('All servers failed to create');
+      }
     } catch (_error) {
       toast({
         title: t('common.error'),
@@ -174,6 +222,8 @@ export default function MCPServersPage() {
           const config = serverConfig as any;
           const serverType = config.type?.toLowerCase() === 'sse'
             ? McpServerType.SSE
+            : config.type?.toLowerCase() === 'streamable_http'
+            ? McpServerType.STREAMABLE_HTTP
             : McpServerType.STDIO;
 
           // Create server config based on type
@@ -184,6 +234,51 @@ export default function MCPServersPage() {
               url: config.url,
               type: serverType,
               status: McpServerStatus.ACTIVE,
+            };
+          } else if (serverType === McpServerType.STREAMABLE_HTTP) {
+            // Extract API key from URL if present
+            let url = config.url;
+            let extractedHeaders = {};
+            
+            try {
+              const urlObj = new URL(url);
+              const apiKey = urlObj.searchParams.get('api_key') || urlObj.searchParams.get('apiKey');
+              
+              if (apiKey) {
+                // Smithery requires the API key to remain in the URL
+                if (url.includes('server.smithery.ai')) {
+                  // Keep the API key in the URL for Smithery
+                  console.log('Smithery server detected during import, keeping API key in URL');
+                } else {
+                  // For other services, extract and remove API key from URL
+                  extractedHeaders = { 'Authorization': `Bearer ${apiKey}` };
+                  urlObj.searchParams.delete('api_key');
+                  urlObj.searchParams.delete('apiKey');
+                  url = urlObj.toString();
+                }
+              }
+            } catch (_e) {
+              // Invalid URL, use as is
+            }
+            
+            // Merge extracted headers with existing ones
+            const streamableOptions = config.streamableHTTPOptions || {};
+            const headers = {
+              ...extractedHeaders,
+              ...(streamableOptions.headers || {})
+            };
+            
+            acc[name] = {
+              name,
+              description: config.description || '',
+              url,
+              type: serverType,
+              status: McpServerStatus.ACTIVE,
+              transport: config.transport || 'streamable_http',
+              streamableHTTPOptions: {
+                ...streamableOptions,
+                headers: Object.keys(headers).length > 0 ? headers : undefined,
+              },
             };
           } else {
             // STDIO type
@@ -408,35 +503,13 @@ export default function MCPServersPage() {
         </div>
       )}
 
-      {/* Add Server Dialog */}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] sm:max-w-[425px] p-4 sm:p-6">
-          <Tabs defaultValue={McpServerType.STDIO} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value={McpServerType.STDIO} className="text-sm">
-                {t('mcpServers.form.commandBased')}
-              </TabsTrigger>
-              <TabsTrigger value={McpServerType.SSE} className="text-sm">
-                {t('mcpServers.form.urlBased')}
-              </TabsTrigger>
-            </TabsList>
-            <TabsContent value={McpServerType.STDIO}>
-              <StdioServerForm
-                onSubmit={handleCreateServer}
-                onCancel={() => setOpen(false)}
-                isSubmitting={isSubmitting}
-              />
-            </TabsContent>
-            <TabsContent value={McpServerType.SSE}>
-              <SseServerForm
-                onSubmit={handleCreateServer}
-                onCancel={() => setOpen(false)}
-                isSubmitting={isSubmitting}
-              />
-            </TabsContent>
-          </Tabs>
-        </DialogContent>
-      </Dialog>
+      {/* Smart Add Server Dialog */}
+      <SmartServerDialog
+        open={open}
+        onOpenChange={setOpen}
+        onSubmit={handleCreateMultipleServers}
+        isSubmitting={isSubmitting}
+      />
 
       {/* Import/Export Dialogs */}
       <ImportDialog

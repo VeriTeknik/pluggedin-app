@@ -33,6 +33,7 @@
       "deleteAllSuccess": "所有通知已删除",
       "deleteAllError": "删除所有通知失败",
       "toggleCompleteError": "无法更新笔记状态"
-    }
+    },
+    "customNotificationTitle": "自定义通知"
   }
 }

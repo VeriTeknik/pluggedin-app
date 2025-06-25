@@ -70,6 +70,19 @@ export function ImportDialog({ open, onOpenChange, onImport, isSubmitting }: Imp
       "url": "https://example.com/sse",
       "description": "Optional description",
       "type": "sse" // optional, defaults to "stdio"
+    },
+    "StreamableHttpServerName": {
+      "url": "https://server.smithery.ai/@owner/server/mcp?api_key=YOUR_KEY",
+      "description": "Streamable HTTP server",
+      "type": "streamable_http",
+      "transport": "streamable_http",
+      "streamableHTTPOptions": {
+        "headers": {
+          "Authorization": "Bearer token",
+          "X-API-Key": "your-api-key"
+        },
+        "sessionId": "optional-session-id"
+      }
     }
   }
 }`}

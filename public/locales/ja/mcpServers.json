@@ -7,7 +7,8 @@
       "totalServers": "総サーバー数",
       "active": "アクティブ",
       "stdio": "STDIO",
-      "sse": "SSE"
+      "sse": "SSE",
+      "streamableHttp": "Streamable HTTP"
     },
     "actions": {
       "addServer": "サーバーを追加",
@@ -31,7 +32,8 @@
       "unshareConfirmTitle": "サーバーの共有を解除",
       "unshareConfirmDesc": "このサーバーの共有を解除してもよろしいですか？他のユーザーはアクセスできなくなります。",
       "shared": "共有済み",
-      "share": "共有"
+      "share": "共有",
+      "selectForCollection": "コレクション用に選択"
     },
     "form": {
       "success": "MCPサーバーが正常に作成されました。",
@@ -42,6 +44,7 @@
       "addDescription": "新しいMCPサーバー構成を作成します。STDIO（コマンドベース）またはSSE（URLベース）のサーバータイプを選択してください。",
       "commandBased": "コマンドベース (STDIO)",
       "urlBased": "URLベース (SSE)",
+      "streamableHttpBased": "URLベース (Streamable HTTP)",
       "name": "名前",
       "namePlaceholder": "例：mcp-server-time",
       "description": "説明",
@@ -53,6 +56,12 @@
       "envVars": "環境変数",
       "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
       "envVarsHelp": "環境変数をKEY=value形式で、1行に1つずつ入力してください",
+      "headers": "ヘッダー",
+      "headersPlaceholder": "Authorization: Bearer token\nX-Custom-Header: 値",
+      "headersHelp": "ヘッダーを1行に1つずつ入力してください。形式：ヘッダー名: ヘッダー値",
+      "sessionId": "セッションID",
+      "sessionIdPlaceholder": "オプションのセッション識別子",
+      "sessionIdHelp": "ステートフル接続のためのセッションIDを提供してください（オプション）",
       "serverUrl": "サーバーURL",
       "serverUrlPlaceholder": "http://localhost:3000/sse",
       "serverUrlHelp": "有効なHTTP/HTTPS URLである必要があります",
@@ -122,7 +131,8 @@
       "fetchTemplatesFailed": "リソーステンプレートの読み込みに失敗しました。",
       "fetchPromptsFailed": "プロンプトの読み込みに失敗しました。",
       "fetchToolsFailed": "ツールの読み込みに失敗しました。",
-      "fetchInstructionsFailed": "カスタム指示の取得に失敗しました。"
+      "fetchInstructionsFailed": "カスタム指示の取得に失敗しました。",
+      "mustBeSharedForCollection": "サーバーはコレクションに含めるために共有される必要があります。"
     },
     "tabs": {
       "details": "サーバー詳細",

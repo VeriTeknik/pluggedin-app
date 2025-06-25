@@ -28,4 +28,12 @@ export interface McpServer {
 
   // Flag to indicate if firejail sandboxing should be applied (used internally)
   applySandboxing?: boolean;
+
+  // Streamable HTTP specific options
+  transport?: 'streamable_http' | 'sse' | 'stdio';
+  streamableHTTPOptions?: {
+    sessionId?: string;
+    authProvider?: any;
+    headers?: Record<string, string>;
+  };
 }

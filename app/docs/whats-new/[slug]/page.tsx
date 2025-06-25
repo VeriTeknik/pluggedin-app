@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 
 import WhatsNewArticleClient from './page-client';
 
+export const dynamic = 'force-dynamic';
+
 const articles = [
   'send-notifications-from-ai',
   'document-context-rag',

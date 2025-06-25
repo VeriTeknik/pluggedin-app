@@ -33,6 +33,18 @@
       "deleteAllSuccess": "Tüm bildirimler silindi",
       "deleteAllError": "Tüm bildirimler silinemedi",
       "toggleCompleteError": "Not durumu güncellenemedi"
+    },
+    "customNotificationTitle": "Özel bildirim",
+    "search": {
+      "placeholder": "Bildirimlerde ara..."
+    },
+    "filter": {
+      "severity": "Önem derecesine göre filtrele",
+      "allSeverities": "Tüm önem dereceleri"
+    },
+    "sort": {
+      "newest": "En yeni önce",
+      "oldest": "En eski önce"
     }
   }
 }

@@ -7,7 +7,8 @@
       "totalServers": "Total Servers",
       "active": "Active",
       "stdio": "STDIO",
-      "sse": "SSE"
+      "sse": "SSE",
+      "streamableHttp": "Streamable HTTP"
     },
     "actions": {
       "addServer": "Add Server",
@@ -31,10 +32,13 @@
       "unshareConfirmTitle": "Unshare Server",
       "unshareConfirmDesc": "Are you sure you want to unshare this server? Other users will no longer be able to access it.",
       "shared": "Shared",
-      "share": "Share"
+      "share": "Share",
+      "selectForCollection": "Select for Collection"
     },
     "form": {
       "success": "MCP server created successfully.",
+      "multipleSuccess": "Successfully created {{count}} MCP server(s).",
+      "partialSuccess": "Created {{success}} server(s), but {{failed}} failed.",
       "error": {
         "createFailed": "Failed to create MCP server."
       },
@@ -42,6 +46,7 @@
       "addDescription": "Create a new MCP server configuration. Choose between STDIO (command-based) or SSE (URL-based) server type.",
       "commandBased": "Command-based (STDIO)",
       "urlBased": "URL-based (SSE)",
+      "streamableHttpBased": "URL-based (Streamable HTTP)",
       "name": "Name",
       "namePlaceholder": "e.g., mcp-server-time",
       "description": "Description",
@@ -53,6 +58,12 @@
       "envVars": "Environment Variables",
       "envVarsPlaceholder": "KEY=value\nANOTHER_KEY=another_value",
       "envVarsHelp": "Enter environment variables in KEY=value format, one per line",
+      "headers": "Headers",
+      "headersPlaceholder": "Authorization: Bearer token\nX-Custom-Header: value",
+      "headersHelp": "Enter headers, one per line in the format: Header-Name: Header-Value",
+      "sessionId": "Session ID",
+      "sessionIdPlaceholder": "Optional session identifier",
+      "sessionIdHelp": "Provide a session ID for stateful connections (optional)",
       "serverUrl": "Server URL",
       "serverUrlPlaceholder": "http://localhost:3000/sse",
       "serverUrlHelp": "Must be a valid HTTP/HTTPS URL",
@@ -113,7 +124,8 @@
       "active": "Active",
       "inactive": "Inactive",
       "stdio": "STDIO",
-      "sse": "SSE"
+      "sse": "SSE",
+      "streamableHttp": "Streamable HTTP"
     },
     "errors": {
       "missingInfo": "Missing profile or server information.",
@@ -122,7 +134,8 @@
       "fetchTemplatesFailed": "Failed to load resource templates.",
       "fetchPromptsFailed": "Failed to load prompts.",
       "fetchToolsFailed": "Failed to load tools.",
-      "fetchInstructionsFailed": "Failed to fetch custom instructions."
+      "fetchInstructionsFailed": "Failed to fetch custom instructions.",
+      "mustBeSharedForCollection": "Server must be shared to be included in a collection."
     },
     "tabs": {
       "details": "Server Details",

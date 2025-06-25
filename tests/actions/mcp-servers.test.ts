@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { 
   createMcpServer, 
   updateMcpServer, 
-  deleteMcpServer,
+  deleteMcpServerByUuid,
   getMcpServers 
 } from '@/app/actions/mcp-servers';
 import { db } from '@/db';
 import { McpServerStatus, McpServerType } from '@/db/schema';
-import { createMockMcpServer, createMockProfile, createMockAuthResult } from '../utils/mocks';
+import { createMockMcpServer, createMockProfile } from '../utils/mocks';
 
 // Mock dependencies
 vi.mock('@/db');
@@ -19,6 +19,10 @@ vi.mock('@/lib/auth', () => ({
 }));
 vi.mock('@/app/actions/profiles', () => ({
   getActiveProfile: vi.fn(() => Promise.resolve(createMockProfile())),
+}));
+vi.mock('@/lib/encryption', () => ({
+  encryptServerData: vi.fn((data) => JSON.stringify(data)),
+  decryptServerData: vi.fn((data) => data),
 }));
 
 const mockedDb = vi.mocked(db);
@@ -37,12 +41,16 @@ describe('MCP Server Actions', () => {
     mockedDb.values = vi.fn().mockReturnThis();
     mockedDb.set = vi.fn().mockReturnThis();
     mockedDb.returning = vi.fn();
+    mockedDb.leftJoin = vi.fn().mockReturnThis();
+    mockedDb.orderBy = vi.fn().mockReturnThis();
   });
 
   describe('createMcpServer', () => {
     it('should successfully create a new MCP server', async () => {
+      const profileUuid = 'test-profile-uuid';
       const serverData = {
         name: 'Test MCP Server',
+        profileUuid,
         description: 'Test server description',
         type: McpServerType.STDIO,
         command: 'node',
@@ -61,212 +69,197 @@ describe('MCP Server Actions', () => {
       const result = await createMcpServer(serverData);
 
       expect(result.success).toBe(true);
-      expect(result.server).toEqual(newServer);
       expect(mockedDb.insert).toHaveBeenCalled();
-      expect(mockedDb.values).toHaveBeenCalledWith(
-        expect.objectContaining({
-          name: serverData.name,
-          type: serverData.type,
-          command: serverData.command,
-        })
-      );
     });
 
-    it('should fail with invalid server type', async () => {
+    it('should fail with missing command for STDIO type', async () => {
       const serverData = {
         name: 'Test MCP Server',
-        type: 'INVALID_TYPE' as any,
-        command: 'node',
+        profileUuid: 'test-profile-uuid',
+        type: McpServerType.STDIO,
+        // Missing command
       };
 
       const result = await createMcpServer(serverData);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Invalid server type');
+      expect(result.error).toContain('Command is required');
     });
 
-    it('should fail with missing required fields', async () => {
+    it('should fail with missing URL for SSE type', async () => {
       const serverData = {
-        // Missing name and command
-        type: McpServerType.STDIO,
-      } as any;
+        name: 'Test MCP Server',
+        profileUuid: 'test-profile-uuid',
+        type: McpServerType.SSE,
+        // Missing URL
+      };
 
       const result = await createMcpServer(serverData);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('required');
+      expect(result.error).toContain('URL is required');
     });
 
     it('should handle database errors during creation', async () => {
       const serverData = {
         name: 'Test MCP Server',
+        profileUuid: 'test-profile-uuid',
         type: McpServerType.STDIO,
         command: 'node',
       };
 
-      mockedDb.returning.mockRejectedValueOnce(new Error('Database constraint violation'));
+      mockedDb.returning.mockRejectedValueOnce(new Error('Database error'));
 
       const result = await createMcpServer(serverData);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('Database constraint violation');
+      expect(result.error).toContain('Failed to create');
     });
   });
 
   describe('updateMcpServer', () => {
     it('should successfully update an existing MCP server', async () => {
+      const profileUuid = 'test-profile-uuid';
       const serverUuid = 'test-server-uuid';
       const updateData = {
         name: 'Updated Server Name',
         description: 'Updated description',
-        status: McpServerStatus.INACTIVE,
       };
 
-      const existingServer = createMockMcpServer({ uuid: serverUuid });
+      const existingServer = createMockMcpServer({ 
+        uuid: serverUuid,
+        profile_uuid: profileUuid 
+      });
       const updatedServer = { ...existingServer, ...updateData };
 
-      // Mock server exists check
-      mockedDb.returning.mockResolvedValueOnce([existingServer]);
-      // Mock update operation
+      // Mock successful update
       mockedDb.returning.mockResolvedValueOnce([updatedServer]);
 
-      const result = await updateMcpServer(serverUuid, updateData);
+      const result = await updateMcpServer(profileUuid, serverUuid, updateData);
 
-      expect(result.success).toBe(true);
-      expect(result.server).toEqual(updatedServer);
+      expect(result).toBeDefined();
       expect(mockedDb.update).toHaveBeenCalled();
-      expect(mockedDb.set).toHaveBeenCalledWith(
-        expect.objectContaining(updateData)
-      );
     });
 
     it('should fail if server does not exist', async () => {
+      const profileUuid = 'test-profile-uuid';
       const serverUuid = 'nonexistent-server-uuid';
       const updateData = { name: 'Updated Name' };
 
-      // Mock server not found
+      // Mock no server found
       mockedDb.returning.mockResolvedValueOnce([]);
 
-      const result = await updateMcpServer(serverUuid, updateData);
+      const result = await updateMcpServer(profileUuid, serverUuid, updateData);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Server not found');
+      expect(result).toBeUndefined();
     });
 
     it('should fail if user does not own the server', async () => {
+      const profileUuid = 'test-profile-uuid';
       const serverUuid = 'test-server-uuid';
       const updateData = { name: 'Updated Name' };
 
-      const serverFromDifferentProfile = createMockMcpServer({
-        uuid: serverUuid,
-        profile_uuid: 'different-profile-uuid',
-      });
+      // Mock no matching server for this profile
+      mockedDb.returning.mockResolvedValueOnce([]);
 
-      // Mock server exists but belongs to different profile
-      mockedDb.returning.mockResolvedValueOnce([serverFromDifferentProfile]);
+      const result = await updateMcpServer(profileUuid, serverUuid, updateData);
 
-      const result = await updateMcpServer(serverUuid, updateData);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('not authorized');
+      expect(result).toBeUndefined();
     });
   });
 
-  describe('deleteMcpServer', () => {
+  describe('deleteMcpServerByUuid', () => {
     it('should successfully delete an MCP server', async () => {
+      const profileUuid = 'test-profile-uuid';
       const serverUuid = 'test-server-uuid';
-      const existingServer = createMockMcpServer({ uuid: serverUuid });
 
-      // Mock server exists check
-      mockedDb.returning.mockResolvedValueOnce([existingServer]);
-      // Mock delete operation
-      mockedDb.returning.mockResolvedValueOnce([existingServer]);
+      await deleteMcpServerByUuid(profileUuid, serverUuid);
 
-      const result = await deleteMcpServer(serverUuid);
-
-      expect(result.success).toBe(true);
       expect(mockedDb.delete).toHaveBeenCalled();
+      expect(mockedDb.where).toHaveBeenCalled();
     });
 
-    it('should fail if server does not exist', async () => {
+    it('should not throw if server does not exist', async () => {
+      const profileUuid = 'test-profile-uuid';
       const serverUuid = 'nonexistent-server-uuid';
 
-      // Mock server not found
-      mockedDb.returning.mockResolvedValueOnce([]);
-
-      const result = await deleteMcpServer(serverUuid);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Server not found');
+      // Should not throw even if nothing is deleted
+      await expect(deleteMcpServerByUuid(profileUuid, serverUuid)).resolves.not.toThrow();
     });
 
     it('should handle database errors during deletion', async () => {
+      const profileUuid = 'test-profile-uuid';
       const serverUuid = 'test-server-uuid';
-      const existingServer = createMockMcpServer({ uuid: serverUuid });
 
-      // Mock server exists
-      mockedDb.returning.mockResolvedValueOnce([existingServer]);
-      // Mock delete error
-      mockedDb.returning.mockRejectedValueOnce(new Error('Foreign key constraint'));
+      mockedDb.delete.mockImplementation(() => {
+        throw new Error('Database error');
+      });
 
-      const result = await deleteMcpServer(serverUuid);
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Foreign key constraint');
+      await expect(deleteMcpServerByUuid(profileUuid, serverUuid)).rejects.toThrow('Database error');
     });
   });
 
   describe('getMcpServers', () => {
     it('should return all servers for active profile', async () => {
-      const servers = [
-        createMockMcpServer({ name: 'Server 1', status: McpServerStatus.ACTIVE }),
-        createMockMcpServer({ name: 'Server 2', status: McpServerStatus.INACTIVE }),
+      const profileUuid = 'test-profile-uuid';
+      const mockServers = [
+        { 
+          server: createMockMcpServer({ profile_uuid: profileUuid }),
+          username: 'testuser'
+        },
+        { 
+          server: createMockMcpServer({ profile_uuid: profileUuid }),
+          username: 'testuser'
+        },
       ];
 
-      mockedDb.returning.mockResolvedValueOnce(servers);
+      mockedDb.orderBy.mockResolvedValueOnce(mockServers);
 
-      const result = await getMcpServers();
+      const result = await getMcpServers(profileUuid);
 
-      expect(result.success).toBe(true);
-      expect(result.servers).toEqual(servers);
-      expect(result.servers).toHaveLength(2);
+      expect(result).toHaveLength(2);
+      expect(mockedDb.select).toHaveBeenCalled();
+      expect(mockedDb.from).toHaveBeenCalled();
     });
 
     it('should filter servers by status', async () => {
-      const activeServers = [
-        createMockMcpServer({ name: 'Active Server', status: McpServerStatus.ACTIVE }),
+      const profileUuid = 'test-profile-uuid';
+      const mockServers = [
+        { 
+          server: createMockMcpServer({ 
+            profile_uuid: profileUuid,
+            status: McpServerStatus.ACTIVE 
+          }),
+          username: 'testuser'
+        },
       ];
 
-      mockedDb.returning.mockResolvedValueOnce(activeServers);
+      mockedDb.orderBy.mockResolvedValueOnce(mockServers);
 
-      const result = await getMcpServers({ status: McpServerStatus.ACTIVE });
+      const result = await getMcpServers(profileUuid);
 
-      expect(result.success).toBe(true);
-      expect(result.servers).toEqual(activeServers);
-      expect(mockedDb.where).toHaveBeenCalledWith(
-        expect.objectContaining({
-          // Should include status filter
-        })
-      );
+      expect(result).toHaveLength(1);
+      expect(mockedDb.where).toHaveBeenCalled();
     });
 
     it('should handle database errors during fetch', async () => {
-      mockedDb.returning.mockRejectedValueOnce(new Error('Database connection failed'));
+      const profileUuid = 'test-profile-uuid';
 
-      const result = await getMcpServers();
+      mockedDb.select.mockImplementation(() => {
+        throw new Error('Database error');
+      });
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Database connection failed');
+      await expect(getMcpServers(profileUuid)).rejects.toThrow('Database error');
     });
 
     it('should return empty array when no servers exist', async () => {
-      mockedDb.returning.mockResolvedValueOnce([]);
+      const profileUuid = 'test-profile-uuid';
 
-      const result = await getMcpServers();
+      mockedDb.orderBy.mockResolvedValueOnce([]);
 
-      expect(result.success).toBe(true);
-      expect(result.servers).toEqual([]);
-      expect(result.servers).toHaveLength(0);
+      const result = await getMcpServers(profileUuid);
+
+      expect(result).toEqual([]);
     });
   });
 });

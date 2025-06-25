@@ -43,6 +43,7 @@ export enum McpServerStatus {
 export enum McpServerType {
   STDIO = 'STDIO',
   SSE = 'SSE',
+  STREAMABLE_HTTP = 'STREAMABLE_HTTP',
 }
 
 export enum McpServerSource {

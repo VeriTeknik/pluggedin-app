@@ -54,6 +54,41 @@ process.env.NEXTAUTH_SECRET = 'test-secret';
 process.env.NEXTAUTH_URL = 'http://localhost:12005';
 process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test';
 
+// Mock database module to prevent auth adapter initialization errors
+vi.mock('@/db', () => ({
+  db: {
+    select: vi.fn().mockReturnThis(),
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    from: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    values: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockReturnThis(),
+    leftJoin: vi.fn().mockReturnThis(),
+    innerJoin: vi.fn().mockReturnThis(),
+    orderBy: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockReturnThis(),
+    offset: vi.fn().mockReturnThis(),
+    query: {
+      users: {
+        findFirst: vi.fn(),
+        findMany: vi.fn(),
+      },
+      verificationTokens: {
+        findFirst: vi.fn(),
+      },
+    },
+  },
+}));
+
+// Mock auth module to prevent adapter initialization
+vi.mock('@/lib/auth', () => ({
+  authOptions: {},
+  getAuthSession: vi.fn(),
+}));
+
 // Global test utilities
 global.fetch = vi.fn();
 

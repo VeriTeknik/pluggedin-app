@@ -2,9 +2,9 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, hi, ja, nl, tr, zhCN } from 'date-fns/locale';
-import { Bell, Check, CheckSquare, Circle, Square, Trash2 } from 'lucide-react';
+import { Bell, Check, CheckSquare, Circle, RefreshCw, Square, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { 
@@ -31,7 +31,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Tabs, TabsContent,TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
@@ -44,6 +52,9 @@ export default function NotificationsPage() {
   const { notifications, refreshNotifications, unreadCount, markAllAsRead } =
     useNotifications();
   const [activeTab, setActiveTab] = useState('all');
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+  const [searchTerm, setSearchTerm] = useState('');
   
   // Get date locale based on current language
   const getDateLocale = () => {
@@ -165,16 +176,40 @@ export default function NotificationsPage() {
     }
   };
 
-  // Filter notifications based on active tab
-  const filteredNotifications = notifications.filter((notification) => {
-    if (activeTab === 'all') {
-      return true;
-    }
+  // Filter and sort notifications
+  const filteredNotifications = useMemo(() => {
+    let filtered = notifications;
+
+    // Apply tab filter
     if (activeTab === 'unread') {
-      return !notification.read;
+      filtered = filtered.filter(n => !n.read);
+    } else if (activeTab !== 'all') {
+      filtered = filtered.filter(n => n.type.toUpperCase() === activeTab.toUpperCase());
     }
-    return notification.type.toUpperCase() === activeTab.toUpperCase();
-  });
+
+    // Apply severity filter
+    if (severityFilter !== 'all') {
+      filtered = filtered.filter(n => n.severity === severityFilter);
+    }
+
+    // Apply search filter
+    if (searchTerm) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(n => 
+        n.title.toLowerCase().includes(search) || 
+        n.message.toLowerCase().includes(search)
+      );
+    }
+
+    // Sort
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = new Date(a.created_at).getTime();
+      const dateB = new Date(b.created_at).getTime();
+      return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+
+    return sorted;
+  }, [notifications, activeTab, severityFilter, searchTerm, sortOrder]);
 
   return (
     <div className="container mx-auto py-6">
@@ -187,6 +222,9 @@ export default function NotificationsPage() {
             </CardDescription>
           </div>
           <div className="flex gap-2">
+            <Button variant="ghost" size="icon" onClick={() => refreshNotifications()}>
+              <RefreshCw className="h-5 w-5" />
+            </Button>
             {unreadCount > 0 && (
               <Button variant="outline" onClick={() => markAllAsRead()}>
                 <Check className="mr-2 h-4 w-4" />
@@ -213,6 +251,37 @@ export default function NotificationsPage() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Filter and Sort Controls */}
+          <div className="flex flex-col sm:flex-row gap-4 mb-6">
+            <Input
+              placeholder={t('notifications.search.placeholder')}
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="sm:w-64"
+            />
+            <Select value={severityFilter} onValueChange={setSeverityFilter}>
+              <SelectTrigger className="sm:w-48">
+                <SelectValue placeholder={t('notifications.filter.severity')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('notifications.filter.allSeverities')}</SelectItem>
+                <SelectItem value="INFO">INFO</SelectItem>
+                <SelectItem value="SUCCESS">SUCCESS</SelectItem>
+                <SelectItem value="WARNING">WARNING</SelectItem>
+                <SelectItem value="ALERT">ALERT</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={sortOrder} onValueChange={(value: 'newest' | 'oldest') => setSortOrder(value)}>
+              <SelectTrigger className="sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">{t('notifications.sort.newest')}</SelectItem>
+                <SelectItem value="oldest">{t('notifications.sort.oldest')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="mb-4">
               <TabsTrigger value="all">
@@ -315,7 +384,7 @@ export default function NotificationsPage() {
                                       variant="secondary"
                                       className="ml-2"
                                     >
-                                      {t('status.unread')}
+                                      {t('notifications.status.unread')}
                                     </Badge>
                                   )}
                                 </div>
@@ -353,7 +422,7 @@ export default function NotificationsPage() {
                                       }
                                     >
                                       <Check className="h-4 w-4 mr-1" />
-                                      {t('actions.markAsRead')}
+                                      {t('notifications.actions.markAsRead')}
                                     </Button>
                                   )}
                                   <Button
@@ -365,7 +434,7 @@ export default function NotificationsPage() {
                                     }
                                   >
                                     <Trash2 className="h-4 w-4 mr-1" />
-                                    {t('actions.delete')}
+                                    {t('notifications.actions.delete')}
                                   </Button>
                                 </div>
                               </div>

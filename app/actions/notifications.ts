@@ -1,6 +1,6 @@
 'use server';
 
-import { and, desc,eq } from 'drizzle-orm';
+import { and, desc, eq, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 import { db } from '@/db';
@@ -145,8 +145,14 @@ export async function deleteNotification(id: string, profileUuid: string) {
 
 export async function deleteAllNotifications(profileUuid: string) {
   try {
+    // Delete all notifications except CUSTOM type
     await db.delete(notificationsTable)
-      .where(eq(notificationsTable.profile_uuid, profileUuid));
+      .where(
+        and(
+          eq(notificationsTable.profile_uuid, profileUuid),
+          ne(notificationsTable.type, 'CUSTOM')
+        )
+      );
     
     revalidatePath('/notifications');
     return { success: true };
