@@ -12,9 +12,16 @@ type AuthLayoutProps = {
 };
 
 type LinkConfigType = {
-  text: string;
-  linkText: string;
-  href: string;
+  primary: {
+    text: string;
+    linkText: string;
+    href: string;
+  };
+  secondary?: {
+    text?: string;
+    linkText: string;
+    href: string;
+  };
 };
 
 export function AuthLayout({ type, children }: AuthLayoutProps) {
@@ -25,28 +32,40 @@ export function AuthLayout({ type, children }: AuthLayoutProps) {
     switch (type) {
       case 'login':
         return {
-          text: t('auth.links.login.noAccount'),
-          linkText: t('auth.links.login.signUp'),
-          href: "/register",
+          primary: {
+            text: t('auth.links.login.noAccount'),
+            linkText: t('auth.links.login.signUp'),
+            href: "/register",
+          },
+          secondary: {
+            linkText: t('auth.login.forgotPassword'),
+            href: "/forgot-password",
+          }
         };
       case 'register':
         return {
-          text: t('auth.links.register.hasAccount'),
-          linkText: t('auth.links.register.signIn'),
-          href: "/login",
+          primary: {
+            text: t('auth.links.register.hasAccount'),
+            linkText: t('auth.links.register.signIn'),
+            href: "/login",
+          }
         };
       case 'forgot-password':
       case 'reset-password':
         return {
-          text: t('auth.links.forgotPassword.rememberPassword'),
-          linkText: t('auth.links.forgotPassword.backToLogin'),
-          href: "/login",
+          primary: {
+            text: t('auth.links.forgotPassword.rememberPassword'),
+            linkText: t('auth.links.forgotPassword.backToLogin'),
+            href: "/login",
+          }
         };
       default:
         return {
-          text: "",
-          linkText: "",
-          href: "/",
+          primary: {
+            text: "",
+            linkText: "",
+            href: "/",
+          }
         };
     }
   };
@@ -57,18 +76,32 @@ export function AuthLayout({ type, children }: AuthLayoutProps) {
     <div className="space-y-6">
       <AuthForm type={type} />
       
-      <div className="text-center">
+      <div className="space-y-2 text-center">
         <p className="text-sm text-muted-foreground">
-          {linkConfig.text && (
-            <>{linkConfig.text}{' '}</>
+          {linkConfig.primary.text && (
+            <>{linkConfig.primary.text}{' '}</>
           )}
           <Link
-            href={linkConfig.href}
+            href={linkConfig.primary.href}
             className="underline underline-offset-4 hover:text-primary"
           >
-            {linkConfig.linkText}
+            {linkConfig.primary.linkText}
           </Link>
         </p>
+
+        {linkConfig.secondary && (
+          <p className="text-sm text-muted-foreground">
+            {linkConfig.secondary.text && (
+              <>{linkConfig.secondary.text}{' '}</>
+            )}
+            <Link
+              href={linkConfig.secondary.href}
+              className="underline underline-offset-4 hover:text-primary"
+            >
+              {linkConfig.secondary.linkText}
+            </Link>
+          </p>
+        )}
       </div>
 
       {children}

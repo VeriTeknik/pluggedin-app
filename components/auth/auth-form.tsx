@@ -1,5 +1,4 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import React, { useEffect } from 'react';
@@ -468,17 +467,6 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
           >
             {buttonText}
           </Button>
-
-          {type === 'login' && (
-            <div className="text-center mt-2">
-              <Link 
-                href="/forgot-password"
-                className="text-sm text-zinc-500 hover:text-zinc-600 dark:text-zinc-400 dark:hover:text-zinc-300 transition-colors"
-              >
-                {t('auth.login.forgotPassword')}
-              </Link>
-            </div>
-          )}
         </form>
       </Form>
 
