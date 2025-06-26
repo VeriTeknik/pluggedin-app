@@ -61,6 +61,60 @@ export const trackServerInstallation = async (input: {
       source: input.source || McpServerSource.PLUGGEDIN,
     });
 
+    // Create notification for the server owner if it's a shared server
+    if (input.source === McpServerSource.COMMUNITY && input.externalId) {
+      try {
+        // Get the shared server details
+        const { sharedMcpServersTable } = await import('@/db/schema');
+        const { eq } = await import('drizzle-orm');
+        
+        const sharedServer = await db.query.sharedMcpServersTable.findFirst({
+          where: eq(sharedMcpServersTable.uuid, input.externalId),
+          with: {
+            profile: {
+              with: {
+                project: {
+                  with: {
+                    user: true
+                  }
+                }
+              }
+            }
+          }
+        });
+        
+        if (sharedServer && sharedServer.profile) {
+          // Get the installer's profile for the notification message
+          const installerProfile = await db.query.profilesTable.findFirst({
+            where: eq(profilesTable.uuid, input.profileUuid),
+            with: {
+              project: {
+                with: {
+                  user: true
+                }
+              }
+            }
+          });
+          
+          const installerName = installerProfile?.project?.user?.username || 'Someone';
+          
+          // Create notification for the server owner
+          const { createNotification } = await import('@/app/actions/notifications');
+          await createNotification({
+            profileUuid: sharedServer.profile_uuid,
+            type: 'SYSTEM',
+            title: 'Server Installed',
+            message: `${installerName} installed your shared server "${sharedServer.title}"`,
+            severity: 'SUCCESS',
+            link: `/social/servers` // Link to their shared servers page
+          });
+        }
+      } catch (notifError) {
+        console.error('Failed to create installation notification:', notifError);
+        // Continue even if notification fails
+      }
+    }
+
     // Update cache for external servers
     if (input.externalId && input.source) {
       await updateServerInCache({ externalId: input.externalId, source: input.source }).catch(error => {

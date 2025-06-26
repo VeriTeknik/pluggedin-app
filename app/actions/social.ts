@@ -821,6 +821,11 @@ export async function unshareServer(
       };
     }
     
+    // Get server details before deletion for notification
+    const serverDetails = await db.query.mcpServersTable.findFirst({
+      where: eq(mcpServersTable.uuid, sharedServer.server_uuid),
+    });
+    
     // Delete the shared server
     await db.delete(sharedMcpServersTable)
       .where(eq(sharedMcpServersTable.uuid, sharedServerUuid));
@@ -831,6 +836,21 @@ export async function unshareServer(
       action: 'UNSHARE_SERVER',
       metadata: { shared_server_uuid: sharedServerUuid },
     });
+    
+    // Create a notification about the unsharing
+    try {
+      const { createNotification } = await import('@/app/actions/notifications');
+      await createNotification({
+        profileUuid: sharedServer.profile_uuid,
+        type: 'SYSTEM',
+        title: 'Server Unshared',
+        message: `You have unshared the server "${sharedServer.title}". Users who already installed it will continue to have access.`,
+        severity: 'INFO',
+      });
+    } catch (notifError) {
+      console.error('Failed to create unshare notification:', notifError);
+      // Continue with the unshare even if notification fails
+    }
     
     // Revalidate paths
     const associatedUsername = await getUsernameForProfile(sharedServer.profile_uuid);
