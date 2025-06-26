@@ -54,10 +54,6 @@ export function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <div className="flex items-center gap-2 px-2 py-1.5">
-          <Avatar className="h-10 w-10 flex-shrink-0">
-            <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || 'User'} />
-            <AvatarFallback>{initials}</AvatarFallback>
-          </Avatar>
           <div className="min-w-0 flex-1 overflow-hidden">
             <DropdownMenuLabel className="p-0 truncate">
               {session?.user?.name || 'User'}
