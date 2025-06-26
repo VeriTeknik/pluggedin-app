@@ -212,7 +212,6 @@ export default function NotificationsPage() {
   }, [notifications, activeTab, severityFilter, searchTerm, sortOrder]);
 
   return (
-    <div className="container mx-auto py-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -450,6 +449,5 @@ export default function NotificationsPage() {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
   );
 }

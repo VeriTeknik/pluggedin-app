@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ImagePlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
@@ -279,9 +280,15 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
                 </Avatar>
                 <div>
                   <Label htmlFor="avatar" className="cursor-pointer">
-                    <div className="text-sm text-muted-foreground">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="flex items-center gap-2" 
+                      disabled={isUploading}
+                    >
+                      <ImagePlus className="h-4 w-4" />
                       {t('settings.profile.avatar')}
-                    </div>
+                    </Button>
                     <Input
                       id="avatar"
                       type="file"
