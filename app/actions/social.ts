@@ -758,42 +758,86 @@ export async function getSharedMcpServer(sharedServerUuid: string): Promise<Shar
 
 
 /**
+ * Helper function to check if a user owns a profile through the project relationship
+ * @param userId The user ID to check
+ * @param profileUuid The profile UUID to verify ownership of
+ * @returns True if the user owns the profile, false otherwise
+ */
+async function userOwnsProfile(userId: string, profileUuid: string): Promise<boolean> {
+  try {
+    const profile = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, profileUuid),
+      with: {
+        project: true
+      }
+    });
+    
+    return profile?.project?.user_id === userId;
+  } catch (error) {
+    console.error('Error checking profile ownership:', error);
+    return false;
+  }
+}
+
+/**
  * Unshare an MCP server from a profile
- * @param profileUuid The UUID of the profile
+ * @param profileUuid The UUID of the profile (for backward compatibility)
  * @param sharedServerUuid The UUID of the shared server
  * @returns Success status and error message if applicable
  */
-// Note: Sharing is still tied to profiles in this refactor. Adjust if needed.
 export async function unshareServer(
   profileUuid: string,
   sharedServerUuid: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Get the current user from session
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return {
+        success: false,
+        error: 'You must be logged in to unshare servers'
+      };
+    }
+    
+    // First, get the shared server to find which profile owns it
     const sharedServer = await db.query.sharedMcpServersTable.findFirst({
-      where: and(
-        eq(sharedMcpServersTable.uuid, sharedServerUuid),
-        eq(sharedMcpServersTable.profile_uuid, profileUuid)
-      ),
+      where: eq(sharedMcpServersTable.uuid, sharedServerUuid),
     });
+    
     if (!sharedServer) {
       return {
         success: false,
-        error: 'Shared server not found or you do not have permission to unshare it'
+        error: 'Shared server not found'
       };
     }
+    
+    // Check if the current user owns the profile that shared this server
+    const ownsProfile = await userOwnsProfile(session.user.id, sharedServer.profile_uuid);
+    
+    if (!ownsProfile) {
+      return {
+        success: false,
+        error: 'You do not have permission to unshare this server'
+      };
+    }
+    
+    // Delete the shared server
     await db.delete(sharedMcpServersTable)
       .where(eq(sharedMcpServersTable.uuid, sharedServerUuid));
+      
     await logAuditEvent({
-      profileUuid,
+      profileUuid: sharedServer.profile_uuid,
       type: 'PROFILE', // Use string literal
       action: 'UNSHARE_SERVER',
       metadata: { shared_server_uuid: sharedServerUuid },
     });
+    
     // Revalidate paths
-    const associatedUsername = await getUsernameForProfile(profileUuid);
+    const associatedUsername = await getUsernameForProfile(sharedServer.profile_uuid);
     if (associatedUsername) {
       revalidatePath(`/to/${associatedUsername}`);
     }
+    
     return { success: true };
   } catch (error) {
     console.error('Error unsharing server:', error);

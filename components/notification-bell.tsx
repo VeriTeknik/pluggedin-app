@@ -2,9 +2,12 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { enUS, hi,ja, nl, tr, zhCN } from 'date-fns/locale';
-import { Bell, Circle } from 'lucide-react';
+import { Bell, Circle, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { useNotifications } from '@/components/providers/notification-provider';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +24,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
   const { t, i18n } = useTranslation('notifications');
+  const router = useRouter();
   
   // Get date locale based on current language
   const getDateLocale = () => {
@@ -104,8 +108,15 @@ export function NotificationBell() {
                 key={notification.id}
                 className={`p-3 focus:bg-accent border-b last:border-b-0 cursor-pointer ${
                   !notification.read ? 'bg-accent/20' : ''
-                }`}
-                onClick={() => markAsRead(notification.id)}
+                } ${notification.link ? 'hover:bg-accent/50' : ''}`}
+                onClick={() => {
+                  markAsRead(notification.id);
+                  if (notification.link) {
+                    router.push(notification.link);
+                  } else {
+                    router.push('/notifications');
+                  }
+                }}
               >
                 <div className="flex flex-col gap-1 w-full">
                   <div className="flex items-center justify-between">
@@ -114,6 +125,9 @@ export function NotificationBell() {
                       <span className={`font-medium ${getColorByType(notification.type)}`}>
                         {notification.title}
                       </span>
+                      {notification.link && (
+                        <ExternalLink className="h-3 w-3 ml-1 text-muted-foreground" />
+                      )}
                     </div>
                     <span className="text-xs text-muted-foreground">
                       {formatDistanceToNow(new Date(notification.created_at), { 
@@ -122,17 +136,37 @@ export function NotificationBell() {
                       })}
                     </span>
                   </div>
-                  <p className="text-sm text-muted-foreground">{notification.message}</p>
-                  
-                  {notification.link && (
-                    <Link 
-                      href={notification.link} 
-                      className="text-xs text-primary hover:underline mt-1"
-                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                  <div className="text-sm text-muted-foreground notification-markdown">
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-4 mb-1">{children}</ul>,
+                        ol: ({ children }) => <ol className="list-decimal pl-4 mb-1">{children}</ol>,
+                        li: ({ children }) => <li className="mb-0.5">{children}</li>,
+                        a: ({ href, children }) => (
+                          <a 
+                            href={href} 
+                            className="text-primary hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {children}
+                          </a>
+                        ),
+                        code: ({ children }) => <code className="px-1 py-0.5 bg-muted rounded text-xs">{children}</code>,
+                        pre: ({ children }) => <pre className="p-2 bg-muted rounded text-xs overflow-x-auto mb-1">{children}</pre>,
+                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        h1: ({ children }) => <h1 className="text-base font-bold mb-1">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-sm font-bold mb-1">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
+                      }}
                     >
-                      {t('notifications.actions.viewDetails')}
-                    </Link>
-                  )}
+                      {notification.message}
+                    </ReactMarkdown>
+                  </div>
                   
                   {!notification.read && (
                     <div className="flex justify-end mt-1">

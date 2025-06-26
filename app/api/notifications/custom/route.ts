@@ -99,10 +99,11 @@ export async function POST(request: Request) {
         const userEmail = await getUserEmailFromProfile(auth.activeProfile.uuid);
         
         if (userEmail) {
+          const emailHtml = await generateCustomNotificationEmail(title, message, severity);
           const emailResult = await sendEmailHelper({
             to: userEmail,
             subject: `${title} - Plugged.in`,
-            html: generateCustomNotificationEmail(title, message, severity),
+            html: emailHtml,
           });
           
           emailSent = !!emailResult;
@@ -170,18 +171,45 @@ async function getUserEmailFromProfile(profileUuid: string): Promise<string | nu
 }
 
 /**
- * Generate HTML email for custom notifications
+ * Generate HTML email for custom notifications with markdown support
  */
-function generateCustomNotificationEmail(title: string, message: string, severity: string): string {
+async function generateCustomNotificationEmail(title: string, message: string, severity: string): Promise<string> {
+  const { marked } = await import('marked');
+  
+  // Configure marked for email-safe HTML
+  marked.setOptions({
+    breaks: true,
+    gfm: true,
+  });
+  
+  // Convert markdown to HTML
+  const htmlMessage = await marked(message);
+  
   const severityColors = {
-    INFO: '#3b82f6',
-    SUCCESS: '#10b981', 
-    WARNING: '#f59e0b',
-    ALERT: '#ef4444',
+    INFO: { primary: '#3b82f6', light: '#dbeafe', dark: '#1e40af' },
+    SUCCESS: { primary: '#10b981', light: '#d1fae5', dark: '#047857' }, 
+    WARNING: { primary: '#f59e0b', light: '#fef3c7', dark: '#b45309' },
+    ALERT: { primary: '#ef4444', light: '#fee2e2', dark: '#b91c1c' },
   };
   
-  const severityColor = severityColors[severity as keyof typeof severityColors] || '#6b7280';
+  const colors = severityColors[severity as keyof typeof severityColors] || { 
+    primary: '#6b7280', 
+    light: '#f3f4f6', 
+    dark: '#374151' 
+  };
+  
   const appName = process.env.EMAIL_FROM_NAME || 'Plugged.in';
+  const appUrl = process.env.NEXTAUTH_URL || 'https://pluggedin.com';
+  
+  // Severity icons as inline SVG
+  const severityIcons = {
+    INFO: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 16V12M12 8H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    SUCCESS: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M20 6L9 17L4 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    WARNING: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M10.29 3.86L1.82 18C1.64 18.32 1.55 18.68 1.55 19.05C1.55 20.12 2.38 21 3.45 21H20.55C21.62 21 22.45 20.12 22.45 19.05C22.45 18.68 22.36 18.32 22.18 18L13.71 3.86C13.3 3.17 12.55 2.75 11.73 2.75C10.91 2.75 10.16 3.17 9.75 3.86H10.29Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 9V13M12 17H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    ALERT: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/><path d="M12 8V12M12 16H12.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  };
+  
+  const icon = severityIcons[severity as keyof typeof severityIcons] || severityIcons.INFO;
   
   return `
     <!DOCTYPE html>
@@ -190,37 +218,157 @@ function generateCustomNotificationEmail(title: string, message: string, severit
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${title}</title>
+      <!--[if mso]>
+      <noscript>
+        <xml>
+          <o:OfficeDocumentSettings>
+            <o:PixelsPerInch>96</o:PixelsPerInch>
+          </o:OfficeDocumentSettings>
+        </xml>
+      </noscript>
+      <![endif]-->
     </head>
-    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f9f9f9; color: #333;">
-      <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="max-width: 600px; margin: 0 auto; padding: 20px;">
+    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f8fafc; color: #1e293b; -webkit-font-smoothing: antialiased;">
+      <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="background-color: #f8fafc; padding: 40px 20px;">
         <tr>
-          <td style="padding: 20px 0; text-align: center; background-color: #ffffff; border-radius: 8px 8px 0 0; border-bottom: 2px solid #f0f0f0;">
-            <h1 style="margin: 0; color: #333; font-size: 24px;">${appName}</h1>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 40px 30px; background-color: #ffffff;">
-            <div style="margin-bottom: 20px; padding: 15px; border-radius: 4px; border-left: 4px solid ${severityColor}; background-color: ${severityColor}10;">
-              <h2 style="margin: 0 0 10px; color: ${severityColor}; font-size: 18px; text-transform: uppercase; font-weight: bold;">
-                ${severity}
-              </h2>
-              <h3 style="margin: 0 0 15px; color: #333; font-size: 16px;">
-                ${title}
-              </h3>
-              <p style="margin: 0; line-height: 1.6; color: #555;">
-                ${message}
-              </p>
-            </div>
-            
-            <p style="margin: 20px 0 0; line-height: 1.6; font-size: 14px; color: #666;">
-              This notification was sent at: <code style="background-color: #f3f4f6; padding: 2px 4px; border-radius: 3px;">${new Date().toLocaleString()}</code>
-            </p>
-          </td>
-        </tr>
-        <tr>
-          <td style="padding: 20px 30px; background-color: #f3f4f6; border-radius: 0 0 8px 8px; text-align: center; color: #666; font-size: 14px;">
-            <p style="margin: 0 0 10px;">Thanks,<br>The ${appName} Team</p>
-            <p style="margin: 0; font-size: 12px; color: #999;">© ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
+          <td align="center">
+            <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); overflow: hidden;">
+              <!-- Header with gradient -->
+              <tr>
+                <td style="background: linear-gradient(135deg, ${colors.primary} 0%, ${colors.dark} 100%); padding: 32px; text-align: center;">
+                  <table role="presentation" cellspacing="0" cellpadding="0" width="100%">
+                    <tr>
+                      <td align="center">
+                        <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700; letter-spacing: -0.5px;">
+                          ${appName}
+                        </h1>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Severity Badge -->
+              <tr>
+                <td style="padding: 0 32px;">
+                  <div style="margin-top: -24px; margin-bottom: 24px;">
+                    <table role="presentation" cellspacing="0" cellpadding="0" align="center" style="background-color: ${colors.light}; border-radius: 8px; overflow: hidden;">
+                      <tr>
+                        <td style="padding: 12px 20px;">
+                          <table role="presentation" cellspacing="0" cellpadding="0">
+                            <tr>
+                              <td style="color: ${colors.primary}; vertical-align: middle; padding-right: 8px;">
+                                ${icon}
+                              </td>
+                              <td style="color: ${colors.dark}; font-size: 14px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; vertical-align: middle;">
+                                ${severity}
+                              </td>
+                            </tr>
+                          </table>
+                        </td>
+                      </tr>
+                    </table>
+                  </div>
+                </td>
+              </tr>
+              
+              <!-- Content -->
+              <tr>
+                <td style="padding: 0 32px 32px;">
+                  <!-- Title -->
+                  <h2 style="margin: 0 0 16px; color: #1e293b; font-size: 24px; font-weight: 600; line-height: 1.25;">
+                    ${title}
+                  </h2>
+                  
+                  <!-- Message with markdown styles -->
+                  <div style="color: #475569; font-size: 16px; line-height: 1.6;">
+                    <style>
+                      .email-content p { margin: 0 0 16px; }
+                      .email-content p:last-child { margin-bottom: 0; }
+                      .email-content ul, .email-content ol { margin: 0 0 16px; padding-left: 24px; }
+                      .email-content li { margin-bottom: 8px; }
+                      .email-content a { color: ${colors.primary}; text-decoration: none; font-weight: 500; }
+                      .email-content a:hover { text-decoration: underline; }
+                      .email-content code { background-color: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 14px; }
+                      .email-content pre { background-color: #f1f5f9; padding: 16px; border-radius: 8px; overflow-x: auto; margin: 0 0 16px; }
+                      .email-content pre code { background-color: transparent; padding: 0; }
+                      .email-content strong { font-weight: 600; color: #1e293b; }
+                      .email-content em { font-style: italic; }
+                      .email-content h1, .email-content h2, .email-content h3 { color: #1e293b; margin: 24px 0 12px; font-weight: 600; }
+                      .email-content h1 { font-size: 20px; }
+                      .email-content h2 { font-size: 18px; }
+                      .email-content h3 { font-size: 16px; }
+                      .email-content blockquote { border-left: 4px solid #e2e8f0; padding-left: 16px; margin: 16px 0; color: #64748b; font-style: italic; }
+                      .email-content hr { border: none; border-top: 1px solid #e2e8f0; margin: 24px 0; }
+                      .email-content table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+                      .email-content th, .email-content td { padding: 8px 12px; text-align: left; border: 1px solid #e2e8f0; }
+                      .email-content th { background-color: #f8fafc; font-weight: 600; }
+                    </style>
+                    <div class="email-content">
+                      ${htmlMessage}
+                    </div>
+                  </div>
+                  
+                  <!-- Timestamp -->
+                  <div style="margin-top: 24px; padding-top: 24px; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; color: #64748b; font-size: 14px;">
+                      Sent on <strong>${new Date().toLocaleDateString('en-US', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                      })}</strong> at <strong>${new Date().toLocaleTimeString('en-US', { 
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        hour12: true 
+                      })}</strong>
+                    </p>
+                  </div>
+                  
+                  <!-- Call to Action -->
+                  <div style="margin-top: 32px; text-align: center;">
+                    <a href="${appUrl}/notifications" style="display: inline-block; padding: 12px 24px; background-color: ${colors.primary}; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 8px; font-size: 16px;">
+                      View All Notifications
+                    </a>
+                  </div>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f8fafc; padding: 32px; text-align: center; border-top: 1px solid #e2e8f0;">
+                  <p style="margin: 0 0 8px; color: #64748b; font-size: 14px;">
+                    Thanks for using ${appName}!
+                  </p>
+                  <p style="margin: 0 0 16px; color: #94a3b8; font-size: 12px;">
+                    © ${new Date().getFullYear()} ${appName}. All rights reserved.
+                  </p>
+                  
+                  <!-- Social Links (optional) -->
+                  <table role="presentation" cellspacing="0" cellpadding="0" align="center">
+                    <tr>
+                      <td style="padding: 0 8px;">
+                        <a href="${appUrl}" style="color: #94a3b8; text-decoration: none; font-size: 12px;">
+                          Website
+                        </a>
+                      </td>
+                      <td style="color: #cbd5e1;">•</td>
+                      <td style="padding: 0 8px;">
+                        <a href="${appUrl}/docs" style="color: #94a3b8; text-decoration: none; font-size: 12px;">
+                          Documentation
+                        </a>
+                      </td>
+                      <td style="color: #cbd5e1;">•</td>
+                      <td style="padding: 0 8px;">
+                        <a href="${appUrl}/support" style="color: #94a3b8; text-decoration: none; font-size: 12px;">
+                          Support
+                        </a>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+            </table>
           </td>
         </tr>
       </table>

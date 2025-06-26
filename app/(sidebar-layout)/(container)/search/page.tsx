@@ -411,6 +411,7 @@ function SearchContent() {
           items={getSortedResults() || {}}
           installedServerMap={installedServerMap}
           currentUsername={currentUsername} // Pass the correct username
+          profileUuid={profileUuid}
           onRefreshNeeded={() => mutate()}
         />
       )}

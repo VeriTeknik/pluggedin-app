@@ -6,6 +6,8 @@ import { Bell, Check, CheckSquare, Circle, RefreshCw, Square, Trash2 } from 'luc
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 import { 
   deleteAllNotifications, 
@@ -398,9 +400,55 @@ export default function NotificationsPage() {
                                   )}
                                 </span>
                               </div>
-                              <p className={`text-muted-foreground ${notification.completed ? 'line-through opacity-60' : ''}`}>
-                                {notification.message}
-                              </p>
+                              <div className={`text-muted-foreground ${notification.completed ? 'line-through opacity-60' : ''} notification-markdown-page`}>
+                                <ReactMarkdown 
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                                    ul: ({ children }) => <ul className="list-disc pl-5 mb-2">{children}</ul>,
+                                    ol: ({ children }) => <ol className="list-decimal pl-5 mb-2">{children}</ol>,
+                                    li: ({ children }) => <li className="mb-1">{children}</li>,
+                                    a: ({ href, children }) => (
+                                      <a 
+                                        href={href} 
+                                        className="text-primary hover:underline"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                      >
+                                        {children}
+                                      </a>
+                                    ),
+                                    code: ({ children }) => <code className="px-1.5 py-0.5 bg-muted rounded text-sm">{children}</code>,
+                                    pre: ({ children }) => <pre className="p-3 bg-muted rounded text-sm overflow-x-auto mb-2">{children}</pre>,
+                                    strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                                    em: ({ children }) => <em className="italic">{children}</em>,
+                                    h1: ({ children }) => <h1 className="text-lg font-bold mb-2 mt-4 first:mt-0">{children}</h1>,
+                                    h2: ({ children }) => <h2 className="text-base font-bold mb-2 mt-3 first:mt-0">{children}</h2>,
+                                    h3: ({ children }) => <h3 className="text-sm font-semibold mb-1 mt-2 first:mt-0">{children}</h3>,
+                                    blockquote: ({ children }) => (
+                                      <blockquote className="border-l-4 border-muted-foreground/30 pl-4 italic my-2">
+                                        {children}
+                                      </blockquote>
+                                    ),
+                                    hr: () => <hr className="my-4 border-muted-foreground/30" />,
+                                    table: ({ children }) => (
+                                      <div className="overflow-x-auto mb-2">
+                                        <table className="min-w-full divide-y divide-border">{children}</table>
+                                      </div>
+                                    ),
+                                    th: ({ children }) => (
+                                      <th className="px-3 py-2 text-left text-xs font-medium uppercase tracking-wider bg-muted">
+                                        {children}
+                                      </th>
+                                    ),
+                                    td: ({ children }) => (
+                                      <td className="px-3 py-2 text-sm border-b">{children}</td>
+                                    ),
+                                  }}
+                                >
+                                  {notification.message}
+                                </ReactMarkdown>
+                              </div>
                               <div className="flex justify-between items-center mt-3">
                                 {notification.link ? (
                                   <Link

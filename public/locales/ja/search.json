@@ -8,7 +8,13 @@
     },
     "loading": "検索を読み込み中...",
     "noResults": "結果が見つかりません",
-    "error": "検索結果の読み込みエラー",
+    "error": {
+      "general": "検索結果の読み込みエラー",
+      "profileNotFound": "プロファイルが見つかりません。サーバーの共有を解除するにはプロファイルを選択してください。",
+      "missingShareId": "共有を解除できません：共有情報がありません。",
+      "unshareFailed": "サーバーの共有解除に失敗しました"
+    },
+    "unshareSuccess": "{{name}}の共有を解除しました",
     "sort": "並べ替え",
     "sortBy": "並べ替え基準",
     "sortOptions": {

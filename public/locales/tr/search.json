@@ -8,7 +8,13 @@
     },
     "loading": "Arama yükleniyor...",
     "noResults": "Sonuç bulunamadı",
-    "error": "Arama sonuçları yüklenirken hata oluştu",
+    "error": {
+      "general": "Arama sonuçları yüklenirken hata oluştu",
+      "profileNotFound": "Profil bulunamadı. Sunucuları paylaşımdan kaldırmak için lütfen bir profil seçin.",
+      "missingShareId": "Paylaşım kaldırılamadı: Paylaşım bilgisi eksik.",
+      "unshareFailed": "Sunucu paylaşımı kaldırılamadı"
+    },
+    "unshareSuccess": "{{name}} başarıyla paylaşımdan kaldırıldı",
     "sort": "Sırala",
     "sortBy": "Sıralama kriteri",
     "sortOptions": {

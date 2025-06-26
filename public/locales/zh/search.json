@@ -8,7 +8,13 @@
     },
     "loading": "正在加载搜索...",
     "noResults": "未找到结果",
-    "error": "加载搜索结果时出错",
+    "error": {
+      "general": "加载搜索结果时出错",
+      "profileNotFound": "找不到配置文件。请选择一个配置文件以取消共享服务器。",
+      "missingShareId": "无法取消共享：缺少共享信息。",
+      "unshareFailed": "取消共享服务器失败"
+    },
+    "unshareSuccess": "成功取消共享 {{name}}",
     "sort": "排序",
     "sortBy": "排序方式",
     "sortOptions": {

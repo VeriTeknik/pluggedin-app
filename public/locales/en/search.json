@@ -8,7 +8,13 @@
     },
     "loading": "Loading search...",
     "noResults": "No results found",
-    "error": "Error loading search results",
+    "error": {
+      "general": "Error loading search results",
+      "profileNotFound": "Profile not found. Please select a profile to unshare servers.",
+      "missingShareId": "Cannot unshare: Missing share information.",
+      "unshareFailed": "Failed to unshare server"
+    },
+    "unshareSuccess": "Successfully unshared {{name}}",
     "sort": "Sort",
     "sortBy": "Sort by",
     "sortOptions": {

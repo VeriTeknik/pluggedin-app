@@ -8,7 +8,13 @@
     },
     "loading": "Zoeken laden...",
     "noResults": "Geen resultaten gevonden",
-    "error": "Fout bij het laden van zoekresultaten",
+    "error": {
+      "general": "Fout bij het laden van zoekresultaten",
+      "profileNotFound": "Profiel niet gevonden. Selecteer een profiel om servers te delen.",
+      "missingShareId": "Kan delen niet ongedaan maken: Deel-informatie ontbreekt.",
+      "unshareFailed": "Server delen ongedaan maken mislukt"
+    },
+    "unshareSuccess": "{{name}} succesvol niet meer gedeeld",
     "sort": "Sorteren",
     "sortBy": "Sorteren op",
     "sortOptions": {

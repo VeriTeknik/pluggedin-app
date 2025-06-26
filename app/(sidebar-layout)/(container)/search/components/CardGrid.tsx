@@ -284,12 +284,12 @@ export default function CardGrid({
       });
       return;
     }
-    // Assuming the item contains the shared_uuid from the search index
-    const sharedServerUuid = item.shared_uuid; 
+    // For community servers, external_id contains the shared server UUID
+    const sharedServerUuid = item.source === McpServerSource.COMMUNITY ? item.external_id : item.shared_uuid;
     if (!sharedServerUuid) {
        toast({
          title: t('common.error'),
-         description: t('search.error.missingShareId'), // Need this translation key
+         description: t('search.error.missingShareId'),
          variant: 'destructive',
        });
        return;
@@ -302,7 +302,10 @@ export default function CardGrid({
           title: t('common.success'),
           description: t('search.unshareSuccess', { name: item.name }), // Need this translation key
         });
-        onRefreshNeeded?.(); // Refresh the search results
+        // Add a small delay before refreshing to allow the search index to update
+        setTimeout(() => {
+          onRefreshNeeded?.(); // Refresh the search results
+        }, 500);
       } else {
         throw new Error(result.error || t('search.error.unshareFailed')); // Need this translation key
       }
