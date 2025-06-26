@@ -22,7 +22,9 @@
     "confirm": "Onayla",
     "confirmDelete": "Bunu silmek istediğinizden emin misiniz?",
     "errors": {
-      "unexpected": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin."
+      "unexpected": "Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.",
+      "pageNotFound": "Sayfa Bulunamadı",
+      "pageNotFoundMessage": "Aradığınız bağlantı fişi çekilmiş veya mevcut değil."
     },
     "loading": "Yükleniyor...",
     "notAvailable": "Mevcut Değil",
@@ -30,7 +32,13 @@
     "backToServerList": "Sunucu Listesine Dön",
     "viewSchema": "Şemayı Görüntüle",
     "delete": "Sil",
-    "deleting": "Siliniyor..."
+    "deleting": "Siliniyor...",
+    "pluggedinLogo": "plugged.in Logosu"
+  },
+  "actions": {
+    "goHome": "Ana Sayfaya Git",
+    "login": "Giriş Yap",
+    "playground": "Oyun Alanı"
   },
   "library": {
     "title": "Kütüphane"

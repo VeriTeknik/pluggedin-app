@@ -22,7 +22,9 @@
     "confirm": "पुष्टि करें",
     "confirmDelete": "क्या आप वाकई इसे हटाना चाहते हैं?",
     "errors": {
-      "unexpected": "एक अप्रत्याशित त्रुटि हुई। कृपया पुनः प्रयास करें।"
+      "unexpected": "एक अप्रत्याशित त्रुटि हुई। कृपया पुनः प्रयास करें।",
+      "pageNotFound": "पृष्ठ नहीं मिला",
+      "pageNotFoundMessage": "आप जिस कनेक्शन की तलाश कर रहे हैं वह अनप्लग है या मौजूद नहीं है।"
     },
     "loading": "लोड हो रहा है...",
     "notAvailable": "लागू नहीं",
@@ -30,7 +32,13 @@
     "backToServerList": "सर्वर सूची पर वापस जाएं",
     "viewSchema": "स्कीमा देखें",
     "delete": "हटाएं",
-    "deleting": "हटाया जा रहा है..."
+    "deleting": "हटाया जा रहा है...",
+    "pluggedinLogo": "plugged.in लोगो"
+  },
+  "actions": {
+    "goHome": "होम पेज पर जाएं",
+    "login": "लॉगिन करें",
+    "playground": "प्लेग्राउंड"
   },
   "library": {
     "title": "पुस्तकालय"

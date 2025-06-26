@@ -22,7 +22,9 @@
     "confirm": "Bevestigen",
     "confirmDelete": "Weet u zeker dat u dit wilt verwijderen?",
     "errors": {
-      "unexpected": "Er is een onverwachte fout opgetreden. Probeer het opnieuw."
+      "unexpected": "Er is een onverwachte fout opgetreden. Probeer het opnieuw.",
+      "pageNotFound": "Pagina niet gevonden",
+      "pageNotFoundMessage": "De verbinding die je zoekt lijkt losgekoppeld te zijn of bestaat niet."
     },
     "loading": "Laden...",
     "notAvailable": "N.v.t.",
@@ -30,7 +32,13 @@
     "backToServerList": "Terug naar serverlijst",
     "viewSchema": "Schema bekijken",
     "delete": "Verwijderen",
-    "deleting": "Verwijderen..."
+    "deleting": "Verwijderen...",
+    "pluggedinLogo": "plugged.in Logo"
+  },
+  "actions": {
+    "goHome": "Naar startpagina",
+    "login": "Inloggen",
+    "playground": "Speeltuin"
   },
   "library": {
     "title": "Bibliotheek"

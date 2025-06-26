@@ -22,7 +22,9 @@
     "confirm": "確認",
     "confirmDelete": "これを削除してもよろしいですか？",
     "errors": {
-      "unexpected": "予期せぬエラーが発生しました。もう一度お試しください。"
+      "unexpected": "予期せぬエラーが発生しました。もう一度お試しください。",
+      "pageNotFound": "ページが見つかりません",
+      "pageNotFoundMessage": "お探しの接続はプラグが抜かれているか、存在しません。"
     },
     "loading": "読み込み中...",
     "notAvailable": "該当なし",
@@ -30,7 +32,13 @@
     "backToServerList": "サーバーリストに戻る",
     "viewSchema": "スキーマを表示",
     "delete": "削除",
-    "deleting": "削除中..."
+    "deleting": "削除中...",
+    "pluggedinLogo": "plugged.in ロゴ"
+  },
+  "actions": {
+    "goHome": "ホームに戻る",
+    "login": "ログイン",
+    "playground": "プレイグラウンド"
   },
   "library": {
     "title": "ライブラリ"
