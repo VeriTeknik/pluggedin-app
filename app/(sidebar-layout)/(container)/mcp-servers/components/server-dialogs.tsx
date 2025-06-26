@@ -44,18 +44,21 @@ export function ImportDialog({ open, onOpenChange, onImport, isSubmitting }: Imp
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[900px] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{t('mcpServers.import.title')}</DialogTitle>
           <DialogDescription>
             {t('mcpServers.import.description')}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 mt-4">
-          <div className="bg-muted/30 p-4 rounded-md">
-            <h4 className="text-sm font-medium mb-2">{t('mcpServers.import.jsonFormat')}</h4>
-            <pre className="p-2 bg-slate-900 text-slate-50 rounded-md text-xs overflow-x-auto whitespace-pre-wrap break-all">
-              {`{
+        <div className="mt-4">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* JSON Format Example - Left Side */}
+            <div className="w-full lg:w-1/2">
+              <h4 className="text-sm font-medium mb-2">{t('mcpServers.import.jsonFormat')}</h4>
+              <ScrollArea className="h-[400px] border rounded-md">
+                <pre className="p-3 bg-slate-900 text-slate-50 rounded-md text-xs">
+                  {`{
   "mcpServers": {
     "CommandBasedServerName": {
       "command": "command",
@@ -86,28 +89,35 @@ export function ImportDialog({ open, onOpenChange, onImport, isSubmitting }: Imp
     }
   }
 }`}
-            </pre>
-          </div>
-          <div>
-            <ScrollArea className="h-[200px] rounded-md border border-input">
-              <Textarea
-                value={importJson}
-                onChange={(e) => {
-                  setImportJson(e.target.value);
-                  setImportError('');
-                }}
-                placeholder={t('mcpServers.import.jsonPlaceholder')}
-                className="font-mono text-sm resize-none border-0 h-full p-4"
-              />
-            </ScrollArea>
-            {importError && (
-              <div className="mt-2 text-sm text-destructive flex items-start p-2 rounded-md bg-destructive/10">
-                <XCircle className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" />
-                <p>{importError}</p>
+                </pre>
+              </ScrollArea>
+            </div>
+
+            {/* JSON Input Area - Right Side */}
+            <div className="w-full lg:w-1/2">
+              <h4 className="text-sm font-medium mb-2">{t('mcpServers.import.jsonPlaceholder')}</h4>
+              <div className="rounded-md h-[400px]">
+                <Textarea
+                  value={importJson}
+                  onChange={(e) => {
+                    setImportJson(e.target.value);
+                    setImportError('');
+                  }}
+                  placeholder={t('mcpServers.import.jsonPlaceholder')}
+                  className="font-mono text-sm w-full h-full resize-none rounded-md p-4"
+                  style={{ minHeight: '100%' }}
+                />
               </div>
-            )}
+              {importError && (
+                <div className="mt-2 text-sm text-destructive flex items-start p-2 rounded-md bg-destructive/10">
+                  <XCircle className="h-4 w-4 mr-2 flex-shrink-0 mt-0.5" />
+                  <p>{importError}</p>
+                </div>
+              )}
+            </div>
           </div>
-          <div className="flex justify-end space-x-2">
+
+          <div className="flex justify-end space-x-2 mt-4">
             <Button
               type="button"
               variant="outline"
@@ -207,9 +217,9 @@ export function ExportDialog({ open, onOpenChange, exportJson }: ExportDialogPro
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
-                      className="bg-white"
+                      className="text-foreground"
                       onClick={copyToClipboard}
                     >
                       <Copy className="h-3.5 w-3.5 mr-1" />
