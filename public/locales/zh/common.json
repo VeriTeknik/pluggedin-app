@@ -22,7 +22,9 @@
     "confirm": "确认",
     "confirmDelete": "您确定要删除吗？",
     "errors": {
-      "unexpected": "发生意外错误。请重试。"
+      "unexpected": "发生意外错误。请重试。",
+      "pageNotFound": "页面未找到",
+      "pageNotFoundMessage": "您寻找的连接似乎已断开或不存在。"
     },
     "loading": "加载中...",
     "notAvailable": "不适用",
@@ -30,7 +32,13 @@
     "backToServerList": "返回服务器列表",
     "viewSchema": "查看模式",
     "delete": "删除",
-    "deleting": "删除中..."
+    "deleting": "删除中...",
+    "pluggedinLogo": "plugged.in 标志"
+  },
+  "actions": {
+    "goHome": "返回首页",
+    "login": "登录",
+    "playground": "游乐场"
   },
   "library": {
     "title": "资料库"

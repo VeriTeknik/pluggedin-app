@@ -23,7 +23,9 @@
     "confirm": "Confirm",
     "confirmDelete": "Are you sure you want to delete this?",
     "errors": {
-      "unexpected": "An unexpected error occurred. Please try again."
+      "unexpected": "An unexpected error occurred. Please try again.",
+      "pageNotFound": "Page Not Found",
+      "pageNotFoundMessage": "The connection you're looking for seems to be unplugged or doesn't exist."
     },
     "loading": "Loading...",
     "notAvailable": "N/A",
@@ -31,7 +33,13 @@
     "backToServerList": "Back to Server List",
     "viewSchema": "View Schema",
     "delete": "Delete",
-    "deleting": "Deleting..."
+    "deleting": "Deleting...",
+    "pluggedinLogo": "plugged.in Logo"
+  },
+  "actions": {
+    "goHome": "Go Home",
+    "login": "Login",
+    "playground": "Playground"
   },
   "library": {
     "title": "Library"

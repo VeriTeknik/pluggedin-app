@@ -41,24 +41,28 @@ export function UserMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center w-full gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent focus:outline-none">
-        <div className="flex items-center gap-2 flex-1">
-          <Avatar className="h-6 w-6">
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <Avatar className="h-8 w-8 border-2 border-background flex-shrink-0">
             <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || 'User'} />
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
+            <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
           </Avatar>
-          <div className="text-left flex-1 overflow-hidden">
+          <div className="text-left flex-1 overflow-hidden min-w-0">
             <p className="text-sm font-medium truncate">{session?.user?.name || 'User'}</p>
             <p className="text-xs text-muted-foreground truncate">{session?.user?.email}</p>
           </div>
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>
-          {session?.user?.name || 'User'}
-        </DropdownMenuLabel>
-        <DropdownMenuLabel className="font-normal text-xs text-muted-foreground">
-          {session?.user?.email}
-        </DropdownMenuLabel>
+        <div className="flex items-center gap-2 px-2 py-1.5">
+          <div className="min-w-0 flex-1 overflow-hidden">
+            <DropdownMenuLabel className="p-0 truncate">
+              {session?.user?.name || 'User'}
+            </DropdownMenuLabel>
+            <DropdownMenuLabel className="font-normal text-xs text-muted-foreground p-0 truncate">
+              {session?.user?.email}
+            </DropdownMenuLabel>
+          </div>
+        </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/settings" className="flex items-center cursor-pointer">

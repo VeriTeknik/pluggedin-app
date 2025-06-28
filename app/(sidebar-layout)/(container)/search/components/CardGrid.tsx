@@ -62,37 +62,37 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
   switch (source) {
     case McpServerSource.SMITHERY:
       return (
-        <Badge variant="outline" className="gap-1">
-          <Database className="h-3 w-3" />
-          Smithery
+        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">
+          <Database className="h-3 w-3 flex-shrink-0" />
+          <span className="inline-block">Smithery</span>
         </Badge>
       );
     case McpServerSource.NPM:
       return (
-        <Badge variant="outline" className="gap-1">
-          <Package className="h-3 w-3" />
-          NPM
+        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">
+          <Package className="h-3 w-3 flex-shrink-0" />
+          <span className="inline-block">NPM</span>
         </Badge>
       );
     case McpServerSource.GITHUB:
       return (
-        <Badge variant="outline" className="gap-1">
-          <Github className="h-3 w-3" />
-          GitHub
+        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">
+          <Github className="h-3 w-3 flex-shrink-0" />
+          <span className="inline-block">GitHub</span>
         </Badge>
       );
     case McpServerSource.COMMUNITY:
       return (
-        <Badge variant="outline" className="gap-1 bg-blue-100 dark:bg-blue-900">
-          <Users className="h-3 w-3" />
-          Community
+        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1 bg-blue-100 dark:bg-blue-900">
+          <Users className="h-3 w-3 flex-shrink-0" />
+          <span className="inline-block">Community</span>
         </Badge>
       );
     default:
       return (
-        <Badge variant="outline" className="gap-1">
-          <Database className="h-3 w-3" />
-          PluggedIn
+        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">
+          <Database className="h-3 w-3 flex-shrink-0" />
+          <span className="inline-block">PluggedIn</span>
         </Badge>
       );
   }
@@ -342,11 +342,13 @@ export default function CardGrid({
             }}
           >
             <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <CardTitle className="mr-2">{item.name}</CardTitle>
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
+                <CardTitle className="mr-2 break-words">{item.name}</CardTitle>
+                <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
                   {isInstalled && (
-                    <Badge variant="secondary" className="pointer-events-none">Installed</Badge>
+                    <Badge variant="secondary" className="pointer-events-none whitespace-normal text-center h-auto py-1">
+                      <span className="inline-block">Installed</span>
+                    </Badge>
                   )}
                   <SourceBadge source={item.source} />
                 </div>
@@ -355,17 +357,17 @@ export default function CardGrid({
             </CardHeader>
             <CardContent className='flex-grow pb-2'>
               {item.package_name && (
-                <p className='text-sm text-muted-foreground mb-2'>
+                <p className='text-sm text-muted-foreground mb-2 overflow-wrap-normal break-words'>
                   {t('search.card.package')}: {item.package_name}
                 </p>
               )}
               {item.command && (
-                <p className='text-sm text-muted-foreground mb-2'>
+                <p className='text-sm text-muted-foreground mb-2 overflow-wrap-normal break-words'>
                   {t('search.card.command')}: {item.command}
                 </p>
               )}
               {item.args?.length > 0 && (
-                <p className='text-sm text-muted-foreground mb-2'>
+                <p className='text-sm text-muted-foreground mb-2 overflow-wrap-normal break-words'>
                   {t('search.card.exampleArgs')}: {item.args.join(' ')}
                 </p>
               )}
