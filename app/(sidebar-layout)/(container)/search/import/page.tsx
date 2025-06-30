@@ -132,31 +132,38 @@ export default function ImportPage() {
       setProgress(100);
 
       if (result.success && result.server) {
-        setAnalysisResult(result);
-        
         // Transform the server data to match ExtractionResult format
         const extractionResult = {
-          extracted_config: {
+          server_detail: {
             name: result.server.name,
             description: result.server.description,
             command: result.server.command,
             args: result.server.args || [],
-            env: result.server.env || {},
+            env: result.server.env || [],
             capabilities: result.server.capabilities || {
               tools: false,
               resources: false,
               prompts: false,
               logging: false
             },
-            transport: result.server.transport as 'stdio' | 'sse' | 'streamable-http',
+            transport: result.server.transport,
             url: result.server.url,
+            installation: result.server.installation,
+            requirements: result.server.requirements,
+            packages: result.server.packages,
+            repository: result.server.repository,
+            version_detail: result.server.metadata?.version ? {
+              version: result.server.metadata.version,
+              release_date: new Date().toISOString(),
+              is_latest: true
+            } : undefined,
           },
           confidence_scores: result.extraction?.confidence || { overall: 0.5, completeness: 0.5 },
           warnings: result.extraction?.warnings || []
         };
         
         setAnalysisResult(extractionResult);
-        setExtractedConfig(extractionResult.extracted_config);
+        setExtractedConfig(extractionResult.server_detail);
         
         toast({
           title: 'Success',

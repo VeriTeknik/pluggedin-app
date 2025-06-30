@@ -36,16 +36,20 @@ export interface ExtractedConfig {
   description?: string;
   command?: string;
   args?: string[];
-  env?: Record<string, {
+  env?: Array<{
+    name: string;
     description: string;
     required: boolean;
     example: string;
+    default?: string;
+    help_url?: string;
   }>;
   installation?: {
     npm?: string;
     pip?: string;
     docker?: string;
     binary?: string;
+    source?: string;
   };
   capabilities?: {
     tools?: boolean;
@@ -53,17 +57,49 @@ export interface ExtractedConfig {
     prompts?: boolean;
     logging?: boolean;
   };
-  transport?: 'stdio' | 'sse' | 'streamable-http';
+  transport?: {
+    type: 'stdio' | 'http' | 'sse';
+    config?: any;
+  } | 'stdio' | 'sse' | 'streamable-http';
   url?: string;
+  repository?: {
+    url: string;
+    source: string;
+    id: string;
+  };
+  packages?: Array<{
+    registry_name: string;
+    name: string;
+    version: string;
+    package_arguments: string[];
+    environment_variables: any[];
+  }>;
+  requirements?: {
+    runtime: string;
+    version?: string;
+    dependencies?: string[];
+  };
+  version_detail?: {
+    version: string;
+    release_date: string;
+    is_latest: boolean;
+  };
 }
 
 export interface ExtractionResult {
-  extracted_config: ExtractedConfig;
+  server_detail?: ExtractedConfig;
+  extracted_config?: ExtractedConfig; // For backward compatibility
   confidence_scores: {
     overall: number;
     completeness: number;
   };
   warnings?: string[];
+  source_files?: string[];
+  extraction_metadata?: {
+    extracted_at: string;
+    model: string;
+    sources: string[];
+  };
 }
 
 interface DynamicServerConfigFormProps {
@@ -87,7 +123,7 @@ export function DynamicServerConfigForm({
       type: McpServerType.STDIO,
       command: '',
       args: [] as string[],
-      env: [] as { key: string; value: string; description?: string }[],
+      env: [] as { key: string; value: string; description?: string; required?: boolean; help_url?: string }[],
       url: '',
       capabilities: {
         tools: false,
@@ -110,19 +146,25 @@ export function DynamicServerConfigForm({
 
   // Update form when extraction result changes
   useEffect(() => {
-    if (extractionResult?.extracted_config) {
-      const config = extractionResult.extracted_config;
-      
+    const config = extractionResult?.server_detail || extractionResult?.extracted_config;
+    if (config) {
       // Basic fields
       if (config.name) form.setValue('name', config.name);
       if (config.description) form.setValue('description', config.description);
       if (config.command) form.setValue('command', config.command);
       if (config.url) form.setValue('url', config.url);
       
-      // Set type based on transport or URL
-      if (config.transport === 'streamable-http' || config.url) {
+      // Set type based on transport
+      let transportType = 'stdio';
+      if (typeof config.transport === 'object') {
+        transportType = config.transport.type;
+      } else if (typeof config.transport === 'string') {
+        transportType = config.transport;
+      }
+      
+      if (transportType === 'http' || transportType === 'streamable-http' || config.url) {
         form.setValue('type', McpServerType.STREAMABLE_HTTP);
-      } else if (config.transport === 'sse') {
+      } else if (transportType === 'sse') {
         form.setValue('type', McpServerType.SSE);
       } else {
         form.setValue('type', McpServerType.STDIO);
@@ -133,13 +175,26 @@ export function DynamicServerConfigForm({
         form.setValue('args', config.args);
       }
       
-      // Environment variables
+      // Environment variables - handle both array and object formats
       if (config.env) {
-        const envArray = Object.entries(config.env).map(([key, info]) => ({
-          key,
-          value: info.example || '',
-          description: info.description,
-        }));
+        let envArray: any[] = [];
+        if (Array.isArray(config.env)) {
+          envArray = config.env.map(env => ({
+            key: env.name,
+            value: env.example || env.default || '',
+            description: env.description,
+            required: env.required,
+            help_url: env.help_url,
+          }));
+        } else {
+          // Legacy object format
+          envArray = Object.entries(config.env).map(([key, info]: [string, any]) => ({
+            key,
+            value: info.example || '',
+            description: info.description,
+            required: info.required,
+          }));
+        }
         form.setValue('env', envArray);
       }
       
@@ -204,6 +259,49 @@ export function DynamicServerConfigForm({
               )}
             </CardContent>
           </Card>
+        )}
+
+        {/* Installation & Requirements Info */}
+        {extractionResult && (extractionResult.server_detail || extractionResult.extracted_config) && (
+          <>
+            {((extractionResult.server_detail || extractionResult.extracted_config)?.installation || 
+              (extractionResult.server_detail || extractionResult.extracted_config)?.requirements) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">Installation & Requirements</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {(extractionResult.server_detail || extractionResult.extracted_config)?.installation && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Installation Methods</h4>
+                      <div className="space-y-1">
+                        {Object.entries((extractionResult.server_detail || extractionResult.extracted_config)?.installation || {}).map(([method, command]) => (
+                          <div key={method} className="text-sm">
+                            <Badge variant="outline" className="mr-2">{method}</Badge>
+                            <code className="text-xs bg-muted px-1 py-0.5 rounded">{command}</code>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {(extractionResult.server_detail || extractionResult.extracted_config)?.requirements && (
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Runtime Requirements</h4>
+                      <div className="text-sm text-muted-foreground">
+                        <Badge variant="outline" className="mr-2">
+                          {(extractionResult.server_detail || extractionResult.extracted_config)?.requirements.runtime}
+                        </Badge>
+                        {(extractionResult.server_detail || extractionResult.extracted_config)?.requirements.version && (
+                          <span>Version: {(extractionResult.server_detail || extractionResult.extracted_config)?.requirements.version}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
 
         {/* Basic Information */}
@@ -373,10 +471,35 @@ export function DynamicServerConfigForm({
                 <div key={field.id} className="space-y-2 p-4 border rounded-lg">
                   <div className="flex gap-2">
                     <div className="flex-1 space-y-2">
-                      <Input
-                        {...form.register(`env.${index}.key`)}
-                        placeholder="VARIABLE_NAME"
-                      />
+                      <div className="flex items-center gap-2">
+                        <Input
+                          {...form.register(`env.${index}.key`)}
+                          placeholder="VARIABLE_NAME"
+                          className="flex-1"
+                        />
+                        {form.watch(`env.${index}.required`) && (
+                          <Badge variant="destructive" className="text-xs">Required</Badge>
+                        )}
+                        {form.watch(`env.${index}.help_url`) && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <a 
+                                  href={form.watch(`env.${index}.help_url`)} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="text-blue-500 hover:text-blue-600"
+                                >
+                                  <HelpCircle className="h-4 w-4" />
+                                </a>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Click for documentation</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
+                      </div>
                       <Input
                         {...form.register(`env.${index}.value`)}
                         placeholder="Value or example"
@@ -403,7 +526,7 @@ export function DynamicServerConfigForm({
                 type="button"
                 variant="outline"
                 className="w-full"
-                onClick={() => appendEnv({ key: '', value: '', description: '' })}
+                onClick={() => appendEnv({ key: '', value: '', description: '', required: false, help_url: '' })}
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Environment Variable
