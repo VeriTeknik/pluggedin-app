@@ -12,6 +12,7 @@ import {
   timestamp,
   unique,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 import { locales } from '@/i18n/config';
@@ -1033,6 +1034,42 @@ export const embeddedChatsRelations = relations(embeddedChatsTable, ({ one }) =>
   profile: one(profilesTable, {
     fields: [embeddedChatsTable.profile_uuid],
     references: [profilesTable.uuid],
+  }),
+}));
+
+// GitHub App installations table
+export const githubAppInstallationsTable = pgTable(
+  'github_app_installations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    user_id: varchar('user_id', { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    installation_id: varchar('installation_id', { length: 255 }).notNull(),
+    access_token: text('access_token'),
+    token_type: varchar('token_type', { length: 50 }),
+    expires_at: timestamp('expires_at', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    userIdIdx: index('idx_github_app_installations_user_id').on(table.user_id),
+    installationIdIdx: index('idx_github_app_installations_installation_id').on(table.installation_id),
+    userInstallationUnique: unique('github_app_installations_user_installation_unique').on(
+      table.user_id,
+      table.installation_id
+    ),
+  })
+);
+
+export const githubAppInstallationsRelations = relations(githubAppInstallationsTable, ({ one }) => ({
+  user: one(users, {
+    fields: [githubAppInstallationsTable.user_id],
+    references: [users.id],
   }),
 }));
 

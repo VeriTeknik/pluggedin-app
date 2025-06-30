@@ -8,6 +8,7 @@ import {
   Code2,
   FileText,
   FlaskConical,
+  Package,
   Plus,
   Trash2,
   Unplug,
@@ -226,6 +227,15 @@ export default function SidebarLayout({
                       <Link href='/search'>
                         <Blocks className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden">{t('search.explorePlugins')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Registry" className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/registry'>
+                        <Package className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">Registry</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

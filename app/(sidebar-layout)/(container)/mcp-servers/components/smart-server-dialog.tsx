@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Github, Loader2, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -28,6 +28,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { cn } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { DynamicServerConfigForm, type ExtractionResult } from '@/components/forms/dynamic-server-config-form';
+import { importGitHubRepository } from '@/app/actions/registry';
 
 interface SmartServerDialogProps {
   open: boolean;
@@ -123,7 +127,7 @@ export function SmartServerDialog({
   onSubmit,
   isSubmitting
 }: SmartServerDialogProps) {
-  const { } = useTranslation();
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const [analysis, setAnalysis] = useState<InputAnalysis | null>(null);
   const [parsedConfigs, setParsedConfigs] = useState<ParsedConfig[]>([]);
@@ -131,6 +135,14 @@ export function SmartServerDialog({
   const [selectedConfigs, setSelectedConfigs] = useState<Set<string>>(new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'smart' | 'github'>('smart');
+  
+  // GitHub import states
+  const [githubUrl, setGithubUrl] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [extractionResult, setExtractionResult] = useState<ExtractionResult | null>(null);
+  const [importedServerId, setImportedServerId] = useState<string | null>(null);
 
   // Analyze input whenever it changes
   useEffect(() => {
@@ -469,7 +481,59 @@ export function SmartServerDialog({
     setParsedConfigs([]);
     setTestResults(new Map());
     setSelectedConfigs(new Set());
+    setGithubUrl('');
+    setImportError(null);
+    setExtractionResult(null);
+    setImportedServerId(null);
+    setActiveTab('smart');
     onOpenChange(false);
+  };
+  
+  const handleGitHubImport = async () => {
+    if (!githubUrl.trim()) return;
+    
+    setIsImporting(true);
+    setImportError(null);
+    setExtractionResult(null);
+    
+    try {
+      const result = await importGitHubRepository(githubUrl);
+      
+      if (!result.success) {
+        setImportError(result.error || t('common.error.generic'));
+        return;
+      }
+      
+      if (result.extraction && result.server) {
+        setExtractionResult({
+          extracted_config: result.server.ai_extraction?.raw_config || {},
+          confidence_scores: result.extraction.confidence,
+          warnings: result.extraction.warnings || []
+        });
+        setImportedServerId(result.server._id);
+      }
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : t('common.error.generic'));
+    } finally {
+      setIsImporting(false);
+    }
+  };
+  
+  const handleDynamicFormSubmit = async (data: any) => {
+    // Convert the dynamic form data to our ParsedConfig format
+    const config: ParsedConfig = {
+      name: data.name,
+      type: data.type,
+      description: data.description,
+      command: data.command,
+      args: data.args,
+      env: data.env,
+      url: data.url,
+      status: McpServerStatus.ACTIVE
+    };
+    
+    await onSubmit([config]);
+    handleClose();
   };
 
   const loadExample = (example: keyof typeof EXAMPLES) => {
@@ -482,14 +546,26 @@ export function SmartServerDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5" />
-            Smart Add Server
+            {t('mcpServers.dialog.smartAdd.title', 'Smart Add Server')}
           </DialogTitle>
           <DialogDescription>
-            Paste a URL, JSON configuration, or command to add MCP servers. Try examples like Context7 for up-to-date documentation.
+            {t('mcpServers.dialog.smartAdd.description', 'Add MCP servers by pasting configurations or importing from GitHub repositories.')}
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-y-auto space-y-4 py-4">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'smart' | 'github')} className="flex-1 flex flex-col">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="smart" className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4" />
+              {t('mcpServers.dialog.smartAdd.tabs.smart', 'Smart Import')}
+            </TabsTrigger>
+            <TabsTrigger value="github" className="flex items-center gap-2">
+              <Github className="h-4 w-4" />
+              {t('mcpServers.dialog.smartAdd.tabs.github', 'Import from GitHub')}
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="smart" className="flex-1 overflow-y-auto space-y-4 py-4">
           {/* Examples Dropdown */}
           <div className="flex items-center gap-2">
             <Label>Examples:</Label>
@@ -654,9 +730,96 @@ export function SmartServerDialog({
               </div>
             </div>
           )}
-        </div>
+          </TabsContent>
+          
+          <TabsContent value="github" className="flex-1 overflow-y-auto space-y-4 py-4">
+            {!extractionResult ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="github-url">{t('mcpServers.dialog.github.urlLabel', 'GitHub Repository URL')}</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="github-url"
+                      type="url"
+                      placeholder="https://github.com/owner/repository"
+                      value={githubUrl}
+                      onChange={(e) => setGithubUrl(e.target.value)}
+                      disabled={isImporting}
+                    />
+                    <Button
+                      onClick={handleGitHubImport}
+                      disabled={!githubUrl.trim() || isImporting}
+                    >
+                      {isImporting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        t('mcpServers.dialog.github.analyze', 'Analyze')
+                      )}
+                    </Button>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {t('mcpServers.dialog.github.urlHelp', 'Enter any GitHub repository URL. We\'ll analyze it to extract MCP server configuration.')}
+                  </p>
+                </div>
+                
+                {importError && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{importError}</AlertDescription>
+                  </Alert>
+                )}
+                
+                <div className="rounded-lg border p-4 space-y-3">
+                  <h4 className="font-medium text-sm">{t('mcpServers.dialog.github.howItWorks', 'How it works:')}</h4>
+                  <ul className="space-y-2 text-sm text-muted-foreground">
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">1.</span>
+                      <span>{t('mcpServers.dialog.github.step1', 'We analyze the repository\'s README and package.json files')}</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">2.</span>
+                      <span>{t('mcpServers.dialog.github.step2', 'AI extracts MCP server configuration and environment variables')}</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">3.</span>
+                      <span>{t('mcpServers.dialog.github.step3', 'Review and customize the extracted configuration')}</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="text-primary">4.</span>
+                      <span>{t('mcpServers.dialog.github.step4', 'Add the server to your project')}</span>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium">{t('mcpServers.dialog.github.reviewConfig', 'Review Configuration')}</h3>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setExtractionResult(null);
+                      setImportedServerId(null);
+                      setGithubUrl('');
+                    }}
+                  >
+                    {t('common.action.back', 'Back')}
+                  </Button>
+                </div>
+                
+                <DynamicServerConfigForm
+                  extractionResult={extractionResult}
+                  onSubmit={handleDynamicFormSubmit}
+                  isSubmitting={isSubmitting}
+                />
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
 
-        <DialogFooter className="gap-2">
+        {activeTab === 'smart' && (
+          <DialogFooter className="gap-2">
           <Button
             variant="outline"
             onClick={async () => {
@@ -689,7 +852,8 @@ export function SmartServerDialog({
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Add {selectedConfigs.size} Server{selectedConfigs.size !== 1 ? 's' : ''}
           </Button>
-        </DialogFooter>
+          </DialogFooter>
+        )}
       </DialogContent>
     </Dialog>
   );

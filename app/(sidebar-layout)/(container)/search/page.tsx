@@ -1,6 +1,6 @@
 'use client';
 
-import { Filter, Layers, SortDesc } from 'lucide-react';
+import { Filter, Layers, SortDesc, Plus } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
@@ -43,7 +43,7 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('query') || '';
   const offset = parseInt(searchParams.get('offset') || '0');
-  const sourceParam = searchParams.get('source') || McpServerSource.COMMUNITY;
+  const sourceParam = searchParams.get('source') || 'all';
   const sortParam = (searchParams.get('sort') as SortOption) || 'relevance';
   const tagsParam = searchParams.get('tags') || '';
   const categoryParam = searchParams.get('category') || '';
@@ -230,11 +230,8 @@ function SearchContent() {
         <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
           <Tabs defaultValue={source} onValueChange={handleSourceChange} className="w-full">
             <TabsList className="w-full h-10 flex rounded-lg">
+              <TabsTrigger value="all" className="flex-1">Registry</TabsTrigger>
               <TabsTrigger value={McpServerSource.COMMUNITY} className="flex-1">Community</TabsTrigger>
-              <TabsTrigger value="all" className="flex-1">All Sources</TabsTrigger>
-              <TabsTrigger value={McpServerSource.SMITHERY} className="flex-1">Smithery</TabsTrigger>
-              <TabsTrigger value={McpServerSource.NPM} className="flex-1">NPM</TabsTrigger>
-              <TabsTrigger value={McpServerSource.GITHUB} className="flex-1">GitHub</TabsTrigger>
             </TabsList>
           </Tabs>
           
@@ -358,6 +355,11 @@ function SearchContent() {
                 )}
               </DropdownMenuContent>
             </DropdownMenu>
+            
+            <Button onClick={() => router.push('/search/import')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add MCP Server to Plugged.in Catalog
+            </Button>
           </div>
         </div>
         
