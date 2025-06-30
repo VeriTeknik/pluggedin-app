@@ -1,12 +1,13 @@
-
 import { addDays } from 'date-fns';
 import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { db } from '@/db';
-import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema'; // Added profilesTable, projectsTable, users
+import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema';
 import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
+import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
+import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 import {
   fetchAwesomeMcpServersList,
   getGitHubRepoAsMcpServer,
@@ -27,7 +28,17 @@ const CACHE_TTL: Record<McpServerSource, number> = {
   [McpServerSource.GITHUB]: 1440, // 24 hours
   [McpServerSource.PLUGGEDIN]: 1440, // 24 hours
   [McpServerSource.COMMUNITY]: 60, // 1 hour - community content may change frequently
+  [McpServerSource.REGISTRY]: 5, // 5 minutes for registry
 };
+
+// Registry cache for better performance
+let registryCache: { 
+  servers: any[]; 
+  timestamp: number;
+  indexed: SearchIndex;
+} | null = null;
+
+const REGISTRY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
 // Add inline type definition for SmitherySearchResponse
 type SmitheryServer = {
@@ -71,7 +82,21 @@ export async function GET(request: NextRequest) {
 
     // If source is specified, only search that source
     if (source) {
-      // Check cache first
+      // Handle community source (keep existing functionality)
+      if (source === McpServerSource.COMMUNITY) {
+        results = await searchCommunity(query);
+        const paginated = paginateResults(results, offset, pageSize);
+        return NextResponse.json(paginated);
+      }
+
+      // Handle registry source
+      if (source === McpServerSource.REGISTRY) {
+        results = await searchRegistry(query);
+        const paginated = paginateResults(results, offset, pageSize);
+        return NextResponse.json(paginated);
+      }
+
+      // Check cache first for legacy sources
       const cachedResults = await checkCache(source, query);
       
       if (cachedResults) {
@@ -92,9 +117,6 @@ export async function GET(request: NextRequest) {
           break;
         case McpServerSource.GITHUB:
           results = await searchGitHub(query);
-          break;
-        case McpServerSource.COMMUNITY:
-          results = await searchCommunity(query);
           break;
         default:
           // Return empty results for unsupported sources
@@ -118,79 +140,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(paginatedResults);
     }
     
-    // If no source specified, search all (with caching per source)
-    // Check if we have ALL sources cached for this query
-    const cachedSmithery = await checkCache(McpServerSource.SMITHERY, query);
-    const cachedNpm = await checkCache(McpServerSource.NPM, query);
-    const cachedGitHub = await checkCache(McpServerSource.GITHUB, query);
-    const cachedCommunity = await checkCache(McpServerSource.COMMUNITY, query);
+    // If no source specified, search registry and community
+    const registryEnabled = process.env.REGISTRY_ENABLED !== 'false';
     
-    // If all are cached, combine and return
-    if (cachedSmithery && cachedNpm && cachedGitHub && cachedCommunity) {
-      const combinedResults: SearchIndex = {};
-      
-      // Add results with namespace prefix
-      Object.entries(cachedSmithery).forEach(([key, value]) => {
-        combinedResults[`smithery:${key}`] = value;
-      });
-      Object.entries(cachedNpm).forEach(([key, value]) => {
-        combinedResults[`npm:${key}`] = value;
-      });
-      Object.entries(cachedGitHub).forEach(([key, value]) => {
-        combinedResults[`github:${key}`] = value;
-      });
-      Object.entries(cachedCommunity).forEach(([key, value]) => {
-        combinedResults[`community:${key}`] = value;
-      });
-      
-      // Enrich combined results with metrics
-      const enrichedResults = await enrichWithMetrics(combinedResults);
-      
-      // Paginate and return
-      const paginatedResults = paginateResults(enrichedResults, offset, pageSize);
-      return NextResponse.json(paginatedResults);
+    if (registryEnabled) {
+      // Get registry results
+      const registryResults = await searchRegistry(query);
+      Object.assign(results, registryResults);
     }
     
-    // Otherwise, fetch what's needed and merge
-    const smitheryResults = cachedSmithery || await searchSmithery(query);
-    if (!cachedSmithery) {
-      await cacheResults(McpServerSource.SMITHERY, query, smitheryResults);
-    }
-    
-    const npmResults = cachedNpm || await searchNpm(query);
-    if (!cachedNpm) {
-      await cacheResults(McpServerSource.NPM, query, npmResults);
-    }
-    
-    const githubResults = cachedGitHub || await searchGitHub(query);
-    if (!cachedGitHub) {
-      await cacheResults(McpServerSource.GITHUB, query, githubResults);
-    }
-    
-    const communityResults = cachedCommunity || await searchCommunity(query);
-    if (!cachedCommunity) {
-      await cacheResults(McpServerSource.COMMUNITY, query, communityResults);
-    }
-    
-    // Combine all results under namespaced keys to avoid collisions
-    results = {} as SearchIndex;
-    
-    // Add results with namespace prefix
-    Object.entries(smitheryResults).forEach(([key, value]) => {
-      results[`smithery:${key}`] = value;
-    });
-    Object.entries(npmResults).forEach(([key, value]) => {
-      results[`npm:${key}`] = value;
-    });
-    Object.entries(githubResults).forEach(([key, value]) => {
-      results[`github:${key}`] = value;
-    });
-    Object.entries(communityResults).forEach(([key, value]) => {
-      results[`community:${key}`] = value;
-    });
-    
-    // Enrich combined results with metrics
-    results = await enrichWithMetrics(results);
+    // Always include community results
+    const communityResults = await searchCommunity(query);
+    Object.assign(results, communityResults);
     
     // Paginate and return results
     const paginatedResults = paginateResults(results, offset, pageSize);
@@ -202,6 +163,69 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+/**
+ * Search for MCP servers in the Plugged.in Registry
+ */
+async function searchRegistry(query: string): Promise<SearchIndex> {
+  try {
+    const client = new PluggedinRegistryClient();
+    
+    // Use cache if available and fresh
+    if (registryCache && Date.now() - registryCache.timestamp < REGISTRY_CACHE_TTL) {
+      console.log('Using cached registry data');
+      return searchInCache(registryCache.indexed, query);
+    }
+    
+    console.log('Fetching fresh registry data');
+    
+    // Fetch all servers from registry
+    const servers = await client.searchServers(query);
+    
+    // Transform and index
+    const indexed: SearchIndex = {};
+    for (const server of servers) {
+      const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
+      indexed[server.id] = mcpIndex;
+    }
+    
+    // Update cache (only if we fetched all servers)
+    if (!query) {
+      registryCache = {
+        servers,
+        timestamp: Date.now(),
+        indexed
+      };
+    }
+    
+    // Return results
+    return indexed;
+    
+  } catch (error) {
+    console.error('Registry search failed:', error);
+    return {}; // Return empty results on error
+  }
+}
+
+function searchInCache(indexed: SearchIndex, query: string): SearchIndex {
+  if (!query) return indexed;
+  
+  const searchQuery = query.toLowerCase();
+  const results: SearchIndex = {};
+  
+  Object.entries(indexed).forEach(([id, server]) => {
+    if (
+      server.name.toLowerCase().includes(searchQuery) ||
+      server.description.toLowerCase().includes(searchQuery) ||
+      server.package_name?.toLowerCase().includes(searchQuery) ||
+      server.tags?.some(tag => tag.toLowerCase().includes(searchQuery))
+    ) {
+      results[id] = server;
+    }
+  });
+  
+  return results;
 }
 
 /**

@@ -267,6 +267,13 @@
       "when": 1750629734506,
       "tag": "0037_wakeful_trauma",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1751299019903,
+      "tag": "0038_talented_squadron_supreme",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."mcp_server_source" ADD VALUE 'REGISTRY';

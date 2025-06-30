@@ -43,7 +43,7 @@ function SearchContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('query') || '';
   const offset = parseInt(searchParams.get('offset') || '0');
-  const sourceParam = searchParams.get('source') || McpServerSource.COMMUNITY;
+  const sourceParam = searchParams.get('source') || McpServerSource.REGISTRY;
   const sortParam = (searchParams.get('sort') as SortOption) || 'relevance';
   const tagsParam = searchParams.get('tags') || '';
   const categoryParam = searchParams.get('category') || '';
@@ -228,13 +228,11 @@ function SearchContent() {
         </div>
 
         <div className="flex flex-col md:flex-row items-center justify-between mb-4 gap-4">
-          <Tabs defaultValue={source} onValueChange={handleSourceChange} className="w-full">
+          <Tabs defaultValue={McpServerSource.REGISTRY} onValueChange={handleSourceChange} className="w-full">
             <TabsList className="w-full h-10 flex rounded-lg">
-              <TabsTrigger value={McpServerSource.COMMUNITY} className="flex-1">Community</TabsTrigger>
-              <TabsTrigger value="all" className="flex-1">All Sources</TabsTrigger>
-              <TabsTrigger value={McpServerSource.SMITHERY} className="flex-1">Smithery</TabsTrigger>
-              <TabsTrigger value={McpServerSource.NPM} className="flex-1">NPM</TabsTrigger>
-              <TabsTrigger value={McpServerSource.GITHUB} className="flex-1">GitHub</TabsTrigger>
+              <TabsTrigger value={McpServerSource.REGISTRY} className="flex-1">{t('search.sources.registry', 'Plugged.in Registry')}</TabsTrigger>
+              <TabsTrigger value={McpServerSource.COMMUNITY} className="flex-1">{t('search.sources.community', 'Community')}</TabsTrigger>
+              <TabsTrigger value="all" className="flex-1">{t('search.sources.all', 'All')}</TabsTrigger>
             </TabsList>
           </Tabs>
           
