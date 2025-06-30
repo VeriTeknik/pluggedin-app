@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, HelpCircle, Plus, Trash2 } from 'lucide-react';
+import { AlertCircle, ExternalLink, HelpCircle, Plus, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useFieldArray, useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -480,25 +480,6 @@ export function DynamicServerConfigForm({
                         {form.watch(`env.${index}.required`) && (
                           <Badge variant="destructive" className="text-xs">Required</Badge>
                         )}
-                        {form.watch(`env.${index}.help_url`) && (
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <a 
-                                  href={form.watch(`env.${index}.help_url`)} 
-                                  target="_blank" 
-                                  rel="noopener noreferrer"
-                                  className="text-blue-500 hover:text-blue-600"
-                                >
-                                  <HelpCircle className="h-4 w-4" />
-                                </a>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Click for documentation</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        )}
                       </div>
                       <Input
                         {...form.register(`env.${index}.value`)}
@@ -508,6 +489,16 @@ export function DynamicServerConfigForm({
                         <p className="text-sm text-muted-foreground">
                           {form.watch(`env.${index}.description`)}
                         </p>
+                      )}
+                      {form.watch(`env.${index}.help_url`) && (
+                        <a
+                          href={form.watch(`env.${index}.help_url`)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                        >
+                          Get API Key <ExternalLink className="w-3 h-3" />
+                        </a>
                       )}
                     </div>
                     <Button
