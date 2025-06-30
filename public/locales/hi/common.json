@@ -33,7 +33,9 @@
     "viewSchema": "स्कीमा देखें",
     "delete": "हटाएं",
     "deleting": "हटाया जा रहा है...",
-    "pluggedinLogo": "plugged.in लोगो"
+    "pluggedinLogo": "plugged.in लोगो",
+    "install": "इंस्टॉल करें",
+    "installing": "इंस्टॉल हो रहा है..."
   },
   "actions": {
     "goHome": "होम पेज पर जाएं",

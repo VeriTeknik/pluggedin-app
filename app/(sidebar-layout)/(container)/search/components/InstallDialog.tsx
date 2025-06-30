@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo,useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { mutate } from 'swr';
@@ -48,11 +48,31 @@ export function InstallDialog({
   onOpenChange,
   serverData,
 }: InstallDialogProps) {
-  // Load 'discover' as the default namespace
-  const { t } = useTranslation('discover');
+  // Load 'discover' as the default namespace and 'common' for shared translations
+  const { t } = useTranslation(['discover', 'common']);
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Parse environment variables to extract keys
+  const envKeys = useMemo(() => {
+    if (!serverData.env) return [];
+    return serverData.env.split('\n')
+      .filter(line => line.includes('='))
+      .map(line => {
+        const [key] = line.split('=');
+        return key.trim();
+      });
+  }, [serverData.env]);
+
+  // Initialize form with environment variables as separate fields
+  const defaultEnvValues = useMemo(() => {
+    const values: Record<string, string> = {};
+    envKeys.forEach(key => {
+      values[`env_${key}`] = '';
+    });
+    return values;
+  }, [envKeys]);
 
   const form = useForm({
     defaultValues: {
@@ -63,11 +83,17 @@ export function InstallDialog({
       env: serverData.env,
       url: serverData.url,
       type: serverData.type,
+      ...defaultEnvValues,
     },
   });
 
   useEffect(() => {
     if (open) {
+      const envValues: Record<string, string> = {};
+      envKeys.forEach(key => {
+        envValues[`env_${key}`] = '';
+      });
+      
       form.reset({
         name: serverData.name,
         description: serverData.description,
@@ -76,40 +102,36 @@ export function InstallDialog({
         env: serverData.env,
         url: serverData.url,
         type: serverData.type,
+        ...envValues,
       });
     }
-  }, [open, serverData, form]);
+  }, [open, serverData, form, envKeys]);
 
-  const onSubmit = async (values: {
-    name: string;
-    description: string;
-    command: string;
-    args: string;
-    env: string;
-    url: string | undefined;
-    type: McpServerType;
-  }) => {
+  const onSubmit = async (values: any) => {
     if (!currentProfile?.uuid) {
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // Extract environment variables from form fields
+      const envObject: Record<string, string> = {};
+      Object.keys(values).forEach(key => {
+        if (key.startsWith('env_')) {
+          const envKey = key.replace('env_', '');
+          if (values[key]) {
+            envObject[envKey] = values[key];
+          }
+        }
+      });
+
       const result = await createMcpServer({
         name: values.name,
         profileUuid: currentProfile.uuid,
         description: values.description,
         command: values.command,
         args: values.args.trim().split(/\s+/).filter(Boolean),
-        env: Object.fromEntries(
-          values.env
-            .split('\n')
-            .filter((line) => line.includes('='))
-            .map((line) => {
-              const [key, ...values] = line.split('=');
-              return [key.trim(), values.join('=').trim()];
-            })
-        ),
+        env: envObject,
         type: values.type,
         url: values.url,
         source: serverData.source,
@@ -234,19 +256,29 @@ export function InstallDialog({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="env"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('install.env')}</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {envKeys.length > 0 && (
+                  <div className="space-y-4">
+                    <FormLabel>{t('install.env')}</FormLabel>
+                    {envKeys.map((envKey) => (
+                      <FormField
+                        key={envKey}
+                        control={form.control}
+                        name={`env_${envKey}`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="grid grid-cols-3 gap-4 items-center">
+                              <FormLabel className="text-sm font-mono">{envKey}</FormLabel>
+                              <FormControl className="col-span-2">
+                                <Input {...field} placeholder="Enter value" />
+                              </FormControl>
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+                )}
               </>
             ) : (
               <FormField
@@ -270,10 +302,10 @@ export function InstallDialog({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                {t('common.cancel')}
+                {t('common:common.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? t('common.installing') : t('common.install')}
+                {isSubmitting ? t('common:common.installing') : t('common:common.install')}
               </Button>
             </div>
           </form>

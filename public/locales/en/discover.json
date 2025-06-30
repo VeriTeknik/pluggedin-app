@@ -22,7 +22,7 @@
     "name": "Server Name",
     "command": "Command",
     "args": "Arguments (space-separated)",
-    "env": "Environment Variables (KEY=VALUE per line)",
+    "env": "Environment Variables",
     "url": "Server URL",
     "successDescription": "Server installed successfully",
     "errorDescription": "Failed to install server"

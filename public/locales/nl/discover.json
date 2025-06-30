@@ -16,6 +16,17 @@
     "title": "Voorgestelde gebruikers",
     "empty": "Geen voorgestelde gebruikers gevonden"
   },
+  "install": {
+    "title": "Server installeren",
+    "description": "Configureer en installeer deze MCP-server.",
+    "name": "Servernaam",
+    "command": "Commando",
+    "args": "Argumenten (spatie-gescheiden)",
+    "env": "Omgevingsvariabelen",
+    "url": "Server URL",
+    "successDescription": "Server succesvol geïnstalleerd",
+    "errorDescription": "Server installatie mislukt"
+  },
   "search": {
     "placeholder": "Zoeken...",
     "noResults": "Geen resultaten gevonden",

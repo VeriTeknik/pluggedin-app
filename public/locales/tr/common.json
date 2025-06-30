@@ -33,7 +33,9 @@
     "viewSchema": "Şemayı Görüntüle",
     "delete": "Sil",
     "deleting": "Siliniyor...",
-    "pluggedinLogo": "plugged.in Logosu"
+    "pluggedinLogo": "plugged.in Logosu",
+    "install": "Yükle",
+    "installing": "Yükleniyor..."
   },
   "actions": {
     "goHome": "Ana Sayfaya Git",

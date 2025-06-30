@@ -16,6 +16,17 @@
     "title": "Önerilen Kullanıcılar",
     "empty": "Önerilen kullanıcı bulunamadı"
   },
+  "install": {
+    "title": "Sunucu Yükle",
+    "description": "Bu MCP sunucusunu yapılandır ve yükle.",
+    "name": "Sunucu Adı",
+    "command": "Komut",
+    "args": "Argümanlar (boşlukla ayrılmış)",
+    "env": "Ortam Değişkenleri",
+    "url": "Sunucu URL'si",
+    "successDescription": "Sunucu başarıyla yüklendi",
+    "errorDescription": "Sunucu yüklenemedi"
+  },
   "search": {
     "placeholder": "Ara...",
     "noResults": "Sonuç bulunamadı",

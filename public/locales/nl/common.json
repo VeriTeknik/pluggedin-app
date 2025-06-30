@@ -33,7 +33,9 @@
     "viewSchema": "Schema bekijken",
     "delete": "Verwijderen",
     "deleting": "Verwijderen...",
-    "pluggedinLogo": "plugged.in Logo"
+    "pluggedinLogo": "plugged.in Logo",
+    "install": "Installeren",
+    "installing": "Installeren..."
   },
   "actions": {
     "goHome": "Naar startpagina",
