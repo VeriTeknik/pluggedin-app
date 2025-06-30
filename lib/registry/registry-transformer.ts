@@ -34,8 +34,12 @@ interface PluggedinRegistryServer {
 export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistryServer): McpIndex {
   const primaryPackage = server.packages?.[0];
   
+  // Extract a user-friendly display name from the server name
+  // e.g., "io.github.felores/airtable-mcp" -> "Airtable MCP"
+  const displayName = extractDisplayName(server.name);
+  
   return {
-    name: server.name,
+    name: displayName,
     description: server.description || '',
     command: extractCommand(primaryPackage),
     args: extractArgs(primaryPackage),
@@ -51,11 +55,34 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
     category: inferCategory(server),
     tags: extractTags(server),
     updated_at: server.version_detail?.release_date,
-    qualifiedName: `registry:${server.id}`,
-    rating: null, // Will come from your rating system
-    ratingCount: null,
-    installation_count: null, // Track in your database
+    qualifiedName: server.name, // Keep original name as qualified name
+    rating: undefined, // Will come from your rating system
+    ratingCount: undefined,
+    installation_count: undefined, // Track in your database
   };
+}
+
+function extractDisplayName(serverName: string): string {
+  // Extract the last part after the last slash
+  // e.g., "io.github.felores/airtable-mcp" -> "airtable-mcp"
+  const lastPart = serverName.split('/').pop() || serverName;
+  
+  // Convert kebab-case or snake_case to Title Case
+  // e.g., "airtable-mcp" -> "Airtable MCP"
+  // e.g., "filesystem_server" -> "Filesystem Server"
+  return lastPart
+    .replace(/[-_]/g, ' ')
+    .split(' ')
+    .map(word => {
+      // Handle common acronyms
+      const upperCaseWords = ['mcp', 'api', 'ai', 'db', 'sql', 'json', 'xml', 'http', 'url', 'cli'];
+      if (upperCaseWords.includes(word.toLowerCase())) {
+        return word.toUpperCase();
+      }
+      // Title case for other words
+      return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    })
+    .join(' ');
 }
 
 function extractCommand(pkg?: RegistryPackage): string {
@@ -65,9 +92,17 @@ function extractCommand(pkg?: RegistryPackage): string {
     case 'npm':
       return pkg.runtime_hint || 'npx';
     case 'docker':
-      return 'docker run';
+      return 'docker';
     case 'pypi':
       return pkg.runtime_hint || 'uvx';
+    case 'unknown':
+      // For unknown packages, try to infer from package name
+      if (pkg.name?.endsWith('.py')) {
+        return 'python';
+      } else if (pkg.name?.endsWith('.js')) {
+        return 'node';
+      }
+      return 'node'; // Default to node for unknown
     default:
       return '';
   }
@@ -78,19 +113,52 @@ function extractArgs(pkg?: RegistryPackage): string[] {
   
   const args: string[] = [];
   
-  // Runtime arguments (e.g., docker flags)
-  if (pkg.runtime_arguments) {
-    args.push(...pkg.runtime_arguments.map((arg: any) => arg.value || arg.default || ''));
-  }
-  
-  // Package name
-  if (pkg.name) {
-    args.push(pkg.name);
-  }
-  
-  // Package arguments
-  if (pkg.package_arguments) {
-    args.push(...pkg.package_arguments.map((arg: any) => arg.value || arg.default || ''));
+  // Handle different registry types
+  switch (pkg.registry_name) {
+    case 'docker':
+      // Extract docker-specific arguments
+      if (pkg.package_arguments) {
+        // For docker, we need to extract the actual command parts
+        const dockerArgs = pkg.package_arguments
+          .filter((arg: any) => arg.type === 'named' && !arg.name?.startsWith('-e '))
+          .map((arg: any) => arg.value || arg.default || arg.name || '');
+        args.push('run', ...dockerArgs);
+        
+        // Add the image name (positional argument)
+        const imageArg = pkg.package_arguments.find((arg: any) => arg.type === 'positional');
+        if (imageArg) {
+          args.push(imageArg.value || imageArg.default || '');
+        }
+      }
+      break;
+      
+    case 'npm':
+      // For npm packages, just add the package name
+      args.push(pkg.name);
+      break;
+      
+    case 'unknown':
+      // For unknown packages with arguments
+      if (pkg.package_arguments) {
+        // Extract positional arguments (like file paths)
+        const positionalArgs = pkg.package_arguments
+          .filter((arg: any) => arg.type === 'positional')
+          .map((arg: any) => arg.value || arg.default || '');
+        args.push(...positionalArgs);
+      } else {
+        // If no arguments, just add the package name
+        args.push(pkg.name);
+      }
+      break;
+      
+    default:
+      // Default behavior
+      if (pkg.name) {
+        args.push(pkg.name);
+      }
+      if (pkg.package_arguments) {
+        args.push(...pkg.package_arguments.map((arg: any) => arg.value || arg.default || ''));
+      }
   }
   
   return args.filter(Boolean);

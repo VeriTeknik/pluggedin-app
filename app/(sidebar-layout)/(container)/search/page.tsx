@@ -30,10 +30,11 @@ import { getCategoryIcon } from '@/utils/categories';
 
 import CardGrid from './components/CardGrid';
 import { PaginationUi } from './components/PaginationUi';
+import { PageSizeSelector } from './components/PageSizeSelector';
 import { useFilteredResults } from './hooks/useFilteredResults';
 import { useSortedResults } from './hooks/useSortedResults';
 
-const PAGE_SIZE = 8;
+const DEFAULT_PAGE_SIZE = 12;
 
 type SortOption = 'relevance' | 'popularity' | 'recent' | 'stars';
 
@@ -47,6 +48,7 @@ function SearchContent() {
   const sortParam = (searchParams.get('sort') as SortOption) || 'relevance';
   const tagsParam = searchParams.get('tags') || '';
   const categoryParam = searchParams.get('category') || '';
+  const pageSizeParam = parseInt(searchParams.get('pageSize') || DEFAULT_PAGE_SIZE.toString());
   
   const [searchQuery, setSearchQuery] = useState(query);
   const [source, setSource] = useState<string>(sourceParam);
@@ -55,6 +57,7 @@ function SearchContent() {
   const [category, setCategory] = useState<McpServerCategory | ''>( 
     categoryParam as McpServerCategory || ''
   );
+  const [pageSize, setPageSize] = useState(pageSizeParam);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableCategories, setAvailableCategories] = useState<McpServerCategory[]>([]);
   const { currentProfile } = useProfiles();
@@ -83,8 +86,8 @@ function SearchContent() {
 
   // Prepare API URL with parameters
   const apiUrl = source === 'all' 
-    ? `/api/service/search?query=${encodeURIComponent(query)}&pageSize=${PAGE_SIZE}&offset=${offset}`
-    : `/api/service/search?query=${encodeURIComponent(query)}&source=${source}&pageSize=${PAGE_SIZE}&offset=${offset}`;
+    ? `/api/service/search?query=${encodeURIComponent(query)}&pageSize=${pageSize}&offset=${offset}`
+    : `/api/service/search?query=${encodeURIComponent(query)}&source=${source}&pageSize=${pageSize}&offset=${offset}`;
 
   const { data, mutate } = useSWR(
     apiUrl,
@@ -131,11 +134,12 @@ function SearchContent() {
       sort: sort,
       tags: tags.join(','),
       category,
+      pageSize,
       // Include enhanced state information from hooks
       filterState: filter,
       sortState
     };
-  }, [source, sort, tags, category, filter, sortState]);
+  }, [source, sort, tags, category, pageSize, filter, sortState]);
 
   // Update URL when search parameters change
   useEffect(() => {
@@ -145,7 +149,8 @@ function SearchContent() {
         searchFilters.source !== sourceParam || 
         searchFilters.sort !== sortParam || 
         searchFilters.tags !== tagsParam ||
-        searchFilters.category !== categoryParam
+        searchFilters.category !== categoryParam ||
+        searchFilters.pageSize !== pageSizeParam
       ) {
         const params = new URLSearchParams();
         if (searchQuery) {
@@ -163,18 +168,25 @@ function SearchContent() {
         if (searchFilters.filterState.hasCategory) {
           params.set('category', searchFilters.category);
         }
+        if (searchFilters.pageSize !== DEFAULT_PAGE_SIZE) {
+          params.set('pageSize', searchFilters.pageSize.toString());
+        }
         params.set('offset', '0');
         router.push(`/search?${params.toString()}`);
       }
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, query, searchFilters, sourceParam, sortParam, tagsParam, categoryParam, router]);
+  }, [searchQuery, query, searchFilters, sourceParam, sortParam, tagsParam, categoryParam, pageSizeParam, router]);
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams);
-    params.set('offset', ((page - 1) * PAGE_SIZE).toString());
+    params.set('offset', ((page - 1) * pageSize).toString());
     router.push(`/search?${params.toString()}`);
+  };
+  
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
   };
 
   const handleSourceChange = (value: string) => {
@@ -416,11 +428,17 @@ function SearchContent() {
 
    <div className='pb-3'>
    {data && data.total > 0 && (
-        <PaginationUi
-          currentPage={Math.floor(offset / PAGE_SIZE) + 1}
-          totalPages={Math.ceil(data.total / PAGE_SIZE)}
-          onPageChange={handlePageChange}
-        />
+        <div className="flex items-center justify-between">
+          <PageSizeSelector
+            pageSize={pageSize}
+            onPageSizeChange={handlePageSizeChange}
+          />
+          <PaginationUi
+            currentPage={Math.floor(offset / pageSize) + 1}
+            totalPages={Math.ceil(data.total / pageSize)}
+            onPageChange={handlePageChange}
+          />
+        </div>
       )}
    </div>
     </div>

@@ -158,6 +158,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(paginatedResults);
   } catch (_error) {
     console.error('Search error:', _error);
+    console.error('Error stack:', _error instanceof Error ? _error.stack : 'No stack trace');
     return NextResponse.json(
       { error: 'Failed to search for MCP servers' },
       { status: 500 }
@@ -169,6 +170,7 @@ export async function GET(request: NextRequest) {
  * Search for MCP servers in the Plugged.in Registry
  */
 async function searchRegistry(query: string): Promise<SearchIndex> {
+  console.log('searchRegistry called with query:', query);
   try {
     const client = new PluggedinRegistryClient();
     

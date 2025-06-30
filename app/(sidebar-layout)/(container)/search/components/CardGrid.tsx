@@ -163,17 +163,50 @@ export default function CardGrid({
   const [reviewsDialogOpen, setReviewsDialogOpen] = useState(false);
 
 
-  const handleInstallClick = (key: string, item: any) => {
+  const handleInstallClick = async (key: string, item: any) => {
     if (!requireAuth('auth:loginToInstall', 'You must be logged in to install servers.')) return;
-    // Determine if this is a stdio or SSE server
+    
+    // If this is a registry server and we don't have package info, fetch details
+    if (item.source === McpServerSource.REGISTRY && (!item.command || item.command === '')) {
+      try {
+        const response = await fetch(`/api/registry/server/${item.external_id}`);
+        const data = await response.json();
+        
+        if (data.success && data.server) {
+          const detailedItem = data.server;
+          // Determine if this is a stdio or SSE server
+          const isSSE = detailedItem.url || false;
+          
+          setSelectedServer({
+            name: detailedItem.name,
+            description: detailedItem.description,
+            command: isSSE ? '' : detailedItem.command || '',
+            args: isSSE ? '' : (Array.isArray(detailedItem.args) ? detailedItem.args.join(' ') : '') || '',
+            env: isSSE ? '' : (Array.isArray(detailedItem.envs) ? detailedItem.envs.map((env: string) => `${env}=<value>`).join('\n') : '') || '',
+            url: isSSE ? detailedItem.url : undefined,
+            type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
+            source: item.source,
+            external_id: item.external_id,
+          });
+          
+          setDialogOpen(true);
+          return;
+        }
+      } catch (error) {
+        console.error('Failed to fetch server details:', error);
+        // Fall through to use basic info
+      }
+    }
+    
+    // For non-registry servers or if fetch failed, use existing data
     const isSSE = item.url || false;
     
     setSelectedServer({
       name: item.name,
       description: item.description,
-      command: isSSE ? '' : item.command,
-      args: isSSE ? '' : item.args?.join(' ') || '',
-      env: isSSE ? '' : item.envs?.map((env: string) => env).join('\n') || '',
+      command: isSSE ? '' : item.command || '',
+      args: isSSE ? '' : (Array.isArray(item.args) ? item.args.join(' ') : '') || '',
+      env: isSSE ? '' : (Array.isArray(item.envs) ? item.envs.map((env: string) => `${env}=<value>`).join('\n') : '') || '',
       url: isSSE ? item.url : undefined,
       type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
       source: item.source,
