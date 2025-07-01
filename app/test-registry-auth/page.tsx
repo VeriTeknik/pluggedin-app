@@ -40,22 +40,26 @@ export default function TestRegistryAuthPage() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // GitHub OAuth configuration
-  const GITHUB_CLIENT_ID = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || 'Ov23liauuJvy6sLzrDdr';
+  const GITHUB_CLIENT_ID = typeof window !== 'undefined' && (window as any).ENV?.GITHUB_CLIENT_ID 
+    ? (window as any).ENV.GITHUB_CLIENT_ID 
+    : 'Ov23liauuJvy6sLzrDdr'; // Fallback
   
-  // Use subdirectory pattern that GitHub OAuth supports
+  // For callback URL, check what the OAuth app expects
   const getRedirectUri = () => {
     if (typeof window !== 'undefined') {
-      // Check if we're on staging or local
       const origin = window.location.origin;
-      if (origin.includes('staging.plugged.in')) {
-        // On staging, use the main callback URL
+      
+      // The production OAuth app (Ov23liGQCDAID0kY58HE) uses /api/auth/callback
+      // The local OAuth app (Ov23liauuJvy6sLzrDdr) uses /api/auth/callback/registry
+      if (GITHUB_CLIENT_ID === 'Ov23liGQCDAID0kY58HE') {
+        // Production OAuth app
         return `${origin}/api/auth/callback`;
       } else {
-        // On local, use the registry-specific callback
+        // Local OAuth app
         return `${origin}/api/auth/callback/registry`;
       }
     }
-    // Fallback for SSR
+    // Fallback
     return 'https://staging.plugged.in/api/auth/callback';
   };
   
