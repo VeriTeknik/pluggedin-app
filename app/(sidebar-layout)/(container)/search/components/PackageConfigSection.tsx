@@ -8,8 +8,8 @@ import { useTranslation } from 'react-i18next';
 import {
   checkPackageAvailability,
   type GitHubRepoData,
-  type PackageInfo,
-  suggestNextVersion} from '@/app/actions/registry-intelligence';
+  type PackageInfo} from '@/app/actions/registry-intelligence';
+import { suggestNextVersion } from '@/lib/registry/registry-utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';

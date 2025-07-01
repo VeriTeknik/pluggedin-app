@@ -36,6 +36,28 @@ import { InstallDialog } from './InstallDialog';
 import { RateServerDialog } from './RateServerDialog';
 import { ReviewsDialog } from './ReviewsDialog'; // Import the new dialog
 
+// Helper function to format environment variables
+function formatEnvVariables(envs: string[] | Array<{ name: string; description?: string }> | undefined): string {
+  if (!envs || !Array.isArray(envs)) return '';
+  
+  // Handle both string array and object array formats
+  if (envs.length === 0) return '';
+  
+  // Check if it's an array of strings or objects
+  if (typeof envs[0] === 'string') {
+    // Old format: string[]
+    return (envs as string[]).map(env => `${env}=<value>`).join('\n');
+  } else {
+    // New format: Array<{ name: string; description?: string }>
+    return (envs as Array<{ name: string; description?: string }>)
+      .map(env => {
+        const line = `${env.name}=<value>`;
+        return env.description ? `${line} # ${env.description}` : line;
+      })
+      .join('\n');
+  }
+}
+
 // Helper function to get category badge
 function CategoryBadge({ category }: { category?: McpServerCategory }) {
   const { t } = useTranslation();
@@ -182,7 +204,7 @@ export default function CardGrid({
             description: detailedItem.description,
             command: isSSE ? '' : detailedItem.command || '',
             args: isSSE ? '' : (Array.isArray(detailedItem.args) ? detailedItem.args.join(' ') : '') || '',
-            env: isSSE ? '' : (Array.isArray(detailedItem.envs) ? detailedItem.envs.map((env: string) => `${env}=<value>`).join('\n') : '') || '',
+            env: isSSE ? '' : formatEnvVariables(detailedItem.envs),
             url: isSSE ? detailedItem.url : undefined,
             type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
             source: item.source,
@@ -206,7 +228,7 @@ export default function CardGrid({
       description: item.description,
       command: isSSE ? '' : item.command || '',
       args: isSSE ? '' : (Array.isArray(item.args) ? item.args.join(' ') : '') || '',
-      env: isSSE ? '' : (Array.isArray(item.envs) ? item.envs.map((env: string) => `${env}=<value>`).join('\n') : '') || '',
+      env: isSSE ? '' : formatEnvVariables(item.envs),
       url: isSSE ? item.url : undefined,
       type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
       source: item.source,

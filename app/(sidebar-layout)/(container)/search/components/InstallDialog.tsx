@@ -54,16 +54,26 @@ export function InstallDialog({
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Parse environment variables to extract keys
-  const envKeys = useMemo(() => {
+  // Parse environment variables to extract keys and descriptions
+  const envInfo = useMemo(() => {
     if (!serverData.env) return [];
     return serverData.env.split('\n')
       .filter(line => line.includes('='))
       .map(line => {
-        const [key] = line.split('=');
-        return key.trim();
+        const [keyValue, ...descParts] = line.split('#');
+        const [key] = keyValue.split('=');
+        const description = descParts.join('#').trim();
+        return {
+          key: key.trim(),
+          description: description || undefined
+        };
       });
   }, [serverData.env]);
+
+  // Extract just the keys for backward compatibility
+  const envKeys = useMemo(() => {
+    return envInfo.map(info => info.key);
+  }, [envInfo]);
 
   // Initialize form with environment variables as separate fields
   const defaultEnvValues = useMemo(() => {
@@ -256,21 +266,28 @@ export function InstallDialog({
                   )}
                 />
 
-                {envKeys.length > 0 && (
+                {envInfo.length > 0 && (
                   <div className="space-y-4">
                     <FormLabel>{t('install.env')}</FormLabel>
-                    {envKeys.map((envKey) => (
+                    {envInfo.map((env) => (
                       <FormField
-                        key={envKey}
+                        key={env.key}
                         control={form.control}
-                        name={`env_${envKey}`}
+                        name={`env_${env.key}`}
                         render={({ field }) => (
                           <FormItem>
-                            <div className="grid grid-cols-3 gap-4 items-center">
-                              <FormLabel className="text-sm font-mono">{envKey}</FormLabel>
-                              <FormControl className="col-span-2">
-                                <Input {...field} placeholder="Enter value" />
-                              </FormControl>
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-3 gap-4 items-center">
+                                <FormLabel className="text-sm font-mono">{env.key}</FormLabel>
+                                <FormControl className="col-span-2">
+                                  <Input {...field} placeholder="Enter value" />
+                                </FormControl>
+                              </div>
+                              {env.description && (
+                                <p className="text-sm text-muted-foreground ml-1">
+                                  {env.description}
+                                </p>
+                              )}
                             </div>
                             <FormMessage />
                           </FormItem>

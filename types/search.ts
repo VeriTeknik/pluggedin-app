@@ -22,7 +22,7 @@ export interface McpIndex {
   package_name: string | null;
   command: string;
   args: string[];
-  envs: string[];
+  envs: string[] | Array<{ name: string; description?: string }>;
   github_stars: number | null;
   package_registry: string | null;
   package_download_count: number | null;

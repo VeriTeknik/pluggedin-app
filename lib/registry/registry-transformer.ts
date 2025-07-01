@@ -164,9 +164,12 @@ function extractArgs(pkg?: RegistryPackage): string[] {
   return args.filter(Boolean);
 }
 
-function extractEnvs(pkg?: RegistryPackage): string[] {
+function extractEnvs(pkg?: RegistryPackage): Array<{ name: string; description?: string }> {
   if (!pkg?.environment_variables) return [];
-  return pkg.environment_variables.map(env => env.name);
+  return pkg.environment_variables.map(env => ({
+    name: env.name,
+    description: env.description
+  }));
 }
 
 function inferCategory(server: PluggedinRegistryServer): McpServerCategory {

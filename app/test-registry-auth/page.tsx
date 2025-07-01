@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AlertCircle, CheckCircle, Copy, Github, Loader2 } from 'lucide-react';
+import { AlertCircle, CheckCircle, Copy, Github, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -10,6 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+
+interface EnvVariable {
+  name: string;
+  description?: string;
+}
 
 export default function TestRegistryAuthPage() {
   // Prevent caching of this page
@@ -31,6 +36,8 @@ export default function TestRegistryAuthPage() {
     version: '1.0.0',
     repoUrl: 'https://github.com/yourusername/test-server'
   });
+  const [envVariables, setEnvVariables] = useState<EnvVariable[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // GitHub OAuth configuration
   const GITHUB_CLIENT_ID = 'Ov23liGQCDAID0kY58HE';
@@ -77,6 +84,103 @@ export default function TestRegistryAuthPage() {
     toast.success('Token copied to clipboard!');
   };
 
+  const analyzeRepository = async () => {
+    if (!publishData.repoUrl) {
+      toast.error('Please enter a repository URL');
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      // Extract owner and repo from URL
+      const match = publishData.repoUrl.match(/github\.com\/([^\/]+)\/([^\/\?]+)/);
+      if (!match) {
+        toast.error('Invalid GitHub URL');
+        return;
+      }
+
+      const [, owner, repo] = match;
+      
+      // Try to fetch claude_desktop_config.json from the repository
+      const configUrls = [
+        `https://raw.githubusercontent.com/${owner}/${repo}/main/claude_desktop_config.json`,
+        `https://raw.githubusercontent.com/${owner}/${repo}/master/claude_desktop_config.json`,
+        `https://raw.githubusercontent.com/${owner}/${repo}/main/mcp.json`,
+        `https://raw.githubusercontent.com/${owner}/${repo}/master/mcp.json`,
+      ];
+
+      let mcpConfig = null;
+      for (const url of configUrls) {
+        try {
+          const response = await fetch(url);
+          if (response.ok) {
+            mcpConfig = await response.json();
+            break;
+          }
+        } catch (e) {
+          // Continue to next URL
+        }
+      }
+
+      if (mcpConfig && mcpConfig.mcpServers) {
+        // Extract environment variables from the first server
+        const firstServer = Object.values(mcpConfig.mcpServers)[0] as any;
+        if (firstServer && firstServer.env) {
+          const envVars: EnvVariable[] = [];
+          for (const [name, value] of Object.entries(firstServer.env)) {
+            envVars.push({
+              name,
+              description: `Environment variable for ${name}`
+            });
+          }
+          setEnvVariables(envVars);
+          toast.success(`Found ${envVars.length} environment variables`);
+        }
+      } else {
+        // Try to fetch README and detect env vars
+        const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`;
+        const readmeResponse = await fetch(readmeUrl);
+        
+        if (readmeResponse.ok) {
+          const readmeText = await readmeResponse.text();
+          
+          // Look for environment variable patterns
+          const envPatterns = [
+            /`([A-Z][A-Z0-9_]+)`/g,  // Backtick wrapped
+            /\$\{?([A-Z][A-Z0-9_]+)\}?/g,  // Shell variable syntax
+            /process\.env\.([A-Z][A-Z0-9_]+)/g,  // Node.js syntax
+          ];
+
+          const foundVars = new Set<string>();
+          for (const pattern of envPatterns) {
+            let match;
+            while ((match = pattern.exec(readmeText)) !== null) {
+              const varName = match[1];
+              if (varName.length > 2 && varName !== 'NODE' && varName !== 'PATH') {
+                foundVars.add(varName);
+              }
+            }
+          }
+
+          const envVars: EnvVariable[] = Array.from(foundVars).map(name => ({
+            name,
+            description: `Environment variable detected from README`
+          }));
+          
+          setEnvVariables(envVars);
+          toast.success(`Detected ${envVars.length} environment variables from README`);
+        } else {
+          toast.error('Could not find MCP configuration or README');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to analyze repository:', error);
+      toast.error('Failed to analyze repository');
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
   const testPublish = async () => {
     if (!accessToken) {
       toast.error('Please authenticate first');
@@ -96,7 +200,11 @@ export default function TestRegistryAuthPage() {
         packages: [{
           registry_name: 'npm',
           name: publishData.name.replace('io.github.', '@'),
-          version: publishData.version
+          version: publishData.version,
+          environment_variables: envVariables.map(env => ({
+            name: env.name,
+            description: env.description || `Environment variable ${env.name}`
+          }))
         }],
         repository: {
           url: publishData.repoUrl,
@@ -249,14 +357,47 @@ export default function TestRegistryAuthPage() {
                 
                 <div>
                   <Label htmlFor="repoUrl">Repository URL</Label>
-                  <Input
-                    id="repoUrl"
-                    value={publishData.repoUrl}
-                    onChange={(e) => setPublishData({ ...publishData, repoUrl: e.target.value })}
-                    placeholder="https://github.com/username/repo"
-                  />
+                  <div className="flex gap-2">
+                    <Input
+                      id="repoUrl"
+                      value={publishData.repoUrl}
+                      onChange={(e) => setPublishData({ ...publishData, repoUrl: e.target.value })}
+                      placeholder="https://github.com/username/repo"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={analyzeRepository}
+                      disabled={isAnalyzing}
+                      title="Analyze repository for environment variables"
+                    >
+                      {isAnalyzing ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <RefreshCw className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </div>
+
+              {envVariables.length > 0 && (
+                <div className="mt-4">
+                  <Label>Detected Environment Variables</Label>
+                  <div className="mt-2 space-y-2">
+                    {envVariables.map((env, index) => (
+                      <div key={index} className="p-2 bg-muted rounded-md">
+                        <div className="font-mono text-sm">{env.name}</div>
+                        {env.description && (
+                          <div className="text-xs text-muted-foreground mt-1">{env.description}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <Button 
                 onClick={testPublish}
