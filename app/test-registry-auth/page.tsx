@@ -45,11 +45,18 @@ export default function TestRegistryAuthPage() {
   // Use subdirectory pattern that GitHub OAuth supports
   const getRedirectUri = () => {
     if (typeof window !== 'undefined') {
-      // Use subdirectory of the main callback URL
-      return `${window.location.origin}/api/auth/callback/registry`;
+      // Check if we're on staging or local
+      const origin = window.location.origin;
+      if (origin.includes('staging.plugged.in')) {
+        // On staging, use the main callback URL
+        return `${origin}/api/auth/callback`;
+      } else {
+        // On local, use the registry-specific callback
+        return `${origin}/api/auth/callback/registry`;
+      }
     }
     // Fallback for SSR
-    return 'https://staging.plugged.in/api/auth/callback/registry';
+    return 'https://staging.plugged.in/api/auth/callback';
   };
   
   const REDIRECT_URI = getRedirectUri();
