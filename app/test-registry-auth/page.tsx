@@ -101,24 +101,58 @@ export default function TestRegistryAuthPage() {
 
       const [, owner, repo] = match;
       
+      // First, let's check if we can access the repo
+      const repoApiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+      const apiHeaders: Record<string, string> = {
+        'Accept': 'application/vnd.github.v3+json',
+        'User-Agent': 'Pluggedin-Registry-Test'
+      };
+      
+      if (accessToken) {
+        apiHeaders['Authorization'] = `Bearer ${accessToken}`;
+      }
+
+      // Check repo accessibility
+      const repoCheck = await fetch(repoApiUrl, { headers: apiHeaders });
+      if (!repoCheck.ok) {
+        if (repoCheck.status === 404) {
+          toast.error('Repository not found');
+        } else if (repoCheck.status === 403) {
+          toast.error('API rate limit reached. Please authenticate with GitHub first.');
+        } else {
+          toast.error(`GitHub API error: ${repoCheck.status}`);
+        }
+        return;
+      }
+
       // Try to fetch claude_desktop_config.json from the repository
-      const configUrls = [
-        `https://raw.githubusercontent.com/${owner}/${repo}/main/claude_desktop_config.json`,
-        `https://raw.githubusercontent.com/${owner}/${repo}/master/claude_desktop_config.json`,
-        `https://raw.githubusercontent.com/${owner}/${repo}/main/mcp.json`,
-        `https://raw.githubusercontent.com/${owner}/${repo}/master/mcp.json`,
+      const configFiles = [
+        { path: 'claude_desktop_config.json', branch: 'main' },
+        { path: 'claude_desktop_config.json', branch: 'master' },
+        { path: 'mcp.json', branch: 'main' },
+        { path: 'mcp.json', branch: 'master' },
       ];
 
+      // Use raw.githubusercontent.com for file content
+      const headers: Record<string, string> = {
+        'Accept': 'application/json',
+      };
+      
+      if (accessToken) {
+        headers['Authorization'] = `token ${accessToken}`;
+      }
+
       let mcpConfig = null;
-      for (const url of configUrls) {
+      for (const config of configFiles) {
+        const url = `https://raw.githubusercontent.com/${owner}/${repo}/${config.branch}/${config.path}`;
         try {
-          const response = await fetch(url);
+          const response = await fetch(url, { headers });
           if (response.ok) {
             mcpConfig = await response.json();
             break;
           }
-        } catch (e) {
-          // Continue to next URL
+        } catch (_e) {
+          // Continue to next file
         }
       }
 
@@ -127,7 +161,7 @@ export default function TestRegistryAuthPage() {
         const firstServer = Object.values(mcpConfig.mcpServers)[0] as any;
         if (firstServer && firstServer.env) {
           const envVars: EnvVariable[] = [];
-          for (const [name, value] of Object.entries(firstServer.env)) {
+          for (const [name] of Object.entries(firstServer.env)) {
             envVars.push({
               name,
               description: `Environment variable for ${name}`
@@ -139,7 +173,7 @@ export default function TestRegistryAuthPage() {
       } else {
         // Try to fetch README and detect env vars
         const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`;
-        const readmeResponse = await fetch(readmeUrl);
+        const readmeResponse = await fetch(readmeUrl, { headers });
         
         if (readmeResponse.ok) {
           const readmeText = await readmeResponse.text();
@@ -187,6 +221,12 @@ export default function TestRegistryAuthPage() {
       return;
     }
 
+    // Check if repository has been analyzed for env vars
+    if (publishData.repoUrl && publishData.repoUrl !== 'https://github.com/yourusername/test-server' && envVariables.length === 0) {
+      toast.warning('Please analyze the repository first to detect environment variables');
+      return;
+    }
+
     setIsLoading(true);
     setTestResult(null);
 
@@ -212,6 +252,8 @@ export default function TestRegistryAuthPage() {
           id: publishData.repoUrl.replace('https://github.com/', '')
         }
       };
+
+      console.log('Publishing with payload:', JSON.stringify(payload, null, 2));
 
       const response = await fetch('https://registry.plugged.in/v0/publish', {
         method: 'POST',
