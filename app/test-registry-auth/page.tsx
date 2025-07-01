@@ -42,25 +42,17 @@ export default function TestRegistryAuthPage() {
   // GitHub OAuth configuration
   const GITHUB_CLIENT_ID = typeof window !== 'undefined' && (window as any).ENV?.GITHUB_CLIENT_ID 
     ? (window as any).ENV.GITHUB_CLIENT_ID 
-    : 'Ov23liauuJvy6sLzrDdr'; // Fallback
+    : 'Ov23liGQCDAID0kY58HE'; // Fallback
   
-  // For callback URL, check what the OAuth app expects
+  // Always use our custom registry callback for the registry test
   const getRedirectUri = () => {
     if (typeof window !== 'undefined') {
       const origin = window.location.origin;
-      
-      // The production OAuth app (Ov23liGQCDAID0kY58HE) uses /api/auth/callback
-      // The local OAuth app (Ov23liauuJvy6sLzrDdr) uses /api/auth/callback/registry
-      if (GITHUB_CLIENT_ID === 'Ov23liGQCDAID0kY58HE') {
-        // Production OAuth app
-        return `${origin}/api/auth/callback`;
-      } else {
-        // Local OAuth app
-        return `${origin}/api/auth/callback/registry`;
-      }
+      // Always use the registry callback for this specific OAuth flow
+      return `${origin}/api/auth/callback/registry`;
     }
     // Fallback
-    return 'https://staging.plugged.in/api/auth/callback';
+    return 'https://staging.plugged.in/api/auth/callback/registry';
   };
   
   const REDIRECT_URI = getRedirectUri();
