@@ -31,16 +31,16 @@ export default function TestRegistryAuthPage() {
   const [accessToken, setAccessToken] = useState('');
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [publishData, setPublishData] = useState({
-    name: 'io.github.yourusername/test-server',
-    description: 'Test server for registry authentication',
-    version: '1.0.0',
-    repoUrl: 'https://github.com/yourusername/test-server'
+    name: 'io.github.VeriTeknik/pluggedin-mcp-proxy',
+    description: 'MCP Proxy for Plugged.in - Enables multiple MCP servers through a single connection',
+    version: '1.2.6',
+    repoUrl: 'https://github.com/VeriTeknik/pluggedin-mcp-proxy'
   });
   const [envVariables, setEnvVariables] = useState<EnvVariable[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   // GitHub OAuth configuration
-  const GITHUB_CLIENT_ID = 'Ov23liGQCDAID0kY58HE';
+  const GITHUB_CLIENT_ID = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID || 'Ov23liauuJvy6sLzrDdr';
   
   // Use subdirectory pattern that GitHub OAuth supports
   const getRedirectUri = () => {
@@ -92,124 +92,31 @@ export default function TestRegistryAuthPage() {
 
     setIsAnalyzing(true);
     try {
-      // Extract owner and repo from URL
-      const match = publishData.repoUrl.match(/github\.com\/([^\/]+)\/([^\/\?]+)/);
-      if (!match) {
-        toast.error('Invalid GitHub URL');
+      // Call our API route to analyze the repository
+      const response = await fetch(`/api/analyze-repository?url=${encodeURIComponent(publishData.repoUrl)}`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        toast.error(errorData.error || `Failed to analyze repository: ${response.status}`);
         return;
       }
 
-      const [, owner, repo] = match;
+      const data = await response.json();
       
-      // First, let's check if we can access the repo
-      const repoApiUrl = `https://api.github.com/repos/${owner}/${repo}`;
-      const apiHeaders: Record<string, string> = {
-        'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'Pluggedin-Registry-Test'
-      };
-      
-      if (accessToken) {
-        apiHeaders['Authorization'] = `Bearer ${accessToken}`;
-      }
-
-      // Check repo accessibility
-      const repoCheck = await fetch(repoApiUrl, { headers: apiHeaders });
-      if (!repoCheck.ok) {
-        if (repoCheck.status === 404) {
-          toast.error('Repository not found');
-        } else if (repoCheck.status === 403) {
-          toast.error('API rate limit reached. Please authenticate with GitHub first.');
+      if (data.success && data.envVariables) {
+        setEnvVariables(data.envVariables);
+        if (data.envVariables.length > 0) {
+          toast.success(`Found ${data.envVariables.length} environment variables`);
         } else {
-          toast.error(`GitHub API error: ${repoCheck.status}`);
-        }
-        return;
-      }
-
-      // Try to fetch claude_desktop_config.json from the repository
-      const configFiles = [
-        { path: 'claude_desktop_config.json', branch: 'main' },
-        { path: 'claude_desktop_config.json', branch: 'master' },
-        { path: 'mcp.json', branch: 'main' },
-        { path: 'mcp.json', branch: 'master' },
-      ];
-
-      // Use raw.githubusercontent.com for file content
-      const headers: Record<string, string> = {
-        'Accept': 'application/json',
-      };
-      
-      if (accessToken) {
-        headers['Authorization'] = `token ${accessToken}`;
-      }
-
-      let mcpConfig = null;
-      for (const config of configFiles) {
-        const url = `https://raw.githubusercontent.com/${owner}/${repo}/${config.branch}/${config.path}`;
-        try {
-          const response = await fetch(url, { headers });
-          if (response.ok) {
-            mcpConfig = await response.json();
-            break;
-          }
-        } catch (_e) {
-          // Continue to next file
-        }
-      }
-
-      if (mcpConfig && mcpConfig.mcpServers) {
-        // Extract environment variables from the first server
-        const firstServer = Object.values(mcpConfig.mcpServers)[0] as any;
-        if (firstServer && firstServer.env) {
-          const envVars: EnvVariable[] = [];
-          for (const [name] of Object.entries(firstServer.env)) {
-            envVars.push({
-              name,
-              description: `Environment variable for ${name}`
-            });
-          }
-          setEnvVariables(envVars);
-          toast.success(`Found ${envVars.length} environment variables`);
+          toast.info('No environment variables detected');
         }
       } else {
-        // Try to fetch README and detect env vars
-        const readmeUrl = `https://raw.githubusercontent.com/${owner}/${repo}/main/README.md`;
-        const readmeResponse = await fetch(readmeUrl, { headers });
-        
-        if (readmeResponse.ok) {
-          const readmeText = await readmeResponse.text();
-          
-          // Look for environment variable patterns
-          const envPatterns = [
-            /`([A-Z][A-Z0-9_]+)`/g,  // Backtick wrapped
-            /\$\{?([A-Z][A-Z0-9_]+)\}?/g,  // Shell variable syntax
-            /process\.env\.([A-Z][A-Z0-9_]+)/g,  // Node.js syntax
-          ];
-
-          const foundVars = new Set<string>();
-          for (const pattern of envPatterns) {
-            let match;
-            while ((match = pattern.exec(readmeText)) !== null) {
-              const varName = match[1];
-              if (varName.length > 2 && varName !== 'NODE' && varName !== 'PATH') {
-                foundVars.add(varName);
-              }
-            }
-          }
-
-          const envVars: EnvVariable[] = Array.from(foundVars).map(name => ({
-            name,
-            description: `Environment variable detected from README`
-          }));
-          
-          setEnvVariables(envVars);
-          toast.success(`Detected ${envVars.length} environment variables from README`);
-        } else {
-          toast.error('Could not find MCP configuration or README');
-        }
+        toast.error('Failed to analyze repository');
       }
     } catch (error) {
       console.error('Failed to analyze repository:', error);
-      toast.error('Failed to analyze repository');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to analyze repository: ${errorMessage}`);
     } finally {
       setIsAnalyzing(false);
     }
@@ -222,7 +129,7 @@ export default function TestRegistryAuthPage() {
     }
 
     // Check if repository has been analyzed for env vars
-    if (publishData.repoUrl && publishData.repoUrl !== 'https://github.com/yourusername/test-server' && envVariables.length === 0) {
+    if (publishData.repoUrl && publishData.repoUrl !== 'https://github.com/VeriTeknik/pluggedin-mcp-proxy' && envVariables.length === 0) {
       toast.warning('Please analyze the repository first to detect environment variables');
       return;
     }
