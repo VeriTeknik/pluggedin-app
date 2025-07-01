@@ -12,6 +12,16 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 
 export default function TestRegistryAuthPage() {
+  // Prevent caching of this page
+  if (typeof window !== 'undefined') {
+    // Add no-cache meta tags dynamically
+    const metaNoCache = document.createElement('meta');
+    metaNoCache.setAttribute('http-equiv', 'Cache-Control');
+    metaNoCache.setAttribute('content', 'no-cache, no-store, must-revalidate');
+    if (!document.head.querySelector('meta[http-equiv="Cache-Control"]')) {
+      document.head.appendChild(metaNoCache);
+    }
+  }
   const [isLoading, setIsLoading] = useState(false);
   const [accessToken, setAccessToken] = useState('');
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -24,49 +34,41 @@ export default function TestRegistryAuthPage() {
 
   // GitHub OAuth configuration
   const GITHUB_CLIENT_ID = 'Ov23liGQCDAID0kY58HE';
-  const REDIRECT_URI = 'http://localhost:12005/test-registry-auth';
+  
+  // Use subdirectory pattern that GitHub OAuth supports
+  const getRedirectUri = () => {
+    if (typeof window !== 'undefined') {
+      // Use subdirectory of the main callback URL
+      return `${window.location.origin}/api/auth/callback/registry`;
+    }
+    // Fallback for SSR
+    return 'https://staging.plugged.in/api/auth/callback/registry';
+  };
+  
+  const REDIRECT_URI = getRedirectUri();
   const GITHUB_OAUTH_URL = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=read:user,read:org&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`;
 
-  const handleOAuthCallback = async (code: string) => {
-    setIsLoading(true);
-    try {
-      // Exchange code for token
-      const response = await fetch('/api/auth/github-registry', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code, redirect_uri: REDIRECT_URI })
-      });
-
-      const data = await response.json();
-      
-      if (data.access_token) {
-        setAccessToken(data.access_token);
-        toast.success('Successfully authenticated with GitHub!');
-        
-        // Clean up URL
-        window.history.replaceState({}, document.title, '/test-registry-auth');
-      } else {
-        toast.error(data.error || 'Failed to get access token');
-      }
-    } catch (error) {
-      console.error('OAuth callback error:', error);
-      toast.error('Failed to process OAuth callback');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Check for OAuth callback on page load
+  // Check for OAuth callback results on page load
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get('code');
+    const accessToken = urlParams.get('access_token');
+    const error = urlParams.get('error');
     
-    if (code) {
-      handleOAuthCallback(code);
+    if (accessToken) {
+      setAccessToken(accessToken);
+      toast.success('Successfully authenticated with GitHub!');
+      // Clean up URL
+      window.history.replaceState({}, document.title, '/test-registry-auth');
+    } else if (error) {
+      toast.error(`Authentication failed: ${error}`);
+      // Clean up URL
+      window.history.replaceState({}, document.title, '/test-registry-auth');
     }
   }, []);
 
   const initiateOAuth = () => {
+    console.log('REDIRECT_URI:', REDIRECT_URI);
+    console.log('GITHUB_OAUTH_URL:', GITHUB_OAUTH_URL);
     window.location.href = GITHUB_OAUTH_URL;
   };
 
