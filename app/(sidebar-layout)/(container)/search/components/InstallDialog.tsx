@@ -1,3 +1,4 @@
+import { AlertCircle, Package } from 'lucide-react';
 import { useEffect, useMemo,useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -5,6 +6,8 @@ import { mutate } from 'swr';
 
 import { trackServerInstallation } from '@/app/actions/mcp-server-metrics'; // Import trackServerInstallation
 import { createMcpServer } from '@/app/actions/mcp-servers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -202,9 +205,26 @@ export function InstallDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('install.title')}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {t('install.title')}
+            {serverData.source === McpServerSource.REGISTRY && (
+              <Badge className="bg-blue-600 hover:bg-blue-700">
+                <Package className="h-3 w-3 mr-1" />
+                Registry
+              </Badge>
+            )}
+          </DialogTitle>
           <DialogDescription>{t('install.description')}</DialogDescription>
         </DialogHeader>
+
+        {serverData.source === McpServerSource.REGISTRY && (
+          <Alert className="mb-4">
+            <Package className="h-4 w-4" />
+            <AlertDescription>
+              {t('install.registryNotice', 'This server is from the official Plugged.in Registry and has been verified for compatibility.')}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">

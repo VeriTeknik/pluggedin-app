@@ -1,9 +1,10 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, GitBranch, Loader2, Package, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { fetchRegistryServer } from '@/app/actions/registry-servers';
 import { testMcpConnection } from '@/app/actions/test-mcp-connection';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -26,7 +27,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { McpServerStatus, McpServerType } from '@/db/schema';
+import { McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
 import { cn } from '@/lib/utils';
 
 interface SmartServerDialogProps {
@@ -50,14 +51,17 @@ interface ParsedConfig {
     sessionId?: string;
   };
   status?: McpServerStatus;
+  source?: McpServerSource;
+  external_id?: string;
 }
 
 interface InputAnalysis {
-  type: 'url' | 'json' | 'command' | 'unknown';
+  type: 'url' | 'json' | 'command' | 'registry' | 'github' | 'unknown';
   serverType?: McpServerType;
   data?: any;
   error?: string;
   suggestions?: string[];
+  registryData?: any;
 }
 
 interface TestResult {
@@ -68,6 +72,14 @@ interface TestResult {
 
 // Example configurations
 const EXAMPLES = {
+  registry: {
+    name: 'Registry Server (Filesystem)',
+    config: 'io.github.modelcontextprotocol/servers/src/filesystem'
+  },
+  github: {
+    name: 'GitHub URL',
+    config: 'https://github.com/modelcontextprotocol/servers'
+  },
   context7: {
     name: 'Context7 MCP',
     config: 'https://mcp.context7.com/mcp'
@@ -153,8 +165,46 @@ export function SmartServerDialog({
     const trimmed = inputText.trim();
     
     try {
+      // Check if it's a registry format (io.github.owner/repo)
+      if (isRegistryFormat(trimmed)) {
+        const config = await parseRegistryInput(trimmed);
+        if (config) {
+          setAnalysis({
+            type: 'registry',
+            serverType: config.type,
+            data: config,
+            registryData: config
+          });
+          
+          setParsedConfigs([config]);
+          setSelectedConfigs(new Set([config.name]));
+        } else {
+          setAnalysis({
+            type: 'registry',
+            error: 'Registry server not found',
+            suggestions: [
+              'Check the registry identifier format',
+              'Ensure the server is published to the registry',
+              'Try using the GitHub URL instead'
+            ]
+          });
+        }
+      }
+      // Check if it's a GitHub URL
+      else if (isGitHubUrl(trimmed)) {
+        const config = await parseGitHubUrl(trimmed);
+        
+        setAnalysis({
+          type: 'github',
+          serverType: McpServerType.STDIO,
+          data: config
+        });
+        
+        setParsedConfigs([config]);
+        setSelectedConfigs(new Set([config.name]));
+      }
       // Check if it's a URL
-      if (isValidUrl(trimmed)) {
+      else if (isValidUrl(trimmed)) {
         const serverType = detectServerTypeFromUrl(trimmed);
         const config = parseUrlInput(trimmed, serverType);
         
@@ -210,6 +260,8 @@ export function SmartServerDialog({
           type: 'unknown',
           error: 'Could not detect input format',
           suggestions: [
+            'Enter a registry ID like: io.github.owner/repo',
+            'Paste a GitHub URL: https://github.com/owner/repo',
             'Paste a URL for Streamable HTTP/SSE servers',
             'Paste JSON configuration from MCP documentation',
             'Enter a command like: npx @modelcontextprotocol/server-name'
@@ -425,6 +477,125 @@ export function SmartServerDialog({
     };
   };
 
+  // Check if input is in registry format (io.github.owner/repo)
+  const isRegistryFormat = (text: string): boolean => {
+    const registryPattern = /^io\.github\.[^\/]+\/[^\/]+/;
+    return registryPattern.test(text);
+  };
+
+  // Check if input is a GitHub URL
+  const isGitHubUrl = (text: string): boolean => {
+    return text.startsWith('https://github.com/') || text.startsWith('github.com/');
+  };
+
+  // Parse registry input and fetch server data
+  const parseRegistryInput = async (registryId: string): Promise<ParsedConfig | null> => {
+    try {
+      // Fetch server data from registry
+      const result = await fetchRegistryServer(registryId);
+      
+      if (!result.success || !result.data) {
+        return null;
+      }
+
+      const server = result.data;
+      const primaryPackage = server.packages?.[0];
+
+      // Transform registry data to ParsedConfig
+      if (primaryPackage) {
+        // Determine command based on package type
+        let command = '';
+        let args: string[] = [];
+        
+        switch (primaryPackage.registry_name) {
+          case 'npm':
+            command = primaryPackage.runtime_hint || 'npx';
+            args = [primaryPackage.name];
+            if (primaryPackage.runtime_arguments) {
+              args.push(...primaryPackage.runtime_arguments);
+            }
+            break;
+          case 'docker':
+            command = 'docker';
+            args = ['run'];
+            if (primaryPackage.package_arguments) {
+              args.push(...primaryPackage.package_arguments.map((arg: any) => arg.value || arg.default || ''));
+            }
+            args.push(primaryPackage.name);
+            break;
+          case 'pypi':
+            command = primaryPackage.runtime_hint || 'uvx';
+            args = [primaryPackage.name];
+            break;
+          default:
+            // Unknown type, try to infer
+            if (primaryPackage.name?.endsWith('.py')) {
+              command = 'python';
+              args = [primaryPackage.name];
+            } else {
+              command = 'node';
+              args = [primaryPackage.name];
+            }
+        }
+
+        // Extract environment variables
+        const env: Record<string, string> = {};
+        if (primaryPackage.environment_variables) {
+          primaryPackage.environment_variables.forEach((envVar: any) => {
+            env[envVar.name] = envVar.defaultValue || '';
+          });
+        }
+
+        return {
+          name: server.name.split('/').pop() || server.name,
+          type: McpServerType.STDIO,
+          description: server.description,
+          command,
+          args,
+          env: Object.keys(env).length > 0 ? env : undefined,
+          status: McpServerStatus.ACTIVE,
+          source: McpServerSource.REGISTRY,
+          external_id: server.id
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error parsing registry input:', error);
+      return null;
+    }
+  };
+
+  // Parse GitHub URL and transform to registry format
+  const parseGitHubUrl = async (githubUrl: string): Promise<ParsedConfig> => {
+    // Extract owner and repo from GitHub URL
+    const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    if (!match) {
+      throw new Error('Invalid GitHub URL');
+    }
+
+    const [, owner, repo] = match;
+    const registryId = `io.github.${owner}/${repo}`;
+
+    // Try to fetch from registry first
+    const registryConfig = await parseRegistryInput(registryId);
+    if (registryConfig) {
+      return registryConfig;
+    }
+
+    // If not in registry, create a basic config
+    return {
+      name: repo,
+      type: McpServerType.STDIO,
+      description: `MCP server from ${owner}/${repo}`,
+      command: 'npx',
+      args: [`@${owner}/${repo}`],
+      status: McpServerStatus.ACTIVE,
+      source: McpServerSource.GITHUB,
+      external_id: `${owner}/${repo}`
+    };
+  };
+
   const testServerConfig = async (config: ParsedConfig) => {
     setIsTesting(true);
     const testId = config.name;
@@ -485,7 +656,7 @@ export function SmartServerDialog({
             Smart Add Server
           </DialogTitle>
           <DialogDescription>
-            Paste a URL, JSON configuration, or command to add MCP servers. Try examples like Context7 for up-to-date documentation.
+            Paste a registry ID (io.github.owner/repo), GitHub URL, JSON configuration, or command to add MCP servers.
           </DialogDescription>
         </DialogHeader>
         
@@ -610,6 +781,24 @@ export function SmartServerDialog({
                             <Badge variant="outline" className="text-xs">
                               {config.type}
                             </Badge>
+                            {config.source === McpServerSource.REGISTRY && (
+                              <Badge 
+                                variant="default" 
+                                className="text-xs bg-blue-600 hover:bg-blue-700"
+                              >
+                                <Package className="h-3 w-3 mr-1" />
+                                Registry
+                              </Badge>
+                            )}
+                            {config.source === McpServerSource.GITHUB && (
+                              <Badge 
+                                variant="outline" 
+                                className="text-xs"
+                              >
+                                <GitBranch className="h-3 w-3 mr-1" />
+                                GitHub
+                              </Badge>
+                            )}
                             {testResult && (
                               <Badge 
                                 variant={testResult.success ? "default" : "destructive"}

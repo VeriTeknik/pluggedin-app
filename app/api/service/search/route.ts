@@ -8,24 +8,25 @@ import { McpServerSource, profilesTable, projectsTable, searchCacheTable, shared
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
-import {
-  fetchAwesomeMcpServersList,
-  getGitHubRepoAsMcpServer,
-  getRepoPackageJson,
-  searchGitHubRepos,
-} from '@/utils/github';
-import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
-import {
-  fetchSmitheryServerDetails,
-  getMcpServerFromSmitheryServer,
-  updateMcpServerWithDetails,
-} from '@/utils/smithery';
+// Legacy imports - commented out as these sources are deprecated
+// import {
+//   fetchAwesomeMcpServersList,
+//   getGitHubRepoAsMcpServer,
+//   getRepoPackageJson,
+//   searchGitHubRepos,
+// } from '@/utils/github';
+// import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
+// import {
+//   fetchSmitheryServerDetails,
+//   getMcpServerFromSmitheryServer,
+//   updateMcpServerWithDetails,
+// } from '@/utils/smithery';
 
 // Cache TTL in minutes for each source
 const CACHE_TTL: Record<McpServerSource, number> = {
-  [McpServerSource.SMITHERY]: 60, // 1 hour
-  [McpServerSource.NPM]: 360, // 6 hours
-  [McpServerSource.GITHUB]: 1440, // 24 hours
+  [McpServerSource.SMITHERY]: 60, // 1 hour - DEPRECATED
+  [McpServerSource.NPM]: 360, // 6 hours - DEPRECATED
+  [McpServerSource.GITHUB]: 1440, // 24 hours - DEPRECATED
   [McpServerSource.PLUGGEDIN]: 1440, // 24 hours
   [McpServerSource.COMMUNITY]: 60, // 1 hour - community content may change frequently
   [McpServerSource.REGISTRY]: 5, // 5 minutes for registry
@@ -39,29 +40,6 @@ let registryCache: {
 } | null = null;
 
 const REGISTRY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-
-// Add inline type definition for SmitherySearchResponse
-type SmitheryServer = {
-  qualifiedName: string;
-  displayName: string;
-  description: string;
-  homepage: string;
-  useCount: number;
-  isDeployed: boolean;
-  createdAt: string;
-};
-
-type SmitheryPagination = {
-  currentPage: number;
-  pageSize: number;
-  totalPages: number;
-  totalCount: number;
-};
-
-type SmitherySearchResponse = {
-  servers: SmitheryServer[];
-  pagination: SmitheryPagination;
-};
 
 /**
  * Search for MCP servers
@@ -107,27 +85,27 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(paginatedResults);
       }
       
-      // If not in cache, fetch data from source
-      switch (source) {
-        case McpServerSource.SMITHERY:
-          results = await searchSmithery(query);
-          break;
-        case McpServerSource.NPM:
-          results = await searchNpm(query);
-          break;
-        case McpServerSource.GITHUB:
-          results = await searchGitHub(query);
-          break;
-        default:
-          // Return empty results for unsupported sources
-          return NextResponse.json({
-            results: {},
-            total: 0,
-            offset,
-            pageSize,
-            hasMore: false,
-          } as PaginatedSearchResult);
+      // Legacy sources are deprecated - return empty results
+      if (source === McpServerSource.SMITHERY || 
+          source === McpServerSource.NPM || 
+          source === McpServerSource.GITHUB) {
+        return NextResponse.json({
+          results: {},
+          total: 0,
+          offset,
+          pageSize,
+          hasMore: false,
+        } as PaginatedSearchResult);
       }
+      
+      // Return empty results for any other unsupported sources
+      return NextResponse.json({
+        results: {},
+        total: 0,
+        offset,
+        pageSize,
+        hasMore: false,
+      } as PaginatedSearchResult);
       
       // Enrich results with metrics before caching
       results = await enrichWithMetrics(results);
@@ -265,10 +243,12 @@ async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
 
 /**
  * Search for MCP servers in Smithery
+ * DEPRECATED - Legacy source no longer supported
  * 
  * @param query Search query
  * @returns SearchIndex of results
  */
+/*
 async function searchSmithery(query: string): Promise<SearchIndex> {
   const apiKey = process.env.SMITHERY_API_KEY;
   if (!apiKey) {
@@ -312,13 +292,16 @@ async function searchSmithery(query: string): Promise<SearchIndex> {
   // Enrich results with metrics
   return await enrichWithMetrics(results);
 }
+*/
 
 /**
  * Search for MCP servers on NPM
+ * DEPRECATED - Legacy source no longer supported
  * 
  * @param query Search query
  * @returns SearchIndex of results
  */
+/*
 async function searchNpm(query: string): Promise<SearchIndex> {
   try {
     const data = await searchNpmPackages(query);
@@ -338,13 +321,16 @@ async function searchNpm(query: string): Promise<SearchIndex> {
     return {}; // Return empty results on error
   }
 }
+*/
 
 /**
  * Search for MCP servers on GitHub
+ * DEPRECATED - Legacy source no longer supported
  * 
  * @param query Search query
  * @returns SearchIndex of results
  */
+/*
 async function searchGitHub(query: string): Promise<SearchIndex> {
   try {
     // Try to search GitHub for repos
@@ -391,6 +377,7 @@ async function searchGitHub(query: string): Promise<SearchIndex> {
     return {}; // Return empty results on error
   }
 }
+*/
 
 /**
  * Search for community MCP servers - implementation to show shared servers

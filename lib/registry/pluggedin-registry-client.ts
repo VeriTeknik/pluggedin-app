@@ -135,6 +135,25 @@ export class PluggedinRegistryClient {
       server.repository?.url?.toLowerCase().includes(searchQuery)
     );
   }
+
+  async getServer(registryId: string): Promise<PluggedinRegistryServer | null> {
+    try {
+      // First try to get by exact ID
+      try {
+        return await this.getServerDetails(registryId);
+      } catch {
+        // If that fails, search by name
+        const allServers = await this.getAllServers();
+        return allServers.find(server => 
+          server.name === registryId || 
+          server.id === registryId
+        ) || null;
+      }
+    } catch (error) {
+      console.error('Error getting server:', error);
+      return null;
+    }
+  }
   
   async healthCheck(): Promise<boolean> {
     try {

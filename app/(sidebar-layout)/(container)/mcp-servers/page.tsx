@@ -11,7 +11,8 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Database, Download, Settings, Share,Upload } from 'lucide-react';
+import { Database, Download, Package, Settings, Share,Upload } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -56,6 +57,7 @@ export default function MCPServersPage() {
   const { currentProfile } = useProfiles();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [open, setOpen] = useState(false);
@@ -161,7 +163,9 @@ export default function MCPServersPage() {
         try {
           await createMcpServer({
             ...config,
-            profileUuid: currentProfile.uuid
+            profileUuid: currentProfile.uuid,
+            source: config.source,
+            external_id: config.external_id
           });
           successCount++;
         } catch (error) {
@@ -385,6 +389,14 @@ export default function MCPServersPage() {
           
           {/* Action buttons */}
           <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/search?source=REGISTRY')} 
+              className="flex-1 sm:flex-none"
+            >
+              <Package className="mr-2 h-4 w-4" />
+              {t('mcpServers.actions.browseRegistry', 'Browse Registry')}
+            </Button>
             <Button variant="outline" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none">
               <Upload className="mr-2 h-4 w-4" />
               {t('mcpServers.actions.import')}

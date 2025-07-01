@@ -82,6 +82,13 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
   const { t: _t } = useTranslation();
   
   switch (source) {
+    case McpServerSource.REGISTRY:
+      return (
+        <Badge variant="default" className="gap-1 whitespace-normal text-center h-auto py-1 bg-blue-600 hover:bg-blue-700">
+          <Package className="h-3 w-3 flex-shrink-0" />
+          <span className="inline-block">Registry</span>
+        </Badge>
+      );
     case McpServerSource.SMITHERY:
       return (
         <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">

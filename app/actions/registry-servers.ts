@@ -4,7 +4,7 @@ import { and,eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { accounts,registryServersTable, serverClaimRequestsTable } from '@/db/schema';
+import { accounts, registryServersTable, serverClaimRequestsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 
@@ -142,6 +142,139 @@ export async function verifyGitHubOwnership(userId: string, repoUrl: string) {
   } catch (error) {
     console.error('Error verifying GitHub ownership:', error);
     return { isOwner: false, reason: 'Failed to verify ownership' };
+  }
+}
+
+/**
+ * Fetch a server from the registry by its ID
+ */
+export async function fetchRegistryServer(registryId: string) {
+  try {
+    const client = new PluggedinRegistryClient();
+    
+    // Extract the last part as the server ID
+    // Format: io.github.owner/repo -> use full ID as lookup
+    const server = await client.getServer(registryId);
+    
+    if (!server) {
+      return { 
+        success: false, 
+        error: 'Server not found in registry' 
+      };
+    }
+
+    return { 
+      success: true, 
+      data: server 
+    };
+  } catch (error) {
+    console.error('Error fetching registry server:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to fetch server from registry' 
+    };
+  }
+}
+
+/**
+ * Import a server from registry to local profile
+ */
+export async function importRegistryServer(registryId: string, profileUuid: string) {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'You must be logged in to import servers' };
+    }
+
+    // Fetch server from registry
+    const registryResult = await fetchRegistryServer(registryId);
+    if (!registryResult.success || !registryResult.data) {
+      return { success: false, error: registryResult.error || 'Server not found in registry' };
+    }
+
+    const server = registryResult.data;
+    const primaryPackage = server.packages?.[0];
+
+    if (!primaryPackage) {
+      return { success: false, error: 'No package information available for this server' };
+    }
+
+    // Transform registry data to local server config
+    let command = '';
+    let args: string[] = [];
+    const env: Record<string, string> = {};
+
+    switch (primaryPackage.registry_name) {
+      case 'npm':
+        command = primaryPackage.runtime_hint || 'npx';
+        args = [primaryPackage.name];
+        if (primaryPackage.runtime_arguments) {
+          args.push(...primaryPackage.runtime_arguments);
+        }
+        break;
+      case 'docker':
+        command = 'docker';
+        args = ['run'];
+        if (primaryPackage.package_arguments) {
+          args.push(...primaryPackage.package_arguments.map((arg: any) => arg.value || arg.default || ''));
+        }
+        args.push(primaryPackage.name);
+        break;
+      case 'pypi':
+        command = primaryPackage.runtime_hint || 'uvx';
+        args = [primaryPackage.name];
+        break;
+      default:
+        // Unknown type, try to infer
+        if (primaryPackage.name?.endsWith('.py')) {
+          command = 'python';
+          args = [primaryPackage.name];
+        } else {
+          command = 'node';
+          args = [primaryPackage.name];
+        }
+    }
+
+    // Extract environment variables with empty values for user to fill
+    if (primaryPackage.environment_variables) {
+      primaryPackage.environment_variables.forEach((envVar: any) => {
+        env[envVar.name] = '';
+      });
+    }
+
+    // Import using existing mcp-servers action
+    const { createMcpServer } = await import('./mcp-servers');
+    
+    const result = await createMcpServer({
+      name: server.name.split('/').pop() || server.name,
+      profileUuid,
+      description: server.description || '',
+      command,
+      args,
+      env: Object.keys(env).length > 0 ? env : undefined,
+      type: 'STDIO' as any, // Registry servers are typically STDIO
+      source: 'REGISTRY' as any,
+      external_id: server.id,
+    });
+
+    if (result.success) {
+      return { 
+        success: true, 
+        server: result.server,
+        message: 'Server imported successfully from registry' 
+      };
+    } else {
+      return { 
+        success: false, 
+        error: result.error || 'Failed to import server' 
+      };
+    }
+  } catch (error) {
+    console.error('Error importing registry server:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to import server from registry' 
+    };
   }
 }
 
