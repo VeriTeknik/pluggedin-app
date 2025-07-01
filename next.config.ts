@@ -11,6 +11,20 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [];
   },
+  async redirects() {
+    return [
+      {
+        source: '/privacy',
+        destination: '/legal/privacy-policy',
+        permanent: true,
+      },
+      {
+        source: '/terms',
+        destination: '/legal/terms-of-service',
+        permanent: true,
+      },
+    ];
+  },
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
