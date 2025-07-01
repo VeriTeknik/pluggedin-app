@@ -274,6 +274,13 @@
       "when": 1751299019903,
       "tag": "0038_talented_squadron_supreme",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1751321555106,
+      "tag": "0039_living_peter_quill",
+      "breakpoints": true
     }
   ]
 }

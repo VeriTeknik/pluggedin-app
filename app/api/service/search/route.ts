@@ -5,9 +5,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { db } from '@/db';
 import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema';
-import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
+import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
 import {
   fetchAwesomeMcpServersList,
   getGitHubRepoAsMcpServer,

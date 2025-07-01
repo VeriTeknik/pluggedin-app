@@ -1,0 +1,70 @@
+{
+  "registry": {
+    "addServer": {
+      "button": "Add to Registry",
+      "title": "Add Server to Registry",
+      "description": {
+        "ownership": "Let's start by determining your relationship with this server.",
+        "unclaimed": "Add a server to help the community discover it. The owner can claim it later.",
+        "claimed": "As the owner, you can publish this server directly to the registry.",
+        "verifying": "Verifying your ownership...",
+        "success": "Server added successfully!"
+      },
+      "success": {
+        "unclaimed": "Server added to the community registry. The owner can claim it later.",
+        "claimed": "Server published to the registry successfully!"
+      }
+    },
+    "ownership": {
+      "question": "Do you own this server?",
+      "owned": "Yes, I own this server",
+      "owned.description": "I'm the repository owner and want to publish it to the registry",
+      "notOwned": "No, I'm adding it for the community",
+      "notOwned.description": "I found this server and want to help others discover it"
+    },
+    "form": {
+      "repositoryUrl": "GitHub Repository URL",
+      "repositoryUrl.hint": "Example: https://github.com/owner/repo",
+      "description": "Description",
+      "description.placeholder": "Brief description of what this server does",
+      "packageRegistry": "Package Registry",
+      "packageName": "Package Name",
+      "packageVersion": "Version",
+      "environmentVariables": "Environment Variables",
+      "addEnvVar": "Add Variable",
+      "submit": {
+        "unclaimed": "Add Server",
+        "claimed": "Publish to Registry"
+      }
+    },
+    "verifying": {
+      "ownership": "Verifying GitHub ownership..."
+    },
+    "success": {
+      "claimed": "Your server has been published to the registry!",
+      "unclaimed": "Server added! The owner can claim it when they're ready."
+    },
+    "claim": {
+      "button": "Claim This Server",
+      "dialog": {
+        "title": "Claim Server",
+        "description": "Verify your ownership to claim this server"
+      },
+      "verifying": "Verifying ownership...",
+      "success": "Server claimed successfully!",
+      "publishing": "Publishing to registry...",
+      "pending": "Your claim request has been submitted for review"
+    },
+    "badges": {
+      "verified": "Verified",
+      "unclaimed": "Unclaimed",
+      "pending": "Claim Pending"
+    },
+    "errors": {
+      "notOwner": "You must be the owner of this repository",
+      "alreadyExists": "This server is already in the registry",
+      "authRequired": "Registry authentication not configured",
+      "publishFailed": "Failed to publish server to registry"
+    }
+  }
+}

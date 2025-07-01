@@ -36,7 +36,8 @@
     "deleting": "Deleting...",
     "pluggedinLogo": "plugged.in Logo",
     "install": "Install",
-    "installing": "Installing..."
+    "installing": "Installing...",
+    "back": "Back"
   },
   "actions": {
     "goHome": "Go Home",

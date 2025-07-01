@@ -39,6 +39,48 @@ interface HealthResponse {
   github_client_id?: string;
 }
 
+interface PublishServerData {
+  name: string;
+  description: string;
+  packages: Array<{
+    registry_name: string;
+    name: string;
+    version: string;
+    runtime_hint?: string;
+    package_arguments?: any[];
+    runtime_arguments?: any[];
+    environment_variables?: Array<{
+      name: string;
+      description?: string;
+      required?: boolean;
+    }>;
+  }>;
+  repository: {
+    url: string;
+    source: string;
+    id: string;
+  };
+  version_detail: {
+    version: string;
+  };
+}
+
+interface PublishResponse {
+  id: string;
+  name: string;
+  description: string;
+  repository?: {
+    url: string;
+    source: string;
+    id: string;
+  };
+  version_detail?: {
+    version: string;
+    release_date: string;
+    is_latest: boolean;
+  };
+}
+
 export class PluggedinRegistryClient {
   private baseUrl: string;
   
@@ -102,5 +144,26 @@ export class PluggedinRegistryClient {
     } catch {
       return false;
     }
+  }
+  
+  async publishServer(
+    serverData: PublishServerData,
+    authToken: string
+  ): Promise<PublishResponse> {
+    const response = await fetch(`${this.baseUrl}/publish`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(serverData),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to publish server: ${response.status} ${response.statusText} - ${errorText}`);
+    }
+    
+    return response.json();
   }
 }

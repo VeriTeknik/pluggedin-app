@@ -1,6 +1,6 @@
 'use client';
 
-import { Filter, Layers, SortDesc } from 'lucide-react';
+import { Filter, Layers, Plus, SortDesc } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
@@ -29,8 +29,9 @@ import { McpIndex, McpServerCategory, PaginatedSearchResult } from '@/types/sear
 import { getCategoryIcon } from '@/utils/categories';
 
 import CardGrid from './components/CardGrid';
-import { PaginationUi } from './components/PaginationUi';
+import { IntelligentAddServerWizard } from './components/IntelligentAddServerWizard';
 import { PageSizeSelector } from './components/PageSizeSelector';
+import { PaginationUi } from './components/PaginationUi';
 import { useFilteredResults } from './hooks/useFilteredResults';
 import { useSortedResults } from './hooks/useSortedResults';
 
@@ -60,8 +61,9 @@ function SearchContent() {
   const [pageSize, setPageSize] = useState(pageSizeParam);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableCategories, setAvailableCategories] = useState<McpServerCategory[]>([]);
+  const [showAddServerWizard, setShowAddServerWizard] = useState(false);
   const { currentProfile } = useProfiles();
-  const { session } = useAuth(); // Use the auth hook
+  const { session, isAuthenticated } = useAuth(); // Use the auth hook
   const currentUsername = session?.user?.username; // Get username from session
   const profileUuid = currentProfile?.uuid;
 
@@ -220,11 +222,19 @@ function SearchContent() {
   return (
     <div className="container-fluid h-[var(--search-content)] flex flex-col bg-background py-4 space-y-4">
 
-    <div className="flex flex-col space-y-1.5">
-        <h1 className="text-2xl font-bold tracking-tight">{t('search.title')}</h1>
-        <p className="text-muted-foreground">
-          {t('search.subtitle')}
-        </p>
+    <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-2 md:space-y-0">
+        <div className="flex flex-col space-y-1.5">
+          <h1 className="text-2xl font-bold tracking-tight">{t('search.title')}</h1>
+          <p className="text-muted-foreground">
+            {t('search.subtitle')}
+          </p>
+        </div>
+        {isAuthenticated && (
+          <Button onClick={() => setShowAddServerWizard(true)} size="sm">
+            <Plus className="h-4 w-4 mr-2" />
+            {t('registry.addServer.button')}
+          </Button>
+        )}
       </div>
 
       {/* Search Controls */}
@@ -441,6 +451,12 @@ function SearchContent() {
         </div>
       )}
    </div>
+      
+      {/* Add Server Wizard */}
+      <IntelligentAddServerWizard 
+        open={showAddServerWizard} 
+        onOpenChange={setShowAddServerWizard} 
+      />
     </div>
   );
 }

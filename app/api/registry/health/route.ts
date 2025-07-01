@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 
 export async function GET() {

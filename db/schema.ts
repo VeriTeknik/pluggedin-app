@@ -1038,3 +1038,80 @@ export const embeddedChatsRelations = relations(embeddedChatsTable, ({ one }) =>
 }));
 
 // Removed duplicate profilesRelationsWithSocial definition
+
+// ===== Registry Servers Tables =====
+
+export const registryServersTable = pgTable(
+  'registry_servers',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    registry_id: text('registry_id').unique(), // Official registry ID when published
+    name: text('name').notNull(), // e.g., "io.github.owner/repo"
+    github_owner: text('github_owner').notNull(),
+    github_repo: text('github_repo').notNull(),
+    repository_url: text('repository_url').notNull(),
+    description: text('description'),
+    is_claimed: boolean('is_claimed').default(false).notNull(),
+    is_published: boolean('is_published').default(false).notNull(), // Whether it's in official registry
+    claimed_by_user_id: text('claimed_by_user_id')
+      .references(() => users.id, { onDelete: 'set null' }),
+    claimed_at: timestamp('claimed_at', { withTimezone: true }),
+    published_at: timestamp('published_at', { withTimezone: true }),
+    metadata: jsonb('metadata'), // Full server data
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    registryServersGithubIdx: index('registry_servers_github_idx').on(table.github_owner, table.github_repo),
+    registryServersClaimedByIdx: index('registry_servers_claimed_by_idx').on(table.claimed_by_user_id),
+    registryServersIsPublishedIdx: index('registry_servers_is_published_idx').on(table.is_published),
+  })
+);
+
+export const serverClaimRequestsTable = pgTable(
+  'server_claim_requests',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    server_uuid: uuid('server_uuid')
+      .notNull()
+      .references(() => registryServersTable.uuid, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
+    github_username: text('github_username'), // From OAuth account
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    processed_at: timestamp('processed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    serverClaimRequestsServerIdx: index('server_claim_requests_server_idx').on(table.server_uuid),
+    serverClaimRequestsUserIdx: index('server_claim_requests_user_idx').on(table.user_id),
+    serverClaimRequestsStatusIdx: index('server_claim_requests_status_idx').on(table.status),
+  })
+);
+
+// Relations for registry servers
+export const registryServersRelations = relations(registryServersTable, ({ one, many }) => ({
+  claimedBy: one(users, {
+    fields: [registryServersTable.claimed_by_user_id],
+    references: [users.id],
+  }),
+  claimRequests: many(serverClaimRequestsTable),
+}));
+
+export const serverClaimRequestsRelations = relations(serverClaimRequestsTable, ({ one }) => ({
+  server: one(registryServersTable, {
+    fields: [serverClaimRequestsTable.server_uuid],
+    references: [registryServersTable.uuid],
+  }),
+  user: one(users, {
+    fields: [serverClaimRequestsTable.user_id],
+    references: [users.id],
+  }),
+}));
