@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
+import { discoverSingleServerToolsWithLogs } from '@/app/actions/discover-mcp-tools-with-logs';
 import { isServerShared, unshareServer } from '@/app/actions/social';
 import { ShareServerDialog } from '@/components/server/share-server-dialog';
 import {
@@ -27,6 +27,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
+import { CliToast } from '@/components/ui/cli-toast';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { cn } from '@/lib/utils';
@@ -65,6 +66,8 @@ export function ServerCard({
   const [sharedUuid, setSharedUuid] = useState<string | null>(null);
   const [isCheckingShareStatus, setIsCheckingShareStatus] = useState(true);
   const [isUnsharing, setIsUnsharing] = useState(false);
+  const [showCliToast, setShowCliToast] = useState(false);
+  const [cliLogs, setCliLogs] = useState<string[]>([]);
 
   // Check if server is shared on mount
   useEffect(() => {
@@ -96,14 +99,27 @@ export function ServerCard({
       return;
     }
     setIsDiscovering(true);
+    setCliLogs([]);
+    setShowCliToast(true);
+    
     try {
-      const result = await discoverSingleServerTools(currentProfile.uuid, server.uuid);
+      const result = await discoverSingleServerToolsWithLogs(currentProfile.uuid, server.uuid);
+      
+      // Update CLI logs
+      if (result.logs && result.logs.length > 0) {
+        setCliLogs(result.logs);
+      }
+      
       if (result.success) {
-        toast({ title: t('common.success'), description: result.message });
+        // Add success message to logs
+        setCliLogs(prev => [...prev, '', `[SUCCESS] ${result.message}`]);
       } else {
-        throw new Error(result.error || t('mcpServers.errors.discoveryFailed'));
+        // Add error message to logs
+        setCliLogs(prev => [...prev, '', `[ERROR] ${result.error || t('mcpServers.errors.discoveryFailed')}`]);
       }
     } catch (error: any) {
+      // Add error to logs
+      setCliLogs(prev => [...prev, '', `[ERROR] ${error.message}`]);
       toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
     } finally {
       setIsDiscovering(false);
@@ -132,11 +148,12 @@ export function ServerCard({
   };
 
   return (
-    <Card className={cn("relative", isSelected && "ring-2 ring-primary")}>
-      {/* Add selection checkbox */}
-      <div className="absolute top-2 left-2 z-10">
-        <TooltipProvider>
-          <Tooltip>
+    <>
+      <Card className={cn("relative", isSelected && "ring-2 ring-primary")}>
+        {/* Add selection checkbox */}
+        <div className="absolute top-2 left-2 z-10">
+          <TooltipProvider>
+            <Tooltip>
             <TooltipTrigger asChild>
               <div>
                 <Checkbox
@@ -319,5 +336,14 @@ export function ServerCard({
         </Button>
       </CardFooter>
     </Card>
+    
+    {/* CLI Toast for discovery logs */}
+    <CliToast
+      isOpen={showCliToast}
+      onClose={() => setShowCliToast(false)}
+      title={`Discovering tools for ${server.name}`}
+      lines={cliLogs}
+    />
+  </>
   );
 }

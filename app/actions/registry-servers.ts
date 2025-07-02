@@ -7,6 +7,7 @@ import { db } from '@/db';
 import { accounts, registryServersTable, serverClaimRequestsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
+import { transformPluggedinRegistryToMcpIndex, inferTransportFromPackages } from '@/lib/registry/registry-transformer';
 
 // Validation schemas
 const repositoryUrlSchema = z.string().url().refine(
@@ -250,66 +251,31 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
     }
 
     const server = registryResult.data;
-    const primaryPackage = server.packages?.[0];
-
-    if (!primaryPackage) {
-      return { success: false, error: 'No package information available for this server' };
-    }
-
-    // Transform registry data to local server config
-    let command = '';
-    let args: string[] = [];
-    const env: Record<string, string> = {};
-
-    switch (primaryPackage.registry_name) {
-      case 'npm':
-        command = primaryPackage.runtime_hint || 'npx';
-        args = [primaryPackage.name];
-        if (primaryPackage.runtime_arguments) {
-          args.push(...primaryPackage.runtime_arguments);
-        }
-        break;
-      case 'docker':
-        command = 'docker';
-        args = ['run'];
-        if (primaryPackage.package_arguments) {
-          args.push(...primaryPackage.package_arguments.map((arg: any) => arg.value || arg.default || ''));
-        }
-        args.push(primaryPackage.name);
-        break;
-      case 'pypi':
-        command = primaryPackage.runtime_hint || 'uvx';
-        args = [primaryPackage.name];
-        break;
-      default:
-        // Unknown type, try to infer
-        if (primaryPackage.name?.endsWith('.py')) {
-          command = 'python';
-          args = [primaryPackage.name];
-        } else {
-          command = 'node';
-          args = [primaryPackage.name];
-        }
-    }
-
-    // Extract environment variables with empty values for user to fill
-    if (primaryPackage.environment_variables) {
-      primaryPackage.environment_variables.forEach((envVar: any) => {
-        env[envVar.name] = '';
-      });
-    }
+    
+    // Use the official transformer to convert registry data
+    const transformedServer = transformPluggedinRegistryToMcpIndex(server);
+    
+    // Extract command, args, and envs from the transformed data
+    const command = transformedServer.command;
+    const args = transformedServer.args;
+    const env = transformedServer.envs;
+    
+    // Determine the transport type based on packages
+    const transportType = inferTransportFromPackages(server.packages);
+    const serverType = transportType === 'stdio' ? 'STDIO' : 
+                      transportType === 'sse' ? 'SSE' : 'STREAMABLE_HTTP';
 
     // Import using existing mcp-servers action
     const { createMcpServer } = await import('./mcp-servers');
     
     const result = await createMcpServer({
-      name: server.name.split('/').pop() || server.name,
+      name: transformedServer.name, // Use the transformed display name
       profileUuid,
       description: server.description || '',
       command,
       args,
       env: Object.keys(env).length > 0 ? env : undefined,
-      type: 'STDIO' as any, // Registry servers are typically STDIO
+      type: serverType as any,
       source: 'REGISTRY' as any,
       external_id: server.id,
     });

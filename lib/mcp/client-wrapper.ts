@@ -21,6 +21,7 @@ import {
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
+import { packageManager } from '@/lib/mcp/package-manager';
 
 // --- Configuration & Types ---
 
@@ -181,7 +182,7 @@ export function createFirejailConfig(
  * Creates an MCP Client instance and its corresponding transport based on server config.
  * Does not establish the connection yet.
  */
-function createMcpClientAndTransport(serverConfig: McpServer): { client: Client; transport: Transport } | null {
+async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ client: Client; transport: Transport } | null> {
   let transport: Transport | undefined;
   const clientName = 'PluggedinAppClient'; // Or get from config/package.json
   const clientVersion = '0.1.0'; // Or get from config/package.json
@@ -209,22 +210,57 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
         }
       }
 
+      // Transform command for package managers (npx, uvx, etc.)
+      let transformedCommand = serverConfig.command;
+      let transformedArgs = serverConfig.args || [];
+      let packageManagerEnv: Record<string, string> = {};
+      
+      try {
+        const transformation = await packageManager.transformCommand(
+          serverConfig.command,
+          serverConfig.args || [],
+          serverConfig.uuid || serverConfig.name // Use UUID if available, fallback to name
+        );
+        
+        transformedCommand = transformation.command;
+        transformedArgs = transformation.args;
+        packageManagerEnv = transformation.env || {};
+        
+        console.log(`[MCP Wrapper] Transformed command for ${serverConfig.name}:`, {
+          original: `${serverConfig.command} ${(serverConfig.args || []).join(' ')}`,
+          transformed: `${transformedCommand} ${transformedArgs.join(' ')}`
+        });
+      } catch (error) {
+        console.error(`[MCP Wrapper] Failed to transform command for ${serverConfig.name}:`, error);
+        // Continue with original command if transformation fails
+      }
+
       // Apply firejail sandboxing only if explicitly requested and applicable
       let firejailConfig: FirejailConfig | null = null;
       if (serverConfig.applySandboxing === true) { // Check for the flag
-        firejailConfig = createFirejailConfig(serverConfig);
+        // Update firejail config to use transformed command
+        const originalConfig = createFirejailConfig(serverConfig);
+        if (originalConfig) {
+          firejailConfig = {
+            ...originalConfig,
+            command: transformedCommand,
+            args: transformedArgs
+          };
+        }
       }
 
       const stdioParams: StdioServerParameters = firejailConfig ? {
         // Use firejail configuration because applySandboxing was true
         command: firejailConfig.command,
         args: firejailConfig.args,
-        env: firejailConfig.env
+        env: {
+          ...firejailConfig.env,
+          ...packageManagerEnv // Merge package manager env
+        }
       } : {
-        // Use original configuration (non-Linux or non-STDIO/command)
-        // Construct necessary env even when not using firejail, especially for uvx
-        command: serverConfig.command,
-        args: serverConfig.args || [],
+        // Use transformed configuration
+        command: transformedCommand,
+        args: transformedArgs,
         env: {
           // Start with parent process env
           ...(process.env as Record<string, string>),
@@ -238,6 +274,8 @@ function createMcpClientAndTransport(serverConfig: McpServer): { client: Client;
             PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace',
             UV_SYSTEM_PYTHON: 'true',
           } : {}),
+          // Apply package manager env
+          ...packageManagerEnv,
           // Apply server-specific env vars, overriding anything above
           ...(serverConfig.env || {})
         }
@@ -383,7 +421,7 @@ async function connectMcpClient(
             }
           }
           
-          const newClientData = createMcpClientAndTransport(serverConfig);
+          const newClientData = await createMcpClientAndTransport(serverConfig);
           if (newClientData?.transport) {
             currentTransport = newClientData.transport;
           } else {
@@ -483,7 +521,7 @@ export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool
   }
   
   const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
-  const clientData = createMcpClientAndTransport(serverConfig);
+  const clientData = await createMcpClientAndTransport(serverConfig);
   if (!clientData) {
     throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
   }
@@ -529,7 +567,7 @@ export async function listResourceTemplatesFromServer(serverConfig: McpServer): 
     }
     
     const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
-    const clientData = createMcpClientAndTransport(serverConfig);
+    const clientData = await createMcpClientAndTransport(serverConfig);
     if (!clientData) {
         throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
     }
@@ -578,7 +616,7 @@ export async function listResourcesFromServer(serverConfig: McpServer): Promise<
     }
     
     const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
-    const clientData = createMcpClientAndTransport(serverConfig);
+    const clientData = await createMcpClientAndTransport(serverConfig);
     if (!clientData) {
         throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
     }
@@ -627,7 +665,7 @@ export async function listPromptsFromServer(serverConfig: McpServer): Promise<Pr
     }
     
     const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
-    const clientData = createMcpClientAndTransport(serverConfig);
+    const clientData = await createMcpClientAndTransport(serverConfig);
     if (!clientData) {
         throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
     }

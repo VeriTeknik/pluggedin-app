@@ -167,6 +167,15 @@ async function searchRegistry(query: string): Promise<SearchIndex> {
     const indexed: SearchIndex = {};
     for (const server of servers) {
       const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
+      
+      // Debug log for YouTube server
+      if (server.name?.includes('youtube')) {
+        console.log('[Search API] Transforming YouTube server:', {
+          original: server,
+          transformed: mcpIndex
+        });
+      }
+      
       indexed[server.id] = mcpIndex;
     }
     

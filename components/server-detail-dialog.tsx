@@ -73,6 +73,7 @@ export function ServerDetailDialog({
   const [registryData, setRegistryData] = useState(server.registryData);
   const [isLoadingRegistry, setIsLoadingRegistry] = useState(false);
   const [editableEnv, setEditableEnv] = useState(server.env || {});
+  const [fullServerData, setFullServerData] = useState<any>(null);
 
   // Reset editableEnv when server changes
   useEffect(() => {
@@ -85,26 +86,51 @@ export function ServerDetailDialog({
   // Fetch registry data if server is from registry
   useEffect(() => {
     async function loadRegistryData() {
-      if (open && server.source === McpServerSource.REGISTRY && server.external_id && !server.registryData) {
+      if (open && server.source === McpServerSource.REGISTRY && server.external_id) {
         setIsLoadingRegistry(true);
         try {
-          const result = await fetchRegistryServer(server.external_id);
-          if (result.success && result.data) {
-            const data = result.data;
-            setRegistryData({
-              id: data.id,
-              name: data.name,
-              description: data.description,
-              repository: data.repository?.url,
-              version: data.version_detail?.version,
-              author: data.repository?.id ? data.repository.id.split('/')[0] : undefined,
-              homepage: data.repository?.url,
-              tags: data.tags || [],
-              created_at: data.created_at,
-              updated_at: data.version_detail?.release_date,
-              downloads: data.downloads,
-              stars: data.stars,
-            });
+          // Fetch full server details from the API which includes command/args
+          const response = await fetch(`/api/registry/server/${server.external_id}`);
+          const apiData = await response.json();
+          
+          if (apiData.success && apiData.server) {
+            // Set the full server data which includes command/args
+            setFullServerData(apiData.server);
+            
+            // Also update env if we have environment variables
+            if (apiData.server.envs && Array.isArray(apiData.server.envs)) {
+              const envObj: Record<string, string> = {};
+              apiData.server.envs.forEach((env: any) => {
+                if (typeof env === 'string') {
+                  envObj[env] = '';
+                } else if (env.name) {
+                  envObj[env.name] = env.description || '';
+                }
+              });
+              setEditableEnv(envObj);
+            }
+          }
+          
+          // Also fetch registry-specific data if not already present
+          if (!server.registryData) {
+            const result = await fetchRegistryServer(server.external_id);
+            if (result.success && result.data) {
+              const data = result.data;
+              setRegistryData({
+                id: data.id,
+                name: data.name,
+                description: data.description,
+                repository: data.repository?.url,
+                version: data.version_detail?.version,
+                author: data.repository?.id ? data.repository.id.split('/')[0] : undefined,
+                homepage: data.repository?.url,
+                tags: data.tags || [],
+                created_at: data.created_at,
+                updated_at: data.version_detail?.release_date,
+                downloads: data.downloads,
+                stars: data.stars,
+              });
+            }
           }
         } catch (error) {
           console.error('Failed to fetch registry data:', error);
@@ -114,7 +140,7 @@ export function ServerDetailDialog({
       }
     }
     loadRegistryData();
-  }, [open, server.source, server.external_id, server.registryData]);
+  }, [open, server.source, server.external_id]);
 
   // Don't allow deletion of registry servers
   const isDeletable = canDelete && server.source !== McpServerSource.REGISTRY;
@@ -335,29 +361,29 @@ export function ServerDetailDialog({
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {server.command && (
+                  {(fullServerData?.command || server.command) && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Command</p>
                       <code className="block p-3 bg-muted rounded-md text-sm">
-                        {server.command}
+                        {fullServerData?.command || server.command}
                       </code>
                     </div>
                   )}
 
-                  {server.args && server.args.length > 0 && (
+                  {((fullServerData?.args && fullServerData.args.length > 0) || (server.args && server.args.length > 0)) && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Arguments</p>
                       <code className="block p-3 bg-muted rounded-md text-sm">
-                        {server.args.join(' ')}
+                        {(fullServerData?.args || server.args || []).join(' ')}
                       </code>
                     </div>
                   )}
 
-                  {server.url && (
+                  {(fullServerData?.url || server.url) && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">URL</p>
                       <code className="block p-3 bg-muted rounded-md text-sm break-all">
-                        {server.url}
+                        {fullServerData?.url || server.url}
                       </code>
                     </div>
                   )}
@@ -393,13 +419,13 @@ export function ServerDetailDialog({
                     <pre className="p-3 bg-muted rounded-md text-sm overflow-x-auto">
                       {JSON.stringify(
                         {
-                          name: server.name,
-                          type: server.type,
-                          description: server.description,
-                          command: server.command,
-                          args: server.args,
-                          env: server.env,
-                          url: server.url,
+                          name: fullServerData?.name || server.name,
+                          type: fullServerData?.url ? McpServerType.SSE : server.type,
+                          description: fullServerData?.description || server.description,
+                          command: fullServerData?.command || server.command,
+                          args: fullServerData?.args || server.args,
+                          env: editableEnv,
+                          url: fullServerData?.url || server.url,
                         },
                         null,
                         2

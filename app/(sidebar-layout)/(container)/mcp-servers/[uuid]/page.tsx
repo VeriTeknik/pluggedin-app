@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 // Internal absolute imports (@/)
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
+import { discoverSingleServerToolsWithLogs } from '@/app/actions/discover-mcp-tools-with-logs';
 import {
   deleteMcpServerByUuid,
   getMcpServerByUuid,
@@ -37,6 +37,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
+import { CliToast } from '@/components/ui/cli-toast';
 import { McpServer } from '@/types/mcp-server';
 import { ResourceTemplate } from '@/types/resource-template';
 import type { Tool } from '@/types/tool';
@@ -59,6 +60,8 @@ export default function McpServerDetailPage({
   const { toast } = useToast(); // Initialize useToast
   const [hasChanges, setHasChanges] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false); // Add state for discovery loading
+  const [showCliToast, setShowCliToast] = useState(false);
+  const [cliLogs, setCliLogs] = useState<string[]>([]);
 
   const form = useForm({
     defaultValues: {
@@ -212,19 +215,32 @@ export default function McpServerDetailPage({
       return;
     }
     setIsDiscovering(true);
+    setCliLogs([]);
+    setShowCliToast(true);
+    
     try {
       // Use uuid from params directly
-      const result = await discoverSingleServerTools(currentProfile.uuid, uuid);
+      const result = await discoverSingleServerToolsWithLogs(currentProfile.uuid, uuid);
+      
+      // Update CLI logs
+      if (result.logs && result.logs.length > 0) {
+        setCliLogs(result.logs);
+      }
+      
       if (result.success) {
-        toast({ title: t('common.success'), description: result.message });
+        // Add success message to logs
+        setCliLogs(prev => [...prev, '', `[SUCCESS] ${result.message}`]);
         // Optionally revalidate SWR data for tools/resources/templates here if needed
         // mutateTools(); // Assuming mutate functions exist for SWR hooks
         // mutateTemplates();
         // mutateResources();
       } else {
-        throw new Error(result.error || t('mcpServers.errors.discoveryFailed'));
+        // Add error message to logs
+        setCliLogs(prev => [...prev, '', `[ERROR] ${result.error || t('mcpServers.errors.discoveryFailed')}`]);
       }
     } catch (error: any) {
+      // Add error to logs
+      setCliLogs(prev => [...prev, '', `[ERROR] ${error.message}`]);
       toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
     } finally {
       setIsDiscovering(false);
@@ -633,6 +649,14 @@ export default function McpServerDetailPage({
 
         </Tabs>
       </Form>
+      
+      {/* CLI Toast for discovery logs */}
+      <CliToast
+        isOpen={showCliToast}
+        onClose={() => setShowCliToast(false)}
+        title={`Discovering tools for ${mcpServer?.name || 'server'}`}
+        lines={cliLogs}
+      />
     </div>
   );
 }
