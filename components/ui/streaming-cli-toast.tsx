@@ -37,27 +37,65 @@ export function StreamingCliToast({
   const [hasError, setHasError] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const sessionStartedRef = useRef<string | null>(null);
+  const isCompleteRef = useRef<boolean>(false);
+
+  // Component state and refs
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      });
     }
   }, [messages]);
 
   // Connect to SSE stream when opened
   useEffect(() => {
     if (!isOpen) {
-      // Cleanup when closed
+      // Cleanup when closed, but don't reset messages immediately - let them persist for viewing
       if (eventSourceRef.current) {
-        eventSourceRef.current.close();
+        if (eventSourceRef.current.readyState !== EventSource.CLOSED) {
+          eventSourceRef.current.close();
+        }
         eventSourceRef.current = null;
       }
-      setMessages([]);
+      sessionStartedRef.current = null; // Clear session tracking
+      isCompleteRef.current = false; // Reset completion ref
       setIsConnected(false);
       setIsComplete(false);
       setHasError(false);
       return;
+    }
+
+    // Check if we're already processing this session
+    const sessionKey = `${serverUuid}-${profileUuid}`;
+    if (sessionStartedRef.current === sessionKey) {
+      return;
+    }
+
+    sessionStartedRef.current = sessionKey;
+    
+    // Only reset messages when starting a new discovery session
+    const resetState = () => {
+      setMessages([]);
+      setIsConnected(false);
+      setIsComplete(false);
+      setHasError(false);
+      isCompleteRef.current = false; // Reset completion ref
+    };
+    resetState();
+
+    // Prevent creating multiple connections
+    if (eventSourceRef.current) {
+      if (eventSourceRef.current.readyState !== EventSource.CLOSED) {
+        eventSourceRef.current.close();
+      }
+      eventSourceRef.current = null;
     }
 
     // Connect to streaming endpoint
@@ -67,11 +105,18 @@ export function StreamingCliToast({
 
     eventSource.onopen = () => {
       setIsConnected(true);
-      setMessages([{
+      setMessages(prev => [...prev, {
         type: 'log',
         message: 'Connected to discovery stream...',
         timestamp: Date.now(),
       }]);
+      
+      // Ensure we scroll to bottom when first connected
+      setTimeout(() => {
+        if (scrollRef.current) {
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }
+      }, 100);
     };
 
     eventSource.onmessage = (event) => {
@@ -85,11 +130,17 @@ export function StreamingCliToast({
 
         if (message.type === 'complete') {
           setIsComplete(true);
+          isCompleteRef.current = true; // Track completion status in ref
           onComplete?.(true, message.data);
-          // Auto-close after a short delay
+          // Close the EventSource connection immediately to prevent error events
+          if (eventSourceRef.current && eventSourceRef.current.readyState !== EventSource.CLOSED) {
+            eventSourceRef.current.close();
+          }
+          eventSourceRef.current = null;
+          // Auto-close after showing completion for a moment
           setTimeout(() => {
             onClose();
-          }, 3000);
+          }, 2000);
         }
       } catch (error) {
         console.error('Failed to parse SSE message:', error);
@@ -97,7 +148,12 @@ export function StreamingCliToast({
     };
 
     eventSource.onerror = (error) => {
-      console.error('EventSource error:', error);
+      // Don't show error if discovery already completed successfully
+      if (isCompleteRef.current) {
+        return;
+      }
+      
+      console.error('EventSource error during discovery:', error);
       setHasError(true);
       setMessages(prev => [...prev, {
         type: 'error',
@@ -105,17 +161,23 @@ export function StreamingCliToast({
         timestamp: Date.now(),
       }]);
       
-      // Close the connection
-      eventSource.close();
+      // Close the connection and clean up
+      if (eventSource.readyState !== EventSource.CLOSED) {
+        eventSource.close();
+      }
       setIsConnected(false);
+      eventSourceRef.current = null;
       onComplete?.(false);
     };
 
     // Cleanup on unmount or when dependencies change
     return () => {
-      eventSource.close();
+      if (eventSource.readyState !== EventSource.CLOSED) {
+        eventSource.close();
+      }
+      eventSourceRef.current = null;
     };
-  }, [isOpen, serverUuid, profileUuid, onComplete, onClose]);
+  }, [isOpen, serverUuid, profileUuid]); // Removed onComplete and onClose from dependencies to prevent recreation
 
   if (!isOpen) return null;
 
@@ -158,7 +220,8 @@ export function StreamingCliToast({
       {/* Stream Content */}
       <div 
         ref={scrollRef}
-        className="overflow-y-auto h-[calc(100%-40px)] p-4 font-mono text-xs custom-scrollbar"
+        className="overflow-y-auto h-[calc(100%-40px)] p-4 font-mono text-xs custom-scrollbar scroll-smooth"
+        style={{ scrollBehavior: 'smooth' }}
       >
         {messages.map((message, index) => (
           <StreamLine key={index} message={message} />

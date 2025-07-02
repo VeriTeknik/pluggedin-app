@@ -102,17 +102,9 @@ export function ServerCard({
 
   const handleDiscoveryComplete = (success: boolean, data?: any) => {
     setIsDiscovering(false);
-    if (success) {
-      toast({ 
-        title: t('common.success'), 
-        description: t('mcpServers.discovery.success', { 
-          tools: data?.tools || 0,
-          templates: data?.templates || 0,
-          resources: data?.resources || 0,
-          prompts: data?.prompts || 0
-        }) 
-      });
-    } else {
+    // Don't show additional toast for success since streaming interface already shows completion
+    // Only show error toast if discovery failed
+    if (!success) {
       toast({ 
         title: t('common.error'), 
         description: t('mcpServers.errors.discoveryFailed'), 

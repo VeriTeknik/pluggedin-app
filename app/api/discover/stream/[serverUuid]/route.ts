@@ -1,9 +1,9 @@
 import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
-import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
-import { mcpServersTable, ToggleStatus,toolsTable } from '@/db/schema';
+import { mcpServersTable, profilesTable, ToggleStatus, toolsTable } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 import { decryptServerData } from '@/lib/encryption';
 import { listToolsFromServer } from '@/lib/mcp/client-wrapper';
 
@@ -17,20 +17,39 @@ interface StreamMessage {
 function createSSEResponse() {
   const encoder = new TextEncoder();
   let controller: ReadableStreamDefaultController;
+  let isClosed = false;
   
   const stream = new ReadableStream({
     start(c) {
       controller = c;
     },
+    cancel() {
+      isClosed = true;
+    }
   });
 
   const sendMessage = (message: StreamMessage) => {
-    const data = `data: ${JSON.stringify(message)}\n\n`;
-    controller.enqueue(encoder.encode(data));
+    if (isClosed) return; // Don't send if stream is closed
+    
+    try {
+      const data = `data: ${JSON.stringify(message)}\n\n`;
+      controller.enqueue(encoder.encode(data));
+    } catch (error) {
+      // Stream might be closed, mark as closed to prevent further sends
+      isClosed = true;
+    }
   };
 
   const close = () => {
-    controller.close();
+    if (isClosed) return; // Don't close if already closed
+    
+    try {
+      controller.close();
+      isClosed = true;
+    } catch (error) {
+      // Already closed, just mark as closed
+      isClosed = true;
+    }
   };
 
   return { stream, sendMessage, close };
@@ -43,10 +62,29 @@ export async function GET(
   try {
     const { serverUuid } = await params;
     
-    // Authenticate API key and get active profile
-    const auth = await authenticateApiKey(request);
-    if (auth.error) return auth.error;
-    const profileUuid = auth.activeProfile.uuid;
+    // Authenticate using session and get profile UUID from query params
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    // Get profile UUID from query parameters
+    const profileUuid = request.nextUrl.searchParams.get('profileUuid');
+    if (!profileUuid) {
+      return new NextResponse('Profile UUID required', { status: 400 });
+    }
+
+    // Validate user has access to this profile
+    const profile = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, profileUuid),
+      with: {
+        project: true
+      }
+    });
+
+    if (!profile || profile.project.user_id !== session.user.id) {
+      return new NextResponse('Unauthorized access to profile', { status: 403 });
+    }
 
     const { stream, sendMessage, close } = createSSEResponse();
 

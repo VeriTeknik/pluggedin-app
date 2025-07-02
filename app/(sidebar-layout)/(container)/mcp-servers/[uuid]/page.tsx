@@ -219,16 +219,8 @@ export default function McpServerDetailPage({
   const handleDiscoveryComplete = (success: boolean, data?: any) => {
     setIsDiscovering(false);
     if (success) {
-      toast({ 
-        title: t('common.success'), 
-        description: t('mcpServers.discovery.success', { 
-          tools: data?.tools || 0,
-          templates: data?.templates || 0,
-          resources: data?.resources || 0,
-          prompts: data?.prompts || 0
-        }) 
-      });
-      // Revalidate SWR data to refresh the UI
+      // Don't show additional success toast since streaming interface already shows completion
+      // Just revalidate SWR data to refresh the UI
       mutate();
     } else {
       toast({ 
@@ -644,6 +636,7 @@ export default function McpServerDetailPage({
       
       {/* Streaming CLI Toast for discovery */}
       <StreamingCliToast
+        key={`discovery-${uuid}-${showStreamingToast}`}
         isOpen={showStreamingToast}
         onClose={() => setShowStreamingToast(false)}
         title={`Discovering tools for ${mcpServer?.name || 'server'}`}
