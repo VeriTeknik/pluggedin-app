@@ -5,6 +5,7 @@ import * as LucideIcons from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'sonner';
 import useSWR from 'swr';
 
 import { createMcpServer, getMcpServers } from '@/app/actions/mcp-servers';
@@ -223,18 +224,41 @@ function SearchContent() {
   const handleCreateServers = async (configs: any[]) => {
     if (!currentProfile) return;
     
+    let successCount = 0;
+    let failureCount = 0;
+    
     try {
       for (const config of configs) {
-        await createMcpServer({
+        const result = await createMcpServer({
           ...config,
           profileUuid: currentProfile.uuid
         });
+        
+        if (result.success) {
+          successCount++;
+          
+          // Special message for registry servers
+          if (config.source === McpServerSource.REGISTRY) {
+            toast.success(`Added ${config.name} from MCP Registry`);
+          }
+        } else {
+          failureCount++;
+          toast.error(`Failed to add ${config.name}: ${result.error}`);
+        }
+      }
+      
+      if (successCount > 1) {
+        toast.success(`Successfully added ${successCount} servers`);
+      } else if (successCount === 1 && configs[0].source !== McpServerSource.REGISTRY) {
+        // Single non-registry server
+        toast.success(`Successfully added ${configs[0].name}`);
       }
       
       // Refresh the installed servers list
       mutate(`${currentProfile.uuid}/installed-mcp-servers`);
     } catch (error) {
       console.error('Failed to create servers:', error);
+      toast.error('An unexpected error occurred while adding servers');
     }
   };
 

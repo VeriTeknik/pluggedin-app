@@ -191,7 +191,7 @@ export function IntelligentServerDialog({
   const [selectedServerForDetail, setSelectedServerForDetail] = useState<ParsedConfig | null>(null);
   const [registryToken, setRegistryToken] = useState<string | null>(null);
   const [githubUsername, setGithubUsername] = useState<string | null>(null);
-
+  
   // Check if a server configuration is a duplicate
   const isDuplicate = (config: ParsedConfig): boolean => {
     return existingServers.some(existing => {
@@ -216,6 +216,11 @@ export function IntelligentServerDialog({
       return config.name === existing.name;
     });
   };
+
+  // Calculate the actual number of non-duplicate selected servers
+  const nonDuplicateSelectedCount = parsedConfigs.filter(c => 
+    selectedConfigs.has(c.name) && !isDuplicate(c)
+  ).length;
 
   const initiateGitHubOAuth = () => {
     const redirectUri = getRedirectUri();
@@ -927,12 +932,98 @@ export function IntelligentServerDialog({
   };
 
   const handleSubmit = async () => {
-    const configsToSubmit = parsedConfigs.filter(c => selectedConfigs.has(c.name));
+    // Filter out duplicates and only get selected configs
+    const configsToSubmit = parsedConfigs.filter(c => 
+      selectedConfigs.has(c.name) && !isDuplicate(c)
+    );
     
-    if (configsToSubmit.length === 0) return;
+    if (configsToSubmit.length === 0) {
+      toast.warning('No new servers to add. Please unselect any duplicate servers.');
+      return;
+    }
 
-    // If we have a GitHub URL and the user is not the owner, save as unclaimed
+    // For owned repositories with registry token, publish to registry first
     if (configsToSubmit.length === 1 && 
+        configsToSubmit[0].repositoryUrl && 
+        ownershipStatus.isOwner === true &&
+        registryToken) {
+      
+      try {
+        const config = configsToSubmit[0];
+        
+        // Extract owner/repo
+        const match = config.repositoryUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        if (!match) throw new Error('Invalid GitHub URL');
+        const [, owner, repo] = match;
+        
+        // Prepare registry payload
+        const payload = {
+          name: `io.github.${owner}/${repo}`,
+          description: config.description || '',
+          version_detail: {
+            version: "1.0.0" // TODO: Extract from package.json or config
+          },
+          packages: [{
+            registry_name: 'npm',
+            name: config.args?.[0] || `@${owner}/${repo}`,
+            version: "1.0.0",
+            environment_variables: Object.keys(config.env || {}).map(name => ({
+              name,
+              description: `Environment variable ${name}`
+            }))
+          }],
+          repository: {
+            url: config.repositoryUrl,
+            source: 'github',
+            id: `${owner}/${repo}`
+          }
+        };
+
+        toast.info('Publishing to MCP Registry...');
+
+        // Publish to registry first
+        const registryResponse = await fetch('https://registry.plugged.in/v0/publish', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${registryToken}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!registryResponse.ok) {
+          const errorText = await registryResponse.text();
+          
+          // Check for specific error cases
+          if (registryResponse.status === 409) {
+            toast.error('This server is already published to the registry');
+          } else if (registryResponse.status === 401) {
+            toast.error('Authentication failed. Please re-authenticate with GitHub.');
+          } else {
+            toast.error(`Registry publishing failed: ${errorText}`);
+          }
+          return; // Don't create local entry
+        }
+
+        const registryResult = await registryResponse.json();
+        toast.success('Successfully published to MCP Registry!');
+        
+        // Now create local entry with registry reference
+        const localConfig = {
+          ...config,
+          source: McpServerSource.REGISTRY,
+          external_id: registryResult.id || `io.github.${owner}/${repo}`
+        };
+        
+        await onSubmit([localConfig]);
+        handleClose();
+        
+      } catch (error) {
+        toast.error(`Failed to publish: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+    // If we have a GitHub URL and the user is not the owner, save as unclaimed
+    else if (configsToSubmit.length === 1 && 
         configsToSubmit[0].repositoryUrl && 
         ownershipStatus.isOwner === false) {
       
@@ -1183,10 +1274,15 @@ export function IntelligentServerDialog({
                     <Card 
                       key={config.name}
                       className={cn(
-                        "cursor-pointer transition-colors",
+                        "transition-colors",
+                        isConfigDuplicate ? "opacity-50 cursor-not-allowed" : "cursor-pointer",
                         isSelected ? "border-primary" : "border-muted"
                       )}
                       onClick={() => {
+                        if (isConfigDuplicate) {
+                          toast.warning(`${config.name} is already installed in your profile`);
+                          return;
+                        }
                         setSelectedConfigs(prev => {
                           const next = new Set(prev);
                           if (next.has(config.name)) {
@@ -1204,10 +1300,12 @@ export function IntelligentServerDialog({
                             <input
                               type="checkbox"
                               checked={isSelected}
+                              disabled={isConfigDuplicate}
                               onChange={() => {}}
                               onClick={(e) => e.stopPropagation()}
-                              className="rounded"
+                              className="rounded disabled:opacity-50 disabled:cursor-not-allowed"
                               aria-label={`Select ${config.name}`}
+                              title={isConfigDuplicate ? "This server is already installed" : ""}
                             />
                             {config.name}
                           </CardTitle>
@@ -1338,12 +1436,14 @@ export function IntelligentServerDialog({
           </Button>
           <Button 
             onClick={handleSubmit}
-            disabled={selectedConfigs.size === 0 || isSubmitting}
+            disabled={nonDuplicateSelectedCount === 0 || isSubmitting}
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {ownershipStatus.isOwner === false && selectedConfigs.size === 1 && parsedConfigs[0]?.repositoryUrl
+            {ownershipStatus.isOwner === false && nonDuplicateSelectedCount === 1 && parsedConfigs[0]?.repositoryUrl
               ? 'Add as Unclaimed'
-              : `Add ${selectedConfigs.size} Server${selectedConfigs.size !== 1 ? 's' : ''}`}
+              : ownershipStatus.isOwner === true && nonDuplicateSelectedCount === 1 && parsedConfigs[0]?.repositoryUrl && registryToken
+              ? 'Publish to Registry'
+              : `Add ${nonDuplicateSelectedCount} Server${nonDuplicateSelectedCount !== 1 ? 's' : ''}`}
           </Button>
         </DialogFooter>
       </DialogContent>
