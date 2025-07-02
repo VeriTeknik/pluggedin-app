@@ -6,7 +6,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { discoverSingleServerToolsWithLogs } from '@/app/actions/discover-mcp-tools-with-logs';
 import { isServerShared, unshareServer } from '@/app/actions/social';
 import { ShareServerDialog } from '@/components/server/share-server-dialog';
 import {
@@ -24,10 +23,10 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { StreamingCliToast } from '@/components/ui/streaming-cli-toast';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
-import { CliToast } from '@/components/ui/cli-toast';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { cn } from '@/lib/utils';
@@ -66,8 +65,7 @@ export function ServerCard({
   const [sharedUuid, setSharedUuid] = useState<string | null>(null);
   const [isCheckingShareStatus, setIsCheckingShareStatus] = useState(true);
   const [isUnsharing, setIsUnsharing] = useState(false);
-  const [showCliToast, setShowCliToast] = useState(false);
-  const [cliLogs, setCliLogs] = useState<string[]>([]);
+  const [showStreamingToast, setShowStreamingToast] = useState(false);
 
   // Check if server is shared on mount
   useEffect(() => {
@@ -93,36 +91,33 @@ export function ServerCard({
     setSharedUuid(newSharedUuid);
   };
 
-  const handleDiscover = async () => {
+  const handleDiscover = () => {
     if (!currentProfile?.uuid || !server.uuid) {
       toast({ title: t('common.error'), description: t('mcpServers.errors.missingInfo'), variant: 'destructive' });
       return;
     }
     setIsDiscovering(true);
-    setCliLogs([]);
-    setShowCliToast(true);
-    
-    try {
-      const result = await discoverSingleServerToolsWithLogs(currentProfile.uuid, server.uuid);
-      
-      // Update CLI logs
-      if (result.logs && result.logs.length > 0) {
-        setCliLogs(result.logs);
-      }
-      
-      if (result.success) {
-        // Add success message to logs
-        setCliLogs(prev => [...prev, '', `[SUCCESS] ${result.message}`]);
-      } else {
-        // Add error message to logs
-        setCliLogs(prev => [...prev, '', `[ERROR] ${result.error || t('mcpServers.errors.discoveryFailed')}`]);
-      }
-    } catch (error: any) {
-      // Add error to logs
-      setCliLogs(prev => [...prev, '', `[ERROR] ${error.message}`]);
-      toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
-    } finally {
-      setIsDiscovering(false);
+    setShowStreamingToast(true);
+  };
+
+  const handleDiscoveryComplete = (success: boolean, data?: any) => {
+    setIsDiscovering(false);
+    if (success) {
+      toast({ 
+        title: t('common.success'), 
+        description: t('mcpServers.discovery.success', { 
+          tools: data?.tools || 0,
+          templates: data?.templates || 0,
+          resources: data?.resources || 0,
+          prompts: data?.prompts || 0
+        }) 
+      });
+    } else {
+      toast({ 
+        title: t('common.error'), 
+        description: t('mcpServers.errors.discoveryFailed'), 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -337,12 +332,14 @@ export function ServerCard({
       </CardFooter>
     </Card>
     
-    {/* CLI Toast for discovery logs */}
-    <CliToast
-      isOpen={showCliToast}
-      onClose={() => setShowCliToast(false)}
+    {/* Streaming CLI Toast for discovery */}
+    <StreamingCliToast
+      isOpen={showStreamingToast}
+      onClose={() => setShowStreamingToast(false)}
       title={`Discovering tools for ${server.name}`}
-      lines={cliLogs}
+      serverUuid={server.uuid}
+      profileUuid={currentProfile?.uuid || ''}
+      onComplete={handleDiscoveryComplete}
     />
   </>
   );

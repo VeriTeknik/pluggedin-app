@@ -10,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 // Internal absolute imports (@/)
-import { discoverSingleServerToolsWithLogs } from '@/app/actions/discover-mcp-tools-with-logs';
 import {
   deleteMcpServerByUuid,
   getMcpServerByUuid,
@@ -31,13 +30,13 @@ import {
 import { Form } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
+import { StreamingCliToast } from '@/components/ui/streaming-cli-toast';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
-import { CliToast } from '@/components/ui/cli-toast';
 import { McpServer } from '@/types/mcp-server';
 import { ResourceTemplate } from '@/types/resource-template';
 import type { Tool } from '@/types/tool';
@@ -60,8 +59,7 @@ export default function McpServerDetailPage({
   const { toast } = useToast(); // Initialize useToast
   const [hasChanges, setHasChanges] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false); // Add state for discovery loading
-  const [showCliToast, setShowCliToast] = useState(false);
-  const [cliLogs, setCliLogs] = useState<string[]>([]);
+  const [showStreamingToast, setShowStreamingToast] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -209,41 +207,35 @@ export default function McpServerDetailPage({
   };
 
   // Add handleDiscover function (adapted from ServerCard)
-  const handleDiscover = async () => {
+  const handleDiscover = () => {
     if (!currentProfile?.uuid || !uuid) { // Use uuid from params
       toast({ title: t('common.error'), description: t('mcpServers.errors.missingInfo'), variant: 'destructive' });
       return;
     }
     setIsDiscovering(true);
-    setCliLogs([]);
-    setShowCliToast(true);
-    
-    try {
-      // Use uuid from params directly
-      const result = await discoverSingleServerToolsWithLogs(currentProfile.uuid, uuid);
-      
-      // Update CLI logs
-      if (result.logs && result.logs.length > 0) {
-        setCliLogs(result.logs);
-      }
-      
-      if (result.success) {
-        // Add success message to logs
-        setCliLogs(prev => [...prev, '', `[SUCCESS] ${result.message}`]);
-        // Optionally revalidate SWR data for tools/resources/templates here if needed
-        // mutateTools(); // Assuming mutate functions exist for SWR hooks
-        // mutateTemplates();
-        // mutateResources();
-      } else {
-        // Add error message to logs
-        setCliLogs(prev => [...prev, '', `[ERROR] ${result.error || t('mcpServers.errors.discoveryFailed')}`]);
-      }
-    } catch (error: any) {
-      // Add error to logs
-      setCliLogs(prev => [...prev, '', `[ERROR] ${error.message}`]);
-      toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
-    } finally {
-      setIsDiscovering(false);
+    setShowStreamingToast(true);
+  };
+
+  const handleDiscoveryComplete = (success: boolean, data?: any) => {
+    setIsDiscovering(false);
+    if (success) {
+      toast({ 
+        title: t('common.success'), 
+        description: t('mcpServers.discovery.success', { 
+          tools: data?.tools || 0,
+          templates: data?.templates || 0,
+          resources: data?.resources || 0,
+          prompts: data?.prompts || 0
+        }) 
+      });
+      // Revalidate SWR data to refresh the UI
+      mutate();
+    } else {
+      toast({ 
+        title: t('common.error'), 
+        description: t('mcpServers.errors.discoveryFailed'), 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -650,12 +642,14 @@ export default function McpServerDetailPage({
         </Tabs>
       </Form>
       
-      {/* CLI Toast for discovery logs */}
-      <CliToast
-        isOpen={showCliToast}
-        onClose={() => setShowCliToast(false)}
+      {/* Streaming CLI Toast for discovery */}
+      <StreamingCliToast
+        isOpen={showStreamingToast}
+        onClose={() => setShowStreamingToast(false)}
         title={`Discovering tools for ${mcpServer?.name || 'server'}`}
-        lines={cliLogs}
+        serverUuid={uuid}
+        profileUuid={currentProfile?.uuid || ''}
+        onComplete={handleDiscoveryComplete}
       />
     </div>
   );
