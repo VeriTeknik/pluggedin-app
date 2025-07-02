@@ -102,7 +102,7 @@ const EXAMPLES = {
     name: 'Smithery Sequential Thinking',
     config: 'https://server.smithery.ai/@smithery-ai/server-sequential-thinking/mcp?api_key=YOUR_KEY'
   },
-  github: {
+  githubMcp: {
     name: 'GitHub MCP',
     config: `{
   "mcpServers": {

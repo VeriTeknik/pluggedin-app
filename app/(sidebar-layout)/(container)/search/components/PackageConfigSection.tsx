@@ -9,7 +9,6 @@ import {
   checkPackageAvailability,
   type GitHubRepoData,
   type PackageInfo} from '@/app/actions/registry-intelligence';
-import { suggestNextVersion } from '@/lib/registry/registry-utils';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { suggestNextVersion } from '@/lib/registry/registry-utils';
 import { cn } from '@/lib/utils';
 
 interface PackageConfigSectionProps {

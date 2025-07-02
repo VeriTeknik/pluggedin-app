@@ -18,6 +18,7 @@ import {
   updateMcpServer,
 } from '@/app/actions/mcp-servers';
 import { getToolsForServer } from '@/app/actions/tools';
+import { EnvVarsEditor } from '@/components/env-vars-editor';
 import InlineEditText from '@/components/InlineEditText';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -445,14 +446,11 @@ export default function McpServerDetailPage({
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-0">
-                      <div className="relative group cursor-text">
-                        <textarea
-                          value={form.watch('env')}
-                          onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => form.setValue('env', e.target.value)} // Add type for e
-                          className="w-full bg-muted p-3 rounded-md font-mono text-sm min-h-[150px] border-none resize-y"
-                          placeholder={t('mcpServers.form.envVarsPlaceholder')}
-                        />
-                      </div>
+                      <EnvVarsEditor
+                        value={form.watch('env')}
+                        onChange={(value) => form.setValue('env', value)}
+                        placeholder={t('mcpServers.form.envVarsPlaceholder')}
+                      />
                     </CardContent>
                   </Card>
                 </>

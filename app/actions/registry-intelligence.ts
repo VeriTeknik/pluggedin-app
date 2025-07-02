@@ -1,6 +1,6 @@
 'use server';
 
-import { parseGitHubUrl, suggestNextVersion } from '@/lib/registry/registry-utils';
+import { parseGitHubUrl } from '@/lib/registry/registry-utils';
 
 export interface GitHubRepoData {
   owner: string;

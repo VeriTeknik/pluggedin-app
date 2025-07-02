@@ -110,38 +110,95 @@ export async function addUnclaimedServer(data: z.infer<typeof addUnclaimedServer
 }
 
 /**
- * Verify GitHub ownership by checking OAuth account
+ * Check if user has GitHub account connected via registry OAuth
  */
-export async function verifyGitHubOwnership(userId: string, repoUrl: string) {
+export async function checkGitHubConnection(registryToken?: string) {
+  // For now, just check if we have a registry token
+  // The actual username will come from the registry OAuth flow
+  return { 
+    isConnected: !!registryToken, 
+    githubUsername: null // Will be set during OAuth flow
+  };
+}
+
+/**
+ * Verify GitHub ownership using registry OAuth token
+ */
+export async function verifyGitHubOwnership(registryToken: string, repoUrl: string) {
   try {
     const { owner } = extractGitHubInfo(repoUrl);
     
-    // Get user's GitHub account from OAuth
-    const githubAccount = await db.query.accounts.findFirst({
-      where: and(
-        eq(accounts.userId, userId),
-        eq(accounts.provider, 'github')
-      ),
-    });
-
-    if (!githubAccount) {
-      return { isOwner: false, reason: 'No GitHub account connected' };
+    if (!registryToken) {
+      return { 
+        isOwner: false, 
+        reason: 'Please authenticate with GitHub to verify ownership',
+        needsAuth: true 
+      };
     }
 
-    // The providerAccountId should be the GitHub username
-    const githubUsername = githubAccount.providerAccountId;
+    // Check user info
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${registryToken}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (!userResponse.ok) {
+      return { 
+        isOwner: false, 
+        reason: 'Failed to fetch GitHub user info. Please re-authenticate.',
+        needsAuth: true 
+      };
+    }
+
+    const userInfo = await userResponse.json();
+    const githubUsername = userInfo.login;
     
-    // Compare with repository owner
-    const isOwner = githubUsername.toLowerCase() === owner.toLowerCase();
+    // First check if it's a personal repository
+    if (githubUsername.toLowerCase() === owner.toLowerCase()) {
+      return { 
+        isOwner: true, 
+        githubUsername,
+        reason: null 
+      };
+    }
+    
+    // Check organizations
+    const orgsResponse = await fetch('https://api.github.com/user/orgs', {
+      headers: {
+        Authorization: `Bearer ${registryToken}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (orgsResponse.ok) {
+      const organizations = await orgsResponse.json();
+      const isOrgMember = organizations.some((org: any) => 
+        org.login.toLowerCase() === owner.toLowerCase()
+      );
+      
+      if (isOrgMember) {
+        return { 
+          isOwner: true, 
+          githubUsername,
+          reason: null 
+        };
+      }
+    }
     
     return { 
-      isOwner, 
+      isOwner: false, 
       githubUsername,
-      reason: isOwner ? null : 'Repository owner does not match your GitHub account' 
+      reason: `Repository owner '${owner}' does not match your GitHub account (@${githubUsername}) or any of your organizations` 
     };
   } catch (error) {
     console.error('Error verifying GitHub ownership:', error);
-    return { isOwner: false, reason: 'Failed to verify ownership' };
+    return { 
+      isOwner: false, 
+      reason: 'Failed to verify ownership. Please try again.',
+      needsAuth: true 
+    };
   }
 }
 

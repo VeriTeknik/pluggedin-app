@@ -7,7 +7,8 @@ import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
-import { getMcpServers } from '@/app/actions/mcp-servers';
+import { createMcpServer, getMcpServers } from '@/app/actions/mcp-servers';
+import { IntelligentServerDialog } from '@/components/intelligent-server-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,7 +30,6 @@ import { McpIndex, McpServerCategory, PaginatedSearchResult } from '@/types/sear
 import { getCategoryIcon } from '@/utils/categories';
 
 import CardGrid from './components/CardGrid';
-import { IntelligentAddServerWizard } from './components/IntelligentAddServerWizard';
 import { PageSizeSelector } from './components/PageSizeSelector';
 import { PaginationUi } from './components/PaginationUi';
 import { useFilteredResults } from './hooks/useFilteredResults';
@@ -217,6 +217,25 @@ function SearchContent() {
     const IconComponent = (LucideIcons as Record<string, any>)[iconName];
     
     return IconComponent ? <IconComponent className="h-4 w-4 mr-2" /> : <Layers className="h-4 w-4 mr-2" />;
+  };
+
+  // Handle creating servers from the dialog
+  const handleCreateServers = async (configs: any[]) => {
+    if (!currentProfile) return;
+    
+    try {
+      for (const config of configs) {
+        await createMcpServer({
+          ...config,
+          profileUuid: currentProfile.uuid
+        });
+      }
+      
+      // Refresh the installed servers list
+      mutate(`${currentProfile.uuid}/installed-mcp-servers`);
+    } catch (error) {
+      console.error('Failed to create servers:', error);
+    }
   };
 
   return (
@@ -452,10 +471,12 @@ function SearchContent() {
       )}
    </div>
       
-      {/* Add Server Wizard */}
-      <IntelligentAddServerWizard 
+      {/* Intelligent Add Server Dialog */}
+      <IntelligentServerDialog 
         open={showAddServerWizard} 
-        onOpenChange={setShowAddServerWizard} 
+        onOpenChange={setShowAddServerWizard}
+        onSubmit={handleCreateServers}
+        existingServers={installedServersData}
       />
     </div>
   );

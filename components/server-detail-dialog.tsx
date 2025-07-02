@@ -1,0 +1,479 @@
+'use client';
+
+import { AlertCircle, BarChart3, Code2, ExternalLink, GitBranch, Globe, Info, Loader2, Package, Server, Trash2, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { fetchRegistryServer } from '@/app/actions/registry-servers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { EnvVarsEditor } from '@/components/env-vars-editor';
+import { McpServerSource, McpServerType } from '@/db/schema';
+
+interface ServerDetailDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  server: {
+    name: string;
+    type: McpServerType;
+    description?: string;
+    command?: string;
+    args?: string[];
+    env?: Record<string, string>;
+    url?: string;
+    source?: McpServerSource;
+    external_id?: string;
+    repositoryUrl?: string;
+    // Registry-specific fields
+    registryData?: {
+      id: string;
+      name: string;
+      description?: string;
+      author?: string;
+      license?: string;
+      homepage?: string;
+      repository?: string;
+      version?: string;
+      downloads?: number;
+      stars?: number;
+      created_at?: string;
+      updated_at?: string;
+      tags?: string[];
+      readme?: string;
+    };
+  };
+  onDelete?: () => void;
+  canDelete?: boolean;
+  onUpdate?: (updatedServer: any) => void;
+}
+
+export function ServerDetailDialog({
+  open,
+  onOpenChange,
+  server,
+  onDelete,
+  canDelete = true,
+  onUpdate,
+}: ServerDetailDialogProps) {
+  const { t } = useTranslation();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeTab, setActiveTab] = useState('configuration'); // Default to configuration tab
+  const [registryData, setRegistryData] = useState(server.registryData);
+  const [isLoadingRegistry, setIsLoadingRegistry] = useState(false);
+  const [editableEnv, setEditableEnv] = useState(server.env || {});
+
+  // Reset editableEnv when server changes
+  useEffect(() => {
+    if (open) {
+      setEditableEnv(server.env || {});
+      setActiveTab('configuration'); // Always open configuration tab
+    }
+  }, [open, server.env]);
+
+  // Fetch registry data if server is from registry
+  useEffect(() => {
+    async function loadRegistryData() {
+      if (open && server.source === McpServerSource.REGISTRY && server.external_id && !server.registryData) {
+        setIsLoadingRegistry(true);
+        try {
+          const result = await fetchRegistryServer(server.external_id);
+          if (result.success && result.data) {
+            const data = result.data;
+            setRegistryData({
+              id: data.id,
+              name: data.name,
+              description: data.description,
+              repository: data.repository?.url,
+              version: data.version_detail?.version,
+              author: data.repository?.id ? data.repository.id.split('/')[0] : undefined,
+              homepage: data.repository?.url,
+              tags: data.tags || [],
+              created_at: data.created_at,
+              updated_at: data.version_detail?.release_date,
+              downloads: data.downloads,
+              stars: data.stars,
+            });
+          }
+        } catch (error) {
+          console.error('Failed to fetch registry data:', error);
+        } finally {
+          setIsLoadingRegistry(false);
+        }
+      }
+    }
+    loadRegistryData();
+  }, [open, server.source, server.external_id, server.registryData]);
+
+  // Don't allow deletion of registry servers
+  const isDeletable = canDelete && server.source !== McpServerSource.REGISTRY;
+
+  const handleDelete = () => {
+    if (onDelete) {
+      onDelete();
+      onOpenChange(false);
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString();
+  };
+
+  const formatNumber = (num?: number) => {
+    if (num === undefined || num === null) return '0';
+    return num.toLocaleString();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <DialogTitle className="text-2xl flex items-center gap-2">
+                <Server className="h-6 w-6" />
+                {server.name}
+              </DialogTitle>
+              <DialogDescription className="mt-2">
+                {server.description || 'No description available'}
+              </DialogDescription>
+            </div>
+            {isDeletable && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="ml-4"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2 mt-4">
+            <Badge variant="outline">
+              {server.type}
+            </Badge>
+            {server.source === McpServerSource.REGISTRY && (
+              <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+                <Package className="h-3 w-3 mr-1" />
+                Registry
+              </Badge>
+            )}
+            {server.source === McpServerSource.GITHUB && (
+              <Badge variant="outline">
+                <GitBranch className="h-3 w-3 mr-1" />
+                GitHub
+              </Badge>
+            )}
+            {server.source === McpServerSource.COMMUNITY && (
+              <Badge variant="secondary">
+                <Users className="h-3 w-3 mr-1" />
+                Community
+              </Badge>
+            )}
+          </div>
+        </DialogHeader>
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="configuration">Configuration</TabsTrigger>
+            <TabsTrigger value="analytics" disabled>
+              Analytics (Coming Soon)
+            </TabsTrigger>
+          </TabsList>
+
+          <ScrollArea className="flex-1 h-[500px] mt-4">
+            <TabsContent value="overview" className="space-y-4">
+              {/* Registry Information */}
+              {isLoadingRegistry && (
+                <Card>
+                  <CardContent className="flex items-center justify-center py-8">
+                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                    <span>Loading registry information...</span>
+                  </CardContent>
+                </Card>
+              )}
+              
+              {registryData && !isLoadingRegistry && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Package className="h-5 w-5" />
+                      Registry Information
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Author</p>
+                        <p className="font-medium">{registryData.author || 'Unknown'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">License</p>
+                        <p className="font-medium">{registryData.license || 'N/A'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Version</p>
+                        <p className="font-medium">{registryData.version || 'Latest'}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Downloads</p>
+                        <p className="font-medium">{formatNumber(registryData.downloads)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Stars</p>
+                        <p className="font-medium">{formatNumber(registryData.stars)}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Last Updated</p>
+                        <p className="font-medium">{formatDate(registryData.updated_at)}</p>
+                      </div>
+                    </div>
+
+                    {registryData.tags && registryData.tags.length > 0 && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-2">Tags</p>
+                        <div className="flex flex-wrap gap-2">
+                          {registryData.tags.map((tag) => (
+                            <Badge key={tag} variant="secondary">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      {registryData.homepage && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={registryData.homepage} target="_blank" rel="noopener noreferrer">
+                            <Globe className="h-4 w-4 mr-2" />
+                            Homepage
+                          </a>
+                        </Button>
+                      )}
+                      {registryData.repository && (
+                        <Button variant="outline" size="sm" asChild>
+                          <a href={registryData.repository} target="_blank" rel="noopener noreferrer">
+                            <GitBranch className="h-4 w-4 mr-2" />
+                            Repository
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* GitHub Information */}
+              {server.repositoryUrl && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <GitBranch className="h-5 w-5" />
+                      Source Repository
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" size="sm" asChild>
+                      <a href={server.repositoryUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        View on GitHub
+                      </a>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Server Information */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Info className="h-5 w-5" />
+                    Server Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Type</p>
+                    <p className="font-medium">{server.type}</p>
+                  </div>
+                  {server.external_id && (
+                    <div>
+                      <p className="text-sm text-muted-foreground">External ID</p>
+                      <p className="font-mono text-sm">{server.external_id}</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-sm text-muted-foreground">Source</p>
+                    <p className="font-medium">{server.source || 'Local'}</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="configuration" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Code2 className="h-5 w-5" />
+                    Configuration
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {server.command && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Command</p>
+                      <code className="block p-3 bg-muted rounded-md text-sm">
+                        {server.command}
+                      </code>
+                    </div>
+                  )}
+
+                  {server.args && server.args.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Arguments</p>
+                      <code className="block p-3 bg-muted rounded-md text-sm">
+                        {server.args.join(' ')}
+                      </code>
+                    </div>
+                  )}
+
+                  {server.url && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">URL</p>
+                      <code className="block p-3 bg-muted rounded-md text-sm break-all">
+                        {server.url}
+                      </code>
+                    </div>
+                  )}
+
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Environment Variables</p>
+                    <EnvVarsEditor
+                      value={Object.entries(editableEnv)
+                        .map(([key, value]) => `${key}="${value}"`)
+                        .join('\n')}
+                      onChange={(newValue: string) => {
+                        // Parse the new env vars
+                        const newEnv: Record<string, string> = {};
+                        const lines = newValue.split('\n');
+                        lines.forEach((line: string) => {
+                          const match = line.trim().match(/^([^=]+)=(.*)$/);
+                          if (match) {
+                            newEnv[match[1].trim()] = match[2].trim().replace(/^["']|["']$/g, '');
+                          }
+                        });
+                        setEditableEnv(newEnv);
+                        // Update parent if callback provided
+                        if (onUpdate) {
+                          onUpdate({ ...server, env: newEnv });
+                        }
+                      }}
+                    />
+                  </div>
+
+                  {/* Full Configuration JSON */}
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Full Configuration</p>
+                    <pre className="p-3 bg-muted rounded-md text-sm overflow-x-auto">
+                      {JSON.stringify(
+                        {
+                          name: server.name,
+                          type: server.type,
+                          description: server.description,
+                          command: server.command,
+                          args: server.args,
+                          env: server.env,
+                          url: server.url,
+                        },
+                        null,
+                        2
+                      )}
+                    </pre>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="analytics" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Analytics
+                  </CardTitle>
+                  <CardDescription>
+                    Server usage analytics and statistics will be available here soon.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription>
+                      Analytics features are coming soon. You&apos;ll be able to see:
+                      <ul className="list-disc list-inside mt-2">
+                        <li>Usage statistics and frequency</li>
+                        <li>Performance metrics</li>
+                        <li>Error rates and debugging information</li>
+                        <li>Tool usage breakdown</li>
+                        <li>Historical trends</li>
+                      </ul>
+                    </AlertDescription>
+                  </Alert>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </ScrollArea>
+        </Tabs>
+
+        {showDeleteConfirm && (
+          <Alert className="mt-4 border-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="flex items-center justify-between">
+                <span>Are you sure you want to delete this server?</span>
+                <div className="flex gap-2 ml-4">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setShowDeleteConfirm(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={handleDelete}
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}

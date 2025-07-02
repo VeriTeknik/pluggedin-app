@@ -1,12 +1,13 @@
 'use client';
 
-import { Database, Download, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
+import { Database, Download, Eye, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { unshareServer } from '@/app/actions/social'; // Import unshare action
+import { ServerDetailDialog } from '@/components/server-detail-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -191,6 +192,10 @@ export default function CardGrid({
   } | null>(null);
   const [reviewsDialogOpen, setReviewsDialogOpen] = useState(false);
 
+  // State for detail dialog
+  const [detailServer, setDetailServer] = useState<any | null>(null);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
 
   const handleInstallClick = async (key: string, item: any) => {
     if (!requireAuth('auth:loginToInstall', 'You must be logged in to install servers.')) return;
@@ -265,6 +270,31 @@ export default function CardGrid({
       external_id: item.external_id,
     });
     setReviewsDialogOpen(true);
+  };
+
+  // Handle clicking the view details button
+  const handleViewDetailsClick = (e: React.MouseEvent, item: any) => {
+    e.stopPropagation(); // Prevent card click
+    setDetailServer({
+      name: item.name,
+      type: item.url ? McpServerType.SSE : McpServerType.STDIO,
+      description: item.description,
+      command: item.command,
+      args: item.args,
+      env: item.envs ? formatEnvVariables(item.envs) : undefined,
+      url: item.url,
+      source: item.source,
+      external_id: item.external_id,
+      github_stars: item.github_stars,
+      package_download_count: item.package_download_count,
+      installation_count: item.installation_count,
+      rating: item.rating,
+      ratingCount: item.ratingCount,
+      shared_by: item.shared_by,
+      tags: item.tags,
+      category: item.category,
+    });
+    setDetailDialogOpen(true);
   };
 
 
@@ -396,10 +426,17 @@ export default function CardGrid({
           return (
           <Card 
             key={key} 
-            className={`flex flex-col ${selectable && !isInstalled ? 'cursor-pointer hover:border-primary' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${isInstalled ? 'opacity-70' : ''}`}
-            onClick={() => {
+            className={`flex flex-col cursor-pointer transition-all hover:shadow-lg ${selectable && !isInstalled ? 'hover:border-primary' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${isInstalled ? 'opacity-70' : ''}`}
+            onClick={(e) => {
+              // Don't trigger if clicking on interactive elements
+              const target = e.target as HTMLElement;
+              if (target.closest('button, a')) return;
+              
               if (selectable && !isInstalled && onItemSelect) {
                 onItemSelect(key, !isSelected);
+              } else {
+                // If not in selection mode, show details
+                handleViewDetailsClick(e, item);
               }
             }}
           >
@@ -439,9 +476,12 @@ export default function CardGrid({
                   <CategoryBadge category={item.category} />
                 )}
                 
-                {item.envs?.map((env: string) => (
-                  <Badge key={env} variant='secondary'>
-                    {env}
+                {item.envs?.map((env) => (
+                  <Badge 
+                    key={typeof env === 'string' ? env : env.name} 
+                    variant='secondary'
+                  >
+                    {typeof env === 'string' ? env : env.name}
                   </Badge>
                 ))}
                 
@@ -488,58 +528,72 @@ export default function CardGrid({
               {/* Add community-specific information */}
               {renderCommunityInfo(item)}
             </CardContent>
-            <CardFooter className='flex justify-between pt-2'>
-              {item.githubUrl && (
-                <Button variant='outline' asChild size="sm">
-                  <Link
-                    href={item.githubUrl}
-                    target='_blank'
-                    rel='noopener noreferrer'>
-                    <Github className='w-4 h-4 mr-2' />
-                    GitHub
-                  </Link>
-                </Button>
-              )}
-              
-              {/* Only show rate button if not user's own server */}
-              {item.source && item.external_id && !isOwned && (
+            <CardFooter className='flex flex-wrap gap-2 justify-between pt-2'>
+              <div className='flex gap-2'>
+                {/* View Details button */}
                 <Button 
                   variant='outline' 
                   size="sm"
-                  className="gap-1"
-                  onClick={() => handleRateClick(key, item)}
+                  onClick={(e) => handleViewDetailsClick(e, item)}
                 >
-                  <ThumbsUp className='w-4 h-4' />
-                  {t('search.card.rate')}
+                  <Eye className='w-4 h-4 mr-2' />
+                  Details
                 </Button>
-              )}
+                
+                {item.githubUrl && (
+                  <Button variant='outline' asChild size="sm">
+                    <Link
+                      href={item.githubUrl}
+                      target='_blank'
+                      rel='noopener noreferrer'>
+                      <Github className='w-4 h-4 mr-2' />
+                      GitHub
+                    </Link>
+                  </Button>
+                )}
+              </div>
               
-              {isOwned ? (
-                // Show Unshare button for owned servers
-                <Button
-                  variant='destructive'
-                  size="sm"
-                  onClick={() => handleUnshareClick(item)}
-                >
-                  <Trash2 className='w-4 h-4 mr-2' />
-                  Unshare
-                </Button>
-              ) : isInstalled ? ( // Check if installed first
-                // Render disabled "Installed" button if installed
-                <Button variant='outline' size="sm" disabled className="pointer-events-none">
-                  {t('search.card.installed')}
-                </Button>
-              ) : ( 
-                // If not owned AND not installed, render Install button
-                <Button
-                  variant='default'
-                  size="sm"
-                  onClick={() => handleInstallClick(key, item)}
-                >
-                  <Download className='w-4 h-4 mr-2' />
-                  {t('search.card.install')}
-                </Button>
-              )}
+              <div className='flex gap-2'>
+                {/* Only show rate button if not user's own server */}
+                {item.source && item.external_id && !isOwned && (
+                  <Button 
+                    variant='outline' 
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => handleRateClick(key, item)}
+                  >
+                    <ThumbsUp className='w-4 h-4' />
+                    {t('search.card.rate')}
+                  </Button>
+                )}
+                
+                {isOwned ? (
+                  // Show Unshare button for owned servers
+                  <Button
+                    variant='destructive'
+                    size="sm"
+                    onClick={() => handleUnshareClick(item)}
+                  >
+                    <Trash2 className='w-4 h-4 mr-2' />
+                    Unshare
+                  </Button>
+                ) : isInstalled ? ( // Check if installed first
+                  // Render disabled "Installed" button if installed
+                  <Button variant='outline' size="sm" disabled className="pointer-events-none">
+                    {t('search.card.installed')}
+                  </Button>
+                ) : ( 
+                  // If not owned AND not installed, render Install button
+                  <Button
+                    variant='default'
+                    size="sm"
+                    onClick={() => handleInstallClick(key, item)}
+                  >
+                    <Download className='w-4 h-4 mr-2' />
+                    {t('search.card.install')}
+                  </Button>
+                )}
+              </div>
             </CardFooter>
           </Card>
           );
@@ -569,6 +623,16 @@ export default function CardGrid({
           open={reviewsDialogOpen}
           onOpenChange={setReviewsDialogOpen}
           serverData={reviewServer}
+        />
+      )}
+
+      {/* Server Detail Dialog */}
+      {detailServer && (
+        <ServerDetailDialog
+          open={detailDialogOpen}
+          onOpenChange={setDetailDialogOpen}
+          server={detailServer}
+          canDelete={false}
         />
       )}
 

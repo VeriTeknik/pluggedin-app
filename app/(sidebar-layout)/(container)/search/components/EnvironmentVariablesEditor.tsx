@@ -87,7 +87,7 @@ export function EnvironmentVariablesEditor({ form, detectedVariables }: Environm
     if (varIndex === -1) return;
 
     // Remove from form
-    const updatedVars = currentVars.filter((_, idx) => idx !== varIndex);
+    const updatedVars = currentVars.filter((_: any, idx: number) => idx !== varIndex);
     form.setValue('environmentVariables', updatedVars);
 
     // Remove from manual vars if it's manual

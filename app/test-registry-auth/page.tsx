@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { AlertCircle, CheckCircle, Copy, Github, Loader2, RefreshCw } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -39,10 +39,22 @@ export default function TestRegistryAuthPage() {
   const [envVariables, setEnvVariables] = useState<EnvVariable[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // GitHub OAuth configuration
-  const GITHUB_CLIENT_ID = typeof window !== 'undefined' && (window as any).ENV?.GITHUB_CLIENT_ID 
-    ? (window as any).ENV.GITHUB_CLIENT_ID 
-    : 'Ov23liGQCDAID0kY58HE'; // Fallback
+  // GitHub OAuth configuration - use different client IDs for different environments
+  const getGitHubClientId = () => {
+    if (typeof window !== 'undefined') {
+      const origin = window.location.origin;
+      if (origin.includes('localhost')) {
+        return 'Ov23liauuJvy6sLzrDdr'; // Localhost client ID
+      } else if (origin.includes('staging')) {
+        return 'Ov23liGQCDAID0kY58HE'; // Staging client ID
+      } else {
+        return '13219bd31987f25b7e34'; // Production client ID
+      }
+    }
+    return 'Ov23liauuJvy6sLzrDdr'; // Default to localhost
+  };
+  
+  const GITHUB_CLIENT_ID = getGitHubClientId();
   
   // Always use our custom registry callback for the registry test
   const getRedirectUri = () => {
