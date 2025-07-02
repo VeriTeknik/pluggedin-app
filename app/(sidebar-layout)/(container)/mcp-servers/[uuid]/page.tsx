@@ -208,12 +208,17 @@ export default function McpServerDetailPage({
 
   // Add handleDiscover function (adapted from ServerCard)
   const handleDiscover = () => {
+    console.log('ServerDetail: handleDiscover called', { 
+      profileUuid: currentProfile?.uuid, 
+      serverUuid: uuid 
+    });
     if (!currentProfile?.uuid || !uuid) { // Use uuid from params
       toast({ title: t('common.error'), description: t('mcpServers.errors.missingInfo'), variant: 'destructive' });
       return;
     }
     setIsDiscovering(true);
     setShowStreamingToast(true);
+    console.log('ServerDetail: Discovery state set, isDiscovering: true, showStreamingToast: true');
   };
 
   const handleDiscoveryComplete = (success: boolean, data?: any) => {
@@ -636,7 +641,6 @@ export default function McpServerDetailPage({
       
       {/* Streaming CLI Toast for discovery */}
       <StreamingCliToast
-        key={`discovery-${uuid}-${showStreamingToast}`}
         isOpen={showStreamingToast}
         onClose={() => setShowStreamingToast(false)}
         title={`Discovering tools for ${mcpServer?.name || 'server'}`}
