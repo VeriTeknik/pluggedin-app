@@ -945,6 +945,13 @@ export const sharedMcpServersTable = pgTable(
       .notNull()
       .default(sql`'{}'::jsonb`),
     requires_credentials: boolean('requires_credentials').default(false).notNull(),
+    // Claim fields
+    is_claimed: boolean('is_claimed').default(false).notNull(),
+    claimed_by_user_id: text('claimed_by_user_id')
+      .references(() => users.id, { onDelete: 'set null' }),
+    claimed_at: timestamp('claimed_at', { withTimezone: true }),
+    registry_server_uuid: uuid('registry_server_uuid')
+      .references(() => registryServersTable.uuid, { onDelete: 'set null' }),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -956,6 +963,8 @@ export const sharedMcpServersTable = pgTable(
     sharedMcpServersProfileUuidIdx: index('shared_mcp_servers_profile_uuid_idx').on(table.profile_uuid),
     sharedMcpServersServerUuidIdx: index('shared_mcp_servers_server_uuid_idx').on(table.server_uuid),
     sharedMcpServersIsPublicIdx: index('shared_mcp_servers_is_public_idx').on(table.is_public),
+    sharedMcpServersIsClaimedIdx: index('shared_mcp_servers_is_claimed_idx').on(table.is_claimed),
+    sharedMcpServersClaimedByIdx: index('shared_mcp_servers_claimed_by_idx').on(table.claimed_by_user_id),
   })
 );
 
@@ -967,6 +976,14 @@ export const sharedMcpServersRelations = relations(sharedMcpServersTable, ({ one
   server: one(mcpServersTable, {
     fields: [sharedMcpServersTable.server_uuid],
     references: [mcpServersTable.uuid],
+  }),
+  claimedBy: one(users, {
+    fields: [sharedMcpServersTable.claimed_by_user_id],
+    references: [users.id],
+  }),
+  registryServer: one(registryServersTable, {
+    fields: [sharedMcpServersTable.registry_server_uuid],
+    references: [registryServersTable.uuid],
   }),
 }));
 

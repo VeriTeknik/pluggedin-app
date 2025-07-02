@@ -225,7 +225,7 @@ function SearchContent() {
     if (!currentProfile) return;
     
     let successCount = 0;
-    let failureCount = 0;
+    let _failureCount = 0;
     
     try {
       for (const config of configs) {
@@ -242,7 +242,7 @@ function SearchContent() {
             toast.success(`Added ${config.name} from MCP Registry`);
           }
         } else {
-          failureCount++;
+          _failureCount++;
           toast.error(`Failed to add ${config.name}: ${result.error}`);
         }
       }
@@ -500,6 +500,7 @@ function SearchContent() {
         open={showAddServerWizard} 
         onOpenChange={setShowAddServerWizard}
         onSubmit={handleCreateServers}
+        profileUuid={profileUuid}
         existingServers={installedServersData}
       />
     </div>

@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
+import { createCommunityServer } from '@/app/actions/community-servers';
 import { 
   addUnclaimedServer,
   fetchRegistryServer,
@@ -45,6 +46,7 @@ interface IntelligentServerDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (configs: ParsedConfig[]) => Promise<void>;
   isSubmitting?: boolean;
+  profileUuid?: string;
   existingServers?: Array<{
     name: string;
     command?: string;
@@ -163,6 +165,7 @@ export function IntelligentServerDialog({
   onOpenChange,
   onSubmit,
   isSubmitting = false,
+  profileUuid,
   existingServers = []
 }: IntelligentServerDialogProps) {
   const { t: _t } = useTranslation();
@@ -952,7 +955,7 @@ export function IntelligentServerDialog({
         const config = configsToSubmit[0];
         
         // Extract owner/repo
-        const match = config.repositoryUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+        const match = config.repositoryUrl!.match(/github\.com\/([^\/]+)\/([^\/]+)/);
         if (!match) throw new Error('Invalid GitHub URL');
         const [, owner, repo] = match;
         
@@ -1049,9 +1052,53 @@ export function IntelligentServerDialog({
         toast.error('Failed to add unclaimed server');
       }
     } else {
-      // Normal flow - add to profile
-      await onSubmit(configsToSubmit);
-      handleClose();
+      // For non-GitHub servers or when adding from search page, create as community servers
+      if (!profileUuid) {
+        toast.error('Profile not found. Please select a profile first.');
+        return;
+      }
+
+      try {
+        let successCount = 0;
+        let _failureCount = 0;
+
+        for (const config of configsToSubmit) {
+          // Create community server instead of local server
+          const result = await createCommunityServer({
+            title: config.name,
+            description: config.description,
+            template: {
+              name: config.name,
+              type: config.type,
+              command: config.command,
+              args: config.args,
+              env: config.env,
+              url: config.url,
+              transport: config.transport,
+              streamableHTTPOptions: config.streamableHTTPOptions,
+            },
+            tags: [], // Could extract from config or user input
+            category: undefined, // Could be determined from config
+            profileUuid: profileUuid,
+          });
+
+          if (result.success) {
+            successCount++;
+            toast.success(`Added ${config.name} to community servers`);
+          } else {
+            _failureCount++;
+            toast.error(`Failed to add ${config.name}: ${result.error}`);
+          }
+        }
+
+        if (successCount > 0) {
+          handleClose();
+          // Optionally trigger a refresh of the search results
+          window.location.reload();
+        }
+      } catch (error) {
+        toast.error(`Failed to create community servers: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
     }
   };
 

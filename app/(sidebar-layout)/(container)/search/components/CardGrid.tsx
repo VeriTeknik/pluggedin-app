@@ -1,6 +1,6 @@
 'use client';
 
-import { Database, Download, Eye, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
+import { Award, Database, Download, Eye, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -33,6 +33,7 @@ import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { McpServerCategory, SearchIndex } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
+import { ClaimServerDialog } from './ClaimServerDialog';
 import { InstallDialog } from './InstallDialog';
 import { RateServerDialog } from './RateServerDialog';
 import { ReviewsDialog } from './ReviewsDialog'; // Import the new dialog
@@ -195,6 +196,14 @@ export default function CardGrid({
   // State for detail dialog
   const [detailServer, setDetailServer] = useState<any | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+
+  // State for claim dialog
+  const [claimServer, setClaimServer] = useState<{
+    uuid: string;
+    name: string;
+    template?: any;
+  } | null>(null);
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
 
 
   const handleInstallClick = async (key: string, item: any) => {
@@ -450,6 +459,12 @@ export default function CardGrid({
                     </Badge>
                   )}
                   <SourceBadge source={item.source} />
+                  {item.source === McpServerSource.COMMUNITY && item.is_claimed && (
+                    <Badge variant="secondary" className="gap-1">
+                      <Award className="h-3 w-3" />
+                      <span>Claimed</span>
+                    </Badge>
+                  )}
                 </div>
               </div>
               <CardDescription>{item.description}</CardDescription>
@@ -577,6 +592,30 @@ export default function CardGrid({
                     <Trash2 className='w-4 h-4 mr-2' />
                     Unshare
                   </Button>
+                ) : item.source === McpServerSource.COMMUNITY && !item.is_claimed && item.external_id ? (
+                  // Show claim button for unclaimed community servers
+                  <Button
+                    variant='outline'
+                    size="sm"
+                    onClick={() => {
+                      if (!requireAuth('auth:loginToClaim', 'You must be logged in to claim servers.')) return;
+                      setClaimServer({
+                        uuid: item.external_id,
+                        name: item.name,
+                        template: {
+                          command: item.command,
+                          args: item.args,
+                          env: item.envs,
+                          url: item.url,
+                          type: (item.command ? McpServerType.STDIO : item.url ? McpServerType.SSE : McpServerType.STDIO),
+                        }
+                      });
+                      setClaimDialogOpen(true);
+                    }}
+                  >
+                    <Award className='w-4 h-4 mr-2' />
+                    {t('search.card.claim', 'Claim')}
+                  </Button>
                 ) : isInstalled ? ( // Check if installed first
                   // Render disabled "Installed" button if installed
                   <Button variant='outline' size="sm" disabled className="pointer-events-none">
@@ -670,6 +709,15 @@ export default function CardGrid({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Claim Server Dialog */}
+      {claimServer && (
+        <ClaimServerDialog
+          open={claimDialogOpen}
+          onOpenChange={setClaimDialogOpen}
+          server={claimServer}
+        />
+      )}
     </>
   );
 }

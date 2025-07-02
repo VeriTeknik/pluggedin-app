@@ -40,6 +40,11 @@ export interface McpIndex {
   installation_count?: number; // Number of installations
   shared_by?: string | null; // Username or name of the profile that shared the server
   shared_by_profile_url?: string | null; // URL to the profile of the user who shared the server
+  // Claim information for community servers
+  is_claimed?: boolean;
+  claimed_by_user_id?: string | null;
+  claimed_at?: string | null;
+  registry_server_uuid?: string | null;
 }
 
 export interface SearchIndex {

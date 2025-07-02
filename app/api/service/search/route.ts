@@ -476,6 +476,11 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
         rating: rating,
         ratingCount: ratingCount,
         installation_count: installationCount, // Use the declared variable
+        // Add claim information
+        is_claimed: sharedServer.is_claimed || false,
+        claimed_by_user_id: sharedServer.claimed_by_user_id || null,
+        claimed_at: sharedServer.claimed_at ? sharedServer.claimed_at.toISOString() : null,
+        registry_server_uuid: sharedServer.registry_server_uuid || null,
       };
     }
 
