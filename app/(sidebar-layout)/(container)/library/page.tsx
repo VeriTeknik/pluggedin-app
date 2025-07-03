@@ -15,6 +15,7 @@ import { useTranslation } from 'react-i18next';
 
 // Internal components
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageContainer } from '@/components/ui/page-container';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 // Internal hooks and types
@@ -22,7 +23,6 @@ import { useLibrary } from '@/hooks/use-library';
 import type { Doc } from '@/types/library';
 
 // Local components
-import { DeleteDialog } from './components/DeleteDialog';
 import { DocsControls } from './components/DocsControls';
 import { DocsGrid } from './components/DocsGrid';
 import { DocsStats } from './components/DocsStats';
@@ -294,12 +294,16 @@ export default function LibraryPage() {
         </Tabs>
 
         {/* Delete Dialog */}
-        <DeleteDialog
+        <ConfirmDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
-          doc={selectedDoc}
+          title={t('deleteDialog.title')}
+          description={t('deleteDialog.description', { name: selectedDoc?.name })}
+          confirmText={isDeleting ? t('deleteDialog.deleting') : t('deleteDialog.delete')}
+          cancelText={t('deleteDialog.cancel')}
           onConfirm={confirmDelete}
-          isDeleting={isDeleting}
+          isLoading={isDeleting}
+          variant="destructive"
         />
       </div>
     </PageContainer>
