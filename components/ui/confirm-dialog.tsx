@@ -42,8 +42,14 @@ export function ConfirmDialog({
   const { t } = useTranslation();
   
   const handleConfirm = async () => {
-    await onConfirm();
-    onOpenChange(false);
+    try {
+      await onConfirm();
+      // Only close the dialog if the operation was successful
+      onOpenChange(false);
+    } catch (error) {
+      // Keep the dialog open if there was an error
+      console.error('Operation failed:', error);
+    }
   };
 
   return (
@@ -57,7 +63,7 @@ export function ConfirmDialog({
         {children}
         
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isLoading}>
+          <AlertDialogCancel>
             {cancelText || t('common.cancel')}
           </AlertDialogCancel>
           <AlertDialogAction
