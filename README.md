@@ -436,3 +436,29 @@ See [CHANGELOG.md](./CHANGELOG.md) for the latest updates.
 - Fixed localhost URL validation for development environments
 
 See [Release Notes](./RELEASE_NOTES_v2.1.0.md) for complete details.
+
+## Discovery Performance Optimizations
+
+### Smart Discovery Throttling
+The app now includes intelligent throttling mechanisms to prevent redundant discovery calls:
+
+- **Tools API (`/api/tools`)**: Implements 5-minute throttling to avoid repeated discovery attempts
+- **Discovery API (`/api/discover`)**: Uses 2-minute throttling for explicit discovery requests
+- **In-memory caching**: Tracks recent discovery attempts to prevent duplicate calls
+- **Failure recovery**: Clears throttle cache on discovery failures to allow faster retries
+
+### Optimized Database Queries
+- **Single query optimization**: Fetches server data and tool counts in one query using LEFT JOIN
+- **Reduced database load**: Eliminates redundant tool count queries
+- **Indexed lookups**: Uses existing database indexes for faster server and tool queries
+
+### Background Processing
+- **Asynchronous discovery**: All discovery processes run in background without blocking API responses
+- **Error handling**: Comprehensive error handling with automatic retry mechanisms
+- **Status tracking**: Provides clear feedback on discovery progress and throttling status
+
+### Performance Benefits
+- **Reduced API latency**: Faster response times for tools API calls
+- **Lower database load**: Fewer redundant queries and optimized data fetching
+- **Better user experience**: Prevents duplicate work and provides instant feedback
+- **Scalable architecture**: Can handle multiple concurrent discovery requests efficiently

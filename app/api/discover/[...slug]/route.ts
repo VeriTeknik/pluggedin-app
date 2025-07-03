@@ -8,6 +8,10 @@ import { mcpServersTable,McpServerStatus } from '@/db/schema'; // Sorted
 
 export const dynamic = 'force-dynamic';
 
+// In-memory cache to track recent discovery attempts
+const discoveryAttempts = new Map<string, number>();
+const DISCOVERY_THROTTLE_MS = 2 * 60 * 1000; // 2 minutes for explicit discovery requests
+
 /**
  * @swagger
  * /api/discover/{slug}:
@@ -144,23 +148,59 @@ export async function POST(
       serversToDiscover.push({ uuid: specificServer.uuid, name: specificServer.name });
     }
 
-    // 4. Trigger discovery action(s) - asynchronously without waiting
-    const discoveryPromises: Promise<any>[] = []; // Changed let to const
+    // 4. Apply throttling and trigger discovery action(s)
+    const discoveryPromises: Promise<any>[] = [];
+    const throttledServers: string[] = [];
+    const now = Date.now();
+    
     serversToDiscover.forEach(server => {
-      console.log(`[API Discover Trigger] Initiating discovery for server: ${server.name || server.uuid}`);
-      // Call the action but don't await it here to keep the API response fast
-      discoveryPromises.push(discoverSingleServerTools(profileUuid, server.uuid));
-      // We could potentially handle errors here later if needed, maybe logging them
+      const serverKey = `${profileUuid}:${server.uuid}`;
+      const lastAttempt = discoveryAttempts.get(serverKey) || 0;
+      
+      // Check if discovery was attempted recently
+      if ((now - lastAttempt) > DISCOVERY_THROTTLE_MS) {
+        console.log(`[API Discover Trigger] Initiating discovery for server: ${server.name || server.uuid}`);
+        
+        // Record attempt to prevent duplicates
+        discoveryAttempts.set(serverKey, now);
+        
+        // Call the action but don't await it here to keep the API response fast
+        discoveryPromises.push(
+          discoverSingleServerTools(profileUuid, server.uuid).catch(err => {
+            console.error(`[API Discover] Discovery failed for ${server.uuid}:`, err);
+            // Remove from cache on failure to allow retry sooner
+            discoveryAttempts.delete(serverKey);
+            return { error: err.message };
+          })
+        );
+      } else {
+        throttledServers.push(server.name || server.uuid);
+        console.log(`[API Discover Trigger] Throttling discovery for server: ${server.name || server.uuid} (last attempt ${Math.round((now - lastAttempt) / 1000)}s ago)`);
+      }
     });
 
-    // Wait for all discovery actions to start (not necessarily finish)
-    // This is a basic fire-and-forget approach for the API response.
-    // A more robust solution might involve background jobs or status polling.
-    await Promise.allSettled(discoveryPromises); // Wait briefly for promises to initiate
+    // Clean up old entries from discovery attempts cache
+    const cutoff = now - DISCOVERY_THROTTLE_MS;
+    for (const [key, timestamp] of discoveryAttempts.entries()) {
+      if (timestamp < cutoff) {
+        discoveryAttempts.delete(key);
+      }
+    }
 
-    // 5. Return immediate success response
+    // Wait for all discovery actions to start (not necessarily finish)
+    await Promise.allSettled(discoveryPromises);
+
+    // 5. Return response with throttling information
     const targetDescription = discoverAll ? 'all active servers' : `server ${serversToDiscover[0]?.name || targetServerUuid}`;
-    return NextResponse.json({ message: `Discovery process initiated for ${targetDescription}. Results will be available shortly.` });
+    let message = `Discovery process initiated for ${targetDescription}.`;
+    
+    if (throttledServers.length > 0) {
+      message += ` (${throttledServers.length} server(s) throttled: ${throttledServers.join(', ')})`;
+    }
+    
+    message += ' Results will be available shortly.';
+    
+    return NextResponse.json({ message });
 
   } catch (error) {
     console.error('[API /api/discover Error]', error);
