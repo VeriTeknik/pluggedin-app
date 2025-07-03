@@ -63,7 +63,7 @@ export async function createCommunityServer(data: z.infer<typeof createCommunity
     }
 
     // Check for duplicates across all server types
-    const duplicateCheck = await checkForDuplicates(validated.template);
+    const duplicateCheck = await checkForDuplicates(validated.template, validated.profileUuid);
     if (duplicateCheck.isDuplicate) {
       return { 
         success: false, 
@@ -117,7 +117,7 @@ export async function createCommunityServer(data: z.infer<typeof createCommunity
 /**
  * Check for duplicate servers across all tables
  */
-async function checkForDuplicates(template: any): Promise<{
+async function checkForDuplicates(template: any, profileUuid: string): Promise<{
   isDuplicate: boolean;
   reason?: string;
   location?: 'local' | 'community' | 'registry';
@@ -125,9 +125,10 @@ async function checkForDuplicates(template: any): Promise<{
 }> {
   // Check by command + args for STDIO servers
   if (template.type === McpServerType.STDIO && template.command) {
-    // Check in local servers
+    // Check in local servers for the current profile only
     const localServer = await db.query.mcpServersTable.findFirst({
       where: and(
+        eq(mcpServersTable.profile_uuid, profileUuid),
         eq(mcpServersTable.command, template.command),
         eq(mcpServersTable.args, template.args || [])
       )
@@ -163,9 +164,12 @@ async function checkForDuplicates(template: any): Promise<{
 
   // Check by URL for SSE/StreamableHTTP servers
   if ((template.type === McpServerType.SSE || template.type === McpServerType.STREAMABLE_HTTP) && template.url) {
-    // Check in local servers
+    // Check in local servers for the current profile only
     const localServer = await db.query.mcpServersTable.findFirst({
-      where: eq(mcpServersTable.url, template.url)
+      where: and(
+        eq(mcpServersTable.profile_uuid, profileUuid),
+        eq(mcpServersTable.url, template.url)
+      )
     });
     
     if (localServer) {

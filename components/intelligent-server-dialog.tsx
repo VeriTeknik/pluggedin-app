@@ -1025,34 +1025,9 @@ export function IntelligentServerDialog({
         toast.error(`Failed to publish: ${error instanceof Error ? error.message : 'Unknown error'}`);
       }
     }
-    // If we have a GitHub URL and the user is not the owner, save as unclaimed
-    else if (configsToSubmit.length === 1 && 
-        configsToSubmit[0].repositoryUrl && 
-        ownershipStatus.isOwner === false) {
-      
-      try {
-        const config = configsToSubmit[0];
-        const result = await addUnclaimedServer({
-          repositoryUrl: config.repositoryUrl || '',
-          description: config.description,
-          metadata: {
-            command: config.command,
-            args: config.args,
-            env: config.env
-          }
-        });
-
-        if (result.success) {
-          toast.success('Server added as unclaimed. You can claim it later if you own the repository.');
-          handleClose();
-        } else {
-          toast.error(result.error || 'Failed to add server');
-        }
-      } catch (_error) {
-        toast.error('Failed to add unclaimed server');
-      }
-    } else {
-      // For non-GitHub servers or when adding from search page, create as community servers
+    // For all servers (including non-owned GitHub servers), create as community servers
+    else {
+      // Continue with community server creation
       if (!profileUuid) {
         toast.error('Profile not found. Please select a profile first.');
         return;
@@ -1253,7 +1228,7 @@ export function IntelligentServerDialog({
                       <Alert>
                         <Info className="h-4 w-4" />
                         <AlertDescription>
-                          This server is not in the registry. It will be added as an unclaimed server.
+                          This server is not in the registry. It will be added as a community server.
                         </AlertDescription>
                       </Alert>
                     )}

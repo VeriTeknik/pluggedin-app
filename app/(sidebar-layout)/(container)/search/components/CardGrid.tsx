@@ -610,6 +610,14 @@ export default function CardGrid({
                     size="sm"
                     onClick={() => {
                       if (!requireAuth('auth:loginToClaim', 'You must be logged in to claim servers.')) return;
+                      if (!item.external_id) {
+                        toast({
+                          title: 'Error',
+                          description: 'Cannot claim server: Missing server ID',
+                          variant: 'destructive',
+                        });
+                        return;
+                      }
                       setClaimServer({
                         uuid: item.external_id,
                         name: item.name,

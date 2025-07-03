@@ -20,11 +20,6 @@ const repositoryUrlSchema = z.string().url().refine(
   }
 );
 
-const addUnclaimedServerSchema = z.object({
-  repositoryUrl: repositoryUrlSchema,
-  description: z.string().optional(),
-  metadata: z.any().optional(),
-});
 
 const publishClaimedServerSchema = z.object({
   repositoryUrl: repositoryUrlSchema,
@@ -50,65 +45,6 @@ function extractGitHubInfo(url: string): { owner: string; repo: string } {
   return { owner: match[1], repo: match[2] };
 }
 
-/**
- * Add an unclaimed server to the local database
- */
-export async function addUnclaimedServer(data: z.infer<typeof addUnclaimedServerSchema>) {
-  try {
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return { success: false, error: 'You must be logged in to add servers' };
-    }
-
-    // Validate input
-    const validated = addUnclaimedServerSchema.parse(data);
-    const { owner, repo } = extractGitHubInfo(validated.repositoryUrl);
-    
-    // Check if server already exists
-    const existing = await db.query.registryServersTable.findFirst({
-      where: and(
-        eq(registryServersTable.github_owner, owner),
-        eq(registryServersTable.github_repo, repo)
-      ),
-    });
-
-    if (existing) {
-      return { 
-        success: false, 
-        error: 'This server is already in the registry',
-        serverUuid: existing.uuid,
-        isClaimed: existing.is_claimed
-      };
-    }
-
-    // Create server entry
-    const [server] = await db.insert(registryServersTable).values({
-      name: `io.github.${owner}/${repo}`,
-      github_owner: owner,
-      github_repo: repo,
-      repository_url: validated.repositoryUrl,
-      description: validated.description,
-      is_claimed: false,
-      is_published: false,
-      metadata: validated.metadata || {},
-    }).returning();
-
-    return { 
-      success: true, 
-      server,
-      message: 'Server added successfully. The owner can claim it later.'
-    };
-  } catch (error) {
-    console.error('Error adding unclaimed server:', error);
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
-    }
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to add server' 
-    };
-  }
-}
 
 /**
  * Check if user has GitHub account connected via registry OAuth

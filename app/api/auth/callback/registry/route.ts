@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
               document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center; color: #dc2626;"><h2>Authentication failed</h2><p>${error}</p><p>This window will close automatically...</p></div>';
               setTimeout(() => window.close(), 3000);
             } else {
-              window.location.href = '${baseUrl}/test-registry-auth?error=${encodeURIComponent(error)}';
+              // Redirect to search page with error message
+              window.location.href = '${baseUrl}/search?auth_error=${encodeURIComponent(error)}';
             }
           </script>
         </head>
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
               }, '${baseUrl}');
               setTimeout(() => window.close(), 1000);
             } else {
-              window.location.href = '${baseUrl}/test-registry-auth?error=missing_code';
+              window.location.href = '${baseUrl}/search?auth_error=missing_code';
             }
           </script>
         </head>
@@ -101,7 +102,7 @@ export async function GET(request: NextRequest) {
                 }, '${baseUrl}');
                 setTimeout(() => window.close(), 2000);
               } else {
-                window.location.href = '${baseUrl}/test-registry-auth?error=${encodeURIComponent(tokenData.error)}';
+                window.location.href = '${baseUrl}/search?auth_error=${encodeURIComponent(tokenData.error)}';
               }
             </script>
           </head>
@@ -128,7 +129,7 @@ export async function GET(request: NextRequest) {
                 }, '${baseUrl}');
                 setTimeout(() => window.close(), 2000);
               } else {
-                window.location.href = '${baseUrl}/test-registry-auth?error=no_access_token';
+                window.location.href = '${baseUrl}/search?auth_error=no_access_token';
               }
             </script>
           </head>
@@ -140,32 +141,39 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check if this is a popup flow (we can add a state parameter later for more control)
-    // For now, we'll detect based on window.opener
+    // Store token securely and handle redirect
     const htmlResponse = `
       <!DOCTYPE html>
       <html>
         <head>
           <title>Authentication Success</title>
           <script>
-            if (window.opener) {
-              // Send message to parent window
-              window.opener.postMessage({
-                type: 'github-oauth-success',
-                accessToken: '${tokenData.access_token}'
-              }, '${baseUrl}');
-              // Show success message before closing
-              document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center;"><h2>Authentication successful!</h2><p>This window will close automatically...</p></div>';
-              setTimeout(() => window.close(), 1500);
+            // Store token in localStorage
+            localStorage.setItem('registry_oauth_token', '${tokenData.access_token}');
+            
+            // Check if we have saved state from claim flow
+            const savedState = localStorage.getItem('claim_server_state');
+            if (savedState) {
+              try {
+                const state = JSON.parse(savedState);
+                // Clean up saved state
+                localStorage.removeItem('claim_server_state');
+                // Redirect back to search page with claim dialog open
+                window.location.href = state.returnUrl || '/search';
+              } catch (e) {
+                // Fallback to search page
+                window.location.href = '/search';
+              }
             } else {
-              // Fallback: redirect to test page if not in popup
-              window.location.href = '${baseUrl}/test-registry-auth?access_token=${tokenData.access_token}';
+              // No saved state, just go to search page
+              window.location.href = '/search';
             }
           </script>
         </head>
         <body>
           <div style="font-family: system-ui; padding: 20px; text-align: center;">
-            <h2>Authenticating...</h2>
+            <h2>Authentication successful!</h2>
+            <p>Redirecting...</p>
           </div>
         </body>
       </html>
@@ -192,7 +200,7 @@ export async function GET(request: NextRequest) {
               }, '${baseUrl}');
               setTimeout(() => window.close(), 2000);
             } else {
-              window.location.href = '${baseUrl}/test-registry-auth?error=callback_processing_failed';
+              window.location.href = '${baseUrl}/search?auth_error=callback_processing_failed';
             }
           </script>
         </head>
