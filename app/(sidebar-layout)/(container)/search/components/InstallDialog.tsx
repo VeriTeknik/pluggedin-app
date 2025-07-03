@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { McpServerSource, McpServerType } from '@/db/schema';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useProfiles } from '@/hooks/use-profiles';
 
 interface InstallDialogProps {
@@ -55,6 +56,7 @@ export function InstallDialog({
   const { t } = useTranslation(['discover', 'common']);
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
+  const { track } = useAnalytics();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Parse environment variables to extract keys and descriptions
@@ -158,6 +160,16 @@ export function InstallDialog({
         });
 
         // Track the installation after successful creation
+        const serverId = serverData.external_id || result.data?.uuid || serverData.name;
+        
+        // Track to analytics service
+        track({
+          type: 'install',
+          serverId,
+          source: serverData.source || 'search',
+        });
+        
+        // Track to metrics (existing functionality)
         if (result.data?.uuid && serverData.external_id && serverData.source) {
           await trackServerInstallation({
             serverUuid: result.data.uuid,

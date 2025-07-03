@@ -23,6 +23,7 @@ import { Star } from '@/components/ui/star-rating';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { McpServerSource } from '@/db/schema';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useProfiles } from '@/hooks/use-profiles';
 
 interface RateServerDialogProps {
@@ -45,6 +46,7 @@ export function RateServerDialog({
   const { t: _t } = useTranslation();
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
+  const { track } = useAnalytics();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm({
@@ -82,6 +84,13 @@ export function RateServerDialog({
       );
       
       if (result.success) {
+        // Track rating event
+        track({
+          type: 'rating',
+          serverId: serverData.external_id || serverData.name,
+          rating: values.rating,
+        });
+        
         toast({
           title: 'Success',
           description: 'Thank you for rating this server!',

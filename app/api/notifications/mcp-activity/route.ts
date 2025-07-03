@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { createNotification } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
+import { analytics } from '@/lib/analytics/analytics-service';
 
 const mcpActivitySchema = z.object({
   action: z.enum(['tool_call', 'prompt_get', 'resource_read']),
@@ -122,6 +123,28 @@ export async function POST(request: Request) {
       message,
       expiresInDays: 7, // MCP activity notifications expire in 7 days
     });
+
+    // Forward tool call analytics to the analytics service
+    if (action === 'tool_call' && executionTime !== undefined) {
+      try {
+        await analytics.track({
+          type: 'usage',
+          serverId: serverUuid,
+          userId: auth.user?.id || 'mcp-proxy',
+          toolName: itemName,
+          duration: executionTime,
+          success,
+          metadata: {
+            source: 'mcp-proxy',
+            profileId: auth.activeProfile.uuid,
+            serverName,
+          },
+        });
+      } catch (analyticsError) {
+        // Don't fail the request if analytics fails
+        console.error('Failed to track analytics:', analyticsError);
+      }
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

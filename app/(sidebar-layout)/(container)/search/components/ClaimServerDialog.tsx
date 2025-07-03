@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAnalytics } from '@/hooks/use-analytics';
 
 interface ClaimServerDialogProps {
   open: boolean;
@@ -46,6 +47,7 @@ const getGitHubClientId = () => {
 
 export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDialogProps) {
   const { t } = useTranslation();
+  const { track } = useAnalytics();
   const [repositoryUrl, setRepositoryUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [registryToken, setRegistryToken] = useState<string | null>(null);
@@ -90,6 +92,12 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
       });
 
       if (result.success) {
+        // Track claim event
+        track({
+          type: 'claim',
+          serverId: server.uuid,
+        });
+        
         toast.success(result.message || 'Server claimed successfully!');
         onOpenChange(false);
         // Refresh the page to show updated claim status

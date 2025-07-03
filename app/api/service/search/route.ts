@@ -6,6 +6,7 @@ import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { db } from '@/db';
 import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
+import { PluggedinRegistryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
 // Legacy imports - commented out as these sources are deprecated
@@ -32,14 +33,7 @@ const CACHE_TTL: Record<McpServerSource, number> = {
   [McpServerSource.REGISTRY]: 5, // 5 minutes for registry
 };
 
-// Registry cache for better performance
-let registryCache: { 
-  servers: any[]; 
-  timestamp: number;
-  indexed: SearchIndex;
-} | null = null;
-
-const REGISTRY_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// Note: We no longer cache all registry servers since VP API provides efficient filtering
 
 /**
  * Search for MCP servers
@@ -54,6 +48,12 @@ export async function GET(request: NextRequest) {
   const source = (url.searchParams.get('source') as McpServerSource) || null;
   const offset = parseInt(url.searchParams.get('offset') || '0');
   const pageSize = parseInt(url.searchParams.get('pageSize') || '10');
+  
+  // New filter parameters for VP API
+  const packageRegistry = url.searchParams.get('packageRegistry') as 'npm' | 'docker' | 'pypi' | null;
+  const repositorySource = url.searchParams.get('repositorySource');
+  const latestOnly = url.searchParams.get('latest') === 'true';
+  const version = url.searchParams.get('version');
 
   try {
     let results: SearchIndex = {};
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
 
       // Handle registry source
       if (source === McpServerSource.REGISTRY) {
-        results = await searchRegistry(query);
+        results = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
         const paginated = paginateResults(results, offset, pageSize);
         return NextResponse.json(paginated);
       }
@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
     
     if (registryEnabled) {
       // Get registry results
-      const registryResults = await searchRegistry(query);
+      const registryResults = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
       Object.assign(results, registryResults);
     }
     
@@ -144,34 +144,44 @@ export async function GET(request: NextRequest) {
   }
 }
 
+interface RegistryFilters {
+  packageRegistry?: 'npm' | 'docker' | 'pypi' | null;
+  repositorySource?: string | null;
+  latestOnly?: boolean;
+  version?: string | null;
+}
+
 /**
- * Search for MCP servers in the Plugged.in Registry
+ * Search for MCP servers in the Plugged.in Registry using VP API
  */
-async function searchRegistry(query: string): Promise<SearchIndex> {
-  console.log('searchRegistry called with query:', query);
+async function searchRegistry(query: string, filters: RegistryFilters = {}): Promise<SearchIndex> {
+  console.log('searchRegistry called with query:', query, 'filters:', filters);
   try {
-    const client = new PluggedinRegistryClient();
+    const vpClient = new PluggedinRegistryVPClient();
     
-    // Use cache if available and fresh
-    if (registryCache && Date.now() - registryCache.timestamp < REGISTRY_CACHE_TTL) {
-      console.log('Using cached registry data');
-      return searchInCache(registryCache.indexed, query);
-    }
+    // Prepare VP API filters
+    const vpFilters = {
+      package_registry: filters.packageRegistry || undefined,
+      repository_source: filters.repositorySource || undefined,
+      latest: filters.latestOnly || undefined,
+      version: filters.version || undefined,
+    };
     
-    console.log('Fetching fresh registry data');
+    console.log('Fetching from VP API with filters:', vpFilters);
     
-    // Fetch all servers from registry
-    const servers = await client.searchServers(query);
+    // Use VP API to search with filters
+    const servers = await vpClient.searchServers(query, vpFilters);
     
     // Transform and index
     const indexed: SearchIndex = {};
     for (const server of servers) {
       const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
       
-      // Debug log for YouTube server
-      if (server.name?.includes('youtube')) {
-        console.log('[Search API] Transforming YouTube server:', {
-          original: server,
+      // Debug log for special servers
+      if (server.name?.includes('youtube') || server.name?.includes('sqlite')) {
+        console.log('[Search API] Transforming server:', {
+          name: server.name,
+          packages: server.packages,
           transformed: mcpIndex
         });
       }
@@ -179,14 +189,7 @@ async function searchRegistry(query: string): Promise<SearchIndex> {
       indexed[server.id] = mcpIndex;
     }
     
-    // Update cache (only if we fetched all servers)
-    if (!query) {
-      registryCache = {
-        servers,
-        timestamp: Date.now(),
-        indexed
-      };
-    }
+    console.log(`[Search API] Found ${Object.keys(indexed).length} servers`);
     
     // Return results
     return indexed;
@@ -197,25 +200,6 @@ async function searchRegistry(query: string): Promise<SearchIndex> {
   }
 }
 
-function searchInCache(indexed: SearchIndex, query: string): SearchIndex {
-  if (!query) return indexed;
-  
-  const searchQuery = query.toLowerCase();
-  const results: SearchIndex = {};
-  
-  Object.entries(indexed).forEach(([id, server]) => {
-    if (
-      server.name.toLowerCase().includes(searchQuery) ||
-      server.description.toLowerCase().includes(searchQuery) ||
-      server.package_name?.toLowerCase().includes(searchQuery) ||
-      server.tags?.some(tag => tag.toLowerCase().includes(searchQuery))
-    ) {
-      results[id] = server;
-    }
-  });
-  
-  return results;
-}
 
 /**
  * Enrich search results with rating and installation metrics

@@ -3,7 +3,7 @@
 import { Award, Database, Download, Eye, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { unshareServer } from '@/app/actions/social'; // Import unshare action
@@ -28,6 +28,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { McpServerSource, McpServerType } from '@/db/schema';
+import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { McpServerCategory, SearchIndex } from '@/types/search';
@@ -150,9 +151,39 @@ export default function CardGrid({
 }) {
   const { t } = useTranslation();
   const { toast } = useToast(); // Initialize toast
+  const { track } = useAnalytics();
   const { isAuthenticated, signIn } = useAuth();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authDialogMessage, setAuthDialogMessage] = useState<{ key: string; defaultMsg: string } | null>(null);
+  const [trackedViews, setTrackedViews] = useState<Set<string>>(new Set());
+
+  // Track views for all visible servers
+  useEffect(() => {
+    const visibleServers = Object.entries(items);
+    const newViews: string[] = [];
+
+    visibleServers.forEach(([key, item]) => {
+      // Create a unique ID for this server
+      const serverId = item.external_id || key;
+      
+      // Only track if we haven't tracked this view yet
+      if (!trackedViews.has(serverId)) {
+        newViews.push(serverId);
+        
+        // Track the view event
+        track({
+          type: 'view',
+          serverId,
+          source: 'search',
+        });
+      }
+    });
+
+    // Update tracked views
+    if (newViews.length > 0) {
+      setTrackedViews(prev => new Set([...prev, ...newViews]));
+    }
+  }, [items, track, trackedViews]);
 
   // Helper function to check authentication and show a dialog if not authenticated
   const requireAuth = (descriptionKey: string, descriptionDefault: string): boolean => {
@@ -284,6 +315,14 @@ export default function CardGrid({
   // Handle clicking the view details button
   const handleViewDetailsClick = (e: React.MouseEvent, item: any) => {
     e.stopPropagation(); // Prevent card click
+    
+    // Track detail view
+    const serverId = item.external_id || item.name;
+    track({
+      type: 'view',
+      serverId,
+      source: 'detail',
+    });
     
     // Debug logging
     console.log('[CardGrid] handleViewDetailsClick - item data:', {
