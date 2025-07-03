@@ -29,8 +29,8 @@ const CACHE_TTL: Record<McpServerSource, number> = {
   [McpServerSource.NPM]: 360, // 6 hours - DEPRECATED
   [McpServerSource.GITHUB]: 1440, // 24 hours - DEPRECATED
   [McpServerSource.PLUGGEDIN]: 1440, // 24 hours
-  [McpServerSource.COMMUNITY]: 60, // 1 hour - community content may change frequently
-  [McpServerSource.REGISTRY]: 5, // 5 minutes for registry
+  [McpServerSource.COMMUNITY]: 15, // 15 minutes - community content may change frequently
+  [McpServerSource.REGISTRY]: 1, // 1 minute for registry - to quickly reflect newly claimed servers
 };
 
 // Note: We no longer cache all registry servers since VP API provides efficient filtering
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
     if (source) {
       // Handle community source (keep existing functionality)
       if (source === McpServerSource.COMMUNITY) {
-        results = await searchCommunity(query);
+        results = await searchCommunity(query, true); // Pass flag to exclude claimed servers
         const paginated = paginateResults(results, offset, pageSize);
         return NextResponse.json(paginated);
       }
@@ -127,8 +127,8 @@ export async function GET(request: NextRequest) {
       Object.assign(results, registryResults);
     }
     
-    // Always include community results
-    const communityResults = await searchCommunity(query);
+    // Always include community results (excluding claimed servers when showing all)
+    const communityResults = await searchCommunity(query, false); // Include claimed servers when showing all
     Object.assign(results, communityResults);
     
     // Paginate and return results
@@ -376,9 +376,10 @@ async function searchGitHub(query: string): Promise<SearchIndex> {
  * Search for community MCP servers - implementation to show shared servers
  * 
  * @param query Search query
+ * @param excludeClaimed Whether to exclude servers that have been claimed
  * @returns SearchIndex of results
  */
-async function searchCommunity(query: string): Promise<SearchIndex> {
+async function searchCommunity(query: string, excludeClaimed: boolean = true): Promise<SearchIndex> {
   try {
     // Get shared MCP servers, joining through profiles and projects to get user info
     const sharedServersQuery = db
@@ -391,19 +392,26 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
       .innerJoin(profilesTable, eq(sharedMcpServersTable.profile_uuid, profilesTable.uuid))
       .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid)) // Join to projects
       .innerJoin(users, eq(projectsTable.user_id, users.id)) // Join to users
-      .where(
-        query
-          ? and(
-              eq(sharedMcpServersTable.is_public, true),
-              or(
-                ilike(sharedMcpServersTable.title, `%${query}%`),
-                ilike(sharedMcpServersTable.description || '', `%${query}%`),
-                ilike(users.username, `%${query}%`), // Search by username from users table
-                ilike(users.email, `%${query}%`) // Also search by user email
-              )
-            )
-          : eq(sharedMcpServersTable.is_public, true)
-      )
+      .where((() => {
+        const conditions = [eq(sharedMcpServersTable.is_public, true)];
+        
+        if (excludeClaimed) {
+          conditions.push(eq(sharedMcpServersTable.is_claimed, false));
+        }
+        
+        if (query) {
+          conditions.push(
+            or(
+              ilike(sharedMcpServersTable.title, `%${query}%`),
+              ilike(sharedMcpServersTable.description || '', `%${query}%`),
+              ilike(users.username, `%${query}%`), // Search by username from users table
+              ilike(users.email, `%${query}%`) // Also search by user email
+            )!
+          );
+        }
+        
+        return and(...conditions);
+      })())
       .orderBy(desc(sharedMcpServersTable.created_at))
       .limit(50); // Limit to 50 results
 

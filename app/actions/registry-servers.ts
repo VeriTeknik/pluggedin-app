@@ -47,7 +47,61 @@ function extractGitHubInfo(url: string): { owner: string; repo: string } {
 
 
 /**
+ * Get user's GitHub OAuth token from connected accounts
+ */
+async function getUserGitHubToken(userId: string): Promise<string | null> {
+  const githubAccount = await db.query.accounts.findFirst({
+    where: and(
+      eq(accounts.userId, userId),
+      eq(accounts.provider, 'github')
+    ),
+  });
+
+  return githubAccount?.access_token || null;
+}
+
+/**
+ * Check if user has GitHub account connected
+ */
+export async function checkUserGitHubConnection() {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { hasGitHub: false, error: 'Not authenticated' };
+    }
+
+    const githubToken = await getUserGitHubToken(session.user.id);
+    if (!githubToken) {
+      return { hasGitHub: false };
+    }
+
+    // Verify the token is still valid
+    const response = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+
+    if (!response.ok) {
+      return { hasGitHub: false, tokenExpired: true };
+    }
+
+    const userInfo = await response.json();
+    return { 
+      hasGitHub: true, 
+      githubUsername: userInfo.login,
+      githubId: userInfo.id
+    };
+  } catch (error) {
+    console.error('Error checking GitHub connection:', error);
+    return { hasGitHub: false, error: 'Failed to check GitHub connection' };
+  }
+}
+
+/**
  * Check if user has GitHub account connected via registry OAuth
+ * @deprecated Use checkUserGitHubConnection instead
  */
 export async function checkGitHubConnection(registryToken?: string) {
   // For now, just check if we have a registry token
@@ -251,12 +305,23 @@ export async function publishClaimedServer(data: z.infer<typeof publishClaimedSe
     const validated = publishClaimedServerSchema.parse(data);
     const { owner, repo } = extractGitHubInfo(validated.repositoryUrl);
     
+    // Get user's GitHub token
+    const githubToken = await getUserGitHubToken(session.user.id);
+    if (!githubToken) {
+      return {
+        success: false,
+        error: 'Please connect your GitHub account to publish servers',
+        needsAuth: true
+      };
+    }
+    
     // Verify ownership
-    const ownership = await verifyGitHubOwnership(session.user.id, validated.repositoryUrl);
+    const ownership = await verifyGitHubOwnership(githubToken, validated.repositoryUrl);
     if (!ownership.isOwner) {
       return { 
         success: false, 
-        error: ownership.reason || 'You must be the owner of this repository to publish it' 
+        error: ownership.reason || 'You must be the owner of this repository to publish it',
+        needsAuth: ownership.needsAuth
       };
     }
 
@@ -378,8 +443,18 @@ export async function claimServer(serverUuid: string) {
       return { success: false, error: 'This server has already been claimed' };
     }
 
+    // Get user's GitHub token
+    const githubToken = await getUserGitHubToken(session.user.id);
+    if (!githubToken) {
+      return {
+        success: false,
+        error: 'Please connect your GitHub account to claim servers',
+        needsAuth: true
+      };
+    }
+    
     // Verify ownership
-    const ownership = await verifyGitHubOwnership(session.user.id, server.repository_url);
+    const ownership = await verifyGitHubOwnership(githubToken, server.repository_url);
     if (!ownership.isOwner) {
       // Create a claim request for manual review
       await db.insert(serverClaimRequestsTable).values({

@@ -115,7 +115,10 @@ export class PluggedinRegistryVPClient {
         limit: 100, // Max page size
       });
       
-      allServers.push(...response.servers);
+      // Safely handle cases where servers might be null or undefined
+      if (response.servers && Array.isArray(response.servers)) {
+        allServers.push(...response.servers);
+      }
       cursor = response.metadata?.next_cursor;
     } while (cursor);
     
@@ -146,7 +149,10 @@ export class PluggedinRegistryVPClient {
         limit: 100,
       });
       
-      allServers.push(...response.servers);
+      // Safely handle cases where servers might be null or undefined
+      if (response.servers && Array.isArray(response.servers)) {
+        allServers.push(...response.servers);
+      }
       cursor = response.metadata?.next_cursor;
       
       // Log progress

@@ -1,11 +1,13 @@
 'use client';
 
 import { Github, Loader2 } from 'lucide-react';
-import { useState } from 'react';
+import { signIn } from 'next-auth/react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { claimCommunityServer } from '@/app/actions/community-servers';
+import { checkUserGitHubConnection } from '@/app/actions/registry-servers';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,56 +32,62 @@ interface ClaimServerDialogProps {
   } | null;
 }
 
-// GitHub OAuth configuration
-const getGitHubClientId = () => {
-  if (typeof window !== 'undefined') {
-    const origin = window.location.origin;
-    if (origin.includes('localhost')) {
-      return 'Ov23liauuJvy6sLzrDdr'; // Localhost client ID
-    } else if (origin.includes('staging')) {
-      return 'Ov23liGQCDAID0kY58HE'; // Staging client ID
-    } else {
-      return '13219bd31987f25b7e34'; // Production client ID
-    }
-  }
-  return 'Ov23liauuJvy6sLzrDdr'; // Default to localhost
-};
+// No longer need custom GitHub OAuth configuration - using NextAuth
 
 export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDialogProps) {
   const { t } = useTranslation();
   const { track } = useAnalytics();
   const [repositoryUrl, setRepositoryUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [registryToken, setRegistryToken] = useState<string | null>(null);
-  const [_isVerifying, _setIsVerifying] = useState(false);
+  const [hasGitHub, setHasGitHub] = useState(false);
+  const [githubUsername, setGithubUsername] = useState<string | null>(null);
+  const [isCheckingGitHub, setIsCheckingGitHub] = useState(true);
 
-  // Check for OAuth token on mount
-  useState(() => {
-    const token = localStorage.getItem('registry_oauth_token');
-    if (token) {
-      setRegistryToken(token);
+  // Check for GitHub connection on mount
+  useEffect(() => {
+    const checkGitHub = async () => {
+      setIsCheckingGitHub(true);
+      try {
+        const result = await checkUserGitHubConnection();
+        setHasGitHub(result.hasGitHub);
+        setGithubUsername(result.githubUsername || null);
+      } catch (error) {
+        console.error('Error checking GitHub connection:', error);
+      } finally {
+        setIsCheckingGitHub(false);
+      }
+    };
+    
+    if (open) {
+      checkGitHub();
     }
-  });
+  }, [open]);
 
-  const initiateGitHubOAuth = () => {
-    const redirectUri = `${window.location.origin}/api/auth/callback/registry`;
-    const scope = 'read:user,read:org';
-    const githubOAuthUrl = `https://github.com/login/oauth/authorize?client_id=${getGitHubClientId()}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const handleGitHubSignIn = async () => {
+    // Save current state before redirecting
+    if (server) {
+      localStorage.setItem('claim_server_state', JSON.stringify({
+        serverUuid: server.uuid,
+        serverName: server.name,
+        repositoryUrl,
+        returnUrl: window.location.pathname + window.location.search,
+      }));
+    }
     
-    // Save current state
-    localStorage.setItem('claim_server_state', JSON.stringify({
-      serverUuid: server?.uuid,
-      serverName: server?.name,
-      repositoryUrl,
-      returnUrl: window.location.pathname + window.location.search,
-    }));
-    
-    window.location.href = githubOAuthUrl;
+    // Use NextAuth to sign in with GitHub
+    await signIn('github', { 
+      callbackUrl: window.location.pathname + window.location.search 
+    });
   };
 
   const handleClaim = async () => {
-    if (!server || !repositoryUrl || !registryToken) {
-      toast.error('Please provide all required information');
+    if (!server || !repositoryUrl) {
+      toast.error('Please provide a repository URL');
+      return;
+    }
+
+    if (!hasGitHub) {
+      toast.error('Please connect your GitHub account first');
       return;
     }
 
@@ -88,7 +96,7 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
       const result = await claimCommunityServer({
         communityServerUuid: server.uuid,
         repositoryUrl,
-        registryToken,
+        registryToken: 'github-oauth', // Placeholder - the backend will use the user's GitHub token from accounts table
       });
 
       if (result.success) {
@@ -98,14 +106,29 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
           serverId: server.uuid,
         });
         
-        toast.success(result.message || 'Server claimed successfully!');
+        // Show appropriate message based on whether it was published
+        if (result.warning) {
+          toast.warning(result.message || 'Server claimed but not published');
+        } else {
+          toast.success(result.message || 'Server claimed and published successfully!');
+        }
+        
         onOpenChange(false);
-        // Refresh the page to show updated claim status
-        window.location.reload();
+        // Trigger a refresh of search results without reloading the page
+        // The parent component should handle this via onRefreshNeeded prop
+        if (window.location.pathname === '/search') {
+          // Dispatch a custom event that the search page can listen to
+          window.dispatchEvent(new CustomEvent('server-claimed', { 
+            detail: { 
+              serverUuid: server.uuid,
+              published: result.published || false
+            }
+          }));
+        }
       } else {
         if (result.needsAuth) {
           toast.error('Please authenticate with GitHub first');
-          initiateGitHubOAuth();
+          handleGitHubSignIn();
         } else {
           toast.error(result.error || 'Failed to claim server');
         }
@@ -175,12 +198,26 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
             </p>
           </div>
 
-          {!registryToken && (
+          {isCheckingGitHub ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : !hasGitHub && (
             <Alert>
               <AlertDescription>
-                {t('search.claimDialog.authRequired', 'You need to authenticate with GitHub to verify ownership')}
+                {t('search.claimDialog.authRequired', 'You need to connect your GitHub account to claim this server')}
               </AlertDescription>
             </Alert>
+          )}
+          
+          {hasGitHub && githubUsername && (
+            <div className="space-y-2">
+              <Label>{t('search.claimDialog.githubAccount', 'GitHub Account')}</Label>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Github className="h-4 w-4" />
+                <span>{githubUsername}</span>
+              </div>
+            </div>
           )}
         </div>
 
@@ -193,10 +230,15 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
             {t('common.cancel', 'Cancel')}
           </Button>
           
-          {!registryToken ? (
-            <Button onClick={initiateGitHubOAuth} disabled={isSubmitting}>
+          {isCheckingGitHub ? (
+            <Button disabled>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              {t('common.loading', 'Loading...')}
+            </Button>
+          ) : !hasGitHub ? (
+            <Button onClick={handleGitHubSignIn} disabled={isSubmitting}>
               <Github className="mr-2 h-4 w-4" />
-              {t('search.claimDialog.authenticate', 'Authenticate with GitHub')}
+              {t('search.claimDialog.connectGitHub', 'Connect GitHub Account')}
             </Button>
           ) : (
             <Button 

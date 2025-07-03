@@ -39,7 +39,21 @@ export function LiveMetrics() {
       const response = await fetch('/api/analytics/metrics');
       if (response.ok) {
         const data = await response.json();
-        setMetrics(data);
+        // Ensure data has the expected structure
+        if (data && typeof data === 'object') {
+          setMetrics({
+            totalInstalls: data.totalInstalls || 0,
+            totalViews: data.totalViews || 0,
+            activeUsers: data.activeUsers || 0,
+            avgUsageTime: data.avgUsageTime || 0,
+            trends: {
+              installs: data.trends?.installs || { value: 0, isPositive: true },
+              views: data.trends?.views || { value: 0, isPositive: true },
+              users: data.trends?.users || { value: 0, isPositive: true },
+              usage: data.trends?.usage || { value: 0, isPositive: true },
+            },
+          });
+        }
       }
     } catch (error) {
       console.error('Failed to fetch metrics:', error);
@@ -68,7 +82,7 @@ export function LiveMetrics() {
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <MetricsCard
         title="Total Installations"
-        value={metrics.totalInstalls.toLocaleString()}
+        value={typeof metrics.totalInstalls === 'number' ? metrics.totalInstalls.toLocaleString() : '0'}
         icon={TrendingUp}
         trend={metrics.trends.installs}
         color="blue"
@@ -76,7 +90,7 @@ export function LiveMetrics() {
       />
       <MetricsCard
         title="Total Views"
-        value={metrics.totalViews.toLocaleString()}
+        value={typeof metrics.totalViews === 'number' ? metrics.totalViews.toLocaleString() : '0'}
         icon={Eye}
         trend={metrics.trends.views}
         color="green"
@@ -84,7 +98,7 @@ export function LiveMetrics() {
       />
       <MetricsCard
         title="Active Users"
-        value={metrics.activeUsers.toLocaleString()}
+        value={typeof metrics.activeUsers === 'number' ? metrics.activeUsers.toLocaleString() : '0'}
         icon={Users}
         trend={metrics.trends.users}
         color="purple"
@@ -92,7 +106,7 @@ export function LiveMetrics() {
       />
       <MetricsCard
         title="Avg Usage Time"
-        value={formatUsageTime(metrics.avgUsageTime)}
+        value={formatUsageTime(metrics.avgUsageTime || 0)}
         icon={Activity}
         trend={metrics.trends.usage}
         color="orange"

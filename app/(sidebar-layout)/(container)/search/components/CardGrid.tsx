@@ -422,6 +422,13 @@ export default function CardGrid({
 
   // Helper to check if server is owned by current user
   const isOwnServer = (item: any) => {
+    // Registry servers are never "owned" by users in the UI context
+    // They are public registry entries that anyone can use
+    if (item.source === McpServerSource.REGISTRY) {
+      return false;
+    }
+    
+    // Community servers are owned if shared by current user
     return item.shared_by === currentUsername;
   };
 
@@ -772,7 +779,16 @@ export default function CardGrid({
       {claimServer && (
         <ClaimServerDialog
           open={claimDialogOpen}
-          onOpenChange={setClaimDialogOpen}
+          onOpenChange={(open) => {
+            setClaimDialogOpen(open);
+            // If dialog is closing and we have a refresh callback, call it
+            if (!open && onRefreshNeeded) {
+              // Add a small delay to allow the backend to update
+              setTimeout(() => {
+                onRefreshNeeded();
+              }, 1000);
+            }
+          }}
           server={claimServer}
         />
       )}

@@ -146,6 +146,19 @@ function SearchContent() {
     }
   }, [data]);
 
+  // Listen for server claim events to refresh results
+  useEffect(() => {
+    const handleServerClaimed = () => {
+      // Force a refresh of search results
+      mutate();
+    };
+
+    window.addEventListener('server-claimed', handleServerClaimed);
+    return () => {
+      window.removeEventListener('server-claimed', handleServerClaimed);
+    };
+  }, [mutate]);
+
   // Use the enhanced custom hooks for filtering and sorting
   const { filter, getFilteredResults } = useFilteredResults(data?.results, tags, category);
   const { sort: sortState, getSortedResults } = useSortedResults(data?.results, sort, getFilteredResults);

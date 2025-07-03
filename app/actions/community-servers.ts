@@ -16,6 +16,8 @@ import {
 import { getAuthSession } from '@/lib/auth';
 
 import { verifyGitHubOwnership } from './registry-servers';
+import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
+import { accounts } from '@/db/schema';
 
 // Validation schema for community server
 const createCommunityServerSchema = z.object({
@@ -258,6 +260,43 @@ export async function getCommunityServer(uuid: string) {
   }
 }
 
+// Helper function to extract package info from template
+function extractPackageInfo(template: any) {
+  const packageInfo = {
+    registry: 'npm' as 'npm' | 'docker' | 'pypi',
+    name: '',
+    version: 'latest',
+  };
+
+  // Determine package type and name from command
+  if (template.command === 'npx' && template.args?.[0]) {
+    packageInfo.registry = 'npm';
+    packageInfo.name = template.args[0].replace('@latest', '').replace(/-y$/, '').trim();
+  } else if (template.command === 'node' && template.args?.[0]) {
+    packageInfo.registry = 'npm';
+    packageInfo.name = template.args[0];
+  } else if (template.command === 'python' && template.args?.[0] === '-m' && template.args?.[1]) {
+    packageInfo.registry = 'pypi';
+    packageInfo.name = template.args[1];
+  } else if (template.command === 'docker' && template.args?.[0] === 'run') {
+    packageInfo.registry = 'docker';
+    // Extract image name from docker run command
+    const imageArg = template.args.find((arg: string, i: number) => 
+      i > 0 && !arg.startsWith('-') && template.args[i-1] !== '--name'
+    );
+    if (imageArg) {
+      packageInfo.name = imageArg.split(':')[0];
+    }
+  }
+
+  // Default to repository name if can't determine
+  if (!packageInfo.name) {
+    packageInfo.name = template.name || 'unknown';
+  }
+
+  return packageInfo;
+}
+
 // Validation schema for claiming a community server
 const claimCommunityServerSchema = z.object({
   communityServerUuid: z.string().uuid(),
@@ -270,7 +309,7 @@ const claimCommunityServerSchema = z.object({
       message: 'Invalid GitHub repository URL format. Expected: https://github.com/owner/repo',
     }
   ),
-  registryToken: z.string().min(1),
+  registryToken: z.string().min(1).optional(), // Deprecated - kept for compatibility
 });
 
 /**
@@ -315,8 +354,24 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       };
     }
 
+    // Get user's GitHub token
+    const githubAccount = await db.query.accounts.findFirst({
+      where: and(
+        eq(accounts.userId, session.user.id),
+        eq(accounts.provider, 'github')
+      ),
+    });
+
+    if (!githubAccount?.access_token) {
+      return {
+        success: false,
+        error: 'Please connect your GitHub account to claim servers',
+        needsAuth: true
+      };
+    }
+
     // Verify GitHub ownership
-    const ownership = await verifyGitHubOwnership(validated.registryToken, validated.repositoryUrl);
+    const ownership = await verifyGitHubOwnership(githubAccount.access_token, validated.repositoryUrl);
     if (!ownership.isOwner) {
       return { 
         success: false, 
@@ -332,22 +387,80 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
     }
     const [, owner, repo] = match;
 
+    // Extract package information from template
+    const packageInfo = extractPackageInfo(communityServer.template);
+    
+    // Extract environment variables documentation
+    const envVars = communityServer.template?.env ? 
+      Object.entries(communityServer.template.env).map(([key, value]) => ({
+        name: key,
+        description: value as string,
+        required: true,
+        example: value as string,
+      })) : [];
+
+    // Prepare registry payload
+    const registryPayload = {
+      name: `io.github.${owner}/${repo}`,
+      description: communityServer.description || communityServer.template?.description || '',
+      packages: [{
+        registry_name: packageInfo.registry,
+        name: packageInfo.name,
+        version: packageInfo.version,
+        environment_variables: envVars,
+      }],
+      repository: {
+        url: validated.repositoryUrl,
+        source: 'github' as const,
+        id: `${owner}/${repo}`,
+      },
+      version_detail: {
+        version: packageInfo.version,
+      },
+    };
+
+    // Try to publish to registry first
+    let registryId: string | null = null;
+    let publishError: string | null = null;
+    
+    try {
+      const client = new PluggedinRegistryClient();
+      const authToken = process.env.REGISTRY_AUTH_TOKEN;
+      
+      if (!authToken) {
+        publishError = 'Registry authentication not configured on server';
+        console.error(publishError);
+      } else {
+        const publishResult = await client.publishServer(registryPayload, authToken);
+        registryId = publishResult.id;
+        console.log('Successfully published to registry:', registryId);
+      }
+    } catch (error) {
+      console.error('Failed to publish to registry:', error);
+      publishError = error instanceof Error ? error.message : 'Failed to publish to registry';
+      // Don't fail the claim - we'll mark it as claimed but not published
+    }
+
     // Start a transaction to ensure data consistency
     const result = await db.transaction(async (tx) => {
       // Create registry entry
       const [registryServer] = await tx.insert(registryServersTable).values({
+        registry_id: registryId,
         name: `io.github.${owner}/${repo}`,
         github_owner: owner,
         github_repo: repo,
         repository_url: validated.repositoryUrl,
         description: communityServer.description || communityServer.template?.description || '',
         is_claimed: true,
-        is_published: false, // Not published to registry yet
+        is_published: !!registryId, // Published if we got a registry ID
         claimed_by_user_id: session.user.id,
         claimed_at: new Date(),
+        published_at: registryId ? new Date() : null,
         metadata: {
-          ...communityServer.template,
+          ...registryPayload,
+          template: communityServer.template,
           originalCommunityServerUuid: communityServer.uuid,
+          publishError: publishError,
         },
       }).returning();
 
@@ -375,10 +488,20 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       return registryServer;
     });
 
+    if (publishError) {
+      return { 
+        success: true, 
+        registryServer: result,
+        message: 'Server claimed successfully but could not be published to registry. You can try publishing it later.',
+        warning: publishError
+      };
+    }
+
     return { 
       success: true, 
       registryServer: result,
-      message: 'Server claimed successfully! You can now publish it to the registry.'
+      message: 'Server claimed and published to registry successfully!',
+      published: true
     };
   } catch (error) {
     console.error('Error claiming community server:', error);
