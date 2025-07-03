@@ -5,6 +5,53 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2025-01-03
+
+### Added
+- **High-Performance Package Management System**
+  - Isolated package installation per MCP server using pnpm
+  - Support for npm/npx/pnpm commands with 10-100x faster installs
+  - Python package management with uv (100x faster than pip)
+  - Automatic package directory detection per OS
+  - Smart command transformation for registry servers
+  - Package caching with content-addressable storage
+- **CLI-Style Discovery Toast**
+  - Terminal-style toast notification for MCP discovery output
+  - Real-time log streaming with animated display
+  - Color-coded output based on log types (Action, PackageManager, pnpm, etc.)
+  - JSON formatting for structured data
+  - Auto-scroll to bottom with custom terminal-themed scrollbar
+  - Console capture utility for discovery process logging
+- **Registry Integration Improvements**
+  - Enhanced server detail dialog with full registry server support
+  - Fixed registry server import using official transformer
+  - Proper handling of registry servers with package dependencies
+  - Dynamic command/args display in configuration UI
+
+### Changed
+- **Package Manager Enhancements**
+  - Fixed npx flag parsing (-y, --yes, etc. no longer treated as packages)
+  - Improved binary detection for npx-only packages
+  - Keep using npx command for packages without binaries
+  - Better error handling for package installation failures
+- **UI/UX Improvements**
+  - Optimized CLI toast performance with faster animations
+  - Fixed height issues in toast notifications
+  - Added "Processing..." indicator for ongoing operations
+  - Improved scrolling behavior for long outputs
+
+### Fixed
+- Fixed MCP discovery errors where npx flags were incorrectly parsed as package names
+- Fixed binary not found errors for npx-only packages
+- Fixed registry server command transformation issues
+- Fixed duplicate variable declarations in package manager
+- Fixed CLI toast height and scrolling issues
+
+### Security
+- Package isolation per MCP server for enhanced security
+- Separate installation directories prevent package conflicts
+- Environment-based configuration for resource limits
+
 ## [2.5.0] - 2025-01-26
 
 ### Added
