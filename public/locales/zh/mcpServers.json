@@ -17,7 +17,10 @@
       "search": "搜索服务器...",
       "edit": "编辑",
       "delete": "删除",
+      "deleteTitle": "删除 MCP 服务器",
       "deleteConfirm": "您确定要删除此 MCP 服务器吗？",
+      "deleteSuccess": "服务器已成功删除。",
+      "deleteError": "删除服务器失败。",
       "cancel": "取消",
       "create": "创建",
       "creating": "创建中...",
@@ -192,20 +195,12 @@
     },
     "tools": {
       "title": "发现的工具",
-      "noTools": "尚未为此服务器发现任何工具。请尝试使用服务器卡上的“发现工具”按钮。"
+      "noTools": "尚未为此服务器发现任何工具。请尝试使用服务器卡上的\"发现工具\"按钮。"
     },
     "instructions": {
       "title": "自定义指令",
       "descriptionLabel": "描述（可选）",
-      "descriptionPlaceholder": "简要描述这些指令的目的",
-      "descriptionHelp": "此描述仅供您参考。",
-      "messagesLabel": "消息（JSON 数组）",
-      "messagesPlaceholder": "[\n  {\n    \"role\": \"system\",\n    \"content\": { \"type\": \"text\", \"text\": \"在此处输入您的指令...\" }\n  }\n]",
-      "messagesHelp": "以 JSON 格式输入 MCP 消息对象的数组。",
-      "infoTitle": "客户端如何使用指令",
-      "infoText": "这些指令可能被 MCP 客户端（如 Cline）用于在使用此服务器的工具时向 AI 提供上下文。具体用法取决于客户端实现。",
-      "saveSuccess": "自定义指令保存成功。",
-      "saveError": "保存自定义指令失败。"
+      "descriptionPlaceholder": "简要描述这些指令的目的"
     },
     "placeholders": {
       "serverName": "输入服务器名称",

@@ -83,7 +83,7 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80">
+      <DropdownMenuContent align="end" className="w-80 ml-1">
         <div className="flex items-center justify-between p-4 border-b">
           <div className="font-semibold">{t('notifications.title')}</div>
           {unreadCount > 0 && (

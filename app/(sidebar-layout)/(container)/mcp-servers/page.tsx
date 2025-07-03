@@ -11,7 +11,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Database, Download, Settings, Share,Upload } from 'lucide-react';
+import { Database, Download, Settings, Share, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -27,6 +27,7 @@ import {
 } from '@/app/actions/mcp-servers';
 // Internal UI components
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 // Internal DB schema
@@ -66,6 +67,8 @@ export default function MCPServersPage() {
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [shareCollectionOpen, setShareCollectionOpen] = useState(false);
   const [selectedServers, setSelectedServers] = useState<McpServer[]>([]);
+  const [serverToDelete, setServerToDelete] = useState<McpServer | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { data: servers = [], mutate } = useSWR(
     currentProfile?.uuid ? `${currentProfile.uuid}/mcp-servers` : null,
@@ -353,6 +356,32 @@ export default function MCPServersPage() {
     setExportOpen(true);
   };
 
+  const handleDeleteServer = async () => {
+    if (!currentProfile?.uuid || !serverToDelete?.uuid) return;
+    
+    setIsDeleting(true);
+    try {
+      await deleteMcpServerByUuid(
+        currentProfile.uuid,
+        serverToDelete.uuid
+      );
+      await mutate();
+      toast({
+        title: t('common.success'),
+        description: t('mcpServers.actions.deleteSuccess'),
+      });
+    } catch (_error) {
+      toast({
+        title: t('common.error'),
+        description: t('mcpServers.actions.deleteError'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setServerToDelete(null);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <ServerHero onAddServer={() => setOpen(true)} />
@@ -432,15 +461,8 @@ export default function MCPServersPage() {
                 );
                 mutate();
               }}
-              onDelete={async () => {
-                if (!currentProfile?.uuid || !row.original.uuid) return;
-                if (confirm(t('mcpServers.actions.deleteConfirm'))) {
-                  await deleteMcpServerByUuid(
-                    currentProfile.uuid,
-                    row.original.uuid
-                  );
-                  mutate();
-                }
+              onDelete={() => {
+                setServerToDelete(row.original);
               }}
             />
           ))}
@@ -538,6 +560,18 @@ export default function MCPServersPage() {
             description: t('mcpServers.shareCollection.success'),
           });
         }}
+      />
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={!!serverToDelete}
+        onOpenChange={(open) => !open && setServerToDelete(null)}
+        title={t('mcpServers.actions.deleteTitle')}
+        description={t('mcpServers.actions.deleteConfirm')}
+        confirmText={t('mcpServers.actions.delete')}
+        onConfirm={handleDeleteServer}
+        isLoading={isDeleting}
+        variant="destructive"
       />
     </div>
   );
