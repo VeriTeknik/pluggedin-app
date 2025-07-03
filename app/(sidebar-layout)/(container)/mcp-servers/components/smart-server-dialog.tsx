@@ -298,7 +298,7 @@ export function SmartServerDialog({
         return McpServerType.STREAMABLE_HTTP;
       }
       
-      // Context7 - check exact hostname
+      // Context7 - uses Streamable HTTP with SSE streaming
       if (hostname === 'mcp.context7.com') {
         return McpServerType.STREAMABLE_HTTP;
       }
@@ -410,6 +410,8 @@ export function SmartServerDialog({
     if (config.url) {
       const serverType = config.type === 'sse' ? McpServerType.SSE : 
                         config.type === 'streamable_http' ? McpServerType.STREAMABLE_HTTP :
+                        config.type === 'streamable' ? McpServerType.STREAMABLE_HTTP : // New MCP registry format
+                        config.transport === 'streamable' ? McpServerType.STREAMABLE_HTTP : // Alternative field
                         detectServerTypeFromUrl(config.url);
       
       return {
@@ -421,6 +423,37 @@ export function SmartServerDialog({
         transport: config.transport,
         status: McpServerStatus.ACTIVE
       };
+    }
+    
+    // Handle new MCP registry schema with remotes section
+    if (config.remotes && typeof config.remotes === 'object') {
+      // Get the first remote endpoint
+      const remoteKeys = Object.keys(config.remotes);
+      if (remoteKeys.length > 0) {
+        const firstRemote = config.remotes[remoteKeys[0]];
+        if (firstRemote.url) {
+          const serverType = config.transport === 'sse' ? McpServerType.SSE :
+                            config.transport === 'streamable' ? McpServerType.STREAMABLE_HTTP :
+                            detectServerTypeFromUrl(firstRemote.url);
+          
+          const result: ParsedConfig = {
+            name,
+            type: serverType,
+            url: firstRemote.url,
+            description: config.description,
+            status: McpServerStatus.ACTIVE
+          };
+          
+          // Add headers if present
+          if (firstRemote.headers) {
+            result.streamableHTTPOptions = {
+              headers: firstRemote.headers
+            };
+          }
+          
+          return result;
+        }
+      }
     }
     
     return null;

@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, Trash2, XCircle } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, Trash2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -200,8 +200,18 @@ export function ServerCard({
       <CardContent>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="flex items-center gap-1 text-muted-foreground">
-            <Badge variant="outline" className="dark:border-slate-700">
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "dark:border-slate-700",
+                server.type === McpServerType.SSE && "bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900"
+              )}
+              title={server.type === McpServerType.SSE ? "SSE transport is deprecated. Consider migrating to Streamable HTTP." : undefined}
+            >
               {server.type}
+              {server.type === McpServerType.SSE && (
+                <AlertCircle className="ml-1 h-3 w-3" />
+              )}
             </Badge>
           </div>
           <div className="flex items-center gap-1 text-muted-foreground justify-end">

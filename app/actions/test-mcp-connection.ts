@@ -52,23 +52,30 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
         };
       }
 
+      // Check for known MCP endpoints first
+      let isKnownMcpEndpoint = false;
+      let hostname = '';
+      
       try {
-        // For known MCP endpoints that support POST, try the initialize method
-        let shouldTryInitialize = config.type === McpServerType.STREAMABLE_HTTP;
-        
-        // Check for known MCP endpoints using proper URL parsing
-        if (!shouldTryInitialize) {
-          try {
-            const urlObj = new URL(config.url);
-            const hostname = urlObj.hostname.toLowerCase();
-            shouldTryInitialize = hostname === 'mcp.context7.com' || hostname === 'server.smithery.ai';
-          } catch {
-            // Invalid URL, skip initialization attempt
-          }
+        const urlObj = new URL(config.url);
+        hostname = urlObj.hostname.toLowerCase();
+        isKnownMcpEndpoint = hostname === 'mcp.context7.com' || 
+                             hostname === 'server.smithery.ai' ||
+                             hostname === 'api.githubcopilot.com';
+      } catch {
+        // Invalid URL, continue with regular flow
+      }
+
+      // For known MCP endpoints with Streamable HTTP, skip HEAD and go directly to POST
+      if (config.type === McpServerType.STREAMABLE_HTTP && isKnownMcpEndpoint) {
+        // Context7 requires special headers for SSE streaming
+        if (hostname === 'mcp.context7.com') {
+          headers = {
+            ...headers,
+            'Accept': 'application/json, text/event-stream',
+          };
         }
-        
-        if (shouldTryInitialize) {
-          
+        try {
           // Try to send an initialize request
           const initResponse = await fetch(config.url, {
             method: 'POST',
@@ -93,6 +100,44 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
           });
 
           if (initResponse.ok) {
+            const contentType = initResponse.headers.get('content-type') || '';
+            
+            // Handle SSE responses
+            if (contentType.includes('text/event-stream')) {
+              const text = await initResponse.text();
+              // Parse SSE format: extract JSON from "data:" lines
+              const dataMatch = text.match(/data:\s*({.*})/);
+              if (dataMatch) {
+                try {
+                  const data = JSON.parse(dataMatch[1]);
+                  return {
+                    success: true,
+                    message: 'MCP server connection verified',
+                    details: {
+                      capabilities: data.result?.capabilities ? Object.keys(data.result.capabilities) : ['Server initialized'],
+                    },
+                  };
+                } catch (parseError) {
+                  return {
+                    success: false,
+                    message: 'Failed to parse server response',
+                    details: {
+                      error: parseError instanceof Error ? parseError.message : 'Invalid SSE response format',
+                    },
+                  };
+                }
+              } else {
+                return {
+                  success: false,
+                  message: 'Invalid SSE response format',
+                  details: {
+                    error: 'No data field found in SSE response',
+                  },
+                };
+              }
+            }
+            
+            // Standard JSON response handling
             const data = await initResponse.json();
             return {
               success: true,
@@ -101,10 +146,29 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
                 capabilities: data.result?.capabilities ? Object.keys(data.result.capabilities) : ['Server initialized'],
               },
             };
+          } else {
+            return {
+              success: false,
+              message: `Server returned HTTP ${initResponse.status}`,
+              details: {
+                error: `HTTP ${initResponse.status}: ${initResponse.statusText}`,
+              },
+            };
           }
+        } catch (error) {
+          return {
+            success: false,
+            message: 'Failed to connect to MCP server',
+            details: {
+              error: error instanceof Error ? error.message : 'Connection failed',
+            },
+          };
         }
+      }
 
-        // Fallback to HEAD request
+
+      // For other servers, try HEAD request first
+      try {
         const response = await fetch(config.url, {
           method: 'HEAD',
           headers,

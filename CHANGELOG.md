@@ -5,6 +5,42 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.2] - 2025-01-03
+
+### Fixed
+- Fixed "SSEClientTransport already started" errors for Streamable HTTP connections
+- Resolved connection timeout issues during MCP server discovery
+- Fixed retry logic to create fresh client/transport instances on each attempt
+
+### Changed
+- Updated MCP SDK from 1.13.1 to 1.13.3 for improved stability
+- Added default headers for all Streamable HTTP connections (Accept and User-Agent)
+- Implemented 30-second default timeout for all Streamable HTTP connections
+- Enhanced retry mechanism to avoid transport state conflicts
+
+## [2.6.1] - 2025-01-03
+
+### Added
+- **SSE Transport Deprecation Support**
+  - Visual deprecation warnings in UI for SSE servers
+  - Migration buttons to convert SSE to Streamable HTTP
+  - Auto-migration for Context7 servers from SSE to Streamable HTTP
+  - Console warnings when SSE transport is used
+  - Migration server actions for bulk SSE conversion
+
+### Fixed
+- Context7 MCP server now correctly detected as Streamable HTTP with SSE streaming capability
+- Added proper Accept headers for Context7 (`application/json, text/event-stream`)
+- Fixed test connection logic to handle Streamable HTTP servers with SSE streaming
+
+### Changed
+- Updated smart-server-dialog to support new MCP registry schema
+- Added support for 'streamable' transport type from new registry format
+- Added handling for remotes section in server configurations
+- Improved server type detection logic for known MCP endpoints
+- Context7 is now classified as Streamable HTTP (not SSE) per official MCP spec
+- Enhanced UI to show deprecation badges and warnings for SSE servers
+
 ## [2.6.0] - 2025-01-03
 
 ### Added

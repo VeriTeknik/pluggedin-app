@@ -1,7 +1,7 @@
 'use client';
 
 // External imports
-import { Activity, ArrowLeft, Clock, Database, Globe, RefreshCw, Save, Server, Terminal, Trash2 } from 'lucide-react';
+import { Activity, AlertCircle, ArrowLeft, Clock, Database, Globe, RefreshCw, Save, Server, Terminal, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { useEffect, useState } from 'react';
@@ -37,6 +37,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 import { McpServer } from '@/types/mcp-server';
 import { ResourceTemplate } from '@/types/resource-template';
 import type { Tool } from '@/types/tool';
@@ -71,6 +72,8 @@ export default function McpServerDetailPage({
       url: '',
       type: McpServerType.STDIO,
       notes: '', // Add notes field
+      headers: '', // For Streamable HTTP
+      sessionId: '', // For Streamable HTTP
     },
   });
 
@@ -106,8 +109,34 @@ export default function McpServerDetailPage({
   );
 
 
+  // Check for Context7 migration on load
+  useEffect(() => {
+    if (mcpServer && mcpServer.url && mcpServer.url.includes('mcp.context7.com') && mcpServer.type === McpServerType.SSE) {
+      // Auto-migrate Context7 from SSE to Streamable HTTP
+      toast({
+        title: 'Context7 Migration Required',
+        description: 'Context7 now uses Streamable HTTP. The server type has been updated automatically.',
+        variant: 'default',
+      });
+      form.setValue('type', McpServerType.STREAMABLE_HTTP);
+    }
+  }, [mcpServer, form, toast]);
+
   useEffect(() => {
     if (mcpServer) {
+      // Extract streamableHTTPOptions from env if present
+      let headers = '';
+      let sessionId = '';
+      
+      if (mcpServer.type === McpServerType.STREAMABLE_HTTP && mcpServer.streamableHTTPOptions) {
+        if (mcpServer.streamableHTTPOptions.headers) {
+          headers = Object.entries(mcpServer.streamableHTTPOptions.headers)
+            .map(([key, value]) => `${key}: ${value}`)
+            .join('\n');
+        }
+        sessionId = mcpServer.streamableHTTPOptions.sessionId || '';
+      }
+      
       form.reset({
         name: mcpServer.name,
         description: mcpServer.description || '',
@@ -119,6 +148,8 @@ export default function McpServerDetailPage({
         url: mcpServer.url || '',
         type: mcpServer.type,
         notes: mcpServer.notes || '', // Reset notes field
+        headers,
+        sessionId,
       });
       setHasChanges(false);
     }
@@ -129,19 +160,36 @@ export default function McpServerDetailPage({
     // Add type for 'value' parameter
     const subscription = form.watch((value: typeof form.control._defaultValues) => {
       if (mcpServer) {
-        const isDifferent =
+        let isDifferent =
           value.name !== mcpServer.name ||
           value.description !== (mcpServer.description || '') ||
-          (mcpServer.type === McpServerType.STDIO && (
+          value.type !== mcpServer.type ||
+          value.notes !== (mcpServer.notes || ''); // Check notes field
+          
+        if (mcpServer.type === McpServerType.STDIO) {
+          isDifferent = isDifferent || 
             value.command !== (mcpServer.command || '') ||
             value.args !== (mcpServer.args?.join(' ') || '') ||
             value.env !== Object.entries(mcpServer.env || {})
               .map(([key, value]) => `${key}=${value}`)
-              .join('\n')
-          )) ||
-          (mcpServer.type === McpServerType.SSE && value.url !== (mcpServer.url || '')) ||
-          value.type !== mcpServer.type ||
-          value.notes !== (mcpServer.notes || ''); // Check notes field
+              .join('\n');
+        } else if (mcpServer.type === McpServerType.SSE) {
+          isDifferent = isDifferent || value.url !== (mcpServer.url || '');
+        } else if (mcpServer.type === McpServerType.STREAMABLE_HTTP) {
+          isDifferent = isDifferent || value.url !== (mcpServer.url || '');
+          
+          // Check headers
+          const currentHeaders = mcpServer.streamableHTTPOptions?.headers
+            ? Object.entries(mcpServer.streamableHTTPOptions.headers)
+                .map(([key, value]) => `${key}: ${value}`)
+                .join('\n')
+            : '';
+          isDifferent = isDifferent || value.headers !== currentHeaders;
+          
+          // Check sessionId
+          const currentSessionId = mcpServer.streamableHTTPOptions?.sessionId || '';
+          isDifferent = isDifferent || value.sessionId !== currentSessionId;
+        }
 
         setHasChanges(isDifferent);
       }
@@ -159,18 +207,21 @@ export default function McpServerDetailPage({
     url: string;
     type: McpServerType;
     notes: string; // Add notes to type
+    headers: string; // For Streamable HTTP
+    sessionId: string; // For Streamable HTTP
   }) => {
     if (!mcpServer || !currentProfile?.uuid) {
       return;
     }
 
     // Process args and env before submission
-    const processedData = {
+    const processedData: any = {
       ...data,
       args: data.type === McpServerType.STDIO
         ? data.args
           .trim()
           .split(/\s+/)
+          .filter((arg) => arg.length > 0)
           .map((arg) => arg.trim())
         : [],
       env: data.type === McpServerType.STDIO
@@ -185,9 +236,27 @@ export default function McpServerDetailPage({
         ) || {}
         : {},
       command: data.type === McpServerType.STDIO ? data.command : undefined,
-      url: data.type === McpServerType.SSE ? data.url : undefined,
+      url: (data.type === McpServerType.SSE || data.type === McpServerType.STREAMABLE_HTTP) ? data.url : undefined,
       notes: data.notes, // Include notes in processed data
     };
+    
+    // Add streamableHTTPOptions for Streamable HTTP type
+    if (data.type === McpServerType.STREAMABLE_HTTP) {
+      const headers: Record<string, string> = {};
+      if (data.headers) {
+        data.headers.split('\n')
+          .filter((line) => line.includes(':'))
+          .forEach((line) => {
+            const [key, ...values] = line.split(':');
+            headers[key.trim()] = values.join(':').trim();
+          });
+      }
+      
+      processedData.streamableHTTPOptions = {
+        headers: Object.keys(headers).length > 0 ? headers : undefined,
+        sessionId: data.sessionId || undefined,
+      };
+    }
 
     // Ensure processedData aligns with the expected type for updateMcpServer
     // The action now accepts null for description, command, url, notes
@@ -391,9 +460,21 @@ export default function McpServerDetailPage({
                       >
                         <option value={McpServerType.STDIO}>{t('mcpServers.status.stdio')}</option>
                         <option value={McpServerType.SSE}>{t('mcpServers.status.sse')}</option>
+                        <option value={McpServerType.STREAMABLE_HTTP}>Streamable HTTP</option>
                       </select>
-                      <Badge variant="outline" className="group-hover:bg-muted">
-                        {form.watch('type') === McpServerType.STDIO ? t('mcpServers.status.stdio') : t('mcpServers.status.sse')}
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "group-hover:bg-muted",
+                          form.watch('type') === McpServerType.SSE && "bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900"
+                        )}
+                      >
+                        {form.watch('type') === McpServerType.STDIO ? t('mcpServers.status.stdio') : 
+                         form.watch('type') === McpServerType.SSE ? t('mcpServers.status.sse') : 
+                         'Streamable HTTP'}
+                        {form.watch('type') === McpServerType.SSE && (
+                          <AlertCircle className="ml-1 h-3 w-3 inline" />
+                        )}
                       </Badge>
                     </div>
                   </div>
@@ -459,8 +540,37 @@ export default function McpServerDetailPage({
                     </CardContent>
                   </Card>
                 </>
-              ) : (
-                <Card className="shadow-sm">
+              ) : form.watch('type') === McpServerType.SSE ? (
+                <>
+                  <Card className="shadow-sm mb-4 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-md font-medium flex items-center text-amber-700 dark:text-amber-400">
+                        <AlertCircle className="mr-2 h-4 w-4" />
+                        SSE Transport Deprecated
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <p className="text-sm text-amber-600 dark:text-amber-500 mb-3">
+                        SSE transport is deprecated. Consider migrating to Streamable HTTP for better performance and features.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-amber-600 text-amber-700 hover:bg-amber-100 dark:border-amber-500 dark:text-amber-400 dark:hover:bg-amber-900/30"
+                        onClick={async () => {
+                          form.setValue('type', McpServerType.STREAMABLE_HTTP);
+                          toast({
+                            title: 'Migration Started',
+                            description: 'Server type changed to Streamable HTTP. Save changes to complete migration.',
+                          });
+                        }}
+                      >
+                        Migrate to Streamable HTTP
+                      </Button>
+                    </CardContent>
+                  </Card>
+                  <Card className="shadow-sm">
                     <CardHeader className="pb-2">
                       <CardTitle className="text-md font-medium flex items-center">
                         <Globe className="mr-2 h-4 w-4" />
@@ -478,6 +588,73 @@ export default function McpServerDetailPage({
                     </div>
                   </CardContent>
                 </Card>
+                </>
+              ) : (
+                // Streamable HTTP configuration
+                <>
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-md font-medium flex items-center">
+                        <Globe className="mr-2 h-4 w-4" />
+                        {t('mcpServers.config.serverUrl')}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="relative group cursor-text">
+                        <Input
+                          value={form.watch('url')}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => form.setValue('url', e.target.value)}
+                          className="bg-muted p-3 rounded-md font-mono text-sm"
+                          placeholder="https://server.smithery.ai/@owner/server/mcp?api_key=..."
+                        />
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-md font-medium flex items-center">
+                        <Terminal className="mr-2 h-4 w-4" />
+                        {t('mcpServers.form.headers')}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="mb-4">
+                        <Textarea
+                          value={form.watch('headers')}
+                          onChange={(e) => form.setValue('headers', e.target.value)}
+                          className="bg-muted p-3 rounded-md font-mono text-sm min-h-[100px]"
+                          placeholder="Authorization: Bearer YOUR_TOKEN&#10;X-API-Key: your-api-key&#10;Content-Type: application/json"
+                        />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          One header per line in format: Header-Name: Header-Value
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  
+                  <Card className="shadow-sm">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-md font-medium flex items-center">
+                        <Database className="mr-2 h-4 w-4" />
+                        {t('mcpServers.form.sessionId')}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="relative group cursor-text">
+                        <Input
+                          value={form.watch('sessionId')}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => form.setValue('sessionId', e.target.value)}
+                          className="bg-muted p-3 rounded-md font-mono text-sm"
+                          placeholder={t('mcpServers.form.sessionIdPlaceholder')}
+                        />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {t('mcpServers.form.sessionIdHelp')}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </>
               )}
             </div>
           </TabsContent>

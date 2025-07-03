@@ -283,6 +283,9 @@ async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ c
 
       transport = new StdioClientTransport(stdioParams);
     } else if (serverConfig.type === McpServerType.SSE) {
+      // Log deprecation warning
+      console.warn(`[MCP Wrapper] ⚠️ SSE transport is deprecated. Server "${serverConfig.name}" should be migrated to Streamable HTTP.`);
+      
       if (!serverConfig.url) {
         console.error(`[MCP Wrapper] SSE server ${serverConfig.name} is missing URL.`);
         return null;
@@ -342,7 +345,13 @@ async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ c
         // Create StreamableHTTPClientTransport with options
         const transportOptions: any = {};
         
-        // Add headers if provided with validation
+        // Set default headers for Streamable HTTP
+        const defaultHeaders: Record<string, string> = {
+          'Accept': 'application/json, text/event-stream',
+          'User-Agent': 'Plugged.in MCP Client'
+        };
+        
+        // Add custom headers if provided with validation
         if (streamableOptions?.headers && typeof streamableOptions.headers === 'object') {
           const headerValidation = validateHeaders(streamableOptions.headers);
           if (!headerValidation.valid) {
@@ -351,16 +360,32 @@ async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ c
           }
           
           transportOptions.requestInit = {
-            headers: headerValidation.sanitizedHeaders
+            headers: {
+              ...defaultHeaders,
+              ...headerValidation.sanitizedHeaders
+            }
+          };
+        } else {
+          transportOptions.requestInit = {
+            headers: defaultHeaders
           };
         }
+        
         
         // Add session ID if provided
         if (streamableOptions?.sessionId && typeof streamableOptions.sessionId === 'string') {
           transportOptions.sessionId = streamableOptions.sessionId;
         }
         
-        console.log(`[MCP Wrapper] Creating Streamable HTTP transport for server ${serverConfig.name}`);
+        // Add a reasonable default timeout for all Streamable HTTP connections
+        // This helps prevent indefinite hanging on slow servers
+        if (streamableOptions?.timeout && typeof streamableOptions.timeout === 'number') {
+          transportOptions.timeout = streamableOptions.timeout;
+        } else {
+          transportOptions.timeout = 30000; // 30 seconds default
+        }
+        
+        console.log(`[MCP Wrapper] Creating Streamable HTTP transport for server ${serverConfig.name} with ${transportOptions.timeout}ms timeout`);
         transport = new StreamableHTTPClientTransport(url, transportOptions);
       } catch (error) {
         console.error(`[MCP Wrapper] Failed to create Streamable HTTP transport:`, error);
@@ -393,44 +418,34 @@ async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ c
  * Connects an MCP Client to its transport with retry logic.
  */
 async function connectMcpClient(
-  client: Client,
-  transport: Transport,
+  initialClient: Client,
+  initialTransport: Transport,
   serverName: string,
   serverConfig: McpServer,
   retries = 2,
   delay = 1000
 ): Promise<ConnectedMcpClient> {
   let lastError: Error | null = null;
-  let currentTransport = transport;
   
   for (let attempt = 0; attempt <= retries; attempt++) {
+    let client = initialClient;
+    let transport = initialTransport;
+    
     try {
       if (attempt > 0) {
         console.log(`[MCP Wrapper] Retrying connection to ${serverName} (Attempt ${attempt})...`);
         await sleep(delay);
         
-        // For StreamableHTTP, we need to create a new transport for retry
-        if (serverConfig.type === McpServerType.STREAMABLE_HTTP && serverConfig.url) {
-          // Close the old transport before creating a new one to prevent resource leaks
-          try {
-            await currentTransport.close();
-          } catch (e: any) {
-            // Ignore abort errors for Streamable HTTP
-            if (e?.code !== 20 && e?.name !== 'AbortError') {
-              console.debug(`[MCP Wrapper] Warning closing old transport during retry for ${serverName}:`, e.message);
-            }
-          }
-          
-          const newClientData = await createMcpClientAndTransport(serverConfig);
-          if (newClientData?.transport) {
-            currentTransport = newClientData.transport;
-          } else {
-            throw new Error(`Failed to create new transport for retry attempt ${attempt}`);
-          }
+        // For retries, always create fresh client and transport to avoid state issues
+        const newClientData = await createMcpClientAndTransport(serverConfig);
+        if (!newClientData) {
+          throw new Error(`Failed to create new client/transport for retry attempt ${attempt}`);
         }
+        client = newClientData.client;
+        transport = newClientData.transport;
       }
       
-      await client.connect(currentTransport);
+      await client.connect(transport);
       console.log(`[MCP Wrapper] Connected to ${serverName}.`);
       return {
         client,
@@ -442,7 +457,7 @@ async function connectMcpClient(
               // Wrap each close in a separate try-catch and continue regardless
               const closeTransport = async () => {
                 try {
-                  await currentTransport.close();
+                  await transport.close();
                 } catch (e: any) {
                   // Silently ignore all errors for Streamable HTTP transport
                   // as abort errors are expected when fetch is cancelled
@@ -467,7 +482,7 @@ async function connectMcpClient(
               await Promise.all([closeTransport(), closeClient()]);
             } else {
               // For other transport types, use normal cleanup
-              await currentTransport.close();
+              await transport.close();
               await client.close();
             }
             console.log(`[MCP Wrapper] Cleaned up connection for ${serverName}.`);
@@ -478,28 +493,27 @@ async function connectMcpClient(
       };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
+      
       console.warn(`[MCP Wrapper] Connection attempt ${attempt + 1} failed for ${serverName}: ${lastError.message}`);
       // Ensure client/transport are closed before retry
-      if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
+      if (attempt > 0) {
+        // Only close if we're using retry-created instances
         try { 
-          await currentTransport.close(); 
+          await transport.close(); 
         } catch (e: any) { 
-          // Ignore abort errors for Streamable HTTP
-          if (e?.code !== 20) {
-            console.error(`[MCP Wrapper] Error closing transport during retry:`, e);
+          // Ignore abort errors
+          if (e?.code !== 20 && e?.name !== 'AbortError') {
+            console.debug(`[MCP Wrapper] Error closing transport during retry:`, e.message);
           }
         }
         try { 
           await client.close(); 
         } catch (e: any) { 
-          // Ignore abort errors for Streamable HTTP
-          if (e?.code !== 20) {
-            console.error(`[MCP Wrapper] Error closing client during retry:`, e);
+          // Ignore abort errors
+          if (e?.code !== 20 && e?.name !== 'AbortError') {
+            console.debug(`[MCP Wrapper] Error closing client during retry:`, e.message);
           }
         }
-      } else {
-        try { await currentTransport.close(); } catch { /* ignore */ }
-        try { await client.close(); } catch { /* ignore */ }
       }
     }
   }
