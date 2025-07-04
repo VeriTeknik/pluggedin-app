@@ -5,7 +5,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { db } from '@/db';
 import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema';
-import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 import type { PaginatedSearchResult, SearchIndex } from '@/types/search';

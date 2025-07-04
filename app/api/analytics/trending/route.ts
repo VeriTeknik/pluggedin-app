@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { analytics } from '@/lib/analytics/analytics-service';
 
 export async function GET(request: Request) {

@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { getServerSession } from 'next-auth';
 
 import { db } from '@/db';
-import { mcpServersTable, McpServerType, users } from '@/db/schema';
+import { mcpServersTable, McpServerType } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
 
 async function getUserId() {

@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { fetchRegistryServer } from '@/app/actions/registry-servers';
+import { EnvVarsEditor } from '@/components/env-vars-editor';
+import { ServerReviewsList } from '@/components/server-reviews-list';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -19,8 +21,6 @@ import {
 } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EnvVarsEditor } from '@/components/env-vars-editor';
-import { ServerReviewsList } from '@/components/server-reviews-list';
 import { McpServerSource, McpServerType } from '@/db/schema';
 import { useAuth } from '@/hooks/use-auth';
 

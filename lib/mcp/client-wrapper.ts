@@ -1,4 +1,7 @@
-// Standard library imports (none in this case)
+// Standard library imports
+import { execSync } from 'child_process';
+import os from 'os';
+import path from 'path';
 
 // Third-party library imports
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -19,9 +22,10 @@ import {
 
 // Internal application imports
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
+import { packageManager } from '@/lib/mcp/package-manager';
+import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
-import { packageManager } from '@/lib/mcp/package-manager';
 
 // --- Configuration & Types ---
 
@@ -72,6 +76,150 @@ async function safeCleanup(connectedClient: ConnectedMcpClient | undefined, serv
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Check if a command is available on the system
+async function isCommandAvailable(command: string): Promise<boolean> {
+  try {
+    // Try using 'command -v' which is more portable than 'which'
+    execSync(`command -v ${command}`, { stdio: 'ignore', shell: true });
+    return true;
+  } catch {
+    // Fallback: check common binary locations
+    const fs = await import('fs');
+    const commonPaths = [
+      `/usr/local/bin/${command}`,
+      `/usr/bin/${command}`,
+      `/bin/${command}`,
+      `/usr/sbin/${command}`,
+      `/sbin/${command}`,
+      `${process.env.HOME || os.homedir()}/.local/bin/${command}`,
+      `${process.env.HOME}/.local/bin/${command}`,
+    ];
+    
+    for (const path of commonPaths) {
+      try {
+        await fs.promises.access(path, fs.constants.X_OK);
+        return true;
+      } catch {
+        // Continue checking other paths
+      }
+    }
+    
+    return false;
+  }
+}
+
+// Add this function to handle bubblewrap configuration
+export function createBubblewrapConfig(
+  serverConfig: McpServer
+): FirejailConfig | null {
+  // Only apply bubblewrap on Linux
+  if (process.platform !== 'linux') return null;
+  // Only apply bubblewrap to STDIO servers with a command
+  if (serverConfig.type !== McpServerType.STDIO || !serverConfig.command) return null;
+
+  // Read paths from environment variables with fallbacks
+  // Use actual home directory as fallback instead of hardcoded /home/pluggedin
+  const actualHome = process.env.HOME || os.homedir() || '/app';
+  const paths: PathConfig = {
+    userHome: process.env.FIREJAIL_USER_HOME ?? actualHome,
+    localBin: process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local', 'bin'),
+    appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
+    mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')
+  };
+
+  // Resource limits are imported at the top
+
+  // Base bubblewrap arguments for security and isolation
+  const baseBubblewrapArgs = [
+    // Process isolation
+    '--unshare-all',
+    // Conditionally share network based on configuration
+    ...(PackageManagerConfig.ENABLE_NETWORK_ISOLATION ? [] : ['--share-net']),
+    '--die-with-parent',
+    '--new-session',
+    
+    // Filesystem setup
+    '--proc', '/proc',
+    '--dev', '/dev',
+    '--tmpfs', '/tmp',
+    
+    // Bind mount workspace as home
+    '--bind', paths.mcpWorkspace, paths.userHome,
+    
+    // Read-only system directories
+    '--ro-bind', '/usr', '/usr',
+    '--ro-bind', '/lib', '/lib',
+    '--ro-bind', '/lib64', '/lib64',
+    '--ro-bind', '/bin', '/bin',
+    '--ro-bind', '/sbin', '/sbin',
+    
+    // Essential config files
+    '--ro-bind', '/etc/resolv.conf', '/etc/resolv.conf',
+    '--ro-bind', '/etc/ssl', '/etc/ssl',
+    '--ro-bind', '/etc/ca-certificates', '/etc/ca-certificates',
+    
+    // Python-specific bindings
+    '--ro-bind', '/usr/lib/python3', '/usr/lib/python3',
+    '--ro-bind', '/usr/local/lib/python3', '/usr/local/lib/python3',
+    
+    // User's local bin directory
+    '--ro-bind', paths.localBin, paths.localBin,
+    
+    // UV cache directory
+    '--bind', `${paths.userHome}/.cache/uv`, `${paths.userHome}/.cache/uv`,
+    
+    // Set user and group
+    '--uid', '1000',
+    '--gid', '1000',
+    
+    // Resource limits (bubblewrap uses different syntax: --rlimit RESOURCE soft hard)
+    // CPU time limit (in seconds) - using a high value since we control via cgroups
+    '--rlimit', 'cpu', '3600', '3600',
+    // Virtual memory limit (address space)
+    '--rlimit', 'as', `${PackageManagerConfig.MEMORY_MAX_MB * 1024 * 1024}`, `${PackageManagerConfig.MEMORY_MAX_MB * 1024 * 1024}`,
+    
+    // Security capabilities
+    '--cap-drop', 'ALL',
+    
+    // Set hostname
+    '--hostname', 'mcp-sandbox',
+  ];
+
+  // Use the original command name
+  const commandToExecute = serverConfig.command;
+
+  // Construct the final environment
+  const finalEnv = {
+    // Sensible defaults
+    PATH: `${paths.localBin}:/usr/local/bin:/usr/bin:/bin`,
+    HOME: paths.userHome,
+    USER: process.env.FIREJAIL_USER ?? 'pluggedin',
+    USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',
+    LOGNAME: process.env.FIREJAIL_LOGNAME ?? 'pluggedin',
+    // Python specific
+    PYTHONPATH: `${paths.mcpWorkspace}/lib/python`,
+    PYTHONUSERBASE: paths.mcpWorkspace,
+    // UV specific
+    UV_ROOT: `${paths.userHome}/.local/uv`,
+    UV_SYSTEM_PYTHON: 'true',
+    // Inherit parent process env
+    ...(process.env as Record<string, string>),
+    // Apply server-specific env vars
+    ...(serverConfig.env || {}),
+  };
+
+  return {
+    command: 'bwrap', // The bubblewrap command
+    args: [
+      ...baseBubblewrapArgs,
+      '--',
+      commandToExecute,
+      ...(serverConfig.args || [])
+    ],
+    env: finalEnv
+  };
+}
+
 // Add this function to handle firejail configuration
 export function createFirejailConfig(
   serverConfig: McpServer
@@ -82,16 +230,17 @@ export function createFirejailConfig(
   if (serverConfig.type !== McpServerType.STDIO || !serverConfig.command) return null;
 
   // Read paths from environment variables with fallbacks
+  // Use actual home directory as fallback instead of hardcoded /home/pluggedin
+  const actualHome = process.env.HOME || os.homedir() || '/app';
   const paths: PathConfig = {
-    userHome: process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin',
-    localBin: process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin',
-    appPath: process.env.FIREJAIL_APP_PATH ?? '/home/pluggedin/pluggedin-app',
-    mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace'
+    userHome: process.env.FIREJAIL_USER_HOME ?? actualHome,
+    localBin: process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local', 'bin'),
+    appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
+    mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')
   };
   // Only apply firejail to STDIO servers with a command
   if (serverConfig.type !== McpServerType.STDIO || !serverConfig.command) return null;
 
-  const _isUvCommand = serverConfig.command === 'uv' || serverConfig.command === 'uvenv' || serverConfig.command === 'uvx';
 
   // Restore stricter firejail config
   const baseFirejailArgs = [
@@ -181,8 +330,9 @@ export function createFirejailConfig(
 /**
  * Creates an MCP Client instance and its corresponding transport based on server config.
  * Does not establish the connection yet.
+ * @param skipCommandTransformation - Skip package manager command transformation (useful for discovery)
  */
-async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ client: Client; transport: Transport } | null> {
+async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandTransformation = false): Promise<{ client: Client; transport: Transport } | null> {
   let transport: Transport | undefined;
   const clientName = 'PluggedinAppClient'; // Or get from config/package.json
   const clientVersion = '0.1.0'; // Or get from config/package.json
@@ -193,6 +343,13 @@ async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ c
         console.error(`[MCP Wrapper] STDIO server ${serverConfig.name} is missing command.`);
         return null;
       }
+      
+      // Log the command we're about to run for debugging
+      console.log(`[MCP Wrapper] Preparing STDIO transport for ${serverConfig.name}:`, {
+        command: serverConfig.command,
+        args: serverConfig.args,
+        skipTransformation: skipCommandTransformation
+      });
 
       // Validate command for security
       const commandValidation = validateCommand(serverConfig.command);
@@ -215,46 +372,167 @@ async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ c
       let transformedArgs = serverConfig.args || [];
       let packageManagerEnv: Record<string, string> = {};
       
-      try {
-        const transformation = await packageManager.transformCommand(
-          serverConfig.command,
-          serverConfig.args || [],
-          serverConfig.uuid || serverConfig.name // Use UUID if available, fallback to name
-        );
-        
-        transformedCommand = transformation.command;
-        transformedArgs = transformation.args;
-        packageManagerEnv = transformation.env || {};
-        
-        console.log(`[MCP Wrapper] Transformed command for ${serverConfig.name}:`, {
-          original: `${serverConfig.command} ${(serverConfig.args || []).join(' ')}`,
-          transformed: `${transformedCommand} ${transformedArgs.join(' ')}`
+      // Skip transformation if requested (e.g., during discovery)
+      if (!skipCommandTransformation) {
+        // Log environment info for debugging
+        console.log(`[MCP Wrapper] Environment info for ${serverConfig.name}:`, {
+          platform: process.platform,
+          home: process.env.HOME,
+          path: process.env.PATH,
+          cwd: process.cwd(),
+          user: process.env.USER || 'unknown'
         });
-      } catch (error) {
-        console.error(`[MCP Wrapper] Failed to transform command for ${serverConfig.name}:`, error);
-        // Continue with original command if transformation fails
+        
+        try {
+          const transformation = await packageManager.transformCommand(
+            serverConfig.command,
+            serverConfig.args || [],
+            serverConfig.uuid || serverConfig.name // Use UUID if available, fallback to name
+          );
+          
+          transformedCommand = transformation.command;
+          transformedArgs = transformation.args;
+          packageManagerEnv = transformation.env || {};
+          
+          console.log(`[MCP Wrapper] Transformed command for ${serverConfig.name}:`, {
+            original: `${serverConfig.command} ${(serverConfig.args || []).join(' ')}`,
+            transformed: `${transformedCommand} ${transformedArgs.join(' ')}`
+          });
+        } catch (error) {
+          console.error(`[MCP Wrapper] Failed to transform command for ${serverConfig.name}:`, error);
+          // Log more details about the failure
+          console.error(`[MCP Wrapper] Command transformation details:`, {
+            command: serverConfig.command,
+            args: serverConfig.args,
+            error: error instanceof Error ? error.message : String(error)
+          });
+          // Continue with original command if transformation fails
+        }
+      } else {
+        console.log(`[MCP Wrapper] Skipping command transformation for ${serverConfig.name} (discovery mode)`);
       }
 
-      // Apply firejail sandboxing only if explicitly requested and applicable
-      let firejailConfig: FirejailConfig | null = null;
+      // Apply sandboxing only if explicitly requested and applicable
+      let sandboxConfig: FirejailConfig | null = null;
       if (serverConfig.applySandboxing === true) { // Check for the flag
-        // Update firejail config to use transformed command
-        const originalConfig = createFirejailConfig(serverConfig);
-        if (originalConfig) {
-          firejailConfig = {
-            ...originalConfig,
-            command: transformedCommand,
-            args: transformedArgs
-          };
+        // Package manager config is imported at the top
+        
+        // Check availability of isolation tools
+        const [bwrapAvailable, firejailAvailable] = await Promise.all([
+          isCommandAvailable('bwrap'),
+          isCommandAvailable('firejail')
+        ]);
+        
+        // Log availability for debugging
+        console.log(`[MCP Wrapper] Isolation tools availability:`, {
+          bwrap: bwrapAvailable,
+          firejail: firejailAvailable,
+          platform: process.platform,
+          configuredType: PackageManagerConfig.ISOLATION_TYPE,
+          fallback: PackageManagerConfig.ISOLATION_FALLBACK
+        });
+        
+        // Try to use the configured isolation type
+        if (PackageManagerConfig.ISOLATION_TYPE === 'bubblewrap' && bwrapAvailable) {
+          const bubblewrapConfig = createBubblewrapConfig(serverConfig);
+          if (bubblewrapConfig) {
+            // Update bubblewrap args with transformed command
+            const bwrapArgs = [...bubblewrapConfig.args];
+            // Find the index of '--' separator
+            const separatorIndex = bwrapArgs.indexOf('--');
+            if (separatorIndex >= 0) {
+              // Replace command and args after '--'
+              bwrapArgs.splice(separatorIndex + 1, bwrapArgs.length - separatorIndex - 1, transformedCommand, ...transformedArgs);
+            }
+            sandboxConfig = {
+              command: bubblewrapConfig.command,
+              args: bwrapArgs,
+              env: {
+                ...bubblewrapConfig.env,
+                ...packageManagerEnv
+              }
+            };
+            console.log(`[MCP Wrapper] Using Bubblewrap isolation for ${serverConfig.name}`);
+          } else if (PackageManagerConfig.ISOLATION_FALLBACK === 'firejail' && firejailAvailable) {
+            // Fall back to firejail if bubblewrap config failed
+            const firejailConfig = createFirejailConfig(serverConfig);
+            if (firejailConfig) {
+              // Update firejail args with transformed command
+              const fjArgs = [...firejailConfig.args];
+              // Find where the command starts (after all firejail flags)
+              const commandIndex = fjArgs.findIndex(arg => arg === serverConfig.command);
+              if (commandIndex >= 0) {
+                // Replace command and args
+                fjArgs.splice(commandIndex, fjArgs.length - commandIndex, transformedCommand, ...transformedArgs);
+              }
+              sandboxConfig = {
+                command: firejailConfig.command,
+                args: fjArgs,
+                env: {
+                  ...firejailConfig.env,
+                  ...packageManagerEnv
+                }
+              };
+              console.log(`[MCP Wrapper] Falling back to Firejail isolation for ${serverConfig.name}`);
+            }
+          }
+        } else if (PackageManagerConfig.ISOLATION_TYPE === 'firejail' && firejailAvailable) {
+          // Use firejail as primary isolation
+          const firejailConfig = createFirejailConfig(serverConfig);
+          if (firejailConfig) {
+            // Update firejail args with transformed command
+            const fjArgs = [...firejailConfig.args];
+            // Find where the command starts (after all firejail flags)
+            const commandIndex = fjArgs.findIndex(arg => arg === serverConfig.command);
+            if (commandIndex >= 0) {
+              // Replace command and args
+              fjArgs.splice(commandIndex, fjArgs.length - commandIndex, transformedCommand, ...transformedArgs);
+            }
+            sandboxConfig = {
+              command: firejailConfig.command,
+              args: fjArgs,
+              env: {
+                ...firejailConfig.env,
+                ...packageManagerEnv
+              }
+            };
+            console.log(`[MCP Wrapper] Using Firejail isolation for ${serverConfig.name}`);
+          }
+        } else if (PackageManagerConfig.ISOLATION_TYPE === 'bubblewrap' && !bwrapAvailable && firejailAvailable) {
+          // Bubblewrap was requested but not available, try fallback
+          console.warn(`[MCP Wrapper] Bubblewrap not available, attempting fallback to Firejail for ${serverConfig.name}`);
+          const firejailConfig = createFirejailConfig(serverConfig);
+          if (firejailConfig) {
+            // Update firejail args with transformed command
+            const fjArgs = [...firejailConfig.args];
+            // Find where the command starts (after all firejail flags)
+            const commandIndex = fjArgs.findIndex(arg => arg === serverConfig.command);
+            if (commandIndex >= 0) {
+              // Replace command and args
+              fjArgs.splice(commandIndex, fjArgs.length - commandIndex, transformedCommand, ...transformedArgs);
+            }
+            sandboxConfig = {
+              command: firejailConfig.command,
+              args: fjArgs,
+              env: {
+                ...firejailConfig.env,
+                ...packageManagerEnv
+              }
+            };
+            console.log(`[MCP Wrapper] Using Firejail isolation (fallback) for ${serverConfig.name}`);
+          }
+        } else {
+          // No isolation tools available
+          console.warn(`[MCP Wrapper] No isolation tools available for ${serverConfig.name}. Running without sandboxing.`);
         }
       }
 
-      const stdioParams: StdioServerParameters = firejailConfig ? {
-        // Use firejail configuration because applySandboxing was true
-        command: firejailConfig.command,
-        args: firejailConfig.args,
+      const stdioParams: StdioServerParameters = sandboxConfig ? {
+        // Use sandbox configuration because applySandboxing was true
+        command: sandboxConfig.command,
+        args: sandboxConfig.args,
         env: {
-          ...firejailConfig.env,
+          ...sandboxConfig.env,
           ...packageManagerEnv // Merge package manager env
         }
       } : {
@@ -267,11 +545,12 @@ async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ c
           // Only add Linux-specific paths on Linux systems
           ...(process.platform === 'linux' ? {
             // Add potentially missing vars needed by uvx/python on Linux
-            PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? '/home/pluggedin/.local/bin'}:${process.env.PATH}`, // Prepend local bin
-            HOME: process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin',
-            UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? '/home/pluggedin'}/.local/uv`,
-            PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace'}/lib/python`,
-            PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace',
+            // Use dynamic home directory detection
+            PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? path.join(process.env.HOME || os.homedir() || '/app', '.local/bin')}:${process.env.PATH}`, // Prepend local bin
+            HOME: process.env.FIREJAIL_USER_HOME ?? process.env.HOME ?? os.homedir() ?? '/app',
+            UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? process.env.HOME ?? os.homedir() ?? '/app'}/.local/uv`,
+            PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(process.env.HOME || os.homedir() || '/app', 'mcp-workspace')}/lib/python`,
+            PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(process.env.HOME || os.homedir() || '/app', 'mcp-workspace'),
             UV_SYSTEM_PYTHON: 'true',
           } : {}),
           // Apply package manager env
@@ -281,7 +560,34 @@ async function createMcpClientAndTransport(serverConfig: McpServer): Promise<{ c
         }
       };
 
-      transport = new StdioClientTransport(stdioParams);
+      console.log(`[MCP Wrapper] Creating STDIO transport with params:`, {
+        command: stdioParams.command,
+        args: stdioParams.args?.slice(0, 5), // Log first 5 args only
+        hasEnv: !!stdioParams.env,
+        envKeys: Object.keys(stdioParams.env || {})
+      });
+      
+      try {
+        transport = new StdioClientTransport(stdioParams);
+      } catch (error) {
+        console.error(`[MCP Wrapper] Failed to create STDIO transport:`, error);
+        
+        // Check if the command exists
+        const commandExists = await isCommandAvailable(stdioParams.command);
+        if (!commandExists) {
+          console.error(`[MCP Wrapper] Command '${stdioParams.command}' not found in PATH or common locations`);
+          console.error(`[MCP Wrapper] Current PATH: ${process.env.PATH}`);
+          
+          // Provide helpful suggestions
+          if (stdioParams.command === 'npx') {
+            console.error(`[MCP Wrapper] Suggestion: Install npm/npx with 'apt-get install npm' or ensure Node.js installation includes npm`);
+          } else if (stdioParams.command === 'uvx' || stdioParams.command === 'uv') {
+            console.error(`[MCP Wrapper] Suggestion: Install uv with 'curl -LsSf https://astral.sh/uv/install.sh | sh'`);
+          }
+        }
+        
+        throw error;
+      }
     } else if (serverConfig.type === McpServerType.SSE) {
       // Log deprecation warning
       console.warn(`[MCP Wrapper] ⚠️ SSE transport is deprecated. Server "${serverConfig.name}" should be migrated to Streamable HTTP.`);
@@ -423,7 +729,8 @@ async function connectMcpClient(
   serverName: string,
   serverConfig: McpServer,
   retries = 2,
-  delay = 1000
+  delay = 1000,
+  skipCommandTransformation = false
 ): Promise<ConnectedMcpClient> {
   let lastError: Error | null = null;
   
@@ -437,7 +744,7 @@ async function connectMcpClient(
         await sleep(delay);
         
         // For retries, always create fresh client and transport to avoid state issues
-        const newClientData = await createMcpClientAndTransport(serverConfig);
+        const newClientData = await createMcpClientAndTransport(serverConfig, skipCommandTransformation);
         if (!newClientData) {
           throw new Error(`Failed to create new client/transport for retry attempt ${attempt}`);
         }
@@ -535,14 +842,15 @@ export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool
   }
   
   const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
-  const clientData = await createMcpClientAndTransport(serverConfig);
+  // Use discovery mode - skip command transformation since we're just listing capabilities
+  const clientData = await createMcpClientAndTransport(serverConfig, true);
   if (!clientData) {
     throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
   }
 
   let connectedClient: ConnectedMcpClient | undefined;
   try {
-    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig);
+    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig, 2, 1000, true);
 
     // Check capabilities *after* connecting
     const capabilities = connectedClient.client.getServerCapabilities();
@@ -581,14 +889,15 @@ export async function listResourceTemplatesFromServer(serverConfig: McpServer): 
     }
     
     const serverIdentifier = serverConfig.name || serverConfig.uuid || 'unknown';
-    const clientData = await createMcpClientAndTransport(serverConfig);
+    // Use discovery mode - skip command transformation since we're just listing capabilities
+    const clientData = await createMcpClientAndTransport(serverConfig, true);
     if (!clientData) {
         throw new Error(`Failed to create client/transport for server ${serverIdentifier}`);
     }
 
     let connectedClient: ConnectedMcpClient | undefined;
     try {
-    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig);
+    connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig, 2, 1000, true);
 
     // Check capabilities *after* connecting
     const capabilities = connectedClient.client.getServerCapabilities();
@@ -637,7 +946,7 @@ export async function listResourcesFromServer(serverConfig: McpServer): Promise<
 
     let connectedClient: ConnectedMcpClient | undefined;
     try {
-        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig);
+        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig, 2, 1000, true);
 
         // Check capabilities *after* connecting
         const capabilities = connectedClient.client.getServerCapabilities();
@@ -686,7 +995,7 @@ export async function listPromptsFromServer(serverConfig: McpServer): Promise<Pr
 
     let connectedClient: ConnectedMcpClient | undefined;
     try {
-        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig);
+        connectedClient = await connectMcpClient(clientData.client, clientData.transport, serverIdentifier, serverConfig, 2, 1000, true);
 
         // Check capabilities *after* connecting
         const capabilities = connectedClient.client.getServerCapabilities();

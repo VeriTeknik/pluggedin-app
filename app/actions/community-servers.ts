@@ -5,19 +5,19 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { 
-  mcpServersTable,
   McpServerSource,
+  mcpServersTable,
   McpServerStatus,
   McpServerType, 
   profilesTable,
   registryServersTable,
   sharedMcpServersTable
 } from '@/db/schema';
+import { accounts } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 
 import { verifyGitHubOwnership } from './registry-servers';
-import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
-import { accounts } from '@/db/schema';
 
 // Validation schema for community server
 const createCommunityServerSchema = z.object({

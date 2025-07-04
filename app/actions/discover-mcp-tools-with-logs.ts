@@ -1,6 +1,7 @@
 'use server';
 
 import { and, eq } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { mcpServersTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema';
 import { decryptServerData } from '@/lib/encryption';

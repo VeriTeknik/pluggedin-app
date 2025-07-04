@@ -6,8 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { createCommunityServer } from '@/app/actions/community-servers';
-import { 
-  addUnclaimedServer,
+import {
   fetchRegistryServer,
   verifyGitHubOwnership 
 } from '@/app/actions/registry-servers';

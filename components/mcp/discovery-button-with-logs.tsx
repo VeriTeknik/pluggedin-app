@@ -1,10 +1,11 @@
 'use client';
 
+import { Loader2, Terminal } from 'lucide-react';
 import { useState } from 'react';
+
+import { discoverServerWithLogs } from '@/app/actions/discovery-logged';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { discoverServerWithLogs } from '@/app/actions/discovery-logged';
-import { Loader2, Terminal } from 'lucide-react';
 
 interface DiscoveryButtonWithLogsProps {
   serverUuid: string;

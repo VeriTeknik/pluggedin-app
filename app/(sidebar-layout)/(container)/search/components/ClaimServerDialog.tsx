@@ -1,8 +1,7 @@
 'use client';
 
 import { Github, Loader2 } from 'lucide-react';
-import { signIn } from 'next-auth/react';
-import { useState, useEffect } from 'react';
+import { useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 

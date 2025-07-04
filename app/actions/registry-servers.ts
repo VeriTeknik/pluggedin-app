@@ -7,7 +7,7 @@ import { db } from '@/db';
 import { accounts, registryServersTable, serverClaimRequestsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
-import { transformPluggedinRegistryToMcpIndex, inferTransportFromPackages } from '@/lib/registry/registry-transformer';
+import { inferTransportFromPackages,transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 
 // Validation schemas
 const repositoryUrlSchema = z.string().url().refine(

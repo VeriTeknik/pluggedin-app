@@ -1,11 +1,12 @@
 'use server';
 
-import { analyticsAPIClient } from '@/lib/analytics/analytics-api-client';
-import { McpServerSource } from '@/db/schema';
-import { ServerReview } from '@/types/review';
-import { db } from '@/db';
-import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+
+import { db } from '@/db';
+import { McpServerSource } from '@/db/schema';
+import { users } from '@/db/schema';
+import { analyticsAPIClient } from '@/lib/analytics/analytics-api-client';
+import { ServerReview } from '@/types/review';
 
 export async function getReviewsForServer(
   source: McpServerSource,

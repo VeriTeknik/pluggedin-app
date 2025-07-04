@@ -1,7 +1,7 @@
+import { PackageManagerConfig } from './config';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './handlers/base-handler';
 import { PnpmHandler } from './handlers/pnpm-handler';
 import { UvHandler } from './handlers/uv-handler';
-import { PackageManagerConfig } from './config';
 
 export { PackageManagerConfig } from './config';
 export { BasePackageHandler } from './handlers/base-handler';

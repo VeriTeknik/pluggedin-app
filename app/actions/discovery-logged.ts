@@ -1,11 +1,12 @@
 'use server';
 
-import { getAuthAndProject } from '@/lib/auth';
+import { eq } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
+
 import { db } from '@/db/client';
 import { mcpServers } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { getAuthAndProject } from '@/lib/auth';
 import { ConsoleCapture } from '@/lib/utils/console-capture';
-import { revalidatePath } from 'next/cache';
 
 interface DiscoveryResult {
   success: boolean;

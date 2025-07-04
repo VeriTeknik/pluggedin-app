@@ -1,5 +1,6 @@
 'use client';
 
+import { formatDistanceToNow } from 'date-fns';
 import { MessageSquare, Star, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +18,6 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { McpServerSource } from '@/db/schema';
 import { FeedbackItem, FeedbackResponse, registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
-import { formatDistanceToNow } from 'date-fns';
 
 interface ServerReviewsListProps {
   serverId: string;

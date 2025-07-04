@@ -10,9 +10,9 @@ import {
   sharedMcpServersTable,
   users,
 } from '@/db/schema';
+import { analyticsAPIClient } from '@/lib/analytics/analytics-api-client';
 // Removed unused McpIndex import
 import { SearchIndex } from '@/types/search';
-import { analyticsAPIClient } from '@/lib/analytics/analytics-api-client';
 
 
 /**

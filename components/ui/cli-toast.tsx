@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import { X, Terminal } from 'lucide-react';
+import { Terminal,X } from 'lucide-react';
+import React, { useEffect, useRef,useState } from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface CliToastProps {

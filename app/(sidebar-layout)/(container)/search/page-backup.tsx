@@ -1,7 +1,8 @@
 'use client';
 
-import { IntelligentServerDialog } from '@/components/intelligent-server-dialog';
 import { useState } from 'react';
+
+import { IntelligentServerDialog } from '@/components/intelligent-server-dialog';
 
 export default function TestPage() {
   const [showAddServerWizard, setShowAddServerWizard] = useState(false);
