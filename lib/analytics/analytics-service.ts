@@ -69,6 +69,14 @@ const ShareEventSchema = BaseEventSchema.extend({
   visibility: z.enum(['public', 'private']),
 });
 
+const CommentEventSchema = BaseEventSchema.extend({
+  type: z.literal('comment'),
+  serverId: z.string(),
+  userId: z.string(),
+  comment: z.string(),
+  parentId: z.string().optional(),
+});
+
 const AnalyticsEventSchema = z.discriminatedUnion('type', [
   InstallEventSchema,
   UninstallEventSchema,
@@ -78,6 +86,7 @@ const AnalyticsEventSchema = z.discriminatedUnion('type', [
   RatingEventSchema,
   ClaimEventSchema,
   ShareEventSchema,
+  CommentEventSchema,
 ]);
 
 export type AnalyticsEvent = z.infer<typeof AnalyticsEventSchema>;
@@ -150,6 +159,52 @@ class AnalyticsService {
     }
 
     try {
+      // Transform events to match analytics API format
+      const transformedEvents = eventsToSend.map(event => {
+        const baseEvent = {
+          event_type: event.type,
+          server_id: event.serverId,
+          client_id: 'pluggedin-app', // Required field - identifies the source application
+          session_id: event.metadata?.sessionId || `session-${Date.now()}`, // Generate if not provided
+          user_id: event.userId || 'anonymous',
+          metadata: {
+            ...event.metadata,
+            timestamp: event.timestamp,
+          },
+        };
+
+        // Add type-specific fields to metadata
+        switch (event.type) {
+          case 'usage':
+            baseEvent.metadata.toolName = (event as any).toolName;
+            baseEvent.metadata.duration = (event as any).duration;
+            baseEvent.metadata.success = (event as any).success;
+            break;
+          case 'install':
+            baseEvent.metadata.source = (event as any).source;
+            break;
+          case 'view':
+            baseEvent.metadata.viewSource = (event as any).source;
+            break;
+          case 'error':
+            baseEvent.metadata.error = (event as any).error;
+            baseEvent.metadata.context = (event as any).context;
+            break;
+          case 'rating':
+            baseEvent.metadata.rating = (event as any).rating;
+            break;
+          case 'share':
+            baseEvent.metadata.visibility = (event as any).visibility;
+            break;
+          case 'comment':
+            baseEvent.metadata.comment = (event as any).comment;
+            baseEvent.metadata.parentId = (event as any).parentId;
+            break;
+        }
+
+        return baseEvent;
+      });
+
       const response = await fetch(`${this.baseUrl}/api/events/batch`, {
         method: 'POST',
         headers: {
@@ -157,7 +212,7 @@ class AnalyticsService {
           'Authorization': `Basic ${this.auth}`,
         },
         body: JSON.stringify({
-          events: eventsToSend,
+          events: transformedEvents,
         }),
       });
 
@@ -347,5 +402,15 @@ export const trackShare = (serverId: string, userId: string, visibility: 'public
     serverId,
     userId,
     visibility,
+  });
+};
+
+export const trackComment = (serverId: string, userId: string, comment: string, parentId?: string) => {
+  return analytics.track({
+    type: 'comment',
+    serverId,
+    userId,
+    comment,
+    parentId,
   });
 };

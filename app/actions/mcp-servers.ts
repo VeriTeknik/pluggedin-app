@@ -10,7 +10,8 @@ import {
   McpServerStatus, 
   McpServerType, 
   profilesTable, 
-  projectsTable, 
+  projectsTable,
+  serverInstallationsTable,
   users 
 } from '@/db/schema';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
@@ -165,6 +166,55 @@ export async function deleteMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<void> {
+  // Get server details before deletion for tracking
+  const server = await db.query.mcpServersTable.findFirst({
+    where: and(
+      eq(mcpServersTable.uuid, uuid),
+      eq(mcpServersTable.profile_uuid, profileUuid)
+    ),
+  });
+
+  if (server) {
+    // Get user ID for analytics tracking
+    const profileData = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, profileUuid),
+      with: {
+        project: {
+          columns: {
+            user_id: true
+          }
+        }
+      }
+    });
+
+    const userId = profileData?.project?.user_id || 'anonymous';
+
+    // Track uninstallation to analytics service
+    const { trackUninstall } = await import('@/lib/analytics/analytics-service');
+    await trackUninstall(
+      server.external_id || server.uuid,
+      userId,
+      'user_deleted'
+    ).catch(error => {
+      console.error('Failed to track uninstallation to analytics:', error);
+      // Don't fail the operation if analytics tracking fails
+    });
+
+    // Remove from local installations table
+    if (server.external_id && server.source) {
+      await db.delete(serverInstallationsTable)
+        .where(
+          and(
+            eq(serverInstallationsTable.server_uuid, uuid),
+            eq(serverInstallationsTable.profile_uuid, profileUuid)
+          )
+        ).catch(error => {
+          console.error('Failed to remove installation record:', error);
+        });
+    }
+  }
+
+  // Delete the server
   await db
     .delete(mcpServersTable)
     .where(

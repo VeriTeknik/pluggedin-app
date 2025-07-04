@@ -72,29 +72,40 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, serverName, serverUuid, itemName, success, errorMessage, executionTime } = mcpActivitySchema.parse(body);
 
-    // Create appropriate notification based on action type and success
-    let title: string;
-    let message: string;
-    let type: 'SUCCESS' | 'ALERT' | 'INFO' = 'INFO';
+    // Forward ALL MCP activity to analytics service
+    try {
+      // Map action to event type
+      const eventType: 'usage' | 'error' = success ? 'usage' : 'error';
+      
+      await analytics.track({
+        type: eventType,
+        serverId: serverUuid,
+        userId: auth.user?.id || 'anonymous',
+        toolName: itemName, // This will be tool name, prompt name, or resource URI
+        duration: executionTime || 0,
+        success,
+        error: !success ? (errorMessage || 'Unknown error') : undefined,
+        context: action, // Preserve the action type in context
+        metadata: {
+          source: 'mcp-proxy',
+          profileId: auth.activeProfile.uuid,
+          projectId: auth.activeProfile.project_uuid,
+          serverName,
+          action, // Include the original action type
+          sessionId: `mcp-${auth.activeProfile.uuid}-${Date.now()}`, // Generate session ID
+          itemType: action, // tool_call, prompt_get, or resource_read
+        },
+      });
+    } catch (analyticsError) {
+      // Don't fail the request if analytics fails
+      console.error('Failed to track analytics:', analyticsError);
+    }
 
-    if (success) {
-      type = 'SUCCESS';
-      switch (action) {
-        case 'tool_call':
-          title = `Tool executed successfully`;
-          message = `Tool "${itemName}" from ${serverName} completed`;
-          break;
-        case 'prompt_get':
-          title = `Prompt retrieved successfully`;
-          message = `Prompt "${itemName}" from ${serverName} retrieved`;
-          break;
-        case 'resource_read':
-          title = `Resource read successfully`;
-          message = `Resource "${itemName}" from ${serverName} accessed`;
-          break;
-      }
-    } else {
-      type = 'ALERT';
+    // Only create local notifications for errors or important events
+    if (!success) {
+      let title: string;
+      let message: string;
+      
       switch (action) {
         case 'tool_call':
           title = `Tool execution failed`;
@@ -108,42 +119,22 @@ export async function POST(request: Request) {
           title = `Resource read failed`;
           message = `Resource "${itemName}" from ${serverName} failed${errorMessage ? ': ' + errorMessage : ''}`;
           break;
+        default:
+          title = `Operation failed`;
+          message = `Operation "${itemName}" from ${serverName} failed${errorMessage ? ': ' + errorMessage : ''}`;
       }
-    }
-
-    // Add execution time to message if provided
-    if (executionTime) {
-      message += ` (${executionTime}ms)`;
-    }
-
-    await createNotification({
-      profileUuid: auth.activeProfile.uuid,
-      type,
-      title,
-      message,
-      expiresInDays: 7, // MCP activity notifications expire in 7 days
-    });
-
-    // Forward tool call analytics to the analytics service
-    if (action === 'tool_call' && executionTime !== undefined) {
-      try {
-        await analytics.track({
-          type: 'usage',
-          serverId: serverUuid,
-          userId: auth.user?.id || 'mcp-proxy',
-          toolName: itemName,
-          duration: executionTime,
-          success,
-          metadata: {
-            source: 'mcp-proxy',
-            profileId: auth.activeProfile.uuid,
-            serverName,
-          },
-        });
-      } catch (analyticsError) {
-        // Don't fail the request if analytics fails
-        console.error('Failed to track analytics:', analyticsError);
+      
+      if (executionTime) {
+        message += ` (${executionTime}ms)`;
       }
+      
+      await createNotification({
+        profileUuid: auth.activeProfile.uuid,
+        type: 'ALERT',
+        title,
+        message,
+        expiresInDays: 7, // MCP activity notifications expire in 7 days
+      });
     }
 
     return NextResponse.json({ success: true });

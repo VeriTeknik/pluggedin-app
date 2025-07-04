@@ -50,7 +50,33 @@
     "card": {
       "install": "Install",
       "installed": "Installed",
-      "rate": "Rate"
+      "rate": "Rate",
+      "details": "Details",
+      "unshare": "Unshare",
+      "showMore": "Show More",
+      "showLess": "Show Less",
+      "tabs": {
+        "overview": "Overview",
+        "technical": "Technical",
+        "community": "Community"
+      },
+      "description": "Description",
+      "tags": "Tags",
+      "packageInfo": "Package Information",
+      "package": "Package",
+      "registry": "Registry",
+      "downloads": "Downloads",
+      "command": "Command",
+      "url": "URL",
+      "arguments": "Arguments",
+      "exampleArgs": "Example Args",
+      "environmentVariables": "Environment Variables",
+      "sharedBy": "Shared By",
+      "reviews": "Reviews",
+      "viewReviews": "View {{count}} Reviews",
+      "installationStats": "Installation Statistics",
+      "installedByUsers": "Installed by {{count}} users",
+      "usageCount": "Usage Count"
     }
   }
 }

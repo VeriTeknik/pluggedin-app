@@ -1,12 +1,11 @@
 'use server';
 
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { McpServerSource, profilesTable, searchCacheTable, serverInstallationsTable, serverReviews } from '@/db/schema';
+import { McpServerSource, profilesTable, serverInstallationsTable } from '@/db/schema';
 import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { MetricsResponse } from '@/types/reviews';
-import { SearchIndex } from '@/types/search';
 
 /**
  * Submit rating to registry
@@ -98,12 +97,37 @@ export const trackServerInstallation = async (input: {
       };
     }
 
+    // Get user ID for analytics tracking
+    const profileData = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, input.profileUuid),
+      with: {
+        project: {
+          columns: {
+            user_id: true
+          }
+        }
+      }
+    });
+
+    const userId = profileData?.project?.user_id || 'anonymous';
+
     // Record the installation locally
     await db.insert(serverInstallationsTable).values({
       profile_uuid: input.profileUuid,
       server_uuid: input.serverUuid || undefined,
       external_id: input.externalId || undefined,
       source: input.source || McpServerSource.PLUGGEDIN,
+    });
+
+    // Track installation to analytics service
+    const { trackInstall } = await import('@/lib/analytics/analytics-service');
+    await trackInstall(
+      input.externalId || input.serverUuid,
+      userId,
+      input.source || 'pluggedin'
+    ).catch(error => {
+      console.error('Failed to track installation to analytics:', error);
+      // Don't fail the operation if analytics tracking fails
     });
 
     // Also track in registry if it's a registry or community server
@@ -168,13 +192,6 @@ export const trackServerInstallation = async (input: {
       }
     }
 
-    // Update cache for external servers
-    if (input.externalId && input.source) {
-      await updateServerInCache({ externalId: input.externalId, source: input.source }).catch(error => {
-        console.error('Failed to update cache after installation:', error);
-        // Don't fail the installation tracking if cache update fails
-      });
-    }
 
     return { success: true };
   } catch (error) {
@@ -234,92 +251,56 @@ export async function rateServer(
 
     const userId = profileData.project.user_id;
 
-    // Check if this user already rated this server
-    let existingRating;
-    
-    if (serverUuid) {
-      // TODO: Handle serverUuid case for serverReviews
-      return {
-        success: false,
-        error: 'Server UUID based reviews are not supported yet'
-      };
-    } else if (externalId && source) {
-      existingRating = await db.query.serverReviews.findFirst({
-        where: and(
-          eq(serverReviews.user_id, userId),
-          eq(serverReviews.server_external_id, externalId),
-          eq(serverReviews.server_source, source)
-        ),
-      });
-    }
-
-    // If already rated, update the rating
-    if (existingRating) {
-      if (externalId && source) {
-        await db
-          .update(serverReviews)
-          .set({ 
-            rating, 
-            comment,
-            updated_at: new Date() 
-          })
-          .where(
-            and(
-              eq(serverReviews.user_id, userId),
-              eq(serverReviews.server_external_id, externalId),
-              eq(serverReviews.server_source, source)
-            )
-          );
-      }
-      
-      // Also submit updated rating to registry if it's a registry or community server
-      if (externalId && (source === McpServerSource.REGISTRY || source === McpServerSource.COMMUNITY)) {
-        await submitRatingToRegistry(externalId, rating, source).catch(error => {
-          console.error('Failed to submit rating to registry:', error);
-          // Don't fail the local rating if registry submission fails
-        });
-      }
-      
-      // Update cache for external servers
-      if (externalId && source) {
-        await updateServerInCache({ externalId, source }).catch(error => {
-          console.error('Failed to update cache after rating:', error);
-          // Don't fail the rating action if cache update fails
-        });
-      }
-      
-      return { 
-        success: true,
-        message: 'Rating updated'
-      };
-    }
-
-    // Create new rating locally
-    await db.insert(serverReviews).values({
-      user_id: userId,
-      server_external_id: externalId!,
-      server_source: source || McpServerSource.PLUGGEDIN,
-      rating,
-      comment,
-    });
-
-    // Also submit to registry if it's a registry or community server
+    // For registry/community servers, submit directly to registry
     if (externalId && (source === McpServerSource.REGISTRY || source === McpServerSource.COMMUNITY)) {
-      await submitRatingToRegistry(externalId, rating, source).catch(error => {
-        console.error('Failed to submit rating to registry:', error);
-        // Don't fail the local rating if registry submission fails
+      // Submit rating to registry VP endpoint
+      const ratingResult = await submitRatingToRegistry(externalId, rating, source);
+      
+      if (!ratingResult.success) {
+        return {
+          success: false,
+          error: 'Failed to submit rating to registry'
+        };
+      }
+
+      // If comment provided, submit to analytics API
+      if (comment) {
+        const { analyticsAPIClient } = await import('@/lib/analytics/analytics-api-client');
+        const commentResult = await analyticsAPIClient.submitComment(
+          externalId,
+          userId,
+          comment
+        );
+        
+        if (!commentResult.success) {
+          console.error('Failed to submit comment:', commentResult.error);
+          // Don't fail the whole operation if comment fails
+        }
+      }
+      
+      return { success: true };
+    } else if (serverUuid) {
+      // For local PluggedIn servers, we'll need to implement this later
+      // For now, just track in analytics
+      const { analytics } = await import('@/lib/analytics/analytics-service');
+      await analytics.track({
+        type: 'rating',
+        serverId: serverUuid,
+        userId,
+        rating,
+        metadata: {
+          comment,
+          source: McpServerSource.PLUGGEDIN,
+        },
       });
+      
+      return { success: true };
     }
 
-    // Update cache for external servers
-    if (externalId && source) {
-      await updateServerInCache({ externalId, source }).catch(error => {
-        console.error('Failed to update cache after rating:', error);
-        // Don't fail the rating action if cache update fails
-      });
-    }
-
-    return { success: true };
+    return { 
+      success: false, 
+      error: 'Invalid server configuration' 
+    };
   } catch (error) {
     console.error('Error rating server:', error);
     return { 
@@ -337,45 +318,44 @@ export async function getServerRatingMetrics(params: {
   externalId: string;
 }): Promise<MetricsResponse> {
   try {
-    // Get ratings
-    const ratingQuery = db
-      .select({
-        averageRating: sql<number>`COALESCE(avg(${serverReviews.rating}), 0)`,
-        ratingCount: sql<number>`count(${serverReviews.rating})`,
-      })
-      .from(serverReviews)
-      .where(
-        and(
-          eq(serverReviews.server_external_id, params.externalId),
-          eq(serverReviews.server_source, params.source)
-        )
-      );
+    // For registry/community servers, get stats from registry
+    if (params.source === McpServerSource.REGISTRY || params.source === McpServerSource.COMMUNITY) {
+      const stats = await registryVPClient.getServerStats(params.externalId);
+      
+      if (stats) {
+        return {
+          success: true,
+          metrics: {
+            averageRating: stats.rating || 0,
+            ratingCount: stats.rating_count || 0,
+            installationCount: stats.installation_count || 0,
+          }
+        };
+      }
+    }
+    
+    // For PluggedIn servers, get from analytics API
+    const { analyticsAPIClient } = await import('@/lib/analytics/analytics-api-client');
+    const serverStats = await analyticsAPIClient.getServerStats(params.externalId);
+    
+    if (serverStats) {
+      return {
+        success: true,
+        metrics: {
+          averageRating: serverStats.average_rating || 0,
+          ratingCount: serverStats.rating_count || 0,
+          installationCount: serverStats.total_installs || 0,
+        }
+      };
+    }
 
-    const ratingResults = await ratingQuery;
-    const ratingMetrics = ratingResults[0];
-
-    // Get installation count
-    const installationQuery = db
-      .select({
-        installationCount: sql<number>`count(*)`,
-      })
-      .from(serverInstallationsTable)
-      .where(
-        and(
-          eq(serverInstallationsTable.external_id, params.externalId),
-          eq(serverInstallationsTable.source, params.source)
-        )
-      );
-
-    const installationResults = await installationQuery;
-    const installationMetrics = installationResults[0];
-
+    // If no stats found, return zeros
     return { 
       success: true,
       metrics: {
-        averageRating: ratingMetrics.averageRating,
-        ratingCount: ratingMetrics.ratingCount,
-        installationCount: installationMetrics.installationCount,
+        averageRating: 0,
+        ratingCount: 0,
+        installationCount: 0,
       }
     };
   } catch (error) {
@@ -387,132 +367,4 @@ export async function getServerRatingMetrics(params: {
   }
 }
 
-/**
- * Update all search cache entries with the latest metrics
- * Call this periodically to keep metrics updated
- */
-export async function updateSearchCacheMetrics() {
-  try {
-    // Get all cache entries
-    const cacheEntries = await db.query.searchCacheTable.findMany();
-    
-    for (const entry of cacheEntries) {
-      try {
-        // Get results from cache
-        const results = entry.results as SearchIndex;
-        let updated = false;
-        
-        // Update metrics for each server in the results
-        for (const [_key, server] of Object.entries(results)) {
-          const typedServer = server as any;
-          if (!typedServer.source || !typedServer.external_id) {
-            continue;
-          }
-          
-          // Get metrics for this server
-          const metricsResult = await getServerRatingMetrics(
-            {
-              source: typedServer.source,
-              externalId: typedServer.external_id
-            }
-          );
-          
-          if (metricsResult.success && metricsResult.metrics) {
-            // Update metrics
-            typedServer.rating = metricsResult.metrics.averageRating;
-            typedServer.rating_count = metricsResult.metrics.ratingCount;
-            typedServer.installation_count = metricsResult.metrics.installationCount;
-            updated = true;
-          }
-        }
-        
-        // If any metrics were updated, update the cache entry
-        if (updated) {
-          await db
-            .update(searchCacheTable)
-            .set({ results })
-            .where(eq(searchCacheTable.uuid, entry.uuid));
-        }
-      } catch (error) {
-        console.error(`Error updating metrics for cache entry ${entry.uuid}:`, error);
-        // Continue with next entry even if one fails
-      }
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating search cache metrics:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    };
-  }
-}
-
-/**
- * Update cached search results for a specific server after a rating or installation action
- */
-export async function updateServerInCache(params: {
-  externalId: string;
-  source: McpServerSource;
-}) {
-  try {
-    // Get all cache entries
-    const cacheEntries = await db.query.searchCacheTable.findMany();
-    
-    // Get latest metrics for this server
-    const metricsResult = await getServerRatingMetrics({
-      source: params.source,
-      externalId: params.externalId
-    });
-    
-    if (!metricsResult.success || !metricsResult.metrics) {
-      return { success: false, error: 'Failed to get updated metrics' };
-    }
-    
-    const { averageRating, ratingCount, installationCount } = metricsResult.metrics;
-    
-    // Update server in all cache entries
-    for (const entry of cacheEntries) {
-      try {
-        // Get results from cache
-        const results = entry.results as SearchIndex;
-        let updated = false;
-        
-        // Find and update the specific server in the results
-        for (const [_key, server] of Object.entries(results)) {
-          const typedServer = server as any;
-          
-          // Only update the specific server
-          if (typedServer.external_id === params.externalId && typedServer.source === params.source) {
-            // Update metrics
-            typedServer.rating = averageRating;
-            typedServer.rating_count = ratingCount;
-            typedServer.installation_count = installationCount;
-            updated = true;
-            break; // Found and updated the server, no need to check more
-          }
-        }
-        
-        // If server was found and updated, update the cache entry
-        if (updated) {
-          await db
-            .update(searchCacheTable)
-            .set({ results })
-            .where(eq(searchCacheTable.uuid, entry.uuid));
-        }
-      } catch (error) {
-        console.error(`Error updating server in cache entry ${entry.uuid}:`, error);
-        // Continue with next entry even if one fails
-      }
-    }
-    
-    return { success: true };
-  } catch (error) {
-    console.error('Error updating server in cache:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    };
-  }
-} 
+ 

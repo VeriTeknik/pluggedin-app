@@ -1,18 +1,18 @@
 'use server';
 
-import { and, desc, eq, sql } from 'drizzle-orm';
+import { desc, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import {
   McpServerSource,
   profilesTable,
   projectsTable,
-  serverReviews, // Use serverReviews instead of serverRatingsTable
   sharedMcpServersTable,
   users,
 } from '@/db/schema';
 // Removed unused McpIndex import
 import { SearchIndex } from '@/types/search';
+import { analyticsAPIClient } from '@/lib/analytics/analytics-api-client';
 
 
 /**
@@ -92,19 +92,10 @@ export async function getFormattedSharedServersForUser(
     // 4. Transform into SearchIndex format
     const formattedResults: SearchIndex = {};
     for (const sharedServer of sharedServers) {
-      // Get rating data using the serverReviews table
-      const ratingData = await db
-        .select({
-          avgRating: sql<number>`COALESCE(AVG(${serverReviews.rating}), 0)`.mapWith(Number),
-          ratingCount: sql<number>`COUNT(${serverReviews.rating})`.mapWith(Number),
-        })
-        .from(serverReviews) // Query from serverReviews
-        .where(
-          and(
-            eq(serverReviews.server_source, McpServerSource.COMMUNITY), // Use server_source
-            eq(serverReviews.server_external_id, sharedServer.uuid) // Use server_external_id
-          )
-        );
+      // Get rating data from analytics API
+      const serverStats = await analyticsAPIClient.getServerStats(sharedServer.uuid);
+      const avgRating = serverStats?.average_rating || 0;
+      const ratingCount = serverStats?.rating_count || 0;
 
       // Parse the template JSON
       const template = sharedServer.template as any;
@@ -118,8 +109,8 @@ export async function getFormattedSharedServersForUser(
         args: template.args || [],
         envs: template.env ? Object.keys(template.env) : [],
         url: template.url ?? undefined,
-        rating: ratingData[0]?.avgRating ?? 0,
-        ratingCount: ratingData[0]?.ratingCount ?? 0,
+        rating: avgRating,
+        ratingCount: ratingCount,
         shared_by: username,
         shared_by_profile_url: `/to/${username}`,
         // Required fields from McpIndex

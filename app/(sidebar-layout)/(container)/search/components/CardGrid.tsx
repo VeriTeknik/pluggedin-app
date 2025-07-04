@@ -1,23 +1,12 @@
 'use client';
 
-import { Database, Download, Eye, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
-import * as LucideIcons from 'lucide-react';
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { unshareServer } from '@/app/actions/social'; // Import unshare action
+import { unshareServer } from '@/app/actions/social';
+import { UnifiedServerCard } from '@/components/server-card/UnifiedServerCard';
 import { ServerDetailDialog } from '@/components/server-detail-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import {
   Dialog,
   DialogClose,
@@ -30,13 +19,12 @@ import {
 import { McpServerSource, McpServerType } from '@/db/schema';
 import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuth } from '@/hooks/use-auth';
-import { useToast } from '@/hooks/use-toast'; // Import useToast
-import { McpServerCategory, SearchIndex } from '@/types/search';
-import { getCategoryIcon } from '@/utils/categories';
+import { useToast } from '@/hooks/use-toast';
+import { SearchIndex } from '@/types/search';
 
 import { InstallDialog } from './InstallDialog';
 import { RateServerDialog } from './RateServerDialog';
-import { ReviewsDialog } from './ReviewsDialog'; // Import the new dialog
+import { ReviewsDialog } from './ReviewsDialog';
 
 // Helper function to format environment variables
 function formatEnvVariables(envs: string[] | Array<{ name: string; description?: string }> | undefined): string {
@@ -57,56 +45,6 @@ function formatEnvVariables(envs: string[] | Array<{ name: string; description?:
         return env.description ? `${line} # ${env.description}` : line;
       })
       .join('\n');
-  }
-}
-
-// Helper function to get category badge
-function CategoryBadge({ category }: { category?: McpServerCategory }) {
-  const { t } = useTranslation();
-  
-  if (!category) {
-    return null;
-  }
-  
-  const iconName = getCategoryIcon(category);
-  const IconComponent = (LucideIcons as Record<string, any>)[iconName];
-  
-  return (
-    <Badge variant="secondary" className="gap-1">
-      {IconComponent && <IconComponent className="h-3 w-3" />}
-      {t(`search.categories.${category}`)}
-    </Badge>
-  );
-}
-
-// Helper function to get source icon
-function SourceBadge({ source }: { source?: McpServerSource }) {
-  const { t: _t } = useTranslation();
-  
-  switch (source) {
-    case McpServerSource.REGISTRY:
-      return (
-        <Badge variant="default" className="gap-1 whitespace-normal text-center h-auto py-1 bg-blue-600 hover:bg-blue-700">
-          <Package className="h-3 w-3 flex-shrink-0" />
-          <span className="inline-block">Registry</span>
-        </Badge>
-      );
-    case McpServerSource.COMMUNITY:
-      return (
-        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1 bg-blue-100 dark:bg-blue-900">
-          <Users className="h-3 w-3 flex-shrink-0" />
-          <span className="inline-block">Community</span>
-        </Badge>
-      );
-    case McpServerSource.PLUGGEDIN:
-      return (
-        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">
-          <Database className="h-3 w-3 flex-shrink-0" />
-          <span className="inline-block">PluggedIn</span>
-        </Badge>
-      );
-    default:
-      return null; // Return null for unknown sources
   }
 }
 
@@ -330,68 +268,6 @@ export default function CardGrid({
   };
 
 
-  // Helper to format ratings
-  const formatRating = (rating?: number, count?: number) => {
-    // Use ratingCount (consistent with McpIndex type and renderCommunityInfo)
-    if (rating === undefined || rating === null || !count) { 
-      return null;
-    }
-    
-    // Convert rating to number before using toFixed
-    const numericRating = typeof rating === 'string' ? parseFloat(rating) : rating;
-    
-    // Check if conversion was successful and it's a valid number
-    if (isNaN(numericRating)) {
-      return null; 
-    }
-    
-    return (
-      <div className="flex items-center">
-        <Star className="h-3 w-3 mr-1 fill-yellow-400 text-yellow-400" />
-        {numericRating.toFixed(1)} ({count})
-      </div>
-    );
-  };
-
-  // Shows meta data for community cards
-  const renderCommunityInfo = (item: any) => {
-    if (item.source !== McpServerSource.COMMUNITY) return null;
-    
-    // Don't show if there's no shared_by
-    if (!item.shared_by) return null;
-    
-    return (
-      <div className="text-xs text-muted-foreground mt-2 border-t pt-2">
-        {item.shared_by && (
-          <div className="flex items-center mt-1">
-            <Users className="h-3 w-3 mr-1" />
-            Shared by:{' '}
-            {item.shared_by_profile_url ? (
-              <Link 
-                href={item.shared_by_profile_url}
-                className="hover:underline ml-1"
-              >
-                {item.shared_by}
-              </Link>
-            ) : (
-              <span className="ml-1">{item.shared_by}</span>
-            )}
-          </div>
-        )}
-        {/* Make review count clickable */}
-        {item.ratingCount && item.ratingCount > 0 && (
-           <button
-             className="flex items-center mt-1 hover:underline cursor-pointer text-left"
-             onClick={() => handleReviewsClick(item)}
-             aria-label={`View ${item.ratingCount} reviews for ${item.name}`}
-           >
-            <MessageCircle className="h-3 w-3 mr-1" />
-            {item.ratingCount} {item.ratingCount === 1 ? 'review' : 'reviews'}
-          </button>
-        )}
-      </div>
-    );
-  };
 
   // Helper to check if server is owned by current user
   const isOwnServer = (item: any) => {
@@ -463,178 +339,21 @@ export default function CardGrid({
           const isInstalled = Boolean(installedUuid);
 
           return (
-          <Card 
-            key={key} 
-            className={`flex flex-col cursor-pointer transition-all hover:shadow-lg ${selectable && !isInstalled ? 'hover:border-primary' : ''} ${isSelected ? 'ring-2 ring-primary' : ''} ${isInstalled ? 'opacity-70' : ''}`}
-            onClick={(e) => {
-              // Don't trigger if clicking on interactive elements
-              const target = e.target as HTMLElement;
-              if (target.closest('button, a')) return;
-              
-              if (selectable && !isInstalled && onItemSelect) {
-                onItemSelect(key, !isSelected);
-              } else {
-                // If not in selection mode, show details
-                handleViewDetailsClick(e, item);
-              }
-            }}
-          >
-            <CardHeader className="pb-2">
-              <div className="flex flex-col sm:flex-row justify-between items-start gap-2">
-                <CardTitle className="mr-2 break-words">{item.name}</CardTitle>
-                <div className="flex flex-wrap items-center gap-2 mt-1 sm:mt-0">
-                  {isInstalled && (
-                    <Badge variant="secondary" className="pointer-events-none whitespace-normal text-center h-auto py-1">
-                      <span className="inline-block">Installed</span>
-                    </Badge>
-                  )}
-                  <SourceBadge source={item.source} />
-                </div>
-              </div>
-              <CardDescription>{item.description}</CardDescription>
-            </CardHeader>
-            <CardContent className='flex-grow pb-2'>
-              {item.package_name && (
-                <p className='text-sm text-muted-foreground mb-2 overflow-wrap-normal break-words'>
-                  {t('search.card.package')}: {item.package_name}
-                </p>
-              )}
-              {item.command && (
-                <p className='text-sm text-muted-foreground mb-2 overflow-wrap-normal break-words'>
-                  {t('search.card.command')}: {item.command}
-                </p>
-              )}
-              {item.args?.length > 0 && (
-                <p className='text-sm text-muted-foreground mb-2 overflow-wrap-normal break-words'>
-                  {t('search.card.exampleArgs')}: {item.args.join(' ')}
-                </p>
-              )}
-              
-              <div className="flex flex-wrap gap-2 mt-2">
-                {item.category && (
-                  <CategoryBadge category={item.category} />
-                )}
-                
-                {item.envs?.map((env) => (
-                  <Badge 
-                    key={typeof env === 'string' ? env : env.name} 
-                    variant='secondary'
-                  >
-                    {typeof env === 'string' ? env : env.name}
-                  </Badge>
-                ))}
-                
-                {item.tags?.map((tag: string) => (
-                  <Badge key={tag} variant='outline'>
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-              
-              <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-                {item.useCount !== undefined && (
-                  <div className="flex items-center">
-                    <Database className="h-3 w-3 mr-1" />
-                    {t('search.card.usageCount')}: {item.useCount}
-                  </div>
-                )}
-                
-            {formatRating(item.rating, item.ratingCount)}
-
-            {/* Display Installation Count */}
-            {item.installation_count !== undefined && item.installation_count > 0 && (
-              <div className="flex items-center">
-                <UserPlus className="h-3 w-3 mr-1" />
-                {item.installation_count}
-              </div>
-            )}
-
-            {item.github_stars !== undefined && item.github_stars !== null && (
-                  <div className="flex items-center">
-                    <Github className="h-3 w-3 mr-1" />
-                    {item.github_stars}
-                  </div>
-                )}
-                
-                {item.package_download_count !== undefined && item.package_download_count !== null && (
-                  <div className="flex items-center">
-                    <Download className="h-3 w-3 mr-1" />
-                    {item.package_download_count}
-                  </div>
-                )}
-              </div>
-
-              {/* Add community-specific information */}
-              {renderCommunityInfo(item)}
-            </CardContent>
-            <CardFooter className='flex flex-wrap gap-2 justify-between pt-2'>
-              <div className='flex gap-2'>
-                {/* View Details button */}
-                <Button 
-                  variant='outline' 
-                  size="sm"
-                  onClick={(e) => handleViewDetailsClick(e, item)}
-                >
-                  <Eye className='w-4 h-4 mr-2' />
-                  Details
-                </Button>
-                
-                {item.githubUrl && (
-                  <Button variant='outline' asChild size="sm">
-                    <Link
-                      href={item.githubUrl}
-                      target='_blank'
-                      rel='noopener noreferrer'>
-                      <Github className='w-4 h-4 mr-2' />
-                      GitHub
-                    </Link>
-                  </Button>
-                )}
-              </div>
-              
-              <div className='flex gap-2'>
-                {/* Only show rate button if not user's own server */}
-                {item.source && item.external_id && !isOwned && (
-                  <Button 
-                    variant='outline' 
-                    size="sm"
-                    className="gap-1"
-                    onClick={() => handleRateClick(key, item)}
-                  >
-                    <ThumbsUp className='w-4 h-4' />
-                    {t('search.card.rate')}
-                  </Button>
-                )}
-                
-                {isOwned ? (
-                  // Show Unshare button for owned servers
-                  <Button
-                    variant='destructive'
-                    size="sm"
-                    onClick={() => handleUnshareClick(item)}
-                  >
-                    <Trash2 className='w-4 h-4 mr-2' />
-                    Unshare
-                  </Button>
-                ) : isInstalled ? (
-                  // Render disabled "Installed" button if installed
-                  <Button variant='outline' size="sm" disabled className="pointer-events-none">
-                    {t('search.card.installed')}
-                  </Button>
-                ) : ( 
-                  // Show Install button for all non-owned, non-installed servers
-                  <Button
-                    variant='default'
-                    size="sm"
-                    onClick={() => handleInstallClick(key, item)}
-                  >
-                    <Download className='w-4 h-4 mr-2' />
-                    {t('search.card.install')}
-                  </Button>
-                )}
-              </div>
-            </CardFooter>
-          </Card>
+            <UnifiedServerCard
+              key={key}
+              server={item}
+              serverKey={key}
+              isInstalled={isInstalled}
+              isOwned={isOwned}
+              selectable={selectable}
+              isSelected={isSelected}
+              onInstallClick={handleInstallClick}
+              onRateClick={handleRateClick}
+              onViewDetailsClick={handleViewDetailsClick}
+              onUnshareClick={handleUnshareClick}
+              onItemSelect={onItemSelect}
+              onReviewsClick={handleReviewsClick}
+            />
           );
         })}
       </div>
