@@ -42,42 +42,103 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
   const [hasGitHub, setHasGitHub] = useState(false);
   const [githubUsername, setGithubUsername] = useState<string | null>(null);
   const [isCheckingGitHub, setIsCheckingGitHub] = useState(true);
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
 
-  // Check for GitHub connection on mount
+  // Check for GitHub connection on mount and restore state if coming back from OAuth
   useEffect(() => {
-    const checkGitHub = async () => {
-      setIsCheckingGitHub(true);
-      try {
-        const result = await checkUserGitHubConnection();
-        setHasGitHub(result.hasGitHub);
-        setGithubUsername(result.githubUsername || null);
-      } catch (error) {
-        console.error('Error checking GitHub connection:', error);
-      } finally {
-        setIsCheckingGitHub(false);
+    if (open) {
+      checkGitHub();
+      
+      // Check if we're returning from OAuth flow
+      const savedState = localStorage.getItem('claim_server_state');
+      if (savedState) {
+        try {
+          const state = JSON.parse(savedState);
+          // Restore repository URL if it was saved
+          if (state.repositoryUrl && state.serverUuid === server?.uuid) {
+            setRepositoryUrl(state.repositoryUrl);
+          }
+          // Clean up saved state if it's older than 5 minutes
+          if (Date.now() - state.timestamp > 5 * 60 * 1000) {
+            localStorage.removeItem('claim_server_state');
+          }
+        } catch (e) {
+          console.error('Error restoring claim state:', e);
+          localStorage.removeItem('claim_server_state');
+        }
+      }
+    }
+  }, [open, server?.uuid]);
+
+  const handleGitHubSignIn = async () => {
+    setIsAuthenticating(true);
+    
+    // Save the current state before redirecting
+    const claimState = {
+      serverUuid: server?.uuid,
+      serverName: server?.name,
+      repositoryUrl,
+      returnUrl: window.location.pathname + window.location.search,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('claim_server_state', JSON.stringify(claimState));
+    
+    // Get GitHub client ID based on environment
+    const getGitHubClientId = () => {
+      const origin = window.location.origin;
+      if (origin.includes('localhost')) {
+        return 'Ov23liauuJvy6sLzrDdr'; // Localhost client ID
+      } else if (origin.includes('staging')) {
+        return 'Ov23liGQCDAID0kY58HE'; // Staging client ID
+      } else {
+        return '13219bd31987f25b7e34'; // Production client ID
       }
     };
     
-    if (open) {
-      checkGitHub();
-    }
-  }, [open]);
-
-  const handleGitHubSignIn = async () => {
-    // Save current state before redirecting
-    if (server) {
-      localStorage.setItem('claim_server_state', JSON.stringify({
-        serverUuid: server.uuid,
-        serverName: server.name,
-        repositoryUrl,
-        returnUrl: window.location.pathname + window.location.search,
-      }));
-    }
+    const GITHUB_CLIENT_ID = getGitHubClientId();
+    const redirectUri = `${window.location.origin}/api/auth/callback/registry`;
+    const scope = 'read:user,read:org';
+    const githubOAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
     
-    // Use NextAuth to sign in with GitHub
-    await signIn('github', { 
-      callbackUrl: window.location.pathname + window.location.search 
-    });
+    // Redirect to GitHub OAuth
+    window.location.href = githubOAuthUrl;
+  };
+  
+  const checkGitHub = async () => {
+    setIsCheckingGitHub(true);
+    try {
+      // First check if we have a registry OAuth token
+      const registryToken = localStorage.getItem('registry_oauth_token');
+      if (registryToken) {
+        // Verify the token with GitHub API
+        const response = await fetch('https://api.github.com/user', {
+          headers: {
+            Authorization: `Bearer ${registryToken}`,
+            Accept: 'application/vnd.github.v3+json',
+          },
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          setHasGitHub(true);
+          setGithubUsername(userData.login);
+          return;
+        } else {
+          // Token is invalid, remove it
+          localStorage.removeItem('registry_oauth_token');
+        }
+      }
+      
+      // Fall back to checking NextAuth connection
+      const result = await checkUserGitHubConnection();
+      setHasGitHub(result.hasGitHub);
+      setGithubUsername(result.githubUsername || null);
+    } catch (error) {
+      console.error('Error checking GitHub connection:', error);
+      setHasGitHub(false);
+    } finally {
+      setIsCheckingGitHub(false);
+    }
   };
 
   const handleClaim = async () => {
@@ -93,10 +154,13 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
 
     setIsSubmitting(true);
     try {
+      // Use registry OAuth token if available, otherwise the backend will use NextAuth token
+      const registryToken = localStorage.getItem('registry_oauth_token') || 'nextauth';
+      
       const result = await claimCommunityServer({
         communityServerUuid: server.uuid,
         repositoryUrl,
-        registryToken: 'github-oauth', // Placeholder - the backend will use the user's GitHub token from accounts table
+        registryToken, // Pass the registry OAuth token
       });
 
       if (result.success) {
@@ -236,9 +300,18 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
               {t('common.loading', 'Loading...')}
             </Button>
           ) : !hasGitHub ? (
-            <Button onClick={handleGitHubSignIn} disabled={isSubmitting}>
-              <Github className="mr-2 h-4 w-4" />
-              {t('search.claimDialog.connectGitHub', 'Connect GitHub Account')}
+            <Button onClick={handleGitHubSignIn} disabled={isSubmitting || isAuthenticating}>
+              {isAuthenticating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  {t('search.claimDialog.authenticating', 'Authenticating...')}
+                </>
+              ) : (
+                <>
+                  <Github className="mr-2 h-4 w-4" />
+                  {t('search.claimDialog.connectGitHub', 'Connect GitHub Account')}
+                </>
+              )}
             </Button>
           ) : (
             <Button 

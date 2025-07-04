@@ -354,15 +354,24 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       };
     }
 
-    // Get user's GitHub token
-    const githubAccount = await db.query.accounts.findFirst({
-      where: and(
-        eq(accounts.userId, session.user.id),
-        eq(accounts.provider, 'github')
-      ),
-    });
+    // Get GitHub token - either from registry OAuth or NextAuth
+    let githubToken: string | null = null;
+    
+    // Check if we have a registry OAuth token passed
+    if (validated.registryToken && validated.registryToken !== 'nextauth') {
+      githubToken = validated.registryToken;
+    } else {
+      // Fall back to NextAuth token
+      const githubAccount = await db.query.accounts.findFirst({
+        where: and(
+          eq(accounts.userId, session.user.id),
+          eq(accounts.provider, 'github')
+        ),
+      });
+      githubToken = githubAccount?.access_token || null;
+    }
 
-    if (!githubAccount?.access_token) {
+    if (!githubToken) {
       return {
         success: false,
         error: 'Please connect your GitHub account to claim servers',
@@ -371,7 +380,7 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
     }
 
     // Verify GitHub ownership
-    const ownership = await verifyGitHubOwnership(githubAccount.access_token, validated.repositoryUrl);
+    const ownership = await verifyGitHubOwnership(githubToken, validated.repositoryUrl);
     if (!ownership.isOwner) {
       return { 
         success: false, 

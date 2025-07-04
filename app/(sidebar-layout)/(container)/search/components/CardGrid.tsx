@@ -236,6 +236,38 @@ export default function CardGrid({
   } | null>(null);
   const [claimDialogOpen, setClaimDialogOpen] = useState(false);
 
+  // Check for saved claim state on mount (for returning from OAuth)
+  useEffect(() => {
+    const savedState = localStorage.getItem('claim_server_state');
+    if (savedState) {
+      try {
+        const state = JSON.parse(savedState);
+        // Find the server in the current items
+        const serverEntry = Object.entries(items).find(([_key, item]) => 
+          item.uuid === state.serverUuid || 
+          (item.source === McpServerSource.COMMUNITY && item.name === state.serverName)
+        );
+        
+        if (serverEntry) {
+          const [_key, item] = serverEntry;
+          // Re-open the claim dialog with the server
+          setClaimServer({
+            uuid: item.uuid || state.serverUuid,
+            name: item.name,
+            template: item.template || {
+              command: item.command,
+              args: item.args ? item.args.split(' ') : [],
+              env: item.env,
+              type: item.type,
+            }
+          });
+          setClaimDialogOpen(true);
+        }
+      } catch (e) {
+        console.error('Error restoring claim state:', e);
+      }
+    }
+  }, [items]);
 
   const handleInstallClick = async (key: string, item: any) => {
     if (!requireAuth('auth:loginToInstall', 'You must be logged in to install servers.')) return;

@@ -151,22 +151,34 @@ export async function GET(request: NextRequest) {
             // Store token in localStorage
             localStorage.setItem('registry_oauth_token', '${tokenData.access_token}');
             
-            // Check if we have saved state from claim flow
-            const savedState = localStorage.getItem('claim_server_state');
-            if (savedState) {
-              try {
-                const state = JSON.parse(savedState);
-                // Clean up saved state
-                localStorage.removeItem('claim_server_state');
-                // Redirect back to search page with claim dialog open
-                window.location.href = state.returnUrl || '/search';
-              } catch (e) {
-                // Fallback to search page
+            // Check if we're in a popup window
+            if (window.opener) {
+              // Send message to opener
+              window.opener.postMessage({
+                type: 'github-oauth-success',
+                accessToken: '${tokenData.access_token}'
+              }, '${baseUrl}');
+              
+              // Show success message and close
+              document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center; color: #10b981;"><h2>Authentication successful!</h2><p>This window will close automatically...</p></div>';
+              setTimeout(() => window.close(), 2000);
+            } else {
+              // Not in a popup, check for saved state from claim flow
+              const savedState = localStorage.getItem('claim_server_state');
+              if (savedState) {
+                try {
+                  const state = JSON.parse(savedState);
+                  // Don't clean up saved state yet - let the dialog do it
+                  // Redirect back to search page with claim dialog state
+                  window.location.href = state.returnUrl || '/search';
+                } catch (e) {
+                  // Fallback to search page
+                  window.location.href = '/search';
+                }
+              } else {
+                // No saved state, just go to search page
                 window.location.href = '/search';
               }
-            } else {
-              // No saved state, just go to search page
-              window.location.href = '/search';
             }
           </script>
         </head>
