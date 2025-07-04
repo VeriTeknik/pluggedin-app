@@ -384,6 +384,31 @@ export class AnalyticsAPIClient {
       return null;
     }
   }
+
+  /**
+   * Get user's ratings
+   */
+  async getUserRatings(userId: string): Promise<Array<{ server_id: string; rating: number; comment?: string; timestamp: string }>> {
+    try {
+      const response = await this.fetchWithAuth(
+        `${this.baseUrl}/users/${userId}/ratings`
+      );
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          return [];
+        }
+        console.error('[Analytics API] Failed to fetch user ratings:', response.status);
+        return [];
+      }
+      
+      const data = await response.json();
+      return data.ratings || [];
+    } catch (error) {
+      console.error('[Analytics API] Failed to fetch user ratings:', error);
+      return [];
+    }
+  }
 }
 
 // Singleton instance

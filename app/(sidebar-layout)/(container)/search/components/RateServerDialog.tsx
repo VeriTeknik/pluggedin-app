@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { rateServer } from '@/app/actions/mcp-server-metrics';
+import { getUserRating } from '@/app/actions/mcp-server-user-rating';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -48,6 +49,8 @@ export function RateServerDialog({
   const { toast } = useToast();
   const { track } = useAnalytics();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [existingRating, setExistingRating] = useState<{ rating?: number; comment?: string; feedbackId?: string } | null>(null);
+  const [isCheckingRating, setIsCheckingRating] = useState(true);
 
   const form = useForm({
     defaultValues: {
@@ -56,11 +59,47 @@ export function RateServerDialog({
     },
   });
 
+  // Check if user has already rated this server
+  useEffect(() => {
+    const checkExistingRating = async () => {
+      if (!open || !currentProfile?.uuid || !serverData.external_id) {
+        setIsCheckingRating(false);
+        return;
+      }
+
+      setIsCheckingRating(true);
+      try {
+        const userRating = await getUserRating(currentProfile.uuid, serverData.external_id);
+        setExistingRating(userRating);
+        
+        // If user has already rated, populate the form with existing values
+        if (userRating) {
+          form.setValue('rating', userRating.rating || 0);
+          form.setValue('comment', userRating.comment || '');
+        }
+      } catch (error) {
+        console.error('Failed to check existing rating:', error);
+      } finally {
+        setIsCheckingRating(false);
+      }
+    };
+
+    checkExistingRating();
+  }, [open, currentProfile?.uuid, serverData.external_id, form]);
+
   const onSubmit = async (values: { rating: number; comment: string }) => {
+    console.log('[RateServerDialog] Submit called with:', {
+      values,
+      serverData,
+      profileUuid: currentProfile?.uuid
+    });
+    
     if (!currentProfile?.uuid) {
+      console.error('[RateServerDialog] No current profile');
       return;
     }
     if (!serverData.source || !serverData.external_id) {
+      console.error('[RateServerDialog] Missing source or external_id:', serverData);
       return;
     }
     if (values.rating < 1 || values.rating > 5) {
@@ -74,6 +113,14 @@ export function RateServerDialog({
 
     setIsSubmitting(true);
     try {
+      console.log('[RateServerDialog] Calling rateServer with:', {
+        profileUuid: currentProfile.uuid,
+        rating: values.rating,
+        comment: values.comment,
+        externalId: serverData.external_id,
+        source: serverData.source
+      });
+      
       const result = await rateServer(
         currentProfile.uuid,
         values.rating,
@@ -121,9 +168,13 @@ export function RateServerDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rate &quot;{serverData.name}&quot;</DialogTitle>
+          <DialogTitle>
+            {existingRating ? 'Update' : 'Rate'} &quot;{serverData.name}&quot;
+          </DialogTitle>
           <DialogDescription>
-            Your rating helps other users find quality servers
+            {existingRating 
+              ? 'You have already rated this server. You can update your rating below.'
+              : 'Your rating helps other users find quality servers'}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -176,8 +227,14 @@ export function RateServerDialog({
                 onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button type='submit' disabled={isSubmitting}>
-                {isSubmitting ? 'Submitting...' : 'Submit Rating'}
+              <Button type='submit' disabled={isSubmitting || isCheckingRating}>
+                {isCheckingRating 
+                  ? 'Checking...' 
+                  : isSubmitting 
+                    ? 'Submitting...' 
+                    : existingRating 
+                      ? 'Update Rating' 
+                      : 'Submit Rating'}
               </Button>
             </div>
           </form>

@@ -13,13 +13,23 @@ import { MetricsResponse } from '@/types/reviews';
 async function submitRatingToRegistry(
   serverId: string,
   rating: number,
-  source: McpServerSource
+  source: McpServerSource,
+  userId?: string,
+  comment?: string
 ) {
   try {
-    const result = await registryVPClient.submitRating(serverId, rating, source);
+    console.log('[MCP Server Metrics] Submitting rating to registry:', {
+      serverId,
+      rating,
+      source,
+      userId,
+      comment
+    });
+    const result = await registryVPClient.submitRating(serverId, rating, source, userId, comment);
+    console.log('[MCP Server Metrics] Registry rating result:', result);
     return result;
   } catch (error) {
-    console.error('Error submitting rating to registry:', error);
+    console.error('[MCP Server Metrics] Error submitting rating to registry:', error);
     return { success: false };
   }
 }
@@ -254,28 +264,38 @@ export async function rateServer(
     // For registry/community servers, submit directly to registry
     if (externalId && (source === McpServerSource.REGISTRY || source === McpServerSource.COMMUNITY)) {
       // Submit rating to registry VP endpoint
-      const ratingResult = await submitRatingToRegistry(externalId, rating, source);
+      console.log('[rateServer] Submitting rating for:', {
+        externalId,
+        rating,
+        source,
+        userId,
+        comment
+      });
+      
+      const ratingResult = await submitRatingToRegistry(externalId, rating, source, userId, comment);
       
       if (!ratingResult.success) {
+        console.error('[rateServer] Rating submission failed:', ratingResult);
         return {
           success: false,
-          error: 'Failed to submit rating to registry'
+          error: ratingResult.error || 'Failed to submit rating to registry'
         };
       }
+      
+      console.log('[rateServer] Rating submitted successfully');
 
-      // If comment provided, submit to analytics API
+      // Track rating event to analytics
+      const { trackRating } = await import('@/lib/analytics/analytics-service');
+      await trackRating(externalId, userId, rating).catch(error => {
+        console.error('[rateServer] Failed to track rating to analytics:', error);
+      });
+
+      // Also track comment event separately if provided
       if (comment) {
-        const { analyticsAPIClient } = await import('@/lib/analytics/analytics-api-client');
-        const commentResult = await analyticsAPIClient.submitComment(
-          externalId,
-          userId,
-          comment
-        );
-        
-        if (!commentResult.success) {
-          console.error('Failed to submit comment:', commentResult.error);
-          // Don't fail the whole operation if comment fails
-        }
+        const { trackComment } = await import('@/lib/analytics/analytics-service');
+        await trackComment(externalId, userId, comment).catch(error => {
+          console.error('[rateServer] Failed to track comment to analytics:', error);
+        });
       }
       
       return { success: true };

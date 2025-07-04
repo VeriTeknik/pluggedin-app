@@ -60,11 +60,41 @@ export interface StatsResponse {
 export interface RatingRequest {
   rating: number;
   source?: McpServerSource;
+  user_id?: string;
+  timestamp?: string;
+  comment?: string;
 }
 
 export interface RatingResponse {
   success: boolean;
   stats?: ServerStats;
+  feedback?: FeedbackItem;
+  error?: string;
+}
+
+export interface FeedbackItem {
+  id: string;
+  server_id: string;
+  source: McpServerSource;
+  user_id: string;
+  username?: string;
+  user_avatar?: string;
+  rating: number;
+  comment?: string;
+  created_at: string;
+  updated_at: string;
+  is_public: boolean;
+}
+
+export interface FeedbackResponse {
+  feedback: FeedbackItem[];
+  total_count: number;
+  has_more: boolean;
+}
+
+export interface UserRatingResponse {
+  has_rated: boolean;
+  feedback?: FeedbackItem;
 }
 
 export interface InstallRequest {
@@ -185,26 +215,71 @@ export class PluggedinRegistryVPClient {
   async submitRating(
     serverId: string,
     rating: number,
-    source?: McpServerSource
+    source?: McpServerSource,
+    userId?: string,
+    comment?: string
   ): Promise<RatingResponse> {
     try {
+      const requestBody = {
+        rating,
+        source: source || 'REGISTRY',
+        user_id: userId,
+        timestamp: new Date().toISOString(),
+        comment
+      };
+      
+      console.log('[Registry VP] Submitting rating:', {
+        url: `${this.vpUrl}/servers/${serverId}/rate`,
+        serverId,
+        rating,
+        source,
+        userId,
+        comment
+      });
+      
       const response = await fetch(`${this.vpUrl}/servers/${serverId}/rate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'User-Agent': 'PluggedIn-App/1.0',
         },
-        body: JSON.stringify({ rating, source } as RatingRequest),
+        body: JSON.stringify(requestBody),
+      });
+      
+      const responseText = await response.text();
+      console.log('[Registry VP] Rating response:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: responseText,
+        headers: Object.fromEntries(response.headers.entries())
       });
       
       if (!response.ok) {
-        console.error('Failed to submit rating:', response.status);
-        return { success: false };
+        console.error('[Registry VP] Failed to submit rating:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText
+        });
+        return { 
+          success: false,
+          error: `Registry error: ${response.status} - ${responseText || response.statusText}`
+        };
       }
       
-      return response.json();
+      // Try to parse as JSON, fallback to success if not JSON
+      try {
+        const data = JSON.parse(responseText);
+        return { success: true, ...data };
+      } catch (e) {
+        // If response is not JSON, just return success
+        return { success: true };
+      }
     } catch (error) {
-      console.error('Error submitting rating:', error);
-      return { success: false };
+      console.error('[Registry VP] Error submitting rating:', error);
+      return { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   }
   
@@ -297,6 +372,142 @@ export class PluggedinRegistryVPClient {
       server.description?.toLowerCase().includes(searchQuery) ||
       server.repository?.url?.toLowerCase().includes(searchQuery)
     );
+  }
+
+  /**
+   * Get feedback/reviews for a server
+   */
+  async getFeedback(
+    serverId: string,
+    limit = 20,
+    offset = 0,
+    sort: 'newest' | 'oldest' | 'rating_high' | 'rating_low' = 'newest'
+  ): Promise<FeedbackResponse> {
+    try {
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+        offset: offset.toString(),
+        sort,
+      });
+
+      const response = await fetch(`${this.vpUrl}/servers/${serverId}/feedback?${params}`, {
+        headers: {
+          'User-Agent': 'PluggedIn-App/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('[Registry VP] Failed to get feedback:', response.status);
+        return { feedback: [], total_count: 0, has_more: false };
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('[Registry VP] Error getting feedback:', error);
+      return { feedback: [], total_count: 0, has_more: false };
+    }
+  }
+
+  /**
+   * Check if a user has rated a server
+   */
+  async getUserRating(serverId: string, userId: string): Promise<UserRatingResponse> {
+    try {
+      const response = await fetch(`${this.vpUrl}/servers/${serverId}/rating/${userId}`, {
+        headers: {
+          'User-Agent': 'PluggedIn-App/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          return { has_rated: false };
+        }
+        console.error('[Registry VP] Failed to get user rating:', response.status);
+        return { has_rated: false };
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error('[Registry VP] Error getting user rating:', error);
+      return { has_rated: false };
+    }
+  }
+
+  /**
+   * Update user's feedback
+   */
+  async updateFeedback(
+    serverId: string,
+    feedbackId: string,
+    rating: number,
+    comment?: string,
+    userId?: string
+  ): Promise<RatingResponse> {
+    try {
+      const requestBody = {
+        rating,
+        comment,
+        user_id: userId,
+      };
+
+      const response = await fetch(`${this.vpUrl}/servers/${serverId}/feedback/${feedbackId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'PluggedIn-App/1.0',
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Registry VP] Failed to update feedback:', response.status, errorText);
+        return { 
+          success: false,
+          error: `Failed to update feedback: ${response.status}`
+        };
+      }
+
+      const data = await response.json();
+      return { success: true, ...data };
+    } catch (error) {
+      console.error('[Registry VP] Error updating feedback:', error);
+      return { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Delete user's feedback
+   */
+  async deleteFeedback(serverId: string, feedbackId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const response = await fetch(`${this.vpUrl}/servers/${serverId}/feedback/${feedbackId}`, {
+        method: 'DELETE',
+        headers: {
+          'User-Agent': 'PluggedIn-App/1.0',
+        },
+      });
+
+      if (!response.ok) {
+        console.error('[Registry VP] Failed to delete feedback:', response.status);
+        return { 
+          success: false,
+          error: `Failed to delete feedback: ${response.status}`
+        };
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('[Registry VP] Error deleting feedback:', error);
+      return { 
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 }
 

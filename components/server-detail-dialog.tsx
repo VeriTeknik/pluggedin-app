@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, BarChart3, Code2, ExternalLink, GitBranch, Globe, Info, Loader2, Package, Server, Trash2, Users } from 'lucide-react';
+import { AlertCircle, BarChart3, Code2, ExternalLink, GitBranch, Globe, Info, Loader2, MessageSquare, Package, Server, Star, Trash2, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -20,7 +20,9 @@ import {
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EnvVarsEditor } from '@/components/env-vars-editor';
+import { ServerReviewsList } from '@/components/server-reviews-list';
 import { McpServerSource, McpServerType } from '@/db/schema';
+import { useAuth } from '@/hooks/use-auth';
 
 interface ServerDetailDialogProps {
   open: boolean;
@@ -36,6 +38,10 @@ interface ServerDetailDialogProps {
     source?: McpServerSource;
     external_id?: string;
     repositoryUrl?: string;
+    // Stats fields
+    rating?: number;
+    ratingCount?: number;
+    installation_count?: number;
     // Registry-specific fields
     registryData?: {
       id: string;
@@ -74,6 +80,7 @@ export function ServerDetailDialog({
   const [isLoadingRegistry, setIsLoadingRegistry] = useState(false);
   const [editableEnv, setEditableEnv] = useState(server.env || {});
   const [fullServerData, setFullServerData] = useState<any>(null);
+  const { session } = useAuth();
 
   // Reset editableEnv when server changes
   useEffect(() => {
@@ -214,11 +221,15 @@ export function ServerDetailDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="configuration">Configuration</TabsTrigger>
+            <TabsTrigger value="reviews">
+              <MessageSquare className="h-4 w-4 mr-2" />
+              Reviews
+            </TabsTrigger>
             <TabsTrigger value="analytics" disabled>
-              Analytics (Coming Soon)
+              Analytics
             </TabsTrigger>
           </TabsList>
 
@@ -268,6 +279,22 @@ export function ServerDetailDialog({
                         <p className="text-sm text-muted-foreground">Last Updated</p>
                         <p className="font-medium">{formatDate(registryData.updated_at)}</p>
                       </div>
+                      {server.rating !== undefined && server.ratingCount !== undefined && (
+                        <>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Rating</p>
+                            <div className="flex items-center gap-1">
+                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                              <span className="font-medium">{server.rating.toFixed(1)}</span>
+                              <span className="text-sm text-muted-foreground">({server.ratingCount})</span>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Installations</p>
+                            <p className="font-medium">{formatNumber(server.installation_count || 0)}</p>
+                          </div>
+                        </>
+                      )}
                     </div>
 
                     {registryData.tags && registryData.tags.length > 0 && (
@@ -434,6 +461,27 @@ export function ServerDetailDialog({
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            <TabsContent value="reviews" className="space-y-4">
+              {/* Reviews section */}
+              {server.source === McpServerSource.REGISTRY && server.external_id ? (
+                <ServerReviewsList 
+                  serverId={server.external_id}
+                  source={server.source}
+                  currentUserId={session?.user?.id}
+                />
+              ) : (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+                    <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">{t('reviews.notAvailable', 'Reviews not available')}</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {t('reviews.registryOnly', 'Reviews are only available for registry servers')}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="analytics" className="space-y-4">
