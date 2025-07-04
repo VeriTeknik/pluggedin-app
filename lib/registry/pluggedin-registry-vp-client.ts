@@ -1,9 +1,7 @@
-/**
- * VP API Client for enhanced Plugged.in Registry filtering
- * Implements the v-plugged API with advanced filtering capabilities
- */
+import { McpServerSource } from '@/db/schema';
 
-export interface VPServer {
+// Extended interfaces with stats
+export interface ExtendedServer {
   id: string;
   name: string;
   description: string;
@@ -27,139 +25,280 @@ export interface VPServer {
     environment_variables?: Array<{
       name: string;
       description?: string;
-      required?: boolean;
     }>;
   }>;
-  remotes?: any[];
+  // Stats fields
+  installation_count: number;
+  rating: number;
+  rating_count: number;
+  active_installs?: number;
+  weekly_growth?: number;
 }
 
-export interface VPListServersResponse {
-  servers: VPServer[];
-  metadata: {
-    next_cursor?: string;
-    count: number;
-  };
+export interface ExtendedServersResponse {
+  servers: ExtendedServer[];
 }
 
-export interface VPQueryParams {
-  cursor?: string;
-  limit?: number;
-  name?: string;
-  repository_url?: string;
-  repository_source?: string;
+export interface ExtendedServerResponse {
+  server: ExtendedServer;
+}
+
+export interface ServerStats {
+  server_id: string;
+  installation_count: number;
+  rating: number;
+  rating_count: number;
+  active_installs?: number;
+  daily_active_users?: number;
+  monthly_active_users?: number;
+}
+
+export interface StatsResponse {
+  stats: ServerStats;
+}
+
+export interface RatingRequest {
+  rating: number;
+  source?: McpServerSource;
+}
+
+export interface RatingResponse {
+  success: boolean;
+  stats?: ServerStats;
+}
+
+export interface InstallRequest {
+  source?: McpServerSource;
+  user_id?: string;
   version?: string;
-  latest?: boolean;
-  package_registry?: 'npm' | 'docker' | 'pypi';
+  platform?: string;
+  timestamp?: number;
+}
+
+export interface InstallResponse {
+  success: boolean;
+  stats?: ServerStats;
+}
+
+export interface GlobalStats {
+  total_servers: number;
+  total_installs: number;
+  active_servers: number;
+  average_rating: number;
+  last_updated: string;
+}
+
+export interface LeaderboardEntry {
+  server: ExtendedServer;
+  rank: number;
+}
+
+export interface LeaderboardResponse {
+  data: LeaderboardEntry[];
+}
+
+export interface TrendingResponse {
+  servers: ExtendedServer[];
 }
 
 export class PluggedinRegistryVPClient {
   private baseUrl: string;
+  private vpUrl: string;
   
   constructor(baseUrl = process.env.REGISTRY_API_URL || 'https://registry.plugged.in') {
-    // Use /vp endpoint for v-plugged API
-    this.baseUrl = baseUrl.replace(/\/v\d+$/, '') + '/vp';
+    // Remove /v0 if present in baseUrl
+    this.baseUrl = baseUrl.replace(/\/v0$/, '');
+    this.vpUrl = `${this.baseUrl}/vp`;
   }
   
-  /**
-   * List servers with advanced filtering
-   */
-  async listServersWithFilters(params: VPQueryParams = {}): Promise<VPListServersResponse> {
-    const queryParams = new URLSearchParams();
+  // Get servers with stats
+  async getServersWithStats(
+    limit = 30, 
+    cursor?: string, 
+    source?: McpServerSource
+  ): Promise<ExtendedServersResponse> {
+    const params = new URLSearchParams({ limit: limit.toString() });
+    if (cursor) params.append('cursor', cursor);
+    if (source) params.append('source', source);
     
-    // Add parameters only if they exist
-    if (params.cursor) queryParams.append('cursor', params.cursor);
-    if (params.limit) queryParams.append('limit', params.limit.toString());
-    if (params.name) queryParams.append('name', params.name);
-    if (params.repository_url) queryParams.append('repository_url', params.repository_url);
-    if (params.repository_source) queryParams.append('repository_source', params.repository_source);
-    if (params.version) queryParams.append('version', params.version);
-    if (params.latest !== undefined) queryParams.append('latest', params.latest.toString());
-    if (params.package_registry) queryParams.append('package_registry', params.package_registry);
-    
-    const url = `${this.baseUrl}/servers${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-    console.log('[VP Client] Fetching:', url);
-    
-    const response = await fetch(url);
+    const response = await fetch(`${this.vpUrl}/servers?${params}`);
     if (!response.ok) {
-      throw new Error(`VP API error: ${response.status} ${response.statusText}`);
+      throw new Error(`Registry VP error: ${response.status} ${response.statusText}`);
     }
     
     return response.json();
   }
   
-  /**
-   * Get detailed server information
-   */
-  async getServerDetails(id: string): Promise<VPServer> {
-    const response = await fetch(`${this.baseUrl}/servers/${id}`);
+  // Get single server with stats
+  async getServerWithStats(serverId: string): Promise<ExtendedServer> {
+    const response = await fetch(`${this.vpUrl}/servers/${serverId}`);
     if (!response.ok) {
-      throw new Error(`Server not found: ${id}`);
+      throw new Error(`Server not found: ${serverId}`);
     }
     
-    return response.json();
+    const data: ExtendedServerResponse = await response.json();
+    return data.server;
   }
   
-  /**
-   * Search servers with text query and filters
-   * Note: Currently does client-side filtering until the API supports search query parameter
-   */
-  async searchServers(query: string, filters: Omit<VPQueryParams, 'cursor' | 'limit'> = {}): Promise<VPServer[]> {
-    const allServers: VPServer[] = [];
+  // Get all servers with stats
+  async getAllServersWithStats(source?: McpServerSource): Promise<ExtendedServer[]> {
+    const allServers: ExtendedServer[] = [];
     let cursor: string | undefined;
     
-    // Fetch all pages with filters
     do {
-      const response = await this.listServersWithFilters({
-        ...filters,
-        cursor,
-        limit: 100, // Max page size
-      });
-      
-      // Safely handle cases where servers might be null or undefined
-      if (response.servers && Array.isArray(response.servers)) {
-        allServers.push(...response.servers);
-      }
-      cursor = response.metadata?.next_cursor;
+      const response = await this.getServersWithStats(100, cursor, source);
+      allServers.push(...response.servers);
+      // VP API doesn't use cursor yet, but ready for when it does
+      cursor = undefined; // response.metadata?.next_cursor;
     } while (cursor);
     
-    // If no query, return all filtered results
+    return allServers;
+  }
+  
+  // Track installation
+  async trackInstallation(
+    serverId: string,
+    data: InstallRequest = {}
+  ): Promise<InstallResponse> {
+    try {
+      const response = await fetch(`${this.vpUrl}/servers/${serverId}/install`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to track installation:', response.status);
+        return { success: false };
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Error tracking installation:', error);
+      return { success: false };
+    }
+  }
+  
+  // Submit rating
+  async submitRating(
+    serverId: string,
+    rating: number,
+    source?: McpServerSource
+  ): Promise<RatingResponse> {
+    try {
+      const response = await fetch(`${this.vpUrl}/servers/${serverId}/rate`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ rating, source } as RatingRequest),
+      });
+      
+      if (!response.ok) {
+        console.error('Failed to submit rating:', response.status);
+        return { success: false };
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Error submitting rating:', error);
+      return { success: false };
+    }
+  }
+  
+  // Get server stats only
+  async getServerStats(serverId: string): Promise<ServerStats | null> {
+    try {
+      const response = await fetch(`${this.vpUrl}/servers/${serverId}/stats`);
+      if (!response.ok) {
+        return null;
+      }
+      
+      const data: StatsResponse = await response.json();
+      return data.stats;
+    } catch (error) {
+      console.error('Error getting server stats:', error);
+      return null;
+    }
+  }
+  
+  // Get global stats
+  async getGlobalStats(): Promise<GlobalStats | null> {
+    try {
+      const response = await fetch(`${this.vpUrl}/stats/global`);
+      if (!response.ok) {
+        return null;
+      }
+      
+      return response.json();
+    } catch (error) {
+      console.error('Error getting global stats:', error);
+      return null;
+    }
+  }
+  
+  // Get leaderboard
+  async getLeaderboard(
+    type: 'installs' | 'rating' | 'trending' = 'installs',
+    limit = 10
+  ): Promise<LeaderboardEntry[]> {
+    try {
+      const params = new URLSearchParams({
+        type,
+        limit: limit.toString(),
+      });
+      
+      const response = await fetch(`${this.vpUrl}/stats/leaderboard?${params}`);
+      if (!response.ok) {
+        return [];
+      }
+      
+      const data: LeaderboardResponse = await response.json();
+      return data.data;
+    } catch (error) {
+      console.error('Error getting leaderboard:', error);
+      return [];
+    }
+  }
+  
+  // Get trending servers
+  async getTrendingServers(limit = 20): Promise<ExtendedServer[]> {
+    try {
+      const params = new URLSearchParams({
+        limit: limit.toString(),
+      });
+      
+      const response = await fetch(`${this.vpUrl}/stats/trending?${params}`);
+      if (!response.ok) {
+        return [];
+      }
+      
+      const data: TrendingResponse = await response.json();
+      return data.servers;
+    } catch (error) {
+      console.error('Error getting trending servers:', error);
+      return [];
+    }
+  }
+  
+  // Search servers with stats
+  async searchServersWithStats(query: string, source?: McpServerSource): Promise<ExtendedServer[]> {
+    // For now, get all and filter client-side
+    // TODO: Use search endpoint when available
+    const allServers = await this.getAllServersWithStats(source);
+    
     if (!query) return allServers;
     
-    // Client-side text search (until API supports query parameter)
     const searchQuery = query.toLowerCase();
     return allServers.filter(server => 
       server.name.toLowerCase().includes(searchQuery) ||
       server.description?.toLowerCase().includes(searchQuery) ||
-      server.repository?.url?.toLowerCase().includes(searchQuery) ||
-      server.packages?.some(pkg => pkg.name.toLowerCase().includes(searchQuery))
+      server.repository?.url?.toLowerCase().includes(searchQuery)
     );
   }
-  
-  /**
-   * Get all servers with pagination (for caching purposes)
-   */
-  async getAllServers(filters: Omit<VPQueryParams, 'cursor' | 'limit'> = {}): Promise<VPServer[]> {
-    const allServers: VPServer[] = [];
-    let cursor: string | undefined;
-    
-    do {
-      const response = await this.listServersWithFilters({
-        ...filters,
-        cursor,
-        limit: 100,
-      });
-      
-      // Safely handle cases where servers might be null or undefined
-      if (response.servers && Array.isArray(response.servers)) {
-        allServers.push(...response.servers);
-      }
-      cursor = response.metadata?.next_cursor;
-      
-      // Log progress
-      console.log(`[VP Client] Fetched ${allServers.length} servers so far...`);
-    } while (cursor);
-    
-    console.log(`[VP Client] Total servers fetched: ${allServers.length}`);
-    return allServers;
-  }
 }
+
+// Export a singleton instance
+export const registryVPClient = new PluggedinRegistryVPClient();

@@ -48,9 +48,6 @@ export enum McpServerType {
 
 export enum McpServerSource {
   PLUGGEDIN = 'PLUGGEDIN',
-  SMITHERY = 'SMITHERY',
-  NPM = 'NPM',
-  GITHUB = 'GITHUB',
   COMMUNITY = 'COMMUNITY',
   REGISTRY = 'REGISTRY',
 }

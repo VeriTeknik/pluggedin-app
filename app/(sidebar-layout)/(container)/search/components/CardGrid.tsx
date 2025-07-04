@@ -1,6 +1,6 @@
 'use client';
 
-import { Award, Database, Download, Eye, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
+import { Database, Download, Eye, Github, MessageCircle, Package, Star, ThumbsUp, Trash2, UserPlus, Users } from 'lucide-react'; // Sorted alphabetically
 import * as LucideIcons from 'lucide-react';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
@@ -34,7 +34,6 @@ import { useToast } from '@/hooks/use-toast'; // Import useToast
 import { McpServerCategory, SearchIndex } from '@/types/search';
 import { getCategoryIcon } from '@/utils/categories';
 
-import { ClaimServerDialog } from './ClaimServerDialog';
 import { InstallDialog } from './InstallDialog';
 import { RateServerDialog } from './RateServerDialog';
 import { ReviewsDialog } from './ReviewsDialog'; // Import the new dialog
@@ -92,27 +91,6 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
           <span className="inline-block">Registry</span>
         </Badge>
       );
-    case McpServerSource.SMITHERY:
-      return (
-        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">
-          <Database className="h-3 w-3 flex-shrink-0" />
-          <span className="inline-block">Smithery</span>
-        </Badge>
-      );
-    case McpServerSource.NPM:
-      return (
-        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">
-          <Package className="h-3 w-3 flex-shrink-0" />
-          <span className="inline-block">NPM</span>
-        </Badge>
-      );
-    case McpServerSource.GITHUB:
-      return (
-        <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">
-          <Github className="h-3 w-3 flex-shrink-0" />
-          <span className="inline-block">GitHub</span>
-        </Badge>
-      );
     case McpServerSource.COMMUNITY:
       return (
         <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1 bg-blue-100 dark:bg-blue-900">
@@ -120,13 +98,15 @@ function SourceBadge({ source }: { source?: McpServerSource }) {
           <span className="inline-block">Community</span>
         </Badge>
       );
-    default:
+    case McpServerSource.PLUGGEDIN:
       return (
         <Badge variant="outline" className="gap-1 whitespace-normal text-center h-auto py-1">
           <Database className="h-3 w-3 flex-shrink-0" />
           <span className="inline-block">PluggedIn</span>
         </Badge>
       );
+    default:
+      return null; // Return null for unknown sources
   }
 }
 
@@ -228,46 +208,7 @@ export default function CardGrid({
   const [detailServer, setDetailServer] = useState<any | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
 
-  // State for claim dialog
-  const [claimServer, setClaimServer] = useState<{
-    uuid: string;
-    name: string;
-    template?: any;
-  } | null>(null);
-  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
 
-  // Check for saved claim state on mount (for returning from OAuth)
-  useEffect(() => {
-    const savedState = localStorage.getItem('claim_server_state');
-    if (savedState) {
-      try {
-        const state = JSON.parse(savedState);
-        // Find the server in the current items
-        const serverEntry = Object.entries(items).find(([_key, item]) => 
-          item.uuid === state.serverUuid || 
-          (item.source === McpServerSource.COMMUNITY && item.name === state.serverName)
-        );
-        
-        if (serverEntry) {
-          const [_key, item] = serverEntry;
-          // Re-open the claim dialog with the server
-          setClaimServer({
-            uuid: item.uuid || state.serverUuid,
-            name: item.name,
-            template: item.template || {
-              command: item.command,
-              args: item.args ? item.args.split(' ') : [],
-              env: item.env,
-              type: item.type,
-            }
-          });
-          setClaimDialogOpen(true);
-        }
-      } catch (e) {
-        console.error('Error restoring claim state:', e);
-      }
-    }
-  }, [items]);
 
   const handleInstallClick = async (key: string, item: any) => {
     if (!requireAuth('auth:loginToInstall', 'You must be logged in to install servers.')) return;
@@ -548,12 +489,6 @@ export default function CardGrid({
                     </Badge>
                   )}
                   <SourceBadge source={item.source} />
-                  {item.source === McpServerSource.COMMUNITY && item.is_claimed && (
-                    <Badge variant="secondary" className="gap-1">
-                      <Award className="h-3 w-3" />
-                      <span>Claimed</span>
-                    </Badge>
-                  )}
                 </div>
               </div>
               <CardDescription>{item.description}</CardDescription>
@@ -681,45 +616,13 @@ export default function CardGrid({
                     <Trash2 className='w-4 h-4 mr-2' />
                     Unshare
                   </Button>
-                ) : item.source === McpServerSource.COMMUNITY && !item.is_claimed && item.external_id ? (
-                  // Show claim button for unclaimed community servers
-                  <Button
-                    variant='outline'
-                    size="sm"
-                    onClick={() => {
-                      if (!requireAuth('auth:loginToClaim', 'You must be logged in to claim servers.')) return;
-                      if (!item.external_id) {
-                        toast({
-                          title: 'Error',
-                          description: 'Cannot claim server: Missing server ID',
-                          variant: 'destructive',
-                        });
-                        return;
-                      }
-                      setClaimServer({
-                        uuid: item.external_id,
-                        name: item.name,
-                        template: {
-                          command: item.command,
-                          args: item.args,
-                          env: item.envs,
-                          url: item.url,
-                          type: (item.command ? McpServerType.STDIO : item.url ? McpServerType.SSE : McpServerType.STDIO),
-                        }
-                      });
-                      setClaimDialogOpen(true);
-                    }}
-                  >
-                    <Award className='w-4 h-4 mr-2' />
-                    {t('search.card.claim', 'Claim')}
-                  </Button>
-                ) : isInstalled ? ( // Check if installed first
+                ) : isInstalled ? (
                   // Render disabled "Installed" button if installed
                   <Button variant='outline' size="sm" disabled className="pointer-events-none">
                     {t('search.card.installed')}
                   </Button>
                 ) : ( 
-                  // If not owned AND not installed, render Install button
+                  // Show Install button for all non-owned, non-installed servers
                   <Button
                     variant='default'
                     size="sm"
@@ -807,23 +710,6 @@ export default function CardGrid({
         </DialogContent>
       </Dialog>
 
-      {/* Claim Server Dialog */}
-      {claimServer && (
-        <ClaimServerDialog
-          open={claimDialogOpen}
-          onOpenChange={(open) => {
-            setClaimDialogOpen(open);
-            // If dialog is closing and we have a refresh callback, call it
-            if (!open && onRefreshNeeded) {
-              // Add a small delay to allow the backend to update
-              setTimeout(() => {
-                onRefreshNeeded();
-              }, 1000);
-            }
-          }}
-          server={claimServer}
-        />
-      )}
     </>
   );
 }

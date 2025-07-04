@@ -6,7 +6,7 @@ import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { db } from '@/db';
 import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
-import { PluggedinRegistryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
+import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
 // Legacy imports - commented out as these sources are deprecated
@@ -25,9 +25,6 @@ import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
 
 // Cache TTL in minutes for each source
 const CACHE_TTL: Record<McpServerSource, number> = {
-  [McpServerSource.SMITHERY]: 60, // 1 hour - DEPRECATED
-  [McpServerSource.NPM]: 360, // 6 hours - DEPRECATED
-  [McpServerSource.GITHUB]: 1440, // 24 hours - DEPRECATED
   [McpServerSource.PLUGGEDIN]: 1440, // 24 hours
   [McpServerSource.COMMUNITY]: 15, // 15 minutes - community content may change frequently
   [McpServerSource.REGISTRY]: 1, // 1 minute for registry - to quickly reflect newly claimed servers
@@ -67,28 +64,27 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(paginated);
       }
 
-      // Handle registry source
+      // Handle registry source - stats already included from VP API
       if (source === McpServerSource.REGISTRY) {
         results = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
         const paginated = paginateResults(results, offset, pageSize);
         return NextResponse.json(paginated);
       }
 
-      // Check cache first for legacy sources
-      const cachedResults = await checkCache(source, query);
-      
-      if (cachedResults) {
-        // Enrich cached results with metrics
-        const enrichedResults = await enrichWithMetrics(cachedResults);
-        // Paginate enriched results
-        const paginatedResults = paginateResults(enrichedResults, offset, pageSize);
-        return NextResponse.json(paginatedResults);
-      }
-      
-      // Legacy sources are deprecated - return empty results
-      if (source === McpServerSource.SMITHERY || 
-          source === McpServerSource.NPM || 
-          source === McpServerSource.GITHUB) {
+      // For PLUGGEDIN source, check cache
+      if (source === McpServerSource.PLUGGEDIN) {
+        const cachedResults = await checkCache(source, query);
+        
+        if (cachedResults) {
+          // Enrich cached results with metrics
+          const enrichedResults = await enrichWithMetrics(cachedResults);
+          // Paginate enriched results
+          const paginatedResults = paginateResults(enrichedResults, offset, pageSize);
+          return NextResponse.json(paginatedResults);
+        }
+        
+        // TODO: Implement PLUGGEDIN source search
+        // For now, return empty results
         return NextResponse.json({
           results: {},
           total: 0,
@@ -98,7 +94,7 @@ export async function GET(request: NextRequest) {
         } as PaginatedSearchResult);
       }
       
-      // Return empty results for any other unsupported sources
+      // Any other source is unsupported
       return NextResponse.json({
         results: {},
         total: 0,
@@ -106,28 +102,18 @@ export async function GET(request: NextRequest) {
         pageSize,
         hasMore: false,
       } as PaginatedSearchResult);
-      
-      // Enrich results with metrics before caching
-      results = await enrichWithMetrics(results);
-      
-      // Cache the enriched results
-      await cacheResults(source, query, results);
-      
-      // Paginate and return results
-      const paginatedResults = paginateResults(results, offset, pageSize);
-      return NextResponse.json(paginatedResults);
     }
     
     // If no source specified, search registry and community
     const registryEnabled = process.env.REGISTRY_ENABLED !== 'false';
     
     if (registryEnabled) {
-      // Get registry results
+      // Get registry results - these already include stats from VP API
       const registryResults = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
       Object.assign(results, registryResults);
     }
     
-    // Always include community results (excluding claimed servers when showing all)
+    // Always include community results - these need local metrics enrichment
     const communityResults = await searchCommunity(query, false); // Include claimed servers when showing all
     Object.assign(results, communityResults);
     
@@ -157,31 +143,29 @@ interface RegistryFilters {
 async function searchRegistry(query: string, filters: RegistryFilters = {}): Promise<SearchIndex> {
   console.log('searchRegistry called with query:', query, 'filters:', filters);
   try {
-    const vpClient = new PluggedinRegistryVPClient();
-    
-    // Prepare VP API filters
-    const vpFilters = {
-      package_registry: filters.packageRegistry || undefined,
-      repository_source: filters.repositorySource || undefined,
-      latest: filters.latestOnly || undefined,
-      version: filters.version || undefined,
-    };
-    
-    console.log('Fetching from VP API with filters:', vpFilters);
-    
-    // Use VP API to search with filters
-    const servers = await vpClient.searchServers(query, vpFilters);
+    // Use VP API to get servers with stats included
+    const servers = await registryVPClient.searchServersWithStats(query, McpServerSource.REGISTRY);
     
     // Transform and index
     const indexed: SearchIndex = {};
     for (const server of servers) {
       const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
       
+      // Add stats from VP API response
+      mcpIndex.installation_count = server.installation_count || 0;
+      mcpIndex.rating = server.rating || 0;
+      mcpIndex.ratingCount = server.rating_count || 0;
+      
       // Debug log for special servers
       if (server.name?.includes('youtube') || server.name?.includes('sqlite')) {
-        console.log('[Search API] Transforming server:', {
+        console.log('[Search API] Transforming server with stats:', {
           name: server.name,
           packages: server.packages,
+          stats: {
+            installation_count: server.installation_count,
+            rating: server.rating,
+            rating_count: server.rating_count
+          },
           transformed: mcpIndex
         });
       }
@@ -189,9 +173,9 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
       indexed[server.id] = mcpIndex;
     }
     
-    console.log(`[Search API] Found ${Object.keys(indexed).length} servers`);
+    console.log(`[Search API] Found ${Object.keys(indexed).length} servers with stats`);
     
-    // Return results
+    // Return results - no need to enrich with metrics as stats are already included
     return indexed;
     
   } catch (error) {

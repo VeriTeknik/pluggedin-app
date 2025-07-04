@@ -4,8 +4,53 @@ import { and, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { McpServerSource, profilesTable, searchCacheTable, serverInstallationsTable, serverReviews } from '@/db/schema';
+import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { MetricsResponse } from '@/types/reviews';
 import { SearchIndex } from '@/types/search';
+
+/**
+ * Submit rating to registry
+ */
+async function submitRatingToRegistry(
+  serverId: string,
+  rating: number,
+  source: McpServerSource
+) {
+  try {
+    const result = await registryVPClient.submitRating(serverId, rating, source);
+    return result;
+  } catch (error) {
+    console.error('Error submitting rating to registry:', error);
+    return { success: false };
+  }
+}
+
+/**
+ * Track installation in registry
+ */
+async function trackInstallationInRegistry(
+  serverId: string,
+  source: McpServerSource,
+  metadata?: {
+    userId?: string;
+    version?: string;
+    platform?: string;
+  }
+) {
+  try {
+    const result = await registryVPClient.trackInstallation(serverId, {
+      source,
+      user_id: metadata?.userId,
+      version: metadata?.version,
+      platform: metadata?.platform,
+      timestamp: Date.now()
+    });
+    return result;
+  } catch (error) {
+    console.error('Error tracking installation in registry:', error);
+    return { success: false };
+  }
+}
 
 /**
  * Track a server installation
@@ -53,13 +98,21 @@ export const trackServerInstallation = async (input: {
       };
     }
 
-    // Record the installation
+    // Record the installation locally
     await db.insert(serverInstallationsTable).values({
       profile_uuid: input.profileUuid,
       server_uuid: input.serverUuid || undefined,
       external_id: input.externalId || undefined,
       source: input.source || McpServerSource.PLUGGEDIN,
     });
+
+    // Also track in registry if it's a registry or community server
+    if (input.externalId && (input.source === McpServerSource.REGISTRY || input.source === McpServerSource.COMMUNITY)) {
+      await trackInstallationInRegistry(input.externalId, input.source).catch(error => {
+        console.error('Failed to track installation in registry:', error);
+        // Don't fail the local tracking if registry tracking fails
+      });
+    }
 
     // Create notification for the server owner if it's a shared server
     if (input.source === McpServerSource.COMMUNITY && input.externalId) {
@@ -219,6 +272,14 @@ export async function rateServer(
           );
       }
       
+      // Also submit updated rating to registry if it's a registry or community server
+      if (externalId && (source === McpServerSource.REGISTRY || source === McpServerSource.COMMUNITY)) {
+        await submitRatingToRegistry(externalId, rating, source).catch(error => {
+          console.error('Failed to submit rating to registry:', error);
+          // Don't fail the local rating if registry submission fails
+        });
+      }
+      
       // Update cache for external servers
       if (externalId && source) {
         await updateServerInCache({ externalId, source }).catch(error => {
@@ -233,7 +294,7 @@ export async function rateServer(
       };
     }
 
-    // Create new rating
+    // Create new rating locally
     await db.insert(serverReviews).values({
       user_id: userId,
       server_external_id: externalId!,
@@ -241,6 +302,14 @@ export async function rateServer(
       rating,
       comment,
     });
+
+    // Also submit to registry if it's a registry or community server
+    if (externalId && (source === McpServerSource.REGISTRY || source === McpServerSource.COMMUNITY)) {
+      await submitRatingToRegistry(externalId, rating, source).catch(error => {
+        console.error('Failed to submit rating to registry:', error);
+        // Don't fail the local rating if registry submission fails
+      });
+    }
 
     // Update cache for external servers
     if (externalId && source) {
