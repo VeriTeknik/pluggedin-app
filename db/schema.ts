@@ -50,6 +50,9 @@ export enum McpServerSource {
   PLUGGEDIN = 'PLUGGEDIN',
   COMMUNITY = 'COMMUNITY',
   REGISTRY = 'REGISTRY',
+  GITHUB = 'GITHUB',
+  SMITHERY = 'SMITHERY',
+  NPM = 'NPM',
 }
 
 export const mcpServerStatusEnum = pgEnum(

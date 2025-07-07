@@ -305,7 +305,7 @@ export function InstallDialog({
                       <FormField
                         key={env.key}
                         control={form.control}
-                        name={`env_${env.key}`}
+                        name={`env_${env.key}` as any}
                         render={({ field }) => (
                           <FormItem>
                             <div className="space-y-2">
