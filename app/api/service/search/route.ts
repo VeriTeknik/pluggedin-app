@@ -27,6 +27,9 @@ const CACHE_TTL: Record<McpServerSource, number> = {
   [McpServerSource.PLUGGEDIN]: 1440, // 24 hours
   [McpServerSource.COMMUNITY]: 15, // 15 minutes - community content may change frequently
   [McpServerSource.REGISTRY]: 1, // 1 minute for registry - to quickly reflect newly claimed servers
+  [McpServerSource.GITHUB]: 30, // 30 minutes for GitHub sources
+  [McpServerSource.SMITHERY]: 10, // 10 minutes for Smithery
+  [McpServerSource.NPM]: 60, // 1 hour for NPM packages
 };
 
 // Note: We no longer cache all registry servers since VP API provides efficient filtering

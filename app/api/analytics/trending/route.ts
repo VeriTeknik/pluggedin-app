@@ -3,9 +3,10 @@ import { NextResponse } from 'next/server';
 import { analytics } from '@/lib/analytics/analytics-service';
 
 export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const limit = parseInt(searchParams.get('limit') || '10');
+  
   try {
-    const { searchParams } = new URL(request.url);
-    const limit = parseInt(searchParams.get('limit') || '10');
     
     // Check if analytics is enabled
     const analyticsEnabled = process.env.ANALYTICS_ENABLED === 'true';

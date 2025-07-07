@@ -74,28 +74,45 @@ export async function POST(request: Request) {
 
     // Forward ALL MCP activity to analytics service
     try {
-      // Map action to event type
-      const eventType: 'usage' | 'error' = success ? 'usage' : 'error';
-      
-      await analytics.track({
-        type: eventType,
-        serverId: serverUuid,
-        userId: auth.user?.id || 'anonymous',
-        toolName: itemName, // This will be tool name, prompt name, or resource URI
-        duration: executionTime || 0,
-        success,
-        error: !success ? (errorMessage || 'Unknown error') : undefined,
-        context: action, // Preserve the action type in context
-        metadata: {
-          source: 'mcp-proxy',
-          profileId: auth.activeProfile.uuid,
-          projectId: auth.activeProfile.project_uuid,
-          serverName,
-          action, // Include the original action type
-          sessionId: `mcp-${auth.activeProfile.uuid}-${Date.now()}`, // Generate session ID
-          itemType: action, // tool_call, prompt_get, or resource_read
-        },
-      });
+      if (success) {
+        // Track successful usage
+        await analytics.track({
+          type: 'usage',
+          serverId: serverUuid,
+          userId: auth.user?.id || 'anonymous',
+          toolName: itemName, // This will be tool name, prompt name, or resource URI
+          duration: executionTime || 0,
+          success: true,
+          metadata: {
+            source: 'mcp-proxy',
+            profileId: auth.activeProfile.uuid,
+            projectId: auth.activeProfile.project_uuid,
+            serverName,
+            action, // Include the original action type
+            sessionId: `mcp-${auth.activeProfile.uuid}-${Date.now()}`, // Generate session ID
+            itemType: action, // tool_call, prompt_get, or resource_read
+          },
+        });
+      } else {
+        // Track error
+        await analytics.track({
+          type: 'error',
+          serverId: serverUuid,
+          userId: auth.user?.id || 'anonymous',
+          error: errorMessage || 'Unknown error',
+          context: action, // Required context field
+          metadata: {
+            source: 'mcp-proxy',
+            profileId: auth.activeProfile.uuid,
+            projectId: auth.activeProfile.project_uuid,
+            serverName,
+            toolName: itemName, // Include tool name in metadata instead
+            action,
+            sessionId: `mcp-${auth.activeProfile.uuid}-${Date.now()}`,
+            itemType: action,
+          },
+        });
+      }
     } catch (analyticsError) {
       // Don't fail the request if analytics fails
       console.error('Failed to track analytics:', analyticsError);

@@ -248,7 +248,19 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
     // Extract command, args, and envs from the transformed data
     const command = transformedServer.command;
     const args = transformedServer.args;
-    const env = transformedServer.envs;
+    const envArray = transformedServer.envs;
+    
+    // Convert env array to object format expected by createMcpServer
+    const env: { [key: string]: string } = {};
+    if (envArray && Array.isArray(envArray)) {
+      envArray.forEach(envVar => {
+        if (typeof envVar === 'object' && envVar.name) {
+          env[envVar.name] = ''; // Default empty value, user will fill it in
+        } else if (typeof envVar === 'string') {
+          env[envVar] = ''; // If it's just a string, use it as the key
+        }
+      });
+    }
     
     // Determine the transport type based on packages
     const transportType = inferTransportFromPackages(server.packages);
@@ -273,7 +285,7 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
     if (result.success) {
       return { 
         success: true, 
-        server: result.server,
+        data: result.data,
         message: 'Server imported successfully from registry' 
       };
     } else {

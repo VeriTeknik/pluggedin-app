@@ -4,6 +4,7 @@ import { z } from 'zod';
 const ANALYTICS_API_URL = process.env.ANALYTICS_API_URL || 'https://analytics.plugged.in';
 const ANALYTICS_API_USER = process.env.ANALYTICS_API_USERNAME || 'admin';
 const ANALYTICS_API_PASS = process.env.ANALYTICS_API_PASSWORD || 'o6FdPN55UJLuP0';
+const ANALYTICS_ENABLED = process.env.ANALYTICS_ENABLED !== 'false' && process.env.NODE_ENV !== 'development';
 
 // Response schemas
 const RatingSchema = z.object({
@@ -79,14 +80,31 @@ export class AnalyticsAPIClient {
    * Common fetch wrapper with auth headers
    */
   private async fetchWithAuth(url: string, options?: RequestInit): Promise<Response> {
-    return fetch(url, {
+    // In development, allow self-signed certificates
+    const isDevelopment = process.env.NODE_ENV === 'development';
+    
+    const fetchOptions: RequestInit = {
       ...options,
       headers: {
         'Authorization': `Basic ${this.auth}`,
         'Content-Type': 'application/json',
         ...options?.headers,
       },
-    });
+    };
+
+    // For Node.js environments in development, handle self-signed certificates
+    if (isDevelopment && typeof process !== 'undefined' && process.env) {
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    }
+
+    try {
+      return await fetch(url, fetchOptions);
+    } finally {
+      // Restore TLS verification after request
+      if (isDevelopment && typeof process !== 'undefined' && process.env) {
+        delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+      }
+    }
   }
 
   /**
@@ -240,6 +258,11 @@ export class AnalyticsAPIClient {
    * Get server statistics
    */
   async getServerStats(serverId: string): Promise<ServerMetrics | null> {
+    if (!ANALYTICS_ENABLED) {
+      console.log('[Analytics API] Analytics disabled in development mode');
+      return null;
+    }
+
     try {
       const response = await this.fetchWithAuth(
         `${this.baseUrl}/servers/${serverId}/stats`
@@ -389,6 +412,11 @@ export class AnalyticsAPIClient {
    * Get user's ratings
    */
   async getUserRatings(userId: string): Promise<Array<{ server_id: string; rating: number; comment?: string; timestamp: string }>> {
+    if (!ANALYTICS_ENABLED) {
+      console.log('[Analytics API] Analytics disabled in development mode');
+      return [];
+    }
+
     try {
       const response = await this.fetchWithAuth(
         `${this.baseUrl}/users/${userId}/ratings`

@@ -19,20 +19,17 @@ export async function withConsoleCapture<T extends any[], R>(
       // Execute the server action
       const result = await serverAction(...args);
       
-      // Stop capturing
-      capture.stop();
+      // Stop capturing and get logs
+      const logs = capture.stop();
       
       // Return both the result and captured logs
       return {
         result,
-        logs: capture.getFormattedOutput(),
+        logs,
       };
     } catch (error) {
-      // Make sure to stop capturing on error
-      capture.stop();
-      
-      // Include error logs in the output
-      const logs = capture.getFormattedOutput();
+      // Make sure to stop capturing on error and get logs
+      const logs = capture.stop();
       
       // Re-throw with logs attached
       if (error instanceof Error) {
@@ -100,7 +97,9 @@ export async function discoverWithLogs(
   });
   
   return {
-    ...result,
+    success: result?.success ?? false,
+    data: result?.data,
+    error: result?.error,
     logs: output,
   };
 }
@@ -112,6 +111,10 @@ export function createDiscoveryAction<T extends any[], R>(
   discoveryFn: (...args: T) => Promise<R>
 ) {
   return async (...args: T): Promise<{ result: R; logs: string[] }> => {
-    return ConsoleCapture.captureAsync(() => discoveryFn(...args));
+    const { result, output } = await ConsoleCapture.captureAsync(() => discoveryFn(...args));
+    return { 
+      result: result as R, 
+      logs: output 
+    };
   };
 }

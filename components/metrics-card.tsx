@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { LucideIcon } from 'lucide-react';
+import React from 'react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 interface MetricsCardProps {
   title: string;
   value: string | number;
-  icon: LucideIcon;
+  icon: React.ComponentType<any>;
   trend?: {
     value: number;
     isPositive: boolean;

@@ -358,7 +358,7 @@ export function UnifiedServerCard({
                             <Link
                               href={server.shared_by_profile_url}
                               className="text-sm hover:underline"
-                              onClick={(e) => e.stopPropagation()}
+                              onClick={(e: React.MouseEvent) => e.stopPropagation()}
                             >
                               {server.shared_by}
                             </Link>
@@ -418,7 +418,7 @@ export function UnifiedServerCard({
                   href={server.githubUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  onClick={(e) => e.stopPropagation()}
+                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
                 >
                   <Github className="w-4 h-4 mr-2" />
                   GitHub

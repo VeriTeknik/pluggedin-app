@@ -12,12 +12,12 @@ export async function GET() {
       const metrics = await analytics.getGlobalMetrics();
       
       // Transform the response to match frontend expectations
-      // The analytics API returns: { total_installs, active_users, events_today, total_servers }
+      // The analytics API returns: { totalInstalls, totalViews, activeUsers, avgUsageTime, trends }
       const transformedMetrics = {
-        totalInstalls: metrics.totalInstalls || metrics.total_installs || 0,
-        totalViews: metrics.totalViews || metrics.events_today || 0, // Use events_today as a proxy for views
-        activeUsers: metrics.activeUsers || metrics.active_users || 0,
-        avgUsageTime: metrics.avgUsageTime || 0, // Not provided by analytics API yet
+        totalInstalls: metrics.totalInstalls || 0,
+        totalViews: metrics.totalViews || 0,
+        activeUsers: metrics.activeUsers || 0,
+        avgUsageTime: metrics.avgUsageTime || 0,
         trends: metrics.trends || {
           installs: {
             value: 0,

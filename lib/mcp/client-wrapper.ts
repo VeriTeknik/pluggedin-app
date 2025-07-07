@@ -80,7 +80,7 @@ const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 async function isCommandAvailable(command: string): Promise<boolean> {
   try {
     // Try using 'command -v' which is more portable than 'which'
-    execSync(`command -v ${command}`, { stdio: 'ignore', shell: true });
+    execSync(`command -v ${command}`, { stdio: 'ignore' });
     return true;
   } catch {
     // Fallback: check common binary locations

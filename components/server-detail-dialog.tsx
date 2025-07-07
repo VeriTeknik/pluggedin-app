@@ -131,11 +131,11 @@ export function ServerDetailDialog({
                 version: data.version_detail?.version,
                 author: data.repository?.id ? data.repository.id.split('/')[0] : undefined,
                 homepage: data.repository?.url,
-                tags: data.tags || [],
-                created_at: data.created_at,
+                tags: (data as any).tags || [],
+                created_at: (data as any).created_at,
                 updated_at: data.version_detail?.release_date,
-                downloads: data.downloads,
-                stars: data.stars,
+                downloads: (data as any).downloads,
+                stars: (data as any).stars,
               });
             }
           }

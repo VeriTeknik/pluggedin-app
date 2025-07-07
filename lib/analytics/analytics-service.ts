@@ -170,7 +170,7 @@ class AnalyticsService {
           metadata: {
             ...event.metadata,
             timestamp: event.timestamp,
-          },
+          } as Record<string, any>,
         };
 
         // Add type-specific fields to metadata
