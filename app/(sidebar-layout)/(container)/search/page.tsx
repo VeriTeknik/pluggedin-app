@@ -10,6 +10,7 @@ import useSWR from 'swr';
 
 import { createMcpServer, getMcpServers } from '@/app/actions/mcp-servers';
 import { IntelligentServerDialog } from '@/components/intelligent-server-dialog';
+import { SmartServerWizard } from '@/app/(sidebar-layout)/(container)/mcp-servers/components/smart-server-wizard/SmartServerWizard';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -709,12 +710,14 @@ function SearchContent() {
       </div>
 
       {showAddServerWizard && (
-        <IntelligentServerDialog 
+        <SmartServerWizard
           open={showAddServerWizard} 
           onOpenChange={setShowAddServerWizard}
-          onSubmit={handleCreateServers}
-          profileUuid={profileUuid}
-          existingServers={installedServersData}
+          onSuccess={() => {
+            setShowAddServerWizard(false);
+            // Refresh the search results
+            mutate();
+          }}
         />
       )}
     </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Loader2, Package, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Package, Sparkles, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -29,6 +29,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
 import { cn } from '@/lib/utils';
+import { SmartServerWizard } from './smart-server-wizard/SmartServerWizard';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface SmartServerDialogProps {
   open: boolean;
@@ -136,6 +138,7 @@ export function SmartServerDialog({
   isSubmitting
 }: SmartServerDialogProps) {
   const { } = useTranslation();
+  const [mode, setMode] = useState<'quick' | 'wizard'>('quick');
   const [input, setInput] = useState('');
   const [analysis, setAnalysis] = useState<InputAnalysis | null>(null);
   const [parsedConfigs, setParsedConfigs] = useState<ParsedConfig[]>([]);
@@ -680,17 +683,49 @@ export function SmartServerDialog({
     setInput(EXAMPLES[example].config);
   };
 
+  // Show wizard mode if selected
+  if (mode === 'wizard') {
+    return (
+      <SmartServerWizard
+        open={open}
+        onOpenChange={(newOpen) => {
+          if (!newOpen) {
+            setMode('quick'); // Reset to quick mode when closing
+          }
+          onOpenChange(newOpen);
+        }}
+        onSuccess={() => {
+          setMode('quick');
+          onOpenChange(false);
+        }}
+      />
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            Smart Add Server
-          </DialogTitle>
-          <DialogDescription>
-            Paste a registry ID (io.github.owner/repo), GitHub URL, JSON configuration, or command to add MCP servers.
-          </DialogDescription>
+          <div className="space-y-3">
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Smart Add Server
+            </DialogTitle>
+            <DialogDescription>
+              Paste a registry ID (io.github.owner/repo), GitHub URL, JSON configuration, or command to add MCP servers.
+            </DialogDescription>
+            {/* Mode Toggle */}
+            <ToggleGroup type="single" value={mode} onValueChange={(value) => value && setMode(value as 'quick' | 'wizard')} className="justify-start">
+              <ToggleGroupItem value="quick" aria-label="Quick add mode">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Quick Add
+              </ToggleGroupItem>
+              <ToggleGroupItem value="wizard" aria-label="Wizard mode">
+                <Wand2 className="h-4 w-4 mr-2" />
+                Guided Setup
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
