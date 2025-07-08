@@ -205,12 +205,6 @@ export function ServerDetailDialog({
                 Registry
               </Badge>
             )}
-            {server.source === McpServerSource.GITHUB && (
-              <Badge variant="outline">
-                <GitBranch className="h-3 w-3 mr-1" />
-                GitHub
-              </Badge>
-            )}
             {server.source === McpServerSource.COMMUNITY && (
               <Badge variant="secondary">
                 <Users className="h-3 w-3 mr-1" />

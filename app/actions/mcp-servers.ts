@@ -189,16 +189,7 @@ export async function deleteMcpServerByUuid(
 
     const userId = profileData?.project?.user_id || 'anonymous';
 
-    // Track uninstallation to analytics service
-    const { trackUninstall } = await import('@/lib/analytics/analytics-service');
-    await trackUninstall(
-      server.external_id || server.uuid,
-      userId,
-      'user_deleted'
-    ).catch(error => {
-      console.error('Failed to track uninstallation to analytics:', error);
-      // Don't fail the operation if analytics tracking fails
-    });
+    // TODO: Track uninstallation to new analytics service when available
 
     // Remove from local installations table
     if (server.external_id && server.source) {

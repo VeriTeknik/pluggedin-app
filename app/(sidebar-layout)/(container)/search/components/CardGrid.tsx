@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { unshareServer } from '@/app/actions/social';
@@ -17,7 +17,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { McpServerSource, McpServerType } from '@/db/schema';
-import { useAnalytics } from '@/hooks/use-analytics';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { SearchIndex } from '@/types/search';
@@ -69,39 +68,11 @@ export default function CardGrid({
 }) {
   const { t } = useTranslation();
   const { toast } = useToast(); // Initialize toast
-  const { track } = useAnalytics();
   const { isAuthenticated, signIn } = useAuth();
   const [showAuthDialog, setShowAuthDialog] = useState(false);
   const [authDialogMessage, setAuthDialogMessage] = useState<{ key: string; defaultMsg: string } | null>(null);
-  const [trackedViews, setTrackedViews] = useState<Set<string>>(new Set());
 
-  // Track views for all visible servers
-  useEffect(() => {
-    const visibleServers = Object.entries(items);
-    const newViews: string[] = [];
-
-    visibleServers.forEach(([key, item]) => {
-      // Create a unique ID for this server
-      const serverId = item.external_id || key;
-      
-      // Only track if we haven't tracked this view yet
-      if (!trackedViews.has(serverId)) {
-        newViews.push(serverId);
-        
-        // Track the view event
-        track({
-          type: 'view',
-          serverId,
-          source: 'search',
-        });
-      }
-    });
-
-    // Update tracked views
-    if (newViews.length > 0) {
-      setTrackedViews(prev => new Set([...prev, ...newViews]));
-    }
-  }, [items, track, trackedViews]);
+  // Analytics tracking removed - will be replaced with new analytics service
 
   // Helper function to check authentication and show a dialog if not authenticated
   const requireAuth = (descriptionKey: string, descriptionDefault: string): boolean => {
@@ -227,13 +198,7 @@ export default function CardGrid({
   const handleViewDetailsClick = (e: React.MouseEvent, item: any) => {
     e.stopPropagation(); // Prevent card click
     
-    // Track detail view
-    const serverId = item.external_id || item.name;
-    track({
-      type: 'view',
-      serverId,
-      source: 'detail',
-    });
+    // Analytics tracking removed - will be replaced with new analytics service
     
     // Debug logging
     console.log('[CardGrid] handleViewDetailsClick - item data:', {

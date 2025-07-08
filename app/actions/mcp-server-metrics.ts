@@ -129,16 +129,7 @@ export const trackServerInstallation = async (input: {
       source: input.source || McpServerSource.PLUGGEDIN,
     });
 
-    // Track installation to analytics service
-    const { trackInstall } = await import('@/lib/analytics/analytics-service');
-    await trackInstall(
-      input.externalId || input.serverUuid,
-      userId,
-      input.source || 'pluggedin'
-    ).catch(error => {
-      console.error('Failed to track installation to analytics:', error);
-      // Don't fail the operation if analytics tracking fails
-    });
+    // TODO: Track installation to new analytics service when available
 
     // Also track in registry if it's a registry or community server
     if (input.externalId && (input.source === McpServerSource.REGISTRY || input.source === McpServerSource.COMMUNITY)) {
@@ -284,35 +275,12 @@ export async function rateServer(
       
       console.log('[rateServer] Rating submitted successfully');
 
-      // Track rating event to analytics
-      const { trackRating } = await import('@/lib/analytics/analytics-service');
-      await trackRating(externalId, userId, rating).catch(error => {
-        console.error('[rateServer] Failed to track rating to analytics:', error);
-      });
-
-      // Also track comment event separately if provided
-      if (comment) {
-        const { trackComment } = await import('@/lib/analytics/analytics-service');
-        await trackComment(externalId, userId, comment).catch(error => {
-          console.error('[rateServer] Failed to track comment to analytics:', error);
-        });
-      }
+      // TODO: Track rating and comment events to new analytics service when available
       
       return { success: true };
     } else if (serverUuid) {
       // For local PluggedIn servers, we'll need to implement this later
-      // For now, just track in analytics
-      const { analytics } = await import('@/lib/analytics/analytics-service');
-      await analytics.track({
-        type: 'rating',
-        serverId: serverUuid,
-        userId,
-        rating,
-        metadata: {
-          comment,
-          source: McpServerSource.PLUGGEDIN,
-        },
-      });
+      // TODO: Track rating to new analytics service when available
       
       return { success: true };
     }
@@ -354,23 +322,8 @@ export async function getServerRatingMetrics(params: {
       }
     }
     
-    // For PluggedIn servers, get from analytics API
-    const { analyticsAPIClient } = await import('@/lib/analytics/analytics-api-client');
-    const serverStats = await analyticsAPIClient.getServerStats(params.externalId);
-    
-    if (serverStats) {
-      return {
-        success: true,
-        metrics: {
-          averageRating: serverStats.average_rating || 0,
-          ratingCount: serverStats.rating_count || 0,
-          installationCount: serverStats.total_installs || 0,
-        }
-      };
-    }
-
-    // If no stats found, return zeros
-    return { 
+    // Analytics API deprecated - return default values until new analytics service is ready
+    return {
       success: true,
       metrics: {
         averageRating: 0,

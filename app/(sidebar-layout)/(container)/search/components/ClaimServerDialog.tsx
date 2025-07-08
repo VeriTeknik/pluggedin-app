@@ -19,7 +19,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAnalytics } from '@/hooks/use-analytics';
 
 interface ClaimServerDialogProps {
   open: boolean;
@@ -35,7 +34,6 @@ interface ClaimServerDialogProps {
 
 export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDialogProps) {
   const { t } = useTranslation();
-  const { track } = useAnalytics();
   const [repositoryUrl, setRepositoryUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasGitHub, setHasGitHub] = useState(false);
@@ -163,11 +161,7 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
       });
 
       if (result.success) {
-        // Track claim event
-        track({
-          type: 'claim',
-          serverId: server.uuid,
-        });
+        // Analytics tracking removed - will be replaced with new analytics service
         
         // Show appropriate message based on whether it was published
         if (result.warning) {

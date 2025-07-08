@@ -10,8 +10,6 @@ import useSWR from 'swr';
 
 import { createMcpServer, getMcpServers } from '@/app/actions/mcp-servers';
 import { IntelligentServerDialog } from '@/components/intelligent-server-dialog';
-import { LiveMetrics } from '@/components/live-metrics';
-import { TrendingServers } from '@/components/trending-servers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -327,8 +325,6 @@ function SearchContent() {
         )}
       </div>
 
-      {/* Live Metrics Dashboard */}
-      <LiveMetrics />
 
       {/* Trending and Search Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -701,9 +697,14 @@ function SearchContent() {
           </div>
         </div>
 
-        {/* Trending Servers Sidebar */}
+        {/* Trending Servers Sidebar - Temporarily disabled */}
         <div className="lg:col-span-1">
-          <TrendingServers limit={5} />
+          <div className="p-4 rounded-lg border bg-card">
+            <h3 className="font-semibold mb-2">{t('search.trending.title', 'Trending Servers')}</h3>
+            <p className="text-sm text-muted-foreground">
+              {t('search.trending.comingSoon', 'Trending servers will be available with the new analytics service.')}
+            </p>
+          </div>
         </div>
       </div>
 

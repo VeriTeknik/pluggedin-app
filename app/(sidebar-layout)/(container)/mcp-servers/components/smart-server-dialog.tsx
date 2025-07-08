@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, GitBranch, Loader2, Package, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Package, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -624,7 +624,7 @@ export function SmartServerDialog({
       command: 'npx',
       args: [`@${owner}/${repo}`],
       status: McpServerStatus.ACTIVE,
-      source: McpServerSource.GITHUB,
+      source: McpServerSource.COMMUNITY,
       external_id: `${owner}/${repo}`
     };
   };
@@ -821,15 +821,6 @@ export function SmartServerDialog({
                               >
                                 <Package className="h-3 w-3 mr-1" />
                                 Registry
-                              </Badge>
-                            )}
-                            {config.source === McpServerSource.GITHUB && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-xs"
-                              >
-                                <GitBranch className="h-3 w-3 mr-1" />
-                                GitHub
                               </Badge>
                             )}
                             {testResult && (

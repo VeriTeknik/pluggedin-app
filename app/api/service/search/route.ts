@@ -8,28 +8,12 @@ import { McpServerSource, profilesTable, projectsTable, searchCacheTable, shared
 import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
-// Legacy imports - commented out as these sources are deprecated
-// import {
-//   fetchAwesomeMcpServersList,
-//   getGitHubRepoAsMcpServer,
-//   getRepoPackageJson,
-//   searchGitHubRepos,
-// } from '@/utils/github';
-// import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
-// import {
-//   fetchSmitheryServerDetails,
-//   getMcpServerFromSmitheryServer,
-//   updateMcpServerWithDetails,
-// } from '@/utils/smithery';
 
 // Cache TTL in minutes for each source
 const CACHE_TTL: Record<McpServerSource, number> = {
   [McpServerSource.PLUGGEDIN]: 1440, // 24 hours
   [McpServerSource.COMMUNITY]: 15, // 15 minutes - community content may change frequently
   [McpServerSource.REGISTRY]: 1, // 1 minute for registry - to quickly reflect newly claimed servers
-  [McpServerSource.GITHUB]: 30, // 30 minutes for GitHub sources
-  [McpServerSource.SMITHERY]: 10, // 10 minutes for Smithery
-  [McpServerSource.NPM]: 60, // 1 hour for NPM packages
 };
 
 // Note: We no longer cache all registry servers since VP API provides efficient filtering
@@ -220,143 +204,6 @@ async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
   return enrichedResults;
 }
 
-/**
- * Search for MCP servers in Smithery
- * DEPRECATED - Legacy source no longer supported
- * 
- * @param query Search query
- * @returns SearchIndex of results
- */
-/*
-async function searchSmithery(query: string): Promise<SearchIndex> {
-  const apiKey = process.env.SMITHERY_API_KEY;
-  if (!apiKey) {
-    throw new Error('SMITHERY_API_KEY is not defined');
-  }
-
-  const url = new URL('https://registry.smithery.ai/servers');
-  if (query) {
-    url.searchParams.append('q', query);
-  }
-  url.searchParams.append('pageSize', '50'); // Get a reasonable number of results
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Smithery API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json() as SmitherySearchResponse;
-  
-  // Convert to our SearchIndex format
-  const results: SearchIndex = {};
-  
-  for (const server of data.servers) {
-    let mcpServer = getMcpServerFromSmitheryServer(server);
-    try {
-      // Fetch details to get command/args/url
-      const details = await fetchSmitheryServerDetails(server.qualifiedName);
-      mcpServer = updateMcpServerWithDetails(mcpServer, details);
-    } catch (detailError) {
-      console.error(`Failed to fetch details for Smithery server ${server.qualifiedName}:`, detailError);
-      // Continue with the basic info if details fail
-    }
-    results[server.qualifiedName] = mcpServer;
-  }
-
-  // Enrich results with metrics
-  return await enrichWithMetrics(results);
-}
-*/
-
-/**
- * Search for MCP servers on NPM
- * DEPRECATED - Legacy source no longer supported
- * 
- * @param query Search query
- * @returns SearchIndex of results
- */
-/*
-async function searchNpm(query: string): Promise<SearchIndex> {
-  try {
-    const data = await searchNpmPackages(query);
-    
-    // Convert to our SearchIndex format
-    const results: SearchIndex = {};
-    
-    for (const item of data.objects) {
-      const mcpServer = getNpmPackageAsMcpServer(item.package);
-      results[item.package.name] = mcpServer;
-    }
-    
-    // Enrich results with metrics
-    return await enrichWithMetrics(results);
-  } catch (_error) {
-    console.error('NPM search error:', _error);
-    return {}; // Return empty results on error
-  }
-}
-*/
-
-/**
- * Search for MCP servers on GitHub
- * DEPRECATED - Legacy source no longer supported
- * 
- * @param query Search query
- * @returns SearchIndex of results
- */
-/*
-async function searchGitHub(query: string): Promise<SearchIndex> {
-  try {
-    // Try to search GitHub for repos
-    const repos = await searchGitHubRepos(query);
-    
-    // Also fetch from awesome-mcp-servers list if no query
-    let awesomeRepos: any[] = [];
-    if (!query) {
-      try {
-        awesomeRepos = await fetchAwesomeMcpServersList();
-      } catch (_error) {
-        console.error('Error fetching awesome-mcp-servers list:', _error);
-      }
-    }
-    
-    // Combine and deduplicate
-    const allRepos = [...repos];
-    for (const repo of awesomeRepos) {
-      if (!allRepos.some(r => r.full_name === repo.full_name)) {
-        allRepos.push(repo);
-      }
-    }
-    
-    // Convert to our SearchIndex format
-    const results: SearchIndex = {};
-    
-    for (const repo of allRepos) {
-      // Try to fetch package.json for better metadata
-      let packageJson = null;
-      try {
-        packageJson = await getRepoPackageJson(repo);
-      } catch (_error) {
-        // Continue without package.json
-      }
-      
-      const mcpServer = getGitHubRepoAsMcpServer(repo, packageJson);
-      results[repo.full_name] = mcpServer;
-    }
-    
-    // Enrich results with metrics
-    return await enrichWithMetrics(results);
-  } catch (_error) {
-    console.error('GitHub search error:', _error);
-    return {}; // Return empty results on error
-  }
-}
-*/
 
 /**
  * Search for community MCP servers - implementation to show shared servers

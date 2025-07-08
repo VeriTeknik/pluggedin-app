@@ -1,8 +1,4 @@
 // Standard library imports
-import { execSync } from 'child_process';
-import os from 'os';
-import path from 'path';
-
 // Third-party library imports
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
@@ -19,6 +15,9 @@ import {
   ResourceTemplate,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
+import { execSync } from 'child_process';
+import os from 'os';
+import path from 'path';
 
 // Internal application imports
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here

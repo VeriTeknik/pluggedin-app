@@ -10,7 +10,6 @@ import {
   sharedMcpServersTable,
   users,
 } from '@/db/schema';
-import { analyticsAPIClient } from '@/lib/analytics/analytics-api-client';
 // Removed unused McpIndex import
 import { SearchIndex } from '@/types/search';
 
@@ -92,10 +91,9 @@ export async function getFormattedSharedServersForUser(
     // 4. Transform into SearchIndex format
     const formattedResults: SearchIndex = {};
     for (const sharedServer of sharedServers) {
-      // Get rating data from analytics API
-      const serverStats = await analyticsAPIClient.getServerStats(sharedServer.uuid);
-      const avgRating = serverStats?.average_rating || 0;
-      const ratingCount = serverStats?.rating_count || 0;
+      // Analytics API deprecated - using default values until new analytics service is ready
+      const avgRating = 0;
+      const ratingCount = 0;
 
       // Parse the template JSON
       const template = sharedServer.template as any;

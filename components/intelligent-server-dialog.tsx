@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Eye, GitBranch, Github, Info, Loader2, Package, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Eye, Github, Info, Loader2, Package, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
@@ -364,7 +364,7 @@ export function IntelligentServerDialog({
       if (isRegistryFormat(trimmed)) {
         await handleRegistryInput(trimmed);
       }
-      // Check if it's a GitHub URL
+      // Check if it's a GitHub URL - convert to registry format
       else if (isGitHubUrl(trimmed)) {
         await handleGitHubUrl(trimmed, currentRegistryToken);
       }
@@ -493,116 +493,26 @@ export function IntelligentServerDialog({
         }]);
         setSelectedConfigs(new Set([registryConfig.name]));
       } else {
-        // Not in registry, analyze repository for configuration
-        setDetectionState({ isDetecting: true, progress: 80, message: 'Analyzing repository configuration...' });
-        
-        try {
-          // Analyze repository to get environment variables
-          const analysisResponse = await fetch(`/api/analyze-repository?url=${encodeURIComponent(githubUrl)}`);
-          
-          const envVars: Record<string, string> = {};
-          let detectedConfig: any = null;
-          
-          if (analysisResponse.ok) {
-            const analysisData = await analysisResponse.json();
-            
-            // Check if we found MCP configuration
-            if (analysisData.mcpConfig) {
-              detectedConfig = analysisData.mcpConfig;
-            }
-            
-            // Get environment variables
-            if (analysisData.envVariables && analysisData.envVariables.length > 0) {
-              analysisData.envVariables.forEach((envVar: any) => {
-                envVars[envVar.name] = '';
-              });
-            }
-          }
-          
-          // If we found actual MCP config, use it
-          if (detectedConfig?.mcpServers) {
-            const firstServerName = Object.keys(detectedConfig.mcpServers)[0];
-            const firstServer = detectedConfig.mcpServers[firstServerName];
-            
-            const config: ParsedConfig = {
-              name: firstServerName || repo,
-              type: McpServerType.STDIO,
-              description: firstServer.description || `MCP server from ${owner}/${repo}`,
-              command: firstServer.command || 'npx',
-              args: firstServer.args || [`@${owner}/${repo}`],
-              env: firstServer.env || envVars,
-              status: McpServerStatus.ACTIVE,
-              source: McpServerSource.GITHUB,
-              external_id: `${owner}/${repo}`,
-              repositoryUrl: githubUrl
-            };
-            
-            setAnalysis({
-              type: 'github',
-              serverType: McpServerType.STDIO,
-              data: config
-            });
-            
-            setParsedConfigs([config]);
-            setSelectedConfigs(new Set([config.name]));
-          } else {
-            // Create config with detected env vars
-            const config: ParsedConfig = {
-              name: repo,
-              type: McpServerType.STDIO,
-              description: `MCP server from ${owner}/${repo}`,
-              command: 'npx',
-              args: [`-y`, `@${owner}/${repo}@latest`],
-              env: Object.keys(envVars).length > 0 ? envVars : undefined,
-              status: McpServerStatus.ACTIVE,
-              source: McpServerSource.GITHUB,
-              external_id: `${owner}/${repo}`,
-              repositoryUrl: githubUrl
-            };
-            
-            setAnalysis({
-              type: 'github',
-              serverType: McpServerType.STDIO,
-              data: config
-            });
-            
-            setParsedConfigs([config]);
-            setSelectedConfigs(new Set([config.name]));
-          }
-        } catch (error) {
-          console.error('Error analyzing repository:', error);
-          // Fallback to basic config
-          const config: ParsedConfig = {
-            name: repo,
-            type: McpServerType.STDIO,
-            description: `MCP server from ${owner}/${repo}`,
-            command: 'npx',
-            args: [`-y`, `@${owner}/${repo}@latest`],
-            status: McpServerStatus.ACTIVE,
-            source: McpServerSource.GITHUB,
-            external_id: `${owner}/${repo}`,
-            repositoryUrl: githubUrl
-          };
-          
-          setAnalysis({
-            type: 'github',
-            serverType: McpServerType.STDIO,
-            data: config
-          });
-          
-          setParsedConfigs([config]);
-          setSelectedConfigs(new Set([config.name]));
-        }
+        // Server not found in registry
+        setAnalysis({
+          type: 'registry',
+          error: `Server ${registryId} not found in registry`,
+          suggestions: [
+            'Check if the server is published to the Plugged.in Registry',
+            'Use the registry identifier format: io.github.owner/repo',
+            'Consider publishing this server to the registry for easier installation'
+          ]
+        });
       }
     } catch (error) {
       console.error('Error handling GitHub URL:', error);
       setAnalysis({
-        type: 'github',
-        error: error instanceof Error ? error.message : 'Failed to analyze repository',
+        type: 'registry',
+        error: error instanceof Error ? error.message : 'Failed to process GitHub URL',
         suggestions: [
           'Check if the URL is correct',
-          'Ensure the repository is public',
-          'Try again later'
+          'Ensure the server is published to the registry',
+          'Use the registry identifier format instead'
         ]
       });
     } finally {
@@ -1352,15 +1262,6 @@ export function IntelligentServerDialog({
                               >
                                 <Package className="h-3 w-3 mr-1" />
                                 Registry
-                              </Badge>
-                            )}
-                            {config.source === McpServerSource.GITHUB && (
-                              <Badge 
-                                variant="outline" 
-                                className="text-xs"
-                              >
-                                <GitBranch className="h-3 w-3 mr-1" />
-                                GitHub
                               </Badge>
                             )}
                             {testResult && (
