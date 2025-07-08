@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { I18nextProvider } from 'react-i18next';
 
+import { useSafeSession } from '@/hooks/use-safe-session';
 import i18n from '@/i18n/client';
-import { Locale, locales } from '@/i18n/config'; // Import config (removed defaultLocale)
+import { Locale, locales } from '@/i18n/config';
 
 export function I18nProvider({
   children,
@@ -13,40 +14,71 @@ export function I18nProvider({
   children: React.ReactNode;
   initialLocale?: string;
 }) {
+  const { data: session, status } = useSafeSession();
+  const [mounted, setMounted] = useState(false);
+
   useEffect(() => {
-    // If an initial locale is provided by the server, use it and stop.
-    if (initialLocale) {
-      if (i18n.language !== initialLocale) {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    async function loadLanguage() {
+      // Don't run until component is mounted on client
+      if (!mounted) {
+        return;
+      }
+
+      // 1. If user is authenticated, try to get their profile language
+      if (status === 'authenticated' && session?.user) {
+        try {
+          const response = await fetch('/api/profile/language');
+          if (response.ok) {
+            const { language } = await response.json();
+            if (language && locales.includes(language as Locale)) {
+              if (i18n.language !== language) {
+                i18n.changeLanguage(language);
+              }
+              localStorage.setItem('pluggedin_language', language);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('Failed to fetch profile language:', error);
+        }
+      }
+
+      // Skip further processing if we're still loading session
+      if (status === 'loading') {
+        return;
+      }
+
+      // 2. Check localStorage
+      const storedLang = localStorage.getItem('pluggedin_language');
+      if (storedLang && locales.includes(storedLang as Locale)) {
+        if (i18n.language !== storedLang) {
+          i18n.changeLanguage(storedLang);
+        }
+        return;
+      }
+
+      // 3. Try browser detection
+      const browserLang = navigator.language.split('-')[0];
+      if (locales.includes(browserLang as Locale) && browserLang !== i18n.language) {
+        if (process.env.NODE_ENV !== 'production') {
+          console.debug(`Detected browser language: ${browserLang}, setting language.`);
+        }
+        i18n.changeLanguage(browserLang);
+        localStorage.setItem('pluggedin_language', browserLang);
+      }
+
+      // 4. If nothing else, use initialLocale (fallback)
+      if (initialLocale && locales.includes(initialLocale as Locale) && i18n.language !== initialLocale) {
         i18n.changeLanguage(initialLocale);
       }
-      // Ensure localStorage matches the server-provided locale
-      localStorage.setItem('pluggedin_language', initialLocale);
-      return; // Don't proceed with client-side detection if server provided locale
     }
 
-    // --- Client-side detection (only if initialLocale was NOT provided) ---
-
-    // Check localStorage first
-    const storedLang = localStorage.getItem('pluggedin_language');
-    if (storedLang && locales.includes(storedLang as Locale)) {
-       if (i18n.language !== storedLang) {
-         i18n.changeLanguage(storedLang);
-       }
-       return; // Stop if found in localStorage
-    }
-
-    // If no stored lang, try browser detection
-    const browserLang = navigator.language.split('-')[0]; // Get base language
-    if (locales.includes(browserLang as Locale) && browserLang !== i18n.language) {
-       if (process.env.NODE_ENV !== 'production') {
-         console.debug(`Detected browser language: ${browserLang}, setting language.`);
-       }
-       i18n.changeLanguage(browserLang);
-       localStorage.setItem('pluggedin_language', browserLang); // Store detected language
-    }
-
-    // If still no language set, i18next will use the fallbackLng (defaultLocale)
-  }, [initialLocale]); // Rerun if initialLocale changes
+    loadLanguage();
+  }, [mounted, session, status, initialLocale]);
 
   return (
     // Explicitly pass the imported i18n instance

@@ -164,8 +164,16 @@ export function createBubblewrapConfig(
     // User's local bin directory
     '--ro-bind', paths.localBin, paths.localBin,
     
+    // MCP Interpreter directories (mount from config)
+    '--ro-bind', PackageManagerConfig.NODEJS_BIN_DIR, PackageManagerConfig.NODEJS_BIN_DIR,
+    '--ro-bind', PackageManagerConfig.PYTHON_BIN_DIR, PackageManagerConfig.PYTHON_BIN_DIR,
+    '--ro-bind', PackageManagerConfig.DOCKER_BIN_DIR, PackageManagerConfig.DOCKER_BIN_DIR,
+    
     // UV cache directory
     '--bind', `${paths.userHome}/.cache/uv`, `${paths.userHome}/.cache/uv`,
+    
+    // Docker socket (only if not using network isolation)
+    ...(PackageManagerConfig.ENABLE_NETWORK_ISOLATION ? [] : ['--ro-bind', '/var/run/docker.sock', '/var/run/docker.sock']),
     
     // Set user and group
     '--uid', '1000',
@@ -189,8 +197,8 @@ export function createBubblewrapConfig(
 
   // Construct the final environment
   const finalEnv = {
-    // Sensible defaults
-    PATH: `${paths.localBin}:/usr/local/bin:/usr/bin:/bin`,
+    // Sensible defaults - include interpreter paths from config
+    PATH: `${paths.localBin}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
     HOME: paths.userHome,
     USER: process.env.FIREJAIL_USER ?? 'pluggedin',
     USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',
@@ -263,11 +271,17 @@ export function createFirejailConfig(
       `--whitelist=${paths.localBin}`, // Allow access to bin dir
       `--whitelist=${paths.localBin}/uv`, // Explicitly allow uv
       `--whitelist=${paths.localBin}/uvx`, // Explicitly allow uvx
+      `--whitelist=${PackageManagerConfig.NODEJS_BIN_DIR}`, // Allow Node.js interpreters
+      `--whitelist=${PackageManagerConfig.PYTHON_BIN_DIR}`, // Allow Python interpreters  
+      `--whitelist=${PackageManagerConfig.DOCKER_BIN_DIR}`, // Allow Docker
       `--whitelist=${paths.mcpWorkspace}`, // Allow workspace access
       '--whitelist=/usr/lib/python*', // Python libs
       '--whitelist=/usr/local/lib/python*',
       `--whitelist=${paths.userHome}/.cache/uv`, // UV cache
       `--whitelist=${paths.userHome}/.venv`, // Virtual envs
+      
+      // Docker socket (only if not using network isolation)
+      ...(PackageManagerConfig.ENABLE_NETWORK_ISOLATION ? [] : [`--whitelist=/var/run/docker.sock`]),
 
       // Read-only system dirs
       '--read-only=/usr/bin',
@@ -293,8 +307,8 @@ export function createFirejailConfig(
 
   // Construct the final environment, prioritizing serverConfig.env
   const finalEnv = {
-    // Sensible defaults, adjust user/home if needed
-    PATH: `${paths.localBin}:/usr/local/bin:/usr/bin:/bin`,
+    // Sensible defaults, adjust user/home if needed - include interpreter paths from config
+    PATH: `${paths.localBin}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
     HOME: paths.userHome,
     USER: process.env.FIREJAIL_USER ?? 'pluggedin',
     USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',

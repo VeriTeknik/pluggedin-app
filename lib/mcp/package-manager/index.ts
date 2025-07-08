@@ -2,14 +2,16 @@ import { PackageManagerConfig } from './config';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './handlers/base-handler';
 import { PnpmHandler } from './handlers/pnpm-handler';
 import { UvHandler } from './handlers/uv-handler';
+import { DockerHandler } from './handlers/docker-handler';
 
 export { PackageManagerConfig } from './config';
 export { BasePackageHandler } from './handlers/base-handler';
 export type { InstallOptions, PackageInfo } from './handlers/base-handler';
 export { PnpmHandler } from './handlers/pnpm-handler';
 export { UvHandler } from './handlers/uv-handler';
+export { DockerHandler } from './handlers/docker-handler';
 
-export type PackageManagerType = 'npm' | 'pnpm' | 'uv' | 'uvx' | 'pip';
+export type PackageManagerType = 'npm' | 'pnpm' | 'uv' | 'uvx' | 'pip' | 'docker';
 
 export class PackageManager {
   private handlers: Map<PackageManagerType, BasePackageHandler> = new Map();
@@ -21,6 +23,7 @@ export class PackageManager {
     this.handlers.set('uv', new UvHandler());
     this.handlers.set('uvx', new UvHandler());
     this.handlers.set('pip', new UvHandler());    // Use uv for pip commands
+    this.handlers.set('docker', new DockerHandler());
   }
   
   /**
@@ -43,6 +46,9 @@ export class PackageManager {
     }
     if (lowerCommand === 'pip' || lowerCommand === 'pip3') {
       return 'pip';
+    }
+    if (lowerCommand === 'docker') {
+      return 'docker';
     }
     
     return null;
@@ -149,7 +155,7 @@ export class PackageManager {
     }
     
     // Package managers that execute packages directly
-    if (['npm', 'npx', 'pnpm', 'pnpx', 'uvx'].includes(command.toLowerCase())) {
+    if (['npm', 'npx', 'pnpm', 'pnpx', 'uvx', 'docker'].includes(command.toLowerCase())) {
       if (args.length === 0) {
         throw new Error(`No package specified for ${command}`);
       }
@@ -219,8 +225,8 @@ export class PackageManager {
       if (existingBinary) {
         console.log(`[PackageManager] Using cached package: ${packageName}`);
         
-        // For npx/npm exec, keep using the original command even if package is cached
-        if (command === 'npx' || (command === 'npm' && args[0] === 'exec')) {
+        // For npx/npm exec and docker, keep using the original command even if package is cached
+        if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || command === 'docker') {
           const installDir = (handler as any).getServerInstallDir(serverUuid);
           return { 
             command: command, 
@@ -252,9 +258,9 @@ export class PackageManager {
         packageName,
       });
       
-      // For npx/npm exec, keep using the original command
-      // The package is installed, but we run it through npx
-      if (command === 'npx' || (command === 'npm' && args[0] === 'exec')) {
+      // For npx/npm exec and docker, keep using the original command
+      // The package is installed, but we run it through the original command
+      if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || command === 'docker') {
         const handler = this.getHandler(packageManagerType);
         const installDir = (handler as any).getServerInstallDir(serverUuid);
         
@@ -283,7 +289,7 @@ export class PackageManager {
       };
     }
     
-    // For direct pip/uv commands, just ensure environment is set
+    // For direct pip/uv/docker commands, just ensure environment is set
     return { 
       command, 
       args,
@@ -312,6 +318,11 @@ export class PackageManager {
       env.VIRTUAL_ENV = venvDir;
       env.PATH = `${venvDir}/bin:${process.env.PATH}`;
       env.PYTHONPATH = `${venvDir}/lib/python3.*/site-packages`;
+    } else if (type === 'docker') {
+      const handler = this.handlers.get('docker') as DockerHandler;
+      const installDir = handler['getServerInstallDir'](serverUuid);
+      env.PATH = `${installDir}:${process.env.PATH}`;
+      // Docker doesn't need special environment variables like Node.js or Python
     }
     
     return env;
@@ -344,8 +355,17 @@ export class PackageManager {
       'pydantic',
     ];
     
+    const commonDockerImages = [
+      'alpine:latest',
+      'ubuntu:latest',
+      'node:alpine',
+      'python:alpine',
+      'busybox:latest',
+    ];
+    
     const pnpmHandler = this.handlers.get('pnpm') as PnpmHandler;
     const uvHandler = this.handlers.get('uv') as UvHandler;
+    const dockerHandler = this.handlers.get('docker') as DockerHandler;
     
     try {
       if (pnpmHandler.prewarmPackages) {
@@ -354,6 +374,10 @@ export class PackageManager {
       
       if (uvHandler.prewarmPackages) {
         await uvHandler.prewarmPackages(commonPythonPackages);
+      }
+      
+      if (dockerHandler.prewarmPackages) {
+        await dockerHandler.prewarmPackages(commonDockerImages);
       }
       
       console.log('[PackageManager] Pre-warming completed');

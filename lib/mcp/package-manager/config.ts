@@ -46,6 +46,11 @@ export class PackageManagerConfig {
   static readonly ISOLATION_FALLBACK = process.env.MCP_ISOLATION_FALLBACK || 'firejail';
   static readonly ENABLE_NETWORK_ISOLATION = process.env.MCP_ENABLE_NETWORK_ISOLATION === 'true';
   
+  // MCP Interpreter Paths
+  static readonly NODEJS_BIN_DIR = process.env.MCP_NODEJS_BIN_DIR || this.getDefaultNodejsBinDir();
+  static readonly PYTHON_BIN_DIR = process.env.MCP_PYTHON_BIN_DIR || this.getDefaultPythonBinDir();
+  static readonly DOCKER_BIN_DIR = process.env.MCP_DOCKER_BIN_DIR || this.getDefaultDockerBinDir();
+  
   // Log configuration on startup
   static {
     console.log('[PackageManagerConfig] Loaded configuration:', {
@@ -70,6 +75,59 @@ export class PackageManagerConfig {
         fallback: this.ISOLATION_FALLBACK,
         enableNetworkIsolation: this.ENABLE_NETWORK_ISOLATION,
       },
+      interpreterPaths: {
+        nodejsBinDir: this.NODEJS_BIN_DIR,
+        pythonBinDir: this.PYTHON_BIN_DIR,
+        dockerBinDir: this.DOCKER_BIN_DIR,
+      },
     });
+  }
+  
+  // Get OS-specific default Node.js bin directory
+  private static getDefaultNodejsBinDir(): string {
+    const platform = process.platform;
+    
+    if (platform === 'darwin') {
+      // macOS: Check Homebrew first, then system
+      return '/opt/homebrew/bin';
+    } else if (platform === 'win32') {
+      // Windows: npm is typically in Program Files
+      return 'C:\\Program Files\\nodejs';
+    } else {
+      // Linux: Use system bin directory
+      return '/usr/local/bin';
+    }
+  }
+  
+  // Get OS-specific default Python bin directory
+  private static getDefaultPythonBinDir(): string {
+    const platform = process.platform;
+    
+    if (platform === 'darwin') {
+      // macOS: Check Homebrew first, then system
+      return '/opt/homebrew/bin';
+    } else if (platform === 'win32') {
+      // Windows: Python is typically in Scripts folder
+      return 'C:\\Python\\Scripts';
+    } else {
+      // Linux: Use system bin directory
+      return '/usr/local/bin';
+    }
+  }
+  
+  // Get OS-specific default Docker bin directory
+  private static getDefaultDockerBinDir(): string {
+    const platform = process.platform;
+    
+    if (platform === 'darwin') {
+      // macOS: Docker Desktop installs to /usr/local/bin
+      return '/usr/local/bin';
+    } else if (platform === 'win32') {
+      // Windows: Docker Desktop installs to Program Files
+      return 'C:\\Program Files\\Docker\\Docker\\resources\\bin';
+    } else {
+      // Linux: Use system bin directory
+      return '/usr/local/bin';
+    }
   }
 }

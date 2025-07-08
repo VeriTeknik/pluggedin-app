@@ -141,18 +141,18 @@ export default async function RootLayout({
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} ${quicksand.variable} ${nunito.variable} ${poppins.variable} ${roboto.variable} ${ubuntu.variable} ${workSans.variable} ${zillaSlab.variable} ${comfortaa.variable} antialiased`}>
-        <I18nProviderWrapper>
-          <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
-            <SessionProvider>
+        <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
+          <SessionProvider>
+            <I18nProviderWrapper>
               <NotificationProvider>
                 <LanguageSwitcher />
                 {children}
               </NotificationProvider>
-            </SessionProvider>
-            <Toaster />
-            <SonnerToaster position="bottom-right" />
-          </ThemeProvider>
-        </I18nProviderWrapper>
+            </I18nProviderWrapper>
+          </SessionProvider>
+          <Toaster />
+          <SonnerToaster position="bottom-right" />
+        </ThemeProvider>
       </body>
     </html>
   );
