@@ -20,6 +20,7 @@ export interface WizardData {
   willClaim?: boolean;
   isAuthenticated?: boolean;
   githubUsername?: string;
+  ownershipVerified?: boolean;
 
   // Step 3: Environment Variables
   detectedEnvVars?: Array<{
@@ -89,14 +90,19 @@ export function useWizardState() {
       description: 'Claim this server or add to community',
       isComplete: wizardData.willClaim !== undefined && 
                   (wizardData.willClaim === false || 
-                   (wizardData.willClaim === true && wizardData.isAuthenticated === true)),
+                   (wizardData.willClaim === true && wizardData.isAuthenticated === true && wizardData.ownershipVerified === true)),
       isActive: currentStep === 1,
     },
     {
       id: 'env-config',
       title: 'Configuration',
       description: 'Configure environment variables',
-      isComplete: wizardData.configuredEnvVars !== undefined,
+      isComplete: wizardData.configuredEnvVars !== undefined && 
+                  (!wizardData.detectedEnvVars || 
+                   wizardData.detectedEnvVars.filter(v => v.required).every(v => 
+                     wizardData.configuredEnvVars![v.name] && 
+                     wizardData.configuredEnvVars![v.name].trim() !== ''
+                   )),
       isActive: currentStep === 2,
     },
     {

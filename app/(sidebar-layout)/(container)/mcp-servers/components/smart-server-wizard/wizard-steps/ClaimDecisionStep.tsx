@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { WizardData } from '../useWizardState';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Github, Users, Shield, TrendingUp, AlertCircle, Check } from 'lucide-react';
+import { Github, Users, Shield, TrendingUp, AlertCircle, Check, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { verifyGitHubOwnership } from '@/app/actions/registry-servers';
 
 interface ClaimDecisionStepProps {
   data: WizardData;
@@ -34,6 +35,9 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
     data.willClaim === true ? 'claim' : data.willClaim === false ? 'community' : ''
   );
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [isVerifyingOwnership, setIsVerifyingOwnership] = useState(false);
+  const [ownershipVerified, setOwnershipVerified] = useState<boolean | null>(null);
+  const [ownershipMessage, setOwnershipMessage] = useState<string>('');
   const { toast } = useToast();
 
   // Check if we have a stored token
@@ -110,6 +114,9 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
                 title: 'Authentication successful',
                 description: `Authenticated as @${user.login}`,
               });
+              
+              // After successful authentication, verify ownership
+              verifyOwnership(event.data.accessToken);
             }
           })
           .catch(console.error);
@@ -145,6 +152,39 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
     }
   };
 
+  // Verify ownership of the repository
+  const verifyOwnership = useCallback(async (token: string) => {
+    if (!data.githubUrl) return;
+    
+    setIsVerifyingOwnership(true);
+    try {
+      const result = await verifyGitHubOwnership(token, data.githubUrl);
+      setOwnershipVerified(result.isOwner);
+      setOwnershipMessage(result.reason || '');
+      onUpdate({ ownershipVerified: result.isOwner });
+      
+      if (!result.isOwner) {
+        toast({
+          title: 'Ownership verification failed',
+          description: result.reason || 'You do not have admin access to this repository',
+          variant: 'destructive',
+        });
+        // Reset to community choice if not owner
+        setChoice('community');
+        onUpdate({ willClaim: false });
+      }
+    } catch (error) {
+      console.error('Error verifying ownership:', error);
+      toast({
+        title: 'Verification error',
+        description: 'Could not verify repository ownership',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsVerifyingOwnership(false);
+    }
+  }, [data.githubUrl, toast, onUpdate]);
+
   const handleChoiceChange = (value: string) => {
     setChoice(value as 'claim' | 'community');
     
@@ -165,11 +205,19 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
     if (choice === 'community') {
       // Community option is always valid
       onUpdate({ willClaim: false });
-    } else if (choice === 'claim' && data.isAuthenticated) {
-      // Claim option is valid when authenticated
+    } else if (choice === 'claim' && data.isAuthenticated && ownershipVerified) {
+      // Claim option is valid when authenticated and ownership verified
       onUpdate({ willClaim: true });
     }
-  }, [choice, data.isAuthenticated, onUpdate]);
+  }, [choice, data.isAuthenticated, ownershipVerified, onUpdate]);
+  
+  // Verify ownership when authenticated and claim is selected
+  useEffect(() => {
+    const token = localStorage.getItem('registry_oauth_token');
+    if (choice === 'claim' && data.isAuthenticated && token && ownershipVerified === null && data.githubUrl) {
+      verifyOwnership(token);
+    }
+  }, [choice, data.isAuthenticated, ownershipVerified, data.githubUrl, verifyOwnership]);
 
   return (
     <div className="space-y-6">
@@ -234,14 +282,40 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
               </ul>
               
               {choice === 'claim' && (
-                <div className="mt-4">
+                <div className="mt-4 space-y-2">
                   {data.isAuthenticated ? (
-                    <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
-                      <Check className="h-4 w-4 text-green-600" />
-                      <AlertDescription>
-                        Authenticated as <strong>@{data.githubUsername}</strong>
-                      </AlertDescription>
-                    </Alert>
+                    <>
+                      <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+                        <Check className="h-4 w-4 text-green-600" />
+                        <AlertDescription>
+                          Authenticated as <strong>@{data.githubUsername}</strong>
+                        </AlertDescription>
+                      </Alert>
+                      {isVerifyingOwnership && (
+                        <Alert>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <AlertDescription>
+                            Verifying repository ownership...
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      {ownershipVerified === false && (
+                        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
+                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                          <AlertDescription>
+                            {ownershipMessage || 'You do not have admin access to this repository. Please select "Add to community" instead.'}
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                      {ownershipVerified === true && (
+                        <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
+                          <Check className="h-4 w-4 text-green-600" />
+                          <AlertDescription>
+                            Repository ownership verified!
+                          </AlertDescription>
+                        </Alert>
+                      )}
+                    </>
                   ) : (
                     <Alert>
                       <AlertCircle className="h-4 w-4" />

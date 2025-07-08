@@ -90,7 +90,6 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess }: SmartServer
           <EnvVarConfigStep
             data={wizardData}
             onUpdate={updateWizardData}
-            onNext={goToNextStep}
           />
         );
       case 3:
@@ -98,8 +97,6 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess }: SmartServer
           <DiscoveryTestStep
             data={wizardData}
             onUpdate={updateWizardData}
-            onNext={goToNextStep}
-            setIsSubmitting={setIsSubmitting}
           />
         );
       case 4:
