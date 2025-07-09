@@ -2,10 +2,10 @@ import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable, ToggleStatus, toolsTable } from '@/db/schema';
+import { mcpServersTable, profilesTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { decryptServerData } from '@/lib/encryption';
-import { listToolsFromServer } from '@/lib/mcp/client-wrapper';
+import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper';
 
 interface StreamMessage {
   type: 'log' | 'progress' | 'error' | 'complete';
@@ -144,11 +144,15 @@ export async function GET(
 
         // Discovery phase indicators
         let discoveredTools: any[] = [];
-        const discoveredTemplates: any[] = [];
-        const discoveredResources: any[] = [];
-        const discoveredPrompts: any[] = [];
+        let discoveredTemplates: any[] = [];
+        let discoveredResources: any[] = [];
+        let discoveredPrompts: any[] = [];
+        let toolError: string | null = null;
+        let templateError: string | null = null;
+        let resourceError: string | null = null;
+        let promptError: string | null = null;
 
-        // Discover Tools
+        // --- Discover Tools ---
         sendMessage({
           type: 'progress',
           message: 'Discovering tools...',
@@ -163,17 +167,17 @@ export async function GET(
             timestamp: Date.now(),
           });
 
-          if (discoveredTools.length > 0) {
-            // Delete existing tools
-            sendMessage({
-              type: 'log',
-              message: `Deleting old tools for server: ${serverUuid}`,
-              timestamp: Date.now(),
-            });
-            
-            await db.delete(toolsTable).where(eq(toolsTable.mcp_server_uuid, serverUuid));
+          // Delete existing tools
+          sendMessage({
+            type: 'log',
+            message: `Deleting old tools for server: ${serverUuid}`,
+            timestamp: Date.now(),
+          });
+          
+          await db.delete(toolsTable).where(eq(toolsTable.mcp_server_uuid, serverUuid));
 
-            // Insert new tools
+          // Insert new tools
+          if (discoveredTools.length > 0) {
             sendMessage({
               type: 'log',
               message: `Inserting ${discoveredTools.length} new tools...`,
@@ -197,6 +201,7 @@ export async function GET(
             });
           }
         } catch (error: any) {
+          toolError = error.message;
           sendMessage({
             type: 'error',
             message: `Failed to discover/store tools: ${error.message}`,
@@ -204,18 +209,217 @@ export async function GET(
           });
         }
 
-        // TODO: Add similar streaming for resource templates, static resources, and prompts
-        // For now, we'll just complete the tools discovery
+        // --- Discover Resource Templates ---
+        sendMessage({
+          type: 'progress',
+          message: 'Discovering resource templates...',
+          timestamp: Date.now(),
+        });
+
+        try {
+          discoveredTemplates = await listResourceTemplatesFromServer(decryptedServerConfig);
+          sendMessage({
+            type: 'log',
+            message: `Discovered ${discoveredTemplates.length} resource templates`,
+            timestamp: Date.now(),
+          });
+
+          // Delete existing templates
+          sendMessage({
+            type: 'log',
+            message: `Deleting old resource templates for server: ${serverUuid}`,
+            timestamp: Date.now(),
+          });
+          
+          await db.delete(resourceTemplatesTable).where(eq(resourceTemplatesTable.mcp_server_uuid, serverUuid));
+
+          // Insert new templates
+          if (discoveredTemplates.length > 0) {
+            sendMessage({
+              type: 'log',
+              message: `Inserting ${discoveredTemplates.length} new resource templates...`,
+              timestamp: Date.now(),
+            });
+
+            const templatesToInsert = discoveredTemplates.map(template => {
+              const variables = template.uriTemplate.match(/\{([^}]+)\}/g)?.map((v: string) => v.slice(1, -1)) || [];
+              return {
+                mcp_server_uuid: serverUuid,
+                uri_template: template.uriTemplate,
+                name: template.name,
+                description: template.description,
+                mime_type: typeof template.mediaType === 'string' ? template.mediaType : null,
+                template_variables: variables,
+              };
+            });
+            
+            await db.insert(resourceTemplatesTable).values(templatesToInsert);
+            
+            sendMessage({
+              type: 'log',
+              message: `Successfully stored ${discoveredTemplates.length} resource templates`,
+              timestamp: Date.now(),
+            });
+          }
+        } catch (error: any) {
+          templateError = error.message;
+          sendMessage({
+            type: 'error',
+            message: `Failed to discover/store resource templates: ${error.message}`,
+            timestamp: Date.now(),
+          });
+        }
+
+        // --- Discover Static Resources ---
+        sendMessage({
+          type: 'progress',
+          message: 'Discovering static resources...',
+          timestamp: Date.now(),
+        });
+
+        try {
+          discoveredResources = await listResourcesFromServer(decryptedServerConfig);
+          sendMessage({
+            type: 'log',
+            message: `Discovered ${discoveredResources.length} static resources`,
+            timestamp: Date.now(),
+          });
+
+          // Delete existing resources
+          sendMessage({
+            type: 'log',
+            message: `Deleting old static resources for server: ${serverUuid}`,
+            timestamp: Date.now(),
+          });
+          
+          await db.delete(resourcesTable).where(eq(resourcesTable.mcp_server_uuid, serverUuid));
+
+          // Insert new resources
+          if (discoveredResources.length > 0) {
+            sendMessage({
+              type: 'log',
+              message: `Inserting ${discoveredResources.length} new static resources...`,
+              timestamp: Date.now(),
+            });
+
+            const resourcesToInsert = discoveredResources.map((resource: any) => ({
+              mcp_server_uuid: serverUuid,
+              uri: resource.uri,
+              name: resource.name,
+              description: resource.description,
+              mime_type: typeof resource.mimeType === 'string' ? resource.mimeType : null,
+              size: resource.size ?? null,
+            }));
+            
+            await db.insert(resourcesTable).values(resourcesToInsert);
+            
+            sendMessage({
+              type: 'log',
+              message: `Successfully stored ${discoveredResources.length} static resources`,
+              timestamp: Date.now(),
+            });
+          }
+        } catch (error: any) {
+          resourceError = error.message;
+          sendMessage({
+            type: 'error',
+            message: `Failed to discover/store static resources: ${error.message}`,
+            timestamp: Date.now(),
+          });
+        }
+
+        // --- Discover Prompts ---
+        sendMessage({
+          type: 'progress',
+          message: 'Discovering prompts...',
+          timestamp: Date.now(),
+        });
+
+        try {
+          discoveredPrompts = await listPromptsFromServer(decryptedServerConfig);
+          sendMessage({
+            type: 'log',
+            message: `Discovered ${discoveredPrompts.length} prompts`,
+            timestamp: Date.now(),
+          });
+
+          // Delete existing prompts
+          sendMessage({
+            type: 'log',
+            message: `Deleting old prompts for server: ${serverUuid}`,
+            timestamp: Date.now(),
+          });
+          
+          await db.delete(promptsTable).where(eq(promptsTable.mcp_server_uuid, serverUuid));
+
+          // Insert new prompts
+          if (discoveredPrompts.length > 0) {
+            sendMessage({
+              type: 'log',
+              message: `Inserting ${discoveredPrompts.length} new prompts...`,
+              timestamp: Date.now(),
+            });
+
+            const promptsToInsert = discoveredPrompts.map((prompt: any) => ({
+              mcp_server_uuid: serverUuid,
+              name: prompt.name,
+              description: prompt.description,
+              arguments_schema: prompt.arguments as any,
+            }));
+            
+            await db.insert(promptsTable).values(promptsToInsert);
+            
+            sendMessage({
+              type: 'log',
+              message: `Successfully stored ${discoveredPrompts.length} prompts`,
+              timestamp: Date.now(),
+            });
+          }
+        } catch (error: any) {
+          promptError = error.message;
+          sendMessage({
+            type: 'error',
+            message: `Failed to discover/store prompts: ${error.message}`,
+            timestamp: Date.now(),
+          });
+        }
+
+        // Final result
+        const success = !toolError && !templateError && !resourceError && !promptError;
+        const counts = [
+          `${discoveredTools.length} tools`,
+          `${discoveredTemplates.length} templates`, 
+          `${discoveredResources.length} resources`,
+          `${discoveredPrompts.length} prompts`
+        ];
+        
+        let finalMessage = '';
+        if (success) {
+          finalMessage = `Successfully discovered ${counts.join(', ')} for ${serverConfig.name || serverUuid}`;
+        } else {
+          finalMessage = `Discovery partially failed for ${serverConfig.name || serverUuid}`;
+          if (toolError) finalMessage += ` Tool error: ${toolError}`;
+          if (templateError) finalMessage += ` Template error: ${templateError}`;
+          if (resourceError) finalMessage += ` Resource error: ${resourceError}`;
+          if (promptError) finalMessage += ` Prompt error: ${promptError}`;
+        }
 
         sendMessage({
           type: 'complete',
-          message: `Discovery completed successfully for ${serverConfig.name || serverUuid}`,
+          message: finalMessage,
           timestamp: Date.now(),
           data: {
+            success,
             tools: discoveredTools.length,
             templates: discoveredTemplates.length,
             resources: discoveredResources.length,
             prompts: discoveredPrompts.length,
+            errors: {
+              toolError,
+              templateError,
+              resourceError,
+              promptError
+            }
           },
         });
 

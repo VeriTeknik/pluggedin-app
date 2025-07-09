@@ -83,8 +83,34 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
   const detectEnvironmentVariables = async () => {
     setIsDetecting(true);
     const detectedVars: EnvVar[] = [];
+    const seenVars = new Set<string>();
 
     try {
+      // First, check transport configurations for env vars
+      if (data.transportConfigs) {
+        Object.values(data.transportConfigs).forEach(config => {
+          if (config.env) {
+            Object.entries(config.env).forEach(([name, value]) => {
+              if (!seenVars.has(name)) {
+                seenVars.add(name);
+                detectedVars.push({
+                  name,
+                  description: `Environment variable from ${config.source || 'detection'}`,
+                  defaultValue: value || '',
+                  required: true,
+                  source: 'registry',
+                  value: value || '',
+                  isSecret: name.toLowerCase().includes('key') || 
+                           name.toLowerCase().includes('token') ||
+                           name.toLowerCase().includes('secret') ||
+                           name.toLowerCase().includes('password')
+                });
+              }
+            });
+          }
+        });
+      }
+
       // If this is a registry server, fetch env vars from registry
       if (data.githubUrl) {
         const match = data.githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
@@ -99,18 +125,21 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
             
             if (primaryPackage?.environment_variables) {
               primaryPackage.environment_variables.forEach((envVar: any) => {
-                detectedVars.push({
-                  name: envVar.name,
-                  description: envVar.description,
-                  defaultValue: envVar.defaultValue || '',
-                  required: envVar.required !== false,
-                  source: 'registry',
-                  value: envVar.defaultValue || '',
-                  isSecret: envVar.name.toLowerCase().includes('key') || 
-                           envVar.name.toLowerCase().includes('token') ||
-                           envVar.name.toLowerCase().includes('secret') ||
-                           envVar.name.toLowerCase().includes('password')
-                });
+                if (!seenVars.has(envVar.name)) {
+                  seenVars.add(envVar.name);
+                  detectedVars.push({
+                    name: envVar.name,
+                    description: envVar.description,
+                    defaultValue: envVar.defaultValue || '',
+                    required: envVar.required !== false,
+                    source: 'registry',
+                    value: envVar.defaultValue || '',
+                    isSecret: envVar.name.toLowerCase().includes('key') || 
+                             envVar.name.toLowerCase().includes('token') ||
+                             envVar.name.toLowerCase().includes('secret') ||
+                             envVar.name.toLowerCase().includes('password')
+                  });
+                }
               });
             }
           }

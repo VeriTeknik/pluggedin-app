@@ -372,6 +372,7 @@ export async function createMcpServer({
   external_id,
   transport,
   streamableHTTPOptions,
+  skipDiscovery = false,
 }: {
   name: string;
   profileUuid: string;
@@ -388,6 +389,7 @@ export async function createMcpServer({
     sessionId?: string;
     headers?: Record<string, string>;
   };
+  skipDiscovery?: boolean;
 }) { // Removed explicit return type to match actual returns
   try {
     const serverType = type || McpServerType.STDIO;
@@ -479,17 +481,21 @@ export async function createMcpServer({
       // Continue even if tracking fails
     }
 
-    // Trigger discovery after creation
-    try {
-      console.log(`[Action] Triggering tool discovery for created server: ${newServer.uuid}`);
-      // Don't await this, let it run in the background
-      discoverSingleServerTools(profileUuid, newServer.uuid).catch(discoveryError => {
-         console.error(`[Action Warning] Background tool discovery failed after creation for server ${newServer.uuid}:`, discoveryError);
-      });
-    } catch (error) {
-      // Catch synchronous errors if discoverSingleServerTools itself throws immediately (unlikely for async)
-      console.error(`[Action Warning] Failed to trigger tool discovery after creation for server ${newServer.uuid}:`, error);
-      // Do not re-throw, allow the creation operation to be considered successful
+    // Trigger discovery after creation (unless explicitly skipped)
+    if (!skipDiscovery) {
+      try {
+        console.log(`[Action] Triggering tool discovery for created server: ${newServer.uuid}`);
+        // Don't await this, let it run in the background
+        discoverSingleServerTools(profileUuid, newServer.uuid).catch(discoveryError => {
+           console.error(`[Action Warning] Background tool discovery failed after creation for server ${newServer.uuid}:`, discoveryError);
+        });
+      } catch (error) {
+        // Catch synchronous errors if discoverSingleServerTools itself throws immediately (unlikely for async)
+        console.error(`[Action Warning] Failed to trigger tool discovery after creation for server ${newServer.uuid}:`, error);
+        // Do not re-throw, allow the creation operation to be considered successful
+      }
+    } else {
+      console.log(`[Action] Skipping auto-discovery for server: ${newServer.uuid} (skipDiscovery=true)`);
     }
 
     return { success: true, data: newServer }; // Return success and the new server data

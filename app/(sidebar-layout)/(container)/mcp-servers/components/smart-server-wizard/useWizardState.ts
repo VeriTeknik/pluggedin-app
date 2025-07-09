@@ -28,11 +28,27 @@ export interface WizardData {
     description?: string;
     defaultValue?: string;
     required: boolean;
-    source: 'readme' | 'env-example' | 'code' | 'manual';
+    source: 'readme' | 'env-example' | 'code' | 'manual' | 'registry';
   }>;
   configuredEnvVars?: Record<string, string>;
 
   // Step 4: Discovery Test
+  selectedTransports?: Array<'stdio' | 'sse' | 'streamable-http' | 'docker'>;
+  transportConfigs?: {
+    [transport: string]: {
+      command?: string;
+      args?: string[];
+      url?: string;
+      headers?: Record<string, string>;
+      dockerImage?: string;
+      dockerPorts?: string[];
+      dockerVolumes?: string[];
+      env?: Record<string, string>;
+      packageName?: string;
+      confidence?: number;
+      source?: string;
+    };
+  };
   discoveryResult?: {
     success: boolean;
     output: string;
@@ -55,6 +71,26 @@ export interface WizardData {
     categories: string[];
     tags: string[];
     icon?: string;
+  };
+  registryData?: {
+    name: string;
+    description: string;
+    author: string;
+    tags: string[];
+    packages?: Array<{
+      transport: string;
+      type: 'npm' | 'pypi' | 'docker' | 'github';
+      name: string;
+      command?: string;
+      url?: string;
+      environment_variables?: Array<{
+        name: string;
+        description: string;
+        is_required: boolean;
+        is_secret?: boolean;
+        default?: string;
+      }>;
+    }>;
   };
   submissionResult?: {
     success: boolean;

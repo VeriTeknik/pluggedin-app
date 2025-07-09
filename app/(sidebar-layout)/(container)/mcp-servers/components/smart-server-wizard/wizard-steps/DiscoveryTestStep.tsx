@@ -3,28 +3,40 @@
 import { useState, useEffect } from 'react';
 import { WizardData } from '../useWizardState';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { StreamingCliToast } from '@/components/ui/streaming-cli-toast';
-import { 
-  AlertCircle, 
-  CheckCircle2, 
-  Terminal, 
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Terminal,
   Wrench,
   FileText,
   MessageSquare,
   Loader2,
   PlayCircle,
   RefreshCw,
-  Code
+  Code,
+  Globe,
+  Package,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createMcpServer } from '@/app/actions/mcp-servers';
-import { fetchRegistryServer } from '@/app/actions/registry-servers';
+import { detectPackageConfiguration } from '@/app/actions/detect-package';
 import { useProfiles } from '@/hooks/use-profiles';
+import { TransportType } from '@/lib/mcp/package-detector';
+import { McpServerType } from '@/db/schema';
 
 interface DiscoveryTestStepProps {
   data: WizardData;
@@ -40,90 +52,179 @@ interface DiscoveryResult {
   error?: string;
 }
 
+interface TransportOption {
+  value: TransportType;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+}
+
+const transportOptions: TransportOption[] = [
+  {
+    value: 'stdio',
+    label: 'STDIO',
+    icon: Terminal,
+    description: 'Local command-line execution',
+  },
+  {
+    value: 'streamable-http',
+    label: 'Streamable HTTP',
+    icon: Globe,
+    description: 'Modern HTTP transport with streaming support',
+  },
+  {
+    value: 'docker',
+    label: 'Docker',
+    icon: Package,
+    description: 'Container-based deployment',
+  },
+];
+
 export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
   const [isRunning, setIsRunning] = useState(false);
   const [showStreamingToast, setShowStreamingToast] = useState(false);
   const [tempServerUuid, setTempServerUuid] = useState<string | null>(null);
-  const [discoveryResult, setDiscoveryResult] = useState<DiscoveryResult | null>(
-    data.discoveryResult || null
+  const [selectedTransports, setSelectedTransports] = useState<TransportType[]>(
+    data.selectedTransports || ['stdio']
+  );
+  const [activeTransport, setActiveTransport] =
+    useState<TransportType>('stdio');
+  const [discoveryResult, setDiscoveryResult] =
+    useState<DiscoveryResult | null>(data.discoveryResult || null);
+  const [isDetecting, setIsDetecting] = useState(false);
+  const [detectedConfigs, setDetectedConfigs] = useState<Record<string, any>>(
+    {}
   );
   const { toast } = useToast();
   const { currentProfile } = useProfiles();
 
-  // Update wizard data when discovery result changes
+  // Update wizard data when discovery result or transports change
   useEffect(() => {
+    const updates: Partial<WizardData> = {};
     if (discoveryResult) {
-      onUpdate({ discoveryResult });
+      updates.discoveryResult = discoveryResult;
     }
-  }, [discoveryResult, onUpdate]);
+    if (selectedTransports.length > 0) {
+      updates.selectedTransports = selectedTransports;
+    }
+    if (Object.keys(detectedConfigs).length > 0) {
+      updates.transportConfigs = detectedConfigs;
+    }
+    if (Object.keys(updates).length > 0) {
+      onUpdate(updates);
+    }
+  }, [discoveryResult, selectedTransports, detectedConfigs, onUpdate]);
+
+  // Detect package configurations when component mounts or repo changes
+  useEffect(() => {
+    if (data.owner && data.repo && selectedTransports.length > 0) {
+      detectConfigurations();
+    }
+  }, [data.owner, data.repo]);
+
+  const detectConfigurations = async () => {
+    if (!data.owner || !data.repo) return;
+
+    setIsDetecting(true);
+    try {
+      const configs = await detectPackageConfiguration(
+        data.owner,
+        data.repo,
+        selectedTransports
+      );
+      setDetectedConfigs(configs);
+
+      // If we detected a high-confidence STDIO config, automatically run a test
+      const stdioConfig = configs['stdio'];
+      if (stdioConfig && stdioConfig.confidence >= 0.9) {
+        toast({
+          title: 'Package detected!',
+          description: `Found ${stdioConfig.packageName} with ${Math.round(stdioConfig.confidence * 100)}% confidence`,
+        });
+      }
+    } catch (error) {
+      console.error('Error detecting configurations:', error);
+      toast({
+        title: 'Detection error',
+        description: 'Failed to detect package configuration from GitHub',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDetecting(false);
+    }
+  };
+
+  const handleTransportToggle = (transport: TransportType) => {
+    setSelectedTransports((prev) => {
+      const newTransports = prev.includes(transport)
+        ? prev.filter((t) => t !== transport)
+        : [...prev, transport];
+
+      // If we removed the active transport, switch to the first available
+      if (
+        !newTransports.includes(activeTransport) &&
+        newTransports.length > 0
+      ) {
+        setActiveTransport(newTransports[0]);
+      }
+
+      return newTransports;
+    });
+  };
 
   const prepareServerConfig = async () => {
     const owner = data.owner || '';
     const repo = data.repo || '';
     const serverName = repo || 'test-server';
-    
-    // First, try to get the actual command from registry
-    let command = 'npx';
-    let args = ['-y'];
-    
-    try {
-      // Check if this server is in the registry
-      const registryId = `io.github.${owner}/${repo}`;
-      const result = await fetchRegistryServer(registryId);
-      
-      if (result.success && result.data) {
-        const server = result.data;
-        const primaryPackage = server.packages?.[0];
-        
-        if (primaryPackage) {
-          // Use the exact command from registry
-          switch (primaryPackage.registry_name) {
-            case 'npm':
-              command = primaryPackage.runtime_hint || 'npx';
-              args = [primaryPackage.name];
-              if (primaryPackage.runtime_arguments) {
-                args.push(...primaryPackage.runtime_arguments);
-              }
-              break;
-            case 'docker':
-              command = 'docker';
-              args = ['run'];
-              if (primaryPackage.package_arguments) {
-                args.push(...primaryPackage.package_arguments.map((arg: any) => arg.value || arg.default || ''));
-              }
-              args.push(primaryPackage.name);
-              break;
-            case 'pypi':
-              command = primaryPackage.runtime_hint || 'uvx';
-              args = [primaryPackage.name];
-              break;
-            default:
-              // Fallback to npm pattern
-              command = 'npx';
-              args = ['-y', `@${owner.toLowerCase()}/${repo.toLowerCase()}`];
-          }
-        }
-      } else {
-        // Not in registry, use default npm pattern with lowercase
-        args.push(`@${owner.toLowerCase()}/${repo.toLowerCase()}`);
-      }
-    } catch (error) {
-      console.log('Could not fetch from registry, using default pattern');
-      // Fallback to npm pattern with lowercase
-      args.push(`@${owner.toLowerCase()}/${repo.toLowerCase()}`);
+
+    // Get the detected configuration for the active transport
+    const config = detectedConfigs[activeTransport];
+    if (!config) {
+      throw new Error(
+        `No configuration detected for ${activeTransport} transport`
+      );
     }
-    
+
     // Get configured environment variables
-    const env = data.configuredEnvVars || {};
-    
-    return {
+    const env = { ...config.env, ...data.configuredEnvVars };
+
+    // Build server configuration based on transport type
+    const baseConfig = {
       name: `${serverName}-test-${Date.now()}`,
-      description: 'Temporary server for discovery test',
-      command,
-      args,
+      description: `Temporary ${activeTransport} server for discovery test`,
       env: Object.keys(env).length > 0 ? env : undefined,
-      type: 'STDIO' as const,
     };
+
+    switch (activeTransport) {
+      case 'stdio':
+        return {
+          ...baseConfig,
+          type: McpServerType.STDIO,
+          command: config.command || 'npx',
+          args: config.args || ['-y', config.packageName],
+        };
+
+      case 'streamable-http':
+        return {
+          ...baseConfig,
+          type: McpServerType.STREAMABLE_HTTP,
+          url: config.url || '',
+          streamableHTTPOptions: {
+            headers: config.headers,
+          },
+        };
+
+      case 'docker':
+        return {
+          ...baseConfig,
+          type: McpServerType.STDIO, // Docker runs as STDIO
+          command: config.command || 'docker',
+          args: config.args || ['run', '--rm', '-i', config.dockerImage],
+        };
+
+      default:
+        throw new Error(`Unsupported transport type: ${activeTransport}`);
+    }
   };
 
   const runDiscoveryTest = async () => {
@@ -138,15 +239,15 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
 
     setIsRunning(true);
     setDiscoveryResult(null);
-    
+
     try {
       // Create a temporary server for testing
       const serverConfig = await prepareServerConfig();
-      
+
       const result = await createMcpServer({
         ...serverConfig,
         profileUuid: currentProfile.uuid,
-        status: 'ACTIVE',
+        skipDiscovery: true, // Skip automatic discovery for temporary testing server
       });
 
       if (!result.success || !result.data) {
@@ -155,19 +256,27 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
 
       // Store the server UUID for discovery
       setTempServerUuid(result.data.uuid);
-      
+
       // Update wizard with server config
+      const configUpdate: any = {
+        type: serverConfig.type,
+      };
+
+      if ('command' in serverConfig) {
+        configUpdate.command = serverConfig.command;
+        configUpdate.args = serverConfig.args;
+      }
+
+      if ('url' in serverConfig) {
+        configUpdate.url = serverConfig.url;
+      }
+
       onUpdate({
-        serverConfig: {
-          command: serverConfig.command,
-          args: serverConfig.args,
-          type: 'STDIO',
-        }
+        serverConfig: configUpdate,
       });
-      
+
       // Show the streaming toast for discovery
       setShowStreamingToast(true);
-      
     } catch (error) {
       console.error('Error running discovery test:', error);
       setIsRunning(false);
@@ -176,10 +285,13 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
         output: error instanceof Error ? error.message : 'Unknown error',
         error: 'Failed to start discovery test',
       });
-      
+
       toast({
         title: 'Discovery test failed',
-        description: error instanceof Error ? error.message : 'Failed to run discovery test',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to run discovery test',
         variant: 'destructive',
       });
     }
@@ -188,7 +300,7 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
   const handleDiscoveryComplete = async (success: boolean, data?: any) => {
     setIsRunning(false);
     setShowStreamingToast(false);
-    
+
     if (success) {
       // Extract tools, resources, and prompts from the discovery data
       const result: DiscoveryResult = {
@@ -198,9 +310,9 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
         resources: data?.resources || [],
         prompts: data?.prompts || [],
       };
-      
+
       setDiscoveryResult(result);
-      
+
       toast({
         title: 'Discovery successful',
         description: `Found ${result.tools?.length || 0} tools, ${result.resources?.length || 0} resources, and ${result.prompts?.length || 0} prompts`,
@@ -211,19 +323,21 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
         output: data?.error || 'Discovery failed',
         error: 'Failed to discover server capabilities',
       });
-      
+
       toast({
         title: 'Discovery failed',
         description: data?.error || 'Failed to discover server capabilities',
         variant: 'destructive',
       });
     }
-    
+
     // Clean up temporary server
-    if (tempServerUuid) {
+    if (tempServerUuid && currentProfile?.uuid) {
       try {
-        const { deleteMcpServerByUuid } = await import('@/app/actions/mcp-servers');
-        await deleteMcpServerByUuid(tempServerUuid);
+        const { deleteMcpServerByUuid } = await import(
+          '@/app/actions/mcp-servers'
+        );
+        await deleteMcpServerByUuid(currentProfile.uuid, tempServerUuid);
       } catch (error) {
         console.error('Error deleting temporary server:', error);
       }
@@ -234,16 +348,17 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
   const getCapabilityIcon = (type: 'tools' | 'resources' | 'prompts') => {
     switch (type) {
       case 'tools':
-        return <Wrench className="h-4 w-4" />;
+        return <Wrench className='h-4 w-4' />;
       case 'resources':
-        return <FileText className="h-4 w-4" />;
+        return <FileText className='h-4 w-4' />;
       case 'prompts':
-        return <MessageSquare className="h-4 w-4" />;
+        return <MessageSquare className='h-4 w-4' />;
     }
   };
 
   const getCapabilityCount = () => {
-    if (!discoveryResult || !discoveryResult.success) return { tools: 0, resources: 0, prompts: 0 };
+    if (!discoveryResult || !discoveryResult.success)
+      return { tools: 0, resources: 0, prompts: 0 };
     return {
       tools: discoveryResult.tools?.length || 0,
       resources: discoveryResult.resources?.length || 0,
@@ -255,70 +370,244 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
   const totalCapabilities = counts.tools + counts.resources + counts.prompts;
 
   return (
-    <div className="space-y-6">
+    <div className='space-y-6'>
       <div>
-        <h2 className="text-2xl font-semibold mb-2">Test Server Discovery</h2>
-        <p className="text-muted-foreground">
-          Run a discovery test to verify the server works correctly and see what capabilities it provides.
+        <h2 className='text-2xl font-semibold mb-2'>Test Server Discovery</h2>
+        <p className='text-muted-foreground'>
+          Select transport types and run a discovery test to verify the server
+          works correctly.
         </p>
       </div>
 
-      {/* Repository info */}
+      {/* Transport Selection */}
       <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Terminal className="h-4 w-4" />
-            Test Configuration
-          </CardTitle>
+        <CardHeader>
+          <CardTitle className='text-sm'>Select Transport Types</CardTitle>
+          <CardDescription>
+            Choose which transport methods this server supports
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Repository:</span>
-              <span className="font-mono">{data.owner}/{data.repo}</span>
-            </div>
-            {data.serverConfig && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Command:</span>
-                  <span className="font-mono">{data.serverConfig.command}</span>
-                </div>
-                {data.serverConfig.args && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Arguments:</span>
-                    <span className="font-mono">{data.serverConfig.args.join(' ')}</span>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+            {transportOptions.map((transport) => {
+              const Icon = transport.icon;
+              const isSelected = selectedTransports.includes(transport.value);
+              const config = detectedConfigs[transport.value];
+
+              return (
+                <label
+                  key={transport.value}
+                  className={`relative flex flex-col gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                    isSelected
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-muted-foreground'
+                  }`}>
+                  <div className='flex items-start gap-3'>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() =>
+                        handleTransportToggle(transport.value)
+                      }
+                      className='mt-0.5'
+                    />
+                    <div className='flex-1'>
+                      <div className='flex items-center gap-2 mb-1'>
+                        <Icon className='h-4 w-4' />
+                        <span className='font-medium'>{transport.label}</span>
+                      </div>
+                      <p className='text-sm text-muted-foreground'>
+                        {transport.description}
+                      </p>
+
+                      {/* Show detection confidence */}
+                      {config && (
+                        <div className='mt-2 text-xs'>
+                          <Badge
+                            variant={
+                              config.confidence > 0.7 ? 'default' : 'secondary'
+                            }>
+                            {Math.round(config.confidence * 100)}% confidence
+                          </Badge>
+                          <span className='ml-2 text-muted-foreground'>
+                            via {config.source}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Show detected package/image name */}
+                      {config &&
+                        transport.value === 'stdio' &&
+                        config.packageName && (
+                          <p className='mt-1 text-xs font-mono text-muted-foreground'>
+                            {config.packageName}
+                          </p>
+                        )}
+                      {config &&
+                        transport.value === 'docker' &&
+                        config.dockerImage && (
+                          <p className='mt-1 text-xs font-mono text-muted-foreground'>
+                            {config.dockerImage}
+                          </p>
+                        )}
+                    </div>
                   </div>
-                )}
-              </>
-            )}
-            {data.configuredEnvVars && Object.keys(data.configuredEnvVars).length > 0 && (
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Environment Variables:</span>
-                <span>{Object.keys(data.configuredEnvVars).length} configured</span>
-              </div>
-            )}
+                </label>
+              );
+            })}
           </div>
+
+          {isDetecting && (
+            <div className='mt-4 flex items-center gap-2 text-sm text-muted-foreground'>
+              <Loader2 className='h-4 w-4 animate-spin' />
+              Detecting package configurations...
+            </div>
+          )}
         </CardContent>
       </Card>
 
+      {/* Active Transport Configuration */}
+      {selectedTransports.length > 0 && (
+        <Card>
+          <CardHeader className='pb-3'>
+            <CardTitle className='text-sm'>Test Configuration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {selectedTransports.length > 1 && (
+              <div className='mb-4'>
+                <Label className='text-sm'>Active Transport for Testing</Label>
+                <Tabs
+                  value={activeTransport}
+                  onValueChange={(v) => setActiveTransport(v as TransportType)}>
+                  <TabsList
+                    className='grid w-full'
+                    style={{
+                      gridTemplateColumns: `repeat(${selectedTransports.length}, 1fr)`,
+                    }}>
+                    {selectedTransports.map((transport) => {
+                      const option = transportOptions.find(
+                        (o) => o.value === transport
+                      )!;
+                      return (
+                        <TabsTrigger
+                          key={transport}
+                          value={transport}
+                          className='flex items-center gap-2'>
+                          <option.icon className='h-4 w-4' />
+                          {option.label}
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </Tabs>
+              </div>
+            )}
+
+            <div className='space-y-2 text-sm'>
+              <div className='flex items-center justify-between'>
+                <span className='text-muted-foreground'>Repository:</span>
+                <span className='font-mono'>
+                  {data.owner}/{data.repo}
+                </span>
+              </div>
+
+              {detectedConfigs[activeTransport] && (
+                <>
+                  {activeTransport === 'stdio' && (
+                    <>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-muted-foreground'>Command:</span>
+                        <span className='font-mono'>
+                          {detectedConfigs[activeTransport].command}
+                        </span>
+                      </div>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-muted-foreground'>Package:</span>
+                        <span className='font-mono'>
+                          {detectedConfigs[activeTransport].packageName ||
+                            detectedConfigs[activeTransport].args?.join(' ')}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  {activeTransport === 'docker' && (
+                    <>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-muted-foreground'>Image:</span>
+                        <span className='font-mono'>
+                          {detectedConfigs[activeTransport].dockerImage}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  {activeTransport === 'streamable-http' && (
+                    <>
+                      <div className='flex items-center justify-between'>
+                        <span className='text-muted-foreground'>URL:</span>
+                        <span className='font-mono text-xs'>
+                          {detectedConfigs[activeTransport].url}
+                        </span>
+                      </div>
+                    </>
+                  )}
+
+                  <div className='flex items-center justify-between'>
+                    <span className='text-muted-foreground'>
+                      Detection Confidence:
+                    </span>
+                    <Badge
+                      variant={
+                        detectedConfigs[activeTransport].confidence > 0.7
+                          ? 'default'
+                          : 'secondary'
+                      }>
+                      {Math.round(
+                        detectedConfigs[activeTransport].confidence * 100
+                      )}
+                      %
+                    </Badge>
+                  </div>
+                </>
+              )}
+
+              {data.configuredEnvVars &&
+                Object.keys(data.configuredEnvVars).length > 0 && (
+                  <div className='flex items-center justify-between'>
+                    <span className='text-muted-foreground'>
+                      Environment Variables:
+                    </span>
+                    <span>
+                      {Object.keys(data.configuredEnvVars).length} configured
+                    </span>
+                  </div>
+                )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Test button */}
-      {!discoveryResult && (
-        <div className="flex justify-center">
+      {!discoveryResult && selectedTransports.length > 0 && (
+        <div className='flex justify-center'>
           <Button
-            size="lg"
+            size='lg'
             onClick={runDiscoveryTest}
-            disabled={isRunning}
-            className="flex items-center gap-2"
-          >
+            disabled={
+              isRunning ||
+              selectedTransports.length === 0 ||
+              !detectedConfigs[activeTransport]
+            }
+            className='flex items-center gap-2'>
             {isRunning ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Running Discovery Test...
+                <Loader2 className='h-4 w-4 animate-spin' />
+                Testing {activeTransport.toUpperCase()} Server...
               </>
             ) : (
               <>
-                <PlayCircle className="h-4 w-4" />
-                Run Discovery Test
+                <PlayCircle className='h-4 w-4' />
+                Test {activeTransport.toUpperCase()} Discovery
               </>
             )}
           </Button>
@@ -327,39 +616,45 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
 
       {/* Discovery results */}
       {discoveryResult && (
-        <div className="space-y-4">
+        <div className='space-y-4'>
           {/* Status alert */}
-          <Alert className={discoveryResult.success ? 'border-green-600' : 'border-destructive'}>
+          <Alert
+            className={
+              discoveryResult.success
+                ? 'border-green-600'
+                : 'border-destructive'
+            }>
             {discoveryResult.success ? (
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CheckCircle2 className='h-4 w-4 text-green-600' />
             ) : (
-              <AlertCircle className="h-4 w-4" />
+              <AlertCircle className='h-4 w-4' />
             )}
-            <AlertDescription className="flex items-center justify-between">
+            <AlertDescription className='flex items-center justify-between'>
               <div>
                 {discoveryResult.success ? (
                   <>
                     <strong>Discovery successful!</strong>
-                    <p className="text-sm mt-1">
-                      Found {totalCapabilities} capabilities: {counts.tools} tools, {counts.resources} resources, {counts.prompts} prompts
+                    <p className='text-sm mt-1'>
+                      Found {totalCapabilities} capabilities: {counts.tools}{' '}
+                      tools, {counts.resources} resources, {counts.prompts}{' '}
+                      prompts
                     </p>
                   </>
                 ) : (
                   <>
                     <strong>Discovery failed</strong>
                     {discoveryResult.error && (
-                      <p className="text-sm mt-1">{discoveryResult.error}</p>
+                      <p className='text-sm mt-1'>{discoveryResult.error}</p>
                     )}
                   </>
                 )}
               </div>
               <Button
-                variant="ghost"
-                size="sm"
+                variant='ghost'
+                size='sm'
                 onClick={runDiscoveryTest}
-                disabled={isRunning}
-              >
-                <RefreshCw className="h-4 w-4" />
+                disabled={isRunning}>
+                <RefreshCw className='h-4 w-4' />
               </Button>
             </AlertDescription>
           </Alert>
@@ -368,37 +663,48 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
           {discoveryResult.success && totalCapabilities > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-sm">Discovered Capabilities</CardTitle>
+                <CardTitle className='text-sm'>
+                  Discovered Capabilities
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <Tabs defaultValue="tools" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="tools" className="flex items-center gap-2">
+                <Tabs defaultValue='tools' className='w-full'>
+                  <TabsList className='grid w-full grid-cols-3'>
+                    <TabsTrigger
+                      value='tools'
+                      className='flex items-center gap-2'>
                       {getCapabilityIcon('tools')}
                       Tools ({counts.tools})
                     </TabsTrigger>
-                    <TabsTrigger value="resources" className="flex items-center gap-2">
+                    <TabsTrigger
+                      value='resources'
+                      className='flex items-center gap-2'>
                       {getCapabilityIcon('resources')}
                       Resources ({counts.resources})
                     </TabsTrigger>
-                    <TabsTrigger value="prompts" className="flex items-center gap-2">
+                    <TabsTrigger
+                      value='prompts'
+                      className='flex items-center gap-2'>
                       {getCapabilityIcon('prompts')}
                       Prompts ({counts.prompts})
                     </TabsTrigger>
                   </TabsList>
-                  
-                  <TabsContent value="tools">
-                    <ScrollArea className="h-[200px] w-full">
-                      {discoveryResult.tools && discoveryResult.tools.length > 0 ? (
-                        <div className="space-y-2">
+
+                  <TabsContent value='tools'>
+                    <ScrollArea className='h-[200px] w-full'>
+                      {discoveryResult.tools &&
+                      discoveryResult.tools.length > 0 ? (
+                        <div className='space-y-2'>
                           {discoveryResult.tools.map((tool, index) => (
-                            <div key={index} className="p-2 border rounded-md">
-                              <div className="flex items-start gap-2">
-                                <Code className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="font-mono text-sm">{tool.name}</p>
+                            <div key={index} className='p-2 border rounded-md'>
+                              <div className='flex items-start gap-2'>
+                                <Code className='h-4 w-4 text-muted-foreground mt-0.5' />
+                                <div className='flex-1'>
+                                  <p className='font-mono text-sm'>
+                                    {tool.name}
+                                  </p>
                                   {tool.description && (
-                                    <p className="text-xs text-muted-foreground mt-1">
+                                    <p className='text-xs text-muted-foreground mt-1'>
                                       {tool.description}
                                     </p>
                                   )}
@@ -408,25 +714,28 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
+                        <p className='text-sm text-muted-foreground text-center py-4'>
                           No tools discovered
                         </p>
                       )}
                     </ScrollArea>
                   </TabsContent>
-                  
-                  <TabsContent value="resources">
-                    <ScrollArea className="h-[200px] w-full">
-                      {discoveryResult.resources && discoveryResult.resources.length > 0 ? (
-                        <div className="space-y-2">
+
+                  <TabsContent value='resources'>
+                    <ScrollArea className='h-[200px] w-full'>
+                      {discoveryResult.resources &&
+                      discoveryResult.resources.length > 0 ? (
+                        <div className='space-y-2'>
                           {discoveryResult.resources.map((resource, index) => (
-                            <div key={index} className="p-2 border rounded-md">
-                              <div className="flex items-start gap-2">
-                                <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="font-mono text-sm">{resource.uri}</p>
+                            <div key={index} className='p-2 border rounded-md'>
+                              <div className='flex items-start gap-2'>
+                                <FileText className='h-4 w-4 text-muted-foreground mt-0.5' />
+                                <div className='flex-1'>
+                                  <p className='font-mono text-sm'>
+                                    {resource.uri}
+                                  </p>
                                   {resource.name && (
-                                    <p className="text-xs text-muted-foreground mt-1">
+                                    <p className='text-xs text-muted-foreground mt-1'>
                                       {resource.name}
                                     </p>
                                   )}
@@ -436,25 +745,28 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
+                        <p className='text-sm text-muted-foreground text-center py-4'>
                           No resources discovered
                         </p>
                       )}
                     </ScrollArea>
                   </TabsContent>
-                  
-                  <TabsContent value="prompts">
-                    <ScrollArea className="h-[200px] w-full">
-                      {discoveryResult.prompts && discoveryResult.prompts.length > 0 ? (
-                        <div className="space-y-2">
+
+                  <TabsContent value='prompts'>
+                    <ScrollArea className='h-[200px] w-full'>
+                      {discoveryResult.prompts &&
+                      discoveryResult.prompts.length > 0 ? (
+                        <div className='space-y-2'>
                           {discoveryResult.prompts.map((prompt, index) => (
-                            <div key={index} className="p-2 border rounded-md">
-                              <div className="flex items-start gap-2">
-                                <MessageSquare className="h-4 w-4 text-muted-foreground mt-0.5" />
-                                <div className="flex-1">
-                                  <p className="font-mono text-sm">{prompt.name}</p>
+                            <div key={index} className='p-2 border rounded-md'>
+                              <div className='flex items-start gap-2'>
+                                <MessageSquare className='h-4 w-4 text-muted-foreground mt-0.5' />
+                                <div className='flex-1'>
+                                  <p className='font-mono text-sm'>
+                                    {prompt.name}
+                                  </p>
                                   {prompt.description && (
-                                    <p className="text-xs text-muted-foreground mt-1">
+                                    <p className='text-xs text-muted-foreground mt-1'>
                                       {prompt.description}
                                     </p>
                                   )}
@@ -464,7 +776,7 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
                           ))}
                         </div>
                       ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
+                        <p className='text-sm text-muted-foreground text-center py-4'>
                           No prompts discovered
                         </p>
                       )}
