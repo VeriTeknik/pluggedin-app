@@ -1,9 +1,10 @@
 'use client';
 
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { useCallback } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useCallback, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -24,6 +25,7 @@ interface SmartServerWizardProps {
 
 export function SmartServerWizard({ open, onOpenChange, onSuccess }: SmartServerWizardProps) {
   const { toast } = useToast();
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const {
     currentStep,
     wizardData,
@@ -50,15 +52,18 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess }: SmartServer
 
     // Show confirmation if user has made progress
     if (currentStep > 0 || wizardData.githubUrl) {
-      if (confirm('Are you sure you want to cancel? Your progress will be lost.')) {
-        resetWizard();
-        onOpenChange(false);
-      }
+      setShowConfirmDialog(true);
     } else {
       resetWizard();
       onOpenChange(false);
     }
   }, [currentStep, wizardData, isSubmitting, onOpenChange, resetWizard, toast]);
+
+  const handleConfirmClose = useCallback(() => {
+    resetWizard();
+    onOpenChange(false);
+    setShowConfirmDialog(false);
+  }, [onOpenChange, resetWizard]);
 
   const handleSuccess = useCallback(() => {
     toast({
@@ -116,22 +121,12 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess }: SmartServer
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader className="flex-shrink-0">
-          <div className="flex items-center justify-between">
+    <>
+      <Dialog open={open} onOpenChange={handleClose}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader className="flex-shrink-0">
             <DialogTitle>Add Server to Registry</DialogTitle>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleClose}
-              disabled={isSubmitting}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </DialogHeader>
+          </DialogHeader>
 
         {/* Progress indicator */}
         <div className="flex-shrink-0 px-6">
@@ -172,6 +167,18 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess }: SmartServer
           </div>
         </div>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      <ConfirmDialog
+        open={showConfirmDialog}
+        onOpenChange={setShowConfirmDialog}
+        title="Cancel Wizard"
+        description="Are you sure you want to cancel? Your progress will be lost."
+        confirmText="Yes, Cancel"
+        cancelText="Continue"
+        onConfirm={handleConfirmClose}
+        variant="destructive"
+      />
+    </>
   );
 }

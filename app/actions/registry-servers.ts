@@ -554,3 +554,153 @@ export async function getClaimableServers(userId: string) {
     return { servers: [], error: 'Failed to fetch claimable servers' };
   }
 }
+
+interface WizardSubmissionData {
+  // Repository info
+  githubUrl: string;
+  owner: string;
+  repo: string;
+  repoInfo?: {
+    name: string;
+    description?: string;
+    private: boolean;
+    defaultBranch: string;
+    language?: string;
+    stars: number;
+  };
+  
+  // Claim decision
+  shouldClaim?: boolean;
+  
+  // Environment variables
+  configuredEnvVars?: Record<string, string>;
+  detectedEnvVars?: Array<{
+    name: string;
+    description?: string;
+    required: boolean;
+    source: string;
+  }>;
+  
+  // Transport configuration
+  transportConfigs?: {
+    [transport: string]: {
+      command?: string;
+      args?: string[];
+      url?: string;
+      packageName?: string;
+      registry?: string;
+      env?: Record<string, string>;
+    };
+  };
+  
+  // Final metadata
+  finalDescription?: string;
+  categories?: string[];
+}
+
+/**
+ * Submit wizard data to the registry
+ */
+export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'You must be logged in to submit servers' };
+    }
+
+    // Validate required fields
+    if (!wizardData.githubUrl || !wizardData.owner || !wizardData.repo) {
+      return { success: false, error: 'Missing repository information' };
+    }
+
+    // Check if this is a claimed server
+    if (wizardData.shouldClaim) {
+      // Get user's GitHub token for ownership verification
+      const githubToken = await getUserGitHubToken(session.user.id);
+      if (!githubToken) {
+        return {
+          success: false,
+          error: 'Please connect your GitHub account to claim servers',
+          needsAuth: true
+        };
+      }
+      
+      // Verify ownership
+      const ownership = await verifyGitHubOwnership(githubToken, wizardData.githubUrl);
+      if (!ownership.isOwner) {
+        return { 
+          success: false, 
+          error: ownership.reason || 'GitHub ownership verification failed',
+          needsAuth: ownership.needsAuth
+        };
+      }
+    }
+
+    // Determine package information from transport configs
+    const packages = [];
+    if (wizardData.transportConfigs) {
+      for (const [_transport, config] of Object.entries(wizardData.transportConfigs)) {
+        if (config.packageName) {
+          packages.push({
+            registry_name: config.registry || 'npm',
+            name: config.packageName,
+            version: 'latest', // TODO: Get actual version
+            environment_variables: wizardData.detectedEnvVars?.map(env => ({
+              name: env.name,
+              description: env.description || '',
+              required: env.required
+            })) || []
+          });
+        }
+      }
+    }
+
+    // If no packages found, create a GitHub package
+    if (packages.length === 0) {
+      packages.push({
+        registry_name: 'npm', // Default to npm since github is not supported
+        name: `${wizardData.owner}/${wizardData.repo}`,
+        version: 'latest',
+        environment_variables: wizardData.detectedEnvVars?.map(env => ({
+          name: env.name,
+          description: env.description || '',
+          required: env.required
+        })) || []
+      });
+    }
+
+    // Prepare submission data for publishClaimedServer
+    const submissionData = {
+      repositoryUrl: wizardData.githubUrl,
+      description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+      packageInfo: {
+        registry: packages[0].registry_name === 'github' ? 'npm' : packages[0].registry_name as 'npm' | 'docker' | 'pypi',
+        name: packages[0].name,
+        version: packages[0].version,
+      },
+      environmentVariables: packages[0].environment_variables
+    };
+
+    // Submit using existing publishClaimedServer function
+    const result = await publishClaimedServer(submissionData);
+    
+    if (result.success) {
+      return {
+        success: true,
+        serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
+        data: result.server
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error || 'Failed to submit to registry'
+      };
+    }
+  } catch (error) {
+    console.error('Error submitting wizard to registry:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to submit to registry' 
+    };
+  }
+}

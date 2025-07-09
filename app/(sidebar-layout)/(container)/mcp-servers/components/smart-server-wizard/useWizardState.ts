@@ -18,6 +18,7 @@ export interface WizardData {
 
   // Step 2: Claim Decision
   willClaim?: boolean;
+  shouldClaim?: boolean;
   isAuthenticated?: boolean;
   githubUsername?: string;
   ownershipVerified?: boolean;
@@ -29,6 +30,7 @@ export interface WizardData {
     defaultValue?: string;
     required: boolean;
     source: 'readme' | 'env-example' | 'code' | 'manual' | 'registry';
+    isSecret?: boolean;
   }>;
   configuredEnvVars?: Record<string, string>;
 
@@ -45,6 +47,7 @@ export interface WizardData {
       dockerVolumes?: string[];
       env?: Record<string, string>;
       packageName?: string;
+      registry?: string;
       confidence?: number;
       source?: string;
     };
@@ -65,6 +68,9 @@ export interface WizardData {
   };
 
   // Step 5: Registry Submission
+  customDescription?: string;
+  categories?: string[];
+  finalDescription?: string;
   serverMetadata?: {
     name: string;
     description: string;

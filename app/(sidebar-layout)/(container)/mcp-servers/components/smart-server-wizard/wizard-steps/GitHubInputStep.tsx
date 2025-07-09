@@ -110,7 +110,7 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
         <h2 className="text-2xl font-semibold mb-2">Add a GitHub Repository</h2>
         <p className="text-muted-foreground">
           Enter the URL of the GitHub repository containing your MCP server.
-          We'll analyze it to help you configure everything correctly.
+          We&apos;ll analyze it to help you configure everything correctly.
         </p>
       </div>
 
