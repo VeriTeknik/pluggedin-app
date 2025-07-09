@@ -410,10 +410,14 @@ export async function GET(
           timestamp: Date.now(),
           data: {
             success,
-            tools: discoveredTools.length,
-            templates: discoveredTemplates.length,
-            resources: discoveredResources.length,
-            prompts: discoveredPrompts.length,
+            tools: discoveredTools, // Send the actual arrays, not counts
+            templates: discoveredTemplates,
+            resources: discoveredResources,
+            prompts: discoveredPrompts,
+            toolsCount: discoveredTools.length,
+            templatesCount: discoveredTemplates.length,
+            resourcesCount: discoveredResources.length,
+            promptsCount: discoveredPrompts.length,
             errors: {
               toolError,
               templateError,

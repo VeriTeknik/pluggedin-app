@@ -90,18 +90,35 @@ export function StreamingCliToast({
     const connectToStream = async () => {
       try {
         const url = `/api/discover/stream/${serverUuid}?profileUuid=${profileUuid}`;
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: {
-            Accept: 'text/event-stream',
-            'Cache-Control': 'no-cache',
-          },
-          credentials: 'same-origin', // Include cookies for authentication
-          signal: abortController.signal,
-        });
+        
+        // Add a timeout wrapper
+        const timeoutMs = 10000; // 10 seconds
+        const timeoutController = new AbortController();
+        const timeoutId = setTimeout(() => {
+          timeoutController.abort();
+        }, timeoutMs);
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        let response: Response;
+        try {
+          response = await fetch(url, {
+            method: 'GET',
+            headers: {
+              Accept: 'text/event-stream',
+              'Cache-Control': 'no-cache',
+            },
+            credentials: 'same-origin', // Include cookies for authentication
+            signal: timeoutController.signal,
+          });
+          
+          clearTimeout(timeoutId);
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+          }
+        } catch (fetchError) {
+          clearTimeout(timeoutId);
+          throw fetchError;
         }
 
         if (!response.body) {
