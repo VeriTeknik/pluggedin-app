@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { AlertCircle,Code, GitBranch, Github, Loader2, Lock, Star } from 'lucide-react';
+import { useCallback,useState } from 'react';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Github, Lock, Star, GitBranch, Code, Loader2, AlertCircle } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
 import { WizardData } from '../useWizardState';
 
 interface GitHubInputStepProps {

@@ -27,10 +27,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
 import { cn } from '@/lib/utils';
+
 import { SmartServerWizard } from './smart-server-wizard/SmartServerWizard';
-import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface SmartServerDialogProps {
   open: boolean;

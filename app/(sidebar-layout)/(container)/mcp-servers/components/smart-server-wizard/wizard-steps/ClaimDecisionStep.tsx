@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { WizardData } from '../useWizardState';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Label } from '@/components/ui/label';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Github, Users, Shield, TrendingUp, AlertCircle, Check, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { AlertCircle, Check, Github, Loader2,Shield, Users } from 'lucide-react';
+import { useCallback,useEffect, useState } from 'react';
+
 import { verifyGitHubOwnership } from '@/app/actions/registry-servers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useToast } from '@/hooks/use-toast';
+
+import { WizardData } from '../useWizardState';
 
 interface ClaimDecisionStepProps {
   data: WizardData;

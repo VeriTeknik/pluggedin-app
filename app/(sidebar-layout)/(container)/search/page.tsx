@@ -16,8 +16,8 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import useSWR from 'swr';
 
-import { createMcpServer, getMcpServers } from '@/app/actions/mcp-servers';
 import { SmartServerWizard } from '@/app/(sidebar-layout)/(container)/mcp-servers/components/smart-server-wizard/SmartServerWizard';
+import { createMcpServer, getMcpServers } from '@/app/actions/mcp-servers';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

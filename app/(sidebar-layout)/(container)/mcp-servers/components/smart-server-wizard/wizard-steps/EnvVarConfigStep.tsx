@@ -1,29 +1,30 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { WizardData } from '../useWizardState';
+import { 
+  AlertCircle, 
+  Check,
+  Code,
+  Eye,
+  EyeOff,
+  FileCode, 
+  FileText, 
+  Info, 
+  Loader2,
+  Plus, 
+  Trash2} from 'lucide-react';
+import { useEffect,useState } from 'react';
+
+import { fetchRegistryServer } from '@/app/actions/registry-servers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { 
-  AlertCircle, 
-  Info, 
-  Plus, 
-  Trash2, 
-  FileCode, 
-  FileText, 
-  Code,
-  Loader2,
-  Check,
-  Eye,
-  EyeOff
-} from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { fetchRegistryServer } from '@/app/actions/registry-servers';
+
+import { WizardData } from '../useWizardState';
 
 interface EnvVarConfigStepProps {
   data: WizardData;

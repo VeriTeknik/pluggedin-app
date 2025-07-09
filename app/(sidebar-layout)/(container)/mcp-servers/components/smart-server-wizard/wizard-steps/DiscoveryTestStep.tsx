@@ -1,7 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { WizardData } from '../useWizardState';
+import {
+  AlertCircle,
+  CheckCircle2,
+  Code,
+  FileText,
+  Globe,
+  Loader2,
+  MessageSquare,
+  Package,
+  PlayCircle,
+  RefreshCw,
+  Terminal,
+  Wrench,
+} from 'lucide-react';
+import { useEffect,useState } from 'react';
+
+import { detectPackageConfiguration } from '@/app/actions/detect-package';
+import { createMcpServer } from '@/app/actions/mcp-servers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -10,33 +28,17 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { StreamingCliToast } from '@/components/ui/streaming-cli-toast';
-import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
-import {
-  AlertCircle,
-  CheckCircle2,
-  Terminal,
-  Wrench,
-  FileText,
-  MessageSquare,
-  Loader2,
-  PlayCircle,
-  RefreshCw,
-  Code,
-  Globe,
-  Package,
-} from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { createMcpServer } from '@/app/actions/mcp-servers';
-import { detectPackageConfiguration } from '@/app/actions/detect-package';
-import { useProfiles } from '@/hooks/use-profiles';
-import { TransportType } from '@/lib/mcp/package-detector';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { McpServerType } from '@/db/schema';
+import { useProfiles } from '@/hooks/use-profiles';
+import { useToast } from '@/hooks/use-toast';
+import { TransportType } from '@/lib/mcp/package-detector';
+
+import { WizardData } from '../useWizardState';
 
 interface DiscoveryTestStepProps {
   data: WizardData;

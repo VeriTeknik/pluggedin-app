@@ -1,8 +1,9 @@
 import { exec } from 'child_process';
-import { promisify } from 'util';
 import path from 'path';
-import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
+import { promisify } from 'util';
+
 import { PackageManagerConfig } from '../config';
+import { BasePackageHandler, InstallOptions, PackageInfo } from './base-handler';
 
 const execAsync = promisify(exec);
 

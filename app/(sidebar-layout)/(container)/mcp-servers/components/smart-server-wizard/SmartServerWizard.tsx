@@ -1,18 +1,20 @@
 'use client';
 
-import { useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
-import { useWizardState } from './useWizardState';
-import { WizardProgress } from './components/WizardProgress';
-import { GitHubInputStep } from './wizard-steps/GitHubInputStep';
-import { ClaimDecisionStep } from './wizard-steps/ClaimDecisionStep';
-import { EnvVarConfigStep } from './wizard-steps/EnvVarConfigStep';
-import { DiscoveryTestStep } from './wizard-steps/DiscoveryTestStep';
-import { RegistrySubmitStep } from './wizard-steps/RegistrySubmitStep';
+import { useCallback } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+
+import { WizardProgress } from './components/WizardProgress';
+import { useWizardState } from './useWizardState';
+import { ClaimDecisionStep } from './wizard-steps/ClaimDecisionStep';
+import { DiscoveryTestStep } from './wizard-steps/DiscoveryTestStep';
+import { EnvVarConfigStep } from './wizard-steps/EnvVarConfigStep';
+import { GitHubInputStep } from './wizard-steps/GitHubInputStep';
+import { RegistrySubmitStep } from './wizard-steps/RegistrySubmitStep';
 
 interface SmartServerWizardProps {
   open: boolean;

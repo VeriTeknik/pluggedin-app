@@ -1,8 +1,8 @@
 import { PackageManagerConfig } from './config';
 import { BasePackageHandler, InstallOptions, PackageInfo } from './handlers/base-handler';
+import { DockerHandler } from './handlers/docker-handler';
 import { PnpmHandler } from './handlers/pnpm-handler';
 import { UvHandler } from './handlers/uv-handler';
-import { DockerHandler } from './handlers/docker-handler';
 
 export { PackageManagerConfig } from './config';
 export { BasePackageHandler } from './handlers/base-handler';

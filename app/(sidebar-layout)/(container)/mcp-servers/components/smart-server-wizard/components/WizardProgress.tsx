@@ -1,7 +1,9 @@
 'use client';
 
 import { Check } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
 import { WizardStep } from '../useWizardState';
 
 interface WizardProgressProps {

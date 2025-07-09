@@ -1,6 +1,6 @@
 'use server';
 
-import { and, desc, eq, or } from 'drizzle-orm';
+import { and, desc, eq, not, or } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { 
@@ -50,7 +50,9 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
         or(
           eq(mcpServersTable.status, McpServerStatus.ACTIVE),
           eq(mcpServersTable.status, McpServerStatus.INACTIVE)
-        )
+        ),
+        // Exclude temporary servers created during discovery tests
+        not(eq(mcpServersTable.description, 'Temporary stdio server for discovery test'))
       )
     )
     .orderBy(desc(mcpServersTable.created_at));

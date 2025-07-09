@@ -1,7 +1,8 @@
 'use client';
 
-import { WizardData } from '../useWizardState';
 import { Button } from '@/components/ui/button';
+
+import { WizardData } from '../useWizardState';
 
 interface RegistrySubmitStepProps {
   data: WizardData;
