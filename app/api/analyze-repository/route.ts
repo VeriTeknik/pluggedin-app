@@ -3,6 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 interface EnvVariable {
   name: string;
   description?: string;
+  required?: boolean;
+  isSecret?: boolean;
+}
+
+interface TransportConfig {
+  command?: string;
+  args?: string[];
+  env?: Record<string, string>;
 }
 
 export async function GET(request: NextRequest) {
@@ -51,6 +59,7 @@ export async function GET(request: NextRequest) {
     }
 
     const envVariables: EnvVariable[] = [];
+    const transportConfigs: Record<string, TransportConfig> = {};
     
     // Try to fetch MCP configuration files
     const configFiles = [
@@ -80,14 +89,68 @@ export async function GET(request: NextRequest) {
     }
 
     if (mcpConfig?.mcpServers) {
-      // Extract environment variables from the first server
-      const firstServer = Object.values(mcpConfig.mcpServers)[0] as any;
-      if (firstServer?.env) {
-        for (const [name] of Object.entries(firstServer.env)) {
-          envVariables.push({
-            name,
-            description: `Environment variable for ${name}`
-          });
+      // Extract configuration from all servers
+      for (const [serverName, serverConfig] of Object.entries(mcpConfig.mcpServers)) {
+        const config = serverConfig as any;
+        
+        // Store transport configuration
+        transportConfigs[serverName] = {
+          command: config.command,
+          args: config.args,
+          env: config.env
+        };
+        
+        // Extract environment variables from env object
+        if (config.env) {
+          for (const [name] of Object.entries(config.env)) {
+            envVariables.push({
+              name,
+              description: `Environment variable for ${name}`,
+              required: true,
+              isSecret: name.toLowerCase().includes('key') || 
+                       name.toLowerCase().includes('token') ||
+                       name.toLowerCase().includes('secret') ||
+                       name.toLowerCase().includes('password')
+            });
+          }
+        }
+        
+        // Also extract environment variables from args
+        // Look for patterns like API_KEY="your-api-key" or --api-key <value>
+        if (config.args && Array.isArray(config.args)) {
+          for (const arg of config.args) {
+            // Pattern 1: ENV_VAR="value"
+            const envVarMatch = arg.match(/^([A-Z][A-Z0-9_]+)=["']?[^"']*["']?$/);
+            if (envVarMatch) {
+              const varName = envVarMatch[1];
+              if (!envVariables.find(v => v.name === varName)) {
+                envVariables.push({
+                  name: varName,
+                  description: `Environment variable detected from args`,
+                  required: true,
+                  isSecret: varName.toLowerCase().includes('key') || 
+                           varName.toLowerCase().includes('token') ||
+                           varName.toLowerCase().includes('secret') ||
+                           varName.toLowerCase().includes('password')
+                });
+              }
+            }
+            
+            // Pattern 2: --api-key or --token flags
+            const flagMatch = arg.match(/^--?(api[-_]?key|token|secret|password)/i);
+            if (flagMatch) {
+              const varName = flagMatch[1].toUpperCase().replace(/-/g, '_');
+              const envVarName = varName.includes('API_KEY') ? 'API_KEY' : varName;
+              if (!envVariables.find(v => v.name === envVarName)) {
+                envVariables.push({
+                  name: envVarName,
+                  description: `API key or token detected from command line args`,
+                  required: true,
+                  isSecret: true
+                });
+              }
+            }
+          }
         }
       }
     }
@@ -123,11 +186,60 @@ export async function GET(request: NextRequest) {
               }
             }
           }
+          
+          // Also look for JSON configuration examples in README
+          const configBlockPattern = /```json\s*([\s\S]*?)```/g;
+          let configMatch;
+          while ((configMatch = configBlockPattern.exec(readmeText)) !== null) {
+            try {
+              const configJson = JSON.parse(configMatch[1]);
+              if (configJson.mcpServers) {
+                // Extract transport configs and env vars from the example configuration
+                for (const [serverName, config] of Object.entries(configJson.mcpServers)) {
+                  const serverConfig = config as any;
+                  
+                  // Store transport configuration if not already found
+                  if (!transportConfigs[serverName] && (serverConfig.command || serverConfig.args)) {
+                    transportConfigs[serverName] = {
+                      command: serverConfig.command,
+                      args: serverConfig.args,
+                      env: serverConfig.env
+                    };
+                  }
+                  
+                  if (serverConfig.env) {
+                    for (const [envName] of Object.entries(serverConfig.env)) {
+                      if (!foundVars.has(envName)) {
+                        foundVars.add(envName);
+                      }
+                    }
+                  }
+                  // Also check args for env var patterns
+                  if (serverConfig.args && Array.isArray(serverConfig.args)) {
+                    for (const arg of serverConfig.args) {
+                      const envVarMatch = arg.match(/^([A-Z][A-Z0-9_]+)=["']?[^"']*["']?$/);
+                      if (envVarMatch) {
+                        foundVars.add(envVarMatch[1]);
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (e) {
+              // Not valid JSON, continue
+            }
+          }
 
           Array.from(foundVars).forEach(name => {
             envVariables.push({
               name,
-              description: `Environment variable detected from README`
+              description: `Environment variable detected from README`,
+              required: true,
+              isSecret: name.toLowerCase().includes('key') || 
+                       name.toLowerCase().includes('token') ||
+                       name.toLowerCase().includes('secret') ||
+                       name.toLowerCase().includes('password') ||
+                       name === 'API_KEY'
             });
           });
         }
@@ -139,6 +251,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       envVariables,
+      transportConfigs,
       mcpConfig,
       repository: {
         owner,

@@ -207,14 +207,20 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
 
   // Update the completion state when choice changes
   useEffect(() => {
+    // If server already exists, don't allow proceeding
+    if (data.registryCheck?.exists) {
+      onUpdate({ willClaim: undefined });
+      return;
+    }
+    
     if (choice === 'community') {
-      // Community option is always valid
+      // Community option is valid when server doesn't exist
       onUpdate({ willClaim: false });
     } else if (choice === 'claim' && data.isAuthenticated && ownershipVerified) {
       // Claim option is valid when authenticated and ownership verified
       onUpdate({ willClaim: true });
     }
-  }, [choice, data.isAuthenticated, ownershipVerified, onUpdate]);
+  }, [choice, data.isAuthenticated, ownershipVerified, data.registryCheck, onUpdate]);
   
   // Verify ownership when authenticated and claim is selected
   useEffect(() => {
@@ -246,22 +252,51 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
         </AlertDescription>
       </Alert>
 
+      {/* Warning if server already exists */}
+      {data.registryCheck?.exists && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-semibold mb-2">This server is already in the registry!</p>
+            {data.registryCheck.servers?.map((server) => (
+              <div key={server.id} className="text-sm">
+                <p>• {server.name} ({server.isClaimed ? 'Claimed' : 'Community'} server)</p>
+                {server.version && <p className="ml-2 text-xs">Version: {server.version}</p>}
+              </div>
+            ))}
+            <p className="mt-2 text-sm">
+              {data.registryCheck.servers?.some(s => s.isClaimed) 
+                ? "If you're the owner, you can update the existing server instead of creating a duplicate."
+                : "You can claim this community server if you're the repository owner."}
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <RadioGroup value={choice} onValueChange={handleChoiceChange}>
         <div className="space-y-4">
           {/* Claim option */}
           <Card className={choice === 'claim' ? 'ring-2 ring-primary' : ''}>
             <CardHeader className="pb-3">
               <div className="flex items-start space-x-3">
-                <RadioGroupItem value="claim" id="claim" className="mt-1" />
+                <RadioGroupItem 
+                  value="claim" 
+                  id="claim" 
+                  className="mt-1" 
+                  disabled={data.registryCheck?.exists && data.registryCheck.servers?.some(s => s.isClaimed)}
+                />
                 <div className="flex-1">
                   <Label htmlFor="claim" className="cursor-pointer">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Shield className="h-5 w-5 text-primary" />
-                      Claim this server (Recommended)
+                      Claim this server {!data.registryCheck?.exists && '(Recommended)'}
+                      {data.registryCheck?.exists && data.registryCheck.servers?.some(s => s.isClaimed) && ' (Already claimed)'}
                     </CardTitle>
                   </Label>
                   <CardDescription className="mt-1">
-                    Verify ownership and unlock premium features
+                    {data.registryCheck?.exists && data.registryCheck.servers?.some(s => s.isClaimed) 
+                      ? 'This server has already been claimed by its owner'
+                      : 'Verify ownership and unlock premium features'}
                   </CardDescription>
                 </div>
               </div>
@@ -338,16 +373,24 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
           <Card className={choice === 'community' ? 'ring-2 ring-primary' : ''}>
             <CardHeader className="pb-3">
               <div className="flex items-start space-x-3">
-                <RadioGroupItem value="community" id="community" className="mt-1" />
+                <RadioGroupItem 
+                  value="community" 
+                  id="community" 
+                  className="mt-1" 
+                  disabled={data.registryCheck?.exists}
+                />
                 <div className="flex-1">
                   <Label htmlFor="community" className="cursor-pointer">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Users className="h-5 w-5" />
                       Add to community
+                      {data.registryCheck?.exists && ' (Already in registry)'}
                     </CardTitle>
                   </Label>
                   <CardDescription className="mt-1">
-                    Submit without ownership verification
+                    {data.registryCheck?.exists 
+                      ? 'This server is already in the registry'
+                      : 'Submit without ownership verification'}
                   </CardDescription>
                 </div>
               </div>
@@ -375,6 +418,31 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
           </Card>
         </div>
       </RadioGroup>
+
+      {/* Action guidance when server exists */}
+      {data.registryCheck?.exists && (
+        <Alert>
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <p className="font-semibold">What can you do?</p>
+            <ul className="mt-2 space-y-1 text-sm">
+              {data.registryCheck.servers?.some(s => s.isClaimed) ? (
+                <>
+                  <li>• If you own this repository, update the existing server instead</li>
+                  <li>• Import the existing server from the registry to your profile</li>
+                  <li>• Contact the current owner if you believe there&apos;s an issue</li>
+                </>
+              ) : (
+                <>
+                  <li>• If you own this repository, you can claim the existing community server</li>
+                  <li>• Import the existing server from the registry to your profile</li>
+                  <li>• Update the community server if you have improvements</li>
+                </>
+              )}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* The Next button is provided by the wizard footer, so we don't need an extra Continue button here */}
     </div>

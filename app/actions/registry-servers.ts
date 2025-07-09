@@ -904,7 +904,7 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
             }
           }
         }
-      } catch (error) {
+      } catch (_error) {
         console.log('🔍 submitWizardToRegistry: Could not fetch repo metadata, using fallbacks:', { repoId, packageVersion });
       }
       

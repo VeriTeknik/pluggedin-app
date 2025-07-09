@@ -327,7 +327,7 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting 
               <div className="mt-2 space-y-2">
                 <p className="text-sm">To resolve this:</p>
                 <ol className="list-decimal list-inside text-sm space-y-1">
-                  <li>Update the version in your repository's package.json</li>
+                  <li>Update the version in your repository&apos;s package.json</li>
                   <li>Push the changes to GitHub</li>
                   <li>Try submitting again</li>
                 </ol>

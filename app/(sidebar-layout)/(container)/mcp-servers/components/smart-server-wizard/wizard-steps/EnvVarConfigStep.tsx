@@ -11,6 +11,7 @@ import {
   Info, 
   Loader2,
   Plus, 
+  Terminal,
   Trash2} from 'lucide-react';
 import { useEffect,useState } from 'react';
 
@@ -87,7 +88,37 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
     const seenVars = new Set<string>();
 
     try {
-      // First, check transport configurations for env vars
+      // First, call the analyze repository API to get transport configs
+      const response = await fetch(`/api/analyze-repository?url=${encodeURIComponent(data.githubUrl!)}`);
+      
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Store transport configurations
+        if (result.transportConfigs) {
+          onUpdate({ detectedTransportConfigs: result.transportConfigs });
+        }
+        
+        // Add environment variables from the API
+        if (result.envVariables?.length > 0) {
+          result.envVariables.forEach((envVar: any) => {
+            if (!seenVars.has(envVar.name)) {
+              seenVars.add(envVar.name);
+              detectedVars.push({
+                name: envVar.name,
+                description: envVar.description || `Environment variable`,
+                defaultValue: '',
+                required: envVar.required !== false,
+                source: 'args' as const,
+                value: '',
+                isSecret: envVar.isSecret || false
+              });
+            }
+          });
+        }
+      }
+      
+      // Also check transport configurations for env vars
       if (data.transportConfigs) {
         Object.values(data.transportConfigs).forEach(config => {
           if (config.env) {
@@ -283,9 +314,9 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
     }
   };
 
-  const areRequiredVarsFilled = () => {
-    return envVars.filter(v => v.required).every(v => v.value && v.value.trim() !== '');
-  };
+  // const areRequiredVarsFilled = () => {
+  //   return envVars.filter(v => v.required).every(v => v.value && v.value.trim() !== '');
+  // };
 
   return (
     <div className="space-y-6">
@@ -303,6 +334,40 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
             Detecting environment variables...
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Display detected command and args */}
+      {data.detectedTransportConfigs && Object.keys(data.detectedTransportConfigs).length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Terminal className="h-5 w-5" />
+              Detected MCP Configuration
+            </CardTitle>
+            <CardDescription>
+              Command and arguments detected from the repository
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {Object.entries(data.detectedTransportConfigs).map(([serverName, config]) => (
+              <div key={serverName} className="space-y-2">
+                <Label className="text-sm font-medium">{serverName}</Label>
+                <div className="bg-muted p-3 rounded-md font-mono text-sm space-y-1">
+                  {config.command && (
+                    <div>
+                      <span className="text-muted-foreground">Command:</span> {config.command}
+                    </div>
+                  )}
+                  {config.args && config.args.length > 0 && (
+                    <div>
+                      <span className="text-muted-foreground">Args:</span> {JSON.stringify(config.args)}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
       )}
 
       {!isDetecting && envVars.length === 0 && (

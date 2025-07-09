@@ -175,20 +175,27 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
   };
 
   const prepareServerConfig = async () => {
-    const owner = data.owner || '';
     const repo = data.repo || '';
     const serverName = repo || 'test-server';
 
+    // First check if we have detected transport configs from the repository
+    const detectedTransportConfig = data.detectedTransportConfigs ? 
+      Object.values(data.detectedTransportConfigs)[0] : null;
+
     // Get the detected configuration for the active transport
     const config = detectedConfigs[activeTransport];
-    if (!config) {
+    
+    // Use repository-detected config as primary source
+    const useDetectedConfig = detectedTransportConfig || config;
+    
+    if (!useDetectedConfig) {
       throw new Error(
         `No configuration detected for ${activeTransport} transport`
       );
     }
 
     // Get configured environment variables
-    const env = { ...config.env, ...data.configuredEnvVars };
+    const env = { ...useDetectedConfig.env, ...data.configuredEnvVars };
 
     // Build server configuration based on transport type
     const baseConfig = {
@@ -202,17 +209,17 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
         return {
           ...baseConfig,
           type: McpServerType.STDIO,
-          command: config.command || 'npx',
-          args: config.args || ['-y', config.packageName],
+          command: detectedTransportConfig?.command || useDetectedConfig.command || 'npx',
+          args: detectedTransportConfig?.args || useDetectedConfig.args || ['-y', useDetectedConfig.packageName],
         };
 
       case 'streamable-http':
         return {
           ...baseConfig,
           type: McpServerType.STREAMABLE_HTTP,
-          url: config.url || '',
+          url: useDetectedConfig.url || '',
           streamableHTTPOptions: {
-            headers: config.headers,
+            headers: useDetectedConfig.headers,
           },
         };
 
@@ -220,8 +227,8 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
         return {
           ...baseConfig,
           type: McpServerType.STDIO, // Docker runs as STDIO
-          command: config.command || 'docker',
-          args: config.args || ['run', '--rm', '-i', config.dockerImage],
+          command: useDetectedConfig.command || 'docker',
+          args: useDetectedConfig.args || ['run', '--rm', '-i', useDetectedConfig.dockerImage],
         };
 
       default:

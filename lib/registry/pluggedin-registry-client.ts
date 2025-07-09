@@ -106,18 +106,6 @@ export class PluggedinRegistryClient {
     
     do {
       const response = await this.listServers(100, cursor);
-      
-      // Debug: Check if YouTube server has packages
-      const youtubeServer = response.servers.find(s => s.name?.includes('youtube'));
-      if (youtubeServer) {
-        console.log('[Registry Client] YouTube server from list:', {
-          id: youtubeServer.id,
-          name: youtubeServer.name,
-          hasPackages: !!youtubeServer.packages,
-          packagesLength: youtubeServer.packages?.length
-        });
-      }
-      
       allServers.push(...response.servers);
       cursor = response.metadata?.next_cursor;
     } while (cursor);

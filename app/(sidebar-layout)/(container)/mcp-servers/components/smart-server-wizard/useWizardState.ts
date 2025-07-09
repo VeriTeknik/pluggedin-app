@@ -15,6 +15,16 @@ export interface WizardData {
     language?: string;
     stars: number;
   };
+  registryCheck?: {
+    exists: boolean;
+    servers?: Array<{
+      id: string;
+      name: string;
+      isClaimed: boolean;
+      source?: string;
+      version?: string;
+    }>;
+  };
 
   // Step 2: Claim Decision
   willClaim?: boolean;
@@ -30,10 +40,15 @@ export interface WizardData {
     description?: string;
     defaultValue?: string;
     required: boolean;
-    source: 'readme' | 'env-example' | 'code' | 'manual' | 'registry';
+    source: 'readme' | 'env-example' | 'code' | 'manual' | 'registry' | 'args';
     isSecret?: boolean;
   }>;
   configuredEnvVars?: Record<string, string>;
+  detectedTransportConfigs?: Record<string, {
+    command?: string;
+    args?: string[];
+    env?: Record<string, string>;
+  }>;
 
   // Step 4: Discovery Test
   selectedTransports?: Array<'stdio' | 'sse' | 'streamable-http' | 'docker'>;
@@ -131,7 +146,8 @@ export function useWizardState() {
       id: 'claim-decision',
       title: 'Ownership',
       description: 'Claim this server or add to community',
-      isComplete: wizardData.willClaim !== undefined && 
+      isComplete: !wizardData.registryCheck?.exists && // Can't proceed if server already exists
+                  wizardData.willClaim !== undefined && 
                   (wizardData.willClaim === false || 
                    (wizardData.willClaim === true && wizardData.isAuthenticated === true && wizardData.ownershipVerified === true)),
       isActive: currentStep === 1,
