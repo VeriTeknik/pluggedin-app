@@ -628,8 +628,22 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       return { success: false, error: 'Missing repository information' };
     }
 
+    // Check if this is a community server (not claimed)
+    if (!wizardData.shouldClaim) {
+      console.log('🔍 submitWizardToRegistry: This is a community server, using REGISTRY_AUTH_TOKEN');
+      
+      // For community servers, we use the REGISTRY_AUTH_TOKEN from environment
+      const registryAuthToken = process.env.REGISTRY_AUTH_TOKEN;
+      if (!registryAuthToken) {
+        console.log('🔍 submitWizardToRegistry: REGISTRY_AUTH_TOKEN not configured');
+        return { success: false, error: 'Registry authentication not configured. Please contact the administrator.' };
+      }
+      
+      // Skip to submission for community servers
+      console.log('🔍 submitWizardToRegistry: Proceeding with community server submission');
+    }
     // Check if this is a claimed server - ONLY do ownership verification if we don't have a registry token
-    if (wizardData.shouldClaim && !wizardData.registryToken) {
+    else if (wizardData.shouldClaim && !wizardData.registryToken) {
       console.log('🔍 submitWizardToRegistry: This is a claimed server without registry token, using NextAuth flow...');
       
       // Fall back to NextAuth token
@@ -710,8 +724,104 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       environmentVariables: packages[0].environment_variables
     };
 
+    // For community servers, use REGISTRY_AUTH_TOKEN
+    if (!wizardData.shouldClaim) {
+      console.log('🔍 submitWizardToRegistry: Submitting community server with REGISTRY_AUTH_TOKEN');
+      
+      const registryAuthToken = process.env.REGISTRY_AUTH_TOKEN;
+      if (!registryAuthToken) {
+        return { success: false, error: 'Registry authentication not configured. Please contact the administrator.' };
+      }
+      
+      // Prepare registry payload for community server
+      const registryPayload = {
+        name: `io.github.${wizardData.owner}/${wizardData.repo}`,
+        description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+        packages: [{
+          registry_name: packages[0].registry_name || 'npm',
+          name: packages[0].name || `${wizardData.repo}`,
+          version: '1.0.0', // Community servers typically use latest
+          environment_variables: (wizardData.detectedEnvVars || []).map(env => ({
+            name: env.name,
+            description: env.description || `Environment variable ${env.name}`,
+            required: env.required
+          }))
+        }],
+        repository: {
+          url: wizardData.githubUrl,
+          source: 'github',
+          id: `${wizardData.owner}/${wizardData.repo}`
+        },
+        version_detail: {
+          version: '1.0.0',
+        },
+      };
+      
+      console.log('🔍 submitWizardToRegistry: Community server payload:', JSON.stringify(registryPayload, null, 2));
+      
+      // Submit to /v0/servers/community endpoint as per APP_INTEGRATION_GUIDE.md
+      const registryResponse = await fetch('https://registry.plugged.in/v0/servers/community', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${registryAuthToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(registryPayload)
+      });
+      
+      console.log('🔍 submitWizardToRegistry: Community server API response status:', registryResponse.status);
+      
+      if (!registryResponse.ok) {
+        const errorText = await registryResponse.text();
+        console.log('🔍 submitWizardToRegistry: Community server API error:', errorText);
+        
+        // Provide specific error messages based on status code
+        let errorMessage: string;
+        switch (registryResponse.status) {
+          case 401:
+            errorMessage = 'Registry authentication failed. Please contact the administrator.';
+            break;
+          case 409:
+            errorMessage = 'This server is already published to the registry.';
+            break;
+          case 422:
+            errorMessage = `Invalid data: ${errorText}`;
+            break;
+          default:
+            errorMessage = `Registry publication failed (${registryResponse.status}): ${errorText || registryResponse.statusText}`;
+        }
+        
+        return {
+          success: false,
+          error: errorMessage
+        };
+      }
+      
+      const registryResult = await registryResponse.json();
+      console.log('🔍 submitWizardToRegistry: Community server success response:', JSON.stringify(registryResult, null, 2));
+      
+      // Save to our database
+      const [registryServer] = await db.insert(registryServersTable).values({
+        registry_id: registryResult.id,
+        name: `io.github.${wizardData.owner}/${wizardData.repo}`,
+        github_owner: wizardData.owner,
+        github_repo: wizardData.repo,
+        repository_url: wizardData.githubUrl,
+        description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+        is_claimed: false, // Community server
+        is_published: true,
+        published_at: new Date(),
+        metadata: registryPayload,
+      }).returning();
+
+      return {
+        success: true,
+        serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
+        data: registryServer
+      };
+    }
     // For claimed servers, publish directly to registry using the registry token
-    if (wizardData.shouldClaim && wizardData.registryToken) {
+    else if (wizardData.shouldClaim && wizardData.registryToken) {
       console.log('🔍 submitWizardToRegistry: Using direct registry API call with registry token');
       
       // Fetch GitHub repository ID and version from the repository
@@ -799,10 +909,7 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       }
       
       // Use registry token to publish directly - match official MCP registry format exactly
-      // If forceVersionBump is set, append timestamp to make version unique
-      const finalVersion = wizardData.forceVersionBump 
-        ? `${packageVersion}-${Date.now()}`
-        : packageVersion;
+      const finalVersion = packageVersion;
       
       const registryPayload = {
         name: `io.github.${wizardData.owner}/${wizardData.repo}`,
@@ -834,7 +941,7 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       // Publish to registry using registry client with direct token auth
       console.log('🔍 submitWizardToRegistry: Making direct API call to registry...');
       
-      // Note: Could also try /v0/servers/community endpoint based on documentation
+      // For claimed servers, use /v0/publish endpoint
       const registryResponse = await fetch('https://registry.plugged.in/v0/publish', {
         method: 'POST',
         headers: {
