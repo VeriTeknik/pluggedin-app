@@ -103,19 +103,37 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting 
       // Step 4: Submit to registry
       setSubmissionState({ step: 'submitting', progress: 80, message: 'Submitting to registry...' });
       
+      // Debug: Log the data being passed
+      console.log('🔍 RegistrySubmitStep: Wizard data before submission:', {
+        willClaim: data.willClaim,
+        shouldClaim: data.shouldClaim,
+        registryToken: data.registryToken ? `${data.registryToken.substring(0, 10)}...` : 'undefined',
+        githubUsername: data.githubUsername,
+        isAuthenticated: data.isAuthenticated,
+        ownershipVerified: data.ownershipVerified,
+        githubUrl: data.githubUrl,
+        owner: data.owner,
+        repo: data.repo
+      });
+      
       // Call the actual server action
       const result = await submitWizardToRegistry({
         githubUrl: data.githubUrl!,
         owner: data.owner!,
         repo: data.repo!,
         repoInfo: data.repoInfo,
-        shouldClaim: data.shouldClaim,
+        shouldClaim: data.willClaim, // Map willClaim to shouldClaim for server action
+        registryToken: data.registryToken,
+        githubUsername: data.githubUsername,
         configuredEnvVars: data.configuredEnvVars,
         detectedEnvVars: data.detectedEnvVars,
         transportConfigs: data.transportConfigs,
         finalDescription: customDescription || data.repoInfo?.description || '',
         categories,
       });
+      
+      // Debug: Log the result
+      console.log('🔍 RegistrySubmitStep: Server action result:', result);
       
       if (result.success) {
         const serverId = result.serverId || `io.github.${data.owner}/${data.repo}`;
@@ -139,10 +157,11 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting 
           description: 'Your MCP server has been submitted to the registry.',
         });
 
-        // Auto-advance after short delay
+        // Don't auto-close immediately - let user see the success state
+        // They can close manually or we auto-close after longer delay
         setTimeout(() => {
           onSuccess();
-        }, 2000);
+        }, 5000); // Give user 5 seconds to see the success
       } else {
         throw new Error(result.error || 'Failed to submit to registry');
       }
@@ -302,8 +321,21 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting 
 
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            <strong>Error:</strong> {submissionState.error}
+          <AlertDescription className="space-y-2">
+            <p><strong>Error:</strong> {submissionState.error}</p>
+            {submissionState.error?.includes('version must be greater') && (
+              <div className="mt-2 space-y-2">
+                <p className="text-sm">To resolve this:</p>
+                <ol className="list-decimal list-inside text-sm space-y-1">
+                  <li>Update the version in your repository's package.json</li>
+                  <li>Push the changes to GitHub</li>
+                  <li>Try submitting again</li>
+                </ol>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Note: Your server may already be in the registry but pending approval.
+                </p>
+              </div>
+            )}
           </AlertDescription>
         </Alert>
 

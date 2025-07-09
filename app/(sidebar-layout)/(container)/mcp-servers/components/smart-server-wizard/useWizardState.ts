@@ -21,6 +21,7 @@ export interface WizardData {
   shouldClaim?: boolean;
   isAuthenticated?: boolean;
   githubUsername?: string;
+  registryToken?: string;
   ownershipVerified?: boolean;
 
   // Step 3: Environment Variables

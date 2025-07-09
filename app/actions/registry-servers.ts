@@ -571,6 +571,8 @@ interface WizardSubmissionData {
   
   // Claim decision
   shouldClaim?: boolean;
+  registryToken?: string;
+  githubUsername?: string;
   
   // Environment variables
   configuredEnvVars?: Record<string, string>;
@@ -603,21 +605,40 @@ interface WizardSubmissionData {
  */
 export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
   try {
+    console.log('🔍 submitWizardToRegistry: Starting with data:', {
+      shouldClaim: wizardData.shouldClaim,
+      registryToken: wizardData.registryToken ? `${wizardData.registryToken.substring(0, 10)}...` : 'undefined',
+      githubUsername: wizardData.githubUsername,
+      githubUrl: wizardData.githubUrl,
+      owner: wizardData.owner,
+      repo: wizardData.repo
+    });
+
     const session = await getAuthSession();
     if (!session?.user?.id) {
+      console.log('🔍 submitWizardToRegistry: No session found');
       return { success: false, error: 'You must be logged in to submit servers' };
     }
 
+    console.log('🔍 submitWizardToRegistry: Session found for user:', session.user.id);
+
     // Validate required fields
     if (!wizardData.githubUrl || !wizardData.owner || !wizardData.repo) {
+      console.log('🔍 submitWizardToRegistry: Missing repository information');
       return { success: false, error: 'Missing repository information' };
     }
 
-    // Check if this is a claimed server
-    if (wizardData.shouldClaim) {
-      // Get user's GitHub token for ownership verification
-      const githubToken = await getUserGitHubToken(session.user.id);
+    // Check if this is a claimed server - ONLY do ownership verification if we don't have a registry token
+    if (wizardData.shouldClaim && !wizardData.registryToken) {
+      console.log('🔍 submitWizardToRegistry: This is a claimed server without registry token, using NextAuth flow...');
+      
+      // Fall back to NextAuth token
+      const nextAuthToken = await getUserGitHubToken(session.user.id);
+      const githubToken = nextAuthToken || undefined;
+      console.log('🔍 submitWizardToRegistry: NextAuth token:', githubToken ? `${githubToken.substring(0, 10)}...` : 'undefined');
+      
       if (!githubToken) {
+        console.log('🔍 submitWizardToRegistry: No GitHub token available, returning error');
         return {
           success: false,
           error: 'Please connect your GitHub account to claim servers',
@@ -625,15 +646,23 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         };
       }
       
+      console.log('🔍 submitWizardToRegistry: Verifying GitHub ownership...');
       // Verify ownership
       const ownership = await verifyGitHubOwnership(githubToken, wizardData.githubUrl);
+      console.log('🔍 submitWizardToRegistry: Ownership verification result:', ownership);
+      
       if (!ownership.isOwner) {
+        console.log('🔍 submitWizardToRegistry: Ownership verification failed');
         return { 
           success: false, 
           error: ownership.reason || 'GitHub ownership verification failed',
           needsAuth: ownership.needsAuth
         };
       }
+      
+      console.log('🔍 submitWizardToRegistry: Ownership verification passed');
+    } else if (wizardData.shouldClaim && wizardData.registryToken) {
+      console.log('🔍 submitWizardToRegistry: This is a claimed server WITH registry token, skipping ownership verification (already done during OAuth)');
     }
 
     // Determine package information from transport configs
@@ -681,20 +710,222 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       environmentVariables: packages[0].environment_variables
     };
 
-    // Submit using existing publishClaimedServer function
-    const result = await publishClaimedServer(submissionData);
-    
-    if (result.success) {
+    // For claimed servers, publish directly to registry using the registry token
+    if (wizardData.shouldClaim && wizardData.registryToken) {
+      console.log('🔍 submitWizardToRegistry: Using direct registry API call with registry token');
+      
+      // Fetch GitHub repository ID and version from the repository
+      let repoId = `${wizardData.owner}/${wizardData.repo}`;
+      let packageVersion = '1.0.0'; // Default fallback
+      
+      try {
+        // Get repository metadata
+        const repoResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}`, {
+          headers: {
+            'Authorization': `Bearer ${wizardData.registryToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        });
+        if (repoResponse.ok) {
+          const repoData = await repoResponse.json();
+          repoId = repoData.id.toString(); // Use numeric ID
+          console.log('🔍 submitWizardToRegistry: Fetched repository ID:', repoId);
+        }
+
+        // Try to fetch version from package.json
+        const packageResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}/contents/package.json`, {
+          headers: {
+            'Authorization': `Bearer ${wizardData.registryToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        });
+        
+        if (packageResponse.ok) {
+          const packageData = await packageResponse.json();
+          if (packageData.content) {
+            const packageContent = JSON.parse(Buffer.from(packageData.content, 'base64').toString());
+            if (packageContent.version) {
+              packageVersion = packageContent.version;
+              console.log('🔍 submitWizardToRegistry: Fetched version from package.json:', packageVersion);
+            }
+          }
+        } else {
+          console.log('🔍 submitWizardToRegistry: No package.json found, checking for pyproject.toml...');
+          
+          // Try pyproject.toml for Python projects
+          const pyprojectResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}/contents/pyproject.toml`, {
+            headers: {
+              'Authorization': `Bearer ${wizardData.registryToken}`,
+              'Accept': 'application/vnd.github.v3+json',
+            },
+          });
+          
+          if (pyprojectResponse.ok) {
+            const pyprojectData = await pyprojectResponse.json();
+            if (pyprojectData.content) {
+              const pyprojectContent = Buffer.from(pyprojectData.content, 'base64').toString();
+              const versionMatch = pyprojectContent.match(/version\s*=\s*["']([^"']+)["']/);
+              if (versionMatch) {
+                packageVersion = versionMatch[1];
+                console.log('🔍 submitWizardToRegistry: Fetched version from pyproject.toml:', packageVersion);
+              }
+            }
+          } else {
+            console.log('🔍 submitWizardToRegistry: No pyproject.toml found, checking for Cargo.toml...');
+            
+            // Try Cargo.toml for Rust projects
+            const cargoResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}/contents/Cargo.toml`, {
+              headers: {
+                'Authorization': `Bearer ${wizardData.registryToken}`,
+                'Accept': 'application/vnd.github.v3+json',
+              },
+            });
+            
+            if (cargoResponse.ok) {
+              const cargoData = await cargoResponse.json();
+              if (cargoData.content) {
+                const cargoContent = Buffer.from(cargoData.content, 'base64').toString();
+                const versionMatch = cargoContent.match(/version\s*=\s*["']([^"']+)["']/);
+                if (versionMatch) {
+                  packageVersion = versionMatch[1];
+                  console.log('🔍 submitWizardToRegistry: Fetched version from Cargo.toml:', packageVersion);
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.log('🔍 submitWizardToRegistry: Could not fetch repo metadata, using fallbacks:', { repoId, packageVersion });
+      }
+      
+      // Use registry token to publish directly - match official MCP registry format exactly
+      // If forceVersionBump is set, append timestamp to make version unique
+      const finalVersion = wizardData.forceVersionBump 
+        ? `${packageVersion}-${Date.now()}`
+        : packageVersion;
+      
+      const registryPayload = {
+        name: `io.github.${wizardData.owner}/${wizardData.repo}`,
+        description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+        packages: [{
+          registry_name: packages[0].registry_name || 'npm',
+          name: packages[0].name || `${wizardData.repo}`,
+          version: finalVersion, // Use actual or bumped version
+          environment_variables: (wizardData.detectedEnvVars || []).map(env => ({
+            name: env.name,
+            description: env.description || `Environment variable ${env.name}`,
+            required: env.required
+          }))
+        }],
+        repository: {
+          url: wizardData.githubUrl,
+          source: 'github',
+          id: repoId // Use fetched numeric ID
+        },
+        version_detail: {
+          version: finalVersion, // Use actual or bumped version
+        },
+      };
+      
+      console.log('🔍 submitWizardToRegistry: Using package version:', packageVersion);
+
+      console.log('🔍 submitWizardToRegistry: Registry payload:', JSON.stringify(registryPayload, null, 2));
+
+      // Publish to registry using registry client with direct token auth
+      console.log('🔍 submitWizardToRegistry: Making direct API call to registry...');
+      
+      // Note: Could also try /v0/servers/community endpoint based on documentation
+      const registryResponse = await fetch('https://registry.plugged.in/v0/publish', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${wizardData.registryToken}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(registryPayload)
+      });
+
+      console.log('🔍 submitWizardToRegistry: Registry API response status:', registryResponse.status);
+
+      if (!registryResponse.ok) {
+        const errorText = await registryResponse.text();
+        console.log('🔍 submitWizardToRegistry: Registry API error:', errorText);
+        
+        // Provide specific error messages based on status code
+        let errorMessage: string;
+        switch (registryResponse.status) {
+          case 401:
+            errorMessage = 'Authentication failed. Please re-authenticate with GitHub.';
+            break;
+          case 403:
+            errorMessage = 'Permission denied. You may not have admin access to this repository.';
+            break;
+          case 409:
+            errorMessage = 'This server is already published to the registry.';
+            break;
+          case 422:
+            errorMessage = `Invalid data: ${errorText}`;
+            break;
+          case 500:
+            if (errorText.includes('version must be greater')) {
+              // Parse the current version and suggest incrementing it
+              const versionMatch = errorText.match(/existing version\s*[:=]\s*(\S+)/);
+              const existingVersion = versionMatch ? versionMatch[1] : 'unknown';
+              errorMessage = `Server already exists with version ${existingVersion}. To update, please increment the version in your package.json and try again.`;
+              console.log('🔍 submitWizardToRegistry: Version conflict detected. Existing version:', existingVersion);
+            } else {
+              errorMessage = `Registry server error: ${errorText}`;
+            }
+            break;
+          default:
+            errorMessage = `Registry publication failed (${registryResponse.status}): ${errorText || registryResponse.statusText}`;
+        }
+        
+        return {
+          success: false,
+          error: errorMessage
+        };
+      }
+
+      const registryResult = await registryResponse.json();
+      console.log('🔍 submitWizardToRegistry: Registry API success response:', JSON.stringify(registryResult, null, 2));
+      
+      // Save to our database
+      const [registryServer] = await db.insert(registryServersTable).values({
+        registry_id: registryResult.id,
+        name: `io.github.${wizardData.owner}/${wizardData.repo}`,
+        github_owner: wizardData.owner,
+        github_repo: wizardData.repo,
+        repository_url: wizardData.githubUrl,
+        description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+        is_claimed: true,
+        is_published: true,
+        claimed_by_user_id: session.user.id,
+        claimed_at: new Date(),
+        published_at: new Date(),
+        metadata: registryPayload,
+      }).returning();
+
       return {
         success: true,
         serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
-        data: result.server
+        data: registryServer
       };
     } else {
-      return {
-        success: false,
-        error: result.error || 'Failed to submit to registry'
-      };
+      // Fall back to existing publishClaimedServer function for NextAuth flow
+      const result = await publishClaimedServer(submissionData);
+      
+      if (result.success) {
+        return {
+          success: true,
+          serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
+          data: result.server
+        };
+      } else {
+        return {
+          success: false,
+          error: result.error || 'Failed to submit to registry'
+        };
+      }
     }
   } catch (error) {
     console.error('Error submitting wizard to registry:', error);
