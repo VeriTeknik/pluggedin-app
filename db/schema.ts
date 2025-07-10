@@ -494,6 +494,51 @@ export const serverInstallationsRelations = relations(serverInstallationsTable, 
   }),
 }));
 
+// --- MCP Activity Table ---
+// Tracks all MCP server activity for trending calculations
+export const mcpActivityTable = pgTable(
+  'mcp_activity',
+  {
+    id: serial('id').primaryKey(),
+    profile_uuid: uuid('profile_uuid').notNull(),
+    server_uuid: uuid('server_uuid'), // For local servers
+    external_id: text('external_id'), // For registry servers
+    source: text('source').notNull(), // 'REGISTRY' or 'COMMUNITY'
+    action: text('action').notNull(), // 'install', 'uninstall', 'tool_call', 'resource_read', 'prompt_get'
+    item_name: text('item_name'), // Name of tool/resource/prompt
+    created_at: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      serverActivityIdx: index('idx_server_activity').on(
+        table.server_uuid,
+        table.source,
+        table.created_at
+      ),
+      externalActivityIdx: index('idx_external_activity').on(
+        table.external_id,
+        table.source,
+        table.created_at
+      ),
+      actionTimeIdx: index('idx_action_time').on(
+        table.action,
+        table.created_at
+      ),
+    };
+  }
+);
+
+export const mcpActivityRelations = relations(mcpActivityTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [mcpActivityTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  mcpServer: one(mcpServersTable, {
+    fields: [mcpActivityTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
 // --- Server Reviews Table ---
 // Removed serverRatingsTable definition and relations
 export const serverReviews = pgTable(

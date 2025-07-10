@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { TrendingServers } from '@/components/trending-servers';
 import { McpServerSource } from '@/db/schema';
 import { useAuth } from '@/hooks/use-auth'; // Import useAuth
 import { useProfiles } from '@/hooks/use-profiles';
@@ -792,20 +793,12 @@ function SearchContent() {
           </div>
         </div>
 
-        {/* Trending Servers Sidebar - Temporarily disabled */}
-        <div className='lg:col-span-1'>
-          <div className='p-4 rounded-lg border bg-card'>
-            <h3 className='font-semibold mb-2'>
-              {t('search.trending.title', 'Trending Servers')}
-            </h3>
-            <p className='text-sm text-muted-foreground'>
-              {t(
-                'search.trending.comingSoon',
-                'Trending servers will be available with the new analytics service.'
-              )}
-            </p>
+        {/* Trending Servers Sidebar */}
+        {!searchQuery && (
+          <div className='lg:col-span-1'>
+            <TrendingServers />
           </div>
-        </div>
+        )}
       </div>
 
       {showAddServerWizard && (

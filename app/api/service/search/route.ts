@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(url.searchParams.get('offset') || '0');
   const pageSize = parseInt(url.searchParams.get('pageSize') || '10');
   
-  // New filter parameters for VP API
+  // Filter parameters (kept for backward compatibility)
   const packageRegistry = url.searchParams.get('packageRegistry') as 'npm' | 'docker' | 'pypi' | null;
   const repositorySource = url.searchParams.get('repositorySource');
   const latestOnly = url.searchParams.get('latest') === 'true';
@@ -42,65 +42,27 @@ export async function GET(request: NextRequest) {
     let results: SearchIndex = {};
 
     // If source is specified, only search that source
-    if (source) {
-      // Handle community source (keep existing functionality)
-      if (source === McpServerSource.COMMUNITY) {
-        results = await searchCommunity(query, true); // Pass flag to exclude claimed servers
-        const paginated = paginateResults(results, offset, pageSize);
-        return NextResponse.json(paginated);
-      }
+    if (source === McpServerSource.COMMUNITY) {
+      // Community servers from local database
+      results = await searchCommunity(query);
+      const paginated = paginateResults(results, offset, pageSize);
+      return NextResponse.json(paginated);
+    }
 
-      // Handle registry source - stats already included from VP API
-      if (source === McpServerSource.REGISTRY) {
-        results = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
-        const paginated = paginateResults(results, offset, pageSize);
-        return NextResponse.json(paginated);
-      }
-
-      // For PLUGGEDIN source, check cache
-      if (source === McpServerSource.PLUGGEDIN) {
-        const cachedResults = await checkCache(source, query);
-        
-        if (cachedResults) {
-          // Enrich cached results with metrics
-          const enrichedResults = await enrichWithMetrics(cachedResults);
-          // Paginate enriched results
-          const paginatedResults = paginateResults(enrichedResults, offset, pageSize);
-          return NextResponse.json(paginatedResults);
-        }
-        
-        // TODO: Implement PLUGGEDIN source search
-        // For now, return empty results
-        return NextResponse.json({
-          results: {},
-          total: 0,
-          offset,
-          pageSize,
-          hasMore: false,
-        } as PaginatedSearchResult);
-      }
-      
-      // Any other source is unsupported
-      return NextResponse.json({
-        results: {},
-        total: 0,
-        offset,
-        pageSize,
-        hasMore: false,
-      } as PaginatedSearchResult);
+    if (source === McpServerSource.REGISTRY) {
+      // Registry servers from registry.plugged.in
+      results = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
+      const paginated = paginateResults(results, offset, pageSize);
+      return NextResponse.json(paginated);
     }
     
-    // If no source specified, search registry and community
-    const registryEnabled = process.env.REGISTRY_ENABLED !== 'false';
+    // If no source specified or invalid source, return both
+    // Get registry results - these already include stats from VP API
+    const registryResults = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
+    Object.assign(results, registryResults);
     
-    if (registryEnabled) {
-      // Get registry results - these already include stats from VP API
-      const registryResults = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
-      Object.assign(results, registryResults);
-    }
-    
-    // Always include community results - these need local metrics enrichment
-    const communityResults = await searchCommunity(query, false); // Include claimed servers when showing all
+    // Include community results - these need local metrics enrichment
+    const communityResults = await searchCommunity(query);
     Object.assign(results, communityResults);
     
     // Paginate and return results
@@ -209,10 +171,9 @@ async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
  * Search for community MCP servers - implementation to show shared servers
  * 
  * @param query Search query
- * @param excludeClaimed Whether to exclude servers that have been claimed
  * @returns SearchIndex of results
  */
-async function searchCommunity(query: string, excludeClaimed: boolean = true): Promise<SearchIndex> {
+async function searchCommunity(query: string): Promise<SearchIndex> {
   try {
     // Get shared MCP servers, joining through profiles and projects to get user info
     const sharedServersQuery = db
@@ -227,10 +188,6 @@ async function searchCommunity(query: string, excludeClaimed: boolean = true): P
       .innerJoin(users, eq(projectsTable.user_id, users.id)) // Join to users
       .where((() => {
         const conditions = [eq(sharedMcpServersTable.is_public, true)];
-        
-        if (excludeClaimed) {
-          conditions.push(eq(sharedMcpServersTable.is_claimed, false));
-        }
         
         if (query) {
           conditions.push(
