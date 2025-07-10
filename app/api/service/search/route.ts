@@ -128,7 +128,9 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
     
   } catch (error) {
     console.error('Registry search failed:', error);
-    return {}; // Return empty results on error
+    console.error('Registry search will be unavailable. Returning empty results.');
+    // Return empty results on error to allow other sources to work
+    return {};
   }
 }
 

@@ -135,10 +135,10 @@ export class PluggedinRegistryVPClient {
   private baseUrl: string;
   private vpUrl: string;
   
-  constructor(baseUrl = process.env.REGISTRY_API_URL || 'https://registry.plugged.in') {
-    // Remove /v0 if present in baseUrl
-    this.baseUrl = baseUrl.replace(/\/v0$/, '');
-    this.vpUrl = `${this.baseUrl}/vp`;
+  constructor(baseUrl = process.env.REGISTRY_API_URL || 'https://registry.plugged.in/v0') {
+    // Use the baseUrl directly for v0 API
+    this.baseUrl = baseUrl;
+    this.vpUrl = this.baseUrl; // VP endpoints are actually v0 endpoints
   }
   
   // Get servers with stats

@@ -117,21 +117,30 @@ export async function GET(request: NextRequest) {
         try {
           if (server.source === McpServerSource.REGISTRY) {
             // Fetch registry server metadata
-            const registryServers = await registryVPClient.searchServersWithStats(
-              server.server_id,
-              McpServerSource.REGISTRY
-            );
-            const registryServer = registryServers.find(s => s.id === server.server_id);
-            
-            if (registryServer) {
+            try {
+              const registryServers = await registryVPClient.searchServersWithStats(
+                server.server_id,
+                McpServerSource.REGISTRY
+              );
+              const registryServer = registryServers.find(s => s.id === server.server_id);
+              
+              if (registryServer) {
+                metadata = {
+                  name: registryServer.name || 'Unknown',
+                  description: registryServer.description || '',
+                  category: registryServer.category,
+                  tags: registryServer.tags,
+                  githubUrl: registryServer.github_url,
+                  package_name: registryServer.packages?.[0]?.package_name,
+                  package_registry: registryServer.packages?.[0]?.package_type,
+                };
+              }
+            } catch (registryError) {
+              console.error(`Failed to fetch registry metadata for ${server.server_id}:`, registryError);
+              // Use fallback metadata
               metadata = {
-                name: registryServer.name || 'Unknown',
-                description: registryServer.description || '',
-                category: registryServer.category,
-                tags: registryServer.tags,
-                githubUrl: registryServer.github_url,
-                package_name: registryServer.packages?.[0]?.package_name,
-                package_registry: registryServer.packages?.[0]?.package_type,
+                name: server.server_id,
+                description: 'Registry server (metadata unavailable)',
               };
             }
           } else if (server.source === McpServerSource.COMMUNITY) {
