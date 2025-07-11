@@ -145,11 +145,21 @@ export class PluggedinRegistryVPClient {
   async getServersWithStats(
     limit = 30, 
     cursor?: string, 
-    source?: McpServerSource
+    source?: McpServerSource,
+    filters?: {
+      registry_name?: string;
+      sort?: string;
+      search?: string;
+    }
   ): Promise<ExtendedServersResponse> {
     const params = new URLSearchParams({ limit: limit.toString() });
     if (cursor) params.append('cursor', cursor);
     if (source) params.append('source', source);
+    
+    // Add new filtering parameters
+    if (filters?.registry_name) params.append('registry_name', filters.registry_name);
+    if (filters?.sort) params.append('sort', filters.sort);
+    if (filters?.search) params.append('search', filters.search);
     
     const response = await fetch(`${this.vpUrl}/servers?${params}`);
     if (!response.ok) {
@@ -358,20 +368,14 @@ export class PluggedinRegistryVPClient {
     }
   }
   
-  // Search servers with stats
+  // Search servers with stats (now uses server-side filtering)
   async searchServersWithStats(query: string, source?: McpServerSource): Promise<ExtendedServer[]> {
-    // For now, get all and filter client-side
-    // TODO: Use search endpoint when available
-    const allServers = await this.getAllServersWithStats(source);
+    // Use the enhanced getServersWithStats with search parameter
+    const response = await this.getServersWithStats(100, undefined, source, {
+      search: query || undefined
+    });
     
-    if (!query) return allServers;
-    
-    const searchQuery = query.toLowerCase();
-    return allServers.filter(server => 
-      server.name.toLowerCase().includes(searchQuery) ||
-      server.description?.toLowerCase().includes(searchQuery) ||
-      server.repository?.url?.toLowerCase().includes(searchQuery)
-    );
+    return response.servers || [];
   }
 
   /**

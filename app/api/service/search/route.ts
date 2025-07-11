@@ -32,11 +32,10 @@ export async function GET(request: NextRequest) {
   const offset = parseInt(url.searchParams.get('offset') || '0');
   const pageSize = parseInt(url.searchParams.get('pageSize') || '10');
   
-  // Filter parameters (kept for backward compatibility)
+  // Filter parameters
   const packageRegistry = url.searchParams.get('packageRegistry') as 'npm' | 'docker' | 'pypi' | null;
   const repositorySource = url.searchParams.get('repositorySource');
-  const latestOnly = url.searchParams.get('latest') === 'true';
-  const version = url.searchParams.get('version');
+  const sort = url.searchParams.get('sort') || 'relevance';
 
   try {
     let results: SearchIndex = {};
@@ -51,14 +50,14 @@ export async function GET(request: NextRequest) {
 
     if (source === McpServerSource.REGISTRY) {
       // Registry servers from registry.plugged.in
-      results = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
+      results = await searchRegistry(query, { packageRegistry, repositorySource, sort });
       const paginated = paginateResults(results, offset, pageSize);
       return NextResponse.json(paginated);
     }
     
     // If no source specified or invalid source, return both
     // Get registry results - these already include stats from VP API
-    const registryResults = await searchRegistry(query, { packageRegistry, repositorySource, latestOnly, version });
+    const registryResults = await searchRegistry(query, { packageRegistry, repositorySource, sort });
     Object.assign(results, registryResults);
     
     // Include community results - these need local metrics enrichment
@@ -81,8 +80,7 @@ export async function GET(request: NextRequest) {
 interface RegistryFilters {
   packageRegistry?: 'npm' | 'docker' | 'pypi' | null;
   repositorySource?: string | null;
-  latestOnly?: boolean;
-  version?: string | null;
+  sort?: string;
 }
 
 /**
@@ -91,12 +89,43 @@ interface RegistryFilters {
 async function searchRegistry(query: string, filters: RegistryFilters = {}): Promise<SearchIndex> {
   console.log('searchRegistry called with query:', query, 'filters:', filters);
   try {
-    // Use VP API to get servers with stats included
-    const servers = await registryVPClient.searchServersWithStats(query, McpServerSource.REGISTRY);
+    // Use enhanced VP API with server-side filtering
+    const vpFilters: any = {};
+    
+    // Add registry_name filter if specified
+    if (filters.packageRegistry) {
+      vpFilters.registry_name = filters.packageRegistry;
+    }
+    
+    // Add search term if provided
+    if (query) {
+      vpFilters.search = query;
+    }
+    
+    // Map sort parameter to registry API format
+    if (filters.sort === 'recent') {
+      vpFilters.sort = 'release_date_desc';
+    } else {
+      // Default sort for other options (the registry API will handle relevance internally)
+      vpFilters.sort = 'release_date_desc';
+    }
+    
+    console.log('[Search API] Calling VP API with filters:', vpFilters);
+    
+    // Use VP API to get servers with stats and server-side filtering
+    const response = await registryVPClient.getServersWithStats(100, undefined, McpServerSource.REGISTRY, vpFilters);
+    const servers = response.servers || [];
     
     // Transform and index
     const indexed: SearchIndex = {};
     for (const server of servers) {
+      // Client-side filter by repository source if needed (not supported by API yet)
+      if (filters.repositorySource && server.repository?.url) {
+        const repoUrl = server.repository.url.toLowerCase();
+        const source = filters.repositorySource.toLowerCase();
+        if (!repoUrl.includes(source)) continue;
+      }
+      
       const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
       
       // Add stats from VP API response
@@ -104,24 +133,10 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
       mcpIndex.rating = server.rating || 0;
       mcpIndex.ratingCount = server.rating_count || 0;
       
-      // Debug log for special servers
-      if (server.name?.includes('youtube') || server.name?.includes('sqlite')) {
-        console.log('[Search API] Transforming server with stats:', {
-          name: server.name,
-          packages: server.packages,
-          stats: {
-            installation_count: server.installation_count,
-            rating: server.rating,
-            rating_count: server.rating_count
-          },
-          transformed: mcpIndex
-        });
-      }
-      
       indexed[server.id] = mcpIndex;
     }
     
-    console.log(`[Search API] Found ${Object.keys(indexed).length} servers with stats`);
+    console.log(`[Search API] Found ${Object.keys(indexed).length} servers after filtering`);
     
     // Return results - no need to enrich with metrics as stats are already included
     return indexed;

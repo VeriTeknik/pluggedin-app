@@ -69,8 +69,6 @@ function SearchContent() {
   );
   const packageRegistryParam = searchParams.get('packageRegistry') || '';
   const repositorySourceParam = searchParams.get('repositorySource') || '';
-  const latestOnlyParam = searchParams.get('latest') === 'true';
-
   const [searchQuery, setSearchQuery] = useState(query);
   const [source, setSource] = useState<string>(sourceParam);
   const [sort, setSort] = useState<SortOption>(sortParam);
@@ -86,7 +84,6 @@ function SearchContent() {
   const [repositorySource, setRepositorySource] = useState<string>(
     repositorySourceParam
   );
-  const [latestOnly, setLatestOnly] = useState(latestOnlyParam);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [availableCategories, setAvailableCategories] = useState<
     McpServerCategory[]
@@ -127,7 +124,6 @@ function SearchContent() {
     if (source !== 'all') params.set('source', source);
     if (packageRegistry) params.set('packageRegistry', packageRegistry);
     if (repositorySource) params.set('repositorySource', repositorySource);
-    if (latestOnly) params.set('latest', 'true');
 
     return `/api/service/search?${params.toString()}`;
   }, [
@@ -137,7 +133,6 @@ function SearchContent() {
     offset,
     packageRegistry,
     repositorySource,
-    latestOnly,
   ]);
 
   const { data, mutate } = useSWR(apiUrl, async (url: string) => {
@@ -208,7 +203,6 @@ function SearchContent() {
       pageSize,
       packageRegistry,
       repositorySource,
-      latestOnly,
       // Include enhanced state information from hooks
       filterState: filter,
       sortState,
@@ -221,7 +215,6 @@ function SearchContent() {
     pageSize,
     packageRegistry,
     repositorySource,
-    latestOnly,
     filter,
     sortState,
   ]);
@@ -237,8 +230,7 @@ function SearchContent() {
         searchFilters.category !== categoryParam ||
         searchFilters.pageSize !== pageSizeParam ||
         searchFilters.packageRegistry !== packageRegistryParam ||
-        searchFilters.repositorySource !== repositorySourceParam ||
-        searchFilters.latestOnly !== latestOnlyParam
+        searchFilters.repositorySource !== repositorySourceParam
       ) {
         const params = new URLSearchParams();
         if (searchQuery) {
@@ -265,9 +257,6 @@ function SearchContent() {
         if (searchFilters.repositorySource) {
           params.set('repositorySource', searchFilters.repositorySource);
         }
-        if (searchFilters.latestOnly) {
-          params.set('latest', 'true');
-        }
         params.set('offset', '0');
         router.push(`/search?${params.toString()}`);
       }
@@ -285,7 +274,6 @@ function SearchContent() {
     pageSizeParam,
     packageRegistryParam,
     repositorySourceParam,
-    latestOnlyParam,
     router,
   ]);
 
@@ -659,32 +647,12 @@ function SearchContent() {
             </div>
           </div>
 
-          {/* Additional filters row - Only show for registry source */}
-          {(source === McpServerSource.REGISTRY || source === 'all') && (
-            <div className='flex items-center gap-4 mt-2'>
-              <div className='flex items-center space-x-2'>
-                <Checkbox
-                  id='latest-only'
-                  checked={latestOnly}
-                  onCheckedChange={(checked) =>
-                    setLatestOnly(checked as boolean)
-                  }
-                />
-                <label
-                  htmlFor='latest-only'
-                  className='text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70'>
-                  {t('search.latestVersionsOnly', 'Latest versions only')}
-                </label>
-              </div>
-            </div>
-          )}
 
           {/* Active filters display */}
           {(category ||
             tags.length > 0 ||
             packageRegistry ||
-            repositorySource ||
-            latestOnly) && (
+            repositorySource) && (
             <div className='flex flex-wrap gap-2 mb-4'>
               {category && (
                 <Badge variant='secondary' className='flex items-center gap-1'>
@@ -733,22 +701,10 @@ function SearchContent() {
                 </Badge>
               )}
 
-              {latestOnly && (
-                <Badge variant='secondary' className='flex items-center gap-1'>
-                  {t('search.latestOnly', 'Latest only')}
-                  <button
-                    className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => setLatestOnly(false)}>
-                    ✕
-                  </button>
-                </Badge>
-              )}
-
               {(category ||
                 tags.length > 0 ||
                 packageRegistry ||
-                repositorySource ||
-                latestOnly) && (
+                repositorySource) && (
                 <Button
                   variant='ghost'
                   size='sm'
@@ -758,7 +714,6 @@ function SearchContent() {
                     setTags([]);
                     setPackageRegistry('');
                     setRepositorySource('');
-                    setLatestOnly(false);
                   }}>
                   {t('search.clearAllFilters')}
                 </Button>
