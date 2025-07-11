@@ -1,4 +1,6 @@
 import { vi } from 'vitest';
+import type { Session } from 'next-auth';
+import { McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
 
 // Mock database utilities
 export const createMockDb = () => ({
@@ -15,6 +17,16 @@ export const createMockDb = () => ({
   returning: vi.fn().mockReturnThis(),
   onConflictDoUpdate: vi.fn().mockReturnThis(),
   execute: vi.fn(),
+  transaction: vi.fn((callback) => callback({
+    insert: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    delete: vi.fn().mockReturnThis(),
+    select: vi.fn().mockReturnThis(),
+    values: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+    where: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue([]),
+  })),
   query: {
     users: {
       findFirst: vi.fn(),
@@ -24,19 +36,27 @@ export const createMockDb = () => ({
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
-    projects: {
+    projectsTable: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
-    profiles: {
+    profilesTable: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
-    mcpServers: {
+    mcpServersTable: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
-    tools: {
+    sharedMcpServersTable: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+    },
+    registryServersTable: {
+      findFirst: vi.fn(),
+      findMany: vi.fn(),
+    },
+    toolsTable: {
       findFirst: vi.fn(),
       findMany: vi.fn(),
     },
@@ -144,6 +164,7 @@ export const createMockProfile = (overrides = {}) => ({
   project_uuid: 'test-project-uuid',
   name: 'Test Profile',
   created_at: new Date(),
+  updated_at: new Date(),
   ...overrides,
 });
 
@@ -154,5 +175,204 @@ export const createMockProject = (overrides = {}) => ({
   name: 'Test Project',
   active_profile_uuid: 'test-profile-uuid',
   created_at: new Date(),
+  updated_at: new Date(),
+  ...overrides,
+});
+
+// Mock session
+export const createMockSession = (userOverrides = {}): Session => ({
+  user: {
+    id: 'test-user-id',
+    email: 'test@example.com',
+    name: 'Test User',
+    username: 'testuser',
+    image: null,
+    ...userOverrides,
+  },
+  expires: new Date(Date.now() + 86400000).toISOString(),
+});
+
+// Mock shared MCP server
+export const createMockSharedServer = (overrides = {}) => ({
+  uuid: 'test-shared-server-uuid',
+  server_uuid: 'test-server-uuid',
+  profile_uuid: 'test-profile-uuid',
+  title: 'Test Community Server',
+  description: 'Test community server description',
+  template: {
+    name: 'test-community-server',
+    type: McpServerType.STDIO,
+    command: 'npx',
+    args: ['test-mcp-server'],
+    env: {},
+  },
+  is_public: true,
+  requires_credentials: false,
+  is_claimed: false,
+  claimed_by_user_id: null,
+  claimed_at: null,
+  registry_server_uuid: null,
+  created_at: new Date(),
+  updated_at: new Date(),
+  ...overrides,
+});
+
+// Mock registry server
+export const createMockRegistryServer = (overrides = {}) => ({
+  uuid: 'test-registry-server-uuid',
+  registry_id: 'registry-123',
+  name: 'test-mcp-server',
+  github_owner: 'testuser',
+  github_repo: 'test-mcp-server',
+  repository_url: 'https://github.com/testuser/test-mcp-server',
+  description: 'Test registry server',
+  is_claimed: true,
+  is_published: true,
+  claimed_by_user_id: 'test-user-id',
+  claimed_at: new Date(),
+  published_at: new Date(),
+  metadata: {
+    name: 'io.github.testuser/test-mcp-server',
+    packages: [{
+      registry_name: 'npm',
+      name: 'test-mcp-server',
+      version: 'latest',
+    }],
+  },
+  created_at: new Date(),
+  updated_at: new Date(),
+  ...overrides,
+});
+
+// Mock wizard data
+export const createMockWizardData = {
+  npm: (overrides = {}) => ({
+    step: 'package',
+    serverType: 'stdio' as const,
+    deploymentType: 'npm' as const,
+    npmPackage: 'test-mcp-server',
+    owner: 'testuser',
+    repo: 'test-mcp-server',
+    mainBranch: 'main',
+    packageManager: 'npm' as const,
+    packageCommand: 'npx',
+    description: 'Test MCP server for npm',
+    envVars: [],
+    ...overrides,
+  }),
+  
+  docker: (overrides = {}) => ({
+    step: 'package',
+    serverType: 'stdio' as const,
+    deploymentType: 'docker' as const,
+    dockerImage: 'testuser/test-mcp-server',
+    owner: 'testuser',
+    repo: 'test-mcp-server',
+    mainBranch: 'main',
+    packageManager: 'docker' as const,
+    description: 'Test MCP server for docker',
+    envVars: [],
+    ...overrides,
+  }),
+  
+  pypi: (overrides = {}) => ({
+    step: 'package',
+    serverType: 'stdio' as const,
+    deploymentType: 'pypi' as const,
+    pypiPackage: 'test-mcp-server',
+    owner: 'testuser',
+    repo: 'test-mcp-server',
+    mainBranch: 'main',
+    packageManager: 'pip' as const,
+    packageCommand: 'python -m',
+    description: 'Test MCP server for pypi',
+    envVars: [],
+    ...overrides,
+  }),
+};
+
+// Mock GitHub API responses
+export const mockGitHubResponses = {
+  validRepo: {
+    id: 123456789,
+    name: 'test-mcp-server',
+    full_name: 'testuser/test-mcp-server',
+    owner: {
+      login: 'testuser',
+      id: 12345,
+    },
+    private: false,
+    description: 'Test MCP server repository',
+    default_branch: 'main',
+    permissions: {
+      admin: true,
+      push: true,
+      pull: true,
+    },
+  },
+  
+  repoNotFound: {
+    message: 'Not Found',
+    documentation_url: 'https://docs.github.com/rest',
+  },
+  
+  noPermissions: {
+    id: 987654321,
+    name: 'other-mcp-server',
+    full_name: 'otheruser/other-mcp-server',
+    owner: {
+      login: 'otheruser',
+      id: 54321,
+    },
+    private: false,
+    permissions: {
+      admin: false,
+      push: false,
+      pull: true,
+    },
+  },
+};
+
+// Mock registry API responses
+export const mockRegistryApiResponses = {
+  publishSuccess: {
+    id: 'registry-123',
+    status: 'published',
+    message: 'Server published successfully',
+  },
+  
+  publishConflict: {
+    error: 'Server already exists',
+    status: 409,
+    message: 'A server with this repository already exists',
+  },
+  
+  authError: {
+    error: 'Unauthorized',
+    status: 401,
+    message: 'Invalid authentication token',
+  },
+};
+
+// Mock fetch responses
+export const createMockFetchResponse = (data: any, status = 200) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  statusText: status === 200 ? 'OK' : 'Error',
+  json: vi.fn().mockResolvedValue(data),
+  text: vi.fn().mockResolvedValue(JSON.stringify(data)),
+  headers: new Headers({
+    'content-type': 'application/json',
+  }),
+});
+
+// Mock GitHub account
+export const createMockGitHubAccount = (overrides = {}) => ({
+  userId: 'test-user-id',
+  provider: 'github',
+  providerAccountId: '12345',
+  access_token: 'ghp_mocktoken123',
+  token_type: 'bearer',
+  scope: 'repo,user',
   ...overrides,
 });
