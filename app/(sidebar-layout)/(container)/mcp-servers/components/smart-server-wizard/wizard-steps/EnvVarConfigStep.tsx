@@ -121,6 +121,7 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
       // Also check transport configurations for env vars
       if (data.transportConfigs) {
         Object.values(data.transportConfigs).forEach(config => {
+          // Check regular environment variables
           if (config.env) {
             Object.entries(config.env).forEach(([name, value]) => {
               if (!seenVars.has(name)) {
@@ -139,6 +140,58 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                 });
               }
             });
+          }
+          
+          // Check headers for API keys or tokens
+          if (config.headers) {
+            Object.entries(config.headers).forEach(([key, value]) => {
+              // Look for common auth header patterns
+              if (key.toLowerCase() === 'authorization' || 
+                  key.toLowerCase().includes('api-key') ||
+                  key.toLowerCase().includes('x-api-key')) {
+                // Extract placeholder from value (e.g., "Bearer ${API_KEY}")
+                const matches = value.toString().match(/\$\{([^}]+)\}/g);
+                if (matches) {
+                  matches.forEach(match => {
+                    const varName = match.slice(2, -1); // Remove ${ and }
+                    if (!seenVars.has(varName)) {
+                      seenVars.add(varName);
+                      detectedVars.push({
+                        name: varName,
+                        description: `API key for ${key} header`,
+                        defaultValue: '',
+                        required: true,
+                        source: 'args',
+                        value: '',
+                        isSecret: true
+                      });
+                    }
+                  });
+                }
+              }
+            });
+          }
+          
+          // Check OAuth configuration
+          if (config.oauth?.clientId && config.oauth.clientId.includes('${')) {
+            const matches = config.oauth.clientId.match(/\$\{([^}]+)\}/g);
+            if (matches) {
+              matches.forEach(match => {
+                const varName = match.slice(2, -1);
+                if (!seenVars.has(varName)) {
+                  seenVars.add(varName);
+                  detectedVars.push({
+                    name: varName,
+                    description: 'OAuth Client ID',
+                    defaultValue: '',
+                    required: true,
+                    source: 'args',
+                    value: '',
+                    isSecret: true
+                  });
+                }
+              });
+            }
           }
         });
       }

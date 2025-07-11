@@ -185,10 +185,10 @@ export function StreamingCliToast({
                   setIsComplete(true);
                   isCompleteRef.current = true; // Track completion status in ref
                   onComplete?.(true, message.data);
-                  // Auto-close after showing completion for a moment
+                  // Auto-close after showing completion for a longer time
                   setTimeout(() => {
                     onClose();
-                  }, 2000);
+                  }, 8000); // 8 seconds instead of 2
                   return; // Exit the reading loop
                 }
               } catch (error) {

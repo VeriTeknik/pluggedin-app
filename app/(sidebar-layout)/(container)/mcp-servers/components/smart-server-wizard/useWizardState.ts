@@ -48,6 +48,16 @@ export interface WizardData {
     command?: string;
     args?: string[];
     env?: Record<string, string>;
+    url?: string;
+    transport?: string;
+    headers?: Record<string, string>;
+    sessionId?: string;
+    oauth?: {
+      clientId?: string;
+      authorizationUrl?: string;
+      tokenUrl?: string;
+      scopes?: string[];
+    };
   }>;
 
   // Step 4: Discovery Test
@@ -66,6 +76,13 @@ export interface WizardData {
       registry?: string;
       confidence?: number;
       source?: string;
+      sessionId?: string;
+      oauth?: {
+        clientId?: string;
+        authorizationUrl?: string;
+        tokenUrl?: string;
+        scopes?: string[];
+      };
     };
   };
   discoveryResult?: {

@@ -11,6 +11,16 @@ interface TransportConfig {
   command?: string;
   args?: string[];
   env?: Record<string, string>;
+  url?: string;
+  transport?: string;
+  headers?: Record<string, string>;
+  sessionId?: string;
+  oauth?: {
+    clientId?: string;
+    authorizationUrl?: string;
+    tokenUrl?: string;
+    scopes?: string[];
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -94,11 +104,31 @@ export async function GET(request: NextRequest) {
         const config = serverConfig as any;
         
         // Store transport configuration
-        transportConfigs[serverName] = {
+        const transportConfig: TransportConfig = {
           command: config.command,
           args: config.args,
           env: config.env
         };
+        
+        // Check for Streamable HTTP configuration
+        if (config.transport === 'streamable-http' || config.transport === 'streamable_http' || config.url) {
+          transportConfig.transport = 'streamable-http';
+          transportConfig.url = config.url;
+          transportConfig.headers = config.headers;
+          transportConfig.sessionId = config.sessionId;
+          
+          // Check for OAuth configuration
+          if (config.oauth || config.auth?.type === 'oauth') {
+            transportConfig.oauth = {
+              clientId: config.oauth?.clientId || config.auth?.clientId,
+              authorizationUrl: config.oauth?.authorizationUrl || config.auth?.authorizationUrl,
+              tokenUrl: config.oauth?.tokenUrl || config.auth?.tokenUrl,
+              scopes: config.oauth?.scopes || config.auth?.scopes
+            };
+          }
+        }
+        
+        transportConfigs[serverName] = transportConfig;
         
         // Extract environment variables from env object
         if (config.env) {
@@ -199,12 +229,24 @@ export async function GET(request: NextRequest) {
                   const serverConfig = config as any;
                   
                   // Store transport configuration if not already found
-                  if (!transportConfigs[serverName] && (serverConfig.command || serverConfig.args)) {
-                    transportConfigs[serverName] = {
+                  if (!transportConfigs[serverName]) {
+                    const transportConfig: TransportConfig = {
                       command: serverConfig.command,
                       args: serverConfig.args,
                       env: serverConfig.env
                     };
+                    
+                    // Check for Streamable HTTP in README examples
+                    if (serverConfig.transport === 'streamable-http' || 
+                        serverConfig.transport === 'streamable_http' || 
+                        serverConfig.url) {
+                      transportConfig.transport = 'streamable-http';
+                      transportConfig.url = serverConfig.url;
+                      transportConfig.headers = serverConfig.headers;
+                      transportConfig.sessionId = serverConfig.sessionId;
+                    }
+                    
+                    transportConfigs[serverName] = transportConfig;
                   }
                   
                   if (serverConfig.env) {
@@ -242,6 +284,37 @@ export async function GET(request: NextRequest) {
                        name === 'API_KEY'
             });
           });
+          
+          // Look for Streamable HTTP URLs in README
+          const urlPatterns = [
+            /https?:\/\/[^\s]+\/mcp/gi,  // URLs ending with /mcp
+            /https?:\/\/[^\s]+\/api\/mcp/gi,  // URLs with /api/mcp
+            /https?:\/\/api\.[^\s]+\/[^\s]*/gi,  // API subdomain URLs
+            /https?:\/\/[^\s]+\.smithery\.ai[^\s]*/gi,  // Smithery URLs
+            /https?:\/\/[^\s]+\.context7\.com[^\s]*/gi,  // Context7 URLs
+          ];
+          
+          const foundUrls = new Set<string>();
+          for (const pattern of urlPatterns) {
+            let match;
+            while ((match = pattern.exec(readmeText)) !== null) {
+              const url = match[0].replace(/[,;)}\]'"]+$/, ''); // Clean trailing punctuation
+              foundUrls.add(url);
+            }
+          }
+          
+          // If we found URLs that look like MCP endpoints, add a streamable-http config
+          if (foundUrls.size > 0) {
+            const url = Array.from(foundUrls)[0]; // Use the first found URL
+            transportConfigs['detected-streamable'] = {
+              transport: 'streamable-http',
+              url: url,
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json, text/event-stream'
+              }
+            };
+          }
         }
       } catch (e) {
         console.error('Error fetching README:', e);

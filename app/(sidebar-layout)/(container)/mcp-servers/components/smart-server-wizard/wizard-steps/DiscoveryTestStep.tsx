@@ -122,6 +122,7 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
     if (data.owner && data.repo && selectedTransports.length > 0) {
       detectConfigurations();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.owner, data.repo]);
 
   const detectConfigurations = async () => {
@@ -136,13 +137,26 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
       );
       setDetectedConfigs(configs);
 
-      // If we detected a high-confidence STDIO config, automatically run a test
-      const stdioConfig = configs['stdio'];
-      if (stdioConfig && stdioConfig.confidence >= 0.9) {
-        toast({
-          title: 'Package detected!',
-          description: `Found ${stdioConfig.packageName} with ${Math.round(stdioConfig.confidence * 100)}% confidence`,
-        });
+      // Show toast for high-confidence detections
+      for (const [transport, config] of Object.entries(configs)) {
+        if (config && config.confidence >= 0.9) {
+          let description = '';
+          if (transport === 'stdio' && config.packageName) {
+            description = `Found ${config.packageName} with ${Math.round(config.confidence * 100)}% confidence`;
+          } else if (transport === 'streamable-http' && config.url) {
+            description = `Found Streamable HTTP endpoint with ${Math.round(config.confidence * 100)}% confidence`;
+          } else if (transport === 'docker' && config.dockerImage) {
+            description = `Found Docker image ${config.dockerImage} with ${Math.round(config.confidence * 100)}% confidence`;
+          }
+          
+          if (description) {
+            toast({
+              title: 'Configuration detected!',
+              description,
+            });
+            break; // Only show one toast
+          }
+        }
       }
     } catch (error) {
       console.error('Error detecting configurations:', error);
@@ -217,9 +231,12 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
         return {
           ...baseConfig,
           type: McpServerType.STREAMABLE_HTTP,
-          url: useDetectedConfig.url || '',
+          url: detectedTransportConfig?.url || useDetectedConfig.url || '',
+          transport: 'streamable_http',
           streamableHTTPOptions: {
-            headers: useDetectedConfig.headers,
+            headers: detectedTransportConfig?.headers || useDetectedConfig.headers || {},
+            sessionId: detectedTransportConfig?.sessionId || useDetectedConfig.sessionId,
+            oauth: detectedTransportConfig?.oauth || useDetectedConfig.oauth,
           },
         };
 
@@ -555,9 +572,21 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
                       <div className='flex items-center justify-between'>
                         <span className='text-muted-foreground'>URL:</span>
                         <span className='font-mono text-xs'>
-                          {detectedConfigs[activeTransport].url}
+                          {detectedConfigs[activeTransport].url || 
+                           data.detectedTransportConfigs?.[activeTransport]?.url ||
+                           'No URL detected'}
                         </span>
                       </div>
+                      {(detectedConfigs[activeTransport].headers || 
+                        data.detectedTransportConfigs?.[activeTransport]?.headers) && (
+                        <div className='flex items-center justify-between'>
+                          <span className='text-muted-foreground'>Headers:</span>
+                          <span className='text-xs'>
+                            {Object.keys(detectedConfigs[activeTransport].headers || 
+                                       data.detectedTransportConfigs?.[activeTransport]?.headers || {}).length} configured
+                          </span>
+                        </div>
+                      )}
                     </>
                   )}
 

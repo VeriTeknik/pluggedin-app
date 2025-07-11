@@ -773,28 +773,61 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         console.log('🔍 submitWizardToRegistry: Transport keys:', transportKeys);
         
         // Check for both formats (with hyphen and underscore)
-        if (transportKeys.includes('streamable-http') || transportKeys.includes('STREAMABLE_HTTP')) {
+        if (transportKeys.includes('streamable-http') || transportKeys.includes('STREAMABLE_HTTP') || transportKeys.includes('streamable_http')) {
           transportType = 'STREAMABLE_HTTP';
-          const config = wizardData.transportConfigs['streamable-http'] || wizardData.transportConfigs['STREAMABLE_HTTP'];
+          const config = wizardData.transportConfigs['streamable-http'] || 
+                       wizardData.transportConfigs['STREAMABLE_HTTP'] || 
+                       wizardData.transportConfigs['streamable_http'];
           url = config.url;
           console.log('🔍 submitWizardToRegistry: Detected Streamable HTTP with URL:', url);
           
-          // Extract any headers or options if present
-          if (config.env) {
-            streamableHTTPOptions = {
-              headers: Object.entries(config.env).reduce((acc, [key, value]) => {
-                if (key.startsWith('HEADER_')) {
-                  acc[key.replace('HEADER_', '')] = value as string;
-                }
-                return acc;
-              }, {} as Record<string, string>)
-            };
+          // Extract headers and options
+          streamableHTTPOptions = {
+            headers: config.headers || {},
+            sessionId: config.sessionId
+          };
+          
+          // Also check for headers in env (legacy support)
+          if (config.env && !config.headers) {
+            const headers = Object.entries(config.env).reduce((acc, [key, value]) => {
+              if (key.startsWith('HEADER_')) {
+                acc[key.replace('HEADER_', '')] = value as string;
+              }
+              return acc;
+            }, {} as Record<string, string>);
+            
+            if (Object.keys(headers).length > 0) {
+              streamableHTTPOptions.headers = headers;
+            }
+          }
+          
+          // Add OAuth configuration if present
+          if (config.oauth) {
+            streamableHTTPOptions.oauth = config.oauth;
           }
         } else if (transportKeys.includes('sse') || transportKeys.includes('SSE')) {
           transportType = 'SSE';
           const config = wizardData.transportConfigs['sse'] || wizardData.transportConfigs['SSE'];
           url = config.url;
           console.log('🔍 submitWizardToRegistry: Detected SSE with URL:', url);
+        }
+      }
+      
+      // Fallback: check detectedTransportConfigs if transportConfigs doesn't have URL
+      if (!url && wizardData.detectedTransportConfigs) {
+        console.log('🔍 submitWizardToRegistry: Checking detectedTransportConfigs for URL');
+        for (const [transport, config] of Object.entries(wizardData.detectedTransportConfigs)) {
+          if ((transport === 'streamable-http' || transport === 'detected-streamable') && config.url) {
+            transportType = 'STREAMABLE_HTTP';
+            url = config.url;
+            streamableHTTPOptions = {
+              headers: config.headers || {},
+              sessionId: config.sessionId,
+              oauth: config.oauth
+            };
+            console.log('🔍 submitWizardToRegistry: Found URL in detectedTransportConfigs:', url);
+            break;
+          }
         }
       }
       
