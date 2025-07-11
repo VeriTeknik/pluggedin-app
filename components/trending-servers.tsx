@@ -43,11 +43,11 @@ interface TrendingResponse {
 export function TrendingServers() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [source, setSource] = useState<'all' | McpServerSource>('all');
   const [period, setPeriod] = useState<'24h' | '7d' | '30d'>('7d');
+  const [sortBy, setSortBy] = useState<'installs' | 'calls'>('installs');
 
   const { data, error, isLoading } = useSWR<TrendingResponse>(
-    `/api/trending/servers?source=${source}&period=${period}&limit=10`,
+    `/api/trending/servers?source=all&period=${period}&limit=10`,
     async (url: string) => {
       const res = await fetch(url);
       if (!res.ok) throw new Error('Failed to fetch trending servers');
@@ -100,16 +100,13 @@ export function TrendingServers() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-            <Tabs value={source} onValueChange={(v) => setSource(v as typeof source)}>
+            <Tabs value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
               <TabsList className="h-8">
-                <TabsTrigger value="all" className="text-xs">
-                  {t('search.trending.source.all', 'All')}
+                <TabsTrigger value="installs" className="text-xs">
+                  {t('search.trending.sortBy.installs', 'Installs')}
                 </TabsTrigger>
-                <TabsTrigger value={McpServerSource.REGISTRY} className="text-xs">
-                  {t('search.trending.source.registry', 'Registry')}
-                </TabsTrigger>
-                <TabsTrigger value={McpServerSource.COMMUNITY} className="text-xs">
-                  {t('search.trending.source.community', 'Community')}
+                <TabsTrigger value="calls" className="text-xs">
+                  {t('search.trending.sortBy.calls', 'Calls')}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -137,7 +134,15 @@ export function TrendingServers() {
           </div>
         ) : data?.servers && data.servers.length > 0 ? (
           <div className="space-y-3">
-            {data.servers.map((server, index) => (
+            {data.servers
+              .sort((a, b) => {
+                if (sortBy === 'installs') {
+                  return b.install_count - a.install_count;
+                } else {
+                  return b.tool_call_count - a.tool_call_count;
+                }
+              })
+              .map((server, index) => (
               <div
                 key={server.id}
                 className="flex items-start space-x-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors"

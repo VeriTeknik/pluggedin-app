@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { McpServerSource, sharedMcpServersTable, profilesTable, projectsTable, users } from '@/db/schema';
+import { McpServerSource, sharedMcpServersTable, profilesTable, projectsTable, users, mcpServersTable } from '@/db/schema';
 import { calculateTrendingServers, TRENDING_PERIODS } from '@/lib/trending-service';
 import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import type { SearchIndex } from '@/types/search';
@@ -120,36 +120,45 @@ export async function GET(request: NextRequest) {
 
         try {
           if (server.source === McpServerSource.REGISTRY) {
-            // Fetch registry server metadata
-            try {
-              console.log(`[Trending API] Fetching registry server: ${server.server_id}`);
-              const registryServer = await registryVPClient.getServerWithStats(server.server_id);
-              console.log(`[Trending API] Registry server response:`, registryServer ? 'Found' : 'Not found');
-              
-              if (registryServer) {
-                // Extract display name from qualified name
-                const displayName = registryServer.name?.split('/').pop()?.replace(/-/g, ' ')
-                  .split(' ')
-                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                  .join(' ') || registryServer.name || 'Unknown';
-                  
-                console.log(`[Trending API] Display name: ${displayName}`);
-                  
+            // For registry servers, first try to get from local database
+            const mcpServer = await db.query.mcpServersTable.findFirst({
+              where: eq(mcpServersTable.external_id, server.server_id)
+            });
+            
+            if (mcpServer) {
+              // Use local server name if available
+              metadata = {
+                name: mcpServer.name,
+                description: mcpServer.description || '',
+              };
+            } else {
+              // Fallback to fetching from registry
+              try {
+                const registryServer = await registryVPClient.getServerWithStats(server.server_id);
+                
+                if (registryServer) {
+                  // Extract display name from qualified name
+                  const displayName = registryServer.name?.split('/').pop()?.replace(/-/g, ' ')
+                    .split(' ')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ') || registryServer.name || 'Unknown';
+                    
+                  metadata = {
+                    name: displayName,
+                    description: registryServer.description || '',
+                    githubUrl: registryServer.repository?.url,
+                    package_name: registryServer.packages?.[0]?.name,
+                    package_registry: registryServer.packages?.[0]?.registry_name,
+                  };
+                }
+              } catch (registryError) {
+                console.error(`Failed to fetch registry metadata for ${server.server_id}:`, registryError);
+                // Use fallback metadata
                 metadata = {
-                  name: displayName,
-                  description: registryServer.description || '',
-                  githubUrl: registryServer.repository?.url,
-                  package_name: registryServer.packages?.[0]?.name,
-                  package_registry: registryServer.packages?.[0]?.registry_name,
+                  name: server.server_id,
+                  description: 'Registry server (metadata unavailable)',
                 };
               }
-            } catch (registryError) {
-              console.error(`Failed to fetch registry metadata for ${server.server_id}:`, registryError);
-              // Use fallback metadata
-              metadata = {
-                name: server.server_id,
-                description: 'Registry server (metadata unavailable)',
-              };
             }
           } else if (server.source === McpServerSource.COMMUNITY) {
             // Fetch community server metadata from database
