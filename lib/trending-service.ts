@@ -45,11 +45,17 @@ export async function calculateTrendingServers(
   }
 
   // Query to aggregate activity by server
+  // For registry servers, group by external_id; for others, group by server_uuid
   const activityQuery = db
     .select({
-      server_uuid: mcpActivityTable.server_uuid,
-      external_id: mcpActivityTable.external_id,
+      server_uuid: sql<string | null>`MAX(${mcpActivityTable.server_uuid}::text)::uuid`,
+      external_id: sql<string | null>`MAX(${mcpActivityTable.external_id}::text)`,
       source: mcpActivityTable.source,
+      server_key: sql<string>`CASE 
+        WHEN ${mcpActivityTable.source} = 'REGISTRY' AND ${mcpActivityTable.external_id} IS NOT NULL 
+        THEN ${mcpActivityTable.external_id}
+        ELSE COALESCE(${mcpActivityTable.server_uuid}::text, ${mcpActivityTable.external_id})
+      END`,
       install_count: sql<number>`COUNT(CASE WHEN ${mcpActivityTable.action} = 'install' THEN 1 END)`,
       uninstall_count: sql<number>`COUNT(CASE WHEN ${mcpActivityTable.action} = 'uninstall' THEN 1 END)`,
       tool_call_count: sql<number>`COUNT(CASE WHEN ${mcpActivityTable.action} = 'tool_call' THEN 1 END)`,
@@ -61,8 +67,11 @@ export async function calculateTrendingServers(
     .from(mcpActivityTable)
     .where(and(...conditions))
     .groupBy(
-      mcpActivityTable.server_uuid,
-      mcpActivityTable.external_id,
+      sql`CASE 
+        WHEN ${mcpActivityTable.source} = 'REGISTRY' AND ${mcpActivityTable.external_id} IS NOT NULL 
+        THEN ${mcpActivityTable.external_id}
+        ELSE COALESCE(${mcpActivityTable.server_uuid}::text, ${mcpActivityTable.external_id})
+      END`,
       mcpActivityTable.source
     );
 
@@ -89,7 +98,7 @@ export async function calculateTrendingServers(
         (recencyMultiplier * 20); // 20% weight for recency
 
       return {
-        server_id: (row.external_id || row.server_uuid) as string, // Prefer external_id for registry servers
+        server_id: row.server_key as string, // Use the aggregated key
         source: row.source,
         install_count: netInstalls,
         tool_call_count: Number(row.tool_call_count),

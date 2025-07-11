@@ -84,11 +84,40 @@ export async function POST(request: Request) {
 
     // Store all activity in the database for trending calculations
     try {
+      // Determine the correct source
+      let activitySource = source;
+      
+      if (!activitySource && serverUuid) {
+        // Look up the server to get its actual source
+        const { mcpServersTable } = await import('@/db/schema');
+        const { eq } = await import('drizzle-orm');
+        
+        const server = await db.query.mcpServersTable.findFirst({
+          where: eq(mcpServersTable.uuid, serverUuid)
+        });
+        
+        if (server) {
+          activitySource = server.source || McpServerSource.PLUGGEDIN;
+          // Also use the external_id if available
+          if (server.external_id && !externalId) {
+            await db.insert(mcpActivityTable).values({
+              profile_uuid: auth.activeProfile.uuid,
+              server_uuid: serverUuid,
+              external_id: server.external_id,
+              source: activitySource,
+              action,
+              item_name: itemName || null,
+            });
+            return;
+          }
+        }
+      }
+      
       await db.insert(mcpActivityTable).values({
         profile_uuid: auth.activeProfile.uuid,
         server_uuid: serverUuid || null,
         external_id: externalId || null,
-        source: source || (serverUuid ? McpServerSource.COMMUNITY : McpServerSource.REGISTRY),
+        source: activitySource || McpServerSource.PLUGGEDIN,
         action,
         item_name: itemName || null,
       });
