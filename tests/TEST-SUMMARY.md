@@ -26,13 +26,65 @@ This document summarizes the testing implementation for Phase 5: Comprehensive T
   - Mock registry API responses
 
 #### 2. **Registry Server Actions Tests** (`tests/actions/registry-servers.test.ts`)
-Tests for `verifyGitHubOwnership` function:
+Comprehensive test coverage for all registry server functions:
+
+**verifyGitHubOwnership**:
 - ✅ Verify ownership for valid repository
 - ✅ Reject invalid GitHub URL format
 - ✅ Handle authentication failures
 - ✅ Reject if user does not own the repository
 - ✅ Verify ownership for organization repository
 - ✅ Handle network errors gracefully
+
+**checkUserGitHubConnection**:
+- ✅ Return true for user with valid GitHub connection
+- ✅ Return false for user without GitHub connection
+- ✅ Return false for expired GitHub token
+- ✅ Return error for unauthenticated user
+- ✅ Handle network errors
+
+**checkGitHubConnection** (deprecated):
+- ✅ Return connected when registry token is provided
+- ✅ Return not connected when no token provided
+
+**fetchRegistryServer**:
+- ✅ Successfully fetch a server from registry
+- ✅ Return error when server not found
+- ✅ Handle registry client errors
+
+**importRegistryServer**:
+- ✅ Successfully import a STDIO server
+- ✅ Handle unauthenticated user
+- ✅ Handle server not found
+- ✅ Handle createMcpServer failure
+
+**publishClaimedServer**:
+- ✅ Successfully publish a new claimed server
+- ✅ Handle unauthenticated user
+- ✅ Handle user without GitHub connection
+- ✅ Handle ownership verification failure
+- ✅ Handle already published server
+- ✅ Handle registry auth token not configured
+- ✅ Update existing unpublished server
+
+**claimServer**:
+- ✅ Successfully auto-approve claim with valid ownership
+- ✅ Handle unauthenticated user
+- ✅ Handle server not found
+- ✅ Handle already claimed server
+- ✅ Handle user without GitHub connection
+- ✅ Create pending claim request for non-owner
+
+**getClaimableServers**:
+- ✅ Return claimable servers for user with GitHub
+- ✅ Return message for user without GitHub
+- ✅ Handle database errors
+
+**submitWizardToRegistry**:
+- ✅ Community Server Flow (3 tests)
+- ✅ Claimed Server with Registry Token (4 tests)
+- ✅ Claimed Server with NextAuth (2 tests + 1 skipped)
+- ✅ General Error Cases (3 tests)
 
 #### 3. **Community Server Actions Tests** (`tests/actions/community-servers.test.ts`)
 Tests for community server validation:
@@ -60,12 +112,12 @@ Tests for search functionality:
 pnpm test
 
 # Current test results:
-✓ tests/actions/registry-servers.test.ts (6 tests)
+✓ tests/actions/registry-servers.test.ts (48 tests + 1 skipped)
 ✓ tests/actions/community-servers.test.ts (15 tests)
 ✓ tests/api/search.test.ts (7 tests)
 ✓ tests/demo.test.ts (8 tests)
 
-Total: 36 tests passing
+Total: 78 tests passing + 1 skipped
 ```
 
 ## Testing Approach
@@ -154,6 +206,22 @@ tests/
 - Maintain test data in centralized mocks
 - Run tests in CI/CD pipeline
 
+## Recent Updates (2025-07-11)
+
+### Comprehensive Registry Server Tests Added
+- Expanded registry-servers.test.ts from 6 tests to 48 tests (+ 1 skipped)
+- Added complete test coverage for all exported functions:
+  - `checkUserGitHubConnection` - 5 tests covering all scenarios
+  - `fetchRegistryServer` - 3 tests for registry API interactions
+  - `importRegistryServer` - 4 tests for server import flow
+  - `publishClaimedServer` - 7 tests for publishing claimed servers
+  - `claimServer` - 6 tests for server claiming process
+  - `getClaimableServers` - 3 tests for fetching claimable servers
+  - `submitWizardToRegistry` - 14 tests covering all wizard submission flows
+- Improved mock setup with proper dependency injection
+- Added comprehensive error scenario testing
+- One test skipped due to complex NextAuth flow interaction (documented with TODO)
+
 ## Conclusion
 
-The testing implementation provides a solid foundation for the registry features. While we encountered challenges with complex mocking, the chosen approach of testing individual pieces of functionality ensures good coverage of critical business logic. The test utilities and mock data created will facilitate future test development as the application grows.
+The testing implementation provides a solid foundation for the registry features. With the recent expansion, we now have comprehensive test coverage for all registry server actions, significantly improving confidence in the codebase. While we encountered challenges with complex mocking (particularly for the NextAuth flow), the chosen approach of testing individual pieces of functionality ensures good coverage of critical business logic. The test utilities and mock data created will facilitate future test development as the application grows.
