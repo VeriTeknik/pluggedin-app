@@ -4,7 +4,7 @@ import { and,eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { accounts, registryServersTable, serverClaimRequestsTable, projectsTable, McpServerSource } from '@/db/schema';
+import { accounts, McpServerSource,projectsTable, registryServersTable, serverClaimRequestsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { inferTransportFromPackages,transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
@@ -598,6 +598,9 @@ interface WizardSubmissionData {
   // Final metadata
   finalDescription?: string;
   categories?: string[];
+  
+  // Current profile UUID from UI context
+  currentProfileUuid?: string;
 }
 
 /**
@@ -728,46 +731,110 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
     if (!wizardData.shouldClaim) {
       console.log('🔍 submitWizardToRegistry: Saving community server to frontend database');
       
-      // Get the user's active profile
-      const userProjects = await db.query.projectsTable.findMany({
-        where: eq(projectsTable.user_id, session.user.id),
-        with: {
-          profiles: true
+      // Use the provided currentProfileUuid if available, otherwise find the active profile
+      let activeProfileUuid: string;
+      
+      if (wizardData.currentProfileUuid) {
+        // Use the profile UUID from the UI context
+        activeProfileUuid = wizardData.currentProfileUuid;
+        console.log('🔍 submitWizardToRegistry: Using provided profile UUID:', activeProfileUuid);
+      } else {
+        // Fallback to finding the active profile from the database
+        const userProjects = await db.query.projectsTable.findMany({
+          where: eq(projectsTable.user_id, session.user.id),
+          with: {
+            profiles: true
+          }
+        });
+
+        if (!userProjects.length || !userProjects[0].profiles.length) {
+          return { success: false, error: 'No active profile found. Please create a profile first.' };
         }
-      });
 
-      if (!userProjects.length || !userProjects[0].profiles.length) {
-        return { success: false, error: 'No active profile found. Please create a profile first.' };
+        // Use the first profile or the active one
+        const activeProject = userProjects.find(p => p.active_profile_uuid) || userProjects[0];
+        activeProfileUuid = activeProject.active_profile_uuid || activeProject.profiles[0].uuid;
+        console.log('🔍 submitWizardToRegistry: Using database active profile UUID:', activeProfileUuid);
       }
-
-      // Use the first profile or the active one
-      const activeProject = userProjects.find(p => p.active_profile_uuid) || userProjects[0];
-      const activeProfileUuid = activeProject.active_profile_uuid || activeProject.profiles[0].uuid;
       
       // First, create the MCP server in the local database
       const { createMcpServer } = await import('./mcp-servers');
       
-      // Determine transport type based on packages
-      const transportType = packages[0]?.registry_name === 'docker' ? 'STREAMABLE_HTTP' : 'STDIO';
+      // Determine transport type from wizard transport configs
+      let transportType = 'STDIO';
+      let url: string | undefined;
+      let streamableHTTPOptions: any | undefined;
+      
+      console.log('🔍 submitWizardToRegistry: Transport configs:', JSON.stringify(wizardData.transportConfigs, null, 2));
+      
+      // Check if this is a Streamable HTTP or SSE server from transportConfigs
+      if (wizardData.transportConfigs) {
+        const transportKeys = Object.keys(wizardData.transportConfigs);
+        console.log('🔍 submitWizardToRegistry: Transport keys:', transportKeys);
+        
+        // Check for both formats (with hyphen and underscore)
+        if (transportKeys.includes('streamable-http') || transportKeys.includes('STREAMABLE_HTTP')) {
+          transportType = 'STREAMABLE_HTTP';
+          const config = wizardData.transportConfigs['streamable-http'] || wizardData.transportConfigs['STREAMABLE_HTTP'];
+          url = config.url;
+          console.log('🔍 submitWizardToRegistry: Detected Streamable HTTP with URL:', url);
+          
+          // Extract any headers or options if present
+          if (config.env) {
+            streamableHTTPOptions = {
+              headers: Object.entries(config.env).reduce((acc, [key, value]) => {
+                if (key.startsWith('HEADER_')) {
+                  acc[key.replace('HEADER_', '')] = value as string;
+                }
+                return acc;
+              }, {} as Record<string, string>)
+            };
+          }
+        } else if (transportKeys.includes('sse') || transportKeys.includes('SSE')) {
+          transportType = 'SSE';
+          const config = wizardData.transportConfigs['sse'] || wizardData.transportConfigs['SSE'];
+          url = config.url;
+          console.log('🔍 submitWizardToRegistry: Detected SSE with URL:', url);
+        }
+      }
+      
+      // Fallback: determine based on packages if no transport config
+      if (transportType === 'STDIO' && packages[0]?.registry_name === 'docker') {
+        transportType = 'STREAMABLE_HTTP';
+      }
       
       // Create the server configuration - use just the repo name without owner
       const serverName = wizardData.repo;
-      const command = packages[0]?.registry_name === 'npm' 
-        ? 'npx' 
-        : packages[0]?.registry_name === 'docker'
-        ? 'docker'
-        : 'python';
+      let command: string | undefined;
+      let args: string[] | undefined;
       
-      const args = packages[0]?.registry_name === 'npm'
-        ? [`-y`, packages[0].name]
-        : packages[0]?.registry_name === 'docker'
-        ? ['run', packages[0].name]
-        : ['-m', packages[0].name];
+      // Only set command/args for STDIO servers
+      if (transportType === 'STDIO') {
+        command = packages[0]?.registry_name === 'npm' 
+          ? 'npx' 
+          : packages[0]?.registry_name === 'docker'
+          ? 'docker'
+          : 'python';
+        
+        args = packages[0]?.registry_name === 'npm'
+          ? [`-y`, packages[0].name]
+          : packages[0]?.registry_name === 'docker'
+          ? ['run', packages[0].name]
+          : ['-m', packages[0].name];
+      }
       
       // Convert env vars to object format
       const env: { [key: string]: string } = {};
       wizardData.detectedEnvVars?.forEach(envVar => {
         env[envVar.name] = ''; // User will fill these in later
+      });
+      
+      console.log('🔍 submitWizardToRegistry: Creating server with:', {
+        name: serverName,
+        type: transportType,
+        url: url,
+        command: command,
+        hasStreamableOptions: !!streamableHTTPOptions
       });
       
       const createResult = await createMcpServer({
@@ -777,6 +844,8 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         command,
         args,
         env: Object.keys(env).length > 0 ? env : undefined,
+        url,
+        streamableHTTPOptions,
         type: transportType as any,
         source: McpServerSource.COMMUNITY,
         external_id: `io.github.${wizardData.owner}/${wizardData.repo}`,
@@ -789,16 +858,14 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         };
       }
 
-      // Now share the server as a community server
-      const { shareMcpServer } = await import('./social');
+      // For community servers, we don't automatically share them
+      // The user can share them manually if they want
+      console.log('🔍 submitWizardToRegistry: Community server created successfully, not auto-sharing');
       
-      // Prepare the template with all necessary information
-      const template = {
+      // Prepare the template metadata for tracking
+      const template: any = {
         name: serverName,
         description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
-        command,
-        args,
-        env,
         type: transportType,
         repository_url: wizardData.githubUrl,
         github_owner: wizardData.owner,
@@ -811,29 +878,21 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         }))
       };
       
-      const shareResult = await shareMcpServer(
-        activeProfileUuid,
-        createResult.data.uuid,
-        serverName,
-        wizardData.finalDescription || wizardData.repoInfo?.description,
-        true, // public
-        template
-      );
-
-      if (!shareResult.success) {
-        // If sharing fails, we should clean up the created server
-        const { deleteMcpServerByUuid } = await import('./mcp-servers');
-        await deleteMcpServerByUuid(activeProfileUuid, createResult.data.uuid);
-        
-        return { 
-          success: false, 
-          error: shareResult.error || 'Failed to share server' 
-        };
+      // Add transport-specific fields to the template
+      if (transportType === 'STDIO') {
+        template.command = command;
+        template.args = args;
+        template.env = env;
+      } else if (transportType === 'STREAMABLE_HTTP' || transportType === 'SSE') {
+        template.url = url;
+        if (streamableHTTPOptions) {
+          template.streamableHTTPOptions = streamableHTTPOptions;
+        }
       }
       
       // Save minimal info to registry servers table for tracking
       const [registryServer] = await db.insert(registryServersTable).values({
-        registry_id: `community-${shareResult.sharedServer!.uuid}`, // Use shared server UUID as registry ID
+        registry_id: `community-${createResult.data.uuid}`, // Use created server UUID as registry ID
         name: `io.github.${wizardData.owner}/${wizardData.repo}`,
         github_owner: wizardData.owner,
         github_repo: wizardData.repo,
@@ -848,7 +907,7 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         success: true,
         serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
         data: registryServer,
-        sharedServerUuid: shareResult.sharedServer!.uuid,
+        mcpServerUuid: createResult.data.uuid,
         message: 'Community server created successfully!'
       };
     }

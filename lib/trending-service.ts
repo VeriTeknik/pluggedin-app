@@ -1,4 +1,5 @@
-import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, count, eq, gte, sql } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { mcpActivityTable, McpServerSource } from '@/db/schema';
 

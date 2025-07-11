@@ -23,6 +23,7 @@ import path from 'path';
 import { McpServerType } from '@/db/schema'; // Assuming McpServerType enum is here
 import { packageManager } from '@/lib/mcp/package-manager';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
+import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrapper';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
 
@@ -705,7 +706,20 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         }
         
         console.log(`[MCP Wrapper] Creating Streamable HTTP transport for server ${serverConfig.name} with ${transportOptions.timeout}ms timeout`);
-        transport = new StreamableHTTPClientTransport(url, transportOptions);
+        
+        // Use our wrapper to capture session IDs
+        if (serverConfig.uuid && serverConfig.profile_uuid) {
+          transport = await StreamableHTTPWrapper.create(
+            url, 
+            transportOptions,
+            serverConfig.uuid,
+            serverConfig.profile_uuid
+          );
+        } else {
+          // Fallback to direct transport if we don't have server/profile UUIDs
+          console.warn(`[MCP Wrapper] Server ${serverConfig.name} missing UUID or profile UUID, cannot capture session IDs`);
+          transport = new StreamableHTTPClientTransport(url, transportOptions);
+        }
       } catch (error) {
         console.error(`[MCP Wrapper] Failed to create Streamable HTTP transport:`, error);
         throw error; // Propagate the error instead of falling back

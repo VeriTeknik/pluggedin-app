@@ -21,9 +21,10 @@ interface SmartServerWizardProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  currentProfileUuid?: string;
 }
 
-export function SmartServerWizard({ open, onOpenChange, onSuccess }: SmartServerWizardProps) {
+export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfileUuid }: SmartServerWizardProps) {
   const { toast } = useToast();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const {
@@ -113,6 +114,7 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess }: SmartServer
             onUpdate={updateWizardData}
             onSuccess={handleSuccess}
             setIsSubmitting={setIsSubmitting}
+            currentProfileUuid={currentProfileUuid}
           />
         );
       default:

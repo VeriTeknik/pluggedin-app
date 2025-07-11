@@ -74,7 +74,10 @@ export default function MCPServersPage() {
 
   const { data: servers = [], mutate } = useSWR(
     currentProfile?.uuid ? `${currentProfile.uuid}/mcp-servers` : null,
-    () => getMcpServers(currentProfile?.uuid || '')
+    () => {
+      console.log('🔍 MCPServersPage: Fetching servers for profile:', currentProfile?.uuid);
+      return getMcpServers(currentProfile?.uuid || '');
+    }
   );
 
   const columns = [
@@ -155,8 +158,12 @@ export default function MCPServersPage() {
 
   const handleCreateMultipleServers = async (configs: any[]) => {
     if (!currentProfile?.uuid) {
+      console.error('🔍 MCPServersPage: No current profile UUID');
       return;
     }
+    console.log('🔍 MCPServersPage: Creating servers for profile:', currentProfile.uuid);
+    console.log('🔍 MCPServersPage: Configs to create:', configs);
+    
     setIsSubmitting(true);
     let successCount = 0;
     let failedCount = 0;
@@ -164,6 +171,7 @@ export default function MCPServersPage() {
     try {
       for (const config of configs) {
         try {
+          console.log('🔍 MCPServersPage: Creating server:', config.name, 'with config:', config);
           await createMcpServer({
             ...config,
             profileUuid: currentProfile.uuid,
@@ -177,6 +185,7 @@ export default function MCPServersPage() {
         }
       }
       
+      // Force a hard refresh of the server list
       await mutate();
       
       if (successCount > 0 && failedCount === 0) {
@@ -543,6 +552,8 @@ export default function MCPServersPage() {
         onOpenChange={setOpen}
         onSubmit={handleCreateMultipleServers}
         isSubmitting={isSubmitting}
+        onWizardSuccess={mutate}
+        currentProfileUuid={currentProfile?.uuid}
       />
 
       {/* Import/Export Dialogs */}

@@ -36,6 +36,7 @@ interface RegistrySubmitStepProps {
   onUpdate: (updates: Partial<WizardData>) => void;
   onSuccess: () => void;
   setIsSubmitting: (value: boolean) => void;
+  currentProfileUuid?: string;
 }
 
 interface SubmissionState {
@@ -46,7 +47,7 @@ interface SubmissionState {
   serverId?: string;
 }
 
-export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting }: RegistrySubmitStepProps) {
+export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting, currentProfileUuid }: RegistrySubmitStepProps) {
   const [submissionState, setSubmissionState] = useState<SubmissionState>({
     step: 'review',
     progress: 0,
@@ -130,6 +131,7 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting 
         transportConfigs: data.transportConfigs,
         finalDescription: customDescription || data.repoInfo?.description || '',
         categories,
+        currentProfileUuid,
       });
       
       // Debug: Log the result

@@ -12,6 +12,7 @@ import {
   timestamp,
   unique,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 import { locales } from '@/i18n/config';
@@ -1172,5 +1173,74 @@ export const serverClaimRequestsRelations = relations(serverClaimRequestsTable, 
   user: one(users, {
     fields: [serverClaimRequestsTable.user_id],
     references: [users.id],
+  }),
+}));
+
+// ===== MCP Sessions Tables (for Streamable HTTP) =====
+
+export const mcpSessionsTable = pgTable(
+  'mcp_sessions',
+  {
+    id: varchar('id', { length: 128 }).primaryKey(),
+    server_uuid: uuid('server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    session_data: jsonb('session_data').notNull().default({}),
+    last_activity: timestamp('last_activity', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expires_at: timestamp('expires_at', { withTimezone: true })
+      .notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    mcpSessionsServerIdx: index('idx_mcp_sessions_server_uuid').on(table.server_uuid),
+    mcpSessionsExpiresIdx: index('idx_mcp_sessions_expires_at').on(table.expires_at),
+    mcpSessionsProfileIdx: index('idx_mcp_sessions_profile_uuid').on(table.profile_uuid),
+  })
+);
+
+export const transportConfigsTable = pgTable(
+  'transport_configs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    server_uuid: uuid('server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    transport_type: varchar('transport_type', { length: 50 }).notNull(),
+    config: jsonb('config').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    transportConfigsServerIdx: index('idx_transport_configs_server_uuid').on(table.server_uuid),
+  })
+);
+
+// Relations for MCP sessions
+export const mcpSessionsRelations = relations(mcpSessionsTable, ({ one }) => ({
+  server: one(mcpServersTable, {
+    fields: [mcpSessionsTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+  profile: one(profilesTable, {
+    fields: [mcpSessionsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
+export const transportConfigsRelations = relations(transportConfigsTable, ({ one }) => ({
+  server: one(mcpServersTable, {
+    fields: [transportConfigsTable.server_uuid],
+    references: [mcpServersTable.uuid],
   }),
 }));

@@ -1,17 +1,16 @@
 'use client';
 
-import { TrendingUp, Package, Users, Activity } from 'lucide-react';
+import { Activity,Package, TrendingUp, Users } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { McpServerSource } from '@/db/schema';
-import { useRouter } from 'next/navigation';
 
 interface TrendingServer {
   id: string;

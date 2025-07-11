@@ -38,6 +38,8 @@ interface SmartServerDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (configs: ParsedConfig[]) => Promise<void>;
   isSubmitting: boolean;
+  onWizardSuccess?: () => void;
+  currentProfileUuid?: string;
 }
 
 interface ParsedConfig {
@@ -136,7 +138,9 @@ export function SmartServerDialog({
   open,
   onOpenChange,
   onSubmit,
-  isSubmitting
+  isSubmitting,
+  onWizardSuccess,
+  currentProfileUuid
 }: SmartServerDialogProps) {
   const { } = useTranslation();
   const [mode, setMode] = useState<'quick' | 'wizard'>('quick');
@@ -329,10 +333,12 @@ export function SmartServerDialog({
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.toLowerCase();
     let name = hostname.replace(/\./g, '-');
+    let description = '';
     
     // Create better names for known services based on exact hostname matching
     if (hostname === 'mcp.context7.com') {
       name = 'context7';
+      description = 'Context7 MCP Server - Code Documentation Assistant';
     } else if (hostname === 'server.smithery.ai') {
       // Extract server name from Smithery URL path
       const pathMatch = urlObj.pathname.match(/@[^/]+\/([^/]+)\//);
@@ -341,10 +347,13 @@ export function SmartServerDialog({
       } else {
         name = 'smithery-server';
       }
+      description = 'Smithery MCP Server';
     } else if (hostname === 'api.githubcopilot.com') {
       name = 'github-copilot';
+      description = 'GitHub Copilot MCP Server';
     } else {
       name += '-server';
+      description = `MCP Server from ${hostname}`;
     }
     
     // Extract API key if present
@@ -354,6 +363,7 @@ export function SmartServerDialog({
       name,
       type: serverType,
       url: url,
+      description,
       status: McpServerStatus.ACTIVE
     };
     
@@ -500,9 +510,11 @@ export function SmartServerDialog({
     
     // Extract package name for the server name
     let name = 'imported-server';
+    let description = 'Imported MCP server';
     const packageArg = args.find(arg => arg.startsWith('@'));
     if (packageArg) {
       name = packageArg.split('/').pop() || name;
+      description = `MCP server from ${packageArg}`;
     }
     
     return {
@@ -510,6 +522,7 @@ export function SmartServerDialog({
       type: McpServerType.STDIO,
       command,
       args,
+      description,
       status: McpServerStatus.ACTIVE
     };
   };
@@ -698,7 +711,9 @@ export function SmartServerDialog({
         onSuccess={() => {
           setMode('quick');
           onOpenChange(false);
+          onWizardSuccess?.();
         }}
+        currentProfileUuid={currentProfileUuid}
       />
     );
   }

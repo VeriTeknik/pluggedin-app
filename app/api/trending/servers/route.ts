@@ -1,11 +1,11 @@
+import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { McpServerSource, sharedMcpServersTable, profilesTable, projectsTable, users, mcpServersTable } from '@/db/schema';
-import { calculateTrendingServers, TRENDING_PERIODS } from '@/lib/trending-service';
+import { McpServerSource, mcpServersTable,profilesTable, projectsTable, sharedMcpServersTable, users } from '@/db/schema';
 import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
+import { calculateTrendingServers, TRENDING_PERIODS } from '@/lib/trending-service';
 import type { SearchIndex } from '@/types/search';
 
 // Query params schema

@@ -1,12 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { unshareServer } from '@/app/actions/social';
 import { UnifiedServerCard } from '@/components/server-card/UnifiedServerCard';
 import { ServerDetailDialog } from '@/components/server-detail-dialog';
-import { ClaimServerDialog } from './ClaimServerDialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -22,6 +21,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { SearchIndex } from '@/types/search';
 
+import { ClaimServerDialog } from './ClaimServerDialog';
 import { InstallDialog } from './InstallDialog';
 import { RateServerDialog } from './RateServerDialog';
 import { ReviewsDialog } from './ReviewsDialog';

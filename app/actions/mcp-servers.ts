@@ -1,6 +1,6 @@
 'use server';
 
-import { and, desc, eq, not, or } from 'drizzle-orm';
+import { and, desc, eq, isNull, like, not, or } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { 
@@ -34,6 +34,8 @@ type ServerWithMetrics = typeof mcpServersTable.$inferSelect & {
 }
 
 export async function getMcpServers(profileUuid: string): Promise<ServerWithMetrics[]> {
+  console.log('🔍 getMcpServers: Fetching for profile:', profileUuid);
+  
   // Get the servers without type assertion
   const serversQuery = await db
     .select({
@@ -52,10 +54,30 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
           eq(mcpServersTable.status, McpServerStatus.INACTIVE)
         ),
         // Exclude temporary servers created during discovery tests
-        not(eq(mcpServersTable.description, 'Temporary stdio server for discovery test'))
+        // Handle NULL descriptions properly - NULL descriptions should be included
+        or(
+          isNull(mcpServersTable.description),
+          not(like(mcpServersTable.description, 'Temporary % server for discovery test'))
+        )
       )
     )
     .orderBy(desc(mcpServersTable.created_at));
+  
+  console.log('🔍 getMcpServers: Found', serversQuery.length, 'servers');
+  
+  // Debug: Log all servers before filtering to understand what's being excluded
+  const allServersDebug = await db
+    .select({
+      server: mcpServersTable,
+    })
+    .from(mcpServersTable)
+    .where(eq(mcpServersTable.profile_uuid, profileUuid));
+  
+  console.log('🔍 getMcpServers: All servers in profile (before filtering):', allServersDebug.map(s => ({
+    name: s.server.name,
+    description: s.server.description,
+    status: s.server.status
+  })));
 
   // Type the result correctly
   const servers: ServerWithUsername[] = serversQuery;

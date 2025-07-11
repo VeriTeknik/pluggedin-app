@@ -22,7 +22,68 @@ interface TestResult {
   details?: {
     capabilities?: string[];
     error?: string;
+    corsIssue?: boolean;
+    corsDetails?: string;
   };
+}
+
+/**
+ * Check if a response indicates a CORS issue
+ */
+async function checkForCorsIssue(response: Response, url: string, responseText?: string): Promise<{ corsIssue?: boolean; corsDetails?: string }> {
+  // Check if this is a 400 Bad Request that might be session-related
+  if (response.status === 400 && responseText) {
+    if (responseText.includes('session') || responseText.includes('Session-Id') || responseText.includes('Mcp-Session-Id')) {
+      return {
+        corsIssue: true,
+        corsDetails: 'Server requires session ID but may not have proper CORS headers. The server should include "Access-Control-Expose-Headers: Mcp-Session-Id" to allow the client to read the session ID.',
+      };
+    }
+  }
+
+  // Check if the server is missing CORS headers entirely
+  const accessControlAllowOrigin = response.headers.get('Access-Control-Allow-Origin');
+  const accessControlExposeHeaders = response.headers.get('Access-Control-Expose-Headers');
+  
+  if (!accessControlAllowOrigin) {
+    return {
+      corsIssue: true,
+      corsDetails: 'Server is missing Access-Control-Allow-Origin header. The server needs to configure CORS to allow requests from web clients.',
+    };
+  }
+
+  // Check if Mcp-Session-Id is exposed for Streamable HTTP
+  if (!accessControlExposeHeaders?.includes('Mcp-Session-Id')) {
+    return {
+      corsIssue: true,
+      corsDetails: 'Server does not expose Mcp-Session-Id header. Add "Access-Control-Expose-Headers: Mcp-Session-Id" to the server\'s CORS configuration.',
+    };
+  }
+
+  return {};
+}
+
+/**
+ * Check if a network error might be CORS-related
+ */
+function checkForCorsNetworkError(error: unknown): { corsIssue?: boolean; corsDetails?: string } {
+  if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+    return {
+      corsIssue: true,
+      corsDetails: 'Network error (possibly CORS). This often happens when the server doesn\'t allow cross-origin requests. Check the server\'s CORS configuration.',
+    };
+  }
+
+  // Check for other common CORS error patterns
+  const errorMessage = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  if (errorMessage.includes('cors') || errorMessage.includes('cross-origin') || errorMessage.includes('blocked')) {
+    return {
+      corsIssue: true,
+      corsDetails: 'CORS error detected. The server needs to configure proper CORS headers to allow requests from web clients.',
+    };
+  }
+
+  return {};
 }
 
 export async function testMcpConnection(config: TestConfig): Promise<TestResult> {
@@ -147,20 +208,36 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
               },
             };
           } else {
+            // Try to read response body for CORS checking
+            let responseText = '';
+            try {
+              responseText = await initResponse.text();
+            } catch {
+              // Ignore errors reading response body
+            }
+            
+            // Check for CORS issues
+            const corsDetails = await checkForCorsIssue(initResponse.clone(), config.url, responseText);
+            
             return {
               success: false,
               message: `Server returned HTTP ${initResponse.status}`,
               details: {
-                error: `HTTP ${initResponse.status}: ${initResponse.statusText}`,
+                error: `HTTP ${initResponse.status}: ${initResponse.statusText}${responseText ? ` - ${responseText}` : ''}`,
+                ...corsDetails,
               },
             };
           }
         } catch (error) {
+          // Check if it's a network error that might be CORS-related
+          const corsDetails = checkForCorsNetworkError(error);
+          
           return {
             success: false,
             message: 'Failed to connect to MCP server',
             details: {
               error: error instanceof Error ? error.message : 'Connection failed',
+              ...corsDetails,
             },
           };
         }
