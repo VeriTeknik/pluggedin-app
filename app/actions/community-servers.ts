@@ -428,21 +428,36 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       },
     };
 
-    // Try to publish to registry first
+    // Try to publish to registry first (only for claimed servers, not community servers)
     let registryId: string | null = null;
     let publishError: string | null = null;
     
+    // Note: The registry no longer accepts community server submissions
+    // We'll still try to publish claimed servers, but expect this to fail for community servers
     try {
       const client = new PluggedinRegistryClient();
       const authToken = process.env.REGISTRY_AUTH_TOKEN;
       
       if (!authToken) {
-        publishError = 'Registry authentication not configured on server';
-        console.error(publishError);
+        publishError = 'Registry authentication not configured. Community servers are stored locally.';
+        console.log('Registry auth token not configured - storing as local claimed server');
       } else {
-        const publishResult = await client.publishServer(registryPayload, authToken);
-        registryId = publishResult.id;
-        console.log('Successfully published to registry:', registryId);
+        // Try to publish, but expect failure for community servers
+        try {
+          const publishResult = await client.publishServer(registryPayload, authToken);
+          registryId = publishResult.id;
+          console.log('Successfully published to registry:', registryId);
+        } catch (pubError: any) {
+          // Check if it's a community server rejection (expected)
+          if (pubError.message?.includes('401') || pubError.message?.includes('403') || pubError.message?.includes('405')) {
+            publishError = 'Community servers are no longer published to the registry. The server has been claimed locally.';
+            console.log('Registry rejected community server (expected behavior):', pubError.message);
+          } else {
+            // Unexpected error
+            publishError = pubError instanceof Error ? pubError.message : 'Failed to publish to registry';
+            console.error('Unexpected registry error:', pubError);
+          }
+        }
       }
     } catch (error) {
       console.error('Failed to publish to registry:', error);
@@ -498,12 +513,22 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
     });
 
     if (publishError) {
-      return { 
-        success: true, 
-        registryServer: result,
-        message: 'Server claimed successfully but could not be published to registry. You can try publishing it later.',
-        warning: publishError
-      };
+      // Check if it's the expected community server behavior
+      if (publishError.includes('Community servers are no longer published')) {
+        return { 
+          success: true, 
+          registryServer: result,
+          message: 'Server claimed successfully! Community servers are stored locally and can be shared with the community.',
+          warning: null // Don't show as warning since this is expected
+        };
+      } else {
+        return { 
+          success: true, 
+          registryServer: result,
+          message: 'Server claimed successfully but could not be published to registry.',
+          warning: publishError
+        };
+      }
     }
 
     return { 

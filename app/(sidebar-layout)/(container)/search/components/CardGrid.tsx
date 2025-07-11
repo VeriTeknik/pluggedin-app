@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { unshareServer } from '@/app/actions/social';
 import { UnifiedServerCard } from '@/components/server-card/UnifiedServerCard';
 import { ServerDetailDialog } from '@/components/server-detail-dialog';
+import { ClaimServerDialog } from './ClaimServerDialog';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -116,6 +117,26 @@ export default function CardGrid({
   // State for detail dialog
   const [detailServer, setDetailServer] = useState<any | null>(null);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  
+  // State for claim dialog
+  const [claimServer, setClaimServer] = useState<any | null>(null);
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+
+  // Listen for server claim events
+  useEffect(() => {
+    const handleServerClaimed = (event: CustomEvent) => {
+      // Close dialogs and trigger refresh
+      setClaimDialogOpen(false);
+      setDetailDialogOpen(false);
+      // The parent component should handle refreshing the data
+      // This event is dispatched by ClaimServerDialog on success
+    };
+
+    window.addEventListener('server-claimed', handleServerClaimed as any);
+    return () => {
+      window.removeEventListener('server-claimed', handleServerClaimed as any);
+    };
+  }, []);
 
 
 
@@ -228,8 +249,27 @@ export default function CardGrid({
       shared_by: item.shared_by,
       tags: item.tags,
       category: item.category,
+      is_claimed: item.is_claimed,
+      uuid: item.uuid,
     });
     setDetailDialogOpen(true);
+  };
+
+  // Handle claim button click from detail dialog
+  const handleClaimClick = () => {
+    if (detailServer) {
+      setClaimServer({
+        uuid: detailServer.uuid || detailServer.external_id, // Use external_id as fallback
+        name: detailServer.name,
+        template: {
+          command: detailServer.command,
+          args: detailServer.args,
+          env: detailServer.env,
+        }
+      });
+      setClaimDialogOpen(true);
+      setDetailDialogOpen(false); // Close detail dialog
+    }
   };
 
 
@@ -356,6 +396,16 @@ export default function CardGrid({
           onOpenChange={setDetailDialogOpen}
           server={detailServer}
           canDelete={false}
+          onClaim={handleClaimClick}
+        />
+      )}
+
+      {/* Claim Server Dialog */}
+      {claimServer && (
+        <ClaimServerDialog
+          open={claimDialogOpen}
+          onOpenChange={setClaimDialogOpen}
+          server={claimServer}
         />
       )}
 

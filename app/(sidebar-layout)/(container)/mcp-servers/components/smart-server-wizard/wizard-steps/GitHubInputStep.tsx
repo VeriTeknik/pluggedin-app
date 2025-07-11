@@ -83,7 +83,7 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
           `https://registry.plugged.in/v0/servers?search=${encodeURIComponent(searchQuery)}&limit=10`
         );
         
-        let registryCheck = { exists: false };
+        let registryCheck: { exists: boolean; servers?: any[] } = { exists: false };
         
         if (registryResponse.ok) {
           const registryData = await registryResponse.json();

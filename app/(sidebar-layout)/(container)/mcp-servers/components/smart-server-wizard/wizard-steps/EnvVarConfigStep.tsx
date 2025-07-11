@@ -37,7 +37,7 @@ interface EnvVar {
   description?: string;
   defaultValue?: string;
   required: boolean;
-  source: 'readme' | 'env-example' | 'code' | 'manual' | 'registry';
+  source: 'readme' | 'env-example' | 'code' | 'manual' | 'registry' | 'args';
   value?: string;
   isSecret?: boolean;
 }

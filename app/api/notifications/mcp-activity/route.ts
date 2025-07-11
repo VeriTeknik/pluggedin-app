@@ -97,7 +97,8 @@ export async function POST(request: Request) {
         });
         
         if (server) {
-          activitySource = server.source || McpServerSource.PLUGGEDIN;
+          // Map PLUGGEDIN source to COMMUNITY for activity tracking
+          activitySource = server.source === McpServerSource.REGISTRY ? 'REGISTRY' : 'COMMUNITY';
           // Also use the external_id if available
           if (server.external_id && !externalId) {
             await db.insert(mcpActivityTable).values({

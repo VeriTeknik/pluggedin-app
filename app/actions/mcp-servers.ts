@@ -207,6 +207,17 @@ export async function deleteMcpServerByUuid(
     }
   }
 
+  // Delete related activity records first to avoid foreign key constraint violation
+  try {
+    const { mcpActivityTable } = await import('@/db/schema');
+    await db
+      .delete(mcpActivityTable)
+      .where(eq(mcpActivityTable.server_uuid, uuid));
+  } catch (error) {
+    console.error('Failed to delete activity records:', error);
+    // Continue with server deletion even if activity cleanup fails
+  }
+
   // Delete the server
   await db
     .delete(mcpServersTable)

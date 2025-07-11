@@ -99,7 +99,7 @@ export async function calculateTrendingServers(
 
       return {
         server_id: row.server_key as string, // Use the aggregated key
-        source: row.source,
+        source: row.source as McpServerSource,
         install_count: netInstalls,
         tool_call_count: Number(row.tool_call_count),
         total_activity_count: row.total_count,

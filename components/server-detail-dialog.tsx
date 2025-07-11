@@ -38,6 +38,7 @@ interface ServerDetailDialogProps {
     source?: McpServerSource;
     external_id?: string;
     repositoryUrl?: string;
+    is_claimed?: boolean;
     // Stats fields
     rating?: number;
     ratingCount?: number;
@@ -63,6 +64,7 @@ interface ServerDetailDialogProps {
   onDelete?: () => void;
   canDelete?: boolean;
   onUpdate?: (updatedServer: any) => void;
+  onClaim?: () => void;
 }
 
 export function ServerDetailDialog({
@@ -72,6 +74,7 @@ export function ServerDetailDialog({
   onDelete,
   canDelete = true,
   onUpdate,
+  onClaim,
 }: ServerDetailDialogProps) {
   const { t } = useTranslation();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -371,6 +374,30 @@ export function ServerDetailDialog({
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Claim Server Card - Show only for unclaimed community servers */}
+              {server.source === McpServerSource.COMMUNITY && !server.is_claimed && session && onClaim && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Users className="h-5 w-5" />
+                      Claim This Server
+                    </CardTitle>
+                    <CardDescription>
+                      Are you the author of this server? Claim ownership to manage and publish it to the registry.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button onClick={onClaim} className="w-full">
+                      <GitBranch className="h-4 w-4 mr-2" />
+                      Claim with GitHub
+                    </Button>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      You'll need to prove ownership by providing the GitHub repository URL.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
 
             <TabsContent value="configuration" className="space-y-4">

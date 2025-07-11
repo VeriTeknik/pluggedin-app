@@ -4,7 +4,7 @@ import { and,eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { accounts, registryServersTable, serverClaimRequestsTable } from '@/db/schema';
+import { accounts, registryServersTable, serverClaimRequestsTable, projectsTable, McpServerSource } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { inferTransportFromPackages,transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
@@ -724,100 +724,132 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       environmentVariables: packages[0].environment_variables
     };
 
-    // For community servers, use REGISTRY_AUTH_TOKEN
+    // For community servers, save to frontend database instead of registry
     if (!wizardData.shouldClaim) {
-      console.log('🔍 submitWizardToRegistry: Submitting community server with REGISTRY_AUTH_TOKEN');
+      console.log('🔍 submitWizardToRegistry: Saving community server to frontend database');
       
-      const registryAuthToken = process.env.REGISTRY_AUTH_TOKEN;
-      if (!registryAuthToken) {
-        return { success: false, error: 'Registry authentication not configured. Please contact the administrator.' };
+      // Get the user's active profile
+      const userProjects = await db.query.projectsTable.findMany({
+        where: eq(projectsTable.user_id, session.user.id),
+        with: {
+          profiles: true
+        }
+      });
+
+      if (!userProjects.length || !userProjects[0].profiles.length) {
+        return { success: false, error: 'No active profile found. Please create a profile first.' };
       }
+
+      // Use the first profile or the active one
+      const activeProject = userProjects.find(p => p.active_profile_uuid) || userProjects[0];
+      const activeProfileUuid = activeProject.active_profile_uuid || activeProject.profiles[0].uuid;
       
-      // Prepare registry payload for community server
-      const registryPayload = {
-        name: `io.github.${wizardData.owner}/${wizardData.repo}`,
-        description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
-        packages: [{
-          registry_name: packages[0].registry_name || 'npm',
-          name: packages[0].name || `${wizardData.repo}`,
-          version: '1.0.0', // Community servers typically use latest
-          environment_variables: (wizardData.detectedEnvVars || []).map(env => ({
-            name: env.name,
-            description: env.description || `Environment variable ${env.name}`,
-            required: env.required
-          }))
-        }],
-        repository: {
-          url: wizardData.githubUrl,
-          source: 'github',
-          id: `${wizardData.owner}/${wizardData.repo}`
-        },
-        version_detail: {
-          version: '1.0.0',
-        },
-      };
+      // First, create the MCP server in the local database
+      const { createMcpServer } = await import('./mcp-servers');
       
-      console.log('🔍 submitWizardToRegistry: Community server payload:', JSON.stringify(registryPayload, null, 2));
+      // Determine transport type based on packages
+      const transportType = packages[0]?.registry_name === 'docker' ? 'STREAMABLE_HTTP' : 'STDIO';
       
-      // Submit to /v0/servers/community endpoint as per APP_INTEGRATION_GUIDE.md
-      const registryResponse = await fetch('https://registry.plugged.in/v0/servers/community', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${registryAuthToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(registryPayload)
+      // Create the server configuration
+      const serverName = `${wizardData.owner}/${wizardData.repo}`;
+      const command = packages[0]?.registry_name === 'npm' 
+        ? 'npx' 
+        : packages[0]?.registry_name === 'docker'
+        ? 'docker'
+        : 'python';
+      
+      const args = packages[0]?.registry_name === 'npm'
+        ? [`-y`, packages[0].name]
+        : packages[0]?.registry_name === 'docker'
+        ? ['run', packages[0].name]
+        : ['-m', packages[0].name];
+      
+      // Convert env vars to object format
+      const env: { [key: string]: string } = {};
+      wizardData.detectedEnvVars?.forEach(envVar => {
+        env[envVar.name] = ''; // User will fill these in later
       });
       
-      console.log('🔍 submitWizardToRegistry: Community server API response status:', registryResponse.status);
+      const createResult = await createMcpServer({
+        name: serverName,
+        profileUuid: activeProfileUuid,
+        description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+        command,
+        args,
+        env: Object.keys(env).length > 0 ? env : undefined,
+        type: transportType as any,
+        source: McpServerSource.COMMUNITY,
+        external_id: `io.github.${wizardData.owner}/${wizardData.repo}`,
+      });
+
+      if (!createResult.success || !createResult.data) {
+        return { 
+          success: false, 
+          error: createResult.error || 'Failed to create server' 
+        };
+      }
+
+      // Now share the server as a community server
+      const { shareMcpServer } = await import('./social');
       
-      if (!registryResponse.ok) {
-        const errorText = await registryResponse.text();
-        console.log('🔍 submitWizardToRegistry: Community server API error:', errorText);
+      // Prepare the template with all necessary information
+      const template = {
+        name: serverName,
+        description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+        command,
+        args,
+        env,
+        type: transportType,
+        repository_url: wizardData.githubUrl,
+        github_owner: wizardData.owner,
+        github_repo: wizardData.repo,
+        packages: packages.map(pkg => ({
+          registry_name: pkg.registry_name,
+          name: pkg.name,
+          version: pkg.version || 'latest',
+          environment_variables: pkg.environment_variables
+        }))
+      };
+      
+      const shareResult = await shareMcpServer(
+        activeProfileUuid,
+        createResult.data.uuid,
+        serverName,
+        wizardData.finalDescription || wizardData.repoInfo?.description,
+        true, // public
+        template
+      );
+
+      if (!shareResult.success) {
+        // If sharing fails, we should clean up the created server
+        const { deleteMcpServerByUuid } = await import('./mcp-servers');
+        await deleteMcpServerByUuid(activeProfileUuid, createResult.data.uuid);
         
-        // Provide specific error messages based on status code
-        let errorMessage: string;
-        switch (registryResponse.status) {
-          case 401:
-            errorMessage = 'Registry authentication failed. Please contact the administrator.';
-            break;
-          case 409:
-            errorMessage = 'This server is already published to the registry.';
-            break;
-          case 422:
-            errorMessage = `Invalid data: ${errorText}`;
-            break;
-          default:
-            errorMessage = `Registry publication failed (${registryResponse.status}): ${errorText || registryResponse.statusText}`;
-        }
-        
-        return {
-          success: false,
-          error: errorMessage
+        return { 
+          success: false, 
+          error: shareResult.error || 'Failed to share server' 
         };
       }
       
-      const registryResult = await registryResponse.json();
-      console.log('🔍 submitWizardToRegistry: Community server success response:', JSON.stringify(registryResult, null, 2));
-      
-      // Save to our database
+      // Save minimal info to registry servers table for tracking
       const [registryServer] = await db.insert(registryServersTable).values({
-        registry_id: registryResult.id,
+        registry_id: `community-${shareResult.sharedServer!.uuid}`, // Use shared server UUID as registry ID
         name: `io.github.${wizardData.owner}/${wizardData.repo}`,
         github_owner: wizardData.owner,
         github_repo: wizardData.repo,
         repository_url: wizardData.githubUrl,
         description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
         is_claimed: false, // Community server
-        is_published: true,
-        published_at: new Date(),
-        metadata: registryPayload,
+        is_published: false, // Not published to registry, only to frontend
+        metadata: template,
       }).returning();
 
       return {
         success: true,
         serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
-        data: registryServer
+        data: registryServer,
+        sharedServerUuid: shareResult.sharedServer!.uuid,
+        message: 'Community server created successfully!'
       };
     }
     // For claimed servers, publish directly to registry using the registry token

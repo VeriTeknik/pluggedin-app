@@ -233,7 +233,10 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting 
           <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
           <h2 className="text-2xl font-semibold mb-2">Successfully Submitted!</h2>
           <p className="text-muted-foreground">
-            Your MCP server has been successfully submitted to the registry.
+            {data.shouldClaim 
+              ? 'Your MCP server has been successfully submitted to the registry.'
+              : 'Your MCP server has been successfully added to the community servers.'
+            }
           </p>
         </div>
 
@@ -257,16 +260,29 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting 
             </div>
 
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-2"
-                onClick={() => window.open(`https://registry.plugged.in/servers/${submissionState.serverId}`, '_blank')}
-              >
-                <Eye className="h-4 w-4" />
-                View in Registry
-                <ExternalLink className="h-3 w-3" />
-              </Button>
+              {data.shouldClaim ? (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={() => window.open(`https://registry.plugged.in/servers/${submissionState.serverId}`, '_blank')}
+                >
+                  <Eye className="h-4 w-4" />
+                  View in Registry
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              ) : (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="flex items-center gap-2"
+                  onClick={() => window.open(`/discover`, '_blank')}
+                >
+                  <Eye className="h-4 w-4" />
+                  View in Community Servers
+                  <ExternalLink className="h-3 w-3" />
+                </Button>
+              )}
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -289,9 +305,10 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting 
         <Alert>
           <Info className="h-4 w-4" />
           <AlertDescription>
-            <strong>Next steps:</strong> Your server is now available in the registry. 
-            Users can discover and install it directly from the registry. You can also 
-            share the registry link with others or add it to your own profile.
+            <strong>Next steps:</strong> {data.shouldClaim 
+              ? 'Your server is now available in the registry. Users can discover and install it directly from the registry. You can also share the registry link with others or add it to your own profile.'
+              : 'Your server is now available in the community servers. Other users can discover and install it from the discover page. The server has also been added to your profile.'
+            }
           </AlertDescription>
         </Alert>
         
