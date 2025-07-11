@@ -129,6 +129,22 @@ export const trackServerInstallation = async (input: {
       source: input.source || McpServerSource.PLUGGEDIN,
     });
 
+    // Also track in mcp_activity table for trending calculations
+    try {
+      const { mcpActivityTable } = await import('@/db/schema');
+      await db.insert(mcpActivityTable).values({
+        profile_uuid: input.profileUuid,
+        server_uuid: input.serverUuid || null,
+        external_id: input.externalId || null,
+        source: input.source || McpServerSource.PLUGGEDIN,
+        action: 'install',
+        item_name: null,
+      });
+    } catch (activityError) {
+      console.error('Failed to track activity:', activityError);
+      // Continue even if activity tracking fails
+    }
+
     // TODO: Track installation to new analytics service when available
 
     // Also track in registry if it's a registry or community server

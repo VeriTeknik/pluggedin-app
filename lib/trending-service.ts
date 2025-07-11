@@ -89,10 +89,10 @@ export async function calculateTrendingServers(
         (recencyMultiplier * 20); // 20% weight for recency
 
       return {
-        server_id: (row.server_uuid || row.external_id) as string,
+        server_id: (row.external_id || row.server_uuid) as string, // Prefer external_id for registry servers
         source: row.source,
         install_count: netInstalls,
-        tool_call_count: row.tool_call_count,
+        tool_call_count: Number(row.tool_call_count),
         total_activity_count: row.total_count,
         trending_score: Math.round(trendingScore),
         last_activity: row.last_activity,

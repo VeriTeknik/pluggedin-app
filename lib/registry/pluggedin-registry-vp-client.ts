@@ -176,8 +176,9 @@ export class PluggedinRegistryVPClient {
       throw new Error(`Server not found: ${serverId}`);
     }
     
-    const data: ExtendedServerResponse = await response.json();
-    return data.server;
+    const data = await response.json();
+    // Handle both wrapped and unwrapped responses
+    return data.server || data;
   }
   
   // Get all servers with stats

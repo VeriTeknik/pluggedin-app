@@ -101,6 +101,8 @@ export async function GET(request: NextRequest) {
       limit: searchParams.get('limit') || undefined,
     });
 
+    console.log('[Trending API] Params:', params);
+
     // Calculate trending servers
     const sourceFilter = params.source === 'all' ? null : params.source as McpServerSource;
     const trendingServers = await calculateTrendingServers(
@@ -108,6 +110,8 @@ export async function GET(request: NextRequest) {
       params.period,
       params.limit
     );
+    
+    console.log('[Trending API] Found trending servers:', trendingServers.length);
 
     // Enrich trending servers with metadata
     const enrichedServers = await Promise.all(
@@ -118,21 +122,25 @@ export async function GET(request: NextRequest) {
           if (server.source === McpServerSource.REGISTRY) {
             // Fetch registry server metadata
             try {
-              const registryServers = await registryVPClient.searchServersWithStats(
-                server.server_id,
-                McpServerSource.REGISTRY
-              );
-              const registryServer = registryServers.find(s => s.id === server.server_id);
+              console.log(`[Trending API] Fetching registry server: ${server.server_id}`);
+              const registryServer = await registryVPClient.getServerWithStats(server.server_id);
+              console.log(`[Trending API] Registry server response:`, registryServer ? 'Found' : 'Not found');
               
               if (registryServer) {
+                // Extract display name from qualified name
+                const displayName = registryServer.name?.split('/').pop()?.replace(/-/g, ' ')
+                  .split(' ')
+                  .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                  .join(' ') || registryServer.name || 'Unknown';
+                  
+                console.log(`[Trending API] Display name: ${displayName}`);
+                  
                 metadata = {
-                  name: registryServer.name || 'Unknown',
+                  name: displayName,
                   description: registryServer.description || '',
-                  category: registryServer.category,
-                  tags: registryServer.tags,
-                  githubUrl: registryServer.github_url,
-                  package_name: registryServer.packages?.[0]?.package_name,
-                  package_registry: registryServer.packages?.[0]?.package_type,
+                  githubUrl: registryServer.repository?.url,
+                  package_name: registryServer.packages?.[0]?.name,
+                  package_registry: registryServer.packages?.[0]?.registry_name,
                 };
               }
             } catch (registryError) {
@@ -186,7 +194,7 @@ export async function GET(request: NextRequest) {
           install_count: server.install_count,
           tool_call_count: server.tool_call_count,
           total_activity_count: server.total_activity_count,
-          last_activity: server.last_activity.toISOString(),
+          last_activity: new Date(server.last_activity).toISOString(),
           // Additional metadata
           github_url: metadata.githubUrl,
           package_name: metadata.package_name,
@@ -203,6 +211,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching trending servers:', error);
+    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
     
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -212,7 +221,7 @@ export async function GET(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: 'Failed to fetch trending servers' },
+      { error: 'Failed to fetch trending servers', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
