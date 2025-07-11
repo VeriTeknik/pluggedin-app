@@ -402,10 +402,10 @@ export async function publishClaimedServer(data: z.infer<typeof publishClaimedSe
       
       return { success: true, server: updated };
     } else {
-      // Create new entry
+      // Create new entry - use just repo name for display
       const [server] = await db.insert(registryServersTable).values({
         registry_id: registryResult.id,
-        name: `io.github.${owner}/${repo}`,
+        name: repo, // Just the repo name for cleaner display
         github_owner: owner,
         github_repo: repo,
         repository_url: validated.repositoryUrl,
@@ -750,8 +750,8 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       // Determine transport type based on packages
       const transportType = packages[0]?.registry_name === 'docker' ? 'STREAMABLE_HTTP' : 'STDIO';
       
-      // Create the server configuration
-      const serverName = `${wizardData.owner}/${wizardData.repo}`;
+      // Create the server configuration - use just the repo name without owner
+      const serverName = wizardData.repo;
       const command = packages[0]?.registry_name === 'npm' 
         ? 'npx' 
         : packages[0]?.registry_name === 'docker'
@@ -1028,10 +1028,10 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       const registryResult = await registryResponse.json();
       console.log('🔍 submitWizardToRegistry: Registry API success response:', JSON.stringify(registryResult, null, 2));
       
-      // Save to our database
+      // Save to our database - use just repo name for display
       const [registryServer] = await db.insert(registryServersTable).values({
         registry_id: registryResult.id,
-        name: `io.github.${wizardData.owner}/${wizardData.repo}`,
+        name: wizardData.repo, // Just the repo name for cleaner display
         github_owner: wizardData.owner,
         github_repo: wizardData.repo,
         repository_url: wizardData.githubUrl,

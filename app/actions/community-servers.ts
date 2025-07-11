@@ -5,15 +5,17 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { 
+  accounts,
+  mcpActivityTable,
   McpServerSource,
   mcpServersTable,
   McpServerStatus,
   McpServerType, 
   profilesTable,
   registryServersTable,
+  serverInstallationsTable,
   sharedMcpServersTable
 } from '@/db/schema';
-import { accounts } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 
@@ -408,7 +410,7 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
         example: value as string,
       })) : [];
 
-    // Prepare registry payload
+    // Prepare registry payload - registry requires io.github format
     const registryPayload = {
       name: `io.github.${owner}/${repo}`,
       description: communityServer.description || communityServer.template?.description || '',
@@ -428,30 +430,30 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       },
     };
 
-    // Try to publish to registry first (only for claimed servers, not community servers)
+    // Try to publish to registry using the user's GitHub token
     let registryId: string | null = null;
     let publishError: string | null = null;
     
-    // Note: The registry no longer accepts community server submissions
-    // We'll still try to publish claimed servers, but expect this to fail for community servers
     try {
       const client = new PluggedinRegistryClient();
-      const authToken = process.env.REGISTRY_AUTH_TOKEN;
       
-      if (!authToken) {
-        publishError = 'Registry authentication not configured. Community servers are stored locally.';
-        console.log('Registry auth token not configured - storing as local claimed server');
+      if (!githubToken) {
+        publishError = 'GitHub authentication required to publish to registry.';
+        console.log('No GitHub token available - cannot publish to registry');
       } else {
-        // Try to publish, but expect failure for community servers
+        // Use the user's GitHub token to publish
         try {
-          const publishResult = await client.publishServer(registryPayload, authToken);
+          const publishResult = await client.publishServer(registryPayload, githubToken);
           registryId = publishResult.id;
           console.log('Successfully published to registry:', registryId);
         } catch (pubError: any) {
-          // Check if it's a community server rejection (expected)
-          if (pubError.message?.includes('401') || pubError.message?.includes('403') || pubError.message?.includes('405')) {
-            publishError = 'Community servers are no longer published to the registry. The server has been claimed locally.';
-            console.log('Registry rejected community server (expected behavior):', pubError.message);
+          // Handle different error scenarios
+          if (pubError.message?.includes('401') || pubError.message?.includes('403')) {
+            publishError = 'Authentication failed. Please ensure you have the correct permissions.';
+            console.log('Registry authentication error:', pubError.message);
+          } else if (pubError.message?.includes('409')) {
+            publishError = 'A server with this repository already exists in the registry.';
+            console.log('Registry conflict error:', pubError.message);
           } else {
             // Unexpected error
             publishError = pubError instanceof Error ? pubError.message : 'Failed to publish to registry';
@@ -467,10 +469,10 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
 
     // Start a transaction to ensure data consistency
     const result = await db.transaction(async (tx) => {
-      // Create registry entry
+      // Create registry entry - use just repo name for display
       const [registryServer] = await tx.insert(registryServersTable).values({
         registry_id: registryId,
-        name: `io.github.${owner}/${repo}`,
+        name: repo, // Just the repo name for cleaner display
         github_owner: owner,
         github_repo: repo,
         repository_url: validated.repositoryUrl,
@@ -488,16 +490,48 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
         },
       }).returning();
 
-      // Update community server as claimed
-      await tx.update(sharedMcpServersTable)
-        .set({
-          is_claimed: true,
-          claimed_by_user_id: session.user.id,
-          claimed_at: new Date(),
-          registry_server_uuid: registryServer.uuid,
-          updated_at: new Date(),
-        })
-        .where(eq(sharedMcpServersTable.uuid, validated.communityServerUuid));
+      // If successfully published to registry, migrate statistics and delete from community
+      if (registryId) {
+        // Migrate installation records from community server to registry server
+        await tx.update(serverInstallationsTable)
+          .set({ 
+            external_id: registryServer.uuid,
+            source: McpServerSource.REGISTRY
+          })
+          .where(and(
+            eq(serverInstallationsTable.external_id, communityServer.uuid),
+            eq(serverInstallationsTable.source, McpServerSource.COMMUNITY)
+          ));
+
+        // Migrate activity logs
+        await tx.update(mcpActivityTable)
+          .set({ 
+            external_id: registryServer.uuid,
+            source: McpServerSource.REGISTRY
+          })
+          .where(and(
+            eq(mcpActivityTable.external_id, communityServer.uuid),
+            eq(mcpActivityTable.source, McpServerSource.COMMUNITY)
+          ));
+
+        // Note: Ratings are stored externally in the registry, so they'll be migrated
+        // automatically when we use the same repository URL
+
+        // Delete the community server entry since it's now in the registry
+        await tx.delete(sharedMcpServersTable)
+          .where(eq(sharedMcpServersTable.uuid, validated.communityServerUuid));
+      } else {
+        // If not published to registry, just mark as claimed
+        await tx.update(sharedMcpServersTable)
+          .set({
+            is_claimed: true,
+            claimed_by_user_id: session.user.id,
+            claimed_at: new Date(),
+            registry_server_uuid: registryServer.uuid,
+            updated_at: new Date(),
+          })
+          .where(eq(sharedMcpServersTable.uuid, validated.communityServerUuid));
+      }
 
       // Update the local server source to REGISTRY
       if (communityServer.server_uuid) {
