@@ -1,11 +1,12 @@
 'use server';
 
-import { db } from '@/db';
-import { mcpOauthSessionsTable, mcpServersTable } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
+
+import { db } from '@/db';
+import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
-import { getProfiles } from './profiles';
 import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
+import { decryptServerData, encryptField } from '@/lib/encryption';
 
 export interface OAuthStatus {
   isAuthenticated: boolean;
@@ -28,25 +29,29 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
       return { success: false, error: 'Not authenticated' };
     }
 
-    // Get user's profiles
-    const profilesResult = await getProfiles();
-    if (!profilesResult.success || !profilesResult.data) {
-      return { success: false, error: 'Failed to get profiles' };
-    }
+    // Get server details directly from database with joins to verify ownership
+    const serverQuery = await db
+      .select({
+        server: mcpServersTable,
+        profile: profilesTable,
+        project: projectsTable
+      })
+      .from(mcpServersTable)
+      .leftJoin(profilesTable, eq(mcpServersTable.profile_uuid, profilesTable.uuid))
+      .leftJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+      .where(
+        and(
+          eq(mcpServersTable.uuid, serverUuid),
+          eq(projectsTable.user_id, session.user.id)
+        )
+      )
+      .limit(1);
 
-    const profileUuids = profilesResult.data.map(p => p.uuid);
-
-    // Check if server belongs to user's profiles
-    const server = await db.query.mcpServersTable.findFirst({
-      where: and(
-        eq(mcpServersTable.uuid, serverUuid),
-        eq(mcpServersTable.profile_uuid, profileUuids[0]) // Check first profile for simplicity
-      ),
-    });
-
-    if (!server) {
+    if (!serverQuery || serverQuery.length === 0) {
       return { success: false, error: 'Server not found or access denied' };
     }
+
+    const { server } = serverQuery[0];
 
     // Check for active OAuth sessions
     const activeSessions = await oauthStateManager.getActiveSessionsForServer(serverUuid);
@@ -82,7 +87,7 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
           }
         }
         if (!lastAuthenticated) {
-          lastAuthenticated = server.updated_at || server.created_at;
+          lastAuthenticated = server.created_at;
         }
       }
       
@@ -96,7 +101,7 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
               provider = determineProviderFromConfig(options.oauth);
             }
             if (!lastAuthenticated) {
-              lastAuthenticated = server.updated_at || server.created_at;
+              lastAuthenticated = server.created_at;
             }
           }
         } catch (e) {
@@ -136,66 +141,78 @@ export async function clearMcpServerOAuth(serverUuid: string): Promise<{
       return { success: false, error: 'Not authenticated' };
     }
 
-    // Get user's profiles
-    const profilesResult = await getProfiles();
-    if (!profilesResult.success || !profilesResult.data) {
-      return { success: false, error: 'Failed to get profiles' };
-    }
+    // Get server details directly from database with joins to verify ownership
+    const serverQuery = await db
+      .select({
+        server: mcpServersTable,
+        profile: profilesTable,
+        project: projectsTable
+      })
+      .from(mcpServersTable)
+      .leftJoin(profilesTable, eq(mcpServersTable.profile_uuid, profilesTable.uuid))
+      .leftJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+      .where(
+        and(
+          eq(mcpServersTable.uuid, serverUuid),
+          eq(projectsTable.user_id, session.user.id)
+        )
+      )
+      .limit(1);
 
-    const profileUuids = profilesResult.data.map(p => p.uuid);
-
-    // Get the server
-    const server = await db.query.mcpServersTable.findFirst({
-      where: and(
-        eq(mcpServersTable.uuid, serverUuid),
-        eq(mcpServersTable.profile_uuid, profileUuids[0])
-      ),
-    });
-
-    if (!server) {
+    if (!serverQuery || serverQuery.length === 0) {
       return { success: false, error: 'Server not found or access denied' };
     }
 
-    // Clear OAuth tokens from environment
-    if (server.env) {
-      const env = { ...(server.env as Record<string, any>) };
-      
-      // Remove common OAuth token keys
-      delete env.LINEAR_API_KEY;
-      delete env.LINEAR_OAUTH_TOKEN;
-      delete env.OAUTH_ACCESS_TOKEN;
-      delete env.ACCESS_TOKEN;
-      
-      // Clear OAuth from streamable options
-      if (env.__streamableHTTPOptions) {
-        try {
-          const options = JSON.parse(env.__streamableHTTPOptions);
-          if (options.oauth) {
-            delete options.oauth.accessToken;
-            delete options.oauth.refreshToken;
-            env.__streamableHTTPOptions = JSON.stringify(options);
-          }
-        } catch (e) {
-          console.error('Failed to parse streamable options:', e);
-        }
-      }
+    const { server, profile } = serverQuery[0];
 
-      // Also clear OAuth status from config
-      const config = { ...(server.config as Record<string, any> || {}) };
-      delete config.oauth_completed_at;
-      delete config.oauth_provider;
-      config.requires_auth = true; // Re-enable auth requirement
-
-      // Update the server
-      await db
-        .update(mcpServersTable)
-        .set({ 
-          env,
-          config,
-          updated_at: new Date(),
-        })
-        .where(eq(mcpServersTable.uuid, serverUuid));
+    if (!profile?.uuid) {
+      return { success: false, error: 'Server profile not found' };
     }
+
+    // Decrypt server data to get current environment
+    const decryptedData = await decryptServerData(server, profile.uuid);
+    
+    // Clear OAuth tokens from environment
+    const env = { ...(decryptedData.env || {}) };
+    
+    // Remove common OAuth token keys
+    delete env.LINEAR_API_KEY;
+    delete env.LINEAR_OAUTH_TOKEN;
+    delete env.OAUTH_ACCESS_TOKEN;
+    delete env.ACCESS_TOKEN;
+    
+    // Clear OAuth from streamable options
+    if (env.__streamableHTTPOptions) {
+      try {
+        const options = JSON.parse(env.__streamableHTTPOptions);
+        if (options.oauth) {
+          delete options.oauth.accessToken;
+          delete options.oauth.refreshToken;
+          env.__streamableHTTPOptions = JSON.stringify(options);
+        }
+      } catch (e) {
+        console.error('Failed to parse streamable options:', e);
+      }
+    }
+
+    // Also clear OAuth status from config
+    const config = { ...(server.config as Record<string, any> || {}) };
+    delete config.oauth_completed_at;
+    delete config.oauth_provider;
+    config.requires_auth = true; // Re-enable auth requirement
+
+    // Encrypt the updated environment
+    const encryptedEnv = await encryptField(env, profile.uuid);
+
+    // Update the server
+    await db
+      .update(mcpServersTable)
+      .set({ 
+        env_encrypted: encryptedEnv,
+        env: null, // Clear old unencrypted env
+        config,
+      })
+      .where(eq(mcpServersTable.uuid, serverUuid));
 
     // Also clear any active OAuth sessions
     const activeSessions = await oauthStateManager.getActiveSessionsForServer(serverUuid);

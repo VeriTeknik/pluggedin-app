@@ -351,8 +351,22 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
   const clientName = 'PluggedinAppClient'; // Or get from config/package.json
   const clientVersion = '0.1.0'; // Or get from config/package.json
 
+  // Check if this is an mcp-remote server (regardless of the configured type)
+  const isMcpRemoteServer = serverConfig.args?.some(arg => arg === 'mcp-remote') || false;
+  
+  if (isMcpRemoteServer) {
+    console.log(`[MCP Wrapper] Detected mcp-remote server ${serverConfig.name}, forcing STDIO transport`);
+  }
+
   try {
-    if (serverConfig.type === McpServerType.STDIO) {
+    // Force STDIO transport for mcp-remote servers
+    if (serverConfig.type === McpServerType.STDIO || isMcpRemoteServer) {
+      // For mcp-remote servers, ensure we have a command
+      if (!serverConfig.command && isMcpRemoteServer) {
+        serverConfig.command = 'npx';
+        console.log(`[MCP Wrapper] mcp-remote server ${serverConfig.name} missing command, using 'npx'`);
+      }
+      
       if (!serverConfig.command) {
         console.error(`[MCP Wrapper] STDIO server ${serverConfig.name} is missing command.`);
         return null;
@@ -602,7 +616,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         
         throw error;
       }
-    } else if (serverConfig.type === McpServerType.SSE) {
+    } else if (serverConfig.type === McpServerType.SSE && !isMcpRemoteServer) {
       // Log deprecation warning
       console.warn(`[MCP Wrapper] ⚠️ SSE transport is deprecated. Server "${serverConfig.name}" should be migrated to Streamable HTTP.`);
       
@@ -619,7 +633,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       }
       
       transport = new SSEClientTransport(urlValidation.parsedUrl!);
-    } else if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
+    } else if (serverConfig.type === McpServerType.STREAMABLE_HTTP && !isMcpRemoteServer) {
       if (!serverConfig.url) {
         console.error(`[MCP Wrapper] Streamable HTTP server ${serverConfig.name} is missing URL.`);
         return null;
