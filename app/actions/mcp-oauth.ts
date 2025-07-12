@@ -1,0 +1,227 @@
+'use server';
+
+import { db } from '@/db';
+import { mcpOauthSessionsTable, mcpServersTable } from '@/db/schema';
+import { and, eq } from 'drizzle-orm';
+import { getAuthSession } from '@/lib/auth';
+import { getProfiles } from './profiles';
+import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
+
+export interface OAuthStatus {
+  isAuthenticated: boolean;
+  provider?: string;
+  lastAuthenticated?: Date;
+  hasActiveSession: boolean;
+}
+
+/**
+ * Get OAuth status for a specific MCP server
+ */
+export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
+  success: boolean;
+  data?: OAuthStatus;
+  error?: string;
+}> {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // Get user's profiles
+    const profilesResult = await getProfiles();
+    if (!profilesResult.success || !profilesResult.data) {
+      return { success: false, error: 'Failed to get profiles' };
+    }
+
+    const profileUuids = profilesResult.data.map(p => p.uuid);
+
+    // Check if server belongs to user's profiles
+    const server = await db.query.mcpServersTable.findFirst({
+      where: and(
+        eq(mcpServersTable.uuid, serverUuid),
+        eq(mcpServersTable.profile_uuid, profileUuids[0]) // Check first profile for simplicity
+      ),
+    });
+
+    if (!server) {
+      return { success: false, error: 'Server not found or access denied' };
+    }
+
+    // Check for active OAuth sessions
+    const activeSessions = await oauthStateManager.getActiveSessionsForServer(serverUuid);
+    const hasActiveSession = activeSessions.length > 0;
+
+    // Check if server has OAuth configuration
+    let isAuthenticated = false;
+    let provider: string | undefined;
+    let lastAuthenticated: Date | undefined;
+
+    if (server.env) {
+      const env = server.env as Record<string, any>;
+      
+      // Check for OAuth tokens in environment
+      if (env.LINEAR_API_KEY || env.LINEAR_OAUTH_TOKEN || env.OAUTH_ACCESS_TOKEN) {
+        isAuthenticated = true;
+        provider = 'Linear';
+        lastAuthenticated = server.updated_at || server.created_at;
+      }
+      
+      // Check for OAuth configuration in streamable options
+      if (env.__streamableHTTPOptions) {
+        try {
+          const options = JSON.parse(env.__streamableHTTPOptions);
+          if (options.oauth) {
+            provider = determineProviderFromConfig(options.oauth);
+            if (!isAuthenticated && options.oauth.accessToken) {
+              isAuthenticated = true;
+              lastAuthenticated = server.updated_at || server.created_at;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to parse streamable options:', e);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      data: {
+        isAuthenticated,
+        provider,
+        lastAuthenticated,
+        hasActiveSession,
+      },
+    };
+  } catch (error) {
+    console.error('Error getting OAuth status:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+/**
+ * Clear OAuth authentication for a server
+ */
+export async function clearMcpServerOAuth(serverUuid: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // Get user's profiles
+    const profilesResult = await getProfiles();
+    if (!profilesResult.success || !profilesResult.data) {
+      return { success: false, error: 'Failed to get profiles' };
+    }
+
+    const profileUuids = profilesResult.data.map(p => p.uuid);
+
+    // Get the server
+    const server = await db.query.mcpServersTable.findFirst({
+      where: and(
+        eq(mcpServersTable.uuid, serverUuid),
+        eq(mcpServersTable.profile_uuid, profileUuids[0])
+      ),
+    });
+
+    if (!server) {
+      return { success: false, error: 'Server not found or access denied' };
+    }
+
+    // Clear OAuth tokens from environment
+    if (server.env) {
+      const env = { ...(server.env as Record<string, any>) };
+      
+      // Remove common OAuth token keys
+      delete env.LINEAR_API_KEY;
+      delete env.LINEAR_OAUTH_TOKEN;
+      delete env.OAUTH_ACCESS_TOKEN;
+      delete env.ACCESS_TOKEN;
+      
+      // Clear OAuth from streamable options
+      if (env.__streamableHTTPOptions) {
+        try {
+          const options = JSON.parse(env.__streamableHTTPOptions);
+          if (options.oauth) {
+            delete options.oauth.accessToken;
+            delete options.oauth.refreshToken;
+            env.__streamableHTTPOptions = JSON.stringify(options);
+          }
+        } catch (e) {
+          console.error('Failed to parse streamable options:', e);
+        }
+      }
+
+      // Update the server
+      await db
+        .update(mcpServersTable)
+        .set({ 
+          env,
+          updated_at: new Date(),
+        })
+        .where(eq(mcpServersTable.uuid, serverUuid));
+    }
+
+    // Also clear any active OAuth sessions
+    const activeSessions = await oauthStateManager.getActiveSessionsForServer(serverUuid);
+    for (const session of activeSessions) {
+      await oauthStateManager.deleteOAuthSession(session.state);
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Error clearing OAuth:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+/**
+ * Trigger OAuth authentication for a server
+ */
+export async function triggerMcpServerOAuth(serverUuid: string): Promise<{
+  success: boolean;
+  authUrl?: string;
+  error?: string;
+}> {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Not authenticated' };
+    }
+
+    // For now, return an informative message about OAuth
+    // The actual OAuth flow should be handled by the MCP server itself
+    return { 
+      success: false, 
+      error: 'OAuth authentication should be initiated through the MCP server itself. Please check the server documentation for OAuth setup instructions.' 
+    };
+  } catch (error) {
+    console.error('Error triggering OAuth:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+function determineProviderFromConfig(oauthConfig: any): string {
+  if (oauthConfig.authorizationUrl) {
+    const url = oauthConfig.authorizationUrl.toLowerCase();
+    if (url.includes('linear.app')) return 'Linear';
+    if (url.includes('github.com')) return 'GitHub';
+    if (url.includes('google.com')) return 'Google';
+    if (url.includes('slack.com')) return 'Slack';
+    if (url.includes('notion.so')) return 'Notion';
+  }
+  return 'OAuth Provider';
+}

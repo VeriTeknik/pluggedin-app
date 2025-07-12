@@ -340,6 +340,7 @@ export const mcpServersTable = pgTable(
       .default(McpServerSource.PLUGGEDIN),
     external_id: text('external_id'),
     notes: text('notes'),
+    config: jsonb('config'),
   },
   (table) => ({ // Use object syntax for indexes
     mcpServersStatusIdx: index('mcp_servers_status_idx').on(table.status),
@@ -1242,5 +1243,39 @@ export const transportConfigsRelations = relations(transportConfigsTable, ({ one
   server: one(mcpServersTable, {
     fields: [transportConfigsTable.server_uuid],
     references: [mcpServersTable.uuid],
+  }),
+}));
+
+// OAuth sessions table for MCP server OAuth flows
+export const mcpOauthSessionsTable = pgTable(
+  'mcp_oauth_sessions',
+  {
+    id: serial('id').primaryKey(),
+    state: text('state').notNull().unique(),
+    server_uuid: uuid('server_uuid').notNull(),
+    profile_uuid: uuid('profile_uuid').notNull(),
+    callback_url: text('callback_url').notNull(),
+    provider: text('provider').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expires_at: timestamp('expires_at', { withTimezone: true })
+      .notNull(),
+  },
+  (table) => ({
+    mcpOauthSessionsStateIdx: index('idx_mcp_oauth_sessions_state').on(table.state),
+    mcpOauthSessionsExpiresIdx: index('idx_mcp_oauth_sessions_expires_at').on(table.expires_at),
+  })
+);
+
+// Relations for OAuth sessions
+export const mcpOauthSessionsRelations = relations(mcpOauthSessionsTable, ({ one }) => ({
+  server: one(mcpServersTable, {
+    fields: [mcpOauthSessionsTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+  profile: one(profilesTable, {
+    fields: [mcpOauthSessionsTable.profile_uuid],
+    references: [profilesTable.uuid],
   }),
 }));

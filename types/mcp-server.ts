@@ -17,6 +17,7 @@ export interface McpServer {
   source: McpServerSource;
   external_id: string | null;
   notes: string | null; // Added notes field
+  config: Record<string, any> | null; // Added config field for storing metadata like requires_auth
   
   // Additional properties for shared servers
   originalServerUuid?: string;

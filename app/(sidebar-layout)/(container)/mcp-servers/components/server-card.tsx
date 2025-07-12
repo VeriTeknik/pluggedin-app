@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { isServerShared, unshareServer } from '@/app/actions/social';
 import { ShareServerDialog } from '@/components/server/share-server-dialog';
+import { McpOAuthStatus } from '@/components/mcp/oauth-status';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,6 +67,7 @@ export function ServerCard({
   const [isCheckingShareStatus, setIsCheckingShareStatus] = useState(true);
   const [isUnsharing, setIsUnsharing] = useState(false);
   const [showStreamingToast, setShowStreamingToast] = useState(false);
+  const [requiresAuth, setRequiresAuth] = useState(false);
 
   // Check if server is shared on mount
   useEffect(() => {
@@ -85,6 +87,18 @@ export function ServerCard({
     }
     checkIfShared();
   }, [currentProfile?.uuid, server.uuid]);
+  
+  // Check if server requires auth
+  useEffect(() => {
+    const config = server.config as any;
+    console.log(`[ServerCard] Server ${server.name} config:`, config);
+    console.log(`[ServerCard] Server ${server.name} full data:`, server);
+    if (config?.requires_auth) {
+      console.log(`[ServerCard] Server ${server.name} requires auth!`);
+      setRequiresAuth(true);
+    }
+  }, [server.config]);
+
 
   const handleShareStatusChange = (newIsShared: boolean, newSharedUuid: string | null) => {
     setIsShared(newIsShared);
@@ -241,6 +255,17 @@ export function ServerCard({
               <p className="text-xs text-muted-foreground font-mono truncate">
                 {server.url}
               </p>
+            </div>
+          )}
+          
+          {/* OAuth Button - only show for servers that require auth */}
+          {requiresAuth && (server.type === McpServerType.STREAMABLE_HTTP || server.type === McpServerType.SSE) && (
+            <div className="col-span-2 mt-2">
+              <McpOAuthStatus 
+                serverUuid={server.uuid} 
+                serverName={server.name}
+                serverType={server.type}
+              />
             </div>
           )}
           

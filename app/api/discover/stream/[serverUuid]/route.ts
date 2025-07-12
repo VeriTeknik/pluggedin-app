@@ -202,6 +202,44 @@ export async function GET(
           }
         } catch (error: any) {
           toolError = error.message;
+          
+          // Check if this is a 401 authentication error
+          const is401Error = error.code === 401 || 
+                           error.message?.includes('401') || 
+                           error.message?.includes('Unauthorized');
+          
+          if (is401Error) {
+            // Update server config to mark as requires auth
+            try {
+              const currentServer = await db.query.mcpServersTable.findFirst({
+                where: eq(mcpServersTable.uuid, serverUuid)
+              });
+              
+              if (currentServer) {
+                const updatedConfig = {
+                  ...(currentServer.config as any || {}),
+                  requires_auth: true,
+                  last_401_error: new Date().toISOString()
+                };
+                
+                await db.update(mcpServersTable)
+                  .set({ 
+                    config: updatedConfig,
+                    updated_at: new Date()
+                  })
+                  .where(eq(mcpServersTable.uuid, serverUuid));
+                  
+                sendMessage({
+                  type: 'log',
+                  message: 'Server requires authentication - marked for OAuth',
+                  timestamp: Date.now(),
+                });
+              }
+            } catch (updateError) {
+              console.error('Failed to update server auth status:', updateError);
+            }
+          }
+          
           sendMessage({
             type: 'error',
             message: `Failed to discover/store tools: ${error.message}`,

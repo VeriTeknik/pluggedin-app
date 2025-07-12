@@ -107,6 +107,34 @@ export async function discoverSingleServerTools(
     } catch (error: any) {
         console.error(`[Action Error] Failed to discover/store tools for ${serverConfig.name || serverUuid}:`, error);
         toolError = error.message;
+        
+        // Check if this is a 401 authentication error
+        const is401Error = error.message?.includes('401') || 
+                         error.message?.includes('invalid_token') ||
+                         error.message?.includes('Unauthorized');
+        
+        if (is401Error) {
+            // Update server config to mark as requires auth
+            try {
+                const currentConfig = serverConfig.config as any || {};
+                const updatedConfig = {
+                    ...currentConfig,
+                    requires_auth: true,
+                    last_401_error: new Date().toISOString()
+                };
+                
+                await db.update(mcpServersTable)
+                    .set({ 
+                        config: updatedConfig
+                    })
+                    .where(eq(mcpServersTable.uuid, serverUuid));
+                    
+                console.log(`[Action] Server ${serverConfig.name} marked as requiring authentication due to 401 error`);
+                console.log(`[Action] Updated config:`, updatedConfig);
+            } catch (updateError) {
+                console.error('Failed to update server auth status:', updateError);
+            }
+        }
     }
 
     // --- Discover Resource Templates ---

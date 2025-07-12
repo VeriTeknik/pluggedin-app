@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Loader2, Package, Sparkles, Wand2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Loader2, Package, Sparkles, Wand2, Key } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -291,37 +291,19 @@ export function SmartServerDialog({
   };
 
   const detectServerTypeFromUrl = (url: string): McpServerType => {
+    // Since SSE is deprecated and most modern MCP servers support Streamable HTTP,
+    // we should default to STREAMABLE_HTTP for all HTTP(S) URLs.
+    // Servers will negotiate the best transport method during connection.
     try {
       const urlObj = new URL(url);
-      const hostname = urlObj.hostname.toLowerCase();
-      const pathname = urlObj.pathname.toLowerCase();
+      const protocol = urlObj.protocol.toLowerCase();
       
-      // Smithery servers - check exact hostname
-      if (hostname === 'server.smithery.ai') {
+      // For any HTTP(S) URL, use Streamable HTTP (the modern transport)
+      if (protocol === 'http:' || protocol === 'https:') {
         return McpServerType.STREAMABLE_HTTP;
       }
       
-      // GitHub Copilot - check exact hostname
-      if (hostname === 'api.githubcopilot.com') {
-        return McpServerType.STREAMABLE_HTTP;
-      }
-      
-      // Context7 - uses Streamable HTTP with SSE streaming
-      if (hostname === 'mcp.context7.com') {
-        return McpServerType.STREAMABLE_HTTP;
-      }
-      
-      // SSE endpoints (check path patterns more precisely)
-      if (pathname.endsWith('/sse') || 
-          pathname.includes('/sse/') ||
-          pathname.endsWith('/events') || 
-          pathname.includes('/events/') ||
-          pathname.endsWith('/stream') || 
-          pathname.includes('/stream/')) {
-        return McpServerType.SSE;
-      }
-      
-      // Default to Streamable HTTP for HTTP(S) URLs
+      // Default to Streamable HTTP
       return McpServerType.STREAMABLE_HTTP;
     } catch (error) {
       // If URL parsing fails, default to Streamable HTTP
@@ -409,6 +391,35 @@ export function SmartServerDialog({
   const parseSingleConfig = (name: string, config: any): ParsedConfig | null => {
     // Handle STDIO servers
     if (config.command) {
+      // Check if this is mcp-remote, which is actually a proxy for remote servers
+      const isMcpRemote = config.command === 'npx' && 
+                         Array.isArray(config.args) && 
+                         config.args.includes('mcp-remote');
+      
+      if (isMcpRemote && config.args) {
+        // Find the URL in the args
+        const urlIndex = config.args.findIndex((arg: string) => arg.includes('http'));
+        if (urlIndex !== -1) {
+          const url = config.args[urlIndex];
+          const serverType = detectServerTypeFromUrl(url);
+          
+          // For mcp-remote, we should store it as the actual remote type
+          return {
+            name,
+            type: serverType,
+            command: config.command,
+            args: config.args,
+            url: url, // Also store the URL for reference
+            env: parseEnv(config.env),
+            description: config.description || `Remote ${serverType} server via mcp-remote`,
+            status: McpServerStatus.ACTIVE,
+            // Mark this as using mcp-remote for UI display purposes
+            transport: 'mcp-remote'
+          };
+        }
+      }
+      
+      // Regular STDIO server
       return {
         name,
         type: McpServerType.STDIO,
@@ -666,6 +677,15 @@ export function SmartServerDialog({
         message: result.message,
         details: result.details,
       }));
+      
+      // If test shows auth is required, mark the config
+      if (result.details?.requiresAuth) {
+        setParsedConfigs(prev => prev.map(c => 
+          c.name === config.name 
+            ? { ...c, config: { ...(c.config as any || {}), requires_auth: true } }
+            : c
+        ));
+      }
     } catch (error) {
       setTestResults(prev => new Map(prev).set(testId, {
         success: false,
@@ -679,7 +699,18 @@ export function SmartServerDialog({
   const handleSubmit = async () => {
     const configsToSubmit = parsedConfigs.filter(c => selectedConfigs.has(c.name));
     if (configsToSubmit.length > 0) {
-      await onSubmit(configsToSubmit);
+      // Include any auth requirements detected during testing
+      const configsWithAuthInfo = configsToSubmit.map(config => {
+        const testResult = testResults.get(config.name);
+        if (testResult?.details?.requiresAuth) {
+          return {
+            ...config,
+            config: { ...(config.config as any || {}), requires_auth: true }
+          };
+        }
+        return config;
+      });
+      await onSubmit(configsWithAuthInfo);
       handleClose();
     }
   };
@@ -875,17 +906,28 @@ export function SmartServerDialog({
                               </Badge>
                             )}
                             {testResult && (
-                              <Badge 
-                                variant={testResult.success ? "default" : "destructive"}
-                                className="text-xs"
-                              >
-                                {testResult.success ? (
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                ) : (
-                                  <AlertCircle className="h-3 w-3 mr-1" />
+                              <>
+                                <Badge 
+                                  variant={testResult.success ? "default" : "destructive"}
+                                  className="text-xs"
+                                >
+                                  {testResult.success ? (
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  ) : (
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                  )}
+                                  {testResult.success ? "Tested" : "Failed"}
+                                </Badge>
+                                {testResult.details?.requiresAuth && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-xs border-orange-500 text-orange-600"
+                                  >
+                                    <Key className="h-3 w-3 mr-1" />
+                                    Auth Required
+                                  </Badge>
                                 )}
-                                {testResult.success ? "Tested" : "Failed"}
-                              </Badge>
+                              </>
                             )}
                           </div>
                         </div>

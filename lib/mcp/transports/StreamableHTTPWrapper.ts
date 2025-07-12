@@ -2,6 +2,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 import { getSessionManager } from '../sessions/SessionManager';
+import { oauthStateManager } from '../oauth/OAuthStateManager';
 
 /**
  * Wrapper for StreamableHTTPClientTransport that captures and manages session IDs
@@ -81,11 +82,26 @@ export class StreamableHTTPWrapper implements Transport {
 
   /**
    * Creates a fetch wrapper that captures the Mcp-Session-Id header from responses
+   * and intercepts OAuth authorization flows
    */
   private createFetchWrapper(originalFetch?: typeof fetch) {
     const fetchImpl = originalFetch || fetch;
     
     return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+      // Convert input to URL for analysis
+      const requestUrl = typeof input === 'string' ? new URL(input) : input instanceof URL ? input : new URL(input.url);
+      
+      // Check if this is an OAuth authorization request
+      if (this.isOAuthAuthorizationRequest(requestUrl)) {
+        console.log(`[StreamableHTTPWrapper] Intercepting OAuth authorization request: ${requestUrl.toString()}`);
+        
+        // Intercept and handle OAuth flow
+        const modifiedResponse = await this.handleOAuthAuthorizationRequest(requestUrl, init);
+        if (modifiedResponse) {
+          return modifiedResponse;
+        }
+      }
+      
       // If we have a captured session ID, add it to the request headers
       if (this.capturedSessionId) {
         const headers = new Headers(init?.headers);
@@ -171,5 +187,176 @@ export class StreamableHTTPWrapper implements Transport {
    */
   getSessionId(): string | null {
     return this.capturedSessionId;
+  }
+
+  /**
+   * Check if a URL is an OAuth authorization request
+   */
+  private isOAuthAuthorizationRequest(url: URL): boolean {
+    // Common OAuth authorization endpoints
+    const authPaths = [
+      '/oauth/authorize',
+      '/oauth2/authorize',
+      '/oauth2/auth',
+      '/authorize',
+      '/auth/authorize',
+      '/connect/authorize',
+    ];
+    
+    // Check if the URL path matches any OAuth authorization paths
+    return authPaths.some(path => url.pathname.endsWith(path));
+  }
+
+  /**
+   * Handle OAuth authorization request by intercepting and modifying the redirect URI
+   */
+  private async handleOAuthAuthorizationRequest(
+    url: URL,
+    init?: RequestInit
+  ): Promise<Response | null> {
+    try {
+      // Try to extract the callback URL from the request
+      const callbackUrl = await this.extractOAuthCallbackUrl(url, init);
+      if (!callbackUrl) {
+        console.warn(`[StreamableHTTPWrapper] Could not extract OAuth callback URL from request`);
+        return null;
+      }
+
+      // Determine the OAuth provider from the URL
+      const provider = this.determineOAuthProvider(url);
+      
+      // Create an OAuth session
+      const state = await oauthStateManager.createOAuthSession(
+        this.serverUuid,
+        this.profileUuid,
+        callbackUrl,
+        provider
+      );
+
+      console.log(`[StreamableHTTPWrapper] Created OAuth session with state: ${state}`);
+
+      // Modify the authorization URL to use our proxy endpoint
+      const modifiedUrl = new URL(url.toString());
+      
+      // Replace the redirect_uri parameter
+      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:12005';
+      const proxyRedirectUri = `${baseUrl}/api/mcp/oauth/callback`;
+      
+      modifiedUrl.searchParams.set('redirect_uri', proxyRedirectUri);
+      modifiedUrl.searchParams.set('state', state);
+
+      console.log(`[StreamableHTTPWrapper] Modified OAuth URL: ${modifiedUrl.toString()}`);
+
+      // Return a response that triggers the OAuth flow in the browser
+      const html = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>OAuth Authorization Required</title>
+            <meta http-equiv="refresh" content="0; url=${modifiedUrl.toString()}">
+          </head>
+          <body>
+            <p>Redirecting to ${provider} for authorization...</p>
+            <script>
+              window.location.href = '${modifiedUrl.toString()}';
+            </script>
+          </body>
+        </html>
+      `;
+
+      return new Response(html, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html',
+        },
+      });
+      
+    } catch (error) {
+      console.error(`[StreamableHTTPWrapper] Error handling OAuth authorization:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Extract OAuth callback URL from the request
+   */
+  private async extractOAuthCallbackUrl(
+    url: URL,
+    init?: RequestInit
+  ): Promise<string | null> {
+    // First, check URL parameters
+    const redirectUri = url.searchParams.get('redirect_uri') || 
+                       url.searchParams.get('callback_url') ||
+                       url.searchParams.get('return_url');
+    
+    if (redirectUri) {
+      return redirectUri;
+    }
+
+    // Check if it's a POST request with form data
+    if (init?.method === 'POST' && init.body) {
+      try {
+        const bodyText = await this.getBodyText(init.body);
+        const params = new URLSearchParams(bodyText);
+        return params.get('redirect_uri') || 
+               params.get('callback_url') || 
+               params.get('return_url') || 
+               null;
+      } catch {
+        // Ignore parsing errors
+      }
+    }
+
+    // Default callback URL for known patterns
+    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+      // This might be a local OAuth server created by mcp-remote
+      return `http://localhost:14881/oauth/callback`;
+    }
+
+    return null;
+  }
+
+  /**
+   * Convert body to text for parsing
+   */
+  private async getBodyText(body: BodyInit): Promise<string> {
+    if (typeof body === 'string') {
+      return body;
+    }
+    if (body instanceof URLSearchParams) {
+      return body.toString();
+    }
+    if (body instanceof FormData) {
+      const params = new URLSearchParams();
+      body.forEach((value, key) => {
+        if (typeof value === 'string') {
+          params.append(key, value);
+        }
+      });
+      return params.toString();
+    }
+    return '';
+  }
+
+  /**
+   * Determine OAuth provider from URL
+   */
+  private determineOAuthProvider(url: URL): string {
+    const hostname = url.hostname.toLowerCase();
+    
+    if (hostname.includes('linear.app')) return 'Linear';
+    if (hostname.includes('github.com')) return 'GitHub';
+    if (hostname.includes('google.com')) return 'Google';
+    if (hostname.includes('slack.com')) return 'Slack';
+    if (hostname.includes('notion.so')) return 'Notion';
+    if (hostname.includes('microsoft.com') || hostname.includes('microsoftonline.com')) return 'Microsoft';
+    
+    // Extract provider from hostname
+    const parts = hostname.split('.');
+    if (parts.length >= 2) {
+      return parts[parts.length - 2].charAt(0).toUpperCase() + parts[parts.length - 2].slice(1);
+    }
+    
+    return 'OAuth Provider';
   }
 }

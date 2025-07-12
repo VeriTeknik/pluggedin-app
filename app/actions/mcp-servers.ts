@@ -92,6 +92,13 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
         // Process server data - transport options should now be separate from env
         const processedServer: any = { ...decryptedServer };
         
+        // Debug logging for config
+        if (server.name === 'linear') {
+          console.log('[getMcpServers] Linear server raw config:', server.config);
+          console.log('[getMcpServers] Linear decrypted config:', decryptedServer.config);
+          console.log('[getMcpServers] Linear processed config:', processedServer.config);
+        }
+        
         // For backward compatibility, check if transport options are still in env
         if (server.type === McpServerType.STREAMABLE_HTTP && decryptedServer.env) {
           const { __transport, __streamableHTTPOptions, ...cleanEnv } = decryptedServer.env;
@@ -408,6 +415,7 @@ export async function createMcpServer({
   transport,
   streamableHTTPOptions,
   skipDiscovery = false,
+  config,
 }: {
   name: string;
   profileUuid: string;
@@ -425,6 +433,7 @@ export async function createMcpServer({
     headers?: Record<string, string>;
   };
   skipDiscovery?: boolean;
+  config?: Record<string, any>;
 }) { // Removed explicit return type to match actual returns
   try {
     const serverType = type || McpServerType.STDIO;
@@ -484,6 +493,7 @@ export async function createMcpServer({
       profile_uuid: profileUuid,
       source,
       external_id,
+      config: config || null,
       // Store transport-specific options separately
       transport: (serverType === McpServerType.STREAMABLE_HTTP) ? (transport || 'streamable_http') : undefined,
       streamableHTTPOptions: (serverType === McpServerType.STREAMABLE_HTTP && streamableHTTPOptions) ? streamableHTTPOptions : undefined,

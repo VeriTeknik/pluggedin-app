@@ -24,6 +24,7 @@ interface TestResult {
     error?: string;
     corsIssue?: boolean;
     corsDetails?: string;
+    requiresAuth?: boolean;
   };
 }
 
@@ -219,11 +220,15 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
             // Check for CORS issues
             const corsDetails = await checkForCorsIssue(initResponse.clone(), config.url, responseText);
             
+            // Check if this is a 401 authentication error
+            const requiresAuth = initResponse.status === 401;
+            
             return {
               success: false,
-              message: `Server returned HTTP ${initResponse.status}`,
+              message: requiresAuth ? 'Authentication required' : `Server returned HTTP ${initResponse.status}`,
               details: {
                 error: `HTTP ${initResponse.status}: ${initResponse.statusText}${responseText ? ` - ${responseText}` : ''}`,
+                requiresAuth,
                 ...corsDetails,
               },
             };
