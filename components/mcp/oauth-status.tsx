@@ -30,12 +30,16 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
   const fetchStatus = async () => {
     setRefreshing(true);
     try {
-      // For now, just show not authenticated for all servers
-      // TODO: Implement proper OAuth status checking
-      setStatus({
-        isAuthenticated: false,
-        hasActiveSession: false
-      });
+      const result = await getMcpServerOAuthStatus(serverUuid);
+      if (result.success && result.data) {
+        setStatus(result.data);
+      } else {
+        // On error, assume not authenticated
+        setStatus({
+          isAuthenticated: false,
+          hasActiveSession: false
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch OAuth status:', error);
       // On error, assume not authenticated
@@ -53,8 +57,68 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
   }, [serverUuid]);
 
   const handleAuthenticate = async () => {
-    // Show info dialog instead of trying to trigger OAuth
-    setShowInfoDialog(true);
+    setLoading(true);
+    try {
+      const result = await triggerMcpServerOAuth(serverUuid);
+      
+      // Check if we have an OAuth URL to open (regardless of success status)
+      if (result.authUrl) {
+        window.open(result.authUrl, '_blank');
+        toast({
+          title: 'Authentication initiated',
+          description: 'Please complete the OAuth flow in the browser window that opened.',
+        });
+        
+        // Poll for status updates
+        const pollInterval = setInterval(async () => {
+          const statusResult = await getMcpServerOAuthStatus(serverUuid);
+          if (statusResult.success && statusResult.data?.isAuthenticated) {
+            clearInterval(pollInterval);
+            setStatus(statusResult.data);
+            setLoading(false);
+            toast({
+              title: 'Authentication successful',
+              description: 'You are now authenticated with this server.',
+            });
+          }
+        }, 3000); // Poll every 3 seconds
+        
+        // Stop polling after 5 minutes
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setLoading(false);
+        }, 300000);
+        
+      } else if (result.success) {
+        // OAuth completed directly without URL (rare case)
+        toast({
+          title: 'Authentication successful',
+          description: 'You are now authenticated with this server.',
+        });
+        await fetchStatus();
+        setLoading(false);
+        
+      } else {
+        // If OAuth isn't supported or configured, show info dialog
+        if (result.error?.includes('not supported') || result.error?.includes('documentation')) {
+          setShowInfoDialog(true);
+        } else {
+          toast({
+            title: 'Authentication failed',
+            description: result.error || 'Failed to initiate OAuth flow',
+            variant: 'destructive',
+          });
+        }
+        setLoading(false);
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to initiate authentication',
+        variant: 'destructive',
+      });
+      setLoading(false);
+    }
   };
 
   const handleClearAuth = async () => {

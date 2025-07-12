@@ -57,24 +57,45 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
     let provider: string | undefined;
     let lastAuthenticated: Date | undefined;
 
+    // First check config for OAuth completion
+    const config = server.config as Record<string, any>;
+    if (config?.oauth_completed_at) {
+      isAuthenticated = true;
+      lastAuthenticated = new Date(config.oauth_completed_at);
+      provider = config.oauth_provider;
+    }
+
+    // Also check environment for OAuth tokens
     if (server.env) {
       const env = server.env as Record<string, any>;
       
       // Check for OAuth tokens in environment
-      if (env.LINEAR_API_KEY || env.LINEAR_OAUTH_TOKEN || env.OAUTH_ACCESS_TOKEN) {
+      if (env.OAUTH_ACCESS_TOKEN || env.ACCESS_TOKEN || 
+          env.LINEAR_API_KEY || env.LINEAR_OAUTH_TOKEN) {
         isAuthenticated = true;
-        provider = 'Linear';
-        lastAuthenticated = server.updated_at || server.created_at;
+        if (!provider) {
+          // Try to determine provider from server name or URL
+          if (server.name?.toLowerCase().includes('linear')) {
+            provider = 'Linear';
+          } else if (server.url) {
+            provider = determineProviderFromUrl(server.url);
+          }
+        }
+        if (!lastAuthenticated) {
+          lastAuthenticated = server.updated_at || server.created_at;
+        }
       }
       
       // Check for OAuth configuration in streamable options
       if (env.__streamableHTTPOptions) {
         try {
           const options = JSON.parse(env.__streamableHTTPOptions);
-          if (options.oauth) {
-            provider = determineProviderFromConfig(options.oauth);
-            if (!isAuthenticated && options.oauth.accessToken) {
-              isAuthenticated = true;
+          if (options.oauth?.accessToken) {
+            isAuthenticated = true;
+            if (!provider) {
+              provider = determineProviderFromConfig(options.oauth);
+            }
+            if (!lastAuthenticated) {
               lastAuthenticated = server.updated_at || server.created_at;
             }
           }
@@ -159,11 +180,18 @@ export async function clearMcpServerOAuth(serverUuid: string): Promise<{
         }
       }
 
+      // Also clear OAuth status from config
+      const config = { ...(server.config as Record<string, any> || {}) };
+      delete config.oauth_completed_at;
+      delete config.oauth_provider;
+      config.requires_auth = true; // Re-enable auth requirement
+
       // Update the server
       await db
         .update(mcpServersTable)
         .set({ 
           env,
+          config,
           updated_at: new Date(),
         })
         .where(eq(mcpServersTable.uuid, serverUuid));
@@ -193,25 +221,15 @@ export async function triggerMcpServerOAuth(serverUuid: string): Promise<{
   authUrl?: string;
   error?: string;
 }> {
-  try {
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    // For now, return an informative message about OAuth
-    // The actual OAuth flow should be handled by the MCP server itself
-    return { 
-      success: false, 
-      error: 'OAuth authentication should be initiated through the MCP server itself. Please check the server documentation for OAuth setup instructions.' 
-    };
-  } catch (error) {
-    console.error('Error triggering OAuth:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
-    };
-  }
+  // Re-export from the dedicated OAuth trigger module
+  const { triggerMcpOAuth } = await import('./trigger-mcp-oauth');
+  const result = await triggerMcpOAuth(serverUuid);
+  
+  return {
+    success: result.success,
+    authUrl: result.oauthUrl,
+    error: result.error
+  };
 }
 
 function determineProviderFromConfig(oauthConfig: any): string {
@@ -223,5 +241,17 @@ function determineProviderFromConfig(oauthConfig: any): string {
     if (url.includes('slack.com')) return 'Slack';
     if (url.includes('notion.so')) return 'Notion';
   }
+  return 'OAuth Provider';
+}
+
+function determineProviderFromUrl(url: string): string {
+  const lowerUrl = url.toLowerCase();
+  if (lowerUrl.includes('linear.app')) return 'Linear';
+  if (lowerUrl.includes('github.com')) return 'GitHub';
+  if (lowerUrl.includes('google.com')) return 'Google';
+  if (lowerUrl.includes('slack.com')) return 'Slack';
+  if (lowerUrl.includes('notion.so')) return 'Notion';
+  if (lowerUrl.includes('jira')) return 'Jira';
+  if (lowerUrl.includes('confluence')) return 'Confluence';
   return 'OAuth Provider';
 }
