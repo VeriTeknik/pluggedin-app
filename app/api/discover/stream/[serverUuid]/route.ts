@@ -6,6 +6,7 @@ import { mcpServersTable, profilesTable, promptsTable, resourcesTable, resourceT
 import { getAuthSession } from '@/lib/auth';
 import { decryptServerData } from '@/lib/encryption';
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper';
+import { McpServer } from '@/types/mcp-server';
 
 interface StreamMessage {
   type: 'log' | 'progress' | 'error' | 'complete';
@@ -140,7 +141,10 @@ export async function GET(
           timestamp: Date.now(),
         });
 
-        const decryptedServerConfig = decryptServerData(serverConfig, profileUuid);
+        const decryptedServerConfig: McpServer = {
+          ...decryptServerData(serverConfig, profileUuid),
+          config: serverConfig.config as Record<string, any> | null
+        };
 
         // Discovery phase indicators
         let discoveredTools: any[] = [];
@@ -224,8 +228,7 @@ export async function GET(
                 
                 await db.update(mcpServersTable)
                   .set({ 
-                    config: updatedConfig,
-                    updated_at: new Date()
+                    config: updatedConfig
                   })
                   .where(eq(mcpServersTable.uuid, serverUuid));
                   

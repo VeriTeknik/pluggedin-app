@@ -92,12 +92,6 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
         // Process server data - transport options should now be separate from env
         const processedServer: any = { ...decryptedServer };
         
-        // Debug logging for config
-        if (server.name === 'linear') {
-          console.log('[getMcpServers] Linear server raw config:', server.config);
-          console.log('[getMcpServers] Linear decrypted config:', decryptedServer.config);
-          console.log('[getMcpServers] Linear processed config:', processedServer.config);
-        }
         
         // For backward compatibility, check if transport options are still in env
         if (server.type === McpServerType.STREAMABLE_HTTP && decryptedServer.env) {
@@ -190,7 +184,10 @@ export async function getMcpServerByUuid(
     return processedServer;
   }
   
-  return decryptedServer;
+  return {
+    ...decryptedServer,
+    config: decryptedServer.config as Record<string, any> | null
+  };
 }
 
 export async function deleteMcpServerByUuid(

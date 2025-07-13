@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Loader2, Package, Sparkles, Wand2, Key } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Key,Loader2, Package, Sparkles, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -58,6 +58,7 @@ interface ParsedConfig {
   status?: McpServerStatus;
   source?: McpServerSource;
   external_id?: string;
+  config?: Record<string, any>;
 }
 
 interface InputAnalysis {
@@ -305,7 +306,7 @@ export function SmartServerDialog({
       
       // Default to Streamable HTTP
       return McpServerType.STREAMABLE_HTTP;
-    } catch (error) {
+    } catch (_error) {
       // If URL parsing fails, default to Streamable HTTP
       return McpServerType.STREAMABLE_HTTP;
     }
@@ -401,19 +402,20 @@ export function SmartServerDialog({
         const urlIndex = config.args.findIndex((arg: string) => arg.includes('http'));
         if (urlIndex !== -1) {
           const url = config.args[urlIndex];
-          const serverType = detectServerTypeFromUrl(url);
+          const remoteServerType = detectServerTypeFromUrl(url);
           
-          // For mcp-remote, we should store it as the actual remote type
+          // For mcp-remote, always use STDIO type since it's executed as a process
+          // The remote URL is just a parameter for the mcp-remote process
           return {
             name,
-            type: serverType,
+            type: McpServerType.STDIO, // mcp-remote is always STDIO
             command: config.command,
             args: config.args,
-            url: url, // Also store the URL for reference
+            url: undefined, // Don't store URL for STDIO servers
             env: parseEnv(config.env),
-            description: config.description || `Remote ${serverType} server via mcp-remote`,
+            description: config.description || `Remote ${remoteServerType} server via mcp-remote`,
             status: McpServerStatus.ACTIVE,
-            // Mark this as using mcp-remote for UI display purposes
+            // Mark this as mcp-remote for special handling
             transport: 'mcp-remote'
           };
         }
@@ -670,6 +672,7 @@ export function SmartServerDialog({
         args: config.args,
         env: config.env,
         streamableHTTPOptions: config.streamableHTTPOptions,
+        transport: config.transport,
       });
       
       setTestResults(prev => new Map(prev).set(testId, {
@@ -703,9 +706,13 @@ export function SmartServerDialog({
       const configsWithAuthInfo = configsToSubmit.map(config => {
         const testResult = testResults.get(config.name);
         if (testResult?.details?.requiresAuth) {
+          // Set requires_auth at the top level of config, not nested
           return {
             ...config,
-            config: { ...(config.config as any || {}), requires_auth: true }
+            config: { 
+              ...(typeof config.config === 'object' ? config.config : {}), 
+              requires_auth: true 
+            }
           };
         }
         return config;

@@ -199,21 +199,36 @@ export class OAuthProcessManager extends EventEmitter {
                       tokenFound = true;
                       clearTimeout(timeoutId);
                       
-                      // Give it a moment for the token to be saved
+                      // Give it more time for the token to be saved
                       setTimeout(async () => {
-                        const tokenData = await this.checkMcpAuthToken(serverName, mcpAuthDir);
-                        if (tokenData && tokenData.token) {
-                          resolve(tokenData);
-                        } else {
-                          // Fallback to success without token - auth is working but we couldn't extract token
-                          resolve({
-                            success: true,
-                            token: 'oauth_working', // Mark that OAuth is working but we don't have token
-                            tokenType: 'bearer',
-                            metadata: { provider: serverName }
-                          });
-                        }
-                      }, 1000); // Give more time for token to be saved
+                        // Try multiple times to find the token
+                        let attempts = 0;
+                        const maxAttempts = 5;
+                        const checkInterval = 1000; // 1 second between attempts
+                        
+                        const checkForToken = async () => {
+                          attempts++;
+                          console.log(`[OAuth ${serverName}] Checking for token, attempt ${attempts}/${maxAttempts}`);
+                          const tokenData = await this.checkMcpAuthToken(serverName, mcpAuthDir);
+                          
+                          if (tokenData && tokenData.token) {
+                            resolve(tokenData);
+                          } else if (attempts < maxAttempts) {
+                            setTimeout(checkForToken, checkInterval);
+                          } else {
+                            // Fallback to success without token - auth is working but we couldn't extract token
+                            console.log(`[OAuth ${serverName}] Could not find token after ${maxAttempts} attempts, marking as working`);
+                            resolve({
+                              success: true,
+                              token: 'oauth_working', // Mark that OAuth is working but we don't have token
+                              tokenType: 'bearer',
+                              metadata: { provider: serverName }
+                            });
+                          }
+                        };
+                        
+                        await checkForToken();
+                      }, 2000); // Initial delay before first check
                       return;
                     } else {
                       // Got user data without OAuth URL - this might be the initial connection
@@ -388,7 +403,56 @@ export class OAuthProcessManager extends EventEmitter {
    */
   private async checkMcpAuthToken(serverName: string, mcpAuthDir: string = this.MCP_AUTH_DIR): Promise<OAuthProcessResult | null> {
     try {
-      // Common token file patterns
+      // First check for mcp-remote subdirectory structure
+      try {
+        const entries = await fs.readdir(mcpAuthDir);
+        
+        // Look for mcp-remote-* directories
+        for (const entry of entries) {
+          if (entry.startsWith('mcp-remote-')) {
+            const subDir = path.join(mcpAuthDir, entry);
+            const stat = await fs.stat(subDir);
+            
+            if (stat.isDirectory()) {
+              const files = await fs.readdir(subDir);
+              
+              // Look for *_tokens.json files
+              for (const file of files) {
+                if (file.endsWith('_tokens.json')) {
+                  const filepath = path.join(subDir, file);
+                  try {
+                    const content = await fs.readFile(filepath, 'utf-8');
+                    const data = JSON.parse(content);
+                    
+                    // mcp-remote stores tokens in a specific format
+                    const accessToken = data.access_token || data.accessToken;
+                    if (accessToken) {
+                      console.log(`[OAuth ${serverName}] Found token in ${filepath}`);
+                      return {
+                        success: true,
+                        token: accessToken,
+                        tokenType: 'bearer',
+                        metadata: {
+                          refreshToken: data.refresh_token,
+                          expiresAt: data.expires_at,
+                          scope: data.scope,
+                          provider: serverName
+                        }
+                      };
+                    }
+                  } catch (e) {
+                    console.error(`[OAuth ${serverName}] Error reading token file ${filepath}:`, e);
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (_e) {
+        // Directory might not exist yet
+      }
+      
+      // Fallback to checking common token file patterns
       const possibleFiles = [
         `${serverName}.json`,
         `${serverName}-token.json`,

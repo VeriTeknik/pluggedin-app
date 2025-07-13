@@ -642,7 +642,10 @@ export async function shareMcpServer(
     if (!server) {
       return { success: false, error: 'Server not found' };
     }
-    const serverTemplate = customTemplate || await createShareableTemplate(server);
+    const serverTemplate = customTemplate || await createShareableTemplate({
+      ...server,
+      config: server.config as Record<string, any> | null
+    });
     const existingShare = await db.query.sharedMcpServersTable.findFirst({
       where: and(
         eq(sharedMcpServersTable.profile_uuid, profileUuid),

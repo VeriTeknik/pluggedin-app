@@ -14,6 +14,7 @@ interface TestConfig {
     headers?: Record<string, string>;
     sessionId?: string;
   };
+  transport?: string;
 }
 
 interface TestResult {
@@ -89,6 +90,74 @@ function checkForCorsNetworkError(error: unknown): { corsIssue?: boolean; corsDe
 
 export async function testMcpConnection(config: TestConfig): Promise<TestResult> {
   try {
+    // Special handling for mcp-remote servers (servers that proxy to remote URLs)
+    const isMcpRemote = (config.command === 'npx' && config.args?.includes('mcp-remote')) ||
+                        config.transport === 'mcp-remote';
+    
+    if (isMcpRemote) {
+      // For mcp-remote servers, we need to test the remote URL
+      let remoteUrl = config.url;
+      
+      // If URL not directly available, find it in args
+      if (!remoteUrl && config.args) {
+        const urlIndex = config.args.findIndex(arg => arg.includes('http'));
+        if (urlIndex !== -1) {
+          remoteUrl = config.args[urlIndex];
+        }
+      }
+      
+      if (remoteUrl) {
+        
+        // Test the remote URL to see if it needs authentication
+        try {
+          const response = await fetch(remoteUrl, {
+            method: 'HEAD',
+            headers: {
+              'User-Agent': 'Plugged.in MCP Client',
+            },
+            signal: AbortSignal.timeout(5000),
+          });
+          
+          if (response.status === 401) {
+            return {
+              success: true, // The server is reachable, just needs auth
+              message: 'This server requires authentication. After adding it, you\'ll see an "Authenticate" button to connect your account.',
+              details: {
+                requiresAuth: true,
+                error: 'Authentication is required to use this server. The server is reachable but needs you to authenticate first.',
+                capabilities: ['Server verified - authentication required'],
+              },
+            };
+          } else if (response.ok || response.status === 405) {
+            return {
+              success: true,
+              message: 'mcp-remote proxy server verified',
+              details: {
+                capabilities: ['Remote server connection verified'],
+              },
+            };
+          } else {
+            return {
+              success: false,
+              message: `Remote server returned HTTP ${response.status}`,
+              details: {
+                error: `HTTP ${response.status}: ${response.statusText}`,
+              },
+            };
+          }
+        } catch (_error) {
+          // If we can't reach the remote URL, still pass since mcp-remote will handle it
+          return {
+            success: true,
+            message: 'mcp-remote command available (remote connection will be tested on use)',
+            details: {
+              capabilities: ['mcp-remote proxy available'],
+            },
+          };
+        }
+      }
+    }
+    
     // For URL-based servers (SSE and Streamable HTTP)
     if (config.url && (config.type === McpServerType.SSE || config.type === McpServerType.STREAMABLE_HTTP)) {
       // Try to make a HEAD request to check if the endpoint is reachable
@@ -114,29 +183,14 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
         };
       }
 
-      // Check for known MCP endpoints first
-      let isKnownMcpEndpoint = false;
-      let hostname = '';
-      
-      try {
-        const urlObj = new URL(config.url);
-        hostname = urlObj.hostname.toLowerCase();
-        isKnownMcpEndpoint = hostname === 'mcp.context7.com' || 
-                             hostname === 'server.smithery.ai' ||
-                             hostname === 'api.githubcopilot.com';
-      } catch {
-        // Invalid URL, continue with regular flow
-      }
-
-      // For known MCP endpoints with Streamable HTTP, skip HEAD and go directly to POST
-      if (config.type === McpServerType.STREAMABLE_HTTP && isKnownMcpEndpoint) {
-        // Context7 requires special headers for SSE streaming
-        if (hostname === 'mcp.context7.com') {
-          headers = {
-            ...headers,
-            'Accept': 'application/json, text/event-stream',
-          };
-        }
+      // For all Streamable HTTP servers, try to send an initialize request
+      // This is the proper way to test MCP servers
+      if (config.type === McpServerType.STREAMABLE_HTTP) {
+        // Add MCP-compatible headers
+        headers = {
+          ...headers,
+          'Accept': 'application/json, text/event-stream',
+        };
         try {
           // Try to send an initialize request
           const initResponse = await fetch(config.url, {
@@ -223,12 +277,25 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
             // Check if this is a 401 authentication error
             const requiresAuth = initResponse.status === 401;
             
+            if (requiresAuth) {
+              return {
+                success: true, // The server is reachable, just needs auth
+                message: 'This server requires authentication. After adding it, you\'ll see an "Authenticate" button to connect your account.',
+                details: {
+                  requiresAuth: true,
+                  error: 'Authentication is required to use this server. The server is reachable but needs you to authenticate first.',
+                  capabilities: ['Server verified - authentication required'],
+                  ...corsDetails,
+                },
+              };
+            }
+            
             return {
               success: false,
-              message: requiresAuth ? 'Authentication required' : `Server returned HTTP ${initResponse.status}`,
+              message: `Server returned HTTP ${initResponse.status}`,
               details: {
                 error: `HTTP ${initResponse.status}: ${initResponse.statusText}${responseText ? ` - ${responseText}` : ''}`,
-                requiresAuth,
+                requiresAuth: false,
                 ...corsDetails,
               },
             };

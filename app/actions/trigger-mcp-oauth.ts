@@ -64,9 +64,10 @@ export async function triggerMcpOAuth(serverUuid: string) {
 
     // Decrypt server data with profile UUID
     const decryptedData = await decryptServerData(serverRow, profile.uuid);
-    const server = {
+    const server: McpServer = {
       ...serverRow,
       ...decryptedData,
+      config: decryptedData.config as Record<string, any> | null,
     };
 
     console.log('[triggerMcpOAuth] Server details:', {
@@ -92,11 +93,11 @@ export async function triggerMcpOAuth(serverUuid: string) {
       );
       oauthResult = await handleMcpRemoteOAuth(server);
     } else if (server.type === 'STREAMABLE_HTTP' || server.type === 'SSE') {
-      // Handle direct OAuth servers
+      // Handle STREAMABLE_HTTP/SSE servers with direct OAuth support
       console.log(
-        '[triggerMcpOAuth] Using handleDirectOAuth for streamable server'
+        '[triggerMcpOAuth] Handling OAuth for STREAMABLE_HTTP/SSE server'
       );
-      oauthResult = await handleDirectOAuth(server);
+      oauthResult = await handleStreamableHttpOAuth(server);
     } else {
       return {
         success: false,
@@ -106,6 +107,21 @@ export async function triggerMcpOAuth(serverUuid: string) {
 
     if (oauthResult.oauthUrl) {
       // OAuth URL found, return it for the client to open
+      // For mcp-remote servers, we should mark that OAuth has been initiated
+      if (server.args && Array.isArray(server.args) && server.args.some((arg) => arg === 'mcp-remote')) {
+        // Update config to mark OAuth as initiated (but not completed)
+        const currentConfig = (server.config as any) || {};
+        const updatedConfig = {
+          ...currentConfig,
+          oauth_initiated_at: new Date().toISOString(),
+        };
+        
+        await db
+          .update(mcpServersTable)
+          .set({ config: updatedConfig })
+          .where(eq(mcpServersTable.uuid, validated.serverUuid));
+      }
+      
       return {
         success: true,
         oauthUrl: oauthResult.oauthUrl,
@@ -113,7 +129,8 @@ export async function triggerMcpOAuth(serverUuid: string) {
       };
     }
 
-    if (oauthResult.success && oauthResult.token) {
+    if (oauthResult.success && 'token' in oauthResult && oauthResult.token) {
+      console.log('[triggerMcpOAuth] OAuth successful, storing token...');
       // Store the token in the server's environment
       await storeOAuthToken(validated.serverUuid, oauthResult, profile.uuid);
 
@@ -121,6 +138,42 @@ export async function triggerMcpOAuth(serverUuid: string) {
         success: true,
         message: 'OAuth authentication completed successfully',
       };
+    }
+    
+    // For mcp-remote servers, even if we don't get a token back, check if OAuth completed
+    if (server.args && Array.isArray(server.args) && server.args.some((arg) => arg === 'mcp-remote')) {
+      if (oauthResult.success || ('token' in oauthResult && oauthResult.token === 'oauth_working')) {
+        console.log('[triggerMcpOAuth] mcp-remote OAuth detected as working, updating database...');
+        // Update the database to mark OAuth as completed
+        const currentConfig = (server.config as any) || {};
+        
+        // Detect provider from URL in server args
+        let provider = 'mcp-remote';
+        const urlIndex = server.args?.findIndex((arg: string) => arg.includes('http'));
+        if (urlIndex !== -1 && urlIndex !== undefined && server.args) {
+          const url = server.args[urlIndex];
+          if (url.includes('linear')) provider = 'Linear';
+          else if (url.includes('github')) provider = 'GitHub';
+          else if (url.includes('slack')) provider = 'Slack';
+        }
+        
+        const updatedConfig = {
+          ...currentConfig,
+          requires_auth: false,
+          oauth_completed_at: new Date().toISOString(),
+          oauth_provider: provider,
+        };
+        
+        await db
+          .update(mcpServersTable)
+          .set({ config: updatedConfig })
+          .where(eq(mcpServersTable.uuid, validated.serverUuid));
+          
+        return {
+          success: true,
+          message: 'OAuth authentication completed successfully',
+        };
+      }
     }
 
     return {
@@ -144,7 +197,7 @@ async function handleMcpRemoteOAuth(server: McpServer) {
   const urlIndex = server.args?.findIndex((arg: string) =>
     arg.includes('http')
   );
-  const remoteUrl = urlIndex !== -1 ? server.args[urlIndex] : null;
+  const remoteUrl = urlIndex !== -1 && urlIndex !== undefined && server.args ? server.args[urlIndex] : null;
 
   if (!remoteUrl) {
     return {
@@ -198,7 +251,7 @@ async function handleMcpRemoteOAuth(server: McpServer) {
   }
 
   // Spawn mcp-remote to handle OAuth with sandboxing
-  return await oauthProcessManager.triggerOAuth({
+  const result = await oauthProcessManager.triggerOAuth({
     serverName: server.name,
     serverUuid: server.uuid,
     serverUrl: remoteUrl,
@@ -207,66 +260,189 @@ async function handleMcpRemoteOAuth(server: McpServer) {
     env,
     callbackPort,
   });
+  
+  // Clean up the OAuth process after completion
+  if (result.success || result.oauthUrl) {
+    // Give it a moment then clean up
+    setTimeout(() => {
+      oauthProcessManager.cleanup();
+    }, 2000);
+  }
+  
+  return result;
 }
 
+
 /**
- * Handle OAuth for direct OAuth-enabled servers
+ * Handle OAuth for STREAMABLE_HTTP/SSE servers
  */
-async function handleDirectOAuth(server: McpServer) {
-  // For servers that handle OAuth directly
-  // They should accept an --oauth or similar flag
-  const args = [...(server.args || [])];
+async function handleStreamableHttpOAuth(server: McpServer) {
+  console.log('[handleStreamableHttpOAuth] Starting OAuth for STREAMABLE_HTTP server:', server.name);
 
-  // Add OAuth flag if not present
-  if (!args.includes('--oauth') && !args.includes('--auth')) {
-    args.push('--oauth');
+  if (!server.url) {
+    return {
+      success: false,
+      error: 'No URL configured for STREAMABLE_HTTP server',
+    };
   }
 
-  // Create OAuth process manager instance
-  const oauthProcessManager = new OAuthProcessManager();
+  try {
+    // Try to connect to the server and see if it provides OAuth information
+    const response = await fetch(server.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json, text/event-stream',
+      },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        method: 'initialize',
+        params: {
+          protocolVersion: '2024-11-05',
+          capabilities: {},
+          clientInfo: {
+            name: 'pluggedin-oauth',
+            version: '1.0.0'
+          }
+        },
+        id: 1
+      }),
+      signal: AbortSignal.timeout(10000), // 10 second timeout
+    });
 
-  // Prepare the command and env
-  let command = server.command || 'node';
-  let env = server.env || {};
+    if (response.status === 401) {
+      // Check if the server provides OAuth information in headers or response
+      const authHeader = response.headers.get('WWW-Authenticate');
+      const oauthUrl = response.headers.get('X-OAuth-URL') || 
+                       response.headers.get('OAuth-URL') ||
+                       response.headers.get('Authorization-URL');
 
-  // Apply sandboxing if available (reuse existing infrastructure)
-  // Create a temporary server config for sandboxing
-  const oauthServerConfig: McpServer = {
-    ...server,
-    type: 'STDIO' as any, // Force STDIO type for sandboxing
-    command,
-    args,
-    env,
-    applySandboxing: true, // Enable sandboxing for OAuth
-  };
+      if (oauthUrl) {
+        console.log('[handleStreamableHttpOAuth] Found OAuth URL in headers:', oauthUrl);
+        return {
+          success: true,
+          oauthUrl: oauthUrl,
+        };
+      }
 
-  // Try to apply sandboxing using the existing infrastructure
-  const bubblewrapConfig = createBubblewrapConfig(oauthServerConfig);
-  const firejailConfig = createFirejailConfig(oauthServerConfig);
+      // Try to parse response body for OAuth information
+      try {
+        const responseText = await response.text();
+        let responseData;
+        
+        // Handle both JSON and SSE responses
+        if (response.headers.get('content-type')?.includes('text/event-stream')) {
+          // Parse SSE format
+          const dataMatch = responseText.match(/data:\s*({.*})/);
+          if (dataMatch) {
+            responseData = JSON.parse(dataMatch[1]);
+          }
+        } else {
+          // Parse JSON
+          responseData = JSON.parse(responseText);
+        }
 
-  // Use sandboxing if available (prefer Bubblewrap, fallback to Firejail)
-  if (bubblewrapConfig) {
-    console.log('[triggerMcpOAuth] Applying Bubblewrap sandboxing for OAuth');
-    command = bubblewrapConfig.command;
-    args = bubblewrapConfig.args;
-    env = bubblewrapConfig.env;
-  } else if (firejailConfig) {
-    console.log('[triggerMcpOAuth] Applying Firejail sandboxing for OAuth');
-    command = firejailConfig.command;
-    args = firejailConfig.args;
-    env = firejailConfig.env;
-  } else {
-    console.log('[triggerMcpOAuth] No sandboxing available for OAuth process');
+        // Look for OAuth URL in various possible locations
+        const possibleOAuthUrl = responseData?.error?.data?.oauth_url ||
+                                responseData?.error?.oauth_url ||
+                                responseData?.oauth_url ||
+                                responseData?.authorization_url;
+
+        if (possibleOAuthUrl) {
+          console.log('[handleStreamableHttpOAuth] Found OAuth URL in response:', possibleOAuthUrl);
+          return {
+            success: true,
+            oauthUrl: possibleOAuthUrl,
+          };
+        }
+
+        // If no OAuth URL found, try to construct one based on common patterns
+        const serverUrl = new URL(server.url);
+        
+        // Try common OAuth endpoints
+        const commonOAuthPaths = [
+          '/oauth/authorize',
+          '/auth/oauth',
+          '/login/oauth',
+          '/oauth',
+          '/auth'
+        ];
+
+        for (const path of commonOAuthPaths) {
+          const testUrl = new URL(path, serverUrl.origin).toString();
+          console.log('[handleStreamableHttpOAuth] Trying OAuth endpoint:', testUrl);
+          
+          try {
+            const testResponse = await fetch(testUrl, {
+              method: 'GET',
+              signal: AbortSignal.timeout(5000),
+            });
+            
+            // If we get a redirect or success, this might be the OAuth endpoint
+            if (testResponse.status === 302 || testResponse.status === 200) {
+              const location = testResponse.headers.get('Location');
+              if (location && (location.includes('oauth') || location.includes('auth'))) {
+                console.log('[handleStreamableHttpOAuth] Found OAuth redirect:', location);
+                return {
+                  success: true,
+                  oauthUrl: location,
+                };
+              } else if (testResponse.status === 200) {
+                // This might be an OAuth authorization page
+                return {
+                  success: true,
+                  oauthUrl: testUrl,
+                };
+              }
+            }
+          } catch (testError) {
+            // Continue trying other paths
+            console.log('[handleStreamableHttpOAuth] OAuth endpoint test failed:', testError);
+          }
+        }
+
+      } catch (parseError) {
+        console.log('[handleStreamableHttpOAuth] Failed to parse response:', parseError);
+      }
+
+      // If no OAuth URL found anywhere, check if this might be a configuration issue
+      console.log('[handleStreamableHttpOAuth] No OAuth URL found. Server URL:', server.url);
+      
+      // Special check for known servers with specific requirements
+      if (server.url?.includes('sentry.dev') && !server.url.endsWith('/mcp')) {
+        return {
+          success: false,
+          error: 'Sentry MCP requires the URL to end with /mcp (e.g., https://mcp.sentry.dev/mcp). Please update your server configuration.',
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'Authentication required but no OAuth endpoints were discovered. The server may not support OAuth or requires manual configuration.',
+      };
+    }
+
+    // If server responds with success, it might not need OAuth or has different auth
+    if (response.ok) {
+      return {
+        success: false,
+        error: 'Server is accessible without authentication. OAuth may not be required for this server.',
+      };
+    }
+
+    // Other error responses
+    return {
+      success: false,
+      error: `Server returned HTTP ${response.status}. The server may be configured incorrectly or require different authentication.`,
+    };
+
+  } catch (error) {
+    console.error('[handleStreamableHttpOAuth] Error testing OAuth:', error);
+    return {
+      success: false,
+      error: `Failed to connect to server: ${error instanceof Error ? error.message : 'Unknown error'}`,
+    };
   }
-
-  return await oauthProcessManager.triggerOAuth({
-    serverName: server.name,
-    serverUuid: server.uuid,
-    serverUrl: server.url,
-    command,
-    args,
-    env,
-  });
 }
 
 /**

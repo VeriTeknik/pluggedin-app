@@ -93,11 +93,21 @@ export function ServerCard({
     const config = server.config as any;
     console.log(`[ServerCard] Server ${server.name} config:`, config);
     console.log(`[ServerCard] Server ${server.name} full data:`, server);
-    if (config?.requires_auth) {
-      console.log(`[ServerCard] Server ${server.name} requires auth!`);
+    
+    // Check if this is an mcp-remote server (which typically requires OAuth)
+    const isMcpRemote = server.command === 'npx' && 
+                       Array.isArray(server.args) && 
+                       server.args.includes('mcp-remote');
+    
+    // Show auth button if:
+    // 1. Server explicitly requires auth (requires_auth: true)
+    // 2. Server has completed OAuth (oauth_completed_at exists) - to show status
+    // 3. Server is mcp-remote (typically needs OAuth for services like Linear)
+    if (config?.requires_auth || config?.oauth_completed_at || isMcpRemote) {
+      console.log(`[ServerCard] Server ${server.name} requires auth, has OAuth, or is mcp-remote!`);
       setRequiresAuth(true);
     }
-  }, [server.config]);
+  }, [server.config, server.command, server.args]);
 
 
   const handleShareStatusChange = (newIsShared: boolean, newSharedUuid: string | null) => {
@@ -258,8 +268,8 @@ export function ServerCard({
             </div>
           )}
           
-          {/* OAuth Button - only show for servers that require auth */}
-          {requiresAuth && (server.type === McpServerType.STREAMABLE_HTTP || server.type === McpServerType.SSE) && (
+          {/* OAuth Button - show for servers that require auth */}
+          {requiresAuth && (
             <div className="col-span-2 mt-2">
               <McpOAuthStatus 
                 serverUuid={server.uuid} 

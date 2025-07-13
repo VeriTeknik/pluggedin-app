@@ -606,6 +606,7 @@ export async function getOrCreatePlaygroundSession(
       const isFilesystemServer = server.command === 'npx' && server.args?.includes('@modelcontextprotocol/server-filesystem');
       // Removed isUvxServer check
 
+
       if (isFilesystemServer && server.type === 'STDIO') {
         // Special handling for filesystem server: set cwd and ensure arg points within workspace
         mcpServersConfig[server.name] = {
@@ -615,6 +616,8 @@ export async function getOrCreatePlaygroundSession(
           env: server.env,
           url: server.url,
           type: server.type,
+          uuid: server.uuid, // Pass UUID for OAuth HOME detection
+          config: server.config, // Pass config for OAuth detection
           transport: 'stdio', // Add explicit transport field
           cwd: mcpWorkspacePath // Explicitly set the CWD for the server process
         };
@@ -626,6 +629,8 @@ export async function getOrCreatePlaygroundSession(
           env: server.env,
           url: server.url,
           type: server.type,
+          uuid: server.uuid, // Pass UUID for OAuth HOME detection
+          config: server.config, // Pass config for OAuth detection
           // Do not set cwd for non-filesystem servers unless specifically needed/configured
         };
         
@@ -650,6 +655,7 @@ export async function getOrCreatePlaygroundSession(
       if (mcpServersConfig[server.name]?.type === 'STDIO') {
         mcpServersConfig[server.name].applySandboxing = true;
       }
+
     });
 
     // Initialize LLM with streaming

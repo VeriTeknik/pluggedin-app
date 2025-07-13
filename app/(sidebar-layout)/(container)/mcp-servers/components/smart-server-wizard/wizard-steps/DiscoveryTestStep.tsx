@@ -232,7 +232,7 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
           ...baseConfig,
           type: McpServerType.STREAMABLE_HTTP,
           url: detectedTransportConfig?.url || useDetectedConfig.url || '',
-          transport: 'streamable_http',
+          transport: 'streamable_http' as const,
           streamableHTTPOptions: {
             headers: detectedTransportConfig?.headers || useDetectedConfig.headers || {},
             sessionId: detectedTransportConfig?.sessionId || useDetectedConfig.sessionId,

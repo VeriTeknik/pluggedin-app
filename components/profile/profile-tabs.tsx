@@ -69,7 +69,7 @@ export function ProfileTabs({
   );
 
   // Fetch installed servers for the *logged-in* user
-  const fetchInstalledServers = async (): Promise<McpServer[]> => {
+  const fetchInstalledServers = async () => {
     return loggedInProfileUuid ? getMcpServers(loggedInProfileUuid) : [];
   };
 

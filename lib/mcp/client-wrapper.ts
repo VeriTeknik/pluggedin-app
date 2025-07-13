@@ -120,8 +120,19 @@ export function createBubblewrapConfig(
   // Read paths from environment variables with fallbacks
   // Use actual home directory as fallback instead of hardcoded /home/pluggedin
   const actualHome = process.env.HOME || os.homedir() || '/app';
+  
+  // Check if this is an authenticated mcp-remote server that needs OAuth directory access
+  const isMcpRemoteWithOAuth = serverConfig.command === 'npx' && 
+                               serverConfig.args?.includes('mcp-remote') &&
+                               (serverConfig.config as any)?.oauth_completed_at;
+  
+  // For authenticated mcp-remote servers, use their OAuth directory as HOME
+  const oauthHome = isMcpRemoteWithOAuth && serverConfig.uuid
+    ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'oauth')
+    : actualHome;
+  
   const paths: PathConfig = {
-    userHome: process.env.FIREJAIL_USER_HOME ?? actualHome,
+    userHome: process.env.FIREJAIL_USER_HOME ?? oauthHome,
     localBin: process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local', 'bin'),
     appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
     mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')
@@ -145,6 +156,9 @@ export function createBubblewrapConfig(
     
     // Bind mount workspace as home
     '--bind', paths.mcpWorkspace, paths.userHome,
+    
+    // For mcp-remote OAuth, bind mount the OAuth directory
+    ...(isMcpRemoteWithOAuth && paths.userHome !== oauthHome ? ['--bind', paths.userHome, paths.userHome] : []),
     
     // Read-only system directories
     '--ro-bind', '/usr', '/usr',
@@ -240,8 +254,19 @@ export function createFirejailConfig(
   // Read paths from environment variables with fallbacks
   // Use actual home directory as fallback instead of hardcoded /home/pluggedin
   const actualHome = process.env.HOME || os.homedir() || '/app';
+  
+  // Check if this is an authenticated mcp-remote server that needs OAuth directory access
+  const isMcpRemoteWithOAuth = serverConfig.command === 'npx' && 
+                               serverConfig.args?.includes('mcp-remote') &&
+                               (serverConfig.config as any)?.oauth_completed_at;
+  
+  // For authenticated mcp-remote servers, use their OAuth directory as HOME
+  const oauthHome = isMcpRemoteWithOAuth && serverConfig.uuid
+    ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'oauth')
+    : actualHome;
+  
   const paths: PathConfig = {
-    userHome: process.env.FIREJAIL_USER_HOME ?? actualHome,
+    userHome: process.env.FIREJAIL_USER_HOME ?? oauthHome,
     localBin: process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local', 'bin'),
     appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
     mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')
@@ -280,6 +305,8 @@ export function createFirejailConfig(
       '--whitelist=/usr/local/lib/python*',
       `--whitelist=${paths.userHome}/.cache/uv`, // UV cache
       `--whitelist=${paths.userHome}/.venv`, // Virtual envs
+      // For mcp-remote OAuth, ensure access to .mcp-auth directory
+      ...(isMcpRemoteWithOAuth ? [`--whitelist=${paths.userHome}/.mcp-auth`] : []),
       
       // Docker socket (only if not using network isolation)
       ...(PackageManagerConfig.ENABLE_NETWORK_ISOLATION ? [] : [`--whitelist=/var/run/docker.sock`]),
@@ -555,6 +582,16 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         }
       }
 
+      // Check if this is an authenticated mcp-remote server that needs OAuth directory access
+      const isMcpRemoteWithOAuth = serverConfig.command === 'npx' && 
+                                   serverConfig.args?.includes('mcp-remote') &&
+                                   (serverConfig.config as any)?.oauth_completed_at;
+      
+      // For authenticated mcp-remote servers, use their OAuth directory as HOME
+      const oauthHome = isMcpRemoteWithOAuth && serverConfig.uuid
+        ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'oauth')
+        : (process.env.HOME || os.homedir() || '/app');
+
       const stdioParams: StdioServerParameters = sandboxConfig ? {
         // Use sandbox configuration because applySandboxing was true
         command: sandboxConfig.command,
@@ -574,13 +611,15 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           ...(process.platform === 'linux' ? {
             // Add potentially missing vars needed by uvx/python on Linux
             // Use dynamic home directory detection
-            PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? path.join(process.env.HOME || os.homedir() || '/app', '.local/bin')}:${process.env.PATH}`, // Prepend local bin
-            HOME: process.env.FIREJAIL_USER_HOME ?? process.env.HOME ?? os.homedir() ?? '/app',
-            UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? process.env.HOME ?? os.homedir() ?? '/app'}/.local/uv`,
-            PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(process.env.HOME || os.homedir() || '/app', 'mcp-workspace')}/lib/python`,
-            PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(process.env.HOME || os.homedir() || '/app', 'mcp-workspace'),
+            PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? path.join(oauthHome, '.local/bin')}:${process.env.PATH}`, // Prepend local bin
+            HOME: process.env.FIREJAIL_USER_HOME ?? oauthHome,
+            UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? oauthHome}/.local/uv`,
+            PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(oauthHome, 'mcp-workspace')}/lib/python`,
+            PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(oauthHome, 'mcp-workspace'),
             UV_SYSTEM_PYTHON: 'true',
           } : {}),
+          // Set OAuth HOME for all platforms if needed
+          ...(isMcpRemoteWithOAuth ? { HOME: oauthHome } : {}),
           // Apply package manager env
           ...packageManagerEnv,
           // Apply server-specific env vars, overriding anything above

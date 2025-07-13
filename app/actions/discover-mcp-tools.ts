@@ -8,6 +8,7 @@ import { db } from '@/db';
 import { mcpServersTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema'; // Sorted
 import { decryptServerData } from '@/lib/encryption';
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Sorted
+import { McpServer } from '@/types/mcp-server';
 // Removed getUserData import
 // import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 // Removed direct SDK type import
@@ -69,7 +70,10 @@ export async function discoverSingleServerTools(
       hasUrl: !!decryptedServerConfig.url,
       serverType: decryptedServerConfig.type
     });
-    const discoveryServerConfig = { ...decryptedServerConfig };
+    const discoveryServerConfig: McpServer = { 
+        ...decryptedServerConfig,
+        config: decryptedServerConfig.config as Record<string, any> | null
+    };
 
     let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = [];
     let discoveredTemplates: Awaited<ReturnType<typeof listResourceTemplatesFromServer>> = [];

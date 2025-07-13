@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { getMcpServerOAuthStatus, clearMcpServerOAuth, triggerMcpServerOAuth, type OAuthStatus } from '@/app/actions/mcp-oauth';
+import { checkMcpRemoteOAuthCompletion } from '@/app/actions/check-mcp-remote-oauth';
 import { OAuthInfoDialog } from './oauth-info-dialog';
 
 interface OAuthStatusProps {
@@ -70,8 +71,37 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
         });
         
         // Poll for status updates
+        let pollCount = 0;
         const pollInterval = setInterval(async () => {
+          pollCount++;
+          console.log(`[OAuth Status] Polling attempt ${pollCount} for server ${serverUuid}`);
+          
+          // First check mcp-remote OAuth completion
+          const mcpRemoteCheck = await checkMcpRemoteOAuthCompletion(serverUuid);
+          console.log(`[OAuth Status] MCP Remote check result:`, mcpRemoteCheck);
+          
+          if (mcpRemoteCheck.success && mcpRemoteCheck.isAuthenticated) {
+            // OAuth completed, now get the updated status
+            console.log(`[OAuth Status] OAuth detected as complete, fetching updated status...`);
+            const statusResult = await getMcpServerOAuthStatus(serverUuid);
+            console.log(`[OAuth Status] Updated status result:`, statusResult);
+            
+            if (statusResult.success && statusResult.data) {
+              clearInterval(pollInterval);
+              setStatus(statusResult.data);
+              setLoading(false);
+              toast({
+                title: 'Authentication successful',
+                description: 'You are now authenticated with this server.',
+              });
+              return;
+            }
+          }
+          
+          // Also check regular status in case it's not an mcp-remote server
           const statusResult = await getMcpServerOAuthStatus(serverUuid);
+          console.log(`[OAuth Status] Regular status check result:`, statusResult);
+          
           if (statusResult.success && statusResult.data?.isAuthenticated) {
             clearInterval(pollInterval);
             setStatus(statusResult.data);
@@ -79,6 +109,18 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
             toast({
               title: 'Authentication successful',
               description: 'You are now authenticated with this server.',
+            });
+          }
+          
+          // Stop polling after 40 attempts (2 minutes)
+          if (pollCount >= 40) {
+            console.log(`[OAuth Status] Stopping polling after ${pollCount} attempts`);
+            clearInterval(pollInterval);
+            setLoading(false);
+            toast({
+              title: 'Authentication timeout',
+              description: 'Please refresh the page and check your authentication status.',
+              variant: 'destructive',
             });
           }
         }, 3000); // Poll every 3 seconds
@@ -162,7 +204,7 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
           <TooltipTrigger asChild>
             <div className="flex items-center gap-2">
               {displayStatus.isAuthenticated ? (
-                <Badge variant="success" className="flex items-center gap-1">
+                <Badge variant="default" className="flex items-center gap-1 bg-green-500/10 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-900">
                   <Shield className="h-3 w-3" />
                   <span>Authenticated</span>
                   {displayStatus.provider && <span>({displayStatus.provider})</span>}

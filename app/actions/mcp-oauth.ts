@@ -51,7 +51,7 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
       return { success: false, error: 'Server not found or access denied' };
     }
 
-    const { server } = serverQuery[0];
+    const { server, profile } = serverQuery[0];
 
     // Check for active OAuth sessions
     const activeSessions = await oauthStateManager.getActiveSessionsForServer(serverUuid);
@@ -68,6 +68,29 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
       isAuthenticated = true;
       lastAuthenticated = new Date(config.oauth_completed_at);
       provider = config.oauth_provider;
+    }
+    
+    // For mcp-remote servers, also check the OAuth directory if not already authenticated
+    if (!isAuthenticated && server.args && Array.isArray(server.args) && server.args.includes('mcp-remote')) {
+      const { checkMcpRemoteOAuthCompletion } = await import('./check-mcp-remote-oauth');
+      const mcpRemoteCheck = await checkMcpRemoteOAuthCompletion(serverUuid);
+      if (mcpRemoteCheck.success && mcpRemoteCheck.isAuthenticated) {
+        isAuthenticated = true;
+        provider = 'mcp-remote';
+        // The check function updates the database, so re-fetch the config
+        const updatedServer = await db
+          .select()
+          .from(mcpServersTable)
+          .where(eq(mcpServersTable.uuid, serverUuid))
+          .limit(1);
+        if (updatedServer[0]?.config) {
+          const updatedConfig = updatedServer[0].config as Record<string, any>;
+          if (updatedConfig.oauth_completed_at) {
+            lastAuthenticated = new Date(updatedConfig.oauth_completed_at);
+            provider = updatedConfig.oauth_provider || provider;
+          }
+        }
+      }
     }
 
     // Also check environment for OAuth tokens

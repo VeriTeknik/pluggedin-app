@@ -151,6 +151,7 @@ async function testStreamableHTTP() {
         env: null,
         external_id: null,
         notes: null,
+        config: null,
       });
 
       logSuccess(`Found ${tools.length} tools`);
@@ -199,6 +200,7 @@ async function testStreamableHTTP() {
           env: null,
           external_id: null,
           notes: null,
+          config: null,
         });
         
         logSuccess(`Session reuse successful! Retrieved ${tools2.length} tools`);
@@ -261,7 +263,7 @@ async function testStreamableHTTP() {
     process.exit(1);
   } finally {
     // Ensure session manager cleanup
-    sessionManager.destroy();
+    getSessionManager().destroy();
   }
 }
 

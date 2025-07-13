@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
         method: 'GET',
         headers: {
           'User-Agent': 'Plugged.in OAuth Proxy',
-          'X-Forwarded-For': request.headers.get('X-Forwarded-For') || request.ip || 'unknown',
+          'X-Forwarded-For': request.headers.get('X-Forwarded-For') || 'unknown',
           'X-Forwarded-Host': request.headers.get('Host') || 'plugged.in',
         },
         // Follow redirects

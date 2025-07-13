@@ -783,12 +783,12 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
           
           // Extract headers and options
           streamableHTTPOptions = {
-            headers: config.headers || {},
-            sessionId: config.sessionId
+            headers: (config as any).headers || {},
+            sessionId: (config as any).sessionId
           };
           
           // Also check for headers in env (legacy support)
-          if (config.env && !config.headers) {
+          if (config.env && !(config as any).headers) {
             const headers = Object.entries(config.env).reduce((acc, [key, value]) => {
               if (key.startsWith('HEADER_')) {
                 acc[key.replace('HEADER_', '')] = value as string;
@@ -802,8 +802,8 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
           }
           
           // Add OAuth configuration if present
-          if (config.oauth) {
-            streamableHTTPOptions.oauth = config.oauth;
+          if ((config as any).oauth) {
+            streamableHTTPOptions.oauth = (config as any).oauth;
           }
         } else if (transportKeys.includes('sse') || transportKeys.includes('SSE')) {
           transportType = 'SSE';
@@ -814,16 +814,16 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       }
       
       // Fallback: check detectedTransportConfigs if transportConfigs doesn't have URL
-      if (!url && wizardData.detectedTransportConfigs) {
+      if (!url && (wizardData as any).detectedTransportConfigs) {
         console.log('🔍 submitWizardToRegistry: Checking detectedTransportConfigs for URL');
-        for (const [transport, config] of Object.entries(wizardData.detectedTransportConfigs)) {
-          if ((transport === 'streamable-http' || transport === 'detected-streamable') && config.url) {
+        for (const [transport, config] of Object.entries((wizardData as any).detectedTransportConfigs)) {
+          if ((transport === 'streamable-http' || transport === 'detected-streamable') && (config as any).url) {
             transportType = 'STREAMABLE_HTTP';
-            url = config.url;
+            url = (config as any).url;
             streamableHTTPOptions = {
-              headers: config.headers || {},
-              sessionId: config.sessionId,
-              oauth: config.oauth
+              headers: (config as any).headers || {},
+              sessionId: (config as any).sessionId,
+              oauth: (config as any).oauth
             };
             console.log('🔍 submitWizardToRegistry: Found URL in detectedTransportConfigs:', url);
             break;
