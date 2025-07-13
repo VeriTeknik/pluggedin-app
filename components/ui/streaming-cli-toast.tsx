@@ -65,12 +65,8 @@ export function StreamingCliToast({
       return;
     }
 
-    // Check if we're already processing this session
-    const sessionKey = `${serverUuid}-${profileUuid}`;
-    if (sessionStartedRef.current === sessionKey) {
-      return;
-    }
-
+    // Create a unique session key with timestamp to handle rapid re-discovery
+    const sessionKey = `${serverUuid}-${profileUuid}-${Date.now()}`;
     sessionStartedRef.current = sessionKey;
 
     // Only reset messages when starting a new discovery session
@@ -91,13 +87,7 @@ export function StreamingCliToast({
       try {
         const url = `/api/discover/stream/${serverUuid}?profileUuid=${profileUuid}`;
         
-        // Add a timeout wrapper
-        const timeoutMs = 10000; // 10 seconds
-        const timeoutController = new AbortController();
-        const timeoutId = setTimeout(() => {
-          timeoutController.abort();
-        }, timeoutMs);
-
+        // Use the main abort controller instead of a timeout-based one
         let response: Response;
         try {
           response = await fetch(url, {
@@ -107,17 +97,14 @@ export function StreamingCliToast({
               'Cache-Control': 'no-cache',
             },
             credentials: 'same-origin', // Include cookies for authentication
-            signal: timeoutController.signal,
+            signal: abortController.signal,
           });
-          
-          clearTimeout(timeoutId);
           
           if (!response.ok) {
             const errorText = await response.text();
             throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
           }
         } catch (fetchError) {
-          clearTimeout(timeoutId);
           throw fetchError;
         }
 
@@ -146,16 +133,31 @@ export function StreamingCliToast({
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = '';
+        let lastDataTime = Date.now();
+        const dataTimeoutMs = 60000; // 60 seconds timeout for no data
 
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) {
-            break;
+        // Set up a keep-alive check
+        const keepAliveInterval = setInterval(() => {
+          if (Date.now() - lastDataTime > dataTimeoutMs) {
+            console.error('Discovery stream timeout - no data received for 60 seconds');
+            reader.cancel();
+            clearInterval(keepAliveInterval);
           }
+        }, 5000); // Check every 5 seconds
 
-          // Decode the chunk and add to buffer
-          buffer += decoder.decode(value, { stream: true });
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+
+            if (done) {
+              break;
+            }
+
+            // Update last data time
+            lastDataTime = Date.now();
+
+            // Decode the chunk and add to buffer
+            buffer += decoder.decode(value, { stream: true });
 
           // Process complete lines in the buffer
           const lines = buffer.split('\n');
@@ -196,6 +198,10 @@ export function StreamingCliToast({
               }
             }
           }
+        }
+        } finally {
+          // Clean up the keep-alive interval
+          clearInterval(keepAliveInterval);
         }
       } catch (error) {
         // Don't show error if discovery already completed successfully or if aborted

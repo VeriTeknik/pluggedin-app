@@ -481,10 +481,10 @@ export async function GET(
           timestamp: Date.now(),
         });
       } finally {
-        // Close the stream after a short delay to ensure all messages are sent
+        // Close the stream after a delay to ensure all messages are sent through nginx
         setTimeout(() => {
           close();
-        }, 100);
+        }, 500);
       }
     })();
 
