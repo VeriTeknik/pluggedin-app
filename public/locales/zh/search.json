@@ -1,56 +1,162 @@
 {
   "search": {
-    "title": "搜索",
-    "subtitle": "搜索所有内容",
-    "explorePlugins": "探索插件",
+    "title": "Search",
+    "subtitle": "Search across all content",
+    "explorePlugins": "Explore Plugins",
     "input": {
-      "placeholder": "搜索..."
+      "placeholder": "Search..."
     },
-    "loading": "正在加载搜索...",
-    "noResults": "未找到结果",
+    "loading": "Loading search...",
+    "noResults": "No results found",
     "error": {
-      "general": "加载搜索结果时出错",
-      "profileNotFound": "找不到配置文件。请选择一个配置文件以取消共享服务器。",
-      "missingShareId": "无法取消共享：缺少共享信息。",
-      "unshareFailed": "取消共享服务器失败"
+      "general": "Error loading search results",
+      "profileNotFound": "Profile not found. Please select a profile to unshare servers.",
+      "missingShareId": "Cannot unshare: Missing share information.",
+      "unshareFailed": "Failed to unshare server"
     },
-    "unshareSuccess": "成功取消共享 {{name}}",
-    "sort": "排序",
-    "sortBy": "排序方式",
+    "unshareSuccess": "Successfully unshared {{name}}",
+    "sort": "Sort",
+    "sortBy": "Sort by",
     "sortOptions": {
-      "relevance": "相关性",
-      "popularity": "热门度",
-      "recent": "最新",
-      "stars": "GitHub 星标"
+      "relevance": "Relevance",
+      "popularity": "Popularity",
+      "recent": "Most recent",
+      "stars": "GitHub stars"
     },
-    "filter": "筛选",
-    "filterByTags": "按标签筛选",
-    "noTagsAvailable": "无可用标签",
-    "clearFilters": "清除筛选器",
-    "clearAllFilters": "全部清除",
-    "noMatchingTags": "没有结果匹配所选标签",
-    "noMatchingFilters": "没有结果匹配所选筛选器",
-    "category": "类别",
-    "filterByCategory": "按类别筛选",
-    "noCategoriesAvailable": "无可用类别",
-    "allCategories": "所有类别",
+    "filter": "Filter",
+    "filterByTags": "Filter by tags",
+    "noTagsAvailable": "No tags available",
+    "clearFilters": "Clear filters",
+    "clearAllFilters": "Clear all",
+    "noMatchingTags": "No results match the selected tags",
+    "noMatchingFilters": "No results match the selected filters",
+    "category": "Category",
+    "filterByCategory": "Filter by category",
+    "noCategoriesAvailable": "No categories available",
+    "allCategories": "All categories",
     "categories": {
       "LLM": "LLM",
-      "UTILITY": "实用工具",
-      "TOOL": "工具",
-      "DATA": "数据访问",
-      "CONNECTOR": "连接器",
-      "SEARCH": "搜索",
-      "CODE": "代码",
-      "IMAGE": "图像",
-      "AUDIO": "音频",
-      "VIDEO": "视频",
-      "OTHER": "其他"
+      "Utility": "Utility",
+      "Tool": "Tool",
+      "Data Access": "Data Access",
+      "Connector": "Connector",
+      "Search": "Search",
+      "Code": "Code",
+      "Image": "Image",
+      "Audio": "Audio",
+      "Video": "Video",
+      "Other": "Other"
     },
     "card": {
-      "install": "安装",
-      "installed": "已安装",
-      "rate": "评分"
+      "install": "Install",
+      "installed": "Installed",
+      "rate": "Rate",
+      "details": "Details",
+      "unshare": "Unshare",
+      "showMore": "Show More",
+      "showLess": "Show Less",
+      "tabs": {
+        "overview": "Overview",
+        "technical": "Technical",
+        "community": "Community"
+      },
+      "description": "Description",
+      "tags": "Tags",
+      "packageInfo": "Package Information",
+      "package": "Package",
+      "registry": "Registry",
+      "downloads": "Downloads",
+      "command": "Command",
+      "url": "URL",
+      "arguments": "Arguments",
+      "exampleArgs": "Example Args",
+      "environmentVariables": "Environment Variables",
+      "sharedBy": "Shared By",
+      "reviews": "Reviews",
+      "viewReviews": "View {{count}} Reviews",
+      "installationStats": "Installation Statistics",
+      "installedByUsers": "Installed by {{count}} users",
+      "usageCount": "Usage Count"
+    },
+    "registries": {
+      "registry": "Registry",
+      "npm": "NPM (Node.js)",
+      "docker": "Docker",
+      "pypi": "PyPI (Python)",
+      "github": "GitHub",
+      "gitlab": "GitLab"
+    },
+    "dialogs": {
+      "claim": {
+        "title": "Claim Server",
+        "description": "Claim ownership of this server",
+        "repositoryUrl": "Repository URL",
+        "repositoryUrlPlaceholder": "https://github.com/owner/repo",
+        "errors": {
+          "repositoryUrlRequired": "Please provide a repository URL",
+          "githubAuthRequired": "Please connect your GitHub account first",
+          "authenticateFirst": "Please authenticate with GitHub first",
+          "claimFailed": "Failed to claim server",
+          "unexpectedError": "An unexpected error occurred"
+        },
+        "success": {
+          "claimedNotPublished": "Server claimed but not published",
+          "claimedAndPublished": "Server claimed and published successfully!"
+        }
+      },
+      "rate": {
+        "title": "Rate Server",
+        "updateTitle": "Update Rating",
+        "description": "Your rating helps other users find quality servers",
+        "alreadyRated": "You have already rated this server. You can update your rating below.",
+        "rating": "Rating",
+        "comment": "Comment (optional)",
+        "commentPlaceholder": "Share your experience with this server",
+        "submitRating": "Submit Rating",
+        "updateRating": "Update Rating",
+        "submitting": "Submitting...",
+        "checking": "Checking...",
+        "cancel": "Cancel",
+        "errors": {
+          "selectRating": "Please select a rating between 1 and 5 stars"
+        },
+        "success": {
+          "submitted": "Thank you for rating this server!"
+        }
+      },
+      "reviews": {
+        "title": "Reviews for {{serverName}}",
+        "description": "See what others are saying about this server.",
+        "noReviews": "No reviews yet.",
+        "anonymous": "Anonymous",
+        "errors": {
+          "loadFailed": "Failed to load reviews. Please try again later."
+        }
+      },
+      "install": {
+        "enterValue": "Enter value"
+      }
+    },
+    "trending": {
+      "title": "Trending Servers",
+      "mostActiveServers": "Most active servers",
+      "lastDays": "Last 30 days",
+      "sortBy": {
+        "installs": "Installs",
+        "calls": "Calls"
+      }
+    },
+    "packageType": "Package Type",
+    "source": "Source",
+    "registry": {
+      "addServer": {
+        "button": "Add Server"
+      }
+    }
+  },
+  "registry": {
+    "addServer": {
+      "button": "Add Server"
     }
   }
 }

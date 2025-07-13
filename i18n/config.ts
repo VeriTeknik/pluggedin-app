@@ -22,6 +22,7 @@ import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
+import enDiscoverDialog from '../public/locales/en/discover_dialog.json';
 import enDocs from '../public/locales/en/docs.json';
 import enGuides from '../public/locales/en/guides.json';
 import enLibrary from '../public/locales/en/library.json';
@@ -54,6 +55,7 @@ export const namespaces = [
   'auth',
   'common',
   'discover',
+  'discover_dialog',
   'docs',
   'guides',
   'landing',
@@ -89,6 +91,7 @@ export type Messages = {
   auth: typeof enAuth;
   common: typeof enCommon;
   discover: typeof enDiscover;
+  discover_dialog: typeof enDiscoverDialog;
   docs: typeof enDocs;
   guides: typeof enGuides;
   landing: typeof enLanding;

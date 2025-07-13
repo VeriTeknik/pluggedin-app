@@ -104,10 +104,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Initialize font on the client side
-  if (typeof window !== 'undefined') {
-    initializeFont();
-  }
+  // Font initialization moved to client-side only in sidebar layout
 
   return (
     <html lang='en' suppressHydrationWarning>
@@ -145,7 +142,9 @@ export default async function RootLayout({
           <SessionProvider>
             <I18nProviderWrapper>
               <NotificationProvider>
-                <LanguageSwitcher />
+                <div suppressHydrationWarning>
+                  <LanguageSwitcher />
+                </div>
                 {children}
               </NotificationProvider>
             </I18nProviderWrapper>

@@ -36,21 +36,127 @@
     "allCategories": "सभी श्रेणियां",
     "categories": {
       "LLM": "LLM",
-      "UTILITY": "उपयोगिता",
-      "TOOL": "टूल",
-      "DATA": "डेटा एक्सेस",
-      "CONNECTOR": "कनेक्टर",
-      "SEARCH": "खोज",
-      "CODE": "कोड",
-      "IMAGE": "छवि",
-      "AUDIO": "ऑडियो",
-      "VIDEO": "वीडियो",
-      "OTHER": "अन्य"
+      "Utility": "उपयोगिता",
+      "Tool": "टूल",
+      "Data Access": "डेटा एक्सेस",
+      "Connector": "कनेक्टर",
+      "Search": "खोज",
+      "Code": "कोड",
+      "Image": "छवि",
+      "Audio": "ऑडियो",
+      "Video": "वीडियो",
+      "Other": "अन्य"
     },
     "card": {
       "install": "इंस्टॉल करें",
       "installed": "इंस्टॉल किया गया",
-      "rate": "रेट करें"
+      "rate": "रेट करें",
+      "details": "विवरण",
+      "unshare": "अनशेयर करें",
+      "showMore": "और दिखाएं",
+      "showLess": "कम दिखाएं",
+      "tabs": {
+        "overview": "अवलोकन",
+        "technical": "तकनीकी",
+        "community": "समुदाय"
+      },
+      "description": "विवरण",
+      "tags": "टैग",
+      "packageInfo": "पैकेज जानकारी",
+      "package": "पैकेज",
+      "registry": "रजिस्ट्री",
+      "downloads": "डाउनलोड",
+      "command": "कमांड",
+      "url": "URL",
+      "arguments": "तर्क",
+      "exampleArgs": "उदाहरण तर्क",
+      "environmentVariables": "पर्यावरण चर",
+      "sharedBy": "द्वारा साझा किया गया",
+      "reviews": "समीक्षाएं",
+      "viewReviews": "{{count}} समीक्षाएं देखें",
+      "installationStats": "इंस्टॉलेशन आंकड़े",
+      "installedByUsers": "{{count}} उपयोगकर्ताओं द्वारा इंस्टॉल किया गया",
+      "usageCount": "उपयोग गिनती"
+    },
+    "registries": {
+      "registry": "रजिस्ट्री",
+      "npm": "NPM (Node.js)",
+      "docker": "Docker",
+      "pypi": "PyPI (Python)",
+      "github": "GitHub",
+      "gitlab": "GitLab"
+    },
+    "dialogs": {
+      "claim": {
+        "title": "सर्वर क्लेम करें",
+        "description": "इस सर्वर का स्वामित्व क्लेम करें",
+        "repositoryUrl": "रिपॉजिटरी URL",
+        "repositoryUrlPlaceholder": "https://github.com/owner/repo",
+        "errors": {
+          "repositoryUrlRequired": "कृपया रिपॉजिटरी URL प्रदान करें",
+          "githubAuthRequired": "कृपया पहले अपना GitHub खाता कनेक्ट करें",
+          "authenticateFirst": "कृपया पहले GitHub के साथ प्रमाणीकरण करें",
+          "claimFailed": "सर्वर क्लेम करने में विफल",
+          "unexpectedError": "एक अप्रत्याशित त्रुटि हुई"
+        },
+        "success": {
+          "claimedNotPublished": "सर्वर क्लेम किया गया लेकिन प्रकाशित नहीं",
+          "claimedAndPublished": "सर्वर सफलतापूर्वक क्लेम और प्रकाशित किया गया!"
+        }
+      },
+      "rate": {
+        "title": "सर्वर रेट करें",
+        "updateTitle": "रेटिंग अपडेट करें",
+        "description": "आपकी रेटिंग अन्य उपयोगकर्ताओं को गुणवत्तापूर्ण सर्वर खोजने में मदद करती है",
+        "alreadyRated": "आपने पहले से ही इस सर्वर को रेट किया है। आप नीचे अपनी रेटिंग अपडेट कर सकते हैं।",
+        "rating": "रेटिंग",
+        "comment": "टिप्पणी (वैकल्पिक)",
+        "commentPlaceholder": "इस सर्वर के साथ अपना अनुभव साझा करें",
+        "submitRating": "रेटिंग सबमिट करें",
+        "updateRating": "रेटिंग अपडेट करें",
+        "submitting": "सबमिट कर रहे हैं...",
+        "checking": "जांच रहे हैं...",
+        "cancel": "रद्द करें",
+        "errors": {
+          "selectRating": "कृपया 1 से 5 सितारे के बीच एक रेटिंग चुनें"
+        },
+        "success": {
+          "submitted": "इस सर्वर को रेट करने के लिए धन्यवाद!"
+        }
+      },
+      "reviews": {
+        "title": "{{serverName}} की समीक्षाएं",
+        "description": "देखें कि अन्य लोग इस सर्वर के बारे में क्या कह रहे हैं।",
+        "noReviews": "अभी तक कोई समीक्षा नहीं।",
+        "anonymous": "अनाम",
+        "errors": {
+          "loadFailed": "समीक्षाएं लोड करने में विफल। कृपया बाद में पुनः प्रयास करें।"
+        }
+      },
+      "install": {
+        "enterValue": "मान दर्ज करें"
+      }
+    },
+    "trending": {
+      "title": "ट्रेंडिंग सर्वर",
+      "mostActiveServers": "सबसे सक्रिय सर्वर",
+      "lastDays": "पिछले 30 दिन",
+      "sortBy": {
+        "installs": "इंस्टॉल",
+        "calls": "कॉल"
+      }
+    },
+    "packageType": "पैकेज प्रकार",
+    "source": "स्रोत",
+    "registry": {
+      "addServer": {
+        "button": "सर्वर जोड़ें"
+      }
+    }
+  },
+  "registry": {
+    "addServer": {
+      "button": "सर्वर जोड़ें"
     }
   }
 }

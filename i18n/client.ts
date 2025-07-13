@@ -7,6 +7,7 @@ import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
+import enDiscoverDialog from '../public/locales/en/discover_dialog.json';
 import enDocs from '../public/locales/en/docs.json';
 import enGuides from '../public/locales/en/guides.json';
 import enLibrary from '../public/locales/en/library.json';
@@ -37,6 +38,7 @@ import hiApiKeys from '../public/locales/hi/apiKeys.json';
 import hiAuth from '../public/locales/hi/auth.json';
 import hiCommon from '../public/locales/hi/common.json';
 import hiDiscover from '../public/locales/hi/discover.json';
+import hiDiscoverDialog from '../public/locales/hi/discover_dialog.json';
 import hiDocs from '../public/locales/hi/docs.json';
 import hiGuides from '../public/locales/hi/guides.json';
 import hiLibrary from '../public/locales/hi/library.json';
@@ -67,6 +69,7 @@ import jaApiKeys from '../public/locales/ja/apiKeys.json';
 import jaAuth from '../public/locales/ja/auth.json';
 import jaCommon from '../public/locales/ja/common.json';
 import jaDiscover from '../public/locales/ja/discover.json';
+import jaDiscoverDialog from '../public/locales/ja/discover_dialog.json';
 import jaDocs from '../public/locales/ja/docs.json';
 import jaGuides from '../public/locales/ja/guides.json';
 import jaLibrary from '../public/locales/ja/library.json';
@@ -97,6 +100,7 @@ import nlApiKeys from '../public/locales/nl/apiKeys.json';
 import nlAuth from '../public/locales/nl/auth.json';
 import nlCommon from '../public/locales/nl/common.json';
 import nlDiscover from '../public/locales/nl/discover.json';
+import nlDiscoverDialog from '../public/locales/nl/discover_dialog.json';
 import nlDocs from '../public/locales/nl/docs.json';
 import nlGuides from '../public/locales/nl/guides.json';
 import nlLibrary from '../public/locales/nl/library.json';
@@ -127,6 +131,7 @@ import trApiKeys from '../public/locales/tr/apiKeys.json';
 import trAuth from '../public/locales/tr/auth.json';
 import trCommon from '../public/locales/tr/common.json';
 import trDiscover from '../public/locales/tr/discover.json';
+import trDiscoverDialog from '../public/locales/tr/discover_dialog.json';
 import trDocs from '../public/locales/tr/docs.json';
 import trGuides from '../public/locales/tr/guides.json';
 import trLibrary from '../public/locales/tr/library.json';
@@ -157,6 +162,7 @@ import zhApiKeys from '../public/locales/zh/apiKeys.json';
 import zhAuth from '../public/locales/zh/auth.json';
 import zhCommon from '../public/locales/zh/common.json';
 import zhDiscover from '../public/locales/zh/discover.json';
+import zhDiscoverDialog from '../public/locales/zh/discover_dialog.json';
 import zhDocs from '../public/locales/zh/docs.json';
 import zhGuides from '../public/locales/zh/guides.json';
 import zhLibrary from '../public/locales/zh/library.json';
@@ -209,6 +215,7 @@ const resources = {
     auth: enAuth,
     common: enCommon,
     discover: enDiscover,
+    discover_dialog: enDiscoverDialog,
     docs: enDocs,
     guides: enGuides,
     library: enLibrary,
@@ -258,6 +265,7 @@ const resources = {
     auth: hiAuth,
     common: hiCommon,
     discover: hiDiscover,
+    discover_dialog: hiDiscoverDialog,
     docs: hiDocs,
     guides: hiGuides,
     library: hiLibrary,
@@ -307,6 +315,7 @@ const resources = {
     auth: jaAuth,
     common: jaCommon,
     discover: jaDiscover,
+    discover_dialog: jaDiscoverDialog,
     docs: jaDocs,
     guides: jaGuides,
     library: jaLibrary,
@@ -356,6 +365,7 @@ const resources = {
     auth: nlAuth,
     common: nlCommon,
     discover: nlDiscover,
+    discover_dialog: nlDiscoverDialog,
     docs: nlDocs,
     guides: nlGuides,
     library: nlLibrary,
@@ -405,6 +415,7 @@ const resources = {
     auth: trAuth,
     common: trCommon,
     discover: trDiscover,
+    discover_dialog: trDiscoverDialog,
     docs: trDocs,
     guides: trGuides,
     library: trLibrary,
@@ -454,6 +465,7 @@ const resources = {
     auth: zhAuth,
     common: zhCommon,
     discover: zhDiscover,
+    discover_dialog: zhDiscoverDialog,
     docs: zhDocs,
     guides: zhGuides,
     library: zhLibrary,

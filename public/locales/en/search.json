@@ -36,16 +36,16 @@
     "allCategories": "All categories",
     "categories": {
       "LLM": "LLM",
-      "UTILITY": "Utility",
-      "TOOL": "Tool",
-      "DATA": "Data Access",
-      "CONNECTOR": "Connector",
-      "SEARCH": "Search",
-      "CODE": "Code",
-      "IMAGE": "Image",
-      "AUDIO": "Audio",
-      "VIDEO": "Video",
-      "OTHER": "Other"
+      "Utility": "Utility",
+      "Tool": "Tool",
+      "Data Access": "Data Access",
+      "Connector": "Connector",
+      "Search": "Search",
+      "Code": "Code",
+      "Image": "Image",
+      "Audio": "Audio",
+      "Video": "Video",
+      "Other": "Other"
     },
     "card": {
       "install": "Install",
@@ -77,6 +77,86 @@
       "installationStats": "Installation Statistics",
       "installedByUsers": "Installed by {{count}} users",
       "usageCount": "Usage Count"
+    },
+    "registries": {
+      "registry": "Registry",
+      "npm": "NPM (Node.js)",
+      "docker": "Docker",
+      "pypi": "PyPI (Python)",
+      "github": "GitHub",
+      "gitlab": "GitLab"
+    },
+    "dialogs": {
+      "claim": {
+        "title": "Claim Server",
+        "description": "Claim ownership of this server",
+        "repositoryUrl": "Repository URL",
+        "repositoryUrlPlaceholder": "https://github.com/owner/repo",
+        "errors": {
+          "repositoryUrlRequired": "Please provide a repository URL",
+          "githubAuthRequired": "Please connect your GitHub account first",
+          "authenticateFirst": "Please authenticate with GitHub first",
+          "claimFailed": "Failed to claim server",
+          "unexpectedError": "An unexpected error occurred"
+        },
+        "success": {
+          "claimedNotPublished": "Server claimed but not published",
+          "claimedAndPublished": "Server claimed and published successfully!"
+        }
+      },
+      "rate": {
+        "title": "Rate Server",
+        "updateTitle": "Update Rating",
+        "description": "Your rating helps other users find quality servers",
+        "alreadyRated": "You have already rated this server. You can update your rating below.",
+        "rating": "Rating",
+        "comment": "Comment (optional)",
+        "commentPlaceholder": "Share your experience with this server",
+        "submitRating": "Submit Rating",
+        "updateRating": "Update Rating",
+        "submitting": "Submitting...",
+        "checking": "Checking...",
+        "cancel": "Cancel",
+        "errors": {
+          "selectRating": "Please select a rating between 1 and 5 stars"
+        },
+        "success": {
+          "submitted": "Thank you for rating this server!"
+        }
+      },
+      "reviews": {
+        "title": "Reviews for {{serverName}}",
+        "description": "See what others are saying about this server.",
+        "noReviews": "No reviews yet.",
+        "anonymous": "Anonymous",
+        "errors": {
+          "loadFailed": "Failed to load reviews. Please try again later."
+        }
+      },
+      "install": {
+        "enterValue": "Enter value"
+      }
+    },
+    "trending": {
+      "title": "Trending Servers",
+      "mostActiveServers": "Most active servers",
+      "lastDays": "Last 30 days",
+      "sortBy": {
+        "installs": "Installs",
+        "calls": "Calls"
+      }
+    },
+    "packageType": "Package Type",
+    "source": "Source",
+    "registry": {
+      "addServer": {
+        "button": "Add Server"
+      }
+    }
+  },
+  "registry": {
+    "addServer": {
+      "button": "Add Server"
     }
   }
 }

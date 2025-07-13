@@ -4,6 +4,7 @@ import {
   AlertCircle, 
   Check,
   Code,
+  Edit,
   Eye,
   EyeOff,
   FileCode, 
@@ -11,15 +12,30 @@ import {
   Info, 
   Loader2,
   Plus, 
+  RotateCcw,
+  Save,
   Terminal,
-  Trash2} from 'lucide-react';
+  Trash2,
+  X} from 'lucide-react';
 import { useEffect,useState } from 'react';
 
 import { fetchRegistryServer } from '@/app/actions/registry-servers';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { 
+  AlertDialog, 
+  AlertDialogAction, 
+  AlertDialogCancel, 
+  AlertDialogContent, 
+  AlertDialogDescription, 
+  AlertDialogFooter, 
+  AlertDialogHeader, 
+  AlertDialogTitle, 
+  AlertDialogTrigger 
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -40,12 +56,17 @@ interface EnvVar {
   source: 'readme' | 'env-example' | 'code' | 'manual' | 'registry' | 'args';
   value?: string;
   isSecret?: boolean;
+  originalName?: string;
+  originalDescription?: string;
+  originalRequired?: boolean;
+  originalIsSecret?: boolean;
 }
 
 export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
   const [envVars, setEnvVars] = useState<EnvVar[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
+  const [editingVars, setEditingVars] = useState<Record<number, boolean>>({});
   const { toast } = useToast();
 
   // Initialize from wizard data or detect on mount
@@ -58,7 +79,12 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
         isSecret: v.name.toLowerCase().includes('key') || 
                   v.name.toLowerCase().includes('token') ||
                   v.name.toLowerCase().includes('secret') ||
-                  v.name.toLowerCase().includes('password')
+                  v.name.toLowerCase().includes('password'),
+        // Store original values for reset functionality
+        originalName: v.name,
+        originalDescription: v.description,
+        originalRequired: v.required,
+        originalIsSecret: v.isSecret
       })));
     } else {
       // Detect environment variables
@@ -104,7 +130,7 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
           result.envVariables.forEach((envVar: any) => {
             if (!seenVars.has(envVar.name)) {
               seenVars.add(envVar.name);
-              detectedVars.push({
+              const newVar = {
                 name: envVar.name,
                 description: envVar.description || `Environment variable`,
                 defaultValue: '',
@@ -112,6 +138,13 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                 source: 'args' as const,
                 value: '',
                 isSecret: envVar.isSecret || false
+              };
+              detectedVars.push({
+                ...newVar,
+                originalName: newVar.name,
+                originalDescription: newVar.description,
+                originalRequired: newVar.required,
+                originalIsSecret: newVar.isSecret
               });
             }
           });
@@ -337,6 +370,42 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
     setShowSecrets(prev => ({ ...prev, [varName]: !prev[varName] }));
   };
 
+  const toggleEditMode = (index: number) => {
+    setEditingVars(prev => ({ ...prev, [index]: !prev[index] }));
+  };
+
+  const saveEdit = (index: number) => {
+    setEditingVars(prev => ({ ...prev, [index]: false }));
+  };
+
+  const cancelEdit = (index: number) => {
+    // Reset to original values if needed
+    setEditingVars(prev => ({ ...prev, [index]: false }));
+  };
+
+  const resetToOriginal = (index: number) => {
+    const envVar = envVars[index];
+    if (envVar.originalName) {
+      updateEnvVar(index, {
+        name: envVar.originalName,
+        description: envVar.originalDescription,
+        required: envVar.originalRequired || false,
+        isSecret: envVar.originalIsSecret || false
+      });
+    }
+    setEditingVars(prev => ({ ...prev, [index]: false }));
+  };
+
+
+  const hasBeenModified = (envVar: EnvVar): boolean => {
+    return envVar.source !== 'manual' && (
+      envVar.name !== envVar.originalName ||
+      envVar.description !== envVar.originalDescription ||
+      envVar.required !== envVar.originalRequired ||
+      envVar.isSecret !== envVar.originalIsSecret
+    );
+  };
+
   const getSourceIcon = (source: string) => {
     switch (source) {
       case 'readme':
@@ -435,11 +504,14 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
       {envVars.length > 0 && (
         <div className="space-y-4">
           {envVars.map((envVar, index) => (
-            <Card key={index}>
+            <Card 
+              key={index} 
+              className={editingVars[index] ? "border-blue-200 bg-blue-50/50 dark:border-blue-800 dark:bg-blue-950/20" : ""}
+            >
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
-                    {envVar.source === 'manual' && envVar.name === '' ? (
+                    {(envVar.source === 'manual' && envVar.name === '') || editingVars[index] ? (
                       <Input
                         placeholder="VARIABLE_NAME"
                         value={envVar.name}
@@ -447,19 +519,45 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                         className="font-mono text-sm mb-2"
                       />
                     ) : (
-                      <CardTitle className="text-sm font-mono flex items-center gap-2">
-                        {envVar.name}
-                        {envVar.required && (
-                          <Badge variant="destructive" className="text-xs">Required</Badge>
+                      <div className="space-y-2">
+                        <CardTitle className="text-sm font-mono flex items-center gap-2">
+                          {envVar.name}
+                          {envVar.required && (
+                            <Badge variant="destructive" className="text-xs">Required</Badge>
+                          )}
+                          {envVar.isSecret && (
+                            <Badge variant="secondary" className="text-xs">Secret</Badge>
+                          )}
+                        </CardTitle>
+                        {editingVars[index] && (
+                          <div className="flex items-center gap-4 text-xs">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`required-${index}`}
+                                checked={envVar.required}
+                                onCheckedChange={(checked) => 
+                                  updateEnvVar(index, { required: !!checked })
+                                }
+                              />
+                              <Label htmlFor={`required-${index}`}>Required</Label>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`secret-${index}`}
+                                checked={envVar.isSecret}
+                                onCheckedChange={(checked) => 
+                                  updateEnvVar(index, { isSecret: !!checked })
+                                }
+                              />
+                              <Label htmlFor={`secret-${index}`}>Secret</Label>
+                            </div>
+                          </div>
                         )}
-                        {envVar.isSecret && (
-                          <Badge variant="secondary" className="text-xs">Secret</Badge>
-                        )}
-                      </CardTitle>
+                      </div>
                     )}
-                    {(envVar.description || envVar.source === 'manual') && (
+                    {(envVar.description || envVar.source === 'manual' || editingVars[index]) && (
                       <CardDescription className="mt-1">
-                        {envVar.source === 'manual' && !envVar.description ? (
+                        {(envVar.source === 'manual' && !envVar.description) || editingVars[index] ? (
                           <Textarea
                             placeholder="Description (optional)"
                             value={envVar.description || ''}
@@ -477,15 +575,97 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                       {getSourceIcon(envVar.source)}
                       {getSourceLabel(envVar.source)}
                     </Badge>
-                    {envVar.source === 'manual' && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={() => removeEnvVar(index)}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
+                    {hasBeenModified(envVar) && (
+                      <Badge variant="secondary" className="text-xs">Modified</Badge>
+                    )}
+                    {editingVars[index] ? (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => saveEdit(index)}
+                          title="Save changes"
+                        >
+                          <Save className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => cancelEdit(index)}
+                          title="Cancel editing"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        {envVar.source !== 'manual' && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => toggleEditMode(index)}
+                            title="Edit variable"
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {hasBeenModified(envVar) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => resetToOriginal(index)}
+                            title="Reset to original"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                          </Button>
+                        )}
+                        {envVar.source === 'manual' ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => removeEnvVar(index)}
+                            title={`Delete ${envVar.name}`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        ) : (
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title={`Delete ${envVar.name}`}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Environment Variable</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete the discovered variable &quot;{envVar.name}&quot;? 
+                                  This was detected from {getSourceLabel(envVar.source)} and may be required for the server to function properly.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={() => removeEnvVar(index)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

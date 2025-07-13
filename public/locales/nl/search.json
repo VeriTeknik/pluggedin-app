@@ -1,56 +1,162 @@
 {
   "search": {
-    "title": "Zoeken",
-    "subtitle": "Zoek in alle inhoud",
-    "explorePlugins": "Verken Plugins",
+    "title": "Search",
+    "subtitle": "Search across all content",
+    "explorePlugins": "Explore Plugins",
     "input": {
-      "placeholder": "Zoeken..."
+      "placeholder": "Search..."
     },
-    "loading": "Zoeken laden...",
-    "noResults": "Geen resultaten gevonden",
+    "loading": "Loading search...",
+    "noResults": "No results found",
     "error": {
-      "general": "Fout bij het laden van zoekresultaten",
-      "profileNotFound": "Profiel niet gevonden. Selecteer een profiel om servers te delen.",
-      "missingShareId": "Kan delen niet ongedaan maken: Deel-informatie ontbreekt.",
-      "unshareFailed": "Server delen ongedaan maken mislukt"
+      "general": "Error loading search results",
+      "profileNotFound": "Profile not found. Please select a profile to unshare servers.",
+      "missingShareId": "Cannot unshare: Missing share information.",
+      "unshareFailed": "Failed to unshare server"
     },
-    "unshareSuccess": "{{name}} succesvol niet meer gedeeld",
-    "sort": "Sorteren",
-    "sortBy": "Sorteren op",
+    "unshareSuccess": "Successfully unshared {{name}}",
+    "sort": "Sort",
+    "sortBy": "Sort by",
     "sortOptions": {
-      "relevance": "Relevantie",
-      "popularity": "Populariteit",
-      "recent": "Meest recent",
-      "stars": "GitHub sterren"
+      "relevance": "Relevance",
+      "popularity": "Popularity",
+      "recent": "Most recent",
+      "stars": "GitHub stars"
     },
     "filter": "Filter",
-    "filterByTags": "Filteren op tags",
-    "noTagsAvailable": "Geen tags beschikbaar",
-    "clearFilters": "Filters wissen",
-    "clearAllFilters": "Alles wissen",
-    "noMatchingTags": "Geen resultaten komen overeen met de geselecteerde tags",
-    "noMatchingFilters": "Geen resultaten komen overeen met de geselecteerde filters",
-    "category": "Categorie",
-    "filterByCategory": "Filteren op categorie",
-    "noCategoriesAvailable": "Geen categorieën beschikbaar",
-    "allCategories": "Alle categorieën",
+    "filterByTags": "Filter by tags",
+    "noTagsAvailable": "No tags available",
+    "clearFilters": "Clear filters",
+    "clearAllFilters": "Clear all",
+    "noMatchingTags": "No results match the selected tags",
+    "noMatchingFilters": "No results match the selected filters",
+    "category": "Category",
+    "filterByCategory": "Filter by category",
+    "noCategoriesAvailable": "No categories available",
+    "allCategories": "All categories",
     "categories": {
       "LLM": "LLM",
-      "UTILITY": "Hulpprogramma",
-      "TOOL": "Tool",
-      "DATA": "Gegevenstoegang",
-      "CONNECTOR": "Connector",
-      "SEARCH": "Zoeken",
-      "CODE": "Code",
-      "IMAGE": "Afbeelding",
-      "AUDIO": "Audio",
-      "VIDEO": "Video",
-      "OTHER": "Overig"
+      "Utility": "Utility",
+      "Tool": "Tool",
+      "Data Access": "Data Access",
+      "Connector": "Connector",
+      "Search": "Search",
+      "Code": "Code",
+      "Image": "Image",
+      "Audio": "Audio",
+      "Video": "Video",
+      "Other": "Other"
     },
     "card": {
-      "install": "Installeren",
-      "installed": "Geïnstalleerd",
-      "rate": "Beoordelen"
+      "install": "Install",
+      "installed": "Installed",
+      "rate": "Rate",
+      "details": "Details",
+      "unshare": "Unshare",
+      "showMore": "Show More",
+      "showLess": "Show Less",
+      "tabs": {
+        "overview": "Overview",
+        "technical": "Technical",
+        "community": "Community"
+      },
+      "description": "Description",
+      "tags": "Tags",
+      "packageInfo": "Package Information",
+      "package": "Package",
+      "registry": "Registry",
+      "downloads": "Downloads",
+      "command": "Command",
+      "url": "URL",
+      "arguments": "Arguments",
+      "exampleArgs": "Example Args",
+      "environmentVariables": "Environment Variables",
+      "sharedBy": "Shared By",
+      "reviews": "Reviews",
+      "viewReviews": "View {{count}} Reviews",
+      "installationStats": "Installation Statistics",
+      "installedByUsers": "Installed by {{count}} users",
+      "usageCount": "Usage Count"
+    },
+    "registries": {
+      "registry": "Registry",
+      "npm": "NPM (Node.js)",
+      "docker": "Docker",
+      "pypi": "PyPI (Python)",
+      "github": "GitHub",
+      "gitlab": "GitLab"
+    },
+    "dialogs": {
+      "claim": {
+        "title": "Claim Server",
+        "description": "Claim ownership of this server",
+        "repositoryUrl": "Repository URL",
+        "repositoryUrlPlaceholder": "https://github.com/owner/repo",
+        "errors": {
+          "repositoryUrlRequired": "Please provide a repository URL",
+          "githubAuthRequired": "Please connect your GitHub account first",
+          "authenticateFirst": "Please authenticate with GitHub first",
+          "claimFailed": "Failed to claim server",
+          "unexpectedError": "An unexpected error occurred"
+        },
+        "success": {
+          "claimedNotPublished": "Server claimed but not published",
+          "claimedAndPublished": "Server claimed and published successfully!"
+        }
+      },
+      "rate": {
+        "title": "Rate Server",
+        "updateTitle": "Update Rating",
+        "description": "Your rating helps other users find quality servers",
+        "alreadyRated": "You have already rated this server. You can update your rating below.",
+        "rating": "Rating",
+        "comment": "Comment (optional)",
+        "commentPlaceholder": "Share your experience with this server",
+        "submitRating": "Submit Rating",
+        "updateRating": "Update Rating",
+        "submitting": "Submitting...",
+        "checking": "Checking...",
+        "cancel": "Cancel",
+        "errors": {
+          "selectRating": "Please select a rating between 1 and 5 stars"
+        },
+        "success": {
+          "submitted": "Thank you for rating this server!"
+        }
+      },
+      "reviews": {
+        "title": "Reviews for {{serverName}}",
+        "description": "See what others are saying about this server.",
+        "noReviews": "No reviews yet.",
+        "anonymous": "Anonymous",
+        "errors": {
+          "loadFailed": "Failed to load reviews. Please try again later."
+        }
+      },
+      "install": {
+        "enterValue": "Enter value"
+      }
+    },
+    "trending": {
+      "title": "Trending Servers",
+      "mostActiveServers": "Most active servers",
+      "lastDays": "Last 30 days",
+      "sortBy": {
+        "installs": "Installs",
+        "calls": "Calls"
+      }
+    },
+    "packageType": "Package Type",
+    "source": "Source",
+    "registry": {
+      "addServer": {
+        "button": "Add Server"
+      }
+    }
+  },
+  "registry": {
+    "addServer": {
+      "button": "Add Server"
     }
   }
 }

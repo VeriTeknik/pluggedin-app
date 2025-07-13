@@ -1,0 +1,45 @@
+{
+  "test": {
+    "title": "डिस्कवरी टेस्ट",
+    "description": "सर्वर डिस्कवरी और क्षमताओं का परीक्षण करें",
+    "transportTypes": {
+      "stdio": "STDIO (कमांड-आधारित)",
+      "sse": "SSE (सर्वर-सेंट इवेंट्स)",
+      "streamableHttp": "स्ट्रीमेबल HTTP"
+    },
+    "capabilities": {
+      "tools": "उपकरण",
+      "resources": "संसाधन", 
+      "prompts": "प्रॉम्प्ट"
+    },
+    "status": {
+      "testing": "डिस्कवरी का परीक्षण...",
+      "success": "डिस्कवरी सफलतापूर्वक पूर्ण",
+      "failed": "डिस्कवरी विफल",
+      "connecting": "सर्वर से कनेक्ट हो रहा है...",
+      "discovering": "क्षमताओं की खोज..."
+    },
+    "results": {
+      "foundTools": "{{count}} उपकरण मिले",
+      "foundResources": "{{count}} संसाधन मिले",
+      "foundPrompts": "{{count}} प्रॉम्प्ट मिले",
+      "noTools": "कोई उपकरण नहीं मिले",
+      "noResources": "कोई संसाधन नहीं मिले",
+      "noPrompts": "कोई प्रॉम्प्ट नहीं मिले"
+    },
+    "errors": {
+      "connectionFailed": "सर्वर से कनेक्ट करने में विफल",
+      "discoveryTimeout": "डिस्कवरी टाइमआउट",
+      "invalidResponse": "अमान्य सर्वर प्रतिक्रिया",
+      "networkError": "नेटवर्क त्रुटि हुई"
+    }
+  },
+  "streaming": {
+    "title": "MCP डिस्कवरी",
+    "connecting": "कनेक्ट हो रहा है...",
+    "discovering": "क्षमताओं की खोज...",
+    "completed": "डिस्कवरी पूर्ण",
+    "failed": "डिस्कवरी विफल",
+    "aborted": "डिस्कवरी रद्द"
+  }
+}

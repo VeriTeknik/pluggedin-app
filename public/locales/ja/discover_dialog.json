@@ -1,0 +1,45 @@
+{
+  "test": {
+    "title": "ディスカバリーテスト",
+    "description": "サーバーディスカバリーと機能をテストする",
+    "transportTypes": {
+      "stdio": "STDIO（コマンドベース）",
+      "sse": "SSE（サーバー送信イベント）",
+      "streamableHttp": "ストリーミングHTTP"
+    },
+    "capabilities": {
+      "tools": "ツール",
+      "resources": "リソース", 
+      "prompts": "プロンプト"
+    },
+    "status": {
+      "testing": "ディスカバリーをテスト中...",
+      "success": "ディスカバリーが正常に完了しました",
+      "failed": "ディスカバリーに失敗しました",
+      "connecting": "サーバーに接続中...",
+      "discovering": "機能を発見中..."
+    },
+    "results": {
+      "foundTools": "{{count}}個のツールが見つかりました",
+      "foundResources": "{{count}}個のリソースが見つかりました",
+      "foundPrompts": "{{count}}個のプロンプトが見つかりました",
+      "noTools": "ツールが見つかりませんでした",
+      "noResources": "リソースが見つかりませんでした",
+      "noPrompts": "プロンプトが見つかりませんでした"
+    },
+    "errors": {
+      "connectionFailed": "サーバーへの接続に失敗しました",
+      "discoveryTimeout": "ディスカバリーがタイムアウトしました",
+      "invalidResponse": "無効なサーバーレスポンス",
+      "networkError": "ネットワークエラーが発生しました"
+    }
+  },
+  "streaming": {
+    "title": "MCPディスカバリー",
+    "connecting": "接続中...",
+    "discovering": "機能を発見中...",
+    "completed": "ディスカバリー完了",
+    "failed": "ディスカバリー失敗",
+    "aborted": "ディスカバリー中止"
+  }
+}
