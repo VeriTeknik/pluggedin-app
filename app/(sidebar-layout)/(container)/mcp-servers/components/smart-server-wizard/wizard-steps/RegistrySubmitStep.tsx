@@ -104,19 +104,6 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting,
       // Step 4: Submit to registry
       setSubmissionState({ step: 'submitting', progress: 80, message: 'Submitting to registry...' });
       
-      // Debug: Log the data being passed
-      console.log('🔍 RegistrySubmitStep: Wizard data before submission:', {
-        willClaim: data.willClaim,
-        shouldClaim: data.shouldClaim,
-        registryToken: data.registryToken ? `${data.registryToken.substring(0, 10)}...` : 'undefined',
-        githubUsername: data.githubUsername,
-        isAuthenticated: data.isAuthenticated,
-        ownershipVerified: data.ownershipVerified,
-        githubUrl: data.githubUrl,
-        owner: data.owner,
-        repo: data.repo
-      });
-      
       // Call the actual server action
       const result = await submitWizardToRegistry({
         githubUrl: data.githubUrl!,
@@ -135,7 +122,6 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting,
       });
       
       // Debug: Log the result
-      console.log('🔍 RegistrySubmitStep: Server action result:', result);
       
       if (result.success) {
         const serverId = result.serverId || `io.github.${data.owner}/${data.repo}`;
@@ -285,12 +271,12 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting,
                   <ExternalLink className="h-3 w-3" />
                 </Button>
               )}
+              {/* TODO: Implement import to profile functionality
               <Button 
                 variant="outline" 
                 size="sm" 
                 className="flex items-center gap-2"
                 onClick={() => {
-                  // TODO: Implement import to profile functionality
                   toast({
                     title: 'Coming soon',
                     description: 'Direct import to profile will be available soon.',
@@ -300,6 +286,7 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting,
                 <Upload className="h-4 w-4" />
                 Add to Profile
               </Button>
+              */}
             </div>
           </CardContent>
         </Card>
