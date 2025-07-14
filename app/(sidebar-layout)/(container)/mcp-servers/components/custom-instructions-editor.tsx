@@ -3,7 +3,7 @@
 // External imports
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { InferSelectModel } from 'drizzle-orm';
-import { AlertTriangle, Info, Loader2, Save } from 'lucide-react'; // Sorted icons
+import { AlertTriangle, FileJson2, Info, Loader2, Save } from 'lucide-react'; // Sorted icons
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -155,7 +155,36 @@ export function CustomInstructionsEditor({ serverUuid, profileUuid }: CustomInst
           name="messagesJson"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>{t('mcpServers.instructions.messagesLabel')}</FormLabel>
+              <div className="flex items-center justify-between mb-2">
+                <FormLabel>{t('mcpServers.instructions.messagesLabel')}</FormLabel>
+                {(field.value === '[]' || field.value === '') && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const template = JSON.stringify([
+                        {
+                          role: "system",
+                          content: "You are a helpful assistant specialized in [YOUR SPECIALTY HERE]"
+                        },
+                        {
+                          role: "user",
+                          content: "Example user question or context"
+                        },
+                        {
+                          role: "assistant",
+                          content: "Example assistant response"
+                        }
+                      ], null, 2);
+                      field.onChange(template);
+                    }}
+                  >
+                    <FileJson2 className="mr-2 h-3 w-3" />
+                    {t('mcpServers.instructions.insertTemplate')}
+                  </Button>
+                )}
+              </div>
               <FormControl>
                 <Textarea
                   placeholder={t('mcpServers.instructions.messagesPlaceholder')}

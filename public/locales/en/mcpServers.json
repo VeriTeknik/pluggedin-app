@@ -211,7 +211,8 @@
       "infoTitle": "How Clients Use Instructions",
       "infoText": "These instructions can potentially be used by MCP clients (like Cline) to provide context to the AI when using this server's tools. The exact usage depends on the client implementation.",
       "saveSuccess": "Custom instructions saved successfully.",
-      "saveError": "Failed to save custom instructions."
+      "saveError": "Failed to save custom instructions.",
+      "insertTemplate": "Insert Template"
     },
     "placeholders": {
       "serverName": "Enter server name",

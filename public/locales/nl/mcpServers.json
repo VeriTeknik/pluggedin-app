@@ -208,7 +208,8 @@
       "infoTitle": "Hoe clients instructies gebruiken",
       "infoText": "Deze instructies kunnen mogelijk worden gebruikt door MCP-clients (zoals Cline) om context te bieden aan de AI bij het gebruik van de tools van deze server. Het exacte gebruik hangt af van de clientimplementatie.",
       "saveSuccess": "Aangepaste instructies succesvol opgeslagen.",
-      "saveError": "Opslaan van aangepaste instructies mislukt."
+      "saveError": "Opslaan van aangepaste instructies mislukt.",
+      "insertTemplate": "Sjabloon invoegen"
     },
     "placeholders": {
       "serverName": "Voer servernaam in",
