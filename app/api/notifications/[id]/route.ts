@@ -41,16 +41,25 @@ import { authenticateApiKey } from '@/app/api/auth';
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
 
-    const notificationId = params.id;
+    const { id: notificationId } = await params;
     if (!notificationId) {
       return NextResponse.json(
         { error: 'Notification ID is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(notificationId)) {
+      return NextResponse.json(
+        { error: 'Invalid notification ID format. Please use the UUID from the notification list.' },
         { status: 400 }
       );
     }

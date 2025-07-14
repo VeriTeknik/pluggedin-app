@@ -87,8 +87,21 @@ export async function POST(request: Request) {
       // Determine the correct source
       let activitySource = source;
       
-      if (!activitySource && serverUuid) {
-        // Look up the server to get its actual source
+      // Check if this is a built-in static tool (not a real server UUID)
+      const builtInServerIds = [
+        'pluggedin_discovery',
+        'pluggedin_discovery_bg',
+        'pluggedin_discovery_cache',
+        'pluggedin_discovery_cache_error',
+        'pluggedin_rag',
+        'pluggedin_notifications',
+        'pluggedin_proxy'
+      ];
+      
+      const isBuiltInTool = serverUuid && builtInServerIds.includes(serverUuid);
+      
+      if (!activitySource && serverUuid && !isBuiltInTool) {
+        // Look up the server to get its actual source (only for real UUIDs)
         const { mcpServersTable } = await import('@/db/schema');
         const { eq } = await import('drizzle-orm');
         
@@ -116,7 +129,7 @@ export async function POST(request: Request) {
       
       await db.insert(mcpActivityTable).values({
         profile_uuid: auth.activeProfile.uuid,
-        server_uuid: serverUuid || null,
+        server_uuid: (serverUuid && !isBuiltInTool) ? serverUuid : null,
         external_id: externalId || null,
         source: activitySource || McpServerSource.PLUGGEDIN,
         action,

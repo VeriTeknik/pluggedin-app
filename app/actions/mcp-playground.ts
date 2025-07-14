@@ -691,13 +691,31 @@ export async function getOrCreatePlaygroundSession(
 
     try {
       // --- Use Progressive Initialization ---
+      // Map the provider to what langchain-mcp-tools expects
+      let mappedProvider: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none' = 'none';
+      if (llmConfig.provider === 'anthropic') {
+        mappedProvider = 'anthropic';
+      } else if (llmConfig.provider === 'openai') {
+        mappedProvider = 'openai';
+      } else if (llmConfig.provider === 'google') {
+        mappedProvider = 'google_gemini'; // Use google_gemini for stricter validation
+      }
+      
+      // Log the provider mapping for debugging
+      await addServerLogForProfile(
+        profileUuid,
+        'info',
+        `[MCP] LLM Provider mapping: ${llmConfig.provider} → ${mappedProvider}`
+      );
+      
       const { tools, cleanup, failedServers } = await progressivelyInitializeMcpServers(
         mcpServersConfig,
         profileUuid,
         {
           logger,
           perServerTimeout: 20000, // 20 seconds per server (configurable)
-          totalTimeout: 60000 // 60 seconds total (configurable)
+          totalTimeout: 60000, // 60 seconds total (configurable)
+          llmProvider: mappedProvider
         }
       );
 

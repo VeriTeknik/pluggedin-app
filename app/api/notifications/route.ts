@@ -97,8 +97,8 @@ export async function GET(request: NextRequest) {
     // Parse and validate query parameters
     const searchParams = request.nextUrl.searchParams;
     const queryParams = {
-      onlyUnread: searchParams.get('onlyUnread'),
-      limit: searchParams.get('limit'),
+      onlyUnread: searchParams.get('onlyUnread') || undefined,
+      limit: searchParams.get('limit') || undefined,
     };
 
     const validatedParams = querySchema.parse(queryParams);
