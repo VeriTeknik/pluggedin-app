@@ -277,17 +277,12 @@ export default function McpServerDetailPage({
 
   // Add handleDiscover function (adapted from ServerCard)
   const handleDiscover = () => {
-    console.log('ServerDetail: handleDiscover called', { 
-      profileUuid: currentProfile?.uuid, 
-      serverUuid: uuid 
-    });
     if (!currentProfile?.uuid || !uuid) { // Use uuid from params
       toast({ title: t('common.error'), description: t('mcpServers.errors.missingInfo'), variant: 'destructive' });
       return;
     }
     setIsDiscovering(true);
     setShowStreamingToast(true);
-    console.log('ServerDetail: Discovery state set, isDiscovering: true, showStreamingToast: true');
   };
 
   const handleDiscoveryComplete = (success: boolean, data?: any) => {
@@ -798,10 +793,8 @@ export default function McpServerDetailPage({
                         {tool.toolSchema && (
                           <details className="text-xs mt-2"> {/* Added margin top */}
                             <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('common.viewSchema')}</summary> {/* Added hover effect */}
-                            {/* Use dangerouslySetInnerHTML to avoid quote escaping issues, escape quotes */}
                             <pre className="mt-1 p-2 bg-muted dark:bg-slate-800 rounded text-xs overflow-auto max-h-60">
-                              {/* Correctly escape quotes for HTML */}
-                              <code dangerouslySetInnerHTML={{ __html: JSON.stringify(tool.toolSchema, null, 2).replace(/"/g, '"') }} />
+                              <code>{JSON.stringify(tool.toolSchema, null, 2)}</code>
                             </pre>
                           </details>
                         )}

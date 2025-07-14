@@ -88,8 +88,7 @@ export function PromptList({ serverUuid }: PromptListProps) {
                    <details className="text-xs">
                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('mcpServers.prompts.viewArguments', { count: prompt.arguments_schema.length })}</summary>
                      <pre className="mt-1 p-2 bg-muted dark:bg-slate-800 rounded text-xs overflow-auto max-h-40">
-                       {/* Escape quotes for HTML */}
-                       <code dangerouslySetInnerHTML={{ __html: JSON.stringify(prompt.arguments_schema, null, 2).replace(/"/g, '"') }} />
+                       <code>{JSON.stringify(prompt.arguments_schema, null, 2)}</code>
                      </pre>
                    </details>
                  ) : (
