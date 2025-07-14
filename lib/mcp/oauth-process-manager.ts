@@ -96,7 +96,6 @@ export class OAuthProcessManager extends EventEmitter {
         await new Promise(resolve => setTimeout(resolve, 2000));
         
         // Trigger a request to the MCP server to initiate OAuth
-        console.log(`[OAuth ${serverName}] mcp-remote proxy established, triggering OAuth flow...`);
         
         // Send a simple request to trigger OAuth (if not already authenticated)
         // This will cause the mcp-remote to output the OAuth URL
@@ -122,11 +121,9 @@ export class OAuthProcessManager extends EventEmitter {
                   }
                 }) + '\n');
               } catch (error) {
-                console.error(`[OAuth ${serverName}] Error sending user request:`, error);
               }
             }, 2000);
           } catch (error) {
-            console.error(`[OAuth ${serverName}] Error sending test request:`, error);
           }
         }, 1000);
       }
@@ -178,7 +175,6 @@ export class OAuthProcessManager extends EventEmitter {
       process.stdout?.on('data', (data) => {
         const chunk = data.toString();
         _output += chunk;
-        console.log(`[OAuth ${serverName}] stdout:`, chunk);
         
         // Check for OAuth URLs in stdout responses (JSON-RPC errors) and success detection
         try {
@@ -195,7 +191,6 @@ export class OAuthProcessManager extends EventEmitter {
                   if (Array.isArray(userData) && userData.length > 0 && userData[0].id) {
                     if (oauthUrlFound) {
                       // We got real user data AFTER OAuth flow
-                      console.log(`[OAuth ${serverName}] Authentication successful - got user data after OAuth flow`);
                       tokenFound = true;
                       clearTimeout(timeoutId);
                       
@@ -208,7 +203,6 @@ export class OAuthProcessManager extends EventEmitter {
                         
                         const checkForToken = async () => {
                           attempts++;
-                          console.log(`[OAuth ${serverName}] Checking for token, attempt ${attempts}/${maxAttempts}`);
                           const tokenData = await this.checkMcpAuthToken(serverName, mcpAuthDir);
                           
                           if (tokenData && tokenData.token) {
@@ -217,7 +211,6 @@ export class OAuthProcessManager extends EventEmitter {
                             setTimeout(checkForToken, checkInterval);
                           } else {
                             // Fallback to success without token - auth is working but we couldn't extract token
-                            console.log(`[OAuth ${serverName}] Could not find token after ${maxAttempts} attempts, marking as working`);
                             resolve({
                               success: true,
                               token: 'oauth_working', // Mark that OAuth is working but we don't have token
@@ -232,7 +225,6 @@ export class OAuthProcessManager extends EventEmitter {
                       return;
                     } else {
                       // Got user data without OAuth URL - this might be the initial connection
-                      console.log(`[OAuth ${serverName}] Got user data - OAuth may have already been completed`);
                       // Mark as success since we can access user data
                       tokenFound = true;
                       clearTimeout(timeoutId);
@@ -270,7 +262,6 @@ export class OAuthProcessManager extends EventEmitter {
             if (authUrlMatch && !oauthUrl) {
               oauthUrl = authUrlMatch[1] || authUrlMatch[0];
               oauthUrlFound = true;
-              console.log(`[OAuth ${serverName}] Found OAuth URL in error response:`, oauthUrl);
               
               clearTimeout(timeoutId);
               resolve({
@@ -319,7 +310,6 @@ export class OAuthProcessManager extends EventEmitter {
       process.stderr?.on('data', (data) => {
         const chunk = data.toString();
         errorOutput += chunk;
-        console.error(`[OAuth ${serverName}] stderr:`, chunk);
         
         // Look for specific mcp-remote OAuth patterns
         if (chunk.includes('Please authorize this client by visiting:') || 
@@ -329,7 +319,6 @@ export class OAuthProcessManager extends EventEmitter {
           if (urlMatch && !oauthUrl) {
             oauthUrl = urlMatch[0];
             oauthUrlFound = true;
-            console.log(`[OAuth ${serverName}] Found OAuth URL:`, oauthUrl);
             
             // Return immediately with the OAuth URL for the client to handle
             clearTimeout(timeoutId);
@@ -348,7 +337,6 @@ export class OAuthProcessManager extends EventEmitter {
         if (chunk.includes('Auth code received') || 
             chunk.includes('Completing authorization') ||
             chunk.includes('Connected to remote server using SSEClientTransport')) {
-          console.log(`[OAuth ${serverName}] OAuth completion detected`);
           // Mark that OAuth flow is completing
           oauthUrlFound = true; // We're past the OAuth URL stage
         }
@@ -427,7 +415,6 @@ export class OAuthProcessManager extends EventEmitter {
                     // mcp-remote stores tokens in a specific format
                     const accessToken = data.access_token || data.accessToken;
                     if (accessToken) {
-                      console.log(`[OAuth ${serverName}] Found token in ${filepath}`);
                       return {
                         success: true,
                         token: accessToken,
@@ -441,7 +428,6 @@ export class OAuthProcessManager extends EventEmitter {
                       };
                     }
                   } catch (e) {
-                    console.error(`[OAuth ${serverName}] Error reading token file ${filepath}:`, e);
                   }
                 }
               }
@@ -569,7 +555,6 @@ export class OAuthProcessManager extends EventEmitter {
       
       return null;
     } catch (error) {
-      console.error('Error checking MCP auth tokens:', error);
       return null;
     }
   }
@@ -606,7 +591,6 @@ export class OAuthProcessManager extends EventEmitter {
         const filepath = path.join(mcpAuthDir, filename);
         try {
           await fs.unlink(filepath);
-          console.log(`[OAuth ${serverName}] Cleared existing token file: ${filename}`);
         } catch (_e) {
           // File doesn't exist, that's ok
         }
@@ -616,12 +600,10 @@ export class OAuthProcessManager extends EventEmitter {
       try {
         const serverDir = path.join(mcpAuthDir, serverName);
         await fs.rm(serverDir, { recursive: true, force: true });
-        console.log(`[OAuth ${serverName}] Cleared server-specific directory`);
       } catch (_e) {
         // Directory doesn't exist, that's ok
       }
     } catch (error) {
-      console.error(`[OAuth ${serverName}] Error clearing existing tokens:`, error);
     }
   }
 

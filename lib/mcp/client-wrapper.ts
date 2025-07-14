@@ -65,13 +65,11 @@ async function safeCleanup(connectedClient: ConnectedMcpClient | undefined, serv
     if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
       // Only log non-abort errors at debug level
       if (cleanupError?.code !== 20 && cleanupError?.name !== 'AbortError' && !cleanupError?.message?.includes('abort')) {
-        console.debug(`[MCP Wrapper] Cleanup warning for ${serverConfig.name}:`, cleanupError.message);
       }
       // Don't re-throw or log abort errors at all
       return;
     }
     // For other transport types, log the error
-    console.error(`[MCP Wrapper] Cleanup error for ${serverConfig.name}:`, cleanupError);
   }
 }
 
@@ -143,7 +141,6 @@ export function createBubblewrapConfig(
   try {
     fs.mkdirSync(paths.mcpWorkspace, { recursive: true });
   } catch (err) {
-    console.warn(`[MCP Wrapper] Could not create workspace directory ${paths.mcpWorkspace}:`, err);
   }
 
   // Resource limits are imported at the top
@@ -291,7 +288,6 @@ export function createFirejailConfig(
   try {
     fs.mkdirSync(paths.mcpWorkspace, { recursive: true });
   } catch (err) {
-    console.warn(`[MCP Wrapper] Could not create workspace directory ${paths.mcpWorkspace}:`, err);
   }
   
   // Only apply firejail to STDIO servers with a command
@@ -405,7 +401,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
   const isMcpRemoteServer = serverConfig.args?.some(arg => arg === 'mcp-remote') || false;
   
   if (isMcpRemoteServer) {
-    console.log(`[MCP Wrapper] Detected mcp-remote server ${serverConfig.name}, forcing STDIO transport`);
   }
 
   try {
@@ -414,25 +409,15 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       // For mcp-remote servers, ensure we have a command
       if (!serverConfig.command && isMcpRemoteServer) {
         serverConfig.command = 'npx';
-        console.log(`[MCP Wrapper] mcp-remote server ${serverConfig.name} missing command, using 'npx'`);
       }
       
       if (!serverConfig.command) {
-        console.error(`[MCP Wrapper] STDIO server ${serverConfig.name} is missing command.`);
         return null;
       }
       
-      // Log the command we're about to run for debugging
-      console.log(`[MCP Wrapper] Preparing STDIO transport for ${serverConfig.name}:`, {
-        command: serverConfig.command,
-        args: serverConfig.args,
-        skipTransformation: skipCommandTransformation
-      });
-
       // Validate command for security
       const commandValidation = validateCommand(serverConfig.command);
       if (!commandValidation.valid) {
-        console.error(`[MCP Wrapper] Invalid command for ${serverConfig.name}: ${commandValidation.error}`);
         throw new Error(`Invalid command: ${commandValidation.error}`);
       }
 
@@ -440,7 +425,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       if (serverConfig.args) {
         const argsValidation = validateCommandArgs(serverConfig.args);
         if (!argsValidation.valid) {
-          console.error(`[MCP Wrapper] Invalid arguments for ${serverConfig.name}: ${argsValidation.error}`);
           throw new Error(`Invalid arguments: ${argsValidation.error}`);
         }
       }
@@ -452,15 +436,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       
       // Skip transformation if requested (e.g., during discovery)
       if (!skipCommandTransformation) {
-        // Log environment info for debugging
-        console.log(`[MCP Wrapper] Environment info for ${serverConfig.name}:`, {
-          platform: process.platform,
-          home: process.env.HOME,
-          path: process.env.PATH,
-          cwd: process.cwd(),
-          user: process.env.USER || 'unknown'
-        });
-        
         try {
           const transformation = await packageManager.transformCommand(
             serverConfig.command,
@@ -471,13 +446,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           transformedCommand = transformation.command;
           transformedArgs = transformation.args;
           packageManagerEnv = transformation.env || {};
-          
-          console.log(`[MCP Wrapper] Transformed command for ${serverConfig.name}:`, {
-            original: `${serverConfig.command} ${(serverConfig.args || []).join(' ')}`,
-            transformed: `${transformedCommand} ${transformedArgs.join(' ')}`
-          });
         } catch (error) {
-          console.error(`[MCP Wrapper] Failed to transform command for ${serverConfig.name}:`, error);
           // Log more details about the failure
           console.error(`[MCP Wrapper] Command transformation details:`, {
             command: serverConfig.command,
@@ -487,7 +456,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           // Continue with original command if transformation fails
         }
       } else {
-        console.log(`[MCP Wrapper] Skipping command transformation for ${serverConfig.name} (discovery mode)`);
         
         // Even in discovery mode, we need to set up proper environment for uvx
         if (serverConfig.command === 'uvx') {
@@ -497,7 +465,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             UV_PROJECT_ENVIRONMENT: `${installDir}/.venv`,
             UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
           };
-          console.log(`[MCP Wrapper] Set uvx environment for discovery:`, packageManagerEnv);
         }
       }
 
@@ -508,7 +475,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
          transformedArgs.some(arg => arg.toLowerCase().includes('docker')));
       
       if (isDockerServer) {
-        console.log(`[MCP Wrapper] Skipping sandboxing for Docker-based server: ${serverConfig.name}`);
       }
 
       // Apply sandboxing by default for all STDIO servers (unless explicitly disabled)
@@ -522,15 +488,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           isCommandAvailable('bwrap'),
           isCommandAvailable('firejail')
         ]);
-        
-        // Log availability for debugging
-        console.log(`[MCP Wrapper] Applying sandboxing for ${serverConfig.name} (STDIO server):`, {
-          bwrap: bwrapAvailable,
-          firejail: firejailAvailable,
-          platform: process.platform,
-          configuredType: PackageManagerConfig.ISOLATION_TYPE,
-          fallback: PackageManagerConfig.ISOLATION_FALLBACK
-        });
         
         // Try to use the configured isolation type
         if (PackageManagerConfig.ISOLATION_TYPE === 'bubblewrap' && bwrapAvailable) {
@@ -552,7 +509,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
                 ...packageManagerEnv
               }
             };
-            console.log(`[MCP Wrapper] Using Bubblewrap isolation for ${serverConfig.name}`);
           } else if (PackageManagerConfig.ISOLATION_FALLBACK === 'firejail' && firejailAvailable) {
             // Fall back to firejail if bubblewrap config failed
             const firejailConfig = createFirejailConfig(serverConfig);
@@ -573,7 +529,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
                   ...packageManagerEnv
                 }
               };
-              console.log(`[MCP Wrapper] Falling back to Firejail isolation for ${serverConfig.name}`);
             }
           }
         } else if (PackageManagerConfig.ISOLATION_TYPE === 'firejail' && firejailAvailable) {
@@ -596,11 +551,9 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
                 ...packageManagerEnv
               }
             };
-            console.log(`[MCP Wrapper] Using Firejail isolation for ${serverConfig.name}`);
           }
         } else if (PackageManagerConfig.ISOLATION_TYPE === 'bubblewrap' && !bwrapAvailable && firejailAvailable) {
           // Bubblewrap was requested but not available, try fallback
-          console.warn(`[MCP Wrapper] Bubblewrap not available, attempting fallback to Firejail for ${serverConfig.name}`);
           const firejailConfig = createFirejailConfig(serverConfig);
           if (firejailConfig) {
             // Update firejail args with transformed command
@@ -619,11 +572,9 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
                 ...packageManagerEnv
               }
             };
-            console.log(`[MCP Wrapper] Using Firejail isolation (fallback) for ${serverConfig.name}`);
           }
         } else {
           // No isolation tools available
-          console.warn(`[MCP Wrapper] No isolation tools available for ${serverConfig.name}. Running without sandboxing.`);
         }
       }
 
@@ -671,30 +622,18 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           ...(serverConfig.env || {})
         }
       };
-
-      console.log(`[MCP Wrapper] Creating STDIO transport with params:`, {
-        command: stdioParams.command,
-        args: stdioParams.args?.slice(0, 5), // Log first 5 args only
-        hasEnv: !!stdioParams.env,
-        envKeys: Object.keys(stdioParams.env || {})
-      });
       
       try {
         transport = new StdioClientTransport(stdioParams);
       } catch (error) {
-        console.error(`[MCP Wrapper] Failed to create STDIO transport:`, error);
         
         // Check if the command exists
         const commandExists = await isCommandAvailable(stdioParams.command);
         if (!commandExists) {
-          console.error(`[MCP Wrapper] Command '${stdioParams.command}' not found in PATH or common locations`);
-          console.error(`[MCP Wrapper] Current PATH: ${process.env.PATH}`);
           
           // Provide helpful suggestions
           if (stdioParams.command === 'npx') {
-            console.error(`[MCP Wrapper] Suggestion: Install npm/npx with 'apt-get install npm' or ensure Node.js installation includes npm`);
           } else if (stdioParams.command === 'uvx' || stdioParams.command === 'uv') {
-            console.error(`[MCP Wrapper] Suggestion: Install uv with 'curl -LsSf https://astral.sh/uv/install.sh | sh'`);
           }
         }
         
@@ -702,31 +641,26 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       }
     } else if (serverConfig.type === McpServerType.SSE && !isMcpRemoteServer) {
       // Log deprecation warning
-      console.warn(`[MCP Wrapper] ⚠️ SSE transport is deprecated. Server "${serverConfig.name}" should be migrated to Streamable HTTP.`);
       
       if (!serverConfig.url) {
-        console.error(`[MCP Wrapper] SSE server ${serverConfig.name} is missing URL.`);
         return null;
       }
       
       // Validate URL for security
       const urlValidation = validateMcpUrl(serverConfig.url);
       if (!urlValidation.valid) {
-        console.error(`[MCP Wrapper] Invalid URL for ${serverConfig.name}: ${urlValidation.error}`);
         throw new Error(`Invalid URL: ${urlValidation.error}`);
       }
       
       transport = new SSEClientTransport(urlValidation.parsedUrl!);
     } else if (serverConfig.type === McpServerType.STREAMABLE_HTTP && !isMcpRemoteServer) {
       if (!serverConfig.url) {
-        console.error(`[MCP Wrapper] Streamable HTTP server ${serverConfig.name} is missing URL.`);
         return null;
       }
       
       // Validate URL for security
       const urlValidation = validateMcpUrl(serverConfig.url);
       if (!urlValidation.valid) {
-        console.error(`[MCP Wrapper] Invalid URL for ${serverConfig.name}: ${urlValidation.error}`);
         throw new Error(`Invalid URL: ${urlValidation.error}`);
       }
       
@@ -744,13 +678,10 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             if (parsed && typeof parsed === 'object') {
               streamableOptions = parsed;
             } else {
-              console.warn(`[MCP Wrapper] Invalid streamableHTTPOptions format for ${serverConfig.name}, using defaults`);
               streamableOptions = {};
             }
           } catch (e) {
-            console.error(`[MCP Wrapper] Failed to parse streamableHTTPOptions from env for ${serverConfig.name}:`, e);
             // Provide explicit fallback instead of silent failure
-            console.warn(`[MCP Wrapper] Using default streamableHTTPOptions for ${serverConfig.name}`);
             streamableOptions = {};
           }
         }
@@ -773,7 +704,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         if (streamableOptions?.headers && typeof streamableOptions.headers === 'object') {
           const headerValidation = validateHeaders(streamableOptions.headers);
           if (!headerValidation.valid) {
-            console.error(`[MCP Wrapper] Invalid headers for ${serverConfig.name}: ${headerValidation.error}`);
             throw new Error(`Invalid headers: ${headerValidation.error}`);
           }
           
@@ -803,7 +733,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           transportOptions.timeout = 30000; // 30 seconds default
         }
         
-        console.log(`[MCP Wrapper] Creating Streamable HTTP transport for server ${serverConfig.name} with ${transportOptions.timeout}ms timeout`);
         
         // Use our wrapper to capture session IDs
         if (serverConfig.uuid && serverConfig.profile_uuid) {
@@ -815,20 +744,16 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           );
         } else {
           // Fallback to direct transport if we don't have server/profile UUIDs
-          console.warn(`[MCP Wrapper] Server ${serverConfig.name} missing UUID or profile UUID, cannot capture session IDs`);
           transport = new StreamableHTTPClientTransport(url, transportOptions);
         }
       } catch (error) {
-        console.error(`[MCP Wrapper] Failed to create Streamable HTTP transport:`, error);
         throw error; // Propagate the error instead of falling back
       }
     } else {
-      console.error(`[MCP Wrapper] Unsupported server type: ${serverConfig.type} for server ${serverConfig.name}`);
       return null;
     }
 
     if (!transport) {
-      console.error(`[MCP Wrapper] Failed to create transport for ${serverConfig.name}`);
       return null;
     }
 
@@ -840,7 +765,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
     return { client, transport };
 
   } catch (error) {
-    console.error(`[MCP Wrapper] Error creating client/transport for ${serverConfig.name}:`, error);
     return null;
   }
 }
@@ -865,7 +789,6 @@ async function connectMcpClient(
     
     try {
       if (attempt > 0) {
-        console.log(`[MCP Wrapper] Retrying connection to ${serverName} (Attempt ${attempt})...`);
         await sleep(delay);
         
         // For retries, always create fresh client and transport to avoid state issues
@@ -878,7 +801,6 @@ async function connectMcpClient(
       }
       
       await client.connect(transport);
-      console.log(`[MCP Wrapper] Connected to ${serverName}.`);
       return {
         client,
         cleanup: async () => {
@@ -894,7 +816,6 @@ async function connectMcpClient(
                   // Silently ignore all errors for Streamable HTTP transport
                   // as abort errors are expected when fetch is cancelled
                   if (e?.code !== 20 && e?.name !== 'AbortError') {
-                    console.debug(`[MCP Wrapper] Transport cleanup warning for ${serverName}:`, e.message);
                   }
                 }
               };
@@ -905,7 +826,6 @@ async function connectMcpClient(
                 } catch (e: any) {
                   // Silently ignore all errors for Streamable HTTP client
                   if (e?.code !== 20 && e?.name !== 'AbortError') {
-                    console.debug(`[MCP Wrapper] Client cleanup warning for ${serverName}:`, e.message);
                   }
                 }
               };
@@ -917,16 +837,13 @@ async function connectMcpClient(
               await transport.close();
               await client.close();
             }
-            console.log(`[MCP Wrapper] Cleaned up connection for ${serverName}.`);
           } catch (cleanupError) {
-            console.error(`[MCP Wrapper] Error during cleanup for ${serverName}:`, cleanupError);
           }
         },
       };
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       
-      console.warn(`[MCP Wrapper] Connection attempt ${attempt + 1} failed for ${serverName}: ${lastError.message}`);
       // Ensure client/transport are closed before retry
       if (attempt > 0) {
         // Only close if we're using retry-created instances
@@ -935,7 +852,6 @@ async function connectMcpClient(
         } catch (e: any) { 
           // Ignore abort errors
           if (e?.code !== 20 && e?.name !== 'AbortError') {
-            console.debug(`[MCP Wrapper] Error closing transport during retry:`, e.message);
           }
         }
         try { 
@@ -943,7 +859,6 @@ async function connectMcpClient(
         } catch (e: any) { 
           // Ignore abort errors
           if (e?.code !== 20 && e?.name !== 'AbortError') {
-            console.debug(`[MCP Wrapper] Error closing client during retry:`, e.message);
           }
         }
       }
@@ -980,7 +895,6 @@ export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool
     // Check capabilities *after* connecting
     const capabilities = connectedClient.client.getServerCapabilities();
     if (!capabilities?.tools) {
-        // console.log(`[MCP Wrapper] Server ${serverIdentifier} does not advertise tool support.`); // Removed console log
         return []; // Return empty list if tools are not supported
     }
 
@@ -994,7 +908,6 @@ export async function listToolsFromServer(serverConfig: McpServer): Promise<Tool
     // This ensures compatibility with clients that expect original tool names
     return Array.isArray(result?.tools) ? result.tools : [];
   } catch (error) {
-    console.error(`[MCP Wrapper] Error listing tools from ${serverIdentifier}:`, error);
     throw error; // Re-throw the error to be handled by the caller
   } finally {
     await safeCleanup(connectedClient, serverConfig);
@@ -1027,7 +940,6 @@ export async function listResourceTemplatesFromServer(serverConfig: McpServer): 
     // Check capabilities *after* connecting
     const capabilities = connectedClient.client.getServerCapabilities();
     if (!capabilities?.resources) {
-        // console.log(`[MCP Wrapper] Server ${serverIdentifier} does not advertise resource support (needed for templates).`); // Removed console log
         return []; // Return empty list if resources are not supported
     }
 
@@ -1040,11 +952,9 @@ export async function listResourceTemplatesFromServer(serverConfig: McpServer): 
     } catch (error: any) { // Add type to error
         // Specifically handle "Method not found" for templates list as non-critical
         if (error?.code === -32601 && error?.message?.includes('Method not found')) {
-             console.warn(`[MCP Wrapper] Server ${serverIdentifier} does not implement resources/templates/list. Returning empty array.`);
              return [];
         }
         // Log and re-throw other errors
-        console.error(`[MCP Wrapper] Error listing resource templates from ${serverIdentifier}:`, error);
         throw error; // Re-throw the error to be handled by the caller
     } finally {
         await safeCleanup(connectedClient, serverConfig);
@@ -1076,7 +986,6 @@ export async function listResourcesFromServer(serverConfig: McpServer): Promise<
         // Check capabilities *after* connecting
         const capabilities = connectedClient.client.getServerCapabilities();
         if (!capabilities?.resources) {
-            // console.log(`[MCP Wrapper] Server ${serverIdentifier} does not advertise resource support.`); // Removed console log
             return []; // Return empty list if resources are not supported
         }
 
@@ -1089,11 +998,9 @@ export async function listResourcesFromServer(serverConfig: McpServer): Promise<
     } catch (error: any) { // Add type to error
         // Specifically handle "Method not found" for resources list as non-critical
         if (error?.code === -32601 && error?.message?.includes('Method not found')) {
-             console.warn(`[MCP Wrapper] Server ${serverIdentifier} does not implement resources/list. Returning empty array.`);
              return [];
         }
         // Log and re-throw other errors
-        console.error(`[MCP Wrapper] Error listing resources from ${serverIdentifier}:`, error);
         throw error; // Re-throw the error to be handled by the caller
     } finally {
         await safeCleanup(connectedClient, serverConfig);
@@ -1125,7 +1032,6 @@ export async function listPromptsFromServer(serverConfig: McpServer): Promise<Pr
         // Check capabilities *after* connecting
         const capabilities = connectedClient.client.getServerCapabilities();
         if (!capabilities?.prompts) {
-            // console.log(`[MCP Wrapper] Server ${serverIdentifier} does not advertise prompt support.`);
             return []; // Return empty list if prompts are not supported
         }
 
@@ -1138,11 +1044,9 @@ export async function listPromptsFromServer(serverConfig: McpServer): Promise<Pr
     } catch (error: any) {
         // Specifically handle "Method not found" for prompts list as non-critical
         if (error?.code === -32601 && error?.message?.includes('Method not found')) {
-             console.warn(`[MCP Wrapper] Server ${serverIdentifier} does not implement prompts/list. Returning empty array.`);
              return [];
         }
         // Log and re-throw other errors
-        console.error(`[MCP Wrapper] Error listing prompts from ${serverIdentifier}:`, error);
         throw error; // Re-throw the error to be handled by the caller
     } finally {
         await safeCleanup(connectedClient, serverConfig);
