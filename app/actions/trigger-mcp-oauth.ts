@@ -17,7 +17,6 @@ const triggerOAuthSchema = z.object({
 
 export async function triggerMcpOAuth(serverUuid: string) {
   try {
-    console.log('[triggerMcpOAuth] Starting OAuth for server:', serverUuid);
 
     // Validate input
     const validated = triggerOAuthSchema.parse({ serverUuid });
@@ -70,15 +69,6 @@ export async function triggerMcpOAuth(serverUuid: string) {
       config: decryptedData.config as Record<string, any> | null,
     };
 
-    console.log('[triggerMcpOAuth] Server details:', {
-      name: server.name,
-      type: server.type,
-      command: server.command,
-      args: server.args,
-      hasEnv: !!server.env,
-      url: server.url,
-    });
-
     // Determine OAuth approach based on server type and configuration
     let oauthResult;
 
@@ -88,15 +78,9 @@ export async function triggerMcpOAuth(serverUuid: string) {
       server.args.some((arg) => arg === 'mcp-remote')
     ) {
       // Handle mcp-remote servers (like Linear)
-      console.log(
-        '[triggerMcpOAuth] Detected mcp-remote server, using handleMcpRemoteOAuth'
-      );
       oauthResult = await handleMcpRemoteOAuth(server);
     } else if (server.type === 'STREAMABLE_HTTP' || server.type === 'SSE') {
       // Handle STREAMABLE_HTTP/SSE servers with direct OAuth support
-      console.log(
-        '[triggerMcpOAuth] Handling OAuth for STREAMABLE_HTTP/SSE server'
-      );
       oauthResult = await handleStreamableHttpOAuth(server);
     } else {
       return {
@@ -130,7 +114,6 @@ export async function triggerMcpOAuth(serverUuid: string) {
     }
 
     if (oauthResult.success && 'token' in oauthResult && oauthResult.token) {
-      console.log('[triggerMcpOAuth] OAuth successful, storing token...');
       // Store the token in the server's environment
       await storeOAuthToken(validated.serverUuid, oauthResult, profile.uuid);
 
@@ -143,7 +126,6 @@ export async function triggerMcpOAuth(serverUuid: string) {
     // For mcp-remote servers, even if we don't get a token back, check if OAuth completed
     if (server.args && Array.isArray(server.args) && server.args.some((arg) => arg === 'mcp-remote')) {
       if (oauthResult.success || ('token' in oauthResult && oauthResult.token === 'oauth_working')) {
-        console.log('[triggerMcpOAuth] mcp-remote OAuth detected as working, updating database...');
         // Update the database to mark OAuth as completed
         const currentConfig = (server.config as any) || {};
         
@@ -237,17 +219,14 @@ async function handleMcpRemoteOAuth(server: McpServer) {
 
   // Use sandboxing if available (prefer Bubblewrap, fallback to Firejail)
   if (bubblewrapConfig) {
-    console.log('[triggerMcpOAuth] Applying Bubblewrap sandboxing for OAuth');
     command = bubblewrapConfig.command;
     args = bubblewrapConfig.args;
     env = bubblewrapConfig.env;
   } else if (firejailConfig) {
-    console.log('[triggerMcpOAuth] Applying Firejail sandboxing for OAuth');
     command = firejailConfig.command;
     args = firejailConfig.args;
     env = firejailConfig.env;
   } else {
-    console.log('[triggerMcpOAuth] No sandboxing available for OAuth process');
   }
 
   // Spawn mcp-remote to handle OAuth with sandboxing
@@ -277,7 +256,6 @@ async function handleMcpRemoteOAuth(server: McpServer) {
  * Handle OAuth for STREAMABLE_HTTP/SSE servers
  */
 async function handleStreamableHttpOAuth(server: McpServer) {
-  console.log('[handleStreamableHttpOAuth] Starting OAuth for STREAMABLE_HTTP server:', server.name);
 
   if (!server.url) {
     return {
@@ -318,7 +296,6 @@ async function handleStreamableHttpOAuth(server: McpServer) {
                        response.headers.get('Authorization-URL');
 
       if (oauthUrl) {
-        console.log('[handleStreamableHttpOAuth] Found OAuth URL in headers:', oauthUrl);
         return {
           success: true,
           oauthUrl: oauthUrl,
@@ -349,7 +326,6 @@ async function handleStreamableHttpOAuth(server: McpServer) {
                                 responseData?.authorization_url;
 
         if (possibleOAuthUrl) {
-          console.log('[handleStreamableHttpOAuth] Found OAuth URL in response:', possibleOAuthUrl);
           return {
             success: true,
             oauthUrl: possibleOAuthUrl,
@@ -370,7 +346,6 @@ async function handleStreamableHttpOAuth(server: McpServer) {
 
         for (const path of commonOAuthPaths) {
           const testUrl = new URL(path, serverUrl.origin).toString();
-          console.log('[handleStreamableHttpOAuth] Trying OAuth endpoint:', testUrl);
           
           try {
             const testResponse = await fetch(testUrl, {
@@ -382,7 +357,6 @@ async function handleStreamableHttpOAuth(server: McpServer) {
             if (testResponse.status === 302 || testResponse.status === 200) {
               const location = testResponse.headers.get('Location');
               if (location && (location.includes('oauth') || location.includes('auth'))) {
-                console.log('[handleStreamableHttpOAuth] Found OAuth redirect:', location);
                 return {
                   success: true,
                   oauthUrl: location,
@@ -397,16 +371,13 @@ async function handleStreamableHttpOAuth(server: McpServer) {
             }
           } catch (testError) {
             // Continue trying other paths
-            console.log('[handleStreamableHttpOAuth] OAuth endpoint test failed:', testError);
           }
         }
 
       } catch (parseError) {
-        console.log('[handleStreamableHttpOAuth] Failed to parse response:', parseError);
       }
 
       // If no OAuth URL found anywhere, check if this might be a configuration issue
-      console.log('[handleStreamableHttpOAuth] No OAuth URL found. Server URL:', server.url);
       
       // Special check for known servers with specific requirements
       if (server.url?.includes('sentry.dev') && !server.url.endsWith('/mcp')) {
@@ -510,9 +481,6 @@ async function storeOAuthToken(
     } else if (isMcpRemote) {
       // For mcp-remote servers, OAuth is handled by the mcp-remote process
       // We just need to mark it as OAuth-enabled without storing tokens
-      console.log(
-        `[storeOAuthToken] mcp-remote server ${server.name} OAuth completed, tokens managed by mcp-remote`
-      );
     }
 
     // Update config to mark as authenticated
@@ -536,10 +504,6 @@ async function storeOAuthToken(
         config: updatedConfig,
       })
       .where(eq(mcpServersTable.uuid, serverUuid));
-
-    console.log(
-      `[storeOAuthToken] Successfully updated server ${serverUuid} with OAuth authentication`
-    );
   } catch (error) {
     console.error('Error storing OAuth token:', error);
     throw error;

@@ -2,6 +2,7 @@
 
 import { and, eq } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
+import { z } from 'zod';
 
 import { db } from '@/db';
 import { apiKeysTable, projectsTable } from '@/db/schema';
@@ -13,7 +14,14 @@ const nanoid = customAlphabet(
   64
 );
 
+// Validation schemas
+const uuidSchema = z.string().uuid('Invalid UUID format');
+const apiKeyNameSchema = z.string().min(1).max(100).optional();
+
 export async function createApiKey(projectUuid: string, name?: string) {
+  // Validate inputs
+  const validatedProjectUuid = uuidSchema.parse(projectUuid);
+  const validatedName = apiKeyNameSchema.parse(name);
   const session = await getAuthSession();
   
   if (!session || !session.user.id) {
@@ -24,7 +32,7 @@ export async function createApiKey(projectUuid: string, name?: string) {
   const project = await db
     .select()
     .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
+    .where(eq(projectsTable.uuid, validatedProjectUuid))
     .limit(1);
 
   if (project.length === 0) {
@@ -40,9 +48,9 @@ export async function createApiKey(projectUuid: string, name?: string) {
   const apiKey = await db
     .insert(apiKeysTable)
     .values({
-      project_uuid: projectUuid,
+      project_uuid: validatedProjectUuid,
       api_key: newApiKey,
-      name,
+      name: validatedName,
     })
     .returning();
 
@@ -60,11 +68,14 @@ export async function getFirstApiKey(projectUuid: string) {
     return null;
   }
 
+  // Validate input
+  const validatedProjectUuid = uuidSchema.parse(projectUuid);
+
   // Verify the project belongs to the current user
   const project = await db
     .select()
     .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
+    .where(eq(projectsTable.uuid, validatedProjectUuid))
     .limit(1);
 
   if (project.length === 0) {
@@ -76,18 +87,18 @@ export async function getFirstApiKey(projectUuid: string) {
   }
 
   let apiKey = await db.query.apiKeysTable.findFirst({
-    where: eq(apiKeysTable.project_uuid, projectUuid),
+    where: eq(apiKeysTable.project_uuid, validatedProjectUuid),
   });
 
   if (!apiKey) {
     const newApiKey = `pg_in_${nanoid(64)}`;
     await db.insert(apiKeysTable).values({
-      project_uuid: projectUuid,
+      project_uuid: validatedProjectUuid,
       api_key: newApiKey,
     });
 
     apiKey = await db.query.apiKeysTable.findFirst({
-      where: eq(apiKeysTable.project_uuid, projectUuid),
+      where: eq(apiKeysTable.project_uuid, validatedProjectUuid),
     });
   }
 
@@ -95,6 +106,9 @@ export async function getFirstApiKey(projectUuid: string) {
 }
 
 export async function getApiKeys(projectUuid: string) {
+  // Validate input
+  const validatedProjectUuid = uuidSchema.parse(projectUuid);
+  
   const session = await getAuthSession();
   
   if (!session || !session.user.id) {
@@ -105,7 +119,7 @@ export async function getApiKeys(projectUuid: string) {
   const project = await db
     .select()
     .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
+    .where(eq(projectsTable.uuid, validatedProjectUuid))
     .limit(1);
 
   if (project.length === 0) {
@@ -119,12 +133,16 @@ export async function getApiKeys(projectUuid: string) {
   const apiKeys = await db
     .select()
     .from(apiKeysTable)
-    .where(eq(apiKeysTable.project_uuid, projectUuid));
+    .where(eq(apiKeysTable.project_uuid, validatedProjectUuid));
 
   return apiKeys as ApiKey[];
 }
 
 export async function deleteApiKey(apiKeyUuid: string, projectUuid: string) {
+  // Validate inputs
+  const validatedApiKeyUuid = uuidSchema.parse(apiKeyUuid);
+  const validatedProjectUuid = uuidSchema.parse(projectUuid);
+  
   const session = await getAuthSession();
   
   if (!session || !session.user.id) {
@@ -135,7 +153,7 @@ export async function deleteApiKey(apiKeyUuid: string, projectUuid: string) {
   const project = await db
     .select()
     .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
+    .where(eq(projectsTable.uuid, validatedProjectUuid))
     .limit(1);
 
   if (project.length === 0) {
@@ -151,8 +169,8 @@ export async function deleteApiKey(apiKeyUuid: string, projectUuid: string) {
     .delete(apiKeysTable)
     .where(
       and(
-        eq(apiKeysTable.uuid, apiKeyUuid),
-        eq(apiKeysTable.project_uuid, projectUuid)
+        eq(apiKeysTable.uuid, validatedApiKeyUuid),
+        eq(apiKeysTable.project_uuid, validatedProjectUuid)
       )
     );
 

@@ -1,10 +1,15 @@
 'use server';
 
 import { desc, eq } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { db } from '@/db';
 import { codesTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+
+const uuidSchema = z.string().uuid();
+const fileNameSchema = z.string().min(1).max(255);
+const codeSchema = z.string();
 
 export async function getCodes() {
   const session = await getAuthSession();
@@ -21,6 +26,9 @@ export async function getCodes() {
 }
 
 export async function getCode(uuid: string) {
+  // Validate input
+  const validatedUuid = uuidSchema.parse(uuid);
+  
   const session = await getAuthSession();
   
   if (!session || !session.user.id) {
@@ -30,7 +38,7 @@ export async function getCode(uuid: string) {
   const results = await db
     .select()
     .from(codesTable)
-    .where(eq(codesTable.uuid, uuid));
+    .where(eq(codesTable.uuid, validatedUuid));
     
   if (results.length === 0) {
     throw new Error('Code not found');
@@ -45,6 +53,10 @@ export async function getCode(uuid: string) {
 }
 
 export async function createCode(fileName: string, code: string) {
+  // Validate input
+  const validatedFileName = fileNameSchema.parse(fileName);
+  const validatedCode = codeSchema.parse(code);
+  
   const session = await getAuthSession();
   
   if (!session || !session.user.id) {
@@ -54,8 +66,8 @@ export async function createCode(fileName: string, code: string) {
   const results = await db
     .insert(codesTable)
     .values({
-      fileName,
-      code,
+      fileName: validatedFileName,
+      code: validatedCode,
       user_id: session.user.id,
     })
     .returning();
@@ -63,6 +75,11 @@ export async function createCode(fileName: string, code: string) {
 }
 
 export async function updateCode(uuid: string, fileName: string, code: string) {
+  // Validate input
+  const validatedUuid = uuidSchema.parse(uuid);
+  const validatedFileName = fileNameSchema.parse(fileName);
+  const validatedCode = codeSchema.parse(code);
+  
   const session = await getAuthSession();
   
   if (!session || !session.user.id) {
@@ -73,7 +90,7 @@ export async function updateCode(uuid: string, fileName: string, code: string) {
   const existingCode = await db
     .select()
     .from(codesTable)
-    .where(eq(codesTable.uuid, uuid));
+    .where(eq(codesTable.uuid, validatedUuid));
     
   if (existingCode.length === 0) {
     throw new Error('Code not found');
@@ -86,15 +103,18 @@ export async function updateCode(uuid: string, fileName: string, code: string) {
   const results = await db
     .update(codesTable)
     .set({
-      fileName,
-      code,
+      fileName: validatedFileName,
+      code: validatedCode,
     })
-    .where(eq(codesTable.uuid, uuid))
+    .where(eq(codesTable.uuid, validatedUuid))
     .returning();
   return results[0];
 }
 
 export async function deleteCode(uuid: string) {
+  // Validate input
+  const validatedUuid = uuidSchema.parse(uuid);
+  
   const session = await getAuthSession();
   
   if (!session || !session.user.id) {
@@ -105,7 +125,7 @@ export async function deleteCode(uuid: string) {
   const existingCode = await db
     .select()
     .from(codesTable)
-    .where(eq(codesTable.uuid, uuid));
+    .where(eq(codesTable.uuid, validatedUuid));
     
   if (existingCode.length === 0) {
     throw new Error('Code not found');
@@ -117,7 +137,7 @@ export async function deleteCode(uuid: string) {
 
   const results = await db
     .delete(codesTable)
-    .where(eq(codesTable.uuid, uuid))
+    .where(eq(codesTable.uuid, validatedUuid))
     .returning();
   return results[0];
 }

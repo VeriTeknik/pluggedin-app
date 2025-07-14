@@ -1,10 +1,13 @@
 'use server';
 
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { db } from '@/db';
 import { toolsTable } from '@/db/schema';
 import type { Tool } from '@/types/tool';
+
+const serverUuidSchema = z.string().uuid();
 
 /**
  * Fetches all tools associated with a specific MCP server UUID.
@@ -16,8 +19,11 @@ export async function getToolsForServer(serverUuid: string): Promise<Tool[]> {
     return [];
   }
   try {
+    // Validate input
+    const validatedUuid = serverUuidSchema.parse(serverUuid);
+    
     const tools = await db.query.toolsTable.findMany({
-      where: eq(toolsTable.mcp_server_uuid, serverUuid),
+      where: eq(toolsTable.mcp_server_uuid, validatedUuid),
       orderBy: (tools, { asc }) => [asc(tools.name)], // Order alphabetically by name
     });
     // Ensure the return type matches the expected Tool interface

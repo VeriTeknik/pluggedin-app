@@ -3,11 +3,16 @@
 import { and, eq } from 'drizzle-orm';
 import { promises as fs } from 'fs';
 import path from 'path';
+import { z } from 'zod';
 
 import { db } from '@/db';
 import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
+
+const checkOAuthSchema = z.object({
+  serverUuid: z.string().uuid(),
+});
 
 /**
  * Check if an mcp-remote server has completed OAuth by checking for tokens in its OAuth directory
@@ -18,6 +23,9 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
   error?: string;
 }> {
   try {
+    // Validate input
+    const validated = checkOAuthSchema.parse({ serverUuid });
+    
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, isAuthenticated: false, error: 'Not authenticated' };
@@ -41,7 +49,7 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
       )
       .where(
         and(
-          eq(mcpServersTable.uuid, serverUuid),
+          eq(mcpServersTable.uuid, validated.serverUuid),
           eq(projectsTable.user_id, session.user.id)
         )
       )
@@ -59,10 +67,10 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
     }
 
     // Check OAuth directory for tokens
-    const oauthDir = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'oauth', '.mcp-auth');
+    const oauthDir = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', validated.serverUuid, 'oauth', '.mcp-auth');
     
     // Also check without .mcp-auth subdirectory (some versions store directly in oauth/)
-    const oauthDirAlt = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'oauth');
+    const oauthDirAlt = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', validated.serverUuid, 'oauth');
     
     let hasTokens = false;
     
@@ -70,7 +78,6 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
     try {
       await fs.access(oauthDir);
       const entries = await fs.readdir(oauthDir);
-      console.log(`[checkMcpRemoteOAuth] Found entries in ${oauthDir}: ${entries.join(', ')}`);
       
       // Check subdirectories for token files
       for (const entry of entries) {
@@ -83,13 +90,11 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
           const tokenFile = subFiles.find(f => f.includes('_tokens.json'));
           if (tokenFile) {
             hasTokens = true;
-            console.log(`[checkMcpRemoteOAuth] Found OAuth token file: ${path.join(entryPath, tokenFile)}`);
             break;
           }
         }
       }
     } catch (error) {
-      console.log(`[checkMcpRemoteOAuth] Primary OAuth directory not found: ${oauthDir}`);
     }
     
     // Check alternate location if not found
@@ -115,7 +120,6 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
                 const tokenFile = subFiles.find(f => f.includes('_tokens.json'));
                 if (tokenFile) {
                   hasTokens = true;
-                  console.log(`[checkMcpRemoteOAuth] Found OAuth token file: ${path.join(entryPath, tokenFile)}`);
                   break;
                 }
               }
@@ -123,9 +127,7 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
           }
         }
         
-        console.log(`[checkMcpRemoteOAuth] Checked ${oauthDirAlt}, hasTokens: ${hasTokens}`);
       } catch (error) {
-        console.log(`[checkMcpRemoteOAuth] Alternate OAuth directory not found: ${oauthDirAlt}`);
       }
     }
     
@@ -159,16 +161,14 @@ export async function checkMcpRemoteOAuthCompletion(serverUuid: string): Promise
         await db
           .update(mcpServersTable)
           .set({ config: updatedConfig })
-          .where(eq(mcpServersTable.uuid, serverUuid));
+          .where(eq(mcpServersTable.uuid, validated.serverUuid));
         
-        console.log(`[checkMcpRemoteOAuth] OAuth completed for server ${server.name}`);
         return { success: true, isAuthenticated: true };
       }
       
       return { success: true, isAuthenticated: false };
     } catch (error) {
       // Directory doesn't exist or error reading it
-      console.log(`[checkMcpRemoteOAuth] OAuth directory not found or error: ${error}`);
       return { success: true, isAuthenticated: false };
     }
   } catch (error) {

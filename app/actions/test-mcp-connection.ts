@@ -1,7 +1,23 @@
 'use server';
 
+import { z } from 'zod';
+
 import { McpServerType } from '@/db/schema';
 import { validateHeaders } from '@/lib/security/validators';
+
+const testConfigSchema = z.object({
+  name: z.string().min(1),
+  type: z.nativeEnum(McpServerType),
+  url: z.string().optional(), // Not using .url() because it might include localhost URLs
+  command: z.string().optional(),
+  args: z.array(z.string()).optional(),
+  env: z.record(z.string(), z.string()).optional(),
+  streamableHTTPOptions: z.object({
+    headers: z.record(z.string(), z.string()).optional(),
+    sessionId: z.string().optional(),
+  }).optional(),
+  transport: z.string().optional(),
+});
 
 interface TestConfig {
   name: string;
@@ -90,19 +106,21 @@ function checkForCorsNetworkError(error: unknown): { corsIssue?: boolean; corsDe
 
 export async function testMcpConnection(config: TestConfig): Promise<TestResult> {
   try {
+    // Validate input
+    const validated = testConfigSchema.parse(config);
     // Special handling for mcp-remote servers (servers that proxy to remote URLs)
-    const isMcpRemote = (config.command === 'npx' && config.args?.includes('mcp-remote')) ||
-                        config.transport === 'mcp-remote';
+    const isMcpRemote = (validated.command === 'npx' && validated.args?.includes('mcp-remote')) ||
+                        validated.transport === 'mcp-remote';
     
     if (isMcpRemote) {
       // For mcp-remote servers, we need to test the remote URL
-      let remoteUrl = config.url;
+      let remoteUrl = validated.url;
       
       // If URL not directly available, find it in args
-      if (!remoteUrl && config.args) {
-        const urlIndex = config.args.findIndex(arg => arg.includes('http'));
+      if (!remoteUrl && validated.args) {
+        const urlIndex = validated.args.findIndex(arg => arg.includes('http'));
         if (urlIndex !== -1) {
-          remoteUrl = config.args[urlIndex];
+          remoteUrl = validated.args[urlIndex];
         }
       }
       
@@ -159,15 +177,15 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
     }
     
     // For URL-based servers (SSE and Streamable HTTP)
-    if (config.url && (config.type === McpServerType.SSE || config.type === McpServerType.STREAMABLE_HTTP)) {
+    if (validated.url && (validated.type === McpServerType.SSE || validated.type === McpServerType.STREAMABLE_HTTP)) {
       // Try to make a HEAD request to check if the endpoint is reachable
       let headers: HeadersInit = {
         'User-Agent': 'Plugged.in MCP Client',
       };
       
       // Validate and add custom headers if provided
-      if (config.streamableHTTPOptions?.headers) {
-        const headerValidation = validateHeaders(config.streamableHTTPOptions.headers);
+      if (validated.streamableHTTPOptions?.headers) {
+        const headerValidation = validateHeaders(validated.streamableHTTPOptions.headers);
         if (!headerValidation.valid) {
           return {
             success: false,
@@ -185,7 +203,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
 
       // For all Streamable HTTP servers, try to send an initialize request
       // This is the proper way to test MCP servers
-      if (config.type === McpServerType.STREAMABLE_HTTP) {
+      if (validated.type === McpServerType.STREAMABLE_HTTP) {
         // Add MCP-compatible headers
         headers = {
           ...headers,
@@ -193,7 +211,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
         };
         try {
           // Try to send an initialize request
-          const initResponse = await fetch(config.url, {
+          const initResponse = await fetch(validated.url, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -272,7 +290,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
             }
             
             // Check for CORS issues
-            const corsDetails = await checkForCorsIssue(initResponse.clone(), config.url, responseText);
+            const corsDetails = await checkForCorsIssue(initResponse.clone(), validated.url, responseText);
             
             // Check if this is a 401 authentication error
             const requiresAuth = initResponse.status === 401;
@@ -318,7 +336,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
 
       // For other servers, try HEAD request first
       try {
-        const response = await fetch(config.url, {
+        const response = await fetch(validated.url, {
           method: 'HEAD',
           headers,
           signal: AbortSignal.timeout(5000), // 5 second timeout
@@ -344,7 +362,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
       } catch (fetchError) {
         // If HEAD fails, try OPTIONS as a fallback
         try {
-          const optionsResponse = await fetch(config.url, {
+          const optionsResponse = await fetch(validated.url, {
             method: 'OPTIONS',
             headers,
             signal: AbortSignal.timeout(5000),
@@ -374,7 +392,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
     }
 
     // For STDIO servers
-    if (config.command && config.type === McpServerType.STDIO) {
+    if (validated.command && validated.type === McpServerType.STDIO) {
       // Check if the command exists
       const { exec } = await import('child_process');
       const { promisify } = await import('util');
@@ -382,11 +400,11 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
 
       try {
         // Try to check if the command is available
-        const checkCommand = config.command === 'npx' ? 'npx --version' : `which ${config.command}`;
+        const checkCommand = validated.command === 'npx' ? 'npx --version' : `which ${validated.command}`;
         await execPromise(checkCommand);
 
         // If it's npx with a package, we can't easily verify without installing
-        if (config.command === 'npx' && config.args?.[0]) {
+        if (validated.command === 'npx' && validated.args?.[0]) {
           return {
             success: true,
             message: 'Command available (npx package will be installed on first use)',
@@ -408,7 +426,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
           success: false,
           message: 'Command not found',
           details: {
-            error: `Command '${config.command}' not found in PATH`,
+            error: `Command '${validated.command}' not found in PATH`,
           },
         };
       }
