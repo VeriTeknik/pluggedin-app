@@ -55,7 +55,7 @@ const CATEGORY_KEYWORDS: Record<McpServerCategory, string[]> = {
  * @param tags - Server tags
  * @returns The most likely category
  */
-export function detectCategory(
+function detectCategory(
   name: string,
   description: string = '',
   tags: string[] = []

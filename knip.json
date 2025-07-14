@@ -1,0 +1,53 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": [
+        "app/**/*.{ts,tsx}!",
+        "components/**/*.{ts,tsx}!",
+        "lib/**/*.{ts,tsx}!",
+        "scripts/*.{ts,tsx}!"
+      ],
+      "project": [
+        "**/*.{ts,tsx,js,jsx}!",
+        "!**/*.test.*",
+        "!**/*.spec.*"
+      ]
+    }
+  },
+  "ignore": [
+    "node_modules/**",
+    ".next/**",
+    "dist/**",
+    "build/**",
+    "coverage/**",
+    "**/*.d.ts",
+    "console-log-backup-*/**",
+    "scripts/archive/**",
+    "remove-console-*.js",
+    "scripts/remove-console-logs.js"
+  ],
+  "ignoreDependencies": [
+    "eslint-config-next"
+  ],
+  "next": {
+    "entry": [
+      "next.config.js",
+      "app/**/page.tsx",
+      "app/**/layout.tsx", 
+      "app/**/error.tsx",
+      "app/**/loading.tsx",
+      "app/**/not-found.tsx",
+      "app/**/default.tsx",
+      "app/api/**/route.ts",
+      "middleware.ts"
+    ]
+  },
+  "typescript": {
+    "config": ["tsconfig.json"]
+  },
+  "vitest": {
+    "config": ["vitest.config.ts"],
+    "entry": ["**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}"]
+  }
+}

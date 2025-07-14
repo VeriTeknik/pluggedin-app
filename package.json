@@ -20,7 +20,11 @@
     "version:major": "pnpm version major",
     "postversion": "git push && git push --tags",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "knip": "knip",
+    "knip:fix": "knip --fix",
+    "knip:dependencies": "knip --dependencies",
+    "knip:exports": "knip --exports"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.10.0",
@@ -97,7 +101,6 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
-    "@next/eslint-plugin-next": "^15.3.5",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.6.3",
     "@types/bcrypt": "^5.0.2",

@@ -14,21 +14,8 @@ export interface Doc {
   updated_at: Date;
 }
 
-export interface CreateDocRequest {
-  name: string;
-  description?: string;
-  tags?: string[];
-  file: File;
-}
-
-export interface UpdateDocRequest {
-  name?: string;
-  description?: string;
-  tags?: string[];
-}
-
 // New interfaces for RAG progress tracking
-export interface UploadProgress {
+interface UploadProgress {
   upload_id: string;
   status: 'processing' | 'completed' | 'failed';
   message: string;
@@ -60,11 +47,6 @@ export interface UploadProgressState {
   created_at: Date;
 }
 
-export interface UploadStatusResponse {
-  success: boolean;
-  progress?: UploadProgress;
-  error?: string;
-}
 
 export interface DocUploadResponse {
   success: boolean;
@@ -86,16 +68,4 @@ export interface DocListResponse {
   error?: string;
 }
 
-export interface RAGDocumentRequest {
-  id: string;
-  title: string;
-  content: string;
-  metadata: {
-    filename: string;
-    mimeType: string;
-    fileSize: number;
-    tags?: string[];
-    userId: string;
-    projectUuid?: string;
-  };
-} 
+ 

@@ -244,52 +244,6 @@ export const createMockRegistryServer = (overrides = {}) => ({
   ...overrides,
 });
 
-// Mock wizard data
-export const createMockWizardData = {
-  npm: (overrides = {}) => ({
-    step: 'package',
-    serverType: 'stdio' as const,
-    deploymentType: 'npm' as const,
-    npmPackage: 'test-mcp-server',
-    owner: 'testuser',
-    repo: 'test-mcp-server',
-    mainBranch: 'main',
-    packageManager: 'npm' as const,
-    packageCommand: 'npx',
-    description: 'Test MCP server for npm',
-    envVars: [],
-    ...overrides,
-  }),
-  
-  docker: (overrides = {}) => ({
-    step: 'package',
-    serverType: 'stdio' as const,
-    deploymentType: 'docker' as const,
-    dockerImage: 'testuser/test-mcp-server',
-    owner: 'testuser',
-    repo: 'test-mcp-server',
-    mainBranch: 'main',
-    packageManager: 'docker' as const,
-    description: 'Test MCP server for docker',
-    envVars: [],
-    ...overrides,
-  }),
-  
-  pypi: (overrides = {}) => ({
-    step: 'package',
-    serverType: 'stdio' as const,
-    deploymentType: 'pypi' as const,
-    pypiPackage: 'test-mcp-server',
-    owner: 'testuser',
-    repo: 'test-mcp-server',
-    mainBranch: 'main',
-    packageManager: 'pip' as const,
-    packageCommand: 'python -m',
-    description: 'Test MCP server for pypi',
-    envVars: [],
-    ...overrides,
-  }),
-};
 
 // Mock GitHub API responses
 export const mockGitHubResponses = {
