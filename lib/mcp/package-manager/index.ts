@@ -203,6 +203,12 @@ export class PackageManager {
           continue;
         }
         
+        // Skip known subcommands (exec for npm, dlx for pnpm)
+        if ((command === 'npm' && currentArg === 'exec') || (command === 'pnpm' && currentArg === 'dlx')) {
+          packageIndex++;
+          continue;
+        }
+        
         // Found a non-flag argument, this should be the package name
         break;
       }
@@ -225,8 +231,8 @@ export class PackageManager {
       if (existingBinary) {
         console.log(`[PackageManager] Using cached package: ${packageName}`);
         
-        // For npx/npm exec, uvx, and docker, keep using the original command even if package is cached
-        if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || command === 'uvx' || command === 'docker') {
+        // For npx/npm exec, pnpm dlx, uvx, and docker, keep using the original command even if package is cached
+        if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || (command === 'pnpm' && args[0] === 'dlx') || command === 'uvx' || command === 'docker') {
           const installDir = (handler as any).getServerInstallDir(serverUuid);
           return { 
             command: command, 
@@ -235,6 +241,10 @@ export class PackageManager {
               ...this.getEnvironmentForType(packageManagerType, serverUuid),
               // Set package manager specific environment
               ...(command === 'npx' ? { npm_config_prefix: installDir } : {}),
+              ...(command === 'pnpm' ? { 
+                PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
+                NODE_ENV: 'production' 
+              } : {}),
               ...(command === 'uvx' ? { 
                 UV_PROJECT_ENVIRONMENT: `${installDir}/.venv`,
                 UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR 
@@ -263,9 +273,9 @@ export class PackageManager {
         packageName,
       });
       
-      // For npx/npm exec, uvx, and docker, keep using the original command
+      // For npx/npm exec, pnpm dlx, uvx, and docker, keep using the original command
       // The package is installed, but we run it through the original command
-      if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || command === 'uvx' || command === 'docker') {
+      if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || (command === 'pnpm' && args[0] === 'dlx') || command === 'uvx' || command === 'docker') {
         const handler = this.getHandler(packageManagerType);
         const installDir = (handler as any).getServerInstallDir(serverUuid);
         
@@ -276,6 +286,10 @@ export class PackageManager {
             ...this.getEnvironmentForType(packageManagerType, serverUuid),
             // Set package manager specific environment
             ...(command === 'npx' ? { npm_config_prefix: installDir } : {}),
+            ...(command === 'pnpm' ? { 
+              PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
+              NODE_ENV: 'production' 
+            } : {}),
             ...(command === 'uvx' ? { 
               UV_PROJECT_ENVIRONMENT: `${installDir}/.venv`,
               UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR 

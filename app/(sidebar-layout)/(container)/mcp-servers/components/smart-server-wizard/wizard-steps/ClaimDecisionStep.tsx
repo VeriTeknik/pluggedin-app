@@ -19,7 +19,16 @@ interface ClaimDecisionStepProps {
 
 // GitHub OAuth configuration
 const getGitHubClientId = () => {
-  return process.env.GITHUB_CLIENT_ID || '';
+  if (typeof window === 'undefined') return '';
+  
+  const origin = window.location.origin;
+  if (origin.includes('localhost')) {
+    return 'Ov23liauuJvy6sLzrDdr'; // Localhost client ID
+  } else if (origin.includes('staging')) {
+    return 'Ov23liGQCDAID0kY58HE'; // Staging client ID
+  } else {
+    return '13219bd31987f25b7e34'; // Production client ID
+  }
 };
 
 const getRedirectUri = () => {

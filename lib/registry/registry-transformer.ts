@@ -90,7 +90,8 @@ function extractCommand(pkg?: RegistryPackage): string {
   
   switch (pkg.registry_name) {
     case 'npm':
-      return pkg.runtime_hint || 'npx';
+      // Use pnpm dlx for better performance and to avoid npm warnings
+      return pkg.runtime_hint || 'pnpm';
     case 'docker':
       return 'docker';
     case 'pypi':
@@ -108,33 +109,108 @@ function extractCommand(pkg?: RegistryPackage): string {
   }
 }
 
+// Helper function to extract arguments from schema structure
+function extractArgumentsFromSchema(schemaArgs: any[]): string[] {
+  const result: string[] = [];
+  
+  if (!schemaArgs || !Array.isArray(schemaArgs)) return result;
+  
+  for (const arg of schemaArgs) {
+    if (arg.type === 'positional') {
+      // For positional arguments, use value or default
+      const value = arg.value || arg.default || arg.value_hint || '';
+      if (value) result.push(value);
+    } else if (arg.type === 'named') {
+      // For named arguments, add the name and value separately
+      const name = arg.name || '';
+      const value = arg.value || arg.default || '';
+      
+      if (name) {
+        result.push(name);
+        // Only add value if it exists (some flags don't have values)
+        if (value) result.push(value);
+      }
+    }
+  }
+  
+  return result;
+}
+
 function extractArgs(pkg?: RegistryPackage): string[] {
   if (!pkg) return [];
   
   const args: string[] = [];
   
+  // Note: runtime_arguments should be handled by the caller
+  // as they go between the runtime command and package name
+  // This function only handles package arguments that come after the package name
+  
   // Handle different registry types
   switch (pkg.registry_name) {
     case 'docker':
-      // Extract docker-specific arguments
+      // Docker command starts with 'run'
+      args.push('run');
+      
       if (pkg.package_arguments) {
-        // For docker, we need to extract the actual command parts
-        const dockerArgs = pkg.package_arguments
-          .filter((arg: any) => arg.type === 'named' && !arg.name?.startsWith('-e '))
-          .map((arg: any) => arg.value || arg.default || arg.name || '');
-        args.push('run', ...dockerArgs);
+        // Extract ALL positional arguments in order (image, paths, etc.)
+        const positionalArgs = pkg.package_arguments
+          .filter((arg: any) => arg.type === 'positional')
+          .map((arg: any) => arg.value || arg.default || '');
         
-        // Add the image name (positional argument)
-        const imageArg = pkg.package_arguments.find((arg: any) => arg.type === 'positional');
-        if (imageArg) {
-          args.push(imageArg.value || imageArg.default || '');
-        }
+        // Add all positional arguments
+        args.push(...positionalArgs);
+        
+        // Also handle any named arguments if present
+        const namedArgs = pkg.package_arguments
+          .filter((arg: any) => arg.type === 'named' && !arg.name?.startsWith('-e'))
+          .flatMap((arg: any) => {
+            const argName = arg.name || '';
+            const argValue = arg.value || arg.default || '';
+            // If we have both name and value, return both
+            // If only name (like a flag), return just the name
+            return argValue ? [argName, argValue] : [argName];
+          })
+          .filter(Boolean);
+        
+        args.push(...namedArgs);
       }
       break;
       
     case 'npm':
-      // For npm packages, just add the package name
+      // For pnpm, we need to add 'dlx' subcommand
+      args.push('dlx');
+      
+      // First add runtime arguments (e.g., --yes for npx)
+      if (pkg.runtime_arguments) {
+        const runtimeArgs = extractArgumentsFromSchema(pkg.runtime_arguments);
+        args.push(...runtimeArgs);
+      }
+      
+      // Then add package name
       args.push(pkg.name);
+      
+      // Finally add package arguments (arguments for the npm package itself)
+      if (pkg.package_arguments) {
+        const packageArgs = extractArgumentsFromSchema(pkg.package_arguments);
+        args.push(...packageArgs);
+      }
+      break;
+      
+    case 'pypi':
+      // First add runtime arguments (e.g., flags for uvx)
+      if (pkg.runtime_arguments) {
+        const runtimeArgs = extractArgumentsFromSchema(pkg.runtime_arguments);
+        args.push(...runtimeArgs);
+      }
+      
+      // Then add package name
+      args.push(pkg.name);
+      
+      // Finally add package arguments (arguments for the Python package itself)
+      if (pkg.package_arguments) {
+        const packageArgs = extractArgumentsFromSchema(pkg.package_arguments);
+        args.push(...packageArgs);
+      }
       break;
       
     case 'unknown':

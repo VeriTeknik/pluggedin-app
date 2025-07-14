@@ -60,6 +60,7 @@ const BLOCKED_HOSTS = [
 const ALLOWED_COMMANDS = [
   // Package managers only - for security
   'npx',      // Node.js package executor
+  'pnpm',     // pnpm package manager (uses dlx for execution)
   'uvx',      // Python package executor (fast, secure)
   'dnx',      // .NET package executor
   // Legacy support - consider removing
