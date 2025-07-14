@@ -1,9 +1,12 @@
 'use client';
 
+import { ExternalLink,RefreshCw, Shield, ShieldOff } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Shield, ShieldOff, RefreshCw, ExternalLink, Info } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+
+import { checkMcpRemoteOAuthCompletion } from '@/app/actions/check-mcp-remote-oauth';
+import { clearMcpServerOAuth, getMcpServerOAuthStatus, type OAuthStatus,triggerMcpServerOAuth } from '@/app/actions/mcp-oauth';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Tooltip,
   TooltipContent,
@@ -11,8 +14,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
-import { getMcpServerOAuthStatus, clearMcpServerOAuth, triggerMcpServerOAuth, type OAuthStatus } from '@/app/actions/mcp-oauth';
-import { checkMcpRemoteOAuthCompletion } from '@/app/actions/check-mcp-remote-oauth';
+
 import { OAuthInfoDialog } from './oauth-info-dialog';
 
 interface OAuthStatusProps {

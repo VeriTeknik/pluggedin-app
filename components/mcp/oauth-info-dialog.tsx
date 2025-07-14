@@ -1,6 +1,9 @@
 'use client';
 
-import { Info, ExternalLink, Terminal } from 'lucide-react';
+import { ExternalLink, Info, Terminal } from 'lucide-react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -8,8 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Button } from '@/components/ui/button';
 
 interface OAuthInfoDialogProps {
   open: boolean;

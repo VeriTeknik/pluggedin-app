@@ -7,7 +7,6 @@ import path from 'path';
 import { db } from '@/db';
 import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
-import { encryptField } from '@/lib/encryption';
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
 
 /**

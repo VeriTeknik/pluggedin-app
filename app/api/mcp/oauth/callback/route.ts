@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
+
 import { getAuthSession } from '@/lib/auth';
+import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
 
 export async function GET(request: NextRequest) {
   const session = await getAuthSession();

@@ -5,8 +5,8 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
-import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
 import { decryptServerData, encryptField } from '@/lib/encryption';
+import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
 
 export interface OAuthStatus {
   isAuthenticated: boolean;

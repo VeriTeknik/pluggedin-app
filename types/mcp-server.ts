@@ -27,7 +27,8 @@ export interface McpServer {
   ratingCount?: number;
   installationCount?: number;
 
-  // Flag to indicate if firejail sandboxing should be applied (used internally)
+  // Flag to control sandboxing. Defaults to true for STDIO servers, false for others
+  // Set to false to explicitly disable sandboxing for a specific server
   applySandboxing?: boolean;
 
   // Streamable HTTP specific options

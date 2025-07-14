@@ -16,6 +16,7 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 import { execSync } from 'child_process';
+import * as fs from 'fs';
 import os from 'os';
 import path from 'path';
 
@@ -76,6 +77,7 @@ async function safeCleanup(connectedClient: ConnectedMcpClient | undefined, serv
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+
 // Check if a command is available on the system
 async function isCommandAvailable(command: string): Promise<boolean> {
   try {
@@ -84,7 +86,6 @@ async function isCommandAvailable(command: string): Promise<boolean> {
     return true;
   } catch {
     // Fallback: check common binary locations
-    const fs = await import('fs');
     const commonPaths = [
       `/usr/local/bin/${command}`,
       `/usr/bin/${command}`,
@@ -137,6 +138,13 @@ export function createBubblewrapConfig(
     appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
     mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')
   };
+  
+  // Ensure workspace directory exists
+  try {
+    fs.mkdirSync(paths.mcpWorkspace, { recursive: true });
+  } catch (err) {
+    console.warn(`[MCP Wrapper] Could not create workspace directory ${paths.mcpWorkspace}:`, err);
+  }
 
   // Resource limits are imported at the top
 
@@ -172,12 +180,20 @@ export function createBubblewrapConfig(
     '--ro-bind', '/etc/ssl', '/etc/ssl',
     '--ro-bind', '/etc/ca-certificates', '/etc/ca-certificates',
     
-    // Python-specific bindings
-    '--ro-bind', '/usr/lib/python3', '/usr/lib/python3',
-    '--ro-bind', '/usr/local/lib/python3', '/usr/local/lib/python3',
+    // Python-specific bindings (use try variants for directories that might not exist)
+    '--ro-bind-try', '/usr/lib/python3', '/usr/lib/python3',
+    '--ro-bind-try', '/usr/lib/python3.12', '/usr/lib/python3.12',
+    '--ro-bind-try', '/usr/local/lib/python3', '/usr/local/lib/python3',
+    '--ro-bind-try', '/usr/local/lib/python3.12', '/usr/local/lib/python3.12',
     
     // User's local bin directory
     '--ro-bind', paths.localBin, paths.localBin,
+    
+    // Pipx venvs directory (needed for uvx and other pipx-installed tools)
+    '--ro-bind-try', `${paths.userHome}/.local/share/pipx`, `${paths.userHome}/.local/share/pipx`,
+    
+    // UV tools directory (needs write access for uvx)
+    '--bind', `${paths.userHome}/.local/share/uv`, `${paths.userHome}/.local/share/uv`,
     
     // MCP Interpreter directories (mount from config)
     '--ro-bind', PackageManagerConfig.NODEJS_BIN_DIR, PackageManagerConfig.NODEJS_BIN_DIR,
@@ -187,18 +203,17 @@ export function createBubblewrapConfig(
     // UV cache directory
     '--bind', `${paths.userHome}/.cache/uv`, `${paths.userHome}/.cache/uv`,
     
-    // Docker socket (only if not using network isolation)
-    ...(PackageManagerConfig.ENABLE_NETWORK_ISOLATION ? [] : ['--ro-bind', '/var/run/docker.sock', '/var/run/docker.sock']),
+    // MCP package store directory (needed for uvx and other package managers)
+    '--bind', PackageManagerConfig.PACKAGE_STORE_DIR, PackageManagerConfig.PACKAGE_STORE_DIR,
     
-    // Set user and group
+    // Docker socket (only if not using network isolation, use try variant since Docker might not be installed)
+    ...(PackageManagerConfig.ENABLE_NETWORK_ISOLATION ? [] : ['--ro-bind-try', '/var/run/docker.sock', '/var/run/docker.sock']),
+    
+    // User/group mapping for user namespace
     '--uid', '1000',
     '--gid', '1000',
     
-    // Resource limits (bubblewrap uses different syntax: --rlimit RESOURCE soft hard)
-    // CPU time limit (in seconds) - using a high value since we control via cgroups
-    '--rlimit', 'cpu', '3600', '3600',
-    // Virtual memory limit (address space)
-    '--rlimit', 'as', `${PackageManagerConfig.MEMORY_MAX_MB * 1024 * 1024}`, `${PackageManagerConfig.MEMORY_MAX_MB * 1024 * 1024}`,
+    // Note: --rlimit is not supported in bubblewrap < 0.5.0
     
     // Security capabilities
     '--cap-drop', 'ALL',
@@ -271,6 +286,14 @@ export function createFirejailConfig(
     appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
     mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')
   };
+  
+  // Ensure workspace directory exists
+  try {
+    fs.mkdirSync(paths.mcpWorkspace, { recursive: true });
+  } catch (err) {
+    console.warn(`[MCP Wrapper] Could not create workspace directory ${paths.mcpWorkspace}:`, err);
+  }
+  
   // Only apply firejail to STDIO servers with a command
   if (serverConfig.type !== McpServerType.STDIO || !serverConfig.command) return null;
 
@@ -465,11 +488,33 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         }
       } else {
         console.log(`[MCP Wrapper] Skipping command transformation for ${serverConfig.name} (discovery mode)`);
+        
+        // Even in discovery mode, we need to set up proper environment for uvx
+        if (serverConfig.command === 'uvx') {
+          const serverUuid = serverConfig.uuid || serverConfig.name;
+          const installDir = path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, 'uv');
+          packageManagerEnv = {
+            UV_PROJECT_ENVIRONMENT: `${installDir}/.venv`,
+            UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR,
+          };
+          console.log(`[MCP Wrapper] Set uvx environment for discovery:`, packageManagerEnv);
+        }
       }
 
-      // Apply sandboxing only if explicitly requested and applicable
+      // Check if this is a Docker-based server that needs direct socket access
+      const isDockerServer = 
+        transformedCommand === 'docker' || 
+        (transformedCommand === 'uvx' && 
+         transformedArgs.some(arg => arg.toLowerCase().includes('docker')));
+      
+      if (isDockerServer) {
+        console.log(`[MCP Wrapper] Skipping sandboxing for Docker-based server: ${serverConfig.name}`);
+      }
+
+      // Apply sandboxing by default for all STDIO servers (unless explicitly disabled)
       let sandboxConfig: FirejailConfig | null = null;
-      if (serverConfig.applySandboxing === true) { // Check for the flag
+      // Only skip sandboxing if explicitly set to false or if it's a Docker server
+      if (serverConfig.applySandboxing !== false && serverConfig.type === McpServerType.STDIO && !isDockerServer) {
         // Package manager config is imported at the top
         
         // Check availability of isolation tools
@@ -479,7 +524,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         ]);
         
         // Log availability for debugging
-        console.log(`[MCP Wrapper] Isolation tools availability:`, {
+        console.log(`[MCP Wrapper] Applying sandboxing for ${serverConfig.name} (STDIO server):`, {
           bwrap: bwrapAvailable,
           firejail: firejailAvailable,
           platform: process.platform,
@@ -593,7 +638,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         : (process.env.HOME || os.homedir() || '/app');
 
       const stdioParams: StdioServerParameters = sandboxConfig ? {
-        // Use sandbox configuration because applySandboxing was true
+        // Use sandbox configuration (default for STDIO servers)
         command: sandboxConfig.command,
         args: sandboxConfig.args,
         env: {

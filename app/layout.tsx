@@ -23,7 +23,6 @@ import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Toaster } from '@/components/ui/toaster';
-import { initializeFont } from '@/lib/font-utils';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

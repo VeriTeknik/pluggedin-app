@@ -225,15 +225,20 @@ export class PackageManager {
       if (existingBinary) {
         console.log(`[PackageManager] Using cached package: ${packageName}`);
         
-        // For npx/npm exec and docker, keep using the original command even if package is cached
-        if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || command === 'docker') {
+        // For npx/npm exec, uvx, and docker, keep using the original command even if package is cached
+        if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || command === 'uvx' || command === 'docker') {
           const installDir = (handler as any).getServerInstallDir(serverUuid);
           return { 
             command: command, 
             args: args, // Use original args including flags
             env: {
               ...this.getEnvironmentForType(packageManagerType, serverUuid),
-              npm_config_prefix: installDir,
+              // Set package manager specific environment
+              ...(command === 'npx' ? { npm_config_prefix: installDir } : {}),
+              ...(command === 'uvx' ? { 
+                UV_PROJECT_ENVIRONMENT: `${installDir}/.venv`,
+                UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR 
+              } : {}),
             }
           };
         }
@@ -258,9 +263,9 @@ export class PackageManager {
         packageName,
       });
       
-      // For npx/npm exec and docker, keep using the original command
+      // For npx/npm exec, uvx, and docker, keep using the original command
       // The package is installed, but we run it through the original command
-      if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || command === 'docker') {
+      if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || command === 'uvx' || command === 'docker') {
         const handler = this.getHandler(packageManagerType);
         const installDir = (handler as any).getServerInstallDir(serverUuid);
         
@@ -269,8 +274,12 @@ export class PackageManager {
           args: args, // Use original args including flags
           env: {
             ...this.getEnvironmentForType(packageManagerType, serverUuid),
-            // Ensure npx can find the installed package
-            npm_config_prefix: installDir,
+            // Set package manager specific environment
+            ...(command === 'npx' ? { npm_config_prefix: installDir } : {}),
+            ...(command === 'uvx' ? { 
+              UV_PROJECT_ENVIRONMENT: `${installDir}/.venv`,
+              UV_CACHE_DIR: PackageManagerConfig.UV_CACHE_DIR 
+            } : {}),
           }
         };
       }

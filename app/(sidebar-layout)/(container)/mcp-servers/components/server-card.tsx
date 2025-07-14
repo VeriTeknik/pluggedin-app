@@ -7,8 +7,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isServerShared, unshareServer } from '@/app/actions/social';
-import { ShareServerDialog } from '@/components/server/share-server-dialog';
 import { McpOAuthStatus } from '@/components/mcp/oauth-status';
+import { ShareServerDialog } from '@/components/server/share-server-dialog';
 import {
   AlertDialog,
   AlertDialogAction,
