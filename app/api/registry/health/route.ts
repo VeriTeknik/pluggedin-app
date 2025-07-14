@@ -1,8 +1,22 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
+import { RateLimiters } from '@/lib/rate-limiter';
+import { createErrorResponse, getSafeErrorMessage } from '@/lib/api-errors';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = await RateLimiters.api(request);
+  
+  if (!rateLimitResult.allowed) {
+    const response = createErrorResponse('Too many requests', 429, 'RATE_LIMIT_EXCEEDED');
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+    response.headers.set('X-RateLimit-Reset', rateLimitResult.reset.toString());
+    response.headers.set('Retry-After', Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString());
+    return response;
+  }
   try {
     const client = new PluggedinRegistryClient();
     const isHealthy = await client.healthCheck();
@@ -12,13 +26,11 @@ export async function GET() {
       registry_url: process.env.REGISTRY_API_URL || 'https://registry.plugged.in/v0'
     });
   } catch (error) {
-    return NextResponse.json(
-      { 
-        status: 'error', 
-        error: error instanceof Error ? error.message : 'Unknown error',
-        registry_url: process.env.REGISTRY_API_URL || 'https://registry.plugged.in/v0'
-      },
-      { status: 503 }
+    console.error('Registry health check failed:', error);
+    return createErrorResponse(
+      getSafeErrorMessage(error),
+      503,
+      'REGISTRY_UNAVAILABLE'
     );
   }
 }

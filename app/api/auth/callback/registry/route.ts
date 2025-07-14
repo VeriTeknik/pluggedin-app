@@ -1,6 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { storeRegistryOAuthToken } from '@/app/actions/registry-oauth-session';
+import { RateLimiters } from '@/lib/rate-limiter';
 
 export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = await RateLimiters.registryOAuth(request);
+  
+  if (!rateLimitResult.allowed) {
+    return new NextResponse('Too many OAuth attempts. Please try again later.', {
+      status: 429,
+      headers: {
+        'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+        'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+        'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+        'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
+      },
+    });
+  }
+  
   const baseUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || request.nextUrl.origin;
   
   const searchParams = request.nextUrl.searchParams;
@@ -20,13 +37,13 @@ export async function GET(request: NextRequest) {
             if (window.opener) {
               window.opener.postMessage({
                 type: 'github-oauth-error',
-                error: '${error}'
-              }, '${baseUrl}');
+                error: '${encodeURIComponent(error)}'
+              }, '${encodeURIComponent(baseUrl)}');
               document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center; color: #dc2626;"><h2>Authentication failed</h2><p>${error}</p><p>This window will close automatically...</p></div>';
               setTimeout(() => window.close(), 3000);
             } else {
               // Redirect to search page with error message
-              window.location.href = '${baseUrl}/search?auth_error=${encodeURIComponent(error)}';
+              window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=${encodeURIComponent(error)}';
             }
           </script>
         </head>
@@ -54,10 +71,10 @@ export async function GET(request: NextRequest) {
               window.opener.postMessage({
                 type: 'github-oauth-error',
                 error: 'missing_code'
-              }, '${baseUrl}');
+              }, '${encodeURIComponent(baseUrl)}');
               setTimeout(() => window.close(), 1000);
             } else {
-              window.location.href = '${baseUrl}/search?auth_error=missing_code';
+              window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=missing_code';
             }
           </script>
         </head>
@@ -98,11 +115,11 @@ export async function GET(request: NextRequest) {
               if (window.opener) {
                 window.opener.postMessage({
                   type: 'github-oauth-error',
-                  error: 'Token exchange failed: ${tokenData.error}'
-                }, '${baseUrl}');
+                  error: 'Token exchange failed: ${encodeURIComponent(tokenData.error)}'
+                }, '${encodeURIComponent(baseUrl)}');
                 setTimeout(() => window.close(), 2000);
               } else {
-                window.location.href = '${baseUrl}/search?auth_error=${encodeURIComponent(tokenData.error)}';
+                window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=${encodeURIComponent(tokenData.error)}';
               }
             </script>
           </head>
@@ -126,10 +143,10 @@ export async function GET(request: NextRequest) {
                 window.opener.postMessage({
                   type: 'github-oauth-error',
                   error: 'No access token received'
-                }, '${baseUrl}');
+                }, '${encodeURIComponent(baseUrl)}');
                 setTimeout(() => window.close(), 2000);
               } else {
-                window.location.href = '${baseUrl}/search?auth_error=no_access_token';
+                window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=no_access_token';
               }
             </script>
           </head>
@@ -141,23 +158,60 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Store token securely and handle redirect
+    // Get GitHub username for storage
+    const userResponse = await fetch('https://api.github.com/user', {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+        Accept: 'application/vnd.github.v3+json',
+      },
+    });
+
+    const userData = await userResponse.json();
+    const githubUsername = userData.login || 'unknown';
+
+    // Store token securely on server-side
+    const storeResult = await storeRegistryOAuthToken(tokenData.access_token, githubUsername);
+    
+    if (!storeResult.success) {
+      const errorHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Authentication Error</title>
+            <script>
+              if (window.opener) {
+                window.opener.postMessage({
+                  type: 'github-oauth-error',
+                  error: 'Failed to store authentication session'
+                }, '${encodeURIComponent(baseUrl)}');
+                setTimeout(() => window.close(), 2000);
+              } else {
+                window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=session_storage_failed';
+              }
+            </script>
+          </head>
+          <body></body>
+        </html>
+      `;
+      return new NextResponse(errorHtml, {
+        headers: { 'Content-Type': 'text/html' },
+      });
+    }
+
+    // Send success response without exposing the token
     const htmlResponse = `
       <!DOCTYPE html>
       <html>
         <head>
           <title>Authentication Success</title>
           <script>
-            // Store token in localStorage
-            localStorage.setItem('registry_oauth_token', '${tokenData.access_token}');
-            
             // Check if we're in a popup window
             if (window.opener) {
-              // Send message to opener
+              // Send message to opener with username only
               window.opener.postMessage({
                 type: 'github-oauth-success',
-                accessToken: '${tokenData.access_token}'
-              }, '${baseUrl}');
+                githubUsername: '${encodeURIComponent(githubUsername)}'
+              }, '${encodeURIComponent(baseUrl)}');
               
               // Show success message and close
               document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center; color: #10b981;"><h2>Authentication successful!</h2><p>This window will close automatically...</p></div>';
@@ -209,10 +263,10 @@ export async function GET(request: NextRequest) {
               window.opener.postMessage({
                 type: 'github-oauth-error',
                 error: 'Authentication process failed'
-              }, '${baseUrl}');
+              }, '${encodeURIComponent(baseUrl)}');
               setTimeout(() => window.close(), 2000);
             } else {
-              window.location.href = '${baseUrl}/search?auth_error=callback_processing_failed';
+              window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=callback_processing_failed';
             }
           </script>
         </head>

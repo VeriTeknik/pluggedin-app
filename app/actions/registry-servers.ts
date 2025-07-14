@@ -139,7 +139,7 @@ export async function verifyGitHubOwnership(registryToken: string, repoUrl: stri
     if (!userResponse.ok) {
       return { 
         isOwner: false, 
-        reason: 'Failed to fetch GitHub user info. Please re-authenticate.',
+        reason: 'Unable to verify ownership due to a technical error. Please re-authenticate with GitHub.',
         needsAuth: true 
       };
     }
@@ -182,13 +182,13 @@ export async function verifyGitHubOwnership(registryToken: string, repoUrl: stri
     return { 
       isOwner: false, 
       githubUsername,
-      reason: `Repository owner '${owner}' does not match your GitHub account (@${githubUsername}) or any of your organizations` 
+      reason: `You don't have ownership access to this repository. The repository is owned by '${owner}' but you are signed in as @${githubUsername}. Only repository owners or organization members with admin access can claim servers.` 
     };
   } catch (error) {
     console.error('Error verifying GitHub ownership:', error);
     return { 
       isOwner: false, 
-      reason: 'Failed to verify ownership. Please try again.',
+      reason: 'Unable to verify ownership due to a technical error. Please try again later.',
       needsAuth: true 
     };
   }
@@ -331,7 +331,7 @@ export async function publishClaimedServer(data: z.infer<typeof publishClaimedSe
     if (!ownership.isOwner) {
       return { 
         success: false, 
-        error: ownership.reason || 'You must be the owner of this repository to publish it',
+        error: ownership.reason || 'Repository ownership required. Only repository owners can publish servers.',
         needsAuth: ownership.needsAuth
       };
     }
@@ -602,6 +602,467 @@ interface WizardSubmissionData {
   
   // Current profile UUID from UI context
   currentProfileUuid?: string;
+}
+
+/**
+ * Validate wizard data before submission
+ */
+function validateWizardData(wizardData: WizardSubmissionData) {
+  if (!wizardData.githubUrl || !wizardData.owner || !wizardData.repo) {
+    return { success: false, error: 'Missing repository information' };
+  }
+  return { success: true };
+}
+
+/**
+ * Extract package information from wizard data
+ */
+function extractPackageInfo(wizardData: WizardSubmissionData) {
+  const packages = [];
+  
+  if (wizardData.transportConfigs) {
+    for (const [_transport, config] of Object.entries(wizardData.transportConfigs)) {
+      if (config.packageName) {
+        packages.push({
+          registry_name: config.registry || 'npm',
+          name: config.packageName,
+          version: 'latest',
+          environment_variables: wizardData.detectedEnvVars?.map(env => ({
+            name: env.name,
+            description: env.description || '',
+            required: env.required
+          })) || []
+        });
+      }
+    }
+  }
+
+  // If no packages found, create a GitHub package
+  if (packages.length === 0) {
+    packages.push({
+      registry_name: 'npm',
+      name: `${wizardData.owner}/${wizardData.repo}`,
+      version: 'latest',
+      environment_variables: wizardData.detectedEnvVars?.map(env => ({
+        name: env.name,
+        description: env.description || '',
+        required: env.required
+      })) || []
+    });
+  }
+
+  return packages;
+}
+
+/**
+ * Detect transport configuration from wizard data
+ */
+function detectTransportConfig(wizardData: WizardSubmissionData) {
+  let transportType = 'STDIO';
+  let url: string | undefined;
+  let streamableHTTPOptions: any | undefined;
+  
+  if (wizardData.transportConfigs) {
+    const transportKeys = Object.keys(wizardData.transportConfigs);
+    
+    // Check for both formats (with hyphen and underscore)
+    if (transportKeys.includes('streamable-http') || transportKeys.includes('STREAMABLE_HTTP') || transportKeys.includes('streamable_http')) {
+      transportType = 'STREAMABLE_HTTP';
+      const config = wizardData.transportConfigs['streamable-http'] || 
+                   wizardData.transportConfigs['STREAMABLE_HTTP'] || 
+                   wizardData.transportConfigs['streamable_http'];
+      url = config.url;
+      
+      // Extract headers and options
+      streamableHTTPOptions = {
+        headers: (config as any).headers || {},
+        sessionId: (config as any).sessionId
+      };
+      
+      // Also check for headers in env (legacy support)
+      if (config.env && !(config as any).headers) {
+        const headers = Object.entries(config.env).reduce((acc, [key, value]) => {
+          if (key.startsWith('HEADER_')) {
+            acc[key.replace('HEADER_', '')] = value as string;
+          }
+          return acc;
+        }, {} as Record<string, string>);
+        
+        if (Object.keys(headers).length > 0) {
+          streamableHTTPOptions.headers = headers;
+        }
+      }
+      
+      // Add OAuth configuration if present
+      if ((config as any).oauth) {
+        streamableHTTPOptions.oauth = (config as any).oauth;
+      }
+    } else if (transportKeys.includes('sse') || transportKeys.includes('SSE')) {
+      transportType = 'SSE';
+      const config = wizardData.transportConfigs['sse'] || wizardData.transportConfigs['SSE'];
+      url = config.url;
+    }
+  }
+  
+  // Fallback: check detectedTransportConfigs if transportConfigs doesn't have URL
+  if (!url && (wizardData as any).detectedTransportConfigs) {
+    for (const [transport, config] of Object.entries((wizardData as any).detectedTransportConfigs)) {
+      if ((transport === 'streamable-http' || transport === 'detected-streamable') && (config as any).url) {
+        transportType = 'STREAMABLE_HTTP';
+        url = (config as any).url;
+        streamableHTTPOptions = {
+          headers: (config as any).headers || {},
+          sessionId: (config as any).sessionId,
+          oauth: (config as any).oauth
+        };
+        break;
+      }
+    }
+  }
+  
+  return { transportType, url, streamableHTTPOptions };
+}
+
+/**
+ * Create a community server in the local database
+ */
+async function createCommunityServer(
+  wizardData: WizardSubmissionData,
+  packages: any[],
+  activeProfileUuid: string,
+  userId: string
+) {
+  const { createMcpServer } = await import('./mcp-servers');
+  const { transportType, url, streamableHTTPOptions } = detectTransportConfig(wizardData);
+  
+  // Fallback: determine based on packages if no transport config
+  let finalTransportType = transportType;
+  if (transportType === 'STDIO' && packages[0]?.registry_name === 'docker') {
+    finalTransportType = 'STREAMABLE_HTTP';
+  }
+  
+  const serverName = wizardData.repo;
+  let command: string | undefined;
+  let args: string[] | undefined;
+  
+  // Only set command/args for STDIO servers
+  if (finalTransportType === 'STDIO') {
+    command = packages[0]?.registry_name === 'npm' 
+      ? 'npx' 
+      : packages[0]?.registry_name === 'docker'
+      ? 'docker'
+      : 'python';
+    
+    args = packages[0]?.registry_name === 'npm'
+      ? [`-y`, packages[0].name]
+      : packages[0]?.registry_name === 'docker'
+      ? ['run', packages[0].name]
+      : ['-m', packages[0].name];
+  }
+  
+  // Convert env vars to object format
+  const env: { [key: string]: string } = {};
+  wizardData.detectedEnvVars?.forEach(envVar => {
+    env[envVar.name] = ''; // User will fill these in later
+  });
+  
+  const createResult = await createMcpServer({
+    name: serverName,
+    profileUuid: activeProfileUuid,
+    description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+    command,
+    args,
+    env: Object.keys(env).length > 0 ? env : undefined,
+    url,
+    streamableHTTPOptions,
+    type: finalTransportType as any,
+    source: McpServerSource.COMMUNITY,
+    external_id: `io.github.${wizardData.owner}/${wizardData.repo}`,
+  });
+
+  if (!createResult.success || !createResult.data) {
+    return { 
+      success: false, 
+      error: createResult.error || 'Failed to create server' 
+    };
+  }
+
+  // Prepare the template metadata for tracking
+  const template: any = {
+    name: serverName,
+    description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+    type: finalTransportType,
+    repository_url: wizardData.githubUrl,
+    github_owner: wizardData.owner,
+    github_repo: wizardData.repo,
+    packages: packages.map(pkg => ({
+      registry_name: pkg.registry_name,
+      name: pkg.name,
+      version: pkg.version || 'latest',
+      environment_variables: pkg.environment_variables
+    }))
+  };
+  
+  // Add transport-specific fields to the template
+  if (finalTransportType === 'STDIO') {
+    template.command = command;
+    template.args = args;
+    template.env = env;
+  } else if (finalTransportType === 'STREAMABLE_HTTP' || finalTransportType === 'SSE') {
+    template.url = url;
+    if (streamableHTTPOptions) {
+      template.streamableHTTPOptions = streamableHTTPOptions;
+    }
+  }
+  
+  // Save minimal info to registry servers table for tracking
+  const [registryServer] = await db.insert(registryServersTable).values({
+    registry_id: `community-${createResult.data.uuid}`,
+    name: `io.github.${wizardData.owner}/${wizardData.repo}`,
+    github_owner: wizardData.owner,
+    github_repo: wizardData.repo,
+    repository_url: wizardData.githubUrl,
+    description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+    is_claimed: false,
+    is_published: false,
+    metadata: template,
+  }).returning();
+
+  return {
+    success: true,
+    serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
+    data: registryServer,
+    mcpServerUuid: createResult.data.uuid,
+    message: 'Community server created successfully!'
+  };
+}
+
+/**
+ * Fetch repository version from GitHub
+ */
+async function fetchRepositoryVersion(
+  owner: string,
+  repo: string,
+  registryToken: string
+): Promise<{ repoId: string; version: string }> {
+  let repoId = `${owner}/${repo}`;
+  let packageVersion = '1.0.0'; // Default fallback
+  
+  try {
+    // Get repository metadata
+    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+      headers: {
+        'Authorization': `Bearer ${registryToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    });
+    if (repoResponse.ok) {
+      const repoData = await repoResponse.json();
+      repoId = repoData.id.toString(); // Use numeric ID
+    }
+
+    // Try to fetch version from package.json
+    const packageResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/package.json`, {
+      headers: {
+        'Authorization': `Bearer ${registryToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    });
+    
+    if (packageResponse.ok) {
+      const packageData = await packageResponse.json();
+      if (packageData.content) {
+        const packageContent = JSON.parse(Buffer.from(packageData.content, 'base64').toString());
+        if (packageContent.version) {
+          packageVersion = packageContent.version;
+        }
+      }
+    } else {
+      // Try pyproject.toml for Python projects
+      const pyprojectResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/pyproject.toml`, {
+        headers: {
+          'Authorization': `Bearer ${registryToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
+      
+      if (pyprojectResponse.ok) {
+        const pyprojectData = await pyprojectResponse.json();
+        if (pyprojectData.content) {
+          const pyprojectContent = Buffer.from(pyprojectData.content, 'base64').toString();
+          const versionMatch = pyprojectContent.match(/version\s*=\s*["']([^"']+)["']/);
+          if (versionMatch) {
+            packageVersion = versionMatch[1];
+          }
+        }
+      } else {
+        // Try Cargo.toml for Rust projects
+        const cargoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/Cargo.toml`, {
+          headers: {
+            'Authorization': `Bearer ${registryToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        });
+        
+        if (cargoResponse.ok) {
+          const cargoData = await cargoResponse.json();
+          if (cargoData.content) {
+            const cargoContent = Buffer.from(cargoData.content, 'base64').toString();
+            const versionMatch = cargoContent.match(/version\s*=\s*["']([^"']+)["']/);
+            if (versionMatch) {
+              packageVersion = versionMatch[1];
+            }
+          }
+        }
+      }
+    }
+  } catch (_error) {
+    // Silently fall back to defaults
+  }
+  
+  return { repoId, version: packageVersion };
+}
+
+/**
+ * Publish a claimed server to the registry
+ */
+async function publishClaimedServerToRegistry(
+  wizardData: WizardSubmissionData,
+  packages: any[],
+  userId: string
+) {
+  if (!wizardData.registryToken) {
+    return { success: false, error: 'Registry token required for claimed servers' };
+  }
+
+  // Fetch repository version
+  const { repoId, version } = await fetchRepositoryVersion(
+    wizardData.owner,
+    wizardData.repo,
+    wizardData.registryToken
+  );
+  
+  const registryPayload = {
+    name: `io.github.${wizardData.owner}/${wizardData.repo}`,
+    description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+    packages: [{
+      registry_name: packages[0].registry_name || 'npm',
+      name: packages[0].name || `${wizardData.repo}`,
+      version: version,
+      environment_variables: (wizardData.detectedEnvVars || []).map(env => ({
+        name: env.name,
+        description: env.description || `Environment variable ${env.name}`,
+        required: env.required
+      }))
+    }],
+    repository: {
+      url: wizardData.githubUrl,
+      source: 'github',
+      id: repoId
+    },
+    version_detail: {
+      version: version,
+    },
+  };
+  
+  // Publish to registry
+  const registryResponse = await fetch('https://registry.plugged.in/v0/publish', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${wizardData.registryToken}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(registryPayload)
+  });
+
+  if (!registryResponse.ok) {
+    const errorText = await registryResponse.text();
+    
+    // Provide specific error messages based on status code
+    let errorMessage: string;
+    switch (registryResponse.status) {
+      case 401:
+        errorMessage = 'Authentication failed. Please re-authenticate with GitHub.';
+        break;
+      case 403:
+        errorMessage = 'Permission denied. You may not have admin access to this repository.';
+        break;
+      case 409:
+        errorMessage = 'This server is already published to the registry.';
+        break;
+      case 422:
+        errorMessage = `Invalid data: ${errorText}`;
+        break;
+      case 500:
+        if (errorText.includes('version must be greater')) {
+          const versionMatch = errorText.match(/existing version\s*[:=]\s*(\S+)/);
+          const existingVersion = versionMatch ? versionMatch[1] : 'unknown';
+          errorMessage = `Server already exists with version ${existingVersion}. To update, please increment the version in your package.json and try again.`;
+        } else {
+          errorMessage = `Registry server error: ${errorText}`;
+        }
+        break;
+      default:
+        errorMessage = `Registry publication failed (${registryResponse.status}): ${errorText || registryResponse.statusText}`;
+    }
+    
+    return {
+      success: false,
+      error: errorMessage
+    };
+  }
+
+  const registryResult = await registryResponse.json();
+  
+  // Save to our database
+  const [registryServer] = await db.insert(registryServersTable).values({
+    registry_id: registryResult.id,
+    name: wizardData.repo,
+    github_owner: wizardData.owner,
+    github_repo: wizardData.repo,
+    repository_url: wizardData.githubUrl,
+    description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+    is_claimed: true,
+    is_published: true,
+    claimed_by_user_id: userId,
+    claimed_at: new Date(),
+    published_at: new Date(),
+    metadata: registryPayload,
+  }).returning();
+
+  return {
+    success: true,
+    serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
+    data: registryServer
+  };
+}
+
+/**
+ * Get or create active profile for user
+ */
+async function getActiveProfileUuid(
+  userId: string,
+  currentProfileUuid?: string
+): Promise<{ success: boolean; profileUuid?: string; error?: string }> {
+  if (currentProfileUuid) {
+    return { success: true, profileUuid: currentProfileUuid };
+  }
+  
+  const userProjects = await db.query.projectsTable.findMany({
+    where: eq(projectsTable.user_id, userId),
+    with: {
+      profiles: true
+    }
+  });
+
+  if (!userProjects.length || !userProjects[0].profiles.length) {
+    return { success: false, error: 'No active profile found. Please create a profile first.' };
+  }
+
+  const activeProject = userProjects.find(p => p.active_profile_uuid) || userProjects[0];
+  const profileUuid = activeProject.active_profile_uuid || activeProject.profiles[0].uuid;
+  
+  return { success: true, profileUuid };
 }
 
 /**

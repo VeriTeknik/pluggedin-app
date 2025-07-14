@@ -386,7 +386,7 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
     if (!ownership.isOwner) {
       return { 
         success: false, 
-        error: ownership.reason || 'You must be the owner of this repository to claim the server',
+        error: ownership.reason || 'Repository ownership required. Only repository owners can claim servers.',
         needsAuth: ownership.needsAuth
       };
     }

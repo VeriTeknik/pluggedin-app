@@ -8,6 +8,8 @@ import { toast } from 'sonner';
 import { claimCommunityServer } from '@/app/actions/community-servers';
 import { checkUserGitHubConnection } from '@/app/actions/registry-servers';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { useRegistryOAuthSession } from '@/app/hooks/useRegistryOAuthSession';
+import { getRegistryOAuthToken } from '@/app/actions/registry-oauth-session';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -40,6 +42,7 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
   const [githubUsername, setGithubUsername] = useState<string | null>(null);
   const [isCheckingGitHub, setIsCheckingGitHub] = useState(true);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const { isAuthenticated: hasOAuthSession, githubUsername: sessionUsername, checkSession } = useRegistryOAuthSession();
 
   // Check for GitHub connection on mount and restore state if coming back from OAuth
   useEffect(() => {
@@ -104,26 +107,11 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
   const checkGitHub = async () => {
     setIsCheckingGitHub(true);
     try {
-      // First check if we have a registry OAuth token
-      const registryToken = localStorage.getItem('registry_oauth_token');
-      if (registryToken) {
-        // Verify the token with GitHub API
-        const response = await fetch('https://api.github.com/user', {
-          headers: {
-            Authorization: `Bearer ${registryToken}`,
-            Accept: 'application/vnd.github.v3+json',
-          },
-        });
-        
-        if (response.ok) {
-          const userData = await response.json();
-          setHasGitHub(true);
-          setGithubUsername(userData.login);
-          return;
-        } else {
-          // Token is invalid, remove it
-          localStorage.removeItem('registry_oauth_token');
-        }
+      // First check if we have a secure OAuth session
+      if (hasOAuthSession && sessionUsername) {
+        setHasGitHub(true);
+        setGithubUsername(sessionUsername);
+        return;
       }
       
       // Fall back to checking NextAuth connection
@@ -151,13 +139,20 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
 
     setIsSubmitting(true);
     try {
-      // Use registry OAuth token if available, otherwise the backend will use NextAuth token
-      const registryToken = localStorage.getItem('registry_oauth_token') || 'nextauth';
+      // Get the OAuth token from secure session if available
+      let registryToken = 'nextauth'; // Default to NextAuth
+      
+      if (hasOAuthSession) {
+        const sessionResult = await getRegistryOAuthToken();
+        if (sessionResult.success && sessionResult.oauthToken) {
+          registryToken = sessionResult.oauthToken;
+        }
+      }
       
       const result = await claimCommunityServer({
         communityServerUuid: server.uuid,
         repositoryUrl,
-        registryToken, // Pass the registry OAuth token
+        registryToken, // Pass the secure token
       });
 
       if (result.success) {

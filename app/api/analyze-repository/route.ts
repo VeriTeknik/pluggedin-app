@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { RateLimiters } from '@/lib/rate-limiter';
+import { createErrorResponse, ErrorResponses, getSafeErrorMessage } from '@/lib/api-errors';
 
 interface EnvVariable {
   name: string;
@@ -24,24 +26,31 @@ interface TransportConfig {
 }
 
 export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = await RateLimiters.api(request);
+  
+  if (!rateLimitResult.allowed) {
+    const response = createErrorResponse('Too many requests', 429, 'RATE_LIMIT_EXCEEDED');
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+    response.headers.set('X-RateLimit-Reset', rateLimitResult.reset.toString());
+    response.headers.set('Retry-After', Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString());
+    return response;
+  }
+  
   try {
     const { searchParams } = new URL(request.url);
     const repoUrl = searchParams.get('url');
 
     if (!repoUrl) {
-      return NextResponse.json(
-        { error: 'Repository URL is required' },
-        { status: 400 }
-      );
+      return ErrorResponses.badRequest('Repository URL is required');
     }
 
     // Extract owner and repo from URL
     const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\?]+)/);
     if (!match) {
-      return NextResponse.json(
-        { error: 'Invalid GitHub URL' },
-        { status: 400 }
-      );
+      return ErrorResponses.badRequest('Invalid GitHub URL');
     }
 
     const [, owner, repo] = match;
@@ -334,9 +343,10 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     console.error('Repository analysis error:', error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to analyze repository' },
-      { status: 500 }
+    return createErrorResponse(
+      getSafeErrorMessage(error),
+      500,
+      'ANALYSIS_FAILED'
     );
   }
 }

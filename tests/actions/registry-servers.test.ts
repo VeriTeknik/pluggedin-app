@@ -102,7 +102,7 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
       const result = await verifyGitHubOwnership('ghp_testtoken', 'https://not-github.com/user/repo');
       
       expect(result.isOwner).toBe(false);
-      expect(result.reason).toContain('Failed to verify ownership');
+      expect(result.reason).toContain('Unable to verify ownership due to a technical error');
     });
 
     it('should handle authentication failure', async () => {
@@ -147,7 +147,7 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
       const result = await verifyGitHubOwnership('ghp_testtoken', 'https://github.com/testuser/test-mcp-server');
       
       expect(result.isOwner).toBe(false);
-      expect(result.reason).toContain('Failed to verify ownership');
+      expect(result.reason).toContain('Unable to verify ownership due to a technical error');
     });
   });
 

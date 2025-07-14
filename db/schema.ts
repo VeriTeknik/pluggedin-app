@@ -1279,3 +1279,35 @@ export const mcpOauthSessionsRelations = relations(mcpOauthSessionsTable, ({ one
     references: [profilesTable.uuid],
   }),
 }));
+
+// Registry OAuth sessions table for secure token storage
+export const registryOAuthSessions = pgTable(
+  'registry_oauth_sessions',
+  {
+    id: serial('id').primaryKey(),
+    userId: varchar('user_id', { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sessionTokenHash: varchar('session_token_hash', { length: 64 }).notNull().unique(),
+    oauthToken: text('oauth_token').notNull(), // Consider encrypting in production
+    githubUsername: varchar('github_username', { length: 255 }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  },
+  (table) => ({
+    registryOAuthSessionsUserIdx: index('idx_registry_oauth_sessions_user_id').on(table.userId),
+    registryOAuthSessionsTokenIdx: index('idx_registry_oauth_sessions_token_hash').on(table.sessionTokenHash),
+    registryOAuthSessionsExpiresIdx: index('idx_registry_oauth_sessions_expires_at').on(table.expiresAt),
+  })
+);
+
+// Relations for registry OAuth sessions
+export const registryOAuthSessionsRelations = relations(registryOAuthSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [registryOAuthSessions.userId],
+    references: [users.id],
+  }),
+}));

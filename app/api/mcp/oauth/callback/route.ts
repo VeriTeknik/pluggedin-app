@@ -2,8 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthSession } from '@/lib/auth';
 import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
+import { RateLimiters } from '@/lib/rate-limiter';
 
 export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = await RateLimiters.registryOAuth(request);
+  
+  if (!rateLimitResult.allowed) {
+    return new NextResponse('Too many OAuth attempts. Please try again later.', {
+      status: 429,
+      headers: {
+        'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+        'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+        'X-RateLimit-Reset': rateLimitResult.reset.toString(),
+        'Retry-After': Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString(),
+      },
+    });
+  }
+  
   const session = await getAuthSession();
   
   // Check authentication

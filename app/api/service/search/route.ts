@@ -3,6 +3,8 @@ import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
+import { RateLimiters } from '@/lib/rate-limiter';
+import { createErrorResponse, getSafeErrorMessage } from '@/lib/api-errors';
 import { db } from '@/db';
 import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema';
 import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
@@ -26,6 +28,19 @@ const CACHE_TTL: Record<McpServerSource, number> = {
  * @returns NextResponse with search results
  */
 export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = await RateLimiters.api(request);
+  
+  if (!rateLimitResult.allowed) {
+    const response = createErrorResponse('Too many requests', 429, 'RATE_LIMIT_EXCEEDED');
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+    response.headers.set('X-RateLimit-Reset', rateLimitResult.reset.toString());
+    response.headers.set('Retry-After', Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString());
+    return response;
+  }
+  
   const url = new URL(request.url);
   const query = url.searchParams.get('query') || '';
   const source = (url.searchParams.get('source') as McpServerSource) || null;
@@ -70,9 +85,10 @@ export async function GET(request: NextRequest) {
   } catch (_error) {
     console.error('Search error:', _error);
     console.error('Error stack:', _error instanceof Error ? _error.stack : 'No stack trace');
-    return NextResponse.json(
-      { error: 'Failed to search for MCP servers' },
-      { status: 500 }
+    return createErrorResponse(
+      getSafeErrorMessage(_error),
+      500,
+      'SEARCH_FAILED'
     );
   }
 }

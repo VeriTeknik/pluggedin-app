@@ -2,6 +2,8 @@
 
 import { AlertCircle, Check, Github, Loader2,Shield, Users } from 'lucide-react';
 import { useCallback,useEffect, useState } from 'react';
+import { useRegistryOAuthSession } from '@/app/hooks/useRegistryOAuthSession';
+import { getRegistryOAuthToken } from '@/app/actions/registry-oauth-session';
 
 import { verifyGitHubOwnership } from '@/app/actions/registry-servers';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -49,34 +51,18 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
   const [ownershipVerified, setOwnershipVerified] = useState<boolean | null>(null);
   const [ownershipMessage, setOwnershipMessage] = useState<string>('');
   const { toast } = useToast();
+  const { isAuthenticated: hasOAuthSession, githubUsername: sessionUsername, checkSession } = useRegistryOAuthSession();
 
-  // Check if we have a stored token
+  // Check if we have a stored OAuth session
   useEffect(() => {
-    const token = localStorage.getItem('registry_oauth_token');
-    if (token && !data.isAuthenticated) {
-      // Verify the token and get user info
-      fetch('https://api.github.com/user', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github.v3+json',
-        },
-      })
-        .then(res => res.json())
-        .then(user => {
-          if (user.login) {
-            onUpdate({
-              isAuthenticated: true,
-              githubUsername: user.login,
-              registryToken: token,
-            });
-          }
-        })
-        .catch(() => {
-          // Token is invalid, remove it
-          localStorage.removeItem('registry_oauth_token');
-        });
+    if (hasOAuthSession && sessionUsername && !data.isAuthenticated) {
+      onUpdate({
+        isAuthenticated: true,
+        githubUsername: sessionUsername,
+        registryToken: 'secure_session', // Token is stored securely on server
+      });
     }
-  }, [data.isAuthenticated, onUpdate]);
+  }, [hasOAuthSession, sessionUsername, data.isAuthenticated, onUpdate]);
 
   const initiateGitHubOAuth = () => {
     const clientId = getGitHubClientId();
@@ -103,35 +89,25 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
       // Verify origin for security
       if (event.origin !== window.location.origin) return;
       
-      if (event.data.type === 'github-oauth-success' && event.data.accessToken) {
-        // Store token in localStorage
-        localStorage.setItem('registry_oauth_token', event.data.accessToken);
-        
-        // Get GitHub username
-        fetch('https://api.github.com/user', {
-          headers: {
-            Authorization: `Bearer ${event.data.accessToken}`,
-            Accept: 'application/vnd.github.v3+json',
-          },
-        })
-          .then(res => res.json())
-          .then(user => {
-            if (user.login) {
-              onUpdate({
-                isAuthenticated: true,
-                githubUsername: user.login,
-                registryToken: event.data.accessToken,
-              });
-              toast({
-                title: 'Authentication successful',
-                description: `Authenticated as @${user.login}`,
-              });
-              
-              // After successful authentication, verify ownership
-              verifyOwnership(event.data.accessToken);
-            }
-          })
-          .catch(console.error);
+      if (event.data.type === 'github-oauth-success' && event.data.githubUsername) {
+        // Session is now stored server-side, refresh our session state
+        checkSession().then((result) => {
+          if (result && result.success) {
+            onUpdate({
+              isAuthenticated: true,
+              githubUsername: result.githubUsername || event.data.githubUsername,
+              registryToken: 'secure_session', // Token is stored securely on server
+            });
+            toast({
+              title: 'Authentication successful',
+              description: `Authenticated as @${result.githubUsername || event.data.githubUsername}`,
+            });
+            
+            // After successful authentication, verify ownership
+            // We'll use the server-side token for verification
+            verifyOwnershipWithSession();
+          }
+        });
         
         // Clean up
         window.removeEventListener('message', handleMessage);
@@ -164,13 +140,19 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
     }
   };
 
-  // Verify ownership of the repository
-  const verifyOwnership = useCallback(async (token: string) => {
+  // Verify ownership using secure session
+  const verifyOwnershipWithSession = useCallback(async () => {
     if (!data.githubUrl) return;
     
     setIsVerifyingOwnership(true);
     try {
-      const result = await verifyGitHubOwnership(token, data.githubUrl);
+      // Get the OAuth token from secure session
+      const sessionResult = await getRegistryOAuthToken();
+      if (!sessionResult.success || !sessionResult.oauthToken) {
+        throw new Error('No valid session found');
+      }
+      
+      const result = await verifyGitHubOwnership(sessionResult.oauthToken, data.githubUrl);
       setOwnershipVerified(result.isOwner);
       setOwnershipMessage(result.reason || '');
       onUpdate({ ownershipVerified: result.isOwner });
@@ -196,6 +178,12 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
       setIsVerifyingOwnership(false);
     }
   }, [data.githubUrl, toast, onUpdate]);
+
+  // Verify ownership of the repository (legacy function for backwards compatibility)
+  const verifyOwnership = useCallback(async (token: string) => {
+    // This function is kept for backwards compatibility but delegates to the secure version
+    await verifyOwnershipWithSession();
+  }, [verifyOwnershipWithSession]);
 
   const handleChoiceChange = (value: string) => {
     setChoice(value as 'claim' | 'community');
@@ -231,11 +219,10 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
   
   // Verify ownership when authenticated and claim is selected
   useEffect(() => {
-    const token = localStorage.getItem('registry_oauth_token');
-    if (choice === 'claim' && data.isAuthenticated && token && ownershipVerified === null && data.githubUrl) {
-      verifyOwnership(token);
+    if (choice === 'claim' && data.isAuthenticated && hasOAuthSession && ownershipVerified === null && data.githubUrl) {
+      verifyOwnershipWithSession();
     }
-  }, [choice, data.isAuthenticated, ownershipVerified, data.githubUrl, verifyOwnership]);
+  }, [choice, data.isAuthenticated, hasOAuthSession, ownershipVerified, data.githubUrl, verifyOwnershipWithSession]);
 
   return (
     <div className="space-y-6">
@@ -312,10 +299,6 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Verified badge on your server
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-green-500" />
                   Access to analytics and insights
                 </li>
                 <li className="flex items-center gap-2">
@@ -325,6 +308,10 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
                   Direct registry updates from GitHub
+                </li>
+                <li className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-green-500" />
+                  Official ownership attribution
                 </li>
               </ul>
               
@@ -347,8 +334,11 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
                         </Alert>
                       )}
                       {ownershipVerified === false && (
-                        <Alert className="border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950">
-                          <AlertCircle className="h-4 w-4 text-amber-600" />
+                        <Alert className={ownershipMessage?.includes("don't have ownership access") 
+                          ? "border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950"
+                          : "border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950"
+                        }>
+                          <AlertCircle className={`h-4 w-4 ${ownershipMessage?.includes("don't have ownership access") ? "text-blue-600" : "text-amber-600"}`} />
                           <AlertDescription>
                             {ownershipMessage || 'You do not have admin access to this repository. Please select "Add to community" instead.'}
                           </AlertDescription>

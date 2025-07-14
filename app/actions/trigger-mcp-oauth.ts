@@ -114,10 +114,21 @@ export async function triggerMcpOAuth(serverUuid: string) {
         let provider = 'mcp-remote';
         const urlIndex = mcpServer.args?.findIndex((arg: string) => arg.includes('http'));
         if (urlIndex !== -1 && urlIndex !== undefined && mcpServer.args) {
-          const url = mcpServer.args[urlIndex];
-          if (url.includes('linear')) provider = 'Linear';
-          else if (url.includes('github')) provider = 'GitHub';
-          else if (url.includes('slack')) provider = 'Slack';
+          try {
+            const parsedUrl = new URL(mcpServer.args[urlIndex]);
+            const hostname = parsedUrl.hostname.toLowerCase();
+            
+            if (hostname.includes('linear.app') || hostname.endsWith('.linear.app')) {
+              provider = 'Linear';
+            } else if (hostname.includes('github.com') || hostname.endsWith('.github.com')) {
+              provider = 'GitHub';
+            } else if (hostname.includes('slack.com') || hostname.endsWith('.slack.com')) {
+              provider = 'Slack';
+            }
+          } catch (e) {
+            // Invalid URL, keep default provider
+            console.error('Invalid URL for provider detection:', e);
+          }
         }
         
         const updatedConfig = {
@@ -172,8 +183,15 @@ async function handleMcpRemoteOAuth(server: McpServer) {
 
   // Determine callback port (Linear uses 14881)
   let callbackPort = 3334; // Default mcp-remote port
-  if (remoteUrl.includes('linear')) {
-    callbackPort = 14881;
+  try {
+    const parsedUrl = new URL(remoteUrl);
+    const hostname = parsedUrl.hostname.toLowerCase();
+    if (hostname.includes('linear.app') || hostname.endsWith('.linear.app')) {
+      callbackPort = 14881;
+    }
+  } catch (e) {
+    // Invalid URL, use default port
+    console.error('Invalid remote URL:', e);
   }
 
   // Create OAuth process manager instance

@@ -274,24 +274,80 @@ export async function triggerMcpServerOAuth(serverUuid: string): Promise<{
 
 function determineProviderFromConfig(oauthConfig: any): string {
   if (oauthConfig.authorizationUrl) {
-    const url = oauthConfig.authorizationUrl.toLowerCase();
-    if (url.includes('linear.app')) return 'Linear';
-    if (url.includes('github.com')) return 'GitHub';
-    if (url.includes('google.com')) return 'Google';
-    if (url.includes('slack.com')) return 'Slack';
-    if (url.includes('notion.so')) return 'Notion';
+    try {
+      const parsedUrl = new URL(oauthConfig.authorizationUrl);
+      const hostname = parsedUrl.hostname.toLowerCase();
+      
+      // Whitelist of known OAuth providers
+      const providerMap: Record<string, string> = {
+        'linear.app': 'Linear',
+        'github.com': 'GitHub',
+        'accounts.google.com': 'Google',
+        'google.com': 'Google',
+        'slack.com': 'Slack',
+        'api.notion.com': 'Notion',
+        'notion.so': 'Notion'
+      };
+      
+      // Check exact hostname match first
+      if (providerMap[hostname]) {
+        return providerMap[hostname];
+      }
+      
+      // Check if hostname ends with known domains (for subdomains)
+      for (const [domain, provider] of Object.entries(providerMap)) {
+        if (hostname === domain || hostname.endsWith(`.${domain}`)) {
+          return provider;
+        }
+      }
+    } catch (e) {
+      // Invalid URL, return generic provider
+      console.error('Invalid authorization URL:', e);
+    }
   }
   return 'OAuth Provider';
 }
 
 function determineProviderFromUrl(url: string): string {
-  const lowerUrl = url.toLowerCase();
-  if (lowerUrl.includes('linear.app')) return 'Linear';
-  if (lowerUrl.includes('github.com')) return 'GitHub';
-  if (lowerUrl.includes('google.com')) return 'Google';
-  if (lowerUrl.includes('slack.com')) return 'Slack';
-  if (lowerUrl.includes('notion.so')) return 'Notion';
-  if (lowerUrl.includes('jira')) return 'Jira';
-  if (lowerUrl.includes('confluence')) return 'Confluence';
+  try {
+    const parsedUrl = new URL(url);
+    const hostname = parsedUrl.hostname.toLowerCase();
+    
+    // Whitelist of known OAuth providers
+    const providerMap: Record<string, string> = {
+      'linear.app': 'Linear',
+      'github.com': 'GitHub',
+      'accounts.google.com': 'Google',
+      'google.com': 'Google',
+      'slack.com': 'Slack',
+      'api.notion.com': 'Notion',
+      'notion.so': 'Notion',
+      'atlassian.com': 'Jira',
+      'atlassian.net': 'Jira'
+    };
+    
+    // Check exact hostname match first
+    if (providerMap[hostname]) {
+      return providerMap[hostname];
+    }
+    
+    // Check if hostname ends with known domains (for subdomains)
+    for (const [domain, provider] of Object.entries(providerMap)) {
+      if (hostname === domain || hostname.endsWith(`.${domain}`)) {
+        return provider;
+      }
+    }
+    
+    // Special case for Jira/Confluence which may have custom domains
+    if (hostname.includes('jira') || parsedUrl.pathname.includes('jira')) {
+      return 'Jira';
+    }
+    if (hostname.includes('confluence') || parsedUrl.pathname.includes('confluence')) {
+      return 'Confluence';
+    }
+  } catch (e) {
+    // Invalid URL, return generic provider
+    console.error('Invalid URL for provider detection:', e);
+  }
   return 'OAuth Provider';
 }
