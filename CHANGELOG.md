@@ -5,6 +5,70 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Smart Server Wizard**: Comprehensive multi-step wizard for MCP server creation and claiming
+  - Automatic GitHub ownership verification for claimed servers
+  - Environment variable detection and configuration
+  - Registry submission with progress tracking
+  - Discovery testing step with real-time validation
+  - Support for npm, Docker, PyPI, and GitHub deployments
+- **OAuth Integration**: Streamable HTTP OAuth support for MCP servers
+  - Session management with PostgreSQL and in-memory caching
+  - OAuth state management and token handling
+  - Automatic token clearing and session cleanup
+  - Support for GitHub and other OAuth providers
+- **Trending Servers**: Activity-based trending server discovery
+  - Real-time activity tracking and calculations
+  - Server metrics tracking with installation counts
+  - Enhanced sorting functionality for better discovery
+- **Enhanced Registry Integration**
+  - Improved registry server handling with simplified display names
+  - Registry token authentication for submissions
+  - Better error handling for GitHub token authentication
+  - Support for new registry schema and transport types
+- **API Reference Page**: New comprehensive API documentation with metadata
+- **Testing Infrastructure**: Comprehensive test coverage for registry features
+- **Profile Language API**: Language preference storage per user profile
+
+### Changed
+- **Search Functionality**: Refactored to remove 'latest only' filter with enhanced server-side filtering
+- **Database Migrations**: Consolidated multiple migrations and added missing language support
+- **Security Enhancements**:
+  - Added Zod validation to all server actions
+  - Removed XSS vulnerabilities by eliminating dangerouslySetInnerHTML usage
+  - Enhanced input validation across all forms
+- **Code Quality Improvements**:
+  - Removed all console.log statements from production code
+  - Cleaned up unused files, exports, and type definitions
+  - Removed unused dependencies (Knip integration)
+  - Improved error handling with standardized responses
+- **UI/UX Enhancements**:
+  - Improved StreamingCliToast connection handling
+  - Enhanced wizard UI consistency across all steps
+  - Better transport configuration handling
+
+### Fixed
+- Syntax errors from automated console.log removal
+- OAuth state management issues
+- Registry submission error handling
+- Server claiming functionality for community servers
+- Environment variable configuration in wizard
+- LLM provider mapping in playground sessions
+
+### Security
+- Comprehensive Zod validation schemas for all user inputs
+- XSS vulnerability fixes by removing dangerous HTML rendering
+- Enhanced OAuth token security with proper cleanup
+- Input sanitization improvements across all forms
+
+### Performance
+- Optimized activity tracking queries
+- Improved trending server calculations
+- Enhanced search performance with better indexing
+- Reduced bundle size by removing unused code
+
 ## [2.6.2] - 2025-01-03
 
 ### Fixed

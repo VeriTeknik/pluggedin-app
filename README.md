@@ -5,7 +5,7 @@
   <h3>The Crossroads for AI Data Exchanges</h3>
   <p>A unified management interface for all your MCP servers with RAG capabilities</p>
 
-  [![Version](https://img.shields.io/badge/version-2.6.2-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+  [![Version](https://img.shields.io/badge/version-2.7.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
   [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
   [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
   [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -19,6 +19,16 @@ The plugged.in App is a comprehensive web application for managing Model Context
 This application enables seamless integration with any MCP client (Claude, Cline, Cursor, etc.) while providing advanced management capabilities, document-based knowledge augmentation, and real-time notifications through an intuitive web interface.
 
 ## ✨ Key Features
+
+### 🎯 New in v2.7.0 (Registry v2)
+- **Smart Server Wizard**: Intelligent multi-step wizard for creating and claiming MCP servers
+  - Automatic GitHub ownership verification
+  - Environment variable detection and configuration
+  - Registry submission with progress tracking
+  - Real-time discovery testing
+- **OAuth Integration**: Full OAuth support for Streamable HTTP MCP servers
+- **Trending Servers**: Discover popular MCP servers based on real-time activity
+- **Enhanced Security**: Comprehensive input validation with Zod schemas
 
 ### 🚀 Core Capabilities
 - **Multi-Workspace Support**: Switch between different sets of MCP configurations to prevent context pollution
