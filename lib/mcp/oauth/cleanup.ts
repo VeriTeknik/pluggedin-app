@@ -8,7 +8,6 @@ export async function cleanupExpiredOAuthSessions() {
   try {
     const deletedCount = await oauthStateManager.cleanupExpiredSessions();
     if (deletedCount > 0) {
-      console.log(`[OAuth Cleanup] Deleted ${deletedCount} expired OAuth sessions`);
     }
   } catch (error) {
     console.error('[OAuth Cleanup] Failed to clean up expired sessions:', error);

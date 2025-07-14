@@ -57,7 +57,6 @@ export class StreamableHTTPWrapper implements Transport {
 
     // First check if session ID was provided in options
     if (options.sessionId) {
-      console.log(`[StreamableHTTPWrapper] Using provided session ID: ${options.sessionId}`);
       initialSessionId = options.sessionId;
     } else {
       // Try to load existing session from database
@@ -69,7 +68,6 @@ export class StreamableHTTPWrapper implements Transport {
         );
 
         if (existingSession) {
-          console.log(`[StreamableHTTPWrapper] Restored session ID from database: ${existingSession.id}`);
           initialSessionId = existingSession.id;
         }
       } catch (error) {
@@ -93,7 +91,6 @@ export class StreamableHTTPWrapper implements Transport {
       
       // Check if this is an OAuth authorization request
       if (this.isOAuthAuthorizationRequest(requestUrl)) {
-        console.log(`[StreamableHTTPWrapper] Intercepting OAuth authorization request: ${requestUrl.toString()}`);
         
         // Intercept and handle OAuth flow
         const modifiedResponse = await this.handleOAuthAuthorizationRequest(requestUrl, init);
@@ -118,7 +115,6 @@ export class StreamableHTTPWrapper implements Transport {
       // Check if the response has the Mcp-Session-Id header
       const sessionId = response.headers.get('Mcp-Session-Id');
       if (sessionId && sessionId !== this.capturedSessionId) {
-        console.log(`[StreamableHTTPWrapper] Captured session ID for server ${this.serverUuid}: ${sessionId}`);
         this.capturedSessionId = sessionId;
 
         // Store session in database for persistence
@@ -129,7 +125,6 @@ export class StreamableHTTPWrapper implements Transport {
           if (!existingSession) {
             // Create session with the specific ID from the server
             await this.sessionManager.createSession(this.serverUuid, this.profileUuid, sessionId);
-            console.log(`[StreamableHTTPWrapper] Stored new session ID in database: ${sessionId}`);
           } else {
             // Update existing session's last activity
             await this.sessionManager.updateSession(sessionId, {
@@ -139,7 +134,6 @@ export class StreamableHTTPWrapper implements Transport {
                 last_used: new Date().toISOString(),
               },
             });
-            console.log(`[StreamableHTTPWrapper] Updated existing session activity: ${sessionId}`);
           }
         } catch (error) {
           console.error(`[StreamableHTTPWrapper] Failed to store session ID:`, error);
@@ -233,7 +227,6 @@ export class StreamableHTTPWrapper implements Transport {
         provider
       );
 
-      console.log(`[StreamableHTTPWrapper] Created OAuth session with state: ${state}`);
 
       // Modify the authorization URL to use our proxy endpoint
       const modifiedUrl = new URL(url.toString());
@@ -245,7 +238,6 @@ export class StreamableHTTPWrapper implements Transport {
       modifiedUrl.searchParams.set('redirect_uri', proxyRedirectUri);
       modifiedUrl.searchParams.set('state', state);
 
-      console.log(`[StreamableHTTPWrapper] Modified OAuth URL: ${modifiedUrl.toString()}`);
 
       // Return a response that triggers the OAuth flow in the browser
       const html = `

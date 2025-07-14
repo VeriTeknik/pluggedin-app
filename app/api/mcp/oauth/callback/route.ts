@@ -51,7 +51,6 @@ export async function GET(request: NextRequest) {
 
     // Forward the callback to the MCP server's local OAuth server
     try {
-      console.log(`[OAuth Proxy] Forwarding callback to ${oauthSession.callback_url}`);
       
       // Build the callback URL with all parameters
       const callbackUrl = new URL(oauthSession.callback_url);

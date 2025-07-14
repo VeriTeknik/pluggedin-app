@@ -17,16 +17,13 @@ const CACHE_TTL_SECONDS = 3600; // Cache for 1 hour
  * Intended to be called by a webhook or scheduled job.
  */
 export async function updateReleaseNotesFromGitHub(): Promise<{ success: boolean; message: string; updatedRepos: string[]; error?: string }> {
-  console.log('Starting GitHub release notes update...');
   const updatedRepos: string[] = [];
   let overallSuccess = true;
   let errorMessage = '';
 
   for (const repo of REPOSITORIES) {
     try {
-      console.log(`Fetching processed release notes for ${repo}...`);
       const notesFromGitHub = await getProcessedReleaseNotes(repo);
-      console.log(`Fetched ${notesFromGitHub.length} notes for ${repo}.`);
 
       if (notesFromGitHub.length > 0) {
         // Get existing versions for this repo
@@ -53,12 +50,9 @@ export async function updateReleaseNotesFromGitHub(): Promise<{ success: boolean
           }));
 
         if (dataToInsert.length > 0) {
-          console.log(`Inserting ${dataToInsert.length} new notes for ${repo}...`);
           await db.insert(releaseNotes).values(dataToInsert);
           updatedRepos.push(repo);
-          console.log(`Successfully updated notes for ${repo}.`);
         } else {
-          console.log(`No new notes to insert for ${repo}.`);
         }
       }
     } catch (error: any) {
@@ -88,7 +82,6 @@ export async function getReleaseNotes(
   limit = 10
 ): Promise<ReleaseNote[]> {
   try {
-    console.log(`Fetching release notes for ${repositoryFilter}, page ${page}, limit ${limit}`);
     const offset = (page - 1) * limit;
     
     // Build query conditions
@@ -103,7 +96,6 @@ export async function getReleaseNotes(
                           .limit(limit)
                           .offset(offset);
 
-    console.log(`Found ${notes.length} release notes in database`);
 
     // Convert Date objects to ISO strings and assert repository type
     return notes.map(note => ({
@@ -153,9 +145,7 @@ export async function populateHistoricalReleaseNotes(): Promise<{ success: boole
 
         if (notesToInsert.length > 0) {
           await db.insert(releaseNotes).values(notesToInsert);
-          console.log(`Inserted ${notesToInsert.length} historical notes for ${repo}.`);
         } else {
-          console.log(`No new historical notes to insert for ${repo}.`);
         }
       }
     } catch (error: any) {

@@ -6,8 +6,12 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { accounts, McpServerSource,projectsTable, registryServersTable, serverClaimRequestsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { inferTransportFromPackages,transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
+
+// Additional validation schemas
+const uuidSchema = z.string().uuid('Invalid UUID format');
 
 // Validation schemas
 const repositoryUrlSchema = z.string().url().refine(
@@ -65,34 +69,31 @@ async function getUserGitHubToken(userId: string): Promise<string | null> {
  */
 export async function checkUserGitHubConnection() {
   try {
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return { hasGitHub: false, error: 'Not authenticated' };
-    }
+    return await withAuth(async (session) => {
+      const githubToken = await getUserGitHubToken(session.user.id);
+      if (!githubToken) {
+        return { hasGitHub: false };
+      }
 
-    const githubToken = await getUserGitHubToken(session.user.id);
-    if (!githubToken) {
-      return { hasGitHub: false };
-    }
+      // Verify the token is still valid
+      const response = await fetch('https://api.github.com/user', {
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: 'application/vnd.github.v3+json',
+        },
+      });
 
-    // Verify the token is still valid
-    const response = await fetch('https://api.github.com/user', {
-      headers: {
-        Authorization: `Bearer ${githubToken}`,
-        Accept: 'application/vnd.github.v3+json',
-      },
+      if (!response.ok) {
+        return { hasGitHub: false, tokenExpired: true };
+      }
+
+      const userInfo = await response.json();
+      return { 
+        hasGitHub: true, 
+        githubUsername: userInfo.login,
+        githubId: userInfo.id
+      };
     });
-
-    if (!response.ok) {
-      return { hasGitHub: false, tokenExpired: true };
-    }
-
-    const userInfo = await response.json();
-    return { 
-      hasGitHub: true, 
-      githubUsername: userInfo.login,
-      githubId: userInfo.id
-    };
   } catch (error) {
     console.error('Error checking GitHub connection:', error);
     return { hasGitHub: false, error: 'Failed to check GitHub connection' };
@@ -229,10 +230,10 @@ export async function fetchRegistryServer(registryId: string) {
  */
 export async function importRegistryServer(registryId: string, profileUuid: string) {
   try {
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return { success: false, error: 'You must be logged in to import servers' };
-    }
+    // Validate input
+    const validatedProfileUuid = uuidSchema.parse(profileUuid);
+    
+    return await withProfileAuth(validatedProfileUuid, async (session, profile) => {
 
     // Fetch server from registry
     const registryResult = await fetchRegistryServer(registryId);
@@ -294,6 +295,7 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
         error: result.error || 'Failed to import server' 
       };
     }
+    });
   } catch (error) {
     console.error('Error importing registry server:', error);
     return { 
@@ -308,10 +310,7 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
  */
 export async function publishClaimedServer(data: z.infer<typeof publishClaimedServerSchema>) {
   try {
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return { success: false, error: 'You must be logged in to publish servers' };
-    }
+    return await withAuth(async (session) => {
 
     // Validate input
     const validated = publishClaimedServerSchema.parse(data);
@@ -420,6 +419,7 @@ export async function publishClaimedServer(data: z.infer<typeof publishClaimedSe
       
       return { success: true, server };
     }
+    });
   } catch (error) {
     console.error('Error publishing claimed server:', error);
     if (error instanceof z.ZodError) {
@@ -437,10 +437,10 @@ export async function publishClaimedServer(data: z.infer<typeof publishClaimedSe
  */
 export async function claimServer(serverUuid: string) {
   try {
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return { success: false, error: 'You must be logged in to claim servers' };
-    }
+    // Validate input
+    const validatedServerUuid = uuidSchema.parse(serverUuid);
+    
+    return await withAuth(async (session) => {
 
     // Get server details
     const server = await db.query.registryServersTable.findFirst({
@@ -512,6 +512,7 @@ export async function claimServer(serverUuid: string) {
       server: updated,
       message: 'Server claimed successfully! You can now publish it to the registry.'
     };
+    });
   } catch (error) {
     console.error('Error claiming server:', error);
     return { 
@@ -608,11 +609,7 @@ interface WizardSubmissionData {
  */
 export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
   try {
-
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return { success: false, error: 'You must be logged in to submit servers' };
-    }
+    return await withAuth(async (session) => {
 
 
     // Validate required fields
@@ -1103,6 +1100,7 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         };
       }
     }
+    });
   } catch (error) {
     console.error('Error submitting wizard to registry:', error);
     return { 

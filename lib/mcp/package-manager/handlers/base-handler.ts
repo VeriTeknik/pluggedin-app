@@ -107,6 +107,5 @@ export abstract class BasePackageHandler {
    * Log package operation
    */
   protected log(operation: string, details: Record<string, any>): void {
-    console.log(`[${this.packageManagerName}] ${operation}:`, details);
   }
 }

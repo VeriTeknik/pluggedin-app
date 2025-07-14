@@ -101,7 +101,6 @@ export async function GET(request: NextRequest) {
       limit: searchParams.get('limit') || undefined,
     });
 
-    console.log('[Trending API] Params:', params);
 
     // Calculate trending servers
     const sourceFilter = params.source === 'all' ? null : params.source as McpServerSource;
@@ -111,7 +110,6 @@ export async function GET(request: NextRequest) {
       params.limit
     );
     
-    console.log('[Trending API] Found trending servers:', trendingServers.length);
 
     // Enrich trending servers with metadata
     const enrichedServers = await Promise.all(

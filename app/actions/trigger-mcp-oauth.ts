@@ -6,6 +6,7 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { createBubblewrapConfig, createFirejailConfig } from '@/lib/mcp/client-wrapper';
 import { OAuthProcessManager } from '@/lib/mcp/oauth-process-manager';
@@ -17,53 +18,33 @@ const triggerOAuthSchema = z.object({
 
 export async function triggerMcpOAuth(serverUuid: string) {
   try {
-
     // Validate input
     const validated = triggerOAuthSchema.parse({ serverUuid });
 
-    // Check authentication
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return { success: false, error: 'Not authenticated' };
-    }
-
-    // Get server details directly from database
-    const serverQuery = await db
-      .select({
-        server: mcpServersTable,
-        profile: profilesTable,
-        project: projectsTable,
-      })
-      .from(mcpServersTable)
-      .leftJoin(
-        profilesTable,
-        eq(mcpServersTable.profile_uuid, profilesTable.uuid)
-      )
-      .leftJoin(
-        projectsTable,
-        eq(profilesTable.project_uuid, projectsTable.uuid)
-      )
-      .where(
-        and(
-          eq(mcpServersTable.uuid, validated.serverUuid),
-          eq(projectsTable.user_id, session.user.id)
+    return await withServerAuth(validated.serverUuid, async (session, server) => {
+      // Get server details with profile information
+      const serverQuery = await db
+        .select({
+          server: mcpServersTable,
+          profile: profilesTable,
+        })
+        .from(mcpServersTable)
+        .leftJoin(
+          profilesTable,
+          eq(mcpServersTable.profile_uuid, profilesTable.uuid)
         )
-      )
-      .limit(1);
+        .where(eq(mcpServersTable.uuid, validated.serverUuid))
+        .limit(1);
 
-    if (!serverQuery || serverQuery.length === 0) {
-      return { success: false, error: 'Server not found or access denied' };
-    }
+      if (!serverQuery || serverQuery.length === 0 || !serverQuery[0].profile) {
+        return { success: false, error: 'Server profile not found' };
+      }
 
-    const { server: serverRow, profile } = serverQuery[0];
-
-    if (!profile?.uuid) {
-      return { success: false, error: 'Server profile not found' };
-    }
+      const { server: serverRow, profile } = serverQuery[0];
 
     // Decrypt server data with profile UUID
     const decryptedData = await decryptServerData(serverRow, profile.uuid);
-    const server: McpServer = {
+    const mcpServer: McpServer = {
       ...serverRow,
       ...decryptedData,
       config: decryptedData.config as Record<string, any> | null,
@@ -73,15 +54,15 @@ export async function triggerMcpOAuth(serverUuid: string) {
     let oauthResult;
 
     if (
-      server.args &&
-      Array.isArray(server.args) &&
-      server.args.some((arg) => arg === 'mcp-remote')
+      mcpServer.args &&
+      Array.isArray(mcpServer.args) &&
+      mcpServer.args.some((arg) => arg === 'mcp-remote')
     ) {
       // Handle mcp-remote servers (like Linear)
-      oauthResult = await handleMcpRemoteOAuth(server);
-    } else if (server.type === 'STREAMABLE_HTTP' || server.type === 'SSE') {
+      oauthResult = await handleMcpRemoteOAuth(mcpServer);
+    } else if (mcpServer.type === 'STREAMABLE_HTTP' || mcpServer.type === 'SSE') {
       // Handle STREAMABLE_HTTP/SSE servers with direct OAuth support
-      oauthResult = await handleStreamableHttpOAuth(server);
+      oauthResult = await handleStreamableHttpOAuth(mcpServer);
     } else {
       return {
         success: false,
@@ -92,9 +73,9 @@ export async function triggerMcpOAuth(serverUuid: string) {
     if (oauthResult.oauthUrl) {
       // OAuth URL found, return it for the client to open
       // For mcp-remote servers, we should mark that OAuth has been initiated
-      if (server.args && Array.isArray(server.args) && server.args.some((arg) => arg === 'mcp-remote')) {
+      if (mcpServer.args && Array.isArray(mcpServer.args) && mcpServer.args.some((arg) => arg === 'mcp-remote')) {
         // Update config to mark OAuth as initiated (but not completed)
-        const currentConfig = (server.config as any) || {};
+        const currentConfig = (mcpServer.config as any) || {};
         const updatedConfig = {
           ...currentConfig,
           oauth_initiated_at: new Date().toISOString(),
@@ -124,16 +105,16 @@ export async function triggerMcpOAuth(serverUuid: string) {
     }
     
     // For mcp-remote servers, even if we don't get a token back, check if OAuth completed
-    if (server.args && Array.isArray(server.args) && server.args.some((arg) => arg === 'mcp-remote')) {
+    if (mcpServer.args && Array.isArray(mcpServer.args) && mcpServer.args.some((arg) => arg === 'mcp-remote')) {
       if (oauthResult.success || ('token' in oauthResult && oauthResult.token === 'oauth_working')) {
         // Update the database to mark OAuth as completed
-        const currentConfig = (server.config as any) || {};
+        const currentConfig = (mcpServer.config as any) || {};
         
         // Detect provider from URL in server args
         let provider = 'mcp-remote';
-        const urlIndex = server.args?.findIndex((arg: string) => arg.includes('http'));
-        if (urlIndex !== -1 && urlIndex !== undefined && server.args) {
-          const url = server.args[urlIndex];
+        const urlIndex = mcpServer.args?.findIndex((arg: string) => arg.includes('http'));
+        if (urlIndex !== -1 && urlIndex !== undefined && mcpServer.args) {
+          const url = mcpServer.args[urlIndex];
           if (url.includes('linear')) provider = 'Linear';
           else if (url.includes('github')) provider = 'GitHub';
           else if (url.includes('slack')) provider = 'Slack';
@@ -162,6 +143,7 @@ export async function triggerMcpOAuth(serverUuid: string) {
       success: false,
       error: oauthResult.error || 'OAuth authentication failed',
     };
+    });
   } catch (error) {
     console.error('Error triggering OAuth:', error);
     return {

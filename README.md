@@ -5,7 +5,7 @@
   <h3>The Crossroads for AI Data Exchanges</h3>
   <p>A unified management interface for all your MCP servers with RAG capabilities</p>
 
-  [![Version](https://img.shields.io/badge/version-2.3.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+  [![Version](https://img.shields.io/badge/version-2.6.2-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
   [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
   [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
   [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)

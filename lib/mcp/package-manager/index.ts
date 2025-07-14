@@ -89,7 +89,6 @@ export class PackageManager {
       const firstArg = args[0];
       // Check if it looks like a package name (not a path)
       if (!firstArg.includes('/') && !firstArg.includes('\\') && !firstArg.startsWith('.')) {
-        console.log(`[PackageManager] Detected 'node ${firstArg}' - treating as npm package`);
         
         // Transform to npx-style handling
         const handler = this.getHandler('npm');
@@ -98,7 +97,6 @@ export class PackageManager {
             // Check if already installed
             const existingBinary = await handler.getBinaryPath(serverUuid, firstArg);
             if (existingBinary) {
-              console.log(`[PackageManager] Using cached package: ${firstArg}`);
               return { 
                 command: 'node',
                 args: [existingBinary, ...args.slice(1)],
@@ -107,7 +105,6 @@ export class PackageManager {
             }
             
             // Install package
-            console.log(`[PackageManager] Installing package: ${firstArg}`);
             const packageInfo = await this.installPackage('npm', {
               serverUuid,
               packageName: firstArg,
@@ -229,7 +226,6 @@ export class PackageManager {
       // Check if already installed
       const existingBinary = await handler.getBinaryPath(serverUuid, packageName);
       if (existingBinary) {
-        console.log(`[PackageManager] Using cached package: ${packageName}`);
         
         // For npx/npm exec, pnpm dlx, uvx, and docker, keep using the original command even if package is cached
         if (command === 'npx' || (command === 'npm' && args[0] === 'exec') || (command === 'pnpm' && args[0] === 'dlx') || command === 'uvx' || command === 'docker') {
@@ -267,7 +263,6 @@ export class PackageManager {
       }
       
       // Install package
-      console.log(`[PackageManager] Installing package: ${packageName}`);
       await this.installPackage(packageManagerType, {
         serverUuid,
         packageName,
@@ -356,11 +351,9 @@ export class PackageManager {
    */
   async prewarmCommonPackages(): Promise<void> {
     if (!PackageManagerConfig.PREWARM_COMMON_PACKAGES) {
-      console.log('[PackageManager] Package pre-warming disabled');
       return;
     }
     
-    console.log('[PackageManager] Pre-warming common packages...');
     
     const commonNodePackages = [
       '@modelcontextprotocol/sdk',
@@ -403,7 +396,6 @@ export class PackageManager {
         await dockerHandler.prewarmPackages(commonDockerImages);
       }
       
-      console.log('[PackageManager] Pre-warming completed');
     } catch (error) {
       console.error('[PackageManager] Pre-warming failed:', error);
     }
@@ -413,7 +405,6 @@ export class PackageManager {
    * Clean up packages for a server
    */
   async cleanupServer(serverUuid: string): Promise<void> {
-    console.log(`[PackageManager] Cleaning up packages for server ${serverUuid}`);
     
     const cleanupPromises = Array.from(this.handlers.values()).map(handler =>
       handler.cleanup(serverUuid).catch(err => 

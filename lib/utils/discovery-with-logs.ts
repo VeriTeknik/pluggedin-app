@@ -56,11 +56,8 @@ export async function discoverWithLogs(
     // This is where you would call your actual discovery logic
     // For now, this is a placeholder that demonstrates the pattern
     
-    console.log('Starting MCP discovery process...');
-    console.log(`Server UUID: ${serverUuid}`);
     
     if (options?.timeout) {
-      console.log(`Timeout set to: ${options.timeout}ms`);
     }
     
     try {
@@ -71,13 +68,11 @@ export async function discoverWithLogs(
       // Simulate async work
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('Successfully connected to server');
       console.info('Fetching available tools...');
       
       // Simulate more work
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      console.log('Discovery completed successfully');
       
       return {
         success: true,

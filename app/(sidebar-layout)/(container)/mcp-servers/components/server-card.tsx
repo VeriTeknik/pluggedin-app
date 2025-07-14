@@ -91,8 +91,6 @@ export function ServerCard({
   // Check if server requires auth
   useEffect(() => {
     const config = server.config as any;
-    console.log(`[ServerCard] Server ${server.name} config:`, config);
-    console.log(`[ServerCard] Server ${server.name} full data:`, server);
     
     // Check if this is an mcp-remote server (which typically requires OAuth)
     const isMcpRemote = server.command === 'npx' && 
@@ -104,7 +102,6 @@ export function ServerCard({
     // 2. Server has completed OAuth (oauth_completed_at exists) - to show status
     // 3. Server is mcp-remote (typically needs OAuth for services like Linear)
     if (config?.requires_auth || config?.oauth_completed_at || isMcpRemote) {
-      console.log(`[ServerCard] Server ${server.name} requires auth, has OAuth, or is mcp-remote!`);
       setRequiresAuth(true);
     }
   }, [server.config, server.command, server.args]);

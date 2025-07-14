@@ -211,7 +211,6 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
       switch (type) {
         case 'login': {
           const loginValues = values as LoginFormValues;
-          console.log('Attempting login with:', { email: loginValues.email.trim() });
           
           const response = await signIn('credentials', {
             email: loginValues.email.trim(),
@@ -219,7 +218,6 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
             redirect: false,
           });
 
-          console.log('Login response:', response);
 
           if (!response || response.error) {
             console.error('Login failed:', response?.error || 'No response');
@@ -232,7 +230,6 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
           }
 
           // On successful login
-          console.log('Login successful, redirecting...');
           window.location.href = '/mcp-servers';
           if (onSuccess) {
             onSuccess();

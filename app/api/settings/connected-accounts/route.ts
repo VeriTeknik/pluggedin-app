@@ -72,7 +72,6 @@ export async function DELETE(request: NextRequest) {
     
     // Remove the connected account
     // This is a placeholder - replace with your actual implementation
-    console.log(`Removing ${provider} account for user ${_userId}`);
     
     return NextResponse.json({ success: true });
   } catch (error) {

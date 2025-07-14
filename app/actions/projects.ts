@@ -68,7 +68,6 @@ export async function getProjects() {
       if (projects.length === 0) {
         // User has no projects, create a default one
         try {
-          console.log('Creating default project for user:', session.user.id);
           
           // Direct DB transaction method instead of using createProject function
           // This avoids dependency loops and ensures project creation works correctly

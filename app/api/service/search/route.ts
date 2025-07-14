@@ -87,7 +87,6 @@ interface RegistryFilters {
  * Search for MCP servers in the Plugged.in Registry using VP API
  */
 async function searchRegistry(query: string, filters: RegistryFilters = {}): Promise<SearchIndex> {
-  console.log('searchRegistry called with query:', query, 'filters:', filters);
   try {
     // Use enhanced VP API with server-side filtering
     const vpFilters: any = {};
@@ -110,7 +109,6 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
       vpFilters.sort = 'release_date_desc';
     }
     
-    console.log('[Search API] Calling VP API with filters:', vpFilters);
     
     // Use VP API to get servers with stats and server-side filtering
     const response = await registryVPClient.getServersWithStats(100, undefined, McpServerSource.REGISTRY, vpFilters);
@@ -136,7 +134,6 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
       indexed[server.id] = mcpIndex;
     }
     
-    console.log(`[Search API] Found ${Object.keys(indexed).length} servers after filtering`);
     
     // Return results - no need to enrich with metrics as stats are already included
     return indexed;
@@ -292,7 +289,6 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
       };
     }
 
-    console.log(`Found ${Object.keys(results).length} community servers`);
     
     return results; // Return directly as metrics are fetched inside
   } catch (error) {

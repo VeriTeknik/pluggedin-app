@@ -115,7 +115,6 @@ export async function GET(req: NextRequest) {
       },
       cancel() {
         // Clean up when client disconnects
-        console.log(`[MCP API] SSE stream cancelled for session ${sessionId}`);
       },
     });
 

@@ -306,7 +306,6 @@ const handleProcessTermination = async () => {
   if (isCleaningUp) return;
   isCleaningUp = true;
 
-  console.log('[MCP] Starting graceful shutdown...');
   
   // Get all active sessions
   const cleanupPromises = Array.from(activeSessions.entries()).map(async ([profileUuid, session]) => {
@@ -320,7 +319,6 @@ const handleProcessTermination = async () => {
 
   try {
     await Promise.all(cleanupPromises);
-    console.log('[MCP] All sessions cleaned up successfully');
   } catch (error) {
     console.error('[MCP] Error during final cleanup:', error);
   }
@@ -1151,8 +1149,8 @@ Please answer the user's question using both the provided context and your avail
     console.error('Error executing playground query:', error);
     
     // Enhanced error handling for schema-related issues
-    let errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    let errorDetails = '';
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = '';
     
     
     // Log the detailed error

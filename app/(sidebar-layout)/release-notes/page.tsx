@@ -20,7 +20,6 @@ const fetcher = async (url: string): Promise<ReleaseNote[]> => {
     throw new Error(error.message || 'Failed to fetch release notes');
   }
   const data = await res.json();
-  console.log('Fetched release notes:', data); // Debug log
   return data;
 };
 

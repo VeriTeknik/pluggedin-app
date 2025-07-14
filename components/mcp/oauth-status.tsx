@@ -76,17 +76,13 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
         let pollCount = 0;
         const pollInterval = setInterval(async () => {
           pollCount++;
-          console.log(`[OAuth Status] Polling attempt ${pollCount} for server ${serverUuid}`);
           
           // First check mcp-remote OAuth completion
           const mcpRemoteCheck = await checkMcpRemoteOAuthCompletion(serverUuid);
-          console.log(`[OAuth Status] MCP Remote check result:`, mcpRemoteCheck);
           
           if (mcpRemoteCheck.success && mcpRemoteCheck.isAuthenticated) {
             // OAuth completed, now get the updated status
-            console.log(`[OAuth Status] OAuth detected as complete, fetching updated status...`);
             const statusResult = await getMcpServerOAuthStatus(serverUuid);
-            console.log(`[OAuth Status] Updated status result:`, statusResult);
             
             if (statusResult.success && statusResult.data) {
               clearInterval(pollInterval);
@@ -102,7 +98,6 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
           
           // Also check regular status in case it's not an mcp-remote server
           const statusResult = await getMcpServerOAuthStatus(serverUuid);
-          console.log(`[OAuth Status] Regular status check result:`, statusResult);
           
           if (statusResult.success && statusResult.data?.isAuthenticated) {
             clearInterval(pollInterval);
@@ -116,7 +111,6 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
           
           // Stop polling after 40 attempts (2 minutes)
           if (pollCount >= 40) {
-            console.log(`[OAuth Status] Stopping polling after ${pollCount} attempts`);
             clearInterval(pollInterval);
             setLoading(false);
             toast({

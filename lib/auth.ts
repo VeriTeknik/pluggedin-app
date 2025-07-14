@@ -116,7 +116,6 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials: Record<string, string> | undefined) {
         try {
           if (!credentials?.email || !credentials?.password) {
-            console.log('Missing credentials');
             return null;
           }
 
@@ -125,13 +124,11 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user || !user.password) {
-            console.log('User not found or no password');
             return null;
           }
 
           // Check email verification
           if (!user.emailVerified) {
-            console.log('Email not verified');
             return null;
           }
 
@@ -249,7 +246,6 @@ export const authOptions: NextAuthOptions = {
       if (token) {
         // Explicitly assign ID from token, even if session object might already have it
         session.user.id = token.id as string; 
-        // console.log(`Session callback: Assigning ID: ${session.user.id}`); // Add logging
         
         // Use nullish coalescing to ensure type compatibility (string | null)
         session.user.name = token.name ?? null; 
@@ -257,12 +253,10 @@ export const authOptions: NextAuthOptions = {
         session.user.image = token.picture ?? null;
         session.user.emailVerified = token.emailVerified; // This should be Date | null
         session.user.username = token.username ?? null;
-        // console.log(`Session callback: Assigning username: ${session.user.username}`); // Add logging
       } else {
          console.warn('Session callback: Token is missing!'); // Log if token is missing
       }
 
-      // console.log('Session callback: Returning session:', session); // Log the final session object
       return session;
     },
     async jwt({ token, user, trigger, session }) {
@@ -282,7 +276,6 @@ export const authOptions: NextAuthOptions = {
           });
           // Ensure null is assigned if dbUser or dbUser.username is null/undefined
           token.username = dbUser?.username ?? null;
-          // console.log('JWT callback - username fetched:', token.username);
        } catch (error) {
           console.error('Error fetching username in JWT callback:', error);
           token.username = null; // Fallback to null on error
@@ -305,7 +298,6 @@ export const authOptions: NextAuthOptions = {
             });
             // Ensure null is assigned if dbUser or dbUser.username is null/undefined
             token.username = dbUser?.username ?? null;
-            // console.log('JWT callback - username fetched (fallback):', token.username);
           } catch (error) {
             console.error('Error fetching username in JWT callback (fallback):', error);
             token.username = null; // Fallback to null on error

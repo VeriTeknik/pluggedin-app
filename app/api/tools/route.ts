@@ -130,7 +130,6 @@ export async function GET(request: Request) {
         const shouldDiscover = toolCount === 0 && (now - lastAttempt) > DISCOVERY_THROTTLE_MS;
 
         if (shouldDiscover) {
-          console.log(`[API /api/tools] Triggering discovery for server ${server.name || 'Unnamed'} (${server.uuid}). Tool count: ${toolCount}`);
           discoveryTriggered = true;
           serversBeingDiscovered.push(server.name || server.uuid);
 

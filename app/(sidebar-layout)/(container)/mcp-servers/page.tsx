@@ -75,7 +75,6 @@ export default function MCPServersPage() {
   const { data: servers = [], mutate } = useSWR(
     currentProfile?.uuid ? `${currentProfile.uuid}/mcp-servers` : null,
     () => {
-      console.log('🔍 MCPServersPage: Fetching servers for profile:', currentProfile?.uuid);
       return getMcpServers(currentProfile?.uuid || '');
     }
   );
@@ -161,8 +160,6 @@ export default function MCPServersPage() {
       console.error('🔍 MCPServersPage: No current profile UUID');
       return;
     }
-    console.log('🔍 MCPServersPage: Creating servers for profile:', currentProfile.uuid);
-    console.log('🔍 MCPServersPage: Configs to create:', configs);
     
     setIsSubmitting(true);
     let successCount = 0;
@@ -171,7 +168,6 @@ export default function MCPServersPage() {
     try {
       for (const config of configs) {
         try {
-          console.log('🔍 MCPServersPage: Creating server:', config.name, 'with config:', config);
           await createMcpServer({
             ...config,
             profileUuid: currentProfile.uuid,
@@ -264,7 +260,6 @@ export default function MCPServersPage() {
                 // Smithery requires the API key to remain in the URL
                 if (url.includes('server.smithery.ai')) {
                   // Keep the API key in the URL for Smithery
-                  console.log('Smithery server detected during import, keeping API key in URL');
                 } else {
                   // For other services, extract and remove API key from URL
                   extractedHeaders = { 'Authorization': `Bearer ${apiKey}` };

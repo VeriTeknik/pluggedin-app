@@ -159,7 +159,6 @@ export async function POST(
       
       // Check if discovery was attempted recently
       if ((now - lastAttempt) > DISCOVERY_THROTTLE_MS) {
-        console.log(`[API Discover Trigger] Initiating discovery for server: ${server.name || server.uuid}`);
         
         // Record attempt to prevent duplicates
         discoveryAttempts.set(serverKey, now);
@@ -175,7 +174,6 @@ export async function POST(
         );
       } else {
         throttledServers.push(server.name || server.uuid);
-        console.log(`[API Discover Trigger] Throttling discovery for server: ${server.name || server.uuid} (last attempt ${Math.round((now - lastAttempt) / 1000)}s ago)`);
       }
     });
 

@@ -8,7 +8,6 @@ export async function getReviewsForServer(
   externalId: string
 ): Promise<ServerReview[]> {
   // Reviews system deprecated - will be replaced with new analytics service
-  console.log('Reviews system deprecated - returning empty reviews list');
   return [];
 }
 
@@ -21,7 +20,6 @@ export async function submitReview(reviewData: {
   comment?: string | null;
 }): Promise<{ success: boolean; error?: string }> {
   // Reviews system deprecated - will be replaced with new analytics service
-  console.log('Reviews system deprecated - review submission disabled');
   return {
     success: false,
     error: 'Reviews system is temporarily unavailable. Please try again later.'

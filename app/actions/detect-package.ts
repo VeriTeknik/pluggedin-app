@@ -62,7 +62,6 @@ async function fetchFileFromGitHub(
     );
     
     if (!response.ok) {
-      console.log(`GitHub API returned ${response.status} for ${path}`);
       return null;
     }
     
@@ -105,7 +104,6 @@ export async function detectPackageConfiguration(
   if (packageJsonContent) {
     try {
       packageJson = JSON.parse(packageJsonContent);
-      console.log('Found package.json with name:', packageJson.name);
     } catch (e) {
       console.error('Failed to parse package.json:', e);
     }
@@ -146,11 +144,9 @@ async function detectForTransport(
     
     // Check if package exists on npm
     if (packageJson.name) {
-      console.log(`Checking if ${packageJson.name} exists on npm...`);
       const exists = await checkNpmPackageExists(packageJson.name);
       
       if (exists) {
-        console.log(`✓ Found ${packageJson.name} on npm`);
         return {
           packageName: packageJson.name,
           command: 'npx',
@@ -160,16 +156,13 @@ async function detectForTransport(
         };
       }
       
-      console.log(`✗ ${packageJson.name} not found on npm, trying alternatives...`);
       
       // Try without scope
       if (packageJson.name.includes('/')) {
         const nameWithoutScope = packageJson.name.split('/')[1];
-        console.log(`Checking ${nameWithoutScope} (without scope)...`);
         const existsWithoutScope = await checkNpmPackageExists(nameWithoutScope);
         
         if (existsWithoutScope) {
-          console.log(`✓ Found ${nameWithoutScope} on npm`);
           return {
             packageName: nameWithoutScope,
             command: 'npx',
@@ -182,11 +175,9 @@ async function detectForTransport(
       
       // Try repo name directly
       const repoNameLower = repo.toLowerCase();
-      console.log(`Checking ${repoNameLower} (repo name)...`);
       const repoExists = await checkNpmPackageExists(repoNameLower);
       
       if (repoExists) {
-        console.log(`✓ Found ${repoNameLower} on npm`);
         return {
           packageName: repoNameLower,
           command: 'npx',

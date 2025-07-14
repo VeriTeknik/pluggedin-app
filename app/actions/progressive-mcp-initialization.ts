@@ -105,7 +105,6 @@ async function initializeSingleServer(
       
       // Debug log for Streamable HTTP servers
       if (serverConfig.type === 'STREAMABLE_HTTP' || serverConfig.transport === 'streamable_http') {
-        console.log(`[MCP] Initializing Streamable HTTP server "${serverName}" with config:`, JSON.stringify(serverConfig, null, 2));
       }
 
       

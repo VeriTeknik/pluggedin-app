@@ -439,21 +439,17 @@ export async function claimCommunityServer(data: z.infer<typeof claimCommunitySe
       
       if (!githubToken) {
         publishError = 'GitHub authentication required to publish to registry.';
-        console.log('No GitHub token available - cannot publish to registry');
       } else {
         // Use the user's GitHub token to publish
         try {
           const publishResult = await client.publishServer(registryPayload, githubToken);
           registryId = publishResult.id;
-          console.log('Successfully published to registry:', registryId);
         } catch (pubError: any) {
           // Handle different error scenarios
           if (pubError.message?.includes('401') || pubError.message?.includes('403')) {
             publishError = 'Authentication failed. Please ensure you have the correct permissions.';
-            console.log('Registry authentication error:', pubError.message);
           } else if (pubError.message?.includes('409')) {
             publishError = 'A server with this repository already exists in the registry.';
-            console.log('Registry conflict error:', pubError.message);
           } else {
             // Unexpected error
             publishError = pubError instanceof Error ? pubError.message : 'Failed to publish to registry';

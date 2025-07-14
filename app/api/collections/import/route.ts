@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { collectionUuid } = body;
+    const { collectionUuid, importType } = body;
 
     if (!collectionUuid) {
       return NextResponse.json({ error: 'Collection UUID is required' }, { status: 400 });
@@ -126,8 +126,13 @@ export async function POST(request: Request) {
 
     const profileUuid = project.active_profile_uuid || project.profiles[0].uuid;
 
-    // TODO: Handle importType === 'new' by creating a new workspace
-    // For now, we'll just import to the current workspace
+    // Handle importType
+    if (importType === 'new') {
+      return Response.json(
+        { error: 'Creating new workspace on import is not yet implemented' },
+        { status: 501 }
+      );
+    }
 
     // Import each server from the collection
     const importedServers = [];

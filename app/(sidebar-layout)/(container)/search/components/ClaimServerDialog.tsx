@@ -129,7 +129,7 @@ export function ClaimServerDialog({ open, onOpenChange, server }: ClaimServerDia
       // Fall back to checking NextAuth connection
       const result = await checkUserGitHubConnection();
       setHasGitHub(result.hasGitHub);
-      setGithubUsername(result.githubUsername || null);
+      setGithubUsername('githubUsername' in result ? result.githubUsername || null : null);
     } catch (error) {
       console.error('Error checking GitHub connection:', error);
       setHasGitHub(false);

@@ -17,6 +17,10 @@ type User = typeof users.$inferSelect;
 type LanguageCode = typeof languageEnum.enumValues[number]; 
 
 import { getAuthSession } from '@/lib/auth';
+import { withAuth, withServerAuth } from '@/lib/auth-helpers';
+
+// Additional validation schemas
+const uuidSchema = z.string().uuid('Invalid UUID format');
 
 // Validation schema for username
 const usernameSchema = z.string()
@@ -245,7 +249,6 @@ export async function getUserByUsername(username: string): Promise<User | null> 
 
     // If no user exists with this username, return null
     if (!user) {
-      console.log(`No user found with username: ${username}`);
       return null;
     }
 
@@ -258,7 +261,6 @@ export async function getUserByUsername(username: string): Promise<User | null> 
     }
 
     // If none of the visibility rules pass, return null
-    console.log(`User ${username} found but not accessible due to visibility rules`);
     return null;
   } catch (error) {
     console.error('Error getting user by username:', error);
@@ -793,14 +795,11 @@ export async function unshareServer(
   sharedServerUuid: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    // Get the current user from session
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return {
-        success: false,
-        error: 'You must be logged in to unshare servers'
-      };
-    }
+    // Validate inputs
+    const validatedProfileUuid = uuidSchema.parse(profileUuid);
+    const validatedSharedServerUuid = uuidSchema.parse(sharedServerUuid);
+    
+    return await withAuth(async (session) => {
     
     // First, get the shared server to find which profile owns it
     const sharedServer = await db.query.sharedMcpServersTable.findFirst({
@@ -862,6 +861,7 @@ export async function unshareServer(
     }
     
     return { success: true };
+    });
   } catch (error) {
     console.error('Error unsharing server:', error);
     return {

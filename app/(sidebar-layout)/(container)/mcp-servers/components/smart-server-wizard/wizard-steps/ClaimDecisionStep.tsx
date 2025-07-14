@@ -64,7 +64,6 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
         .then(res => res.json())
         .then(user => {
           if (user.login) {
-            console.log('🔍 ClaimDecisionStep: Storing registry token from localStorage:', token ? `${token.substring(0, 10)}...` : 'undefined');
             onUpdate({
               isAuthenticated: true,
               githubUsername: user.login,
@@ -118,7 +117,6 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
           .then(res => res.json())
           .then(user => {
             if (user.login) {
-              console.log('🔍 ClaimDecisionStep: Storing registry token from OAuth popup:', event.data.accessToken ? `${event.data.accessToken.substring(0, 10)}...` : 'undefined');
               onUpdate({
                 isAuthenticated: true,
                 githubUsername: user.login,

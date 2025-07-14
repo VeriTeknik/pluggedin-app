@@ -158,7 +158,6 @@ export async function GET(
     }
 
     // Add logging before returning
-    console.log(`[API /api/custom-instructions/${serverUuid}] Transformed messages being returned:`, JSON.stringify(transformedMessages));
 
     // The proxy expects an object like { messages: [...] }
     return NextResponse.json({
