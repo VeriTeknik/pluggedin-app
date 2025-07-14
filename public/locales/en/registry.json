@@ -1,5 +1,42 @@
 {
   "registry": {
+    "wizard": {
+      "title": "Add Server to Registry",
+      "cancelTitle": "Cancel Wizard",
+      "cancelDescription": "Are you sure you want to cancel? Your progress will be lost.",
+      "confirmCancel": "Yes, Cancel",
+      "continueButton": "Continue",
+      "operationInProgress": "Operation in progress",
+      "waitForOperation": "Please wait for the current operation to complete.",
+      "success": "Success!",
+      "successDescription": "Server has been successfully added to the registry."
+    },
+    "steps": {
+      "github": {
+        "title": "GitHub Repository",
+        "description": "Enter the GitHub repository URL"
+      },
+      "ownership": {
+        "title": "Ownership",
+        "description": "Claim this server or add to community"
+      },
+      "configuration": {
+        "title": "Configuration",
+        "description": "Configure environment variables"
+      },
+      "discovery": {
+        "title": "Test Discovery",
+        "description": "Test server discovery and capabilities"
+      },
+      "submit": {
+        "title": "Submit",
+        "description": "Submit to the registry"
+      }
+    },
+    "navigation": {
+      "previous": "Previous",
+      "next": "Next"
+    },
     "addServer": {
       "button": "Add to Registry",
       "title": "Add Server to Registry",
@@ -15,12 +52,200 @@
         "claimed": "Server published to the registry successfully!"
       }
     },
+    "github": {
+      "inputStep": {
+        "title": "GitHub Repository",
+        "description": "Enter the GitHub repository URL",
+        "label": "Repository URL",
+        "placeholder": "https://github.com/owner/repository",
+        "validate": "Validate",
+        "validating": "Validating",
+        "supportedFormats": "Supports formats: https://github.com/owner/repo, git@github.com:owner/repo, or owner/repo",
+        "errors": {
+          "invalidUrl": "Please enter a valid GitHub repository URL",
+          "notFound": "Repository not found. Please check the URL and try again.",
+          "rateLimited": "GitHub API rate limit exceeded. Please try again later.",
+          "accessDenied": "Failed to access repository. It might be private or the URL is incorrect."
+        },
+        "repository": {
+          "private": "Private repository",
+          "stars": "{{count}} stars",
+          "alreadyInRegistry": "This repository is already in the registry!",
+          "claimed": "Claimed",
+          "community": "Community",
+          "version": "Version: {{version}}"
+        }
+      }
+    },
     "ownership": {
+      "step": {
+        "title": "Server Ownership",
+        "description": "Choose how you want to add this server to the registry.",
+        "repository": "Repository:",
+        "privateRepo": "(Private repository)",
+        "alreadyExists": "This server is already in the registry!",
+        "claimedServer": "Claimed",
+        "communityServer": "Community",
+        "updateExisting": "If you're the owner, you can update the existing server instead of creating a duplicate.",
+        "canClaim": "You can claim this community server if you're the repository owner."
+      },
+      "claim": {
+        "title": "Claim this server",
+        "recommended": "(Recommended)",
+        "alreadyClaimed": "(Already claimed)",
+        "description": "Verify ownership and unlock premium features",
+        "alreadyClaimedDesc": "This server has already been claimed by its owner",
+        "benefits": {
+          "verified": "Verified badge on your server",
+          "analytics": "Access to analytics and insights",
+          "priority": "Priority in search results",
+          "updates": "Direct registry updates from GitHub"
+        },
+        "authenticated": "Authenticated as",
+        "verifying": "Verifying repository ownership...",
+        "verificationFailed": "You do not have admin access to this repository. Please select \"Add to community\" instead.",
+        "verificationSuccess": "Repository ownership verified!",
+        "authRequired": "GitHub authentication is required to claim servers"
+      },
+      "community": {
+        "title": "Add to community",
+        "alreadyInRegistry": "(Already in registry)",
+        "description": "Submit without ownership verification",
+        "alreadyInRegistryDesc": "This server is already in the registry",
+        "benefits": {
+          "quick": "Quick submission process",
+          "noAuth": "No authentication required",
+          "available": "Available to all users",
+          "canBeClaimed": "Can be claimed later by the owner"
+        }
+      },
+      "actions": {
+        "title": "What can you do?",
+        "ifOwnerClaimed": [
+          "If you own this repository, update the existing server instead",
+          "Import the existing server from the registry to your profile",
+          "Contact the current owner if you believe there's an issue"
+        ],
+        "ifOwnerUnclaimed": [
+          "If you own this repository, you can claim the existing community server",
+          "Import the existing server from the registry to your profile",
+          "Update the community server if you have improvements"
+        ]
+      },
       "question": "Do you own this server?",
       "owned": "Yes, I own this server",
       "owned.description": "I'm the repository owner and want to publish it to the registry",
       "notOwned": "No, I'm adding it for the community",
       "notOwned.description": "I found this server and want to help others discover it"
+    },
+    "envConfig": {
+      "title": "Environment Variables",
+      "description": "Configure environment variables required by this server. These can be customized by users when they install the server.",
+      "loading": "Detecting environment variables...",
+      "detectedCommand": {
+        "title": "Detected Command",
+        "command": "Command:",
+        "args": "Args:"
+      },
+      "info": "Double-click any variable to edit its details. These variables will be stored as metadata in the registry.",
+      "variable": {
+        "name": "VARIABLE_NAME",
+        "description": "Description (optional)",
+        "required": "Required",
+        "secret": "Secret",
+        "modified": "Modified",
+        "source": {
+          "readme": "README",
+          "packageJson": "package.json",
+          "envExample": ".env.example",
+          "detected": "Auto-detected",
+          "manual": "Manual"
+        },
+        "placeholder": {
+          "name": "VARIABLE_NAME",
+          "description": "Description (optional)"
+        },
+        "defaultDescription": "Environment variable",
+        "fromSource": "Environment variable from {{source}}",
+        "apiKeyFor": "API key for {{header}} header",
+          "oauthClientId": "OAuth Client ID",
+          "githubToken": "GitHub personal access token for API access",
+          "apiKey": "API key",
+          "noVarsDetected": "No environment variables detected. You can add them manually if needed."
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "save": "Save changes",
+        "cancel": "Cancel editing",
+        "reset": "Reset to detected values",
+        "addVariable": "Add Variable"
+      }
+    },
+    "discovery": {
+      "title": "Test Server Discovery",
+      "description": "Let's test the server to discover its capabilities and ensure it's working correctly.",
+      "notStarted": "Click the button below to test the server discovery.",
+      "testButton": "Test Server Discovery",
+      "testing": "Testing server discovery...",
+      "output": {
+        "title": "Discovery Output",
+        "tools": "Tools",
+        "resources": "Resources",
+        "prompts": "Prompts",
+        "none": "None"
+      },
+      "results": {
+        "success": "Server discovery completed successfully!",
+        "failed": "Server discovery failed",
+        "capabilities": "Discovered Capabilities"
+      }
+    },
+    "submit": {
+      "title": "Submit to Registry",
+      "description": "Review your server configuration and submit it to the registry.",
+      "metadata": {
+        "title": "Server Metadata",
+        "description": "Description",
+        "author": "Author",
+        "categories": "Categories",
+        "tags": "Tags",
+        "placeholders": {
+          "description": "Brief description of what this server does",
+          "tags": "Enter tags and press Enter"
+        }
+      },
+      "review": {
+        "title": "Review Configuration",
+        "repository": "Repository",
+        "package": "Package",
+        "command": "Command",
+        "envVars": "Environment Variables",
+        "capabilities": {
+          "title": "Capabilities",
+          "tools": "{{count}} tool",
+          "tools_plural": "{{count}} tools",
+          "resources": "{{count}} resource",
+          "resources_plural": "{{count}} resources",
+          "prompts": "{{count}} prompt",
+          "prompts_plural": "{{count}} prompts"
+        }
+      },
+      "submitting": "Submitting to registry...",
+      "submitButton": {
+        "claim": "Submit & Claim Server",
+        "community": "Submit to Community"
+      },
+      "success": {
+        "title": "Success!",
+        "claimed": "Your server has been successfully published to the registry!",
+        "community": "Server has been added to the community registry. The owner can claim it later.",
+        "viewInRegistry": "View in Registry"
+      },
+      "error": {
+        "title": "Submission Failed",
+        "tryAgain": "Try Again"
+      }
     },
     "form": {
       "repositoryUrl": "GitHub Repository URL",

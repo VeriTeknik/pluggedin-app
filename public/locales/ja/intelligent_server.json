@@ -1,0 +1,6 @@
+{
+  "dialog": {
+    "title": "Intelligent Add Server",
+    "description": "Add MCP servers from the registry, GitHub, or paste configurations. Supports multiple formats and auto-detection."
+  }
+}

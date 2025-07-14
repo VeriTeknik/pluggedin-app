@@ -25,12 +25,14 @@ import enDiscover from '../public/locales/en/discover.json';
 import enDiscoverDialog from '../public/locales/en/discover_dialog.json';
 import enDocs from '../public/locales/en/docs.json';
 import enGuides from '../public/locales/en/guides.json';
+import enIntelligentServer from '../public/locales/en/intelligent_server.json';
 import enLibrary from '../public/locales/en/library.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
 import enMcpServers from '../public/locales/en/mcpServers.json';
 import enNotifications from '../public/locales/en/notifications.json';
 import enPlayground from '../public/locales/en/playground.json';
+import enRegistry from '../public/locales/en/registry.json';
 import enSearch from '../public/locales/en/search.json';
 import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
@@ -58,12 +60,14 @@ export const namespaces = [
   'discover_dialog',
   'docs',
   'guides',
+  'intelligent_server',
   'landing',
   'legal',
   'library',
   'mcpServers',
   'notifications',
   'playground',
+  'registry',
   'search',
   'settings',
   'setupGuide',
@@ -82,3 +86,43 @@ export const namespaces = [
   'tutorial-self-hosting',
   'tutorial-security-best-practices'
 ] as const;
+
+export type Namespace = typeof namespaces[number];
+
+// Define messages type for each namespace
+export type Messages = {
+  apiKeys: typeof enApiKeys;
+  auth: typeof enAuth;
+  common: typeof enCommon;
+  discover: typeof enDiscover;
+  discover_dialog: typeof enDiscoverDialog;
+  docs: typeof enDocs;
+  guides: typeof enGuides;
+  intelligent_server: typeof enIntelligentServer;
+  landing: typeof enLanding;
+  legal: typeof enLegal;
+  library: typeof enLibrary;
+  mcpServers: typeof enMcpServers;
+  notifications: typeof enNotifications;
+  playground: typeof enPlayground;
+  registry: typeof enRegistry;
+  search: typeof enSearch;
+  settings: typeof enSettings;
+  setupGuide: typeof enSetupGuide;
+  sidebar: typeof enSidebar;
+  whatsNew: typeof enWhatsNew;
+  'getting-started': typeof enGettingStarted;
+  tutorials: typeof enTutorials;
+  'tutorial-rag-client': typeof enTutorialRagClient;
+  'tutorial-notifications': typeof enTutorialNotifications;
+  'tutorial-first-mcp-server': typeof enTutorialFirstMcpServer;
+  'tutorial-sharing-with-community': typeof enTutorialSharingCommunity;
+  'tutorial-rag-knowledge-base': typeof enTutorialRagKnowledge;
+  'tutorial-team-collaboration': typeof enTutorialTeamCollab;
+  'tutorial-custom-mcp-server': typeof enTutorialCustomMcp;
+  'tutorial-api-integration': typeof enTutorialApiIntegration;
+  'tutorial-self-hosting': typeof enTutorialSelfHosting;
+  'tutorial-security-best-practices': typeof enTutorialSecurity;
+};
+
+export type MessageKey<NS extends Namespace> = keyof Messages[NS];

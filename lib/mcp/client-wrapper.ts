@@ -197,6 +197,9 @@ export function createBubblewrapConfig(
     '--ro-bind', PackageManagerConfig.PYTHON_BIN_DIR, PackageManagerConfig.PYTHON_BIN_DIR,
     '--ro-bind', PackageManagerConfig.DOCKER_BIN_DIR, PackageManagerConfig.DOCKER_BIN_DIR,
     
+    // NVM directories for pnpm support (try variants since NVM might not be installed)
+    '--ro-bind-try', `${actualHome}/.nvm`, `${actualHome}/.nvm`,
+    
     // UV cache directory
     '--bind', `${paths.userHome}/.cache/uv`, `${paths.userHome}/.cache/uv`,
     
@@ -222,10 +225,22 @@ export function createBubblewrapConfig(
   // Use the original command name
   const commandToExecute = serverConfig.command;
 
+  // Try to find pnpm in the system
+  let pnpmPath = '';
+  try {
+    const pnpmLocation = execSync('which pnpm', { encoding: 'utf8', stdio: 'pipe' }).trim();
+    if (pnpmLocation) {
+      pnpmPath = path.dirname(pnpmLocation);
+    }
+  } catch (e) {
+    // pnpm not found, fallback to including common nvm paths
+    pnpmPath = `${actualHome}/.nvm/versions/node/v22.17.0/bin:${actualHome}/.nvm/versions/node/v20.18.2/bin`;
+  }
+
   // Construct the final environment
   const finalEnv = {
     // Sensible defaults - include interpreter paths from config
-    PATH: `${paths.localBin}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
+    PATH: `${paths.localBin}:${pnpmPath}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
     HOME: paths.userHome,
     USER: process.env.FIREJAIL_USER ?? 'pluggedin',
     USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',
@@ -236,6 +251,9 @@ export function createBubblewrapConfig(
     // UV specific
     UV_ROOT: `${paths.userHome}/.local/uv`,
     UV_SYSTEM_PYTHON: 'true',
+    // PNPM specific
+    PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
+    NODE_ENV: 'production',
     // Inherit parent process env
     ...(process.env as Record<string, string>),
     // Apply server-specific env vars
@@ -320,6 +338,7 @@ export function createFirejailConfig(
       `--whitelist=${PackageManagerConfig.PYTHON_BIN_DIR}`, // Allow Python interpreters  
       `--whitelist=${PackageManagerConfig.DOCKER_BIN_DIR}`, // Allow Docker
       `--whitelist=${paths.mcpWorkspace}`, // Allow workspace access
+      `--whitelist=${actualHome}/.nvm`, // Allow nvm directory for pnpm
       '--whitelist=/usr/lib/python*', // Python libs
       '--whitelist=/usr/local/lib/python*',
       `--whitelist=${paths.userHome}/.cache/uv`, // UV cache
@@ -352,10 +371,22 @@ export function createFirejailConfig(
   // Use the original command name; rely on PATH set within the sandbox env
   const commandToExecute = serverConfig.command;
 
+  // Try to find pnpm in the system for firejail
+  let pnpmPathFirejail = '';
+  try {
+    const pnpmLocation = execSync('which pnpm', { encoding: 'utf8', stdio: 'pipe' }).trim();
+    if (pnpmLocation) {
+      pnpmPathFirejail = path.dirname(pnpmLocation);
+    }
+  } catch (e) {
+    // pnpm not found, fallback to including common nvm paths
+    pnpmPathFirejail = `${actualHome}/.nvm/versions/node/v22.17.0/bin:${actualHome}/.nvm/versions/node/v20.18.2/bin`;
+  }
+
   // Construct the final environment, prioritizing serverConfig.env
   const finalEnv = {
     // Sensible defaults, adjust user/home if needed - include interpreter paths from config
-    PATH: `${paths.localBin}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
+    PATH: `${paths.localBin}:${pnpmPathFirejail}:${PackageManagerConfig.NODEJS_BIN_DIR}:${PackageManagerConfig.PYTHON_BIN_DIR}:${PackageManagerConfig.DOCKER_BIN_DIR}:/usr/local/bin:/usr/bin:/bin`,
     HOME: paths.userHome,
     USER: process.env.FIREJAIL_USER ?? 'pluggedin',
     USERNAME: process.env.FIREJAIL_USERNAME ?? 'pluggedin',
@@ -366,6 +397,9 @@ export function createFirejailConfig(
     // UV specific
     UV_ROOT: `${paths.userHome}/.local/uv`, // Adjust if needed
     UV_SYSTEM_PYTHON: 'true',
+    // PNPM specific
+    PNPM_STORE_DIR: PackageManagerConfig.PNPM_STORE_DIR,
+    NODE_ENV: 'production',
     // Inherit parent process env (like PATH, etc.)
     ...(process.env as Record<string, string>),
     // Apply server-specific env vars, overriding inherited ones

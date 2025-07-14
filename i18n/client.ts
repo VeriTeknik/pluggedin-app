@@ -10,12 +10,14 @@ import enDiscover from '../public/locales/en/discover.json';
 import enDiscoverDialog from '../public/locales/en/discover_dialog.json';
 import enDocs from '../public/locales/en/docs.json';
 import enGuides from '../public/locales/en/guides.json';
+import enIntelligentServer from '../public/locales/en/intelligent_server.json';
 import enLibrary from '../public/locales/en/library.json';
 import enLanding from '../public/locales/en/landing.json';
 import enLegal from '../public/locales/en/legal.json';
 import enMcpServers from '../public/locales/en/mcpServers.json';
 import enNotifications from '../public/locales/en/notifications.json';
 import enPlayground from '../public/locales/en/playground.json';
+import enRegistry from '../public/locales/en/registry.json';
 import enSearch from '../public/locales/en/search.json';
 import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
@@ -41,12 +43,14 @@ import hiDiscover from '../public/locales/hi/discover.json';
 import hiDiscoverDialog from '../public/locales/hi/discover_dialog.json';
 import hiDocs from '../public/locales/hi/docs.json';
 import hiGuides from '../public/locales/hi/guides.json';
+import hiIntelligentServer from '../public/locales/hi/intelligent_server.json';
 import hiLibrary from '../public/locales/hi/library.json';
 import hiLanding from '../public/locales/hi/landing.json';
 import hiLegal from '../public/locales/hi/legal.json';
 import hiMcpServers from '../public/locales/hi/mcpServers.json';
 import hiNotifications from '../public/locales/hi/notifications.json';
 import hiPlayground from '../public/locales/hi/playground.json';
+import hiRegistry from '../public/locales/hi/registry.json';
 import hiSearch from '../public/locales/hi/search.json';
 import hiSettings from '../public/locales/hi/settings.json';
 import hiSetupGuide from '../public/locales/hi/setupGuide.json';
@@ -72,12 +76,14 @@ import jaDiscover from '../public/locales/ja/discover.json';
 import jaDiscoverDialog from '../public/locales/ja/discover_dialog.json';
 import jaDocs from '../public/locales/ja/docs.json';
 import jaGuides from '../public/locales/ja/guides.json';
+import jaIntelligentServer from '../public/locales/ja/intelligent_server.json';
 import jaLibrary from '../public/locales/ja/library.json';
 import jaLanding from '../public/locales/ja/landing.json';
 import jaLegal from '../public/locales/ja/legal.json';
 import jaMcpServers from '../public/locales/ja/mcpServers.json';
 import jaNotifications from '../public/locales/ja/notifications.json';
 import jaPlayground from '../public/locales/ja/playground.json';
+import jaRegistry from '../public/locales/ja/registry.json';
 import jaSearch from '../public/locales/ja/search.json';
 import jaSettings from '../public/locales/ja/settings.json';
 import jaSetupGuide from '../public/locales/ja/setupGuide.json';
@@ -103,12 +109,14 @@ import nlDiscover from '../public/locales/nl/discover.json';
 import nlDiscoverDialog from '../public/locales/nl/discover_dialog.json';
 import nlDocs from '../public/locales/nl/docs.json';
 import nlGuides from '../public/locales/nl/guides.json';
+import nlIntelligentServer from '../public/locales/nl/intelligent_server.json';
 import nlLibrary from '../public/locales/nl/library.json';
 import nlLanding from '../public/locales/nl/landing.json';
 import nlLegal from '../public/locales/nl/legal.json';
 import nlMcpServers from '../public/locales/nl/mcpServers.json';
 import nlNotifications from '../public/locales/nl/notifications.json';
 import nlPlayground from '../public/locales/nl/playground.json';
+import nlRegistry from '../public/locales/nl/registry.json';
 import nlSearch from '../public/locales/nl/search.json';
 import nlSettings from '../public/locales/nl/settings.json';
 import nlSetupGuide from '../public/locales/nl/setupGuide.json';
@@ -134,12 +142,14 @@ import trDiscover from '../public/locales/tr/discover.json';
 import trDiscoverDialog from '../public/locales/tr/discover_dialog.json';
 import trDocs from '../public/locales/tr/docs.json';
 import trGuides from '../public/locales/tr/guides.json';
+import trIntelligentServer from '../public/locales/tr/intelligent_server.json';
 import trLibrary from '../public/locales/tr/library.json';
 import trLanding from '../public/locales/tr/landing.json';
 import trLegal from '../public/locales/tr/legal.json';
 import trMcpServers from '../public/locales/tr/mcpServers.json';
 import trNotifications from '../public/locales/tr/notifications.json';
 import trPlayground from '../public/locales/tr/playground.json';
+import trRegistry from '../public/locales/tr/registry.json';
 import trSearch from '../public/locales/tr/search.json';
 import trSettings from '../public/locales/tr/settings.json';
 import trSetupGuide from '../public/locales/tr/setupGuide.json';
@@ -165,12 +175,14 @@ import zhDiscover from '../public/locales/zh/discover.json';
 import zhDiscoverDialog from '../public/locales/zh/discover_dialog.json';
 import zhDocs from '../public/locales/zh/docs.json';
 import zhGuides from '../public/locales/zh/guides.json';
+import zhIntelligentServer from '../public/locales/zh/intelligent_server.json';
 import zhLibrary from '../public/locales/zh/library.json';
 import zhLanding from '../public/locales/zh/landing.json';
 import zhLegal from '../public/locales/zh/legal.json';
 import zhMcpServers from '../public/locales/zh/mcpServers.json';
 import zhNotifications from '../public/locales/zh/notifications.json';
 import zhPlayground from '../public/locales/zh/playground.json';
+import zhRegistry from '../public/locales/zh/registry.json';
 import zhSearch from '../public/locales/zh/search.json';
 import zhSettings from '../public/locales/zh/settings.json';
 import zhSetupGuide from '../public/locales/zh/setupGuide.json';
@@ -218,12 +230,14 @@ const resources = {
     discover_dialog: enDiscoverDialog,
     docs: enDocs,
     guides: enGuides,
+    intelligent_server: enIntelligentServer,
     library: enLibrary,
     landing: enLanding,
     legal: enLegal,
     mcpServers: enMcpServers,
     notifications: enNotifications,
     playground: enPlayground,
+    registry: enRegistry,
     search: enSearch,
     settings: enSettings,
     setupGuide: enSetupGuide,
@@ -268,12 +282,14 @@ const resources = {
     discover_dialog: hiDiscoverDialog,
     docs: hiDocs,
     guides: hiGuides,
+    intelligent_server: hiIntelligentServer,
     library: hiLibrary,
     landing: hiLanding,
     legal: hiLegal,
     mcpServers: hiMcpServers,
     notifications: hiNotifications,
     playground: hiPlayground,
+    registry: hiRegistry,
     search: hiSearch,
     settings: hiSettings,
     setupGuide: hiSetupGuide,
@@ -318,12 +334,14 @@ const resources = {
     discover_dialog: jaDiscoverDialog,
     docs: jaDocs,
     guides: jaGuides,
+    intelligent_server: jaIntelligentServer,
     library: jaLibrary,
     landing: jaLanding,
     legal: jaLegal,
     mcpServers: jaMcpServers,
     notifications: jaNotifications,
     playground: jaPlayground,
+    registry: jaRegistry,
     search: jaSearch,
     settings: jaSettings,
     setupGuide: jaSetupGuide,
@@ -368,12 +386,14 @@ const resources = {
     discover_dialog: nlDiscoverDialog,
     docs: nlDocs,
     guides: nlGuides,
+    intelligent_server: nlIntelligentServer,
     library: nlLibrary,
     landing: nlLanding,
     legal: nlLegal,
     mcpServers: nlMcpServers,
     notifications: nlNotifications,
     playground: nlPlayground,
+    registry: nlRegistry,
     search: nlSearch,
     settings: nlSettings,
     setupGuide: nlSetupGuide,
@@ -418,12 +438,14 @@ const resources = {
     discover_dialog: trDiscoverDialog,
     docs: trDocs,
     guides: trGuides,
+    intelligent_server: trIntelligentServer,
     library: trLibrary,
     landing: trLanding,
     legal: trLegal,
     mcpServers: trMcpServers,
     notifications: trNotifications,
     playground: trPlayground,
+    registry: trRegistry,
     search: trSearch,
     settings: trSettings,
     setupGuide: trSetupGuide,
@@ -468,12 +490,14 @@ const resources = {
     discover_dialog: zhDiscoverDialog,
     docs: zhDocs,
     guides: zhGuides,
+    intelligent_server: zhIntelligentServer,
     library: zhLibrary,
     landing: zhLanding,
     legal: zhLegal,
     mcpServers: zhMcpServers,
     notifications: zhNotifications,
     playground: zhPlayground,
+    registry: zhRegistry,
     search: zhSearch,
     settings: zhSettings,
     setupGuide: zhSetupGuide,

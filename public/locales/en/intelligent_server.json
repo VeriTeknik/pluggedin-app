@@ -1,0 +1,79 @@
+{
+  "dialog": {
+    "title": "Intelligent Add Server",
+    "description": "Add MCP servers from the registry, GitHub, or paste configurations. Supports multiple formats and auto-detection."
+  },
+  "github": {
+    "authenticated": "Registry authenticated as",
+    "authenticateButton": "Authenticate for Registry"
+  },
+  "examples": {
+    "label": "Examples:",
+    "loadPlaceholder": "Load an example",
+    "registry": "Registry ID",
+    "github": "GitHub URL",
+    "json": "JSON Config",
+    "command": "NPX Command",
+    "multiple": "Multiple Servers"
+  },
+  "input": {
+    "label": "Server Configuration",
+    "placeholder": "Enter a registry ID (io.github.owner/repo), GitHub URL, JSON config, or command...",
+    "analyzing": "Analyzing...",
+    "analyzingInput": "Analyzing input..."
+  },
+  "autoDetection": {
+    "title": "Auto-detection Details",
+    "youOwnRepo": "You own this repository",
+    "notYourRepo": "Not your repository",
+    "authRequired": "Authenticate with GitHub to verify ownership",
+    "inRegistry": "This server is available in the Plugged.in Registry",
+    "willBeAdded": "This server will be added to your profile.",
+    "notInRegistry": "This server is not in the registry. It will be added as a community server."
+  },
+  "servers": {
+    "detected": "Detected {{count}} server",
+    "detected_plural": "Detected {{count}} servers",
+    "addMore": "Add More",
+    "select": "Select {{name}}",
+    "alreadyInstalled": "This server is already installed",
+    "duplicate": "{{name}} is already installed in your profile"
+  },
+  "badges": {
+    "registry": "Registry",
+    "tested": "Tested",
+    "failed": "Failed",
+    "duplicate": "Duplicate"
+  },
+  "details": {
+    "description": "Description",
+    "transport": "Transport",
+    "command": "Command",
+    "arguments": "Arguments",
+    "url": "URL",
+    "environment": "Environment Variables",
+    "features": "Features",
+    "testResult": "Test Result",
+    "tools": "{{count}} tool",
+    "tools_plural": "{{count}} tools",
+    "resources": "{{count}} resource",
+    "resources_plural": "{{count}} resources",
+    "prompts": "{{count}} prompt",
+    "prompts_plural": "{{count}} prompts",
+    "testSuccess": "Successfully connected",
+    "testFailed": "Connection failed"
+  },
+  "footer": {
+    "selected": "{{count}} selected",
+    "add": "Add {{count}} Server",
+    "add_plural": "Add {{count}} Servers",
+    "testing": "Testing...",
+    "adding": "Adding servers..."
+  },
+  "errors": {
+    "invalidInput": "Invalid input format",
+    "failedToParse": "Failed to parse configuration",
+    "serverExists": "Server already exists",
+    "connectionFailed": "Failed to connect to server"
+  }
+}
