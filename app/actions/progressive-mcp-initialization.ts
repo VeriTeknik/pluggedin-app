@@ -108,14 +108,6 @@ async function initializeSingleServer(
         console.log(`[MCP] Initializing Streamable HTTP server "${serverName}" with config:`, JSON.stringify(serverConfig, null, 2));
       }
 
-      // Log provider info for debugging Gemini issues
-      if (llmProvider === 'google_gemini' || llmProvider === 'google_genai') {
-        await addServerLogForProfile(
-          profileUuid,
-          'info',
-          `[MCP] Initializing ${serverName} with Gemini-compatible schema transformation`
-        );
-      }
       
       const initPromise = convertMcpToLangchainTools(
         configForTool, // Pass the correctly typed config

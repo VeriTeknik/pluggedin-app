@@ -693,20 +693,15 @@ export async function getOrCreatePlaygroundSession(
       // --- Use Progressive Initialization ---
       // Map the provider to what langchain-mcp-tools expects
       let mappedProvider: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none' = 'none';
+      
       if (llmConfig.provider === 'anthropic') {
         mappedProvider = 'anthropic';
       } else if (llmConfig.provider === 'openai') {
         mappedProvider = 'openai';
       } else if (llmConfig.provider === 'google') {
-        mappedProvider = 'google_gemini'; // Use google_gemini for stricter validation
+        // Update to use openai format which is more compatible with Gemini
+        mappedProvider = 'openai';
       }
-      
-      // Log the provider mapping for debugging
-      await addServerLogForProfile(
-        profileUuid,
-        'info',
-        `[MCP] LLM Provider mapping: ${llmConfig.provider} → ${mappedProvider}`
-      );
       
       const { tools, cleanup, failedServers } = await progressivelyInitializeMcpServers(
         mcpServersConfig,
@@ -1154,9 +1149,22 @@ Please answer the user's question using both the provided context and your avail
     };
   } catch (error) {
     console.error('Error executing playground query:', error);
+    
+    // Enhanced error handling for schema-related issues
+    let errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    let errorDetails = '';
+    
+    
+    // Log the detailed error
+    await addServerLogForProfile(
+      profileUuid,
+      'error',
+      `[PLAYGROUND] Query execution failed: ${errorMessage}${errorDetails}`
+    );
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage + errorDetails
     };
   }
 }
