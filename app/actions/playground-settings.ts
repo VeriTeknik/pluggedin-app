@@ -60,11 +60,6 @@ export async function updatePlaygroundSettings(
   settings: PlaygroundSettings
 ) {
   try {
-    console.log('[RAG DEBUG] updatePlaygroundSettings called with:', {
-      profileUuid,
-      settings
-    });
-
     // Validate settings
     if (!['anthropic', 'openai', 'google'].includes(settings.provider)) {
       throw new Error('Invalid provider');

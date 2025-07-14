@@ -34,7 +34,6 @@ type ServerWithMetrics = typeof mcpServersTable.$inferSelect & {
 }
 
 export async function getMcpServers(profileUuid: string): Promise<ServerWithMetrics[]> {
-  console.log('🔍 getMcpServers: Fetching for profile:', profileUuid);
   
   // Get the servers without type assertion
   const serversQuery = await db
@@ -63,7 +62,6 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
     )
     .orderBy(desc(mcpServersTable.created_at));
   
-  console.log('🔍 getMcpServers: Found', serversQuery.length, 'servers');
   
   // Debug: Log all servers before filtering to understand what's being excluded
   const allServersDebug = await db
@@ -72,12 +70,6 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
     })
     .from(mcpServersTable)
     .where(eq(mcpServersTable.profile_uuid, profileUuid));
-  
-  console.log('🔍 getMcpServers: All servers in profile (before filtering):', allServersDebug.map(s => ({
-    name: s.server.name,
-    description: s.server.description,
-    status: s.server.status
-  })));
 
   // Type the result correctly
   const servers: ServerWithUsername[] = serversQuery;
@@ -383,7 +375,6 @@ export async function updateMcpServer(
 
   // Trigger discovery after update
   try {
-    console.log(`[Action] Triggering tool discovery for updated server: ${uuid}`);
     // Don't await this, let it run in the background
     discoverSingleServerTools(profileUuid, uuid).catch(discoveryError => {
        console.error(`[Action Warning] Background tool discovery failed after update for server ${uuid}:`, discoveryError);
@@ -526,7 +517,6 @@ export async function createMcpServer({
     // Trigger discovery after creation (unless explicitly skipped)
     if (!skipDiscovery) {
       try {
-        console.log(`[Action] Triggering tool discovery for created server: ${newServer.uuid}`);
         // Don't await this, let it run in the background
         discoverSingleServerTools(profileUuid, newServer.uuid).catch(discoveryError => {
            console.error(`[Action Warning] Background tool discovery failed after creation for server ${newServer.uuid}:`, discoveryError);
@@ -537,7 +527,6 @@ export async function createMcpServer({
         // Do not re-throw, allow the creation operation to be considered successful
       }
     } else {
-      console.log(`[Action] Skipping auto-discovery for server: ${newServer.uuid} (skipDiscovery=true)`);
     }
 
     return { success: true, data: newServer }; // Return success and the new server data
@@ -628,7 +617,6 @@ export async function bulkImportMcpServers(
 
   // Trigger discovery for all newly created servers in the background
   if (createdServerUuids.length > 0 && profileUuid) {
-      console.log(`[Action] Triggering background tool discovery for ${createdServerUuids.length} bulk imported servers...`);
       // Fire off discovery tasks without awaiting each one individually
       createdServerUuids.forEach(uuid => {
           discoverSingleServerTools(profileUuid, uuid).catch(discoveryError => {
@@ -704,7 +692,6 @@ export async function importSharedServer(
           messages: messages,
         });
         
-        console.log(`Imported custom instructions for server ${newServer.uuid}`);
       } catch (error) {
         console.error('Error importing custom instructions:', error);
         // Continue without custom instructions if there's an error

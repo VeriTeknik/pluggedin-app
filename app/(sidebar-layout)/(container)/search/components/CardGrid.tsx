@@ -221,16 +221,6 @@ export default function CardGrid({
     
     // Analytics tracking removed - will be replaced with new analytics service
     
-    // Debug logging
-    console.log('[CardGrid] handleViewDetailsClick - item data:', {
-      name: item.name,
-      command: item.command,
-      args: item.args,
-      envs: item.envs,
-      source: item.source,
-      external_id: item.external_id
-    });
-    
     setDetailServer({
       name: item.name,
       type: item.url ? McpServerType.SSE : McpServerType.STDIO,

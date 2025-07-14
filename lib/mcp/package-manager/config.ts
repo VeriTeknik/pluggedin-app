@@ -51,37 +51,7 @@ export class PackageManagerConfig {
   static readonly PYTHON_BIN_DIR = process.env.MCP_PYTHON_BIN_DIR || this.getDefaultPythonBinDir();
   static readonly DOCKER_BIN_DIR = process.env.MCP_DOCKER_BIN_DIR || this.getDefaultDockerBinDir();
   
-  // Log configuration on startup
-  static {
-    console.log('[PackageManagerConfig] Loaded configuration:', {
-      platform: process.platform,
-      resources: {
-        cpuCoresMax: this.CPU_CORES_MAX,
-        memoryMaxMB: this.MEMORY_MAX_MB,
-        ioReadMbps: this.IO_READ_MBPS,
-        ioWriteMbps: this.IO_WRITE_MBPS,
-        processTimeoutMs: this.PROCESS_TIMEOUT_MS,
-        startupTimeoutMs: this.STARTUP_TIMEOUT_MS,
-      },
-      packageManagement: {
-        packageStoreDir: this.PACKAGE_STORE_DIR,
-        pnpmStoreDir: this.PNPM_STORE_DIR,
-        uvCacheDir: this.UV_CACHE_DIR,
-        packageCacheDays: this.PACKAGE_CACHE_DAYS,
-        prewarmCommonPackages: this.PREWARM_COMMON_PACKAGES,
-      },
-      isolation: {
-        type: this.ISOLATION_TYPE,
-        fallback: this.ISOLATION_FALLBACK,
-        enableNetworkIsolation: this.ENABLE_NETWORK_ISOLATION,
-      },
-      interpreterPaths: {
-        nodejsBinDir: this.NODEJS_BIN_DIR,
-        pythonBinDir: this.PYTHON_BIN_DIR,
-        dockerBinDir: this.DOCKER_BIN_DIR,
-      },
-    });
-  }
+  // Static initialization block removed - was logging configuration
   
   // Get OS-specific default Node.js bin directory
   private static getDefaultNodejsBinDir(): string {

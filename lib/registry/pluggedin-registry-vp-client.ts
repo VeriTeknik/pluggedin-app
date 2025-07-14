@@ -239,15 +239,6 @@ export class PluggedinRegistryVPClient {
         comment
       };
       
-      console.log('[Registry VP] Submitting rating:', {
-        url: `${this.vpUrl}/servers/${serverId}/rate`,
-        serverId,
-        rating,
-        source,
-        userId,
-        comment
-      });
-      
       const response = await fetch(`${this.vpUrl}/servers/${serverId}/rate`, {
         method: 'POST',
         headers: {
@@ -258,12 +249,6 @@ export class PluggedinRegistryVPClient {
       });
       
       const responseText = await response.text();
-      console.log('[Registry VP] Rating response:', {
-        status: response.status,
-        statusText: response.statusText,
-        body: responseText,
-        headers: Object.fromEntries(response.headers.entries())
-      });
       
       if (!response.ok) {
         console.error('[Registry VP] Failed to submit rating:', {

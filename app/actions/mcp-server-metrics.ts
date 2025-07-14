@@ -18,15 +18,7 @@ async function submitRatingToRegistry(
   comment?: string
 ) {
   try {
-    console.log('[MCP Server Metrics] Submitting rating to registry:', {
-      serverId,
-      rating,
-      source,
-      userId,
-      comment
-    });
     const result = await registryVPClient.submitRating(serverId, rating, source, userId, comment);
-    console.log('[MCP Server Metrics] Registry rating result:', result);
     return result;
   } catch (error) {
     console.error('[MCP Server Metrics] Error submitting rating to registry:', error);
@@ -271,14 +263,6 @@ export async function rateServer(
     // For registry/community servers, submit directly to registry
     if (externalId && (source === McpServerSource.REGISTRY || source === McpServerSource.COMMUNITY)) {
       // Submit rating to registry VP endpoint
-      console.log('[rateServer] Submitting rating for:', {
-        externalId,
-        rating,
-        source,
-        userId,
-        comment
-      });
-      
       const ratingResult = await submitRatingToRegistry(externalId, rating, source, userId, comment);
       
       if (!ratingResult.success) {
@@ -289,7 +273,6 @@ export async function rateServer(
         };
       }
       
-      console.log('[rateServer] Rating submitted successfully');
 
       // TODO: Track rating and comment events to new analytics service when available
       

@@ -86,12 +86,6 @@ export function RateServerDialog({
   }, [open, currentProfile?.uuid, serverData.external_id, form]);
 
   const onSubmit = async (values: { rating: number; comment: string }) => {
-    console.log('[RateServerDialog] Submit called with:', {
-      values,
-      serverData,
-      profileUuid: currentProfile?.uuid
-    });
-    
     if (!currentProfile?.uuid) {
       console.error('[RateServerDialog] No current profile');
       return;
@@ -111,14 +105,6 @@ export function RateServerDialog({
 
     setIsSubmitting(true);
     try {
-      console.log('[RateServerDialog] Calling rateServer with:', {
-        profileUuid: currentProfile.uuid,
-        rating: values.rating,
-        comment: values.comment,
-        externalId: serverData.external_id,
-        source: serverData.source
-      });
-      
       const result = await rateServer(
         currentProfile.uuid,
         values.rating,

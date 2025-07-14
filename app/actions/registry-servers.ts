@@ -608,54 +608,37 @@ interface WizardSubmissionData {
  */
 export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
   try {
-    console.log('🔍 submitWizardToRegistry: Starting with data:', {
-      shouldClaim: wizardData.shouldClaim,
-      registryToken: wizardData.registryToken ? `${wizardData.registryToken.substring(0, 10)}...` : 'undefined',
-      githubUsername: wizardData.githubUsername,
-      githubUrl: wizardData.githubUrl,
-      owner: wizardData.owner,
-      repo: wizardData.repo
-    });
 
     const session = await getAuthSession();
     if (!session?.user?.id) {
-      console.log('🔍 submitWizardToRegistry: No session found');
       return { success: false, error: 'You must be logged in to submit servers' };
     }
 
-    console.log('🔍 submitWizardToRegistry: Session found for user:', session.user.id);
 
     // Validate required fields
     if (!wizardData.githubUrl || !wizardData.owner || !wizardData.repo) {
-      console.log('🔍 submitWizardToRegistry: Missing repository information');
       return { success: false, error: 'Missing repository information' };
     }
 
     // Check if this is a community server (not claimed)
     if (!wizardData.shouldClaim) {
-      console.log('🔍 submitWizardToRegistry: This is a community server, using REGISTRY_AUTH_TOKEN');
       
       // For community servers, we use the REGISTRY_AUTH_TOKEN from environment
       const registryAuthToken = process.env.REGISTRY_AUTH_TOKEN;
       if (!registryAuthToken) {
-        console.log('🔍 submitWizardToRegistry: REGISTRY_AUTH_TOKEN not configured');
         return { success: false, error: 'Registry authentication not configured. Please contact the administrator.' };
       }
       
       // Skip to submission for community servers
-      console.log('🔍 submitWizardToRegistry: Proceeding with community server submission');
     }
     // Check if this is a claimed server - ONLY do ownership verification if we don't have a registry token
     else if (wizardData.shouldClaim && !wizardData.registryToken) {
-      console.log('🔍 submitWizardToRegistry: This is a claimed server without registry token, using NextAuth flow...');
       
       // Fall back to NextAuth token
       const nextAuthToken = await getUserGitHubToken(session.user.id);
       const githubToken = nextAuthToken || undefined;
-      console.log('🔍 submitWizardToRegistry: NextAuth token:', githubToken ? `${githubToken.substring(0, 10)}...` : 'undefined');
       
       if (!githubToken) {
-        console.log('🔍 submitWizardToRegistry: No GitHub token available, returning error');
         return {
           success: false,
           error: 'Please connect your GitHub account to claim servers',
@@ -663,13 +646,10 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         };
       }
       
-      console.log('🔍 submitWizardToRegistry: Verifying GitHub ownership...');
       // Verify ownership
       const ownership = await verifyGitHubOwnership(githubToken, wizardData.githubUrl);
-      console.log('🔍 submitWizardToRegistry: Ownership verification result:', ownership);
       
       if (!ownership.isOwner) {
-        console.log('🔍 submitWizardToRegistry: Ownership verification failed');
         return { 
           success: false, 
           error: ownership.reason || 'GitHub ownership verification failed',
@@ -677,9 +657,7 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         };
       }
       
-      console.log('🔍 submitWizardToRegistry: Ownership verification passed');
     } else if (wizardData.shouldClaim && wizardData.registryToken) {
-      console.log('🔍 submitWizardToRegistry: This is a claimed server WITH registry token, skipping ownership verification (already done during OAuth)');
     }
 
     // Determine package information from transport configs
@@ -729,7 +707,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
 
     // For community servers, save to frontend database instead of registry
     if (!wizardData.shouldClaim) {
-      console.log('🔍 submitWizardToRegistry: Saving community server to frontend database');
       
       // Use the provided currentProfileUuid if available, otherwise find the active profile
       let activeProfileUuid: string;
@@ -737,7 +714,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       if (wizardData.currentProfileUuid) {
         // Use the profile UUID from the UI context
         activeProfileUuid = wizardData.currentProfileUuid;
-        console.log('🔍 submitWizardToRegistry: Using provided profile UUID:', activeProfileUuid);
       } else {
         // Fallback to finding the active profile from the database
         const userProjects = await db.query.projectsTable.findMany({
@@ -754,7 +730,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         // Use the first profile or the active one
         const activeProject = userProjects.find(p => p.active_profile_uuid) || userProjects[0];
         activeProfileUuid = activeProject.active_profile_uuid || activeProject.profiles[0].uuid;
-        console.log('🔍 submitWizardToRegistry: Using database active profile UUID:', activeProfileUuid);
       }
       
       // First, create the MCP server in the local database
@@ -765,12 +740,10 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       let url: string | undefined;
       let streamableHTTPOptions: any | undefined;
       
-      console.log('🔍 submitWizardToRegistry: Transport configs:', JSON.stringify(wizardData.transportConfigs, null, 2));
       
       // Check if this is a Streamable HTTP or SSE server from transportConfigs
       if (wizardData.transportConfigs) {
         const transportKeys = Object.keys(wizardData.transportConfigs);
-        console.log('🔍 submitWizardToRegistry: Transport keys:', transportKeys);
         
         // Check for both formats (with hyphen and underscore)
         if (transportKeys.includes('streamable-http') || transportKeys.includes('STREAMABLE_HTTP') || transportKeys.includes('streamable_http')) {
@@ -779,7 +752,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
                        wizardData.transportConfigs['STREAMABLE_HTTP'] || 
                        wizardData.transportConfigs['streamable_http'];
           url = config.url;
-          console.log('🔍 submitWizardToRegistry: Detected Streamable HTTP with URL:', url);
           
           // Extract headers and options
           streamableHTTPOptions = {
@@ -809,13 +781,11 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
           transportType = 'SSE';
           const config = wizardData.transportConfigs['sse'] || wizardData.transportConfigs['SSE'];
           url = config.url;
-          console.log('🔍 submitWizardToRegistry: Detected SSE with URL:', url);
         }
       }
       
       // Fallback: check detectedTransportConfigs if transportConfigs doesn't have URL
       if (!url && (wizardData as any).detectedTransportConfigs) {
-        console.log('🔍 submitWizardToRegistry: Checking detectedTransportConfigs for URL');
         for (const [transport, config] of Object.entries((wizardData as any).detectedTransportConfigs)) {
           if ((transport === 'streamable-http' || transport === 'detected-streamable') && (config as any).url) {
             transportType = 'STREAMABLE_HTTP';
@@ -825,7 +795,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
               sessionId: (config as any).sessionId,
               oauth: (config as any).oauth
             };
-            console.log('🔍 submitWizardToRegistry: Found URL in detectedTransportConfigs:', url);
             break;
           }
         }
@@ -862,14 +831,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         env[envVar.name] = ''; // User will fill these in later
       });
       
-      console.log('🔍 submitWizardToRegistry: Creating server with:', {
-        name: serverName,
-        type: transportType,
-        url: url,
-        command: command,
-        hasStreamableOptions: !!streamableHTTPOptions
-      });
-      
       const createResult = await createMcpServer({
         name: serverName,
         profileUuid: activeProfileUuid,
@@ -893,7 +854,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
 
       // For community servers, we don't automatically share them
       // The user can share them manually if they want
-      console.log('🔍 submitWizardToRegistry: Community server created successfully, not auto-sharing');
       
       // Prepare the template metadata for tracking
       const template: any = {
@@ -946,7 +906,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
     }
     // For claimed servers, publish directly to registry using the registry token
     else if (wizardData.shouldClaim && wizardData.registryToken) {
-      console.log('🔍 submitWizardToRegistry: Using direct registry API call with registry token');
       
       // Fetch GitHub repository ID and version from the repository
       let repoId = `${wizardData.owner}/${wizardData.repo}`;
@@ -963,7 +922,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         if (repoResponse.ok) {
           const repoData = await repoResponse.json();
           repoId = repoData.id.toString(); // Use numeric ID
-          console.log('🔍 submitWizardToRegistry: Fetched repository ID:', repoId);
         }
 
         // Try to fetch version from package.json
@@ -980,11 +938,9 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
             const packageContent = JSON.parse(Buffer.from(packageData.content, 'base64').toString());
             if (packageContent.version) {
               packageVersion = packageContent.version;
-              console.log('🔍 submitWizardToRegistry: Fetched version from package.json:', packageVersion);
             }
           }
         } else {
-          console.log('🔍 submitWizardToRegistry: No package.json found, checking for pyproject.toml...');
           
           // Try pyproject.toml for Python projects
           const pyprojectResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}/contents/pyproject.toml`, {
@@ -1001,11 +957,9 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
               const versionMatch = pyprojectContent.match(/version\s*=\s*["']([^"']+)["']/);
               if (versionMatch) {
                 packageVersion = versionMatch[1];
-                console.log('🔍 submitWizardToRegistry: Fetched version from pyproject.toml:', packageVersion);
               }
             }
           } else {
-            console.log('🔍 submitWizardToRegistry: No pyproject.toml found, checking for Cargo.toml...');
             
             // Try Cargo.toml for Rust projects
             const cargoResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}/contents/Cargo.toml`, {
@@ -1022,14 +976,12 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
                 const versionMatch = cargoContent.match(/version\s*=\s*["']([^"']+)["']/);
                 if (versionMatch) {
                   packageVersion = versionMatch[1];
-                  console.log('🔍 submitWizardToRegistry: Fetched version from Cargo.toml:', packageVersion);
                 }
               }
             }
           }
         }
       } catch (_error) {
-        console.log('🔍 submitWizardToRegistry: Could not fetch repo metadata, using fallbacks:', { repoId, packageVersion });
       }
       
       // Use registry token to publish directly - match official MCP registry format exactly
@@ -1058,12 +1010,9 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         },
       };
       
-      console.log('🔍 submitWizardToRegistry: Using package version:', packageVersion);
 
-      console.log('🔍 submitWizardToRegistry: Registry payload:', JSON.stringify(registryPayload, null, 2));
 
       // Publish to registry using registry client with direct token auth
-      console.log('🔍 submitWizardToRegistry: Making direct API call to registry...');
       
       // For claimed servers, use /v0/publish endpoint
       const registryResponse = await fetch('https://registry.plugged.in/v0/publish', {
@@ -1075,11 +1024,9 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         body: JSON.stringify(registryPayload)
       });
 
-      console.log('🔍 submitWizardToRegistry: Registry API response status:', registryResponse.status);
 
       if (!registryResponse.ok) {
         const errorText = await registryResponse.text();
-        console.log('🔍 submitWizardToRegistry: Registry API error:', errorText);
         
         // Provide specific error messages based on status code
         let errorMessage: string;
@@ -1102,7 +1049,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
               const versionMatch = errorText.match(/existing version\s*[:=]\s*(\S+)/);
               const existingVersion = versionMatch ? versionMatch[1] : 'unknown';
               errorMessage = `Server already exists with version ${existingVersion}. To update, please increment the version in your package.json and try again.`;
-              console.log('🔍 submitWizardToRegistry: Version conflict detected. Existing version:', existingVersion);
             } else {
               errorMessage = `Registry server error: ${errorText}`;
             }
@@ -1118,7 +1064,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       }
 
       const registryResult = await registryResponse.json();
-      console.log('🔍 submitWizardToRegistry: Registry API success response:', JSON.stringify(registryResult, null, 2));
       
       // Save to our database - use just repo name for display
       const [registryServer] = await db.insert(registryServersTable).values({
