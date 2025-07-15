@@ -39,95 +39,55 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const error = searchParams.get('error');
 
+  // Check if this is a popup window by looking for a state parameter
+  const state = searchParams.get('state');
+  let isPopup = false;
+  
+  try {
+    // Try to parse the state as JSON
+    if (state) {
+      const stateData = JSON.parse(decodeURIComponent(state));
+      isPopup = stateData.popup === true;
+    }
+  } catch (e) {
+    // If state is not valid JSON, check for simple string match as fallback
+    isPopup = state?.includes('popup');
+  }
+
   // Handle OAuth errors
   if (error) {
     console.error('OAuth error:', error);
     const sanitizedError = sanitizeErrorMessage(error);
-    const errorData = {
-      type: 'github-oauth-error',
-      error: sanitizedError
-    };
     
-    // For popup windows, return a minimal HTML that only posts message and closes
-    // This avoids any XSS risks by not rendering any user-controlled content
-    const minimalHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>OAuth Callback</title>
-          <meta charset="utf-8">
-          <script>
-            (function() {
-              const data = ${encodeForJavaScript(errorData)};
-              const origin = ${encodeForJavaScript(baseUrl)};
-              const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=${encodeURIComponent(sanitizedError)}`)};
-              
-              if (window.opener && window.opener !== window) {
-                try {
-                  window.opener.postMessage(data, origin);
-                  setTimeout(function() { window.close(); }, 100);
-                } catch (e) {
-                  window.location.href = redirectUrl;
-                }
-              } else {
-                window.location.href = redirectUrl;
-              }
-            })();
-          </script>
-        </head>
-        <body></body>
-      </html>
-    `;
-    return new NextResponse(minimalHtml, {
-      headers: { 
-        'Content-Type': 'text/html; charset=utf-8',
-        ...getSecurityHeaders()
-      },
-    });
+    // For popups, we need to return HTML to close the window
+    // For regular flow, use redirect
+    if (isPopup) {
+      // Create a secure callback URL that the popup opener can handle
+      const callbackUrl = new URL(`${baseUrl}/api/auth/oauth-popup-handler`);
+      callbackUrl.searchParams.set('status', 'error');
+      callbackUrl.searchParams.set('error', sanitizedError);
+      
+      return NextResponse.redirect(callbackUrl);
+    } else {
+      // Direct redirect for non-popup flows
+      const redirectUrl = new URL(`${baseUrl}/search`);
+      redirectUrl.searchParams.set('auth_error', sanitizedError);
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   // Handle missing code
   if (!code) {
-    const errorData = {
-      type: 'github-oauth-error',
-      error: 'Authentication code missing'
-    };
-    
-    // Minimal HTML for OAuth callback
-    const minimalHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>OAuth Callback</title>
-          <meta charset="utf-8">
-          <script>
-            (function() {
-              const data = ${encodeForJavaScript(errorData)};
-              const origin = ${encodeForJavaScript(baseUrl)};
-              const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=missing_code`)};
-              
-              if (window.opener && window.opener !== window) {
-                try {
-                  window.opener.postMessage(data, origin);
-                  setTimeout(function() { window.close(); }, 100);
-                } catch (e) {
-                  window.location.href = redirectUrl;
-                }
-              } else {
-                window.location.href = redirectUrl;
-              }
-            })();
-          </script>
-        </head>
-        <body></body>
-      </html>
-    `;
-    return new NextResponse(minimalHtml, {
-      headers: { 
-        'Content-Type': 'text/html; charset=utf-8',
-        ...getSecurityHeaders()
-      },
-    });
+    if (isPopup) {
+      const callbackUrl = new URL(`${baseUrl}/api/auth/oauth-popup-handler`);
+      callbackUrl.searchParams.set('status', 'error');
+      callbackUrl.searchParams.set('error', 'missing_code');
+      return NextResponse.redirect(callbackUrl);
+    } else {
+      const redirectUrl = new URL(`${baseUrl}/search`);
+      redirectUrl.searchParams.set('auth_error', 'missing_code');
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 
   try {
@@ -150,90 +110,32 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.error) {
       console.error('Token exchange error:', tokenData);
-      const errorData = {
-        type: 'github-oauth-error',
-        error: 'Authentication failed'
-      };
       
-      // Minimal HTML for OAuth callback
-      const minimalHtml = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>OAuth Callback</title>
-            <meta charset="utf-8">
-            <script>
-              (function() {
-                const data = ${encodeForJavaScript(errorData)};
-                const origin = ${encodeForJavaScript(baseUrl)};
-                const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=token_exchange_failed`)};
-                
-                if (window.opener && window.opener !== window) {
-                  try {
-                    window.opener.postMessage(data, origin);
-                    setTimeout(function() { window.close(); }, 100);
-                  } catch (e) {
-                    window.location.href = redirectUrl;
-                  }
-                } else {
-                  window.location.href = redirectUrl;
-                }
-              })();
-            </script>
-          </head>
-          <body></body>
-        </html>
-      `;
-      return new NextResponse(minimalHtml, {
-        headers: { 
-          'Content-Type': 'text/html; charset=utf-8',
-          ...getSecurityHeaders()
-        },
-      });
+      if (isPopup) {
+        const callbackUrl = new URL(`${baseUrl}/api/auth/oauth-popup-handler`);
+        callbackUrl.searchParams.set('status', 'error');
+        callbackUrl.searchParams.set('error', 'token_exchange_failed');
+        return NextResponse.redirect(callbackUrl);
+      } else {
+        const redirectUrl = new URL(`${baseUrl}/search`);
+        redirectUrl.searchParams.set('auth_error', 'token_exchange_failed');
+        return NextResponse.redirect(redirectUrl);
+      }
     }
 
     if (!tokenData.access_token) {
       console.error('No access token received:', tokenData);
-      const errorData = {
-        type: 'github-oauth-error',
-        error: 'Authentication failed'
-      };
       
-      // Minimal HTML for OAuth callback
-      const minimalHtml = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>OAuth Callback</title>
-            <meta charset="utf-8">
-            <script>
-              (function() {
-                const data = ${encodeForJavaScript(errorData)};
-                const origin = ${encodeForJavaScript(baseUrl)};
-                const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=no_access_token`)};
-                
-                if (window.opener && window.opener !== window) {
-                  try {
-                    window.opener.postMessage(data, origin);
-                    setTimeout(function() { window.close(); }, 100);
-                  } catch (e) {
-                    window.location.href = redirectUrl;
-                  }
-                } else {
-                  window.location.href = redirectUrl;
-                }
-              })();
-            </script>
-          </head>
-          <body></body>
-        </html>
-      `;
-      return new NextResponse(minimalHtml, {
-        headers: { 
-          'Content-Type': 'text/html; charset=utf-8',
-          ...getSecurityHeaders()
-        },
-      });
+      if (isPopup) {
+        const callbackUrl = new URL(`${baseUrl}/api/auth/oauth-popup-handler`);
+        callbackUrl.searchParams.set('status', 'error');
+        callbackUrl.searchParams.set('error', 'no_access_token');
+        return NextResponse.redirect(callbackUrl);
+      } else {
+        const redirectUrl = new URL(`${baseUrl}/search`);
+        redirectUrl.searchParams.set('auth_error', 'no_access_token');
+        return NextResponse.redirect(redirectUrl);
+      }
     }
 
     // Get GitHub username for storage
@@ -251,132 +153,41 @@ export async function GET(request: NextRequest) {
     const storeResult = await storeRegistryOAuthToken(tokenData.access_token, githubUsername);
     
     if (!storeResult.success) {
-      const errorData = {
-        type: 'github-oauth-error',
-        error: 'Failed to store authentication session'
-      };
-      
-      // Minimal HTML for OAuth callback
-      const minimalHtml = `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <title>OAuth Callback</title>
-            <meta charset="utf-8">
-            <script>
-              (function() {
-                const data = ${encodeForJavaScript(errorData)};
-                const origin = ${encodeForJavaScript(baseUrl)};
-                const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=session_storage_failed`)};
-                
-                if (window.opener && window.opener !== window) {
-                  try {
-                    window.opener.postMessage(data, origin);
-                    setTimeout(function() { window.close(); }, 100);
-                  } catch (e) {
-                    window.location.href = redirectUrl;
-                  }
-                } else {
-                  window.location.href = redirectUrl;
-                }
-              })();
-            </script>
-          </head>
-          <body></body>
-        </html>
-      `;
-      return new NextResponse(minimalHtml, {
-        headers: { 
-          'Content-Type': 'text/html; charset=utf-8',
-          ...getSecurityHeaders()
-        },
-      });
+      if (isPopup) {
+        const callbackUrl = new URL(`${baseUrl}/api/auth/oauth-popup-handler`);
+        callbackUrl.searchParams.set('status', 'error');
+        callbackUrl.searchParams.set('error', 'session_storage_failed');
+        return NextResponse.redirect(callbackUrl);
+      } else {
+        const redirectUrl = new URL(`${baseUrl}/search`);
+        redirectUrl.searchParams.set('auth_error', 'session_storage_failed');
+        return NextResponse.redirect(redirectUrl);
+      }
     }
 
-    // Send success response without exposing the token
-    const successData = {
-      type: 'github-oauth-success',
-      githubUsername: githubUsername
-    };
-    
-    // Minimal HTML for OAuth callback success
-    const minimalHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>OAuth Callback</title>
-          <meta charset="utf-8">
-          <script>
-            (function() {
-              const data = ${encodeForJavaScript(successData)};
-              const origin = ${encodeForJavaScript(baseUrl)};
-              const redirectUrl = '/search';
-              
-              if (window.opener && window.opener !== window) {
-                try {
-                  window.opener.postMessage(data, origin);
-                  setTimeout(function() { window.close(); }, 100);
-                } catch (e) {
-                  window.location.href = redirectUrl;
-                }
-              } else {
-                window.location.href = redirectUrl;
-              }
-            })();
-          </script>
-        </head>
-        <body></body>
-      </html>
-    `;
-    
-    return new NextResponse(minimalHtml, {
-      headers: {
-        'Content-Type': 'text/html; charset=utf-8',
-        ...getSecurityHeaders()
-      },
-    });
+    // Send success response
+    if (isPopup) {
+      const callbackUrl = new URL(`${baseUrl}/api/auth/oauth-popup-handler`);
+      callbackUrl.searchParams.set('status', 'success');
+      callbackUrl.searchParams.set('username', githubUsername);
+      return NextResponse.redirect(callbackUrl);
+    } else {
+      // Direct redirect to search page for non-popup flows
+      return NextResponse.redirect(`${baseUrl}/search`);
+    }
 
   } catch (error) {
     console.error('OAuth callback processing error:', error);
-    const errorData = {
-      type: 'github-oauth-error',
-      error: 'Authentication process failed'
-    };
     
-    // Minimal HTML for OAuth callback
-    const minimalHtml = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>OAuth Callback</title>
-          <meta charset="utf-8">
-          <script>
-            (function() {
-              const data = ${encodeForJavaScript(errorData)};
-              const origin = ${encodeForJavaScript(baseUrl)};
-              const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=callback_processing_failed`)};
-              
-              if (window.opener && window.opener !== window) {
-                try {
-                  window.opener.postMessage(data, origin);
-                  setTimeout(function() { window.close(); }, 100);
-                } catch (e) {
-                  window.location.href = redirectUrl;
-                }
-              } else {
-                window.location.href = redirectUrl;
-              }
-            })();
-          </script>
-        </head>
-        <body></body>
-      </html>
-    `;
-    return new NextResponse(minimalHtml, {
-      headers: { 
-        'Content-Type': 'text/html; charset=utf-8',
-        ...getSecurityHeaders()
-      },
-    });
+    if (isPopup) {
+      const callbackUrl = new URL(`${baseUrl}/api/auth/oauth-popup-handler`);
+      callbackUrl.searchParams.set('status', 'error');
+      callbackUrl.searchParams.set('error', 'callback_processing_failed');
+      return NextResponse.redirect(callbackUrl);
+    } else {
+      const redirectUrl = new URL(`${baseUrl}/search`);
+      redirectUrl.searchParams.set('auth_error', 'callback_processing_failed');
+      return NextResponse.redirect(redirectUrl);
+    }
   }
 } 

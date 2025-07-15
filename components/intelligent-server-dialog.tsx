@@ -227,7 +227,9 @@ export function IntelligentServerDialog({
   const initiateGitHubOAuth = () => {
     const redirectUri = getRedirectUri();
     const scope = 'read:user,read:org';
-    const githubOAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    // Include state parameter to indicate this is a popup flow
+    const state = encodeURIComponent(JSON.stringify({ popup: true, timestamp: Date.now() }));
+    const githubOAuthUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=${encodeURIComponent(scope)}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
     
     // Open OAuth in a popup window
     const width = 600;
