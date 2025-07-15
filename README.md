@@ -18,17 +18,19 @@ The plugged.in App is a comprehensive web application for managing Model Context
 
 This application enables seamless integration with any MCP client (Claude, Cline, Cursor, etc.) while providing advanced management capabilities, document-based knowledge augmentation, and real-time notifications through an intuitive web interface.
 
+> ⭐ **If you find this project useful, please consider giving it a star on GitHub!** It helps us reach more developers and motivates us to keep improving.
+
 ## ✨ Key Features
 
 ### 🎯 New in v2.7.0 (Registry v2)
-- **Smart Server Wizard**: Intelligent multi-step wizard for creating and claiming MCP servers
-  - Automatic GitHub ownership verification
-  - Environment variable detection and configuration
-  - Registry submission with progress tracking
-  - Real-time discovery testing
-- **OAuth Integration**: Full OAuth support for Streamable HTTP MCP servers
-- **Trending Servers**: Discover popular MCP servers based on real-time activity
-- **Enhanced Security**: Comprehensive input validation with Zod schemas
+- **MCP Registry Integration**: Modified fork of the official [MCP Registry](https://github.com/modelcontextprotocol/registry) - users can now claim MCP servers with GitHub credentials
+- **Completely Rewritten Discovery Process**: Enhanced server detection and management with improved performance and reliability
+- **Full Streamable HTTP Support**: Complete implementation of Streamable HTTP transport protocol
+- **OAuth for MCP Servers**: OAuth authentication handled by plugged.in with state-of-the-art encryption - no client-side authentication needed anymore
+- **Trending Servers with Analytics**: Every MCP tool call via pluggedin-mcp is tracked and displayed in trending servers
+- **Bidirectional Notifications**: MCP proxy can now send, receive, mark as read, and delete notifications
+- **Smart Server Wizard**: Multi-step wizard with GitHub verification, environment detection, and registry submission
+- **Enhanced Security**: Comprehensive input validation with Zod schemas and XSS/SSRF protection
 
 ### 🚀 Core Capabilities
 - **Multi-Workspace Support**: Switch between different sets of MCP configurations to prevent context pollution
