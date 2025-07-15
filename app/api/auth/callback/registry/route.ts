@@ -57,7 +57,11 @@ export async function GET(request: NextRequest) {
           <script>
             if (window.opener) {
               window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
-              document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center; color: #dc2626;"><h2>Authentication failed</h2><p>${escapeHtml(sanitizedError)}</p><p>This window will close automatically...</p></div>';
+              const errorDiv = document.createElement('div');
+              errorDiv.style.cssText = 'font-family: system-ui; padding: 20px; text-align: center; color: #dc2626;';
+              errorDiv.innerHTML = '<h2>Authentication failed</h2><p>' + ${encodeForJavaScript(escapeHtml(sanitizedError))} + '</p><p>This window will close automatically...</p>';
+              document.body.innerHTML = '';
+              document.body.appendChild(errorDiv);
               setTimeout(() => window.close(), 3000);
             } else {
               // Redirect to search page with error message
@@ -267,7 +271,11 @@ export async function GET(request: NextRequest) {
               window.opener.postMessage(${encodeForJavaScript(successData)}, ${encodeForJavaScript(baseUrl)});
               
               // Show success message and close
-              document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center; color: #10b981;"><h2>Authentication successful!</h2><p>This window will close automatically...</p></div>';
+              const successDiv = document.createElement('div');
+              successDiv.style.cssText = 'font-family: system-ui; padding: 20px; text-align: center; color: #10b981;';
+              successDiv.innerHTML = '<h2>Authentication successful!</h2><p>This window will close automatically...</p>';
+              document.body.innerHTML = '';
+              document.body.appendChild(successDiv);
               setTimeout(() => window.close(), 2000);
             } else {
               // Not in a popup, check for saved state from claim flow
@@ -276,8 +284,14 @@ export async function GET(request: NextRequest) {
                 try {
                   const state = JSON.parse(savedState);
                   // Don't clean up saved state yet - let the dialog do it
-                  // Redirect back to search page with claim dialog state
-                  window.location.href = state.returnUrl || '/search';
+                  // Validate and sanitize the return URL
+                  const returnUrl = state.returnUrl || '/search';
+                  // Only allow relative URLs starting with /
+                  if (returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
+                    window.location.href = returnUrl;
+                  } else {
+                    window.location.href = '/search';
+                  }
                 } catch (e) {
                   // Fallback to search page
                   window.location.href = '/search';

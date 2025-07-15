@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
 import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
 import { RateLimiters } from '@/lib/rate-limiter';
+import { escapeHtml, isValidRedirectUrl, getAllowedRedirectHosts, getCSPHeader } from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
   // Apply rate limiting
@@ -105,8 +106,14 @@ export async function GET(request: NextRequest) {
             return createSuccessResponse(oauthSession.provider);
           }
           
-          // Otherwise, follow the redirect
-          return NextResponse.redirect(redirectUrl);
+          // Validate redirect URL before following
+          const allowedHosts = getAllowedRedirectHosts();
+          if (isValidRedirectUrl(redirectUrl, allowedHosts)) {
+            return NextResponse.redirect(redirectUrl);
+          } else {
+            console.error('[OAuth Proxy] Blocked unsafe redirect:', redirectUrl);
+            return createErrorResponse('Invalid redirect URL', 'The OAuth callback tried to redirect to an unsafe URL.');
+          }
         }
       }
 
@@ -194,7 +201,7 @@ function createSuccessResponse(provider: string): NextResponse {
         <div class="container">
           <div class="icon">✅</div>
           <h1>Authorization Successful!</h1>
-          <p>You have successfully authorized ${provider} for your MCP server.</p>
+          <p>You have successfully authorized ${escapeHtml(provider)} for your MCP server.</p>
           <p>You can now close this window and return to Plugged.in.</p>
           <p class="close-message">This window can be closed at any time.</p>
         </div>
@@ -209,7 +216,10 @@ function createSuccessResponse(provider: string): NextResponse {
   `;
   
   return new NextResponse(html, {
-    headers: { 'Content-Type': 'text/html' },
+    headers: { 
+      'Content-Type': 'text/html',
+      'Content-Security-Policy': getCSPHeader()
+    },
   });
 }
 
@@ -269,10 +279,10 @@ function createErrorResponse(title: string, description?: string): NextResponse 
       <body>
         <div class="container">
           <div class="icon">❌</div>
-          <h1>${title}</h1>
+          <h1>${escapeHtml(title)}</h1>
           ${description ? `
             <div class="error-details">
-              ${description}
+              ${escapeHtml(description)}
             </div>
           ` : ''}
           <p>Please close this window and try again.</p>
@@ -284,6 +294,9 @@ function createErrorResponse(title: string, description?: string): NextResponse 
   
   return new NextResponse(html, {
     status: 400,
-    headers: { 'Content-Type': 'text/html' },
+    headers: { 
+      'Content-Type': 'text/html',
+      'Content-Security-Policy': getCSPHeader()
+    },
   });
 }

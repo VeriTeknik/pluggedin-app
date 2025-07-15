@@ -3,6 +3,7 @@ import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 import { oauthStateManager } from '../oauth/OAuthStateManager';
 import { getSessionManager } from '../sessions/SessionManager';
+import { escapeHtml, getCSPHeader } from '@/lib/security-utils';
 
 /**
  * Wrapper for StreamableHTTPClientTransport that captures and manages session IDs
@@ -240,17 +241,20 @@ export class StreamableHTTPWrapper implements Transport {
 
 
       // Return a response that triggers the OAuth flow in the browser
+      const safeUrl = escapeHtml(modifiedUrl.toString());
+      const safeProvider = escapeHtml(provider);
+      
       const html = `
         <!DOCTYPE html>
         <html>
           <head>
             <title>OAuth Authorization Required</title>
-            <meta http-equiv="refresh" content="0; url=${modifiedUrl.toString()}">
+            <meta http-equiv="refresh" content="0; url=${safeUrl}">
           </head>
           <body>
-            <p>Redirecting to ${provider} for authorization...</p>
+            <p>Redirecting to ${safeProvider} for authorization...</p>
             <script>
-              window.location.href = '${modifiedUrl.toString()}';
+              window.location.href = ${JSON.stringify(modifiedUrl.toString())};
             </script>
           </body>
         </html>
@@ -260,6 +264,7 @@ export class StreamableHTTPWrapper implements Transport {
         status: 200,
         headers: {
           'Content-Type': 'text/html',
+          'Content-Security-Policy': getCSPHeader()
         },
       });
       
