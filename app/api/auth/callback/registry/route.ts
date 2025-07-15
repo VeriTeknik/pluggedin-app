@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     }
   } catch (e) {
     // If state is not valid JSON, check for simple string match as fallback
-    isPopup = state?.includes('popup');
+    isPopup = state?.includes('popup') || false;
   }
 
   // Handle OAuth errors
