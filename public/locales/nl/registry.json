@@ -209,7 +209,8 @@
         "detectedDescription": "{{count}} omgevingsvariabele{{plural}} gevonden",
         "detectionFailed": "Detectie mislukt",
         "detectionFailedDescription": "Kon omgevingsvariabelen niet automatisch detecteren"
-      }
+      },
+      "securityNotice": "Omgevingsvariabelen gemarkeerd als \"Geheim\" worden versleuteld. De getoonde standaardwaarden zijn voorbeelden uit de repository - vervang ze door uw werkelijke waarden."
     },
     "discovery": {
       "title": "Test Server Ontdekking",

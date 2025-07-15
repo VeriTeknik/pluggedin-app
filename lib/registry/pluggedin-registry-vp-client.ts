@@ -211,7 +211,10 @@ export class PluggedinRegistryVPClient {
       });
       
       if (!response.ok) {
-        console.error('Failed to track installation:', response.status);
+        // Only log non-404 errors since 404 is expected for community servers
+        if (response.status !== 404) {
+          console.error('Failed to track installation:', response.status);
+        }
         return { success: false };
       }
       

@@ -209,7 +209,8 @@
         "detectedDescription": "{{count}}個の環境変数{{plural}}が見つかりました",
         "detectionFailed": "検出に失敗しました",
         "detectionFailedDescription": "環境変数を自動で検出できませんでした"
-      }
+      },
+      "securityNotice": "「シークレット」としてマークされた環境変数は暗号化されます。表示されているデフォルト値はリポジトリからの例です - 実際の値に置き換えてください。"
     },
     "discovery": {
       "title": "サーバー検出をテスト",

@@ -6,6 +6,7 @@ import { RateLimiters } from '@/lib/rate-limiter';
 interface EnvVariable {
   name: string;
   description?: string;
+  defaultValue?: string;
   required?: boolean;
   isSecret?: boolean;
 }
@@ -142,10 +143,11 @@ export async function GET(request: NextRequest) {
         
         // Extract environment variables from env object
         if (config.env) {
-          for (const [name] of Object.entries(config.env)) {
+          for (const [name, value] of Object.entries(config.env)) {
             envVariables.push({
               name,
               description: `Environment variable for ${name}`,
+              defaultValue: String(value || ''),
               required: true,
               isSecret: name.toLowerCase().includes('key') || 
                        name.toLowerCase().includes('token') ||

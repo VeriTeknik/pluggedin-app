@@ -1141,7 +1141,7 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
     if (packages.length === 0) {
       packages.push({
         registry_name: 'npm', // Default to npm since github is not supported
-        name: `${wizardData.owner}/${wizardData.repo}`,
+        name: `${wizardData.owner}-${wizardData.repo}`, // Use hyphen instead of slash for npm compatibility
         version: 'latest',
         environment_variables: wizardData.detectedEnvVars?.map(env => ({
           name: env.name,
@@ -1310,8 +1310,33 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         };
       }
 
-      // For community servers, we don't automatically share them
-      // The user can share them manually if they want
+      // For community servers, automatically share them to make them visible
+      const { shareMcpServer } = await import('./social');
+      const shareResult = await shareMcpServer(
+        activeProfileUuid,
+        createResult.data.uuid,
+        serverName,
+        wizardData.finalDescription || wizardData.repoInfo?.description || '',
+        true, // isPublic = true for community servers
+        {
+          name: serverName,
+          description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
+          type: transportType,
+          command,
+          args,
+          env: Object.keys(env).length > 0 ? env : undefined,
+          url,
+          streamableHTTPOptions,
+          repository_url: wizardData.githubUrl,
+          github_owner: wizardData.owner,
+          github_repo: wizardData.repo,
+        }
+      );
+
+      if (!shareResult.success) {
+        console.error('Failed to share community server:', shareResult.error);
+        // Don't fail the whole operation if sharing fails
+      }
       
       // Prepare the template metadata for tracking
       const template: any = {

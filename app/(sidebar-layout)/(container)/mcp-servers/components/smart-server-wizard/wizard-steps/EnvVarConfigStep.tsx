@@ -158,23 +158,54 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
         Object.values(data.transportConfigs).forEach(config => {
           // Check regular environment variables
           if (config.env) {
-            Object.entries(config.env).forEach(([name, value]) => {
-              if (!seenVars.has(name)) {
-                seenVars.add(name);
-                detectedVars.push({
-                  name,
-                  description: `Environment variable from ${config.source || 'detection'}`,
-                  defaultValue: value || '',
-                  required: true,
-                  source: 'registry',
-                  value: value || '',
-                  isSecret: name.toLowerCase().includes('key') || 
-                           name.toLowerCase().includes('token') ||
-                           name.toLowerCase().includes('secret') ||
-                           name.toLowerCase().includes('password')
-                });
-              }
-            });
+            // Handle both string and object formats
+            if (typeof config.env === 'string') {
+              // Parse string format: "VAR1=value1VAR2=value2" or "VAR1=value1,VAR2=value2"
+              const envString: string = config.env;
+              const envPairs = envString.split(/(?=[A-Z_][A-Z0-9_]*=)/); // Split before new variables
+              
+              envPairs.forEach(pair => {
+                if (pair.trim()) {
+                  const [name] = pair.split('=');
+                  if (name && name.match(/^[A-Z_][A-Z0-9_]*$/)) {
+                    if (!seenVars.has(name)) {
+                      seenVars.add(name);
+                      detectedVars.push({
+                        name,
+                        description: `Environment variable from ${config.source || 'detection'}`,
+                        defaultValue: '',
+                        required: true,
+                        source: 'registry',
+                        value: '',
+                        isSecret: name.toLowerCase().includes('key') || 
+                                 name.toLowerCase().includes('token') ||
+                                 name.toLowerCase().includes('secret') ||
+                                 name.toLowerCase().includes('password')
+                      });
+                    }
+                  }
+                }
+              });
+            } else if (typeof config.env === 'object' && config.env !== null) {
+              // Handle object format (existing logic)
+              Object.entries(config.env).forEach(([name, value]) => {
+                if (!seenVars.has(name)) {
+                  seenVars.add(name);
+                  detectedVars.push({
+                    name,
+                    description: `Environment variable from ${config.source || 'detection'}`,
+                    defaultValue: value || '',
+                    required: true,
+                    source: 'registry',
+                    value: value || '',
+                    isSecret: name.toLowerCase().includes('key') || 
+                             name.toLowerCase().includes('token') ||
+                             name.toLowerCase().includes('secret') ||
+                             name.toLowerCase().includes('password')
+                  });
+                }
+              });
+            }
           }
           
           // Check headers for API keys or tokens
@@ -454,6 +485,13 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
         </p>
       </div>
 
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          {t('envConfig.securityNotice')}
+        </AlertDescription>
+      </Alert>
+
       {isDetecting && (
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -487,7 +525,7 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                   )}
                   {config.args && config.args.length > 0 && (
                     <div>
-                      <span className="text-muted-foreground">Args:</span> {JSON.stringify(config.args)}
+                      <span className="text-muted-foreground">Args:</span> {config.args?.join(' ') || ''}
                     </div>
                   )}
                 </div>

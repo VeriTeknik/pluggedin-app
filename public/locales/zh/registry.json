@@ -209,7 +209,8 @@
         "detectedDescription": "找到 {{count}} 个环境变量{{plural}}",
         "detectionFailed": "检测失败",
         "detectionFailedDescription": "无法自动检测环境变量"
-      }
+      },
+      "securityNotice": "标记为\"秘密\"的环境变量将被加密。显示的默认值是来自仓库的示例 - 请用您的实际值替换它们。"
     },
     "discovery": {
       "title": "测试服务器发现",

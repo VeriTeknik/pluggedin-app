@@ -209,7 +209,8 @@
         "detectedDescription": "{{count}} ortam değişken{{plural}} bulundu",
         "detectionFailed": "Algılama başarısız",
         "detectionFailedDescription": "Ortam değişkenleri otomatik olarak algılanamadı"
-      }
+      },
+      "securityNotice": "\"Gizli\" olarak işaretlenen ortam değişkenleri şifrelenecektir. Gösterilen varsayılan değerler depodan alınan örneklerdir - bunları gerçek değerlerinizle değiştirin."
     },
     "discovery": {
       "title": "Sunucu Keşfini Test Et",

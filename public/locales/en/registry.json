@@ -209,7 +209,8 @@
         "detectedDescription": "Found {{count}} environment variable{{plural}}",
         "detectionFailed": "Detection failed",
         "detectionFailedDescription": "Could not detect environment variables automatically"
-      }
+      },
+      "securityNotice": "Environment variables marked as \"Secret\" will be encrypted. Default values shown are examples from the repository - replace them with your actual values."
     },
     "discovery": {
       "title": "Test Server Discovery",

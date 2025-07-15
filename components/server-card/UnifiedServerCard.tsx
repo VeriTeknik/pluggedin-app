@@ -440,29 +440,35 @@ export function UnifiedServerCard({
               </Button>
             )}
             
-            {/* Install/Unshare button */}
-            {isOwned ? (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={handleUnshare}
-              >
-                {t('search.card.unshare')}
-              </Button>
-            ) : isInstalled ? (
-              <Button variant="outline" size="sm" disabled>
-                {t('search.card.installed')}
-              </Button>
-            ) : (
-              <Button
-                variant="default"
-                size="sm"
-                onClick={handleInstall}
-              >
-                <Download className="w-4 h-4 mr-2" />
-                {t('search.card.install')}
-              </Button>
-            )}
+            {/* Install/Unshare buttons */}
+            <div className="flex gap-2">
+              {/* Show install button for everyone, including owners */}
+              {isInstalled ? (
+                <Button variant="outline" size="sm" disabled>
+                  {t('search.card.installed')}
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={handleInstall}
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  {t('search.card.install')}
+                </Button>
+              )}
+              
+              {/* Show unshare button only for owners */}
+              {isOwned && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleUnshare}
+                >
+                  {t('search.card.unshare')}
+                </Button>
+              )}
+            </div>
           </div>
         </CardFooter>
       </Card>

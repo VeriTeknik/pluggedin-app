@@ -99,19 +99,18 @@ export const trackServerInstallation = async (input: {
       };
     }
 
-    // Get user ID for analytics tracking
-    const profileData = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, input.profileUuid),
-      with: {
-        project: {
-          columns: {
-            user_id: true
-          }
-        }
-      }
-    });
-
-    const userId = profileData?.project?.user_id || 'anonymous';
+    // Get user ID for analytics tracking - commented out until new analytics service is available
+    // const profileData = await db.query.profilesTable.findFirst({
+    //   where: eq(profilesTable.uuid, input.profileUuid),
+    //   with: {
+    //     project: {
+    //       columns: {
+    //         user_id: true
+    //       }
+    //     }
+    //   }
+    // });
+    // const userId = profileData?.project?.user_id || 'anonymous';
 
     // Record the installation locally
     await db.insert(serverInstallationsTable).values({
@@ -139,17 +138,40 @@ export const trackServerInstallation = async (input: {
 
     // TODO: Track installation to new analytics service when available
 
-    // Also track in registry if it's a registry or community server
-    if (input.externalId && (input.source === McpServerSource.REGISTRY || input.source === McpServerSource.COMMUNITY)) {
+    // Also track in registry if it's a registry server
+    // For community servers, only track if it has a proper registry ID (not GitHub format)
+    if (input.externalId && input.source === McpServerSource.REGISTRY) {
       await trackInstallationInRegistry(input.externalId, input.source).catch(error => {
         console.error('Failed to track installation in registry:', error);
         // Don't fail the local tracking if registry tracking fails
       });
+    } else if (input.externalId && input.source === McpServerSource.COMMUNITY) {
+      // Only track community servers that have a proper registry ID format
+      // Skip tracking for GitHub-style IDs like "io.github.owner/repo"
+      const isGitHubStyleId = input.externalId.startsWith('io.github.') || input.externalId.includes('/');
+      if (!isGitHubStyleId) {
+        await trackInstallationInRegistry(input.externalId, input.source).catch(error => {
+          console.error('Failed to track installation in registry:', error);
+          // Don't fail the local tracking if registry tracking fails
+        });
+      }
     }
 
     // Create notification for the server owner if it's a shared server
     if (input.source === McpServerSource.COMMUNITY && input.externalId) {
       try {
+        // For community servers created from the wizard, the external_id is like "io.github.owner/repo"
+        // This is not a UUID, so we can't use it to look up a shared server record.
+        // Shared server records are only created when a user explicitly shares their server.
+        // Therefore, we should skip notification creation for wizard-created community servers.
+        
+        // Only try to find shared server if externalId looks like a UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(input.externalId)) {
+          // This is not a shared server UUID, skip notification
+          return;
+        }
+        
         // Get the shared server details
         const { sharedMcpServersTable } = await import('@/db/schema');
         const { eq } = await import('drizzle-orm');
