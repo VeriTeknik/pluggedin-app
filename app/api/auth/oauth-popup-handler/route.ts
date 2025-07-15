@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSecurityHeaders } from '@/lib/security-utils';
+import { getSecurityHeaders, sanitizeErrorMessage } from '@/lib/security-utils';
 
 /**
  * This endpoint handles OAuth popup callbacks securely by returning a minimal HTML page
@@ -21,19 +21,28 @@ export async function GET(request: NextRequest) {
     return new NextResponse('Invalid status', { status: 400 });
   }
   
+  // Sanitize all user inputs
+  const sanitizedError = error ? sanitizeErrorMessage(error) : 'unknown_error';
+  const sanitizedUsername = username ? username.replace(/[^a-zA-Z0-9-_]/g, '') : 'unknown';
+  
   // Build the message object based on status
   let message: Record<string, any>;
   if (status === 'success') {
     message = {
       type: 'github-oauth-success',
-      githubUsername: username || 'unknown'
+      githubUsername: sanitizedUsername
     };
   } else {
     message = {
       type: 'github-oauth-error',
-      error: error || 'unknown_error'
+      error: sanitizedError
     };
   }
+  
+  // Pre-compute the redirect URL for non-popup cases
+  const redirectUrl = status === 'success' 
+    ? '/search' 
+    : `/search?auth_error=${encodeURIComponent(sanitizedError)}`;
   
   // Return a minimal HTML page that posts the message and closes
   // Note: We're not rendering any user-controlled content directly in the HTML
@@ -62,12 +71,8 @@ export async function GET(request: NextRequest) {
       window.close();
     }, 100);
   } else {
-    // If not in a popup, redirect based on status
-    window.location.href = ${JSON.stringify(
-      status === 'success' 
-        ? '/search' 
-        : `/search?auth_error=${error || 'unknown'}`
-    )};
+    // If not in a popup, redirect to pre-computed URL
+    window.location.href = ${JSON.stringify(redirectUrl)};
   }
 })();
 </script>
