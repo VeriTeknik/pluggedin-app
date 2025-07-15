@@ -120,21 +120,17 @@ export function createBubblewrapConfig(
   // Use actual home directory as fallback instead of hardcoded /home/pluggedin
   const actualHome = process.env.HOME || os.homedir() || '/app';
   
-  // Check if this is an authenticated mcp-remote server that needs OAuth directory access
-  const isMcpRemoteWithOAuth = serverConfig.command === 'npx' && 
-                               serverConfig.args?.includes('mcp-remote') &&
-                               (serverConfig.config as any)?.oauth_completed_at;
-  
-  // For authenticated mcp-remote servers, use their OAuth directory as HOME
-  const oauthHome = isMcpRemoteWithOAuth && serverConfig.uuid
-    ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'oauth')
-    : actualHome;
+  // Use server-specific directories for all MCP operations
+  // This ensures OAuth tokens, workspace files, and other data are isolated per server
+  const serverSpecificHome = serverConfig.uuid
+    ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace')
+    : path.join(actualHome, 'mcp-workspace');
   
   const paths: PathConfig = {
-    userHome: process.env.FIREJAIL_USER_HOME ?? oauthHome,
+    userHome: process.env.FIREJAIL_USER_HOME ?? serverSpecificHome,
     localBin: process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local', 'bin'),
     appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
-    mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')
+    mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? serverSpecificHome
   };
   
   // Ensure workspace directory exists
@@ -159,11 +155,16 @@ export function createBubblewrapConfig(
     '--dev', '/dev',
     '--tmpfs', '/tmp',
     
-    // Bind mount workspace as home
+    // Bind mount server-specific workspace as home
     '--bind', paths.mcpWorkspace, paths.userHome,
     
-    // For mcp-remote OAuth, bind mount the OAuth directory
-    ...(isMcpRemoteWithOAuth && paths.userHome !== oauthHome ? ['--bind', paths.userHome, paths.userHome] : []),
+    // For servers with OAuth, ensure OAuth directory is accessible
+    // Mount the parent servers directory to allow access to oauth subdirectory
+    ...(serverConfig.uuid ? [
+      '--bind', 
+      path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid),
+      path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid)
+    ] : []),
     
     // Read-only system directories
     '--ro-bind', '/usr', '/usr',
@@ -190,7 +191,7 @@ export function createBubblewrapConfig(
     '--ro-bind-try', `${paths.userHome}/.local/share/pipx`, `${paths.userHome}/.local/share/pipx`,
     
     // UV tools directory (needs write access for uvx)
-    '--bind', `${paths.userHome}/.local/share/uv`, `${paths.userHome}/.local/share/uv`,
+    '--bind-try', `${paths.userHome}/.local/share/uv`, `${paths.userHome}/.local/share/uv`,
     
     // MCP Interpreter directories (mount from config)
     '--ro-bind', PackageManagerConfig.NODEJS_BIN_DIR, PackageManagerConfig.NODEJS_BIN_DIR,
@@ -201,7 +202,7 @@ export function createBubblewrapConfig(
     '--ro-bind-try', `${actualHome}/.nvm`, `${actualHome}/.nvm`,
     
     // UV cache directory
-    '--bind', `${paths.userHome}/.cache/uv`, `${paths.userHome}/.cache/uv`,
+    '--bind-try', `${paths.userHome}/.cache/uv`, `${paths.userHome}/.cache/uv`,
     
     // MCP package store directory (needed for uvx and other package managers)
     '--bind', PackageManagerConfig.PACKAGE_STORE_DIR, PackageManagerConfig.PACKAGE_STORE_DIR,
@@ -217,6 +218,7 @@ export function createBubblewrapConfig(
     
     // Security capabilities
     '--cap-drop', 'ALL',
+    '--cap-add', 'CAP_NET_BIND_SERVICE',
     
     // Set hostname
     '--hostname', 'mcp-sandbox',
@@ -285,21 +287,17 @@ export function createFirejailConfig(
   // Use actual home directory as fallback instead of hardcoded /home/pluggedin
   const actualHome = process.env.HOME || os.homedir() || '/app';
   
-  // Check if this is an authenticated mcp-remote server that needs OAuth directory access
-  const isMcpRemoteWithOAuth = serverConfig.command === 'npx' && 
-                               serverConfig.args?.includes('mcp-remote') &&
-                               (serverConfig.config as any)?.oauth_completed_at;
-  
-  // For authenticated mcp-remote servers, use their OAuth directory as HOME
-  const oauthHome = isMcpRemoteWithOAuth && serverConfig.uuid
-    ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'oauth')
-    : actualHome;
+  // Use server-specific directories for all MCP operations
+  // This ensures OAuth tokens, workspace files, and other data are isolated per server
+  const serverSpecificHome = serverConfig.uuid
+    ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'workspace')
+    : path.join(actualHome, 'mcp-workspace');
   
   const paths: PathConfig = {
-    userHome: process.env.FIREJAIL_USER_HOME ?? oauthHome,
+    userHome: process.env.FIREJAIL_USER_HOME ?? serverSpecificHome,
     localBin: process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local', 'bin'),
     appPath: process.env.FIREJAIL_APP_PATH ?? process.cwd(),
-    mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')
+    mcpWorkspace: process.env.FIREJAIL_MCP_WORKSPACE ?? serverSpecificHome
   };
   
   // Ensure workspace directory exists
@@ -343,8 +341,11 @@ export function createFirejailConfig(
       '--whitelist=/usr/local/lib/python*',
       `--whitelist=${paths.userHome}/.cache/uv`, // UV cache
       `--whitelist=${paths.userHome}/.venv`, // Virtual envs
-      // For mcp-remote OAuth, ensure access to .mcp-auth directory
-      ...(isMcpRemoteWithOAuth ? [`--whitelist=${paths.userHome}/.mcp-auth`] : []),
+      // For servers with OAuth, ensure access to OAuth directories
+      ...(serverConfig.uuid ? [
+        `--whitelist=${path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'oauth')}`,
+        `--whitelist=${path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid)}`
+      ] : []),
       
       // Docker socket (only if not using network isolation)
       ...(PackageManagerConfig.ENABLE_NETWORK_ISOLATION ? [] : [`--whitelist=/var/run/docker.sock`]),
@@ -612,15 +613,14 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         }
       }
 
-      // Check if this is an authenticated mcp-remote server that needs OAuth directory access
-      const isMcpRemoteWithOAuth = serverConfig.command === 'npx' && 
-                                   serverConfig.args?.includes('mcp-remote') &&
-                                   (serverConfig.config as any)?.oauth_completed_at;
-      
-      // For authenticated mcp-remote servers, use their OAuth directory as HOME
-      const oauthHome = isMcpRemoteWithOAuth && serverConfig.uuid
+      // Get actual home directory for fallback
+      const actualHome = process.env.HOME || os.homedir() || '/app';
+
+      // For mcp-remote servers, ensure HOME points to OAuth directory
+      const isMcpRemote = transformedCommand === 'npx' && transformedArgs?.includes('mcp-remote');
+      const serverOAuthHome = serverConfig.uuid && isMcpRemote
         ? path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverConfig.uuid, 'oauth')
-        : (process.env.HOME || os.homedir() || '/app');
+        : actualHome;
 
       const stdioParams: StdioServerParameters = sandboxConfig ? {
         // Use sandbox configuration (default for STDIO servers)
@@ -628,6 +628,8 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         args: sandboxConfig.args,
         env: {
           ...sandboxConfig.env,
+          // For mcp-remote, override HOME to OAuth directory
+          ...(isMcpRemote && serverConfig.uuid ? { HOME: serverOAuthHome } : {}),
           ...packageManagerEnv // Merge package manager env
         }
       } : {
@@ -641,15 +643,13 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
           ...(process.platform === 'linux' ? {
             // Add potentially missing vars needed by uvx/python on Linux
             // Use dynamic home directory detection
-            PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? path.join(oauthHome, '.local/bin')}:${process.env.PATH}`, // Prepend local bin
-            HOME: process.env.FIREJAIL_USER_HOME ?? oauthHome,
-            UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? oauthHome}/.local/uv`,
-            PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(oauthHome, 'mcp-workspace')}/lib/python`,
-            PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(oauthHome, 'mcp-workspace'),
+            PATH: `${process.env.FIREJAIL_LOCAL_BIN ?? path.join(actualHome, '.local/bin')}:${process.env.PATH}`, // Prepend local bin
+            HOME: process.env.FIREJAIL_USER_HOME ?? serverOAuthHome,
+            UV_ROOT: `${process.env.FIREJAIL_USER_HOME ?? actualHome}/.local/uv`,
+            PYTHONPATH: `${process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace')}/lib/python`,
+            PYTHONUSERBASE: process.env.FIREJAIL_MCP_WORKSPACE ?? path.join(actualHome, 'mcp-workspace'),
             UV_SYSTEM_PYTHON: 'true',
           } : {}),
-          // Set OAuth HOME for all platforms if needed
-          ...(isMcpRemoteWithOAuth ? { HOME: oauthHome } : {}),
           // Apply package manager env
           ...packageManagerEnv,
           // Apply server-specific env vars, overriding anything above

@@ -9,6 +9,7 @@ import { withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { createBubblewrapConfig, createFirejailConfig } from '@/lib/mcp/client-wrapper';
 import { OAuthProcessManager } from '@/lib/mcp/oauth-process-manager';
+import { portAllocator } from '@/lib/mcp/utils/port-allocator';
 import type { McpServer } from '@/types/mcp-server';
 
 const triggerOAuthSchema = z.object({
@@ -180,17 +181,37 @@ async function handleMcpRemoteOAuth(server: McpServer) {
     };
   }
 
-  // Determine callback port (Linear uses 14881)
-  let callbackPort = 3334; // Default mcp-remote port
+  // Allocate a dynamic port for OAuth callback
+  let callbackPort: number;
   try {
-    const parsedUrl = new URL(remoteUrl);
-    const hostname = parsedUrl.hostname.toLowerCase();
-    if (hostname === 'linear.app' || hostname === 'www.linear.app' || hostname.endsWith('.linear.app')) {
-      callbackPort = 14881;
+    // Check if we should use legacy port for backward compatibility
+    const useLegacyPorts = process.env.OAUTH_USE_LEGACY_PORTS === 'true';
+    
+    if (useLegacyPorts) {
+      // Use legacy hardcoded ports
+      callbackPort = 3334; // Default mcp-remote port
+      try {
+        const parsedUrl = new URL(remoteUrl);
+        const hostname = parsedUrl.hostname.toLowerCase();
+        if (hostname === 'linear.app' || hostname === 'www.linear.app' || hostname.endsWith('.linear.app')) {
+          callbackPort = 14881;
+        }
+      } catch (e) {
+        // Invalid URL, use default port
+        console.error('Invalid remote URL:', e);
+      }
+      console.log(`[triggerMcpOAuth] Using legacy port ${callbackPort} for ${server.name}`);
+    } else {
+      // Use dynamic port allocation
+      callbackPort = await portAllocator.allocatePort();
+      console.log(`[triggerMcpOAuth] Allocated dynamic port ${callbackPort} for ${server.name}`);
     }
-  } catch (e) {
-    // Invalid URL, use default port
-    console.error('Invalid remote URL:', e);
+  } catch (error) {
+    console.error(`[triggerMcpOAuth] Failed to allocate port:`, error);
+    return {
+      success: false,
+      error: 'Failed to allocate port for OAuth callback',
+    };
   }
 
   // Create OAuth process manager instance
@@ -244,7 +265,16 @@ async function handleMcpRemoteOAuth(server: McpServer) {
     // Give it a moment then clean up
     setTimeout(() => {
       oauthProcessManager.cleanup();
+      // Release the allocated port
+      if (!process.env.OAUTH_USE_LEGACY_PORTS) {
+        portAllocator.releasePort(callbackPort);
+      }
     }, 2000);
+  } else {
+    // Release port immediately on failure
+    if (!process.env.OAUTH_USE_LEGACY_PORTS) {
+      portAllocator.releasePort(callbackPort);
+    }
   }
   
   return result;

@@ -233,7 +233,7 @@ export class StreamableHTTPWrapper implements Transport {
       const modifiedUrl = new URL(url.toString());
       
       // Replace the redirect_uri parameter
-      const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:12005';
+      const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://staging.plugged.in/';
       const proxyRedirectUri = `${baseUrl}/api/mcp/oauth/callback`;
       
       modifiedUrl.searchParams.set('redirect_uri', proxyRedirectUri);

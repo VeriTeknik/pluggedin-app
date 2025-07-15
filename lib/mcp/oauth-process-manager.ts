@@ -5,6 +5,7 @@ import os from 'os';
 import path from 'path';
 
 import { PackageManagerConfig } from '@/lib/mcp/package-manager/config';
+import { portAllocator } from '@/lib/mcp/utils/port-allocator';
 
 export interface OAuthProcessResult {
   success: boolean;
@@ -37,6 +38,7 @@ export interface OAuthProcessOptions {
  */
 export class OAuthProcessManager extends EventEmitter {
   private processes: Map<string, ChildProcess> = new Map();
+  private processPorts: Map<string, number> = new Map();
   private readonly MCP_AUTH_DIR = path.join(os.homedir(), '.mcp-auth');
   
   constructor() {
@@ -90,6 +92,11 @@ export class OAuthProcessManager extends EventEmitter {
       
       this.processes.set(serverName, childProcess);
       
+      // Track the port if provided for cleanup
+      if (options.callbackPort) {
+        this.processPorts.set(serverName, options.callbackPort);
+      }
+      
       // For mcp-remote servers, we need to wait for it to start then trigger a request
       if (args.includes('mcp-remote')) {
         // Wait for the proxy to be established
@@ -133,6 +140,7 @@ export class OAuthProcessManager extends EventEmitter {
       
       // Clean up
       this.processes.delete(serverName);
+      this.processPorts.delete(serverName);
       
       return result;
       
@@ -589,6 +597,13 @@ export class OAuthProcessManager extends EventEmitter {
       process.kill();
       this.processes.delete(serverName);
       
+      // Release the port if tracked
+      const port = this.processPorts.get(serverName);
+      if (port && !process.env?.OAUTH_USE_LEGACY_PORTS) {
+        portAllocator.releasePort(port);
+        this.processPorts.delete(serverName);
+      }
+      
       // Give it a moment to clean up
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
@@ -631,12 +646,19 @@ export class OAuthProcessManager extends EventEmitter {
    * Clean up all processes
    */
   async cleanup(): Promise<void> {
-    for (const [_name, process] of this.processes) {
+    for (const [name, process] of this.processes) {
       if (!process.killed) {
         process.kill();
       }
+      
+      // Release any tracked ports
+      const port = this.processPorts.get(name);
+      if (port && !process.env?.OAUTH_USE_LEGACY_PORTS) {
+        portAllocator.releasePort(port);
+      }
     }
     this.processes.clear();
+    this.processPorts.clear();
   }
 }
 

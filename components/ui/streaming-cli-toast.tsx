@@ -142,8 +142,25 @@ export function StreamingCliToast({
         const keepAliveInterval = setInterval(() => {
           if (Date.now() - lastDataTime > dataTimeoutMs) {
             console.error('Discovery stream timeout - no data received for 60 seconds');
+            
+            // Update state to show timeout error
+            setHasError(true);
+            setMessages((prev) => [
+              ...prev,
+              {
+                type: 'error',
+                message: 'Discovery timeout - no response from server for 60 seconds',
+                timestamp: Date.now(),
+              },
+            ]);
+            setIsConnected(false);
+            
+            // Cancel the reader and cleanup
             reader.cancel();
             clearInterval(keepAliveInterval);
+            
+            // Call onComplete with failure
+            onComplete?.(false);
           }
         }, 5000); // Check every 5 seconds
 
