@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { storeRegistryOAuthToken } from '@/app/actions/registry-oauth-session';
 import { RateLimiters } from '@/lib/rate-limiter';
+import { 
+  escapeHtml, 
+  encodeForJavaScript, 
+  isValidRedirectUrl, 
+  getAllowedRedirectHosts,
+  sanitizeErrorMessage,
+  getCSPHeader
+} from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
   // Apply rate limiting
@@ -21,6 +29,12 @@ export async function GET(request: NextRequest) {
   
   const baseUrl = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || request.nextUrl.origin;
   
+  // Validate baseUrl to prevent open redirect attacks
+  const allowedHosts = getAllowedRedirectHosts();
+  if (!isValidRedirectUrl(baseUrl, allowedHosts)) {
+    return new NextResponse('Invalid redirect URL', { status: 400 });
+  }
+  
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const error = searchParams.get('error');
@@ -29,6 +43,12 @@ export async function GET(request: NextRequest) {
   // Handle OAuth errors
   if (error) {
     console.error('OAuth error:', error);
+    const sanitizedError = sanitizeErrorMessage(error);
+    const errorData = {
+      type: 'github-oauth-error',
+      error: sanitizedError
+    };
+    
     const errorHtml = `
       <!DOCTYPE html>
       <html>
@@ -36,15 +56,14 @@ export async function GET(request: NextRequest) {
           <title>Authentication Error</title>
           <script>
             if (window.opener) {
-              window.opener.postMessage({
-                type: 'github-oauth-error',
-                error: '${encodeURIComponent(error)}'
-              }, '${encodeURIComponent(baseUrl)}');
-              document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center; color: #dc2626;"><h2>Authentication failed</h2><p>${error}</p><p>This window will close automatically...</p></div>';
+              window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
+              document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center; color: #dc2626;"><h2>Authentication failed</h2><p>${escapeHtml(sanitizedError)}</p><p>This window will close automatically...</p></div>';
               setTimeout(() => window.close(), 3000);
             } else {
               // Redirect to search page with error message
-              window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=${encodeURIComponent(error)}';
+              const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
+              url.searchParams.set('auth_error', ${encodeForJavaScript(sanitizedError)});
+              window.location.href = url.toString();
             }
           </script>
         </head>
@@ -56,12 +75,20 @@ export async function GET(request: NextRequest) {
       </html>
     `;
     return new NextResponse(errorHtml, {
-      headers: { 'Content-Type': 'text/html' },
+      headers: { 
+        'Content-Type': 'text/html',
+        'Content-Security-Policy': getCSPHeader()
+      },
     });
   }
 
   // Handle missing code
   if (!code) {
+    const errorData = {
+      type: 'github-oauth-error',
+      error: 'Authentication code missing'
+    };
+    
     const errorHtml = `
       <!DOCTYPE html>
       <html>
@@ -69,13 +96,12 @@ export async function GET(request: NextRequest) {
           <title>Authentication Error</title>
           <script>
             if (window.opener) {
-              window.opener.postMessage({
-                type: 'github-oauth-error',
-                error: 'missing_code'
-              }, '${encodeURIComponent(baseUrl)}');
+              window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
               setTimeout(() => window.close(), 1000);
             } else {
-              window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=missing_code';
+              const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
+              url.searchParams.set('auth_error', 'missing_code');
+              window.location.href = url.toString();
             }
           </script>
         </head>
@@ -83,7 +109,10 @@ export async function GET(request: NextRequest) {
       </html>
     `;
     return new NextResponse(errorHtml, {
-      headers: { 'Content-Type': 'text/html' },
+      headers: { 
+        'Content-Type': 'text/html',
+        'Content-Security-Policy': getCSPHeader()
+      },
     });
   }
 
@@ -107,6 +136,11 @@ export async function GET(request: NextRequest) {
 
     if (tokenData.error) {
       console.error('Token exchange error:', tokenData);
+      const errorData = {
+        type: 'github-oauth-error',
+        error: 'Authentication failed'
+      };
+      
       const errorHtml = `
         <!DOCTYPE html>
         <html>
@@ -114,13 +148,12 @@ export async function GET(request: NextRequest) {
             <title>Authentication Error</title>
             <script>
               if (window.opener) {
-                window.opener.postMessage({
-                  type: 'github-oauth-error',
-                  error: 'Token exchange failed: ${encodeURIComponent(tokenData.error)}'
-                }, '${encodeURIComponent(baseUrl)}');
+                window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
                 setTimeout(() => window.close(), 2000);
               } else {
-                window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=${encodeURIComponent(tokenData.error)}';
+                const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
+                url.searchParams.set('auth_error', 'token_exchange_failed');
+                window.location.href = url.toString();
               }
             </script>
           </head>
@@ -128,12 +161,20 @@ export async function GET(request: NextRequest) {
         </html>
       `;
       return new NextResponse(errorHtml, {
-        headers: { 'Content-Type': 'text/html' },
+        headers: { 
+          'Content-Type': 'text/html',
+          'Content-Security-Policy': getCSPHeader()
+        },
       });
     }
 
     if (!tokenData.access_token) {
       console.error('No access token received:', tokenData);
+      const errorData = {
+        type: 'github-oauth-error',
+        error: 'Authentication failed'
+      };
+      
       const errorHtml = `
         <!DOCTYPE html>
         <html>
@@ -141,13 +182,12 @@ export async function GET(request: NextRequest) {
             <title>Authentication Error</title>
             <script>
               if (window.opener) {
-                window.opener.postMessage({
-                  type: 'github-oauth-error',
-                  error: 'No access token received'
-                }, '${encodeURIComponent(baseUrl)}');
+                window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
                 setTimeout(() => window.close(), 2000);
               } else {
-                window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=no_access_token';
+                const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
+                url.searchParams.set('auth_error', 'no_access_token');
+                window.location.href = url.toString();
               }
             </script>
           </head>
@@ -155,7 +195,10 @@ export async function GET(request: NextRequest) {
         </html>
       `;
       return new NextResponse(errorHtml, {
-        headers: { 'Content-Type': 'text/html' },
+        headers: { 
+          'Content-Type': 'text/html',
+          'Content-Security-Policy': getCSPHeader()
+        },
       });
     }
 
@@ -174,6 +217,11 @@ export async function GET(request: NextRequest) {
     const storeResult = await storeRegistryOAuthToken(tokenData.access_token, githubUsername);
     
     if (!storeResult.success) {
+      const errorData = {
+        type: 'github-oauth-error',
+        error: 'Failed to store authentication session'
+      };
+      
       const errorHtml = `
         <!DOCTYPE html>
         <html>
@@ -181,13 +229,12 @@ export async function GET(request: NextRequest) {
             <title>Authentication Error</title>
             <script>
               if (window.opener) {
-                window.opener.postMessage({
-                  type: 'github-oauth-error',
-                  error: 'Failed to store authentication session'
-                }, '${encodeURIComponent(baseUrl)}');
+                window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
                 setTimeout(() => window.close(), 2000);
               } else {
-                window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=session_storage_failed';
+                const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
+                url.searchParams.set('auth_error', 'session_storage_failed');
+                window.location.href = url.toString();
               }
             </script>
           </head>
@@ -195,11 +242,19 @@ export async function GET(request: NextRequest) {
         </html>
       `;
       return new NextResponse(errorHtml, {
-        headers: { 'Content-Type': 'text/html' },
+        headers: { 
+          'Content-Type': 'text/html',
+          'Content-Security-Policy': getCSPHeader()
+        },
       });
     }
 
     // Send success response without exposing the token
+    const successData = {
+      type: 'github-oauth-success',
+      githubUsername: githubUsername
+    };
+    
     const htmlResponse = `
       <!DOCTYPE html>
       <html>
@@ -209,10 +264,7 @@ export async function GET(request: NextRequest) {
             // Check if we're in a popup window
             if (window.opener) {
               // Send message to opener with username only
-              window.opener.postMessage({
-                type: 'github-oauth-success',
-                githubUsername: '${encodeURIComponent(githubUsername)}'
-              }, '${encodeURIComponent(baseUrl)}');
+              window.opener.postMessage(${encodeForJavaScript(successData)}, ${encodeForJavaScript(baseUrl)});
               
               // Show success message and close
               document.body.innerHTML = '<div style="font-family: system-ui; padding: 20px; text-align: center; color: #10b981;"><h2>Authentication successful!</h2><p>This window will close automatically...</p></div>';
@@ -249,11 +301,17 @@ export async function GET(request: NextRequest) {
     return new NextResponse(htmlResponse, {
       headers: {
         'Content-Type': 'text/html',
+        'Content-Security-Policy': getCSPHeader()
       },
     });
 
   } catch (error) {
     console.error('OAuth callback processing error:', error);
+    const errorData = {
+      type: 'github-oauth-error',
+      error: 'Authentication process failed'
+    };
+    
     const errorHtml = `
       <!DOCTYPE html>
       <html>
@@ -261,13 +319,12 @@ export async function GET(request: NextRequest) {
           <title>Authentication Error</title>
           <script>
             if (window.opener) {
-              window.opener.postMessage({
-                type: 'github-oauth-error',
-                error: 'Authentication process failed'
-              }, '${encodeURIComponent(baseUrl)}');
+              window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
               setTimeout(() => window.close(), 2000);
             } else {
-              window.location.href = '${encodeURIComponent(baseUrl)}/search?auth_error=callback_processing_failed';
+              const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
+              url.searchParams.set('auth_error', 'callback_processing_failed');
+              window.location.href = url.toString();
             }
           </script>
         </head>
@@ -275,7 +332,10 @@ export async function GET(request: NextRequest) {
       </html>
     `;
     return new NextResponse(errorHtml, {
-      headers: { 'Content-Type': 'text/html' },
+      headers: { 
+        'Content-Type': 'text/html',
+        'Content-Security-Policy': getCSPHeader()
+      },
     });
   }
 } 

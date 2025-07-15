@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
+import { encodeForJavaScript, sanitizeErrorMessage, getCSPHeader } from '@/lib/security-utils';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const error = searchParams.get('error');
+  
+  // Prepare message data
+  const messageData = {
+    type: error ? 'github-auth-error' : 'github-auth-success',
+    error: error ? sanitizeErrorMessage(error) : null
+  };
   
   // Generate the HTML response that will communicate with the parent window
   const html = `
@@ -16,10 +23,7 @@ export async function GET(request: Request) {
           // Check if we're in a popup
           if (window.opener) {
             // Send message to parent window
-            window.opener.postMessage({
-              type: ${error ? "'github-auth-error'" : "'github-auth-success'"},
-              error: ${error ? `"${error}"` : 'null'}
-            }, window.location.origin);
+            window.opener.postMessage(${encodeForJavaScript(messageData)}, window.location.origin);
             
             // Close the popup
             window.close();
@@ -36,6 +40,7 @@ export async function GET(request: Request) {
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html',
+      'Content-Security-Policy': getCSPHeader()
     },
   });
 }
