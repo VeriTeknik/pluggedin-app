@@ -45,7 +45,22 @@ function extractGitHubInfo(url: string): { owner: string; repo: string } {
   if (!match) {
     throw new Error('Invalid GitHub URL');
   }
-  return { owner: match[1], repo: match[2] };
+  
+  const owner = match[1];
+  const repo = match[2];
+  
+  // Validate GitHub username/repo format (alphanumeric, hyphens, underscores)
+  const githubNamePattern = /^[a-zA-Z0-9][a-zA-Z0-9\-_]{0,99}$/;
+  
+  if (!githubNamePattern.test(owner)) {
+    throw new Error('Invalid GitHub owner name');
+  }
+  
+  if (!githubNamePattern.test(repo)) {
+    throw new Error('Invalid GitHub repository name');
+  }
+  
+  return { owner, repo };
 }
 
 

@@ -91,7 +91,12 @@ export function UploadProgressProvider({ children }: { children: React.ReactNode
             continue;
           }
           
-          const result = await fetch(`/api/upload-status/${tracker.uploadId}?ragIdentifier=${tracker.ragIdentifier}${tracker.docUuid ? `&docUuid=${tracker.docUuid}` : ''}`, {
+          const params = new URLSearchParams({
+            ragIdentifier: tracker.ragIdentifier,
+            ...(tracker.docUuid && { docUuid: tracker.docUuid })
+          });
+          
+          const result = await fetch(`/api/upload-status/${encodeURIComponent(tracker.uploadId)}?${params.toString()}`, {
             method: 'GET',
           });
 

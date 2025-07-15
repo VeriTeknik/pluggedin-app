@@ -28,11 +28,27 @@ const determineProviderFromUrl = (url: string): string => {
       }
     }
     
-    if (hostname.includes('jira') || parsedUrl.pathname.includes('jira')) {
-      return 'Jira';
+    // Special case for Jira/Confluence which may have custom domains
+    // Check for common Jira/Confluence patterns in a safer way
+    if (hostname.endsWith('.atlassian.net') || hostname === 'atlassian.net') {
+      if (parsedUrl.pathname.toLowerCase().includes('/jira/')) {
+        return 'Jira';
+      }
+      if (parsedUrl.pathname.toLowerCase().includes('/confluence/')) {
+        return 'Confluence';
+      }
     }
-    if (hostname.includes('confluence') || parsedUrl.pathname.includes('confluence')) {
-      return 'Confluence';
+    
+    // Check for self-hosted instances with proper domain validation
+    const hostParts = hostname.split('.');
+    if (hostParts.length >= 2) {
+      const subdomain = hostParts[0].toLowerCase();
+      if (subdomain === 'jira' || subdomain === 'confluence') {
+        // Only trust if it's a subdomain of a company domain, not a TLD
+        if (hostParts.length > 2) {
+          return subdomain.charAt(0).toUpperCase() + subdomain.slice(1);
+        }
+      }
     }
   } catch (e) {
     console.error('Invalid URL for provider detection:', e);

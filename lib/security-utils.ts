@@ -24,11 +24,11 @@ export function escapeHtml(str: string): string {
  */
 export function encodeForJavaScript(data: any): string {
   // JSON.stringify handles escaping for JS contexts
-  // Additional escaping for </script> tag injection
+  // Additional escaping for </script> tag injection and HTML comments
   return JSON.stringify(data)
     .replace(/<\/script/gi, '<\\/script')
-    .replace(/<!--/g, '\\u003C!--')
-    .replace(/-->/g, '--\\u003E');
+    .replace(/<!--/g, '\\u003C!\\u002D\\u002D')
+    .replace(/-->/g, '\\u002D\\u002D\\u003E');
 }
 
 /**

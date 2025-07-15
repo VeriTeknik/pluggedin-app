@@ -100,7 +100,20 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
             // Also check repository URL
             if (server.repository?.url) {
               const repoUrl = server.repository.url.toLowerCase();
-              return repoUrl.includes(`github.com/${parsed.owner}/${parsed.repo}`.toLowerCase());
+              // Parse URL to check hostname properly
+              try {
+                const url = new URL(server.repository.url);
+                const hostname = url.hostname.toLowerCase();
+                const pathname = url.pathname.toLowerCase();
+                // Check for exact github.com domain (not subdomains)
+                if ((hostname === 'github.com' || hostname === 'www.github.com') && 
+                    pathname === `/${parsed.owner}/${parsed.repo}`.toLowerCase()) {
+                  return true;
+                }
+              } catch (e) {
+                // Invalid URL, skip
+              }
+              return false;
             }
             
             return false;

@@ -48,6 +48,9 @@ export async function GET(request: NextRequest) {
       error: sanitizedError
     };
     
+    // Pre-compute the redirect URL server-side
+    const errorRedirectUrl = `${baseUrl}/search?auth_error=${encodeURIComponent(sanitizedError)}`;
+    
     const errorHtml = `
       <!DOCTYPE html>
       <html>
@@ -58,15 +61,25 @@ export async function GET(request: NextRequest) {
               window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
               const errorDiv = document.createElement('div');
               errorDiv.style.cssText = 'font-family: system-ui; padding: 20px; text-align: center; color: #dc2626;';
-              errorDiv.innerHTML = '<h2>Authentication failed</h2><p>' + ${encodeForJavaScript(escapeHtml(sanitizedError))} + '</p><p>This window will close automatically...</p>';
+              
+              const h2 = document.createElement('h2');
+              h2.textContent = 'Authentication failed';
+              errorDiv.appendChild(h2);
+              
+              const p1 = document.createElement('p');
+              p1.textContent = ${encodeForJavaScript(sanitizedError)};
+              errorDiv.appendChild(p1);
+              
+              const p2 = document.createElement('p');
+              p2.textContent = 'This window will close automatically...';
+              errorDiv.appendChild(p2);
+              
               document.body.innerHTML = '';
               document.body.appendChild(errorDiv);
               setTimeout(() => window.close(), 3000);
             } else {
               // Redirect to search page with error message
-              const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
-              url.searchParams.set('auth_error', ${encodeForJavaScript(sanitizedError)});
-              window.location.href = url.toString();
+              window.location.href = ${encodeForJavaScript(errorRedirectUrl)};
             }
           </script>
         </head>
@@ -92,6 +105,9 @@ export async function GET(request: NextRequest) {
       error: 'Authentication code missing'
     };
     
+    // Pre-compute the redirect URL server-side
+    const missingCodeRedirectUrl = `${baseUrl}/search?auth_error=missing_code`;
+    
     const errorHtml = `
       <!DOCTYPE html>
       <html>
@@ -102,9 +118,7 @@ export async function GET(request: NextRequest) {
               window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
               setTimeout(() => window.close(), 1000);
             } else {
-              const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
-              url.searchParams.set('auth_error', 'missing_code');
-              window.location.href = url.toString();
+              window.location.href = ${encodeForJavaScript(missingCodeRedirectUrl)};
             }
           </script>
         </head>
@@ -144,6 +158,9 @@ export async function GET(request: NextRequest) {
         error: 'Authentication failed'
       };
       
+      // Pre-compute the redirect URL server-side
+      const tokenExchangeFailedRedirectUrl = `${baseUrl}/search?auth_error=token_exchange_failed`;
+      
       const errorHtml = `
         <!DOCTYPE html>
         <html>
@@ -154,9 +171,7 @@ export async function GET(request: NextRequest) {
                 window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
                 setTimeout(() => window.close(), 2000);
               } else {
-                const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
-                url.searchParams.set('auth_error', 'token_exchange_failed');
-                window.location.href = url.toString();
+                window.location.href = ${encodeForJavaScript(tokenExchangeFailedRedirectUrl)};
               }
             </script>
           </head>
@@ -178,6 +193,9 @@ export async function GET(request: NextRequest) {
         error: 'Authentication failed'
       };
       
+      // Pre-compute the redirect URL server-side
+      const noAccessTokenRedirectUrl = `${baseUrl}/search?auth_error=no_access_token`;
+      
       const errorHtml = `
         <!DOCTYPE html>
         <html>
@@ -188,9 +206,7 @@ export async function GET(request: NextRequest) {
                 window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
                 setTimeout(() => window.close(), 2000);
               } else {
-                const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
-                url.searchParams.set('auth_error', 'no_access_token');
-                window.location.href = url.toString();
+                window.location.href = ${encodeForJavaScript(noAccessTokenRedirectUrl)};
               }
             </script>
           </head>
@@ -225,6 +241,9 @@ export async function GET(request: NextRequest) {
         error: 'Failed to store authentication session'
       };
       
+      // Pre-compute the redirect URL server-side
+      const sessionStorageFailedRedirectUrl = `${baseUrl}/search?auth_error=session_storage_failed`;
+      
       const errorHtml = `
         <!DOCTYPE html>
         <html>
@@ -235,9 +254,7 @@ export async function GET(request: NextRequest) {
                 window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
                 setTimeout(() => window.close(), 2000);
               } else {
-                const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
-                url.searchParams.set('auth_error', 'session_storage_failed');
-                window.location.href = url.toString();
+                window.location.href = ${encodeForJavaScript(sessionStorageFailedRedirectUrl)};
               }
             </script>
           </head>
@@ -272,33 +289,22 @@ export async function GET(request: NextRequest) {
               // Show success message and close
               const successDiv = document.createElement('div');
               successDiv.style.cssText = 'font-family: system-ui; padding: 20px; text-align: center; color: #10b981;';
-              successDiv.innerHTML = '<h2>Authentication successful!</h2><p>This window will close automatically...</p>';
+              
+              const h2 = document.createElement('h2');
+              h2.textContent = 'Authentication successful!';
+              successDiv.appendChild(h2);
+              
+              const p = document.createElement('p');
+              p.textContent = 'This window will close automatically...';
+              successDiv.appendChild(p);
+              
               document.body.innerHTML = '';
               document.body.appendChild(successDiv);
               setTimeout(() => window.close(), 2000);
             } else {
-              // Not in a popup, check for saved state from claim flow
-              const savedState = localStorage.getItem('claim_server_state');
-              if (savedState) {
-                try {
-                  const state = JSON.parse(savedState);
-                  // Don't clean up saved state yet - let the dialog do it
-                  // Validate and sanitize the return URL
-                  const returnUrl = state.returnUrl || '/search';
-                  // Only allow relative URLs starting with /
-                  if (returnUrl.startsWith('/') && !returnUrl.startsWith('//')) {
-                    window.location.href = returnUrl;
-                  } else {
-                    window.location.href = '/search';
-                  }
-                } catch (e) {
-                  // Fallback to search page
-                  window.location.href = '/search';
-                }
-              } else {
-                // No saved state, just go to search page
-                window.location.href = '/search';
-              }
+              // Not in a popup, redirect to search page
+              // Note: localStorage-based redirects removed for security
+              window.location.href = '/search';
             }
           </script>
         </head>
@@ -325,6 +331,9 @@ export async function GET(request: NextRequest) {
       error: 'Authentication process failed'
     };
     
+    // Pre-compute the redirect URL server-side
+    const callbackProcessingFailedRedirectUrl = `${baseUrl}/search?auth_error=callback_processing_failed`;
+    
     const errorHtml = `
       <!DOCTYPE html>
       <html>
@@ -335,9 +344,7 @@ export async function GET(request: NextRequest) {
               window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
               setTimeout(() => window.close(), 2000);
             } else {
-              const url = new URL(${encodeForJavaScript(baseUrl)} + '/search');
-              url.searchParams.set('auth_error', 'callback_processing_failed');
-              window.location.href = url.toString();
+              window.location.href = ${encodeForJavaScript(callbackProcessingFailedRedirectUrl)};
             }
           </script>
         </head>

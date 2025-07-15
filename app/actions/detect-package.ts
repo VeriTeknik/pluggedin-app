@@ -82,7 +82,13 @@ async function fetchFileFromGitHub(
 // Check if npm package exists
 async function checkNpmPackageExists(packageName: string): Promise<boolean> {
   try {
-    const response = await fetch(`https://registry.npmjs.org/${packageName}`);
+    // Validate package name format
+    const npmPackagePattern = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+    if (!npmPackagePattern.test(packageName)) {
+      return false;
+    }
+    
+    const response = await fetch(`https://registry.npmjs.org/${encodeURIComponent(packageName)}`);
     return response.ok;
   } catch {
     return false;

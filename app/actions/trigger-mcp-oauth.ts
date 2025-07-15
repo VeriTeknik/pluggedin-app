@@ -185,7 +185,7 @@ async function handleMcpRemoteOAuth(server: McpServer) {
   try {
     const parsedUrl = new URL(remoteUrl);
     const hostname = parsedUrl.hostname.toLowerCase();
-    if (hostname.includes('linear.app') || hostname.endsWith('.linear.app')) {
+    if (hostname === 'linear.app' || hostname === 'www.linear.app' || hostname.endsWith('.linear.app')) {
       callbackPort = 14881;
     }
   } catch (e) {

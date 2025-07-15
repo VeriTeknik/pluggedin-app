@@ -243,9 +243,10 @@ export async function GET(
             }
           }
           
+          console.error('[Tool Discovery Error]', error);
           sendMessage({
             type: 'error',
-            message: `Failed to discover/store tools: ${error.message}`,
+            message: 'Failed to discover/store tools',
             timestamp: Date.now(),
           });
         }
@@ -303,10 +304,11 @@ export async function GET(
             });
           }
         } catch (error: any) {
-          templateError = error.message;
+          templateError = error instanceof Error ? error.message : 'Unknown error';
+          console.error('[ResourceTemplate Discovery Error]', error);
           sendMessage({
             type: 'error',
-            message: `Failed to discover/store resource templates: ${error.message}`,
+            message: 'Failed to discover/store resource templates',
             timestamp: Date.now(),
           });
         }
@@ -361,10 +363,11 @@ export async function GET(
             });
           }
         } catch (error: any) {
-          resourceError = error.message;
+          resourceError = error instanceof Error ? error.message : 'Unknown error';
+          console.error('[Resource Discovery Error]', error);
           sendMessage({
             type: 'error',
-            message: `Failed to discover/store static resources: ${error.message}`,
+            message: 'Failed to discover/store static resources',
             timestamp: Date.now(),
           });
         }
@@ -417,10 +420,11 @@ export async function GET(
             });
           }
         } catch (error: any) {
-          promptError = error.message;
+          promptError = error instanceof Error ? error.message : 'Unknown error';
+          console.error('[Prompt Discovery Error]', error);
           sendMessage({
             type: 'error',
-            message: `Failed to discover/store prompts: ${error.message}`,
+            message: 'Failed to discover/store prompts',
             timestamp: Date.now(),
           });
         }
@@ -475,9 +479,10 @@ export async function GET(
         });
 
       } catch (error: any) {
+        console.error('[Discovery Failed]', error);
         sendMessage({
           type: 'error',
-          message: `Discovery failed: ${error.message}`,
+          message: 'Discovery failed',
           timestamp: Date.now(),
         });
       } finally {

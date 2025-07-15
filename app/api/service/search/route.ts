@@ -44,8 +44,8 @@ export async function GET(request: NextRequest) {
   const url = new URL(request.url);
   const query = url.searchParams.get('query') || '';
   const source = (url.searchParams.get('source') as McpServerSource) || null;
-  const offset = parseInt(url.searchParams.get('offset') || '0');
-  const pageSize = parseInt(url.searchParams.get('pageSize') || '10');
+  const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0') || 0);
+  const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get('pageSize') || '10') || 10));
   
   // Filter parameters
   const packageRegistry = url.searchParams.get('packageRegistry') as 'npm' | 'docker' | 'pypi' | null;

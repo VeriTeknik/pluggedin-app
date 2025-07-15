@@ -312,12 +312,32 @@ export class OAuthProcessManager extends EventEmitter {
         errorOutput += chunk;
         
         // Look for specific mcp-remote OAuth patterns
-        if (chunk.includes('Please authorize this client by visiting:') || 
-            chunk.includes('https://mcp.linear.app/authorize')) {
-          // Extract the OAuth URL
+        if (chunk.includes('Please authorize this client by visiting:')) {
+          // Extract the OAuth URL and validate it
           const urlMatch = chunk.match(/https:\/\/[^\s]+/);
           if (urlMatch && !oauthUrl) {
-            oauthUrl = urlMatch[0];
+            const extractedUrl = urlMatch[0];
+            
+            // Validate the URL is from an expected OAuth provider
+            try {
+              const url = new URL(extractedUrl);
+              const allowedHosts = [
+                'mcp.linear.app',
+                'linear.app',
+                'github.com',
+                'api.github.com',
+                'slack.com',
+                'api.slack.com'
+              ];
+              
+              if (allowedHosts.some(host => url.hostname === host || url.hostname === `www.${host}`)) {
+                oauthUrl = extractedUrl;
+              } else {
+                console.warn('[OAuthProcessManager] Ignoring untrusted OAuth URL:', extractedUrl);
+              }
+            } catch (e) {
+              console.error('[OAuthProcessManager] Invalid OAuth URL found:', extractedUrl);
+            }
             oauthUrlFound = true;
             
             // Return immediately with the OAuth URL for the client to handle

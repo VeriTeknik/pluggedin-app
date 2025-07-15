@@ -58,6 +58,9 @@ yarn-error.log*
 logs/
 logs/mcp-servers/
 
+# Console log backups
+console-log-backup-*/
+
 # User uploads
 uploads/
 

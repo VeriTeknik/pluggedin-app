@@ -45,8 +45,8 @@ files.forEach(file => {
   const patterns = [
     // Single line console.log
     /^\s*console\.log\([^;]*\);?\s*$/gm,
-    // Multi-line console.log
-    /^\s*console\.log\([^;]*\n([^;]|\n)*?\);?\s*$/gm,
+    // Multi-line console.log - improved to prevent exponential backtracking
+    /^\s*console\.log\([^;]*\n[\s\S]*?\);?\s*$/gm,
     // Console.log with trailing code (be careful)
     /console\.log\([^)]*\);/g,
   ];
