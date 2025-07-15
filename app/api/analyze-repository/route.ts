@@ -3,6 +3,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createErrorResponse, ErrorResponses, getSafeErrorMessage } from '@/lib/api-errors';
 import { RateLimiters } from '@/lib/rate-limiter';
 
+// Validate GitHub owner/repo names to prevent SSRF
+function isValidGitHubIdentifier(identifier: string): boolean {
+  // GitHub usernames and repo names can contain alphanumeric characters, hyphens, and underscores
+  // They cannot start with a hyphen and must be 1-100 characters
+  const githubPattern = /^[a-zA-Z0-9][a-zA-Z0-9\-_]{0,99}$/;
+  return githubPattern.test(identifier);
+}
+
 interface EnvVariable {
   name: string;
   description?: string;
@@ -49,13 +57,31 @@ export async function GET(request: NextRequest) {
       return ErrorResponses.badRequest('Repository URL is required');
     }
 
+    // Validate URL is from github.com
+    let url: URL;
+    try {
+      url = new URL(repoUrl);
+    } catch {
+      return ErrorResponses.badRequest('Invalid URL format');
+    }
+    
+    // Only allow github.com URLs to prevent SSRF
+    if (url.hostname !== 'github.com' && url.hostname !== 'www.github.com') {
+      return ErrorResponses.badRequest('Only GitHub URLs are allowed');
+    }
+    
     // Extract owner and repo from URL
-    const match = repoUrl.match(/github\.com\/([^\/]+)\/([^\/\?]+)/);
+    const match = url.pathname.match(/^\/([^\/]+)\/([^\/\?]+)/);
     if (!match) {
-      return ErrorResponses.badRequest('Invalid GitHub URL');
+      return ErrorResponses.badRequest('Invalid GitHub repository URL format');
     }
 
     const [, owner, repo] = match;
+    
+    // Validate owner and repo to prevent SSRF attacks
+    if (!isValidGitHubIdentifier(owner) || !isValidGitHubIdentifier(repo)) {
+      return ErrorResponses.badRequest('Invalid GitHub repository identifiers');
+    }
     
     // Use GitHub PAT for better rate limits
     const headers: Record<string, string> = {

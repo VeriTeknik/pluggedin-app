@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { encodeForJavaScript, sanitizeErrorMessage, getCSPHeader } from '@/lib/security-utils';
+import { encodeForJavaScript, sanitizeErrorMessage, getSecurityHeaders } from '@/lib/security-utils';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   return new NextResponse(html, {
     headers: {
       'Content-Type': 'text/html',
-      'Content-Security-Policy': getCSPHeader()
+      ...getSecurityHeaders()
     },
   });
 }

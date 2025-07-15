@@ -3,7 +3,7 @@ import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
 import { oauthStateManager } from '../oauth/OAuthStateManager';
 import { getSessionManager } from '../sessions/SessionManager';
-import { escapeHtml, getCSPHeader } from '@/lib/security-utils';
+import { escapeHtml, getSecurityHeaders } from '@/lib/security-utils';
 
 /**
  * Wrapper for StreamableHTTPClientTransport that captures and manages session IDs
@@ -264,7 +264,7 @@ export class StreamableHTTPWrapper implements Transport {
         status: 200,
         headers: {
           'Content-Type': 'text/html',
-          'Content-Security-Policy': getCSPHeader()
+          ...getSecurityHeaders()
         },
       });
       
@@ -341,12 +341,14 @@ export class StreamableHTTPWrapper implements Transport {
   private determineOAuthProvider(url: URL): string {
     const hostname = url.hostname.toLowerCase();
     
-    if (hostname.includes('linear.app')) return 'Linear';
-    if (hostname.includes('github.com')) return 'GitHub';
-    if (hostname.includes('google.com')) return 'Google';
-    if (hostname.includes('slack.com')) return 'Slack';
-    if (hostname.includes('notion.so')) return 'Notion';
-    if (hostname.includes('microsoft.com') || hostname.includes('microsoftonline.com')) return 'Microsoft';
+    // Use exact domain matching or endsWith to prevent subdomain attacks
+    if (hostname === 'linear.app' || hostname.endsWith('.linear.app')) return 'Linear';
+    if (hostname === 'github.com' || hostname === 'www.github.com' || hostname.endsWith('.github.com')) return 'GitHub';
+    if (hostname === 'google.com' || hostname.endsWith('.google.com')) return 'Google';
+    if (hostname === 'slack.com' || hostname.endsWith('.slack.com')) return 'Slack';
+    if (hostname === 'notion.so' || hostname.endsWith('.notion.so')) return 'Notion';
+    if (hostname === 'microsoft.com' || hostname.endsWith('.microsoft.com') || 
+        hostname === 'microsoftonline.com' || hostname.endsWith('.microsoftonline.com')) return 'Microsoft';
     
     // Extract provider from hostname
     const parts = hostname.split('.');

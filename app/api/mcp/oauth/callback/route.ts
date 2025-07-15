@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
 import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
 import { RateLimiters } from '@/lib/rate-limiter';
-import { escapeHtml, isValidRedirectUrl, getAllowedRedirectHosts, getCSPHeader } from '@/lib/security-utils';
+import { escapeHtml, isValidRedirectUrl, getAllowedRedirectHosts, getSecurityHeaders } from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
   // Apply rate limiting
@@ -218,7 +218,7 @@ function createSuccessResponse(provider: string): NextResponse {
   return new NextResponse(html, {
     headers: { 
       'Content-Type': 'text/html',
-      'Content-Security-Policy': getCSPHeader()
+      ...getSecurityHeaders()
     },
   });
 }
@@ -296,7 +296,7 @@ function createErrorResponse(title: string, description?: string): NextResponse 
     status: 400,
     headers: { 
       'Content-Type': 'text/html',
-      'Content-Security-Policy': getCSPHeader()
+      ...getSecurityHeaders()
     },
   });
 }

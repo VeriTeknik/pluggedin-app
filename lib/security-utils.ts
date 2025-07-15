@@ -26,7 +26,7 @@ export function encodeForJavaScript(data: any): string {
   // JSON.stringify handles escaping for JS contexts
   // Additional escaping for </script> tag injection
   return JSON.stringify(data)
-    .replace(/<\/(script)/gi, '<\\/$1')
+    .replace(/<\/script/gi, '<\\/script')
     .replace(/<!--/g, '\\u003C!--')
     .replace(/-->/g, '--\\u003E');
 }
@@ -125,9 +125,25 @@ export function getCSPHeader(nonce?: string): string {
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self'",
+    "object-src 'none'",
+    "script-src-attr 'none'",
+    "upgrade-insecure-requests",
   ];
   
   return directives.join('; ');
+}
+
+/**
+ * Get security headers for HTML responses
+ */
+export function getSecurityHeaders(): Record<string, string> {
+  return {
+    'Content-Security-Policy': getCSPHeader(),
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+  };
 }
 
 /**

@@ -117,11 +117,11 @@ export async function triggerMcpOAuth(serverUuid: string) {
             const parsedUrl = new URL(mcpServer.args[urlIndex]);
             const hostname = parsedUrl.hostname.toLowerCase();
             
-            if (hostname.includes('linear.app') || hostname.endsWith('.linear.app')) {
+            if (hostname === 'linear.app' || hostname.endsWith('.linear.app')) {
               provider = 'Linear';
-            } else if (hostname.includes('github.com') || hostname.endsWith('.github.com')) {
+            } else if (hostname === 'github.com' || hostname === 'www.github.com' || hostname.endsWith('.github.com')) {
               provider = 'GitHub';
-            } else if (hostname.includes('slack.com') || hostname.endsWith('.slack.com')) {
+            } else if (hostname === 'slack.com' || hostname.endsWith('.slack.com')) {
               provider = 'Slack';
             }
           } catch (e) {

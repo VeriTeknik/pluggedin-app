@@ -8,7 +8,7 @@ import {
   isValidRedirectUrl, 
   getAllowedRedirectHosts,
   sanitizeErrorMessage,
-  getCSPHeader
+  getSecurityHeaders
 } from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
@@ -38,7 +38,6 @@ export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const error = searchParams.get('error');
-  const state = searchParams.get('state');
 
   // Handle OAuth errors
   if (error) {
@@ -81,7 +80,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(errorHtml, {
       headers: { 
         'Content-Type': 'text/html',
-        'Content-Security-Policy': getCSPHeader()
+        ...getSecurityHeaders()
       },
     });
   }
@@ -115,7 +114,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(errorHtml, {
       headers: { 
         'Content-Type': 'text/html',
-        'Content-Security-Policy': getCSPHeader()
+        ...getSecurityHeaders()
       },
     });
   }
@@ -167,7 +166,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(errorHtml, {
         headers: { 
           'Content-Type': 'text/html',
-          'Content-Security-Policy': getCSPHeader()
+          ...getSecurityHeaders()
         },
       });
     }
@@ -201,7 +200,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(errorHtml, {
         headers: { 
           'Content-Type': 'text/html',
-          'Content-Security-Policy': getCSPHeader()
+          ...getSecurityHeaders()
         },
       });
     }
@@ -248,7 +247,7 @@ export async function GET(request: NextRequest) {
       return new NextResponse(errorHtml, {
         headers: { 
           'Content-Type': 'text/html',
-          'Content-Security-Policy': getCSPHeader()
+          ...getSecurityHeaders()
         },
       });
     }
@@ -315,7 +314,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(htmlResponse, {
       headers: {
         'Content-Type': 'text/html',
-        'Content-Security-Policy': getCSPHeader()
+        ...getSecurityHeaders()
       },
     });
 
@@ -348,7 +347,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(errorHtml, {
       headers: { 
         'Content-Type': 'text/html',
-        'Content-Security-Policy': getCSPHeader()
+        ...getSecurityHeaders()
       },
     });
   }
