@@ -48,51 +48,39 @@ export async function GET(request: NextRequest) {
       error: sanitizedError
     };
     
-    // Pre-compute the redirect URL server-side
-    const errorRedirectUrl = `${baseUrl}/search?auth_error=${encodeURIComponent(sanitizedError)}`;
-    
-    const errorHtml = `
+    // For popup windows, return a minimal HTML that only posts message and closes
+    // This avoids any XSS risks by not rendering any user-controlled content
+    const minimalHtml = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Authentication Error</title>
+          <title>OAuth Callback</title>
+          <meta charset="utf-8">
           <script>
-            if (window.opener) {
-              window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
-              const errorDiv = document.createElement('div');
-              errorDiv.style.cssText = 'font-family: system-ui; padding: 20px; text-align: center; color: #dc2626;';
+            (function() {
+              const data = ${encodeForJavaScript(errorData)};
+              const origin = ${encodeForJavaScript(baseUrl)};
+              const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=${encodeURIComponent(sanitizedError)}`)};
               
-              const h2 = document.createElement('h2');
-              h2.textContent = 'Authentication failed';
-              errorDiv.appendChild(h2);
-              
-              const p1 = document.createElement('p');
-              p1.textContent = ${encodeForJavaScript(sanitizedError)};
-              errorDiv.appendChild(p1);
-              
-              const p2 = document.createElement('p');
-              p2.textContent = 'This window will close automatically...';
-              errorDiv.appendChild(p2);
-              
-              document.body.innerHTML = '';
-              document.body.appendChild(errorDiv);
-              setTimeout(() => window.close(), 3000);
-            } else {
-              // Redirect to search page with error message
-              window.location.href = ${encodeForJavaScript(errorRedirectUrl)};
-            }
+              if (window.opener && window.opener !== window) {
+                try {
+                  window.opener.postMessage(data, origin);
+                  setTimeout(function() { window.close(); }, 100);
+                } catch (e) {
+                  window.location.href = redirectUrl;
+                }
+              } else {
+                window.location.href = redirectUrl;
+              }
+            })();
           </script>
         </head>
-        <body>
-          <div style="font-family: system-ui; padding: 20px; text-align: center;">
-            <h2>Processing...</h2>
-          </div>
-        </body>
+        <body></body>
       </html>
     `;
-    return new NextResponse(errorHtml, {
+    return new NextResponse(minimalHtml, {
       headers: { 
-        'Content-Type': 'text/html',
+        'Content-Type': 'text/html; charset=utf-8',
         ...getSecurityHeaders()
       },
     });
@@ -105,29 +93,38 @@ export async function GET(request: NextRequest) {
       error: 'Authentication code missing'
     };
     
-    // Pre-compute the redirect URL server-side
-    const missingCodeRedirectUrl = `${baseUrl}/search?auth_error=missing_code`;
-    
-    const errorHtml = `
+    // Minimal HTML for OAuth callback
+    const minimalHtml = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Authentication Error</title>
+          <title>OAuth Callback</title>
+          <meta charset="utf-8">
           <script>
-            if (window.opener) {
-              window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
-              setTimeout(() => window.close(), 1000);
-            } else {
-              window.location.href = ${encodeForJavaScript(missingCodeRedirectUrl)};
-            }
+            (function() {
+              const data = ${encodeForJavaScript(errorData)};
+              const origin = ${encodeForJavaScript(baseUrl)};
+              const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=missing_code`)};
+              
+              if (window.opener && window.opener !== window) {
+                try {
+                  window.opener.postMessage(data, origin);
+                  setTimeout(function() { window.close(); }, 100);
+                } catch (e) {
+                  window.location.href = redirectUrl;
+                }
+              } else {
+                window.location.href = redirectUrl;
+              }
+            })();
           </script>
         </head>
         <body></body>
       </html>
     `;
-    return new NextResponse(errorHtml, {
+    return new NextResponse(minimalHtml, {
       headers: { 
-        'Content-Type': 'text/html',
+        'Content-Type': 'text/html; charset=utf-8',
         ...getSecurityHeaders()
       },
     });
@@ -158,29 +155,38 @@ export async function GET(request: NextRequest) {
         error: 'Authentication failed'
       };
       
-      // Pre-compute the redirect URL server-side
-      const tokenExchangeFailedRedirectUrl = `${baseUrl}/search?auth_error=token_exchange_failed`;
-      
-      const errorHtml = `
+      // Minimal HTML for OAuth callback
+      const minimalHtml = `
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Authentication Error</title>
+            <title>OAuth Callback</title>
+            <meta charset="utf-8">
             <script>
-              if (window.opener) {
-                window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
-                setTimeout(() => window.close(), 2000);
-              } else {
-                window.location.href = ${encodeForJavaScript(tokenExchangeFailedRedirectUrl)};
-              }
+              (function() {
+                const data = ${encodeForJavaScript(errorData)};
+                const origin = ${encodeForJavaScript(baseUrl)};
+                const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=token_exchange_failed`)};
+                
+                if (window.opener && window.opener !== window) {
+                  try {
+                    window.opener.postMessage(data, origin);
+                    setTimeout(function() { window.close(); }, 100);
+                  } catch (e) {
+                    window.location.href = redirectUrl;
+                  }
+                } else {
+                  window.location.href = redirectUrl;
+                }
+              })();
             </script>
           </head>
           <body></body>
         </html>
       `;
-      return new NextResponse(errorHtml, {
+      return new NextResponse(minimalHtml, {
         headers: { 
-          'Content-Type': 'text/html',
+          'Content-Type': 'text/html; charset=utf-8',
           ...getSecurityHeaders()
         },
       });
@@ -193,29 +199,38 @@ export async function GET(request: NextRequest) {
         error: 'Authentication failed'
       };
       
-      // Pre-compute the redirect URL server-side
-      const noAccessTokenRedirectUrl = `${baseUrl}/search?auth_error=no_access_token`;
-      
-      const errorHtml = `
+      // Minimal HTML for OAuth callback
+      const minimalHtml = `
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Authentication Error</title>
+            <title>OAuth Callback</title>
+            <meta charset="utf-8">
             <script>
-              if (window.opener) {
-                window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
-                setTimeout(() => window.close(), 2000);
-              } else {
-                window.location.href = ${encodeForJavaScript(noAccessTokenRedirectUrl)};
-              }
+              (function() {
+                const data = ${encodeForJavaScript(errorData)};
+                const origin = ${encodeForJavaScript(baseUrl)};
+                const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=no_access_token`)};
+                
+                if (window.opener && window.opener !== window) {
+                  try {
+                    window.opener.postMessage(data, origin);
+                    setTimeout(function() { window.close(); }, 100);
+                  } catch (e) {
+                    window.location.href = redirectUrl;
+                  }
+                } else {
+                  window.location.href = redirectUrl;
+                }
+              })();
             </script>
           </head>
           <body></body>
         </html>
       `;
-      return new NextResponse(errorHtml, {
+      return new NextResponse(minimalHtml, {
         headers: { 
-          'Content-Type': 'text/html',
+          'Content-Type': 'text/html; charset=utf-8',
           ...getSecurityHeaders()
         },
       });
@@ -241,29 +256,38 @@ export async function GET(request: NextRequest) {
         error: 'Failed to store authentication session'
       };
       
-      // Pre-compute the redirect URL server-side
-      const sessionStorageFailedRedirectUrl = `${baseUrl}/search?auth_error=session_storage_failed`;
-      
-      const errorHtml = `
+      // Minimal HTML for OAuth callback
+      const minimalHtml = `
         <!DOCTYPE html>
         <html>
           <head>
-            <title>Authentication Error</title>
+            <title>OAuth Callback</title>
+            <meta charset="utf-8">
             <script>
-              if (window.opener) {
-                window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
-                setTimeout(() => window.close(), 2000);
-              } else {
-                window.location.href = ${encodeForJavaScript(sessionStorageFailedRedirectUrl)};
-              }
+              (function() {
+                const data = ${encodeForJavaScript(errorData)};
+                const origin = ${encodeForJavaScript(baseUrl)};
+                const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=session_storage_failed`)};
+                
+                if (window.opener && window.opener !== window) {
+                  try {
+                    window.opener.postMessage(data, origin);
+                    setTimeout(function() { window.close(); }, 100);
+                  } catch (e) {
+                    window.location.href = redirectUrl;
+                  }
+                } else {
+                  window.location.href = redirectUrl;
+                }
+              })();
             </script>
           </head>
           <body></body>
         </html>
       `;
-      return new NextResponse(errorHtml, {
+      return new NextResponse(minimalHtml, {
         headers: { 
-          'Content-Type': 'text/html',
+          'Content-Type': 'text/html; charset=utf-8',
           ...getSecurityHeaders()
         },
       });
@@ -275,51 +299,39 @@ export async function GET(request: NextRequest) {
       githubUsername: githubUsername
     };
     
-    const htmlResponse = `
+    // Minimal HTML for OAuth callback success
+    const minimalHtml = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Authentication Success</title>
+          <title>OAuth Callback</title>
+          <meta charset="utf-8">
           <script>
-            // Check if we're in a popup window
-            if (window.opener) {
-              // Send message to opener with username only
-              window.opener.postMessage(${encodeForJavaScript(successData)}, ${encodeForJavaScript(baseUrl)});
+            (function() {
+              const data = ${encodeForJavaScript(successData)};
+              const origin = ${encodeForJavaScript(baseUrl)};
+              const redirectUrl = '/search';
               
-              // Show success message and close
-              const successDiv = document.createElement('div');
-              successDiv.style.cssText = 'font-family: system-ui; padding: 20px; text-align: center; color: #10b981;';
-              
-              const h2 = document.createElement('h2');
-              h2.textContent = 'Authentication successful!';
-              successDiv.appendChild(h2);
-              
-              const p = document.createElement('p');
-              p.textContent = 'This window will close automatically...';
-              successDiv.appendChild(p);
-              
-              document.body.innerHTML = '';
-              document.body.appendChild(successDiv);
-              setTimeout(() => window.close(), 2000);
-            } else {
-              // Not in a popup, redirect to search page
-              // Note: localStorage-based redirects removed for security
-              window.location.href = '/search';
-            }
+              if (window.opener && window.opener !== window) {
+                try {
+                  window.opener.postMessage(data, origin);
+                  setTimeout(function() { window.close(); }, 100);
+                } catch (e) {
+                  window.location.href = redirectUrl;
+                }
+              } else {
+                window.location.href = redirectUrl;
+              }
+            })();
           </script>
         </head>
-        <body>
-          <div style="font-family: system-ui; padding: 20px; text-align: center;">
-            <h2>Authentication successful!</h2>
-            <p>Redirecting...</p>
-          </div>
-        </body>
+        <body></body>
       </html>
     `;
     
-    return new NextResponse(htmlResponse, {
+    return new NextResponse(minimalHtml, {
       headers: {
-        'Content-Type': 'text/html',
+        'Content-Type': 'text/html; charset=utf-8',
         ...getSecurityHeaders()
       },
     });
@@ -331,29 +343,38 @@ export async function GET(request: NextRequest) {
       error: 'Authentication process failed'
     };
     
-    // Pre-compute the redirect URL server-side
-    const callbackProcessingFailedRedirectUrl = `${baseUrl}/search?auth_error=callback_processing_failed`;
-    
-    const errorHtml = `
+    // Minimal HTML for OAuth callback
+    const minimalHtml = `
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Authentication Error</title>
+          <title>OAuth Callback</title>
+          <meta charset="utf-8">
           <script>
-            if (window.opener) {
-              window.opener.postMessage(${encodeForJavaScript(errorData)}, ${encodeForJavaScript(baseUrl)});
-              setTimeout(() => window.close(), 2000);
-            } else {
-              window.location.href = ${encodeForJavaScript(callbackProcessingFailedRedirectUrl)};
-            }
+            (function() {
+              const data = ${encodeForJavaScript(errorData)};
+              const origin = ${encodeForJavaScript(baseUrl)};
+              const redirectUrl = ${encodeForJavaScript(`${baseUrl}/search?auth_error=callback_processing_failed`)};
+              
+              if (window.opener && window.opener !== window) {
+                try {
+                  window.opener.postMessage(data, origin);
+                  setTimeout(function() { window.close(); }, 100);
+                } catch (e) {
+                  window.location.href = redirectUrl;
+                }
+              } else {
+                window.location.href = redirectUrl;
+              }
+            })();
           </script>
         </head>
         <body></body>
       </html>
     `;
-    return new NextResponse(errorHtml, {
+    return new NextResponse(minimalHtml, {
       headers: { 
-        'Content-Type': 'text/html',
+        'Content-Type': 'text/html; charset=utf-8',
         ...getSecurityHeaders()
       },
     });

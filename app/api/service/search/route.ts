@@ -240,6 +240,31 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
     // Convert to our SearchIndex format
     const results: SearchIndex = {};
 
+    // Collect all server UUIDs for batch metrics fetching
+    const serverUuids = resultsWithJoins.map(r => r.sharedServer.uuid);
+    
+    // Fetch all metrics in parallel to avoid N+1 queries
+    const metricsPromises = serverUuids.map(uuid => 
+      getServerRatingMetrics({
+        source: McpServerSource.COMMUNITY,
+        externalId: uuid
+      }).catch(error => {
+        console.error(`Failed to get metrics for community server ${uuid}:`, error);
+        return { success: false, metrics: null };
+      })
+    );
+    
+    const metricsResults = await Promise.all(metricsPromises);
+    
+    // Create a map of uuid to metrics for quick lookup
+    const metricsMap = new Map<string, any>();
+    serverUuids.forEach((uuid, index) => {
+      const result = metricsResults[index];
+      if (result.success && result.metrics) {
+        metricsMap.set(uuid, result.metrics);
+      }
+    });
+
     for (const { sharedServer, profile, user } of resultsWithJoins) {
       // We'll use the template field which contains the sanitized MCP server data
       const template = sharedServer.template as Record<string, any>;
@@ -249,23 +274,16 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
       // Create an entry with metadata from the shared server
       const serverKey = `${sharedServer.uuid}`;
 
-      // Fetch rating metrics for this shared server
+      // Get rating metrics from the pre-fetched map
       let rating = 0;
       let ratingCount = 0;
-      let installationCount = 0; // Declare installationCount here
-      try {
-        // For community servers, metrics are linked via external_id (which is the sharedServer.uuid) and source
-        const metricsResult = await getServerRatingMetrics({ // Pass args as a single object
-          source: McpServerSource.COMMUNITY,
-          externalId: sharedServer.uuid
-        });
-        if (metricsResult.success && metricsResult.metrics) {
-          rating = metricsResult.metrics.averageRating;
-          ratingCount = metricsResult.metrics.ratingCount;
-          installationCount = metricsResult.metrics.installationCount; // Assign value here
-        }
-      } catch (metricsError) {
-        console.error(`Failed to get metrics for community server ${serverKey}:`, metricsError);
+      let installationCount = 0;
+      
+      const metrics = metricsMap.get(sharedServer.uuid);
+      if (metrics) {
+        rating = metrics.averageRating;
+        ratingCount = metrics.ratingCount;
+        installationCount = metrics.installationCount;
       }
 
       // Determine the display name for 'shared_by' - Use username from users table first, then fallback

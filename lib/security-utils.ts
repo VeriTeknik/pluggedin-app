@@ -28,7 +28,7 @@ export function encodeForJavaScript(data: any): string {
   return JSON.stringify(data)
     .replace(/<\/script/gi, '<\\/script')
     .replace(/<!--/g, '\\u003C!\\u002D\\u002D')
-    .replace(/-->/g, '\\u002D\\u002D\\u003E');
+    .replace(/--!?>/g, '\\u002D\\u002D\\u003E');
 }
 
 /**
@@ -112,6 +112,13 @@ export function generateOAuthState(): string {
 }
 
 /**
+ * Generate a secure nonce for CSP
+ */
+export function generateNonce(): string {
+  return Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64');
+}
+
+/**
  * Create a Content Security Policy header
  */
 export function getCSPHeader(nonce?: string): string {
@@ -136,9 +143,9 @@ export function getCSPHeader(nonce?: string): string {
 /**
  * Get security headers for HTML responses
  */
-export function getSecurityHeaders(): Record<string, string> {
+export function getSecurityHeaders(nonce?: string): Record<string, string> {
   return {
-    'Content-Security-Policy': getCSPHeader(),
+    'Content-Security-Policy': getCSPHeader(nonce),
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'X-XSS-Protection': '1; mode=block',

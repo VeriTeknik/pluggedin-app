@@ -346,6 +346,8 @@ export const mcpServersTable = pgTable(
     mcpServersStatusIdx: index('mcp_servers_status_idx').on(table.status),
     mcpServersProfileUuidIdx: index('mcp_servers_profile_uuid_idx').on(table.profile_uuid),
     mcpServersTypeIdx: index('mcp_servers_type_idx').on(table.type),
+    // Composite index for profile + status queries
+    mcpServersProfileStatusIdx: index('idx_mcp_servers_profile_status').on(table.profile_uuid, table.status),
   })
 );
 
@@ -482,6 +484,8 @@ export const serverInstallationsTable = pgTable(
     serverInstallationsServerUuidIdx: index('server_installations_server_uuid_idx').on(table.server_uuid),
     serverInstallationsExternalIdSourceIdx: index('server_installations_external_id_source_idx').on(table.external_id, table.source),
     serverInstallationsProfileUuidIdx: index('server_installations_profile_uuid_idx').on(table.profile_uuid),
+    // Composite index for profile + server queries
+    serverInstallationsProfileServerIdx: index('idx_server_installations_profile_server').on(table.profile_uuid, table.server_uuid),
   })
 );
 
@@ -633,6 +637,8 @@ export const notificationsTable = pgTable("notifications", {
   notificationsProfileUuidIdx: index('notifications_profile_uuid_idx').on(table.profile_uuid),
   notificationsReadIdx: index('notifications_read_idx').on(table.read),
   notificationsCreatedAtIdx: index('notifications_created_at_idx').on(table.created_at),
+  // Composite index for profile + read + created queries
+  notificationsProfileReadCreatedIdx: index('idx_notifications_profile_read_created').on(table.profile_uuid, table.read, table.created_at),
 }));
 
 export const notificationsRelations = relations(notificationsTable, ({ one }) => ({
@@ -1009,6 +1015,9 @@ export const sharedMcpServersTable = pgTable(
     sharedMcpServersIsPublicIdx: index('shared_mcp_servers_is_public_idx').on(table.is_public),
     sharedMcpServersIsClaimedIdx: index('shared_mcp_servers_is_claimed_idx').on(table.is_claimed),
     sharedMcpServersClaimedByIdx: index('shared_mcp_servers_claimed_by_idx').on(table.claimed_by_user_id),
+    // Composite indexes for performance
+    sharedMcpServersPublicProfileIdx: index('idx_shared_mcp_servers_public_profile').on(table.is_public, table.profile_uuid),
+    sharedMcpServersPublicCreatedIdx: index('idx_shared_mcp_servers_public_created').on(table.is_public, table.created_at),
   })
 );
 

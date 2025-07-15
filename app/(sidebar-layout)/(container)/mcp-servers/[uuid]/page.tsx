@@ -111,7 +111,10 @@ export default function McpServerDetailPage({
 
   // Check for Context7 migration on load
   useEffect(() => {
-    if (mcpServer && mcpServer.url && mcpServer.url.includes('mcp.context7.com') && mcpServer.type === McpServerType.SSE) {
+    if (mcpServer && mcpServer.url && mcpServer.type === McpServerType.SSE) {
+      try {
+        const url = new URL(mcpServer.url);
+        if (url.hostname === 'mcp.context7.com') {
       // Auto-migrate Context7 from SSE to Streamable HTTP
       toast({
         title: 'Context7 Migration Required',
@@ -119,6 +122,10 @@ export default function McpServerDetailPage({
         variant: 'default',
       });
       form.setValue('type', McpServerType.STREAMABLE_HTTP);
+        }
+      } catch (e) {
+        // Invalid URL, ignore
+      }
     }
   }, [mcpServer, form, toast]);
 

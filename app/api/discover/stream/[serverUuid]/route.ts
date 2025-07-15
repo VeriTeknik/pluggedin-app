@@ -506,6 +506,13 @@ export async function GET(
 
   } catch (error: any) {
     console.error('[Stream Discovery] Error:', error);
-    return new NextResponse(`Error: ${error.message}`, { status: 500 });
+    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    // Return plain text error without any HTML interpretation
+    return new NextResponse(`Error: ${errorMessage}`, { 
+      status: 500,
+      headers: {
+        'Content-Type': 'text/plain',
+      }
+    });
   }
 } 
