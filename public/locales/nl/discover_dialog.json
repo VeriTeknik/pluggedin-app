@@ -1,0 +1,45 @@
+{
+  "test": {
+    "title": "Discovery Test",
+    "description": "Test server discovery and capabilities",
+    "transportTypes": {
+      "stdio": "STDIO (Command-based)",
+      "sse": "SSE (Server-Sent Events)",
+      "streamableHttp": "Streamable HTTP"
+    },
+    "capabilities": {
+      "tools": "Tools",
+      "resources": "Resources", 
+      "prompts": "Prompts"
+    },
+    "status": {
+      "testing": "Testing discovery...",
+      "success": "Discovery completed successfully",
+      "failed": "Discovery failed",
+      "connecting": "Connecting to server...",
+      "discovering": "Discovering capabilities..."
+    },
+    "results": {
+      "foundTools": "Found {{count}} tool(s)",
+      "foundResources": "Found {{count}} resource(s)",
+      "foundPrompts": "Found {{count}} prompt(s)",
+      "noTools": "No tools discovered",
+      "noResources": "No resources discovered",
+      "noPrompts": "No prompts discovered"
+    },
+    "errors": {
+      "connectionFailed": "Failed to connect to server",
+      "discoveryTimeout": "Discovery timed out",
+      "invalidResponse": "Invalid server response",
+      "networkError": "Network error occurred"
+    }
+  },
+  "streaming": {
+    "title": "MCP Discovery",
+    "connecting": "Connecting...",
+    "discovering": "Discovering capabilities...",
+    "completed": "Discovery completed",
+    "failed": "Discovery failed",
+    "aborted": "Discovery aborted"
+  }
+}

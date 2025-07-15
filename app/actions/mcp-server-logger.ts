@@ -113,7 +113,6 @@ export async function createEnhancedMcpLogger(
         // Log to console
         const colors = { debug: '\x1b[36m', info: '\x1b[32m', warn: '\x1b[33m', error: '\x1b[31m', reset: '\x1b[0m' };
         const logMessage = `${colors[level as keyof typeof colors] || ''}[MCP:${level.toUpperCase()}]${colors.reset} ${message}`;
-        console.log(logMessage);
 
         // Add to UI visible logs - Also send init logs to UI
         await addServerLogForProfile(this.profileUuid, level, logMessage);
@@ -168,7 +167,6 @@ export async function createEnhancedMcpLogger(
           };
 
           const logMessage = `${colors[level as keyof typeof colors] || ''}[MCP:${level.toUpperCase()}]${colors.reset} ${message}`;
-          console.log(logMessage);
 
           // Add to UI visible logs - critical for displaying logs in the UI
           // We send the formatted message to make parsing easier on the client side
@@ -220,7 +218,6 @@ export async function createEnhancedMcpLogger(
     // Cleanup function - close all open file handles
     async cleanup() {
       if (this.isCleaningUp) {
-        console.log('[MCP] Cleanup already in progress, skipping duplicate call');
         return;
       }
       this.isCleaningUp = true;

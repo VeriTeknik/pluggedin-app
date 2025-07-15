@@ -1,6 +1,15 @@
 'use server';
 
+import { z } from 'zod';
+
 import { sendEmail } from '@/lib/email';
+
+const contactFormSchema = z.object({
+  name: z.string().min(1).max(100),
+  email: z.string().email(),
+  subject: z.string().min(1).max(200),
+  message: z.string().min(10).max(5000),
+});
 
 export type ContactFormData = {
   name: string;
@@ -11,7 +20,9 @@ export type ContactFormData = {
 
 export async function submitContactForm(data: ContactFormData) {
   try {
-    const { name, email, subject, message } = data;
+    // Validate input
+    const validated = contactFormSchema.parse(data);
+    const { name, email, subject, message } = validated;
 
     // Send email to configured recipients
     const recipients = [

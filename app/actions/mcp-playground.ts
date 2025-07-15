@@ -306,7 +306,6 @@ const handleProcessTermination = async () => {
   if (isCleaningUp) return;
   isCleaningUp = true;
 
-  console.log('[MCP] Starting graceful shutdown...');
   
   // Get all active sessions
   const cleanupPromises = Array.from(activeSessions.entries()).map(async ([profileUuid, session]) => {
@@ -320,7 +319,6 @@ const handleProcessTermination = async () => {
 
   try {
     await Promise.all(cleanupPromises);
-    console.log('[MCP] All sessions cleaned up successfully');
   } catch (error) {
     console.error('[MCP] Error during final cleanup:', error);
   }
@@ -606,6 +604,7 @@ export async function getOrCreatePlaygroundSession(
       const isFilesystemServer = server.command === 'npx' && server.args?.includes('@modelcontextprotocol/server-filesystem');
       // Removed isUvxServer check
 
+
       if (isFilesystemServer && server.type === 'STDIO') {
         // Special handling for filesystem server: set cwd and ensure arg points within workspace
         mcpServersConfig[server.name] = {
@@ -615,6 +614,8 @@ export async function getOrCreatePlaygroundSession(
           env: server.env,
           url: server.url,
           type: server.type,
+          uuid: server.uuid, // Pass UUID for OAuth HOME detection
+          config: server.config, // Pass config for OAuth detection
           transport: 'stdio', // Add explicit transport field
           cwd: mcpWorkspacePath // Explicitly set the CWD for the server process
         };
@@ -626,6 +627,8 @@ export async function getOrCreatePlaygroundSession(
           env: server.env,
           url: server.url,
           type: server.type,
+          uuid: server.uuid, // Pass UUID for OAuth HOME detection
+          config: server.config, // Pass config for OAuth detection
           // Do not set cwd for non-filesystem servers unless specifically needed/configured
         };
         
@@ -650,6 +653,7 @@ export async function getOrCreatePlaygroundSession(
       if (mcpServersConfig[server.name]?.type === 'STDIO') {
         mcpServersConfig[server.name].applySandboxing = true;
       }
+
     });
 
     // Initialize LLM with streaming
@@ -685,13 +689,26 @@ export async function getOrCreatePlaygroundSession(
 
     try {
       // --- Use Progressive Initialization ---
+      // Map the provider to what langchain-mcp-tools expects
+      let mappedProvider: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none' = 'none';
+      
+      if (llmConfig.provider === 'anthropic') {
+        mappedProvider = 'anthropic';
+      } else if (llmConfig.provider === 'openai') {
+        mappedProvider = 'openai';
+      } else if (llmConfig.provider === 'google') {
+        // Update to use openai format which is more compatible with Gemini
+        mappedProvider = 'openai';
+      }
+      
       const { tools, cleanup, failedServers } = await progressivelyInitializeMcpServers(
         mcpServersConfig,
         profileUuid,
         {
           logger,
           perServerTimeout: 20000, // 20 seconds per server (configurable)
-          totalTimeout: 60000 // 60 seconds total (configurable)
+          totalTimeout: 60000, // 60 seconds total (configurable)
+          llmProvider: mappedProvider
         }
       );
 
@@ -1130,9 +1147,22 @@ Please answer the user's question using both the provided context and your avail
     };
   } catch (error) {
     console.error('Error executing playground query:', error);
+    
+    // Enhanced error handling for schema-related issues
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorDetails = '';
+    
+    
+    // Log the detailed error
+    await addServerLogForProfile(
+      profileUuid,
+      'error',
+      `[PLAYGROUND] Query execution failed: ${errorMessage}${errorDetails}`
+    );
+    
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: errorMessage + errorDetails
     };
   }
 }

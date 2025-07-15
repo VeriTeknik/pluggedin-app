@@ -200,7 +200,16 @@
     "instructions": {
       "title": "自定义指令",
       "descriptionLabel": "描述（可选）",
-      "descriptionPlaceholder": "简要描述这些指令的目的"
+      "descriptionPlaceholder": "简要描述这些指令的目的",
+      "descriptionHelp": "此描述仅供您参考。",
+      "messagesLabel": "消息（JSON数组）",
+      "messagesPlaceholder": "[\n  {\n    \"role\": \"system\",\n    \"content\": { \"type\": \"text\", \"text\": \"在此输入您的指令...\" }\n  }\n]",
+      "messagesHelp": "以JSON格式输入MCP消息对象数组。",
+      "infoTitle": "客户端如何使用指令",
+      "infoText": "这些指令可能被MCP客户端（如Cline）用于在使用此服务器工具时为AI提供上下文。具体用法取决于客户端实现。",
+      "saveSuccess": "自定义指令保存成功。",
+      "saveError": "保存自定义指令失败。",
+      "insertTemplate": "插入模板"
     },
     "placeholders": {
       "serverName": "输入服务器名称",

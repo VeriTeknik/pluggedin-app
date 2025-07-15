@@ -5,6 +5,187 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Smart Server Wizard**: Comprehensive multi-step wizard for MCP server creation and claiming
+  - Automatic GitHub ownership verification for claimed servers
+  - Environment variable detection and configuration
+  - Registry submission with progress tracking
+  - Discovery testing step with real-time validation
+  - Support for npm, Docker, PyPI, and GitHub deployments
+- **OAuth Integration**: Streamable HTTP OAuth support for MCP servers
+  - Session management with PostgreSQL and in-memory caching
+  - OAuth state management and token handling
+  - Automatic token clearing and session cleanup
+  - Support for GitHub and other OAuth providers
+- **Trending Servers**: Activity-based trending server discovery
+  - Real-time activity tracking and calculations
+  - Server metrics tracking with installation counts
+  - Enhanced sorting functionality for better discovery
+- **Enhanced Registry Integration**
+  - Improved registry server handling with simplified display names
+  - Registry token authentication for submissions
+  - Better error handling for GitHub token authentication
+  - Support for new registry schema and transport types
+- **API Reference Page**: New comprehensive API documentation with metadata
+- **Testing Infrastructure**: Comprehensive test coverage for registry features
+- **Profile Language API**: Language preference storage per user profile
+
+### Changed
+- **Search Functionality**: Refactored to remove 'latest only' filter with enhanced server-side filtering
+- **Database Migrations**: Consolidated multiple migrations and added missing language support
+- **Security Enhancements**:
+  - Added Zod validation to all server actions
+  - Removed XSS vulnerabilities by eliminating dangerouslySetInnerHTML usage
+  - Enhanced input validation across all forms
+- **Code Quality Improvements**:
+  - Removed all console.log statements from production code
+  - Cleaned up unused files, exports, and type definitions
+  - Removed unused dependencies (Knip integration)
+  - Improved error handling with standardized responses
+- **UI/UX Enhancements**:
+  - Improved StreamingCliToast connection handling
+  - Enhanced wizard UI consistency across all steps
+  - Better transport configuration handling
+
+### Fixed
+- Syntax errors from automated console.log removal
+- OAuth state management issues
+- Registry submission error handling
+- Server claiming functionality for community servers
+- Environment variable configuration in wizard
+- LLM provider mapping in playground sessions
+
+### Security
+- Comprehensive Zod validation schemas for all user inputs
+- XSS vulnerability fixes by removing dangerous HTML rendering
+- Enhanced OAuth token security with proper cleanup
+- Input sanitization improvements across all forms
+
+### Performance
+- Optimized activity tracking queries
+- Improved trending server calculations
+- Enhanced search performance with better indexing
+- Reduced bundle size by removing unused code
+
+## [2.6.2] - 2025-01-03
+
+### Fixed
+- Fixed "SSEClientTransport already started" errors for Streamable HTTP connections
+- Resolved connection timeout issues during MCP server discovery
+- Fixed retry logic to create fresh client/transport instances on each attempt
+
+### Changed
+- Updated MCP SDK from 1.13.1 to 1.13.3 for improved stability
+- Added default headers for all Streamable HTTP connections (Accept and User-Agent)
+- Implemented 30-second default timeout for all Streamable HTTP connections
+- Enhanced retry mechanism to avoid transport state conflicts
+
+## [2.6.1] - 2025-01-03
+
+### Added
+- **SSE Transport Deprecation Support**
+  - Visual deprecation warnings in UI for SSE servers
+  - Migration buttons to convert SSE to Streamable HTTP
+  - Auto-migration for Context7 servers from SSE to Streamable HTTP
+  - Console warnings when SSE transport is used
+  - Migration server actions for bulk SSE conversion
+
+### Fixed
+- Context7 MCP server now correctly detected as Streamable HTTP with SSE streaming capability
+- Added proper Accept headers for Context7 (`application/json, text/event-stream`)
+- Fixed test connection logic to handle Streamable HTTP servers with SSE streaming
+
+### Changed
+- Updated smart-server-dialog to support new MCP registry schema
+- Added support for 'streamable' transport type from new registry format
+- Added handling for remotes section in server configurations
+- Improved server type detection logic for known MCP endpoints
+- Context7 is now classified as Streamable HTTP (not SSE) per official MCP spec
+- Enhanced UI to show deprecation badges and warnings for SSE servers
+
+## [2.6.0] - 2025-01-03
+
+### Added
+- **High-Performance Package Management System**
+  - Isolated package installation per MCP server using pnpm
+  - Support for npm/npx/pnpm commands with 10-100x faster installs
+  - Python package management with uv (100x faster than pip)
+  - Automatic package directory detection per OS
+  - Smart command transformation for registry servers
+  - Package caching with content-addressable storage
+- **CLI-Style Discovery Toast**
+  - Terminal-style toast notification for MCP discovery output
+  - Real-time log streaming with animated display
+  - Color-coded output based on log types (Action, PackageManager, pnpm, etc.)
+  - JSON formatting for structured data
+  - Auto-scroll to bottom with custom terminal-themed scrollbar
+  - Console capture utility for discovery process logging
+- **Registry Integration Improvements**
+  - Enhanced server detail dialog with full registry server support
+  - Fixed registry server import using official transformer
+  - Proper handling of registry servers with package dependencies
+  - Dynamic command/args display in configuration UI
+
+### Changed
+- **Package Manager Enhancements**
+  - Fixed npx flag parsing (-y, --yes, etc. no longer treated as packages)
+  - Improved binary detection for npx-only packages
+  - Keep using npx command for packages without binaries
+  - Better error handling for package installation failures
+- **UI/UX Improvements**
+  - Optimized CLI toast performance with faster animations
+  - Fixed height issues in toast notifications
+  - Added "Processing..." indicator for ongoing operations
+  - Improved scrolling behavior for long outputs
+
+### Fixed
+- Fixed MCP discovery errors where npx flags were incorrectly parsed as package names
+- Fixed binary not found errors for npx-only packages
+- Fixed registry server command transformation issues
+- Fixed duplicate variable declarations in package manager
+- Fixed CLI toast height and scrolling issues
+
+### Security
+- Package isolation per MCP server for enhanced security
+- Separate installation directories prevent package conflicts
+- Environment-based configuration for resource limits
+
+## [2.5.0] - 2025-01-26
+
+### Added
+- **Discovery Performance Optimizations**
+  - Smart discovery throttling to prevent redundant API calls
+  - In-memory caching for recent discovery attempts
+  - Optimized database queries with single LEFT JOIN operations
+  - Enhanced error recovery with automatic retry mechanisms
+  - Comprehensive discovery status tracking and logging
+
+### Changed
+- **API Performance Improvements**
+  - Tools API (`/api/tools`) now implements 5-minute throttling for automatic discovery
+  - Discovery API (`/api/discover`) uses 2-minute throttling for explicit requests
+  - Single database query fetches server data and tool counts together
+  - Asynchronous discovery processing with improved error handling
+- **Enhanced User Experience**
+  - Faster API response times through optimized queries
+  - Clear feedback on discovery progress and throttling status
+  - Intelligent failure recovery with faster retry mechanisms
+  - Better scalability for concurrent discovery requests
+
+### Fixed
+- Eliminated redundant discovery calls that could overwhelm the system
+- Resolved race conditions in concurrent discovery requests
+- Fixed database query inefficiencies in tool count operations
+- Improved memory management for discovery attempt tracking
+
+### Performance
+- **5-10x reduction** in redundant discovery calls
+- **~50% faster** API response times through query optimization
+- **Zero duplicate work** through intelligent throttling
+- **Better scalability** for high-concurrency scenarios
+
 ## [2.4.0] - 2025-01-26
 
 ### Added

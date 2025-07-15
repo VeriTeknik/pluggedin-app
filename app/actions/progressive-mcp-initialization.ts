@@ -83,9 +83,10 @@ async function initializeSingleServer(
     timeout: number;
     maxRetries: number;
     profileUuid: string;
+    llmProvider?: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none';
   }
 ): Promise<{ tools: any[]; cleanup: McpServerCleanupFn }> { // Return type guarantees non-null on success
-  const { logger, timeout, maxRetries, profileUuid } = options;
+  const { logger, timeout, maxRetries, profileUuid, llmProvider } = options;
   let lastError: Error | null = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) { // <= maxRetries means initial try + retries
@@ -104,12 +105,12 @@ async function initializeSingleServer(
       
       // Debug log for Streamable HTTP servers
       if (serverConfig.type === 'STREAMABLE_HTTP' || serverConfig.transport === 'streamable_http') {
-        console.log(`[MCP] Initializing Streamable HTTP server "${serverName}" with config:`, JSON.stringify(serverConfig, null, 2));
       }
 
+      
       const initPromise = convertMcpToLangchainTools(
         configForTool, // Pass the correctly typed config
-        { logger }
+        { logger, llmProvider }
       );
 
       const timeoutPromise = new Promise<never>((_, reject) => {
@@ -160,6 +161,7 @@ export async function progressivelyInitializeMcpServers(
     totalTimeout?: number;
     skipHealthChecks?: boolean;
     maxRetries?: number;
+    llmProvider?: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none';
   }
 ): Promise<ProgressiveInitResult> {
   const {
@@ -167,7 +169,8 @@ export async function progressivelyInitializeMcpServers(
     perServerTimeout = 20000, // 20 seconds per server default
     totalTimeout = 60000, // 60 seconds total default
     skipHealthChecks = false,
-    maxRetries = 2 // Default to 2 retries (3 attempts total)
+    maxRetries = 2, // Default to 2 retries (3 attempts total)
+    llmProvider
   } = options;
 
   const initStatus: ServerInitStatus[] = [];
@@ -272,7 +275,8 @@ export async function progressivelyInitializeMcpServers(
                 logger,
                 timeout: perServerTimeout,
                 maxRetries,
-                profileUuid
+                profileUuid,
+                llmProvider
               }
             );
 

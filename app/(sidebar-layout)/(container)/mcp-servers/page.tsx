@@ -11,7 +11,8 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Database, Download, Settings, Share, Upload } from 'lucide-react';
+import { Database, Download, Package, Settings, Share, Upload } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -57,6 +58,7 @@ export default function MCPServersPage() {
   const { currentProfile } = useProfiles();
   const { t } = useTranslation();
   const { toast } = useToast();
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [open, setOpen] = useState(false);
@@ -72,7 +74,9 @@ export default function MCPServersPage() {
 
   const { data: servers = [], mutate } = useSWR(
     currentProfile?.uuid ? `${currentProfile.uuid}/mcp-servers` : null,
-    () => getMcpServers(currentProfile?.uuid || '')
+    () => {
+      return getMcpServers(currentProfile?.uuid || '');
+    }
   );
 
   const columns = [
@@ -153,8 +157,10 @@ export default function MCPServersPage() {
 
   const handleCreateMultipleServers = async (configs: any[]) => {
     if (!currentProfile?.uuid) {
+      console.error('🔍 MCPServersPage: No current profile UUID');
       return;
     }
+    
     setIsSubmitting(true);
     let successCount = 0;
     let failedCount = 0;
@@ -164,7 +170,9 @@ export default function MCPServersPage() {
         try {
           await createMcpServer({
             ...config,
-            profileUuid: currentProfile.uuid
+            profileUuid: currentProfile.uuid,
+            source: config.source,
+            external_id: config.external_id
           });
           successCount++;
         } catch (error) {
@@ -173,6 +181,7 @@ export default function MCPServersPage() {
         }
       }
       
+      // Force a hard refresh of the server list
       await mutate();
       
       if (successCount > 0 && failedCount === 0) {
@@ -251,7 +260,6 @@ export default function MCPServersPage() {
                 // Smithery requires the API key to remain in the URL
                 if (url.includes('server.smithery.ai')) {
                   // Keep the API key in the URL for Smithery
-                  console.log('Smithery server detected during import, keeping API key in URL');
                 } else {
                   // For other services, extract and remove API key from URL
                   extractedHeaders = { 'Authorization': `Bearer ${apiKey}` };
@@ -414,6 +422,14 @@ export default function MCPServersPage() {
           
           {/* Action buttons */}
           <div className="flex flex-wrap gap-2 sm:flex-nowrap">
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/search?source=REGISTRY')} 
+              className="flex-1 sm:flex-none"
+            >
+              <Package className="mr-2 h-4 w-4" />
+              {t('mcpServers.actions.browseRegistry', 'Browse Registry')}
+            </Button>
             <Button variant="outline" onClick={() => setImportOpen(true)} className="flex-1 sm:flex-none">
               <Upload className="mr-2 h-4 w-4" />
               {t('mcpServers.actions.import')}
@@ -531,6 +547,8 @@ export default function MCPServersPage() {
         onOpenChange={setOpen}
         onSubmit={handleCreateMultipleServers}
         isSubmitting={isSubmitting}
+        onWizardSuccess={mutate}
+        currentProfileUuid={currentProfile?.uuid}
       />
 
       {/* Import/Export Dialogs */}

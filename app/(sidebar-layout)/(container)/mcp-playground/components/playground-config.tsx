@@ -146,7 +146,6 @@ export function PlaygroundConfig({
       const saveRagSettings = async () => {
         try {
           await saveSettings();
-          console.log('[RAG DEBUG] Settings auto-saved after RAG toggle change');
         } catch (error) {
           console.error('[RAG DEBUG] Failed to auto-save settings:', error);
         }

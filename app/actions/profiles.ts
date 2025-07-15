@@ -1,46 +1,36 @@
 'use server';
 
 import { eq } from 'drizzle-orm';
+import { z } from 'zod';
 
 // Removed Session import as it caused issues and wasn't used effectively
 import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
 import { type Locale } from '@/i18n/config';
 import { getAuthSession } from '@/lib/auth';
+import { withAuth, withProfileAuth,withProjectAuth } from '@/lib/auth-helpers';
 import { Profile } from '@/types/profile';
 
+// Validation schemas
+const uuidSchema = z.string().uuid('Invalid UUID format');
+const nameSchema = z.string().min(1).max(100);
+
 export async function createProfile(currentProjectUuid: string, name: string) {
-  const session = await getAuthSession();
+  // Validate inputs
+  const validatedProjectUuid = uuidSchema.parse(currentProjectUuid);
+  const validatedName = nameSchema.parse(name);
   
-  if (!session || !session.user) { // Explicitly check session and session.user
-    throw new Error('Unauthorized - you must be logged in to create profiles');
-  }
-  
-  // Verify the project belongs to the current user
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, currentProjectUuid))
-    .limit(1);
+  return withProjectAuth(validatedProjectUuid, async (session, project) => {
+    const profile = await db
+      .insert(profilesTable)
+      .values({
+        name: validatedName,
+        project_uuid: validatedProjectUuid,
+      })
+      .returning();
 
-  if (project.length === 0) {
-    throw new Error('Project not found');
-  }
-  
-  // Now session.user.id is safe
-  if (project[0].user_id !== session.user.id) { 
-    throw new Error('Unauthorized - you do not have access to this project');
-  }
-
-  const profile = await db
-    .insert(profilesTable)
-    .values({
-      name,
-      project_uuid: currentProjectUuid,
-    })
-    .returning();
-
-  return profile[0];
+    return profile[0];
+  });
 }
 
 export async function getProfile(profileUuid: string) {
@@ -58,46 +48,29 @@ export async function getProfile(profileUuid: string) {
 }
 
 export async function getProfiles(currentProjectUuid: string) {
-  const session = await getAuthSession();
+  // Validate input
+  const validatedProjectUuid = uuidSchema.parse(currentProjectUuid);
   
-  if (!session || !session.user) { // Explicitly check session and session.user
-    throw new Error('Unauthorized - you must be logged in to view profiles');
-  }
-  
-  // Verify the project belongs to the current user
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, currentProjectUuid))
-    .limit(1);
+  return withProjectAuth(validatedProjectUuid, async (session, project) => {
+    // Get profiles with username from users table
+    const profiles = await db
+      .select({
+        uuid: profilesTable.uuid,
+        name: profilesTable.name,
+        project_uuid: profilesTable.project_uuid,
+        created_at: profilesTable.created_at,
+        language: profilesTable.language,
+        enabled_capabilities: profilesTable.enabled_capabilities,
+        // Removed bio, is_public, avatar_url as they are on the users table now
+        username: users.username // username comes from the joined users table
+      })
+      .from(profilesTable)
+      .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+      .innerJoin(users, eq(projectsTable.user_id, users.id))
+      .where(eq(profilesTable.project_uuid, validatedProjectUuid));
 
-  if (project.length === 0) {
-    throw new Error('Project not found');
-  }
-  
-  // Now session.user.id is safe
-  if (project[0].user_id !== session.user.id) { 
-    throw new Error('Unauthorized - you do not have access to this project');
-  }
-  
-  // Get profiles with username from users table
-  const profiles = await db
-    .select({
-      uuid: profilesTable.uuid,
-      name: profilesTable.name,
-      project_uuid: profilesTable.project_uuid,
-      created_at: profilesTable.created_at,
-      language: profilesTable.language,
-      enabled_capabilities: profilesTable.enabled_capabilities,
-      // Removed bio, is_public, avatar_url as they are on the users table now
-      username: users.username // username comes from the joined users table
-    })
-    .from(profilesTable)
-    .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
-    .innerJoin(users, eq(projectsTable.user_id, users.id))
-    .where(eq(profilesTable.project_uuid, currentProjectUuid));
-
-  return profiles;
+    return profiles;
+  });
 }
 
 export async function getProjectActiveProfile(currentProjectUuid: string) {
@@ -218,39 +191,23 @@ export async function setProfileActive(
   projectUuid: string,
   profileUuid: string
 ) {
-  const session = await getAuthSession();
+  // Validate inputs
+  const validatedProjectUuid = uuidSchema.parse(projectUuid);
+  const validatedProfileUuid = uuidSchema.parse(profileUuid);
   
-  if (!session || !session.user) { // Explicitly check session and session.user
-    throw new Error('Unauthorized - you must be logged in to update profiles');
-  }
-  
-  // Verify the project belongs to the current user
-  const project = await db
-    .select()
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, projectUuid))
-    .limit(1);
+  return withProjectAuth(validatedProjectUuid, async (session, project) => {
+    const updatedProject = await db
+      .update(projectsTable)
+      .set({ active_profile_uuid: validatedProfileUuid })
+      .where(eq(projectsTable.uuid, validatedProjectUuid))
+      .returning();
 
-  if (project.length === 0) {
-    throw new Error('Project not found');
-  }
-  
-  // Now session.user.id is safe
-  if (project[0].user_id !== session.user.id) { 
-    throw new Error('Unauthorized - you do not have access to this project');
-  }
+    if (updatedProject.length === 0) {
+      throw new Error('Project not found');
+    }
 
-  const updatedProject = await db
-    .update(projectsTable)
-    .set({ active_profile_uuid: profileUuid })
-    .where(eq(projectsTable.uuid, projectUuid))
-    .returning();
-
-  if (updatedProject.length === 0) {
-    throw new Error('Project not found');
-  }
-
-  return updatedProject[0];
+    return updatedProject[0];
+  });
 }
 
 export async function updateProfileName(profileUuid: string, newName: string) {
@@ -274,42 +231,19 @@ export async function updateProfileName(profileUuid: string, newName: string) {
 }
 
 export async function updateProfile(profileUuid: string, data: Partial<Profile>) {
-  const session = await getAuthSession();
+  // Validate input
+  const validatedProfileUuid = uuidSchema.parse(profileUuid);
   
-  if (!session || !session.user) { // Explicitly check session and session.user
-    throw new Error('Unauthorized - you must be logged in to update profiles');
-  }
-  
-  // Need to verify ownership before updating
-  const profileData = await db
-    .select({ project_uuid: profilesTable.project_uuid })
-    .from(profilesTable)
-    .where(eq(profilesTable.uuid, profileUuid))
-    .limit(1);
+  return withProfileAuth(validatedProfileUuid, async (session, profile) => {
+    // Now proceed with update
+    const updatedProfile = await db
+      .update(profilesTable)
+      .set(data)
+      .where(eq(profilesTable.uuid, validatedProfileUuid))
+      .returning();
 
-  if (profileData.length === 0) {
-    throw new Error('Profile not found');
-  }
-
-  const project = await db
-    .select({ user_id: projectsTable.user_id })
-    .from(projectsTable)
-    .where(eq(projectsTable.uuid, profileData[0].project_uuid))
-    .limit(1);
-
-  // Now session.user.id is safe
-  if (project.length === 0 || project[0].user_id !== session.user.id) { 
-     throw new Error('Unauthorized - you do not have access to this profile');
-  }
-
-  // Now proceed with update
-  const updatedProfile = await db
-    .update(profilesTable)
-    .set(data)
-    .where(eq(profilesTable.uuid, profileUuid))
-    .returning();
-
-  return updatedProfile[0];
+    return updatedProfile[0];
+  });
 }
 
 export async function deleteProfile(profileUuid: string) {
@@ -351,33 +285,29 @@ export async function setActiveProfile(profileUuid: string) {
 
 export async function getActiveProfileLanguage(): Promise<Locale | null> {
   try {
-    const session = await getAuthSession();
-    if (!session || !session.user) { // Explicitly check session and session.user
-      return null;
-    }
+    return await withAuth(async (session) => {
+      // Get current project
+      const project = await db
+        .select()
+        .from(projectsTable)
+        .where(eq(projectsTable.user_id, session.user.id)) 
+        .limit(1);
 
-    // Get current project
-    // session.user.id is safe now
-    const project = await db
-      .select()
-      .from(projectsTable)
-      .where(eq(projectsTable.user_id, session.user.id)) 
-      .limit(1);
+      if (!project[0]?.active_profile_uuid) {
+        return null;
+      }
 
-    if (!project[0]?.active_profile_uuid) {
-      return null;
-    }
+      // Get profile language
+      const profile = await db
+        .select({ language: profilesTable.language })
+        .from(profilesTable)
+        .where(eq(profilesTable.uuid, project[0].active_profile_uuid))
+        .limit(1);
 
-    // Get profile language
-    const profile = await db
-      .select({ language: profilesTable.language })
-      .from(profilesTable)
-      .where(eq(profilesTable.uuid, project[0].active_profile_uuid))
-      .limit(1);
-
-    return profile[0]?.language || null;
+      return profile[0]?.language || null;
+    });
   } catch (error) {
-    console.error('Failed to get active profile language:', error);
+    // If auth fails, return null (for non-authenticated contexts)
     return null;
   }
 }

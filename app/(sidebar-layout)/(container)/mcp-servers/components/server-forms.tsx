@@ -281,7 +281,6 @@ export function StreamableHttpServerForm({ onSubmit, onCancel, isSubmitting }: S
         // Smithery requires the API key to remain in the URL, not in headers
         if (url.includes('server.smithery.ai')) {
           // Keep the API key in the URL for Smithery
-          console.log('Smithery server detected, keeping API key in URL');
         } else {
           // For other services, move API key to Authorization header
           extractedHeaders['Authorization'] = `Bearer ${apiKey}`;

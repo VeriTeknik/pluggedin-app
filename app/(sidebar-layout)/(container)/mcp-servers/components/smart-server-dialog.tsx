@@ -1,9 +1,10 @@
 'use client';
 
-import { AlertCircle, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Key,Loader2, Package, Sparkles, Wand2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { fetchRegistryServer } from '@/app/actions/registry-servers';
 import { testMcpConnection } from '@/app/actions/test-mcp-connection';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -26,14 +27,19 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { McpServerStatus, McpServerType } from '@/db/schema';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
 import { cn } from '@/lib/utils';
+
+import { SmartServerWizard } from './smart-server-wizard/SmartServerWizard';
 
 interface SmartServerDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (configs: ParsedConfig[]) => Promise<void>;
   isSubmitting: boolean;
+  onWizardSuccess?: () => void;
+  currentProfileUuid?: string;
 }
 
 interface ParsedConfig {
@@ -50,14 +56,18 @@ interface ParsedConfig {
     sessionId?: string;
   };
   status?: McpServerStatus;
+  source?: McpServerSource;
+  external_id?: string;
+  config?: Record<string, any>;
 }
 
 interface InputAnalysis {
-  type: 'url' | 'json' | 'command' | 'unknown';
+  type: 'url' | 'json' | 'command' | 'registry' | 'github' | 'unknown';
   serverType?: McpServerType;
   data?: any;
   error?: string;
   suggestions?: string[];
+  registryData?: any;
 }
 
 interface TestResult {
@@ -68,6 +78,14 @@ interface TestResult {
 
 // Example configurations
 const EXAMPLES = {
+  registry: {
+    name: 'Registry Server (Filesystem)',
+    config: 'io.github.modelcontextprotocol/servers/src/filesystem'
+  },
+  github: {
+    name: 'GitHub URL',
+    config: 'https://github.com/modelcontextprotocol/servers'
+  },
   context7: {
     name: 'Context7 MCP',
     config: 'https://mcp.context7.com/mcp'
@@ -90,7 +108,7 @@ const EXAMPLES = {
     name: 'Smithery Sequential Thinking',
     config: 'https://server.smithery.ai/@smithery-ai/server-sequential-thinking/mcp?api_key=YOUR_KEY'
   },
-  github: {
+  githubMcp: {
     name: 'GitHub MCP',
     config: `{
   "mcpServers": {
@@ -121,9 +139,12 @@ export function SmartServerDialog({
   open,
   onOpenChange,
   onSubmit,
-  isSubmitting
+  isSubmitting,
+  onWizardSuccess,
+  currentProfileUuid
 }: SmartServerDialogProps) {
   const { } = useTranslation();
+  const [mode, setMode] = useState<'quick' | 'wizard'>('quick');
   const [input, setInput] = useState('');
   const [analysis, setAnalysis] = useState<InputAnalysis | null>(null);
   const [parsedConfigs, setParsedConfigs] = useState<ParsedConfig[]>([]);
@@ -153,8 +174,46 @@ export function SmartServerDialog({
     const trimmed = inputText.trim();
     
     try {
+      // Check if it's a registry format (io.github.owner/repo)
+      if (isRegistryFormat(trimmed)) {
+        const config = await parseRegistryInput(trimmed);
+        if (config) {
+          setAnalysis({
+            type: 'registry',
+            serverType: config.type,
+            data: config,
+            registryData: config
+          });
+          
+          setParsedConfigs([config]);
+          setSelectedConfigs(new Set([config.name]));
+        } else {
+          setAnalysis({
+            type: 'registry',
+            error: 'Registry server not found',
+            suggestions: [
+              'Check the registry identifier format',
+              'Ensure the server is published to the registry',
+              'Try using the GitHub URL instead'
+            ]
+          });
+        }
+      }
+      // Check if it's a GitHub URL
+      else if (isGitHubUrl(trimmed)) {
+        const config = await parseGitHubUrl(trimmed);
+        
+        setAnalysis({
+          type: 'github',
+          serverType: McpServerType.STDIO,
+          data: config
+        });
+        
+        setParsedConfigs([config]);
+        setSelectedConfigs(new Set([config.name]));
+      }
       // Check if it's a URL
-      if (isValidUrl(trimmed)) {
+      else if (isValidUrl(trimmed)) {
         const serverType = detectServerTypeFromUrl(trimmed);
         const config = parseUrlInput(trimmed, serverType);
         
@@ -210,6 +269,8 @@ export function SmartServerDialog({
           type: 'unknown',
           error: 'Could not detect input format',
           suggestions: [
+            'Enter a registry ID like: io.github.owner/repo',
+            'Paste a GitHub URL: https://github.com/owner/repo',
             'Paste a URL for Streamable HTTP/SSE servers',
             'Paste JSON configuration from MCP documentation',
             'Enter a command like: npx @modelcontextprotocol/server-name'
@@ -231,39 +292,21 @@ export function SmartServerDialog({
   };
 
   const detectServerTypeFromUrl = (url: string): McpServerType => {
+    // Since SSE is deprecated and most modern MCP servers support Streamable HTTP,
+    // we should default to STREAMABLE_HTTP for all HTTP(S) URLs.
+    // Servers will negotiate the best transport method during connection.
     try {
       const urlObj = new URL(url);
-      const hostname = urlObj.hostname.toLowerCase();
-      const pathname = urlObj.pathname.toLowerCase();
+      const protocol = urlObj.protocol.toLowerCase();
       
-      // Smithery servers - check exact hostname
-      if (hostname === 'server.smithery.ai') {
+      // For any HTTP(S) URL, use Streamable HTTP (the modern transport)
+      if (protocol === 'http:' || protocol === 'https:') {
         return McpServerType.STREAMABLE_HTTP;
       }
       
-      // GitHub Copilot - check exact hostname
-      if (hostname === 'api.githubcopilot.com') {
-        return McpServerType.STREAMABLE_HTTP;
-      }
-      
-      // Context7 - check exact hostname
-      if (hostname === 'mcp.context7.com') {
-        return McpServerType.STREAMABLE_HTTP;
-      }
-      
-      // SSE endpoints (check path patterns more precisely)
-      if (pathname.endsWith('/sse') || 
-          pathname.includes('/sse/') ||
-          pathname.endsWith('/events') || 
-          pathname.includes('/events/') ||
-          pathname.endsWith('/stream') || 
-          pathname.includes('/stream/')) {
-        return McpServerType.SSE;
-      }
-      
-      // Default to Streamable HTTP for HTTP(S) URLs
+      // Default to Streamable HTTP
       return McpServerType.STREAMABLE_HTTP;
-    } catch (error) {
+    } catch (_error) {
       // If URL parsing fails, default to Streamable HTTP
       return McpServerType.STREAMABLE_HTTP;
     }
@@ -273,10 +316,12 @@ export function SmartServerDialog({
     const urlObj = new URL(url);
     const hostname = urlObj.hostname.toLowerCase();
     let name = hostname.replace(/\./g, '-');
+    let description = '';
     
     // Create better names for known services based on exact hostname matching
     if (hostname === 'mcp.context7.com') {
       name = 'context7';
+      description = 'Context7 MCP Server - Code Documentation Assistant';
     } else if (hostname === 'server.smithery.ai') {
       // Extract server name from Smithery URL path
       const pathMatch = urlObj.pathname.match(/@[^/]+\/([^/]+)\//);
@@ -285,10 +330,13 @@ export function SmartServerDialog({
       } else {
         name = 'smithery-server';
       }
+      description = 'Smithery MCP Server';
     } else if (hostname === 'api.githubcopilot.com') {
       name = 'github-copilot';
+      description = 'GitHub Copilot MCP Server';
     } else {
       name += '-server';
+      description = `MCP Server from ${hostname}`;
     }
     
     // Extract API key if present
@@ -298,6 +346,7 @@ export function SmartServerDialog({
       name,
       type: serverType,
       url: url,
+      description,
       status: McpServerStatus.ACTIVE
     };
     
@@ -343,6 +392,36 @@ export function SmartServerDialog({
   const parseSingleConfig = (name: string, config: any): ParsedConfig | null => {
     // Handle STDIO servers
     if (config.command) {
+      // Check if this is mcp-remote, which is actually a proxy for remote servers
+      const isMcpRemote = config.command === 'npx' && 
+                         Array.isArray(config.args) && 
+                         config.args.includes('mcp-remote');
+      
+      if (isMcpRemote && config.args) {
+        // Find the URL in the args
+        const urlIndex = config.args.findIndex((arg: string) => arg.includes('http'));
+        if (urlIndex !== -1) {
+          const url = config.args[urlIndex];
+          const remoteServerType = detectServerTypeFromUrl(url);
+          
+          // For mcp-remote, always use STDIO type since it's executed as a process
+          // The remote URL is just a parameter for the mcp-remote process
+          return {
+            name,
+            type: McpServerType.STDIO, // mcp-remote is always STDIO
+            command: config.command,
+            args: config.args,
+            url: undefined, // Don't store URL for STDIO servers
+            env: parseEnv(config.env),
+            description: config.description || `Remote ${remoteServerType} server via mcp-remote`,
+            status: McpServerStatus.ACTIVE,
+            // Mark this as mcp-remote for special handling
+            transport: 'mcp-remote'
+          };
+        }
+      }
+      
+      // Regular STDIO server
       return {
         name,
         type: McpServerType.STDIO,
@@ -358,6 +437,8 @@ export function SmartServerDialog({
     if (config.url) {
       const serverType = config.type === 'sse' ? McpServerType.SSE : 
                         config.type === 'streamable_http' ? McpServerType.STREAMABLE_HTTP :
+                        config.type === 'streamable' ? McpServerType.STREAMABLE_HTTP : // New MCP registry format
+                        config.transport === 'streamable' ? McpServerType.STREAMABLE_HTTP : // Alternative field
                         detectServerTypeFromUrl(config.url);
       
       return {
@@ -369,6 +450,37 @@ export function SmartServerDialog({
         transport: config.transport,
         status: McpServerStatus.ACTIVE
       };
+    }
+    
+    // Handle new MCP registry schema with remotes section
+    if (config.remotes && typeof config.remotes === 'object') {
+      // Get the first remote endpoint
+      const remoteKeys = Object.keys(config.remotes);
+      if (remoteKeys.length > 0) {
+        const firstRemote = config.remotes[remoteKeys[0]];
+        if (firstRemote.url) {
+          const serverType = config.transport === 'sse' ? McpServerType.SSE :
+                            config.transport === 'streamable' ? McpServerType.STREAMABLE_HTTP :
+                            detectServerTypeFromUrl(firstRemote.url);
+          
+          const result: ParsedConfig = {
+            name,
+            type: serverType,
+            url: firstRemote.url,
+            description: config.description,
+            status: McpServerStatus.ACTIVE
+          };
+          
+          // Add headers if present
+          if (firstRemote.headers) {
+            result.streamableHTTPOptions = {
+              headers: firstRemote.headers
+            };
+          }
+          
+          return result;
+        }
+      }
     }
     
     return null;
@@ -411,9 +523,11 @@ export function SmartServerDialog({
     
     // Extract package name for the server name
     let name = 'imported-server';
+    let description = 'Imported MCP server';
     const packageArg = args.find(arg => arg.startsWith('@'));
     if (packageArg) {
       name = packageArg.split('/').pop() || name;
+      description = `MCP server from ${packageArg}`;
     }
     
     return {
@@ -421,7 +535,127 @@ export function SmartServerDialog({
       type: McpServerType.STDIO,
       command,
       args,
+      description,
       status: McpServerStatus.ACTIVE
+    };
+  };
+
+  // Check if input is in registry format (io.github.owner/repo)
+  const isRegistryFormat = (text: string): boolean => {
+    const registryPattern = /^io\.github\.[^\/]+\/[^\/]+/;
+    return registryPattern.test(text);
+  };
+
+  // Check if input is a GitHub URL
+  const isGitHubUrl = (text: string): boolean => {
+    return text.startsWith('https://github.com/') || text.startsWith('github.com/');
+  };
+
+  // Parse registry input and fetch server data
+  const parseRegistryInput = async (registryId: string): Promise<ParsedConfig | null> => {
+    try {
+      // Fetch server data from registry
+      const result = await fetchRegistryServer(registryId);
+      
+      if (!result.success || !result.data) {
+        return null;
+      }
+
+      const server = result.data;
+      const primaryPackage = server.packages?.[0];
+
+      // Transform registry data to ParsedConfig
+      if (primaryPackage) {
+        // Determine command based on package type
+        let command = '';
+        let args: string[] = [];
+        
+        switch (primaryPackage.registry_name) {
+          case 'npm':
+            command = primaryPackage.runtime_hint || 'npx';
+            args = [primaryPackage.name];
+            if (primaryPackage.runtime_arguments) {
+              args.push(...primaryPackage.runtime_arguments);
+            }
+            break;
+          case 'docker':
+            command = 'docker';
+            args = ['run'];
+            if (primaryPackage.package_arguments) {
+              args.push(...primaryPackage.package_arguments.map((arg: any) => arg.value || arg.default || ''));
+            }
+            args.push(primaryPackage.name);
+            break;
+          case 'pypi':
+            command = primaryPackage.runtime_hint || 'uvx';
+            args = [primaryPackage.name];
+            break;
+          default:
+            // Unknown type, try to infer
+            if (primaryPackage.name?.endsWith('.py')) {
+              command = 'python';
+              args = [primaryPackage.name];
+            } else {
+              command = 'node';
+              args = [primaryPackage.name];
+            }
+        }
+
+        // Extract environment variables
+        const env: Record<string, string> = {};
+        if (primaryPackage.environment_variables) {
+          primaryPackage.environment_variables.forEach((envVar: any) => {
+            env[envVar.name] = envVar.defaultValue || '';
+          });
+        }
+
+        return {
+          name: server.name.split('/').pop() || server.name,
+          type: McpServerType.STDIO,
+          description: server.description,
+          command,
+          args,
+          env: Object.keys(env).length > 0 ? env : undefined,
+          status: McpServerStatus.ACTIVE,
+          source: McpServerSource.REGISTRY,
+          external_id: server.id
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error parsing registry input:', error);
+      return null;
+    }
+  };
+
+  // Parse GitHub URL and transform to registry format
+  const parseGitHubUrl = async (githubUrl: string): Promise<ParsedConfig> => {
+    // Extract owner and repo from GitHub URL
+    const match = githubUrl.match(/github\.com\/([^\/]+)\/([^\/]+)/);
+    if (!match) {
+      throw new Error('Invalid GitHub URL');
+    }
+
+    const [, owner, repo] = match;
+    const registryId = `io.github.${owner}/${repo}`;
+
+    // Try to fetch from registry first
+    const registryConfig = await parseRegistryInput(registryId);
+    if (registryConfig) {
+      return registryConfig;
+    }
+
+    // If not in registry, create a basic config
+    return {
+      name: repo,
+      type: McpServerType.STDIO,
+      description: `MCP server from ${owner}/${repo}`,
+      command: 'npx',
+      args: [`@${owner}/${repo}`],
+      status: McpServerStatus.ACTIVE,
+      source: McpServerSource.COMMUNITY,
+      external_id: `${owner}/${repo}`
     };
   };
 
@@ -438,6 +672,7 @@ export function SmartServerDialog({
         args: config.args,
         env: config.env,
         streamableHTTPOptions: config.streamableHTTPOptions,
+        transport: config.transport,
       });
       
       setTestResults(prev => new Map(prev).set(testId, {
@@ -445,6 +680,15 @@ export function SmartServerDialog({
         message: result.message,
         details: result.details,
       }));
+      
+      // If test shows auth is required, mark the config
+      if (result.details?.requiresAuth) {
+        setParsedConfigs(prev => prev.map(c => 
+          c.name === config.name 
+            ? { ...c, config: { ...(c.config as any || {}), requires_auth: true } }
+            : c
+        ));
+      }
     } catch (error) {
       setTestResults(prev => new Map(prev).set(testId, {
         success: false,
@@ -458,7 +702,22 @@ export function SmartServerDialog({
   const handleSubmit = async () => {
     const configsToSubmit = parsedConfigs.filter(c => selectedConfigs.has(c.name));
     if (configsToSubmit.length > 0) {
-      await onSubmit(configsToSubmit);
+      // Include any auth requirements detected during testing
+      const configsWithAuthInfo = configsToSubmit.map(config => {
+        const testResult = testResults.get(config.name);
+        if (testResult?.details?.requiresAuth) {
+          // Set requires_auth at the top level of config, not nested
+          return {
+            ...config,
+            config: { 
+              ...(typeof config.config === 'object' ? config.config : {}), 
+              requires_auth: true 
+            }
+          };
+        }
+        return config;
+      });
+      await onSubmit(configsWithAuthInfo);
       handleClose();
     }
   };
@@ -476,17 +735,51 @@ export function SmartServerDialog({
     setInput(EXAMPLES[example].config);
   };
 
+  // Show wizard mode if selected
+  if (mode === 'wizard') {
+    return (
+      <SmartServerWizard
+        open={open}
+        onOpenChange={(newOpen) => {
+          if (!newOpen) {
+            setMode('quick'); // Reset to quick mode when closing
+          }
+          onOpenChange(newOpen);
+        }}
+        onSuccess={() => {
+          setMode('quick');
+          onOpenChange(false);
+          onWizardSuccess?.();
+        }}
+        currentProfileUuid={currentProfileUuid}
+      />
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5" />
-            Smart Add Server
-          </DialogTitle>
-          <DialogDescription>
-            Paste a URL, JSON configuration, or command to add MCP servers. Try examples like Context7 for up-to-date documentation.
-          </DialogDescription>
+          <div className="space-y-3">
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              Smart Add Server
+            </DialogTitle>
+            <DialogDescription>
+              Paste a registry ID (io.github.owner/repo), GitHub URL, JSON configuration, or command to add MCP servers.
+            </DialogDescription>
+            {/* Mode Toggle */}
+            <ToggleGroup type="single" value={mode} onValueChange={(value) => value && setMode(value as 'quick' | 'wizard')} className="justify-start">
+              <ToggleGroupItem value="quick" aria-label="Quick add mode">
+                <Sparkles className="h-4 w-4 mr-2" />
+                Quick Add
+              </ToggleGroupItem>
+              <ToggleGroupItem value="wizard" aria-label="Wizard mode">
+                <Wand2 className="h-4 w-4 mr-2" />
+                Guided Setup
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </DialogHeader>
         
         <div className="flex-1 overflow-y-auto space-y-4 py-4">
@@ -610,18 +903,38 @@ export function SmartServerDialog({
                             <Badge variant="outline" className="text-xs">
                               {config.type}
                             </Badge>
-                            {testResult && (
+                            {config.source === McpServerSource.REGISTRY && (
                               <Badge 
-                                variant={testResult.success ? "default" : "destructive"}
-                                className="text-xs"
+                                variant="default" 
+                                className="text-xs bg-blue-600 hover:bg-blue-700"
                               >
-                                {testResult.success ? (
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                ) : (
-                                  <AlertCircle className="h-3 w-3 mr-1" />
-                                )}
-                                {testResult.success ? "Tested" : "Failed"}
+                                <Package className="h-3 w-3 mr-1" />
+                                Registry
                               </Badge>
+                            )}
+                            {testResult && (
+                              <>
+                                <Badge 
+                                  variant={testResult.success ? "default" : "destructive"}
+                                  className="text-xs"
+                                >
+                                  {testResult.success ? (
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  ) : (
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                  )}
+                                  {testResult.success ? "Tested" : "Failed"}
+                                </Badge>
+                                {testResult.details?.requiresAuth && (
+                                  <Badge 
+                                    variant="outline" 
+                                    className="text-xs border-orange-500 text-orange-600"
+                                  >
+                                    <Key className="h-3 w-3 mr-1" />
+                                    Auth Required
+                                  </Badge>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>

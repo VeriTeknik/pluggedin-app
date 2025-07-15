@@ -208,7 +208,8 @@
       "infoTitle": "İstemciler Talimatları Nasıl Kullanır",
       "infoText": "Bu talimatlar potansiyel olarak MCP istemcileri (Cline gibi) tarafından bu sunucunun araçlarını kullanırken yapay zekaya bağlam sağlamak için kullanılabilir. Tam kullanım istemci uygulamasına bağlıdır.",
       "saveSuccess": "Özel talimatlar başarıyla kaydedildi.",
-      "saveError": "Özel talimatlar kaydedilemedi."
+      "saveError": "Özel talimatlar kaydedilemedi.",
+      "insertTemplate": "Şablon Ekle"
     },
     "placeholders": {
       "serverName": "Sunucu adını girin",

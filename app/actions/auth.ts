@@ -2,10 +2,15 @@
 
 import { eq } from 'drizzle-orm';
 import { getServerSession } from 'next-auth';
+import { z } from 'zod';
 
 import { db } from '@/db';
 import { sessions, users, verificationTokens } from '@/db/schema';
 import { authOptions } from '@/lib/auth';
+
+const verifyEmailSchema = z.object({
+  token: z.string().min(1),
+});
 
 /**
  * Server action to handle logout by directly removing the session from the database
@@ -37,9 +42,12 @@ export async function serverLogout() {
 
 export async function verifyEmail(token: string) {
   try {
+    // Validate input
+    const validated = verifyEmailSchema.parse({ token });
+    
     // Find the verification token
     const verificationToken = await db.query.verificationTokens.findFirst({
-      where: eq(verificationTokens.token, token),
+      where: eq(verificationTokens.token, validated.token),
     });
 
     if (!verificationToken) {
@@ -56,7 +64,7 @@ export async function verifyEmail(token: string) {
 
     // Delete the used token
     await db.delete(verificationTokens)
-      .where(eq(verificationTokens.token, token));
+      .where(eq(verificationTokens.token, validated.token));
 
     return { success: true };
   } catch (error) {

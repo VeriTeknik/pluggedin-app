@@ -8,6 +8,7 @@ import { db } from '@/db';
 import { mcpServersTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema'; // Sorted
 import { decryptServerData } from '@/lib/encryption';
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Sorted
+import { McpServer } from '@/types/mcp-server';
 // Removed getUserData import
 // import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 // Removed direct SDK type import
@@ -29,7 +30,6 @@ export async function discoverSingleServerTools(
     profileUuid: string,
     serverUuid: string
 ): Promise<{ success: boolean; message: string; error?: string }> {
-  console.log(`[Action] discoverSingleServerTools called for server: ${serverUuid} in profile: ${profileUuid}`);
 
   if (!profileUuid || !serverUuid) {
       return { success: false, message: 'Profile UUID and Server UUID are required.' };
@@ -48,28 +48,12 @@ export async function discoverSingleServerTools(
       throw new Error(`MCP Server with UUID ${serverUuid} not found for the active profile.`);
     }
 
-    console.log(`[Action] Found server config for ${serverConfig.name || serverUuid}`);
-    console.log(`[Action] Server config has encrypted fields:`, {
-      hasCommandEncrypted: !!serverConfig.command_encrypted,
-      hasArgsEncrypted: !!serverConfig.args_encrypted,
-      hasEnvEncrypted: !!serverConfig.env_encrypted,
-      hasUrlEncrypted: !!serverConfig.url_encrypted,
-      hasPlainCommand: !!serverConfig.command,
-      hasPlainArgs: !!serverConfig.args,
-      hasPlainEnv: !!serverConfig.env,
-      hasPlainUrl: !!serverConfig.url
-    });
-
     // Decrypt the server configuration
     const decryptedServerConfig = decryptServerData(serverConfig, profileUuid);
-    console.log(`[Action] After decryption:`, {
-      hasCommand: !!decryptedServerConfig.command,
-      hasArgs: !!decryptedServerConfig.args,
-      hasEnv: !!decryptedServerConfig.env,
-      hasUrl: !!decryptedServerConfig.url,
-      serverType: decryptedServerConfig.type
-    });
-    const discoveryServerConfig = { ...decryptedServerConfig };
+    const discoveryServerConfig: McpServer = { 
+        ...decryptedServerConfig,
+        config: decryptedServerConfig.config as Record<string, any> | null
+    };
 
     let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = [];
     let discoveredTemplates: Awaited<ReturnType<typeof listResourceTemplatesFromServer>> = [];
@@ -82,18 +66,14 @@ export async function discoverSingleServerTools(
 
     // --- Discover Tools ---
     try {
-        console.log(`[Action] Discovering tools for ${discoveryServerConfig.name || serverUuid}...`);
         // Use the potentially modified config for the discovery call
         discoveredTools = await listToolsFromServer(discoveryServerConfig);
-        console.log(`[Action] Discovered ${discoveredTools.length} tools.`);
 
         // Delete existing tools
-        console.log(`[Action] Deleting old tools for server: ${serverUuid}`);
         await db.delete(toolsTable).where(eq(toolsTable.mcp_server_uuid, serverUuid));
 
         // Insert new tools
         if (discoveredTools.length > 0) {
-            console.log(`[Action] Inserting ${discoveredTools.length} new tools...`);
             const toolsToInsert = discoveredTools.map(tool => ({
                 mcp_server_uuid: serverUuid,
                 name: tool.name, // Keep original name without transformation
@@ -107,22 +87,44 @@ export async function discoverSingleServerTools(
     } catch (error: any) {
         console.error(`[Action Error] Failed to discover/store tools for ${serverConfig.name || serverUuid}:`, error);
         toolError = error.message;
+        
+        // Check if this is a 401 authentication error
+        const is401Error = error.message?.includes('401') || 
+                         error.message?.includes('invalid_token') ||
+                         error.message?.includes('Unauthorized');
+        
+        if (is401Error) {
+            // Update server config to mark as requires auth
+            try {
+                const currentConfig = serverConfig.config as any || {};
+                const updatedConfig = {
+                    ...currentConfig,
+                    requires_auth: true,
+                    last_401_error: new Date().toISOString()
+                };
+                
+                await db.update(mcpServersTable)
+                    .set({ 
+                        config: updatedConfig
+                    })
+                    .where(eq(mcpServersTable.uuid, serverUuid));
+                    
+            } catch (updateError) {
+                console.error('Failed to update server auth status:', updateError);
+            }
+        }
     }
 
     // --- Discover Resource Templates ---
     try {
-        console.log(`[Action] Discovering resource templates for ${discoveryServerConfig.name || serverUuid}...`);
         // Use the potentially modified config for the discovery call
         discoveredTemplates = await listResourceTemplatesFromServer(discoveryServerConfig);
-        console.log(`[Action] Discovered ${discoveredTemplates.length} resource templates.`);
 
         // Delete existing templates
-        console.log(`[Action] Deleting old resource templates for server: ${serverUuid}`);
         await db.delete(resourceTemplatesTable).where(eq(resourceTemplatesTable.mcp_server_uuid, serverUuid));
 
         // Insert new templates
         if (discoveredTemplates.length > 0) {
-            console.log(`[Action] Inserting ${discoveredTemplates.length} new resource templates...`);
             const templatesToInsert = discoveredTemplates.map(template => {
                 // Extract variables from URI template (simple regex example)
                 const variables = template.uriTemplate.match(/\{([^}]+)\}/g)?.map((v: string) => v.slice(1, -1)) || []; // Add type for v
@@ -144,18 +146,14 @@ export async function discoverSingleServerTools(
 
     // --- Discover Static Resources ---
     try {
-        console.log(`[Action] Discovering static resources for ${discoveryServerConfig.name || serverUuid}...`);
         // Use the potentially modified config for the discovery call
         discoveredResources = await listResourcesFromServer(discoveryServerConfig);
-        console.log(`[Action] Discovered ${discoveredResources.length} static resources.`);
 
         // Delete existing resources
-        console.log(`[Action] Deleting old static resources for server: ${serverUuid}`);
         await db.delete(resourcesTable).where(eq(resourcesTable.mcp_server_uuid, serverUuid));
 
         // Insert new resources
         if (discoveredResources.length > 0) {
-            console.log(`[Action] Inserting ${discoveredResources.length} new static resources...`);
             const resourcesToInsert = discoveredResources.map((resource: InferredResource) => ({ // Use inferred type
                 mcp_server_uuid: serverUuid,
                 uri: resource.uri,
@@ -173,18 +171,14 @@ export async function discoverSingleServerTools(
 
     // --- Discover Prompts ---
     try {
-        console.log(`[Action] Discovering prompts for ${discoveryServerConfig.name || serverUuid}...`);
         // Use the potentially modified config for the discovery call
         discoveredPrompts = await listPromptsFromServer(discoveryServerConfig);
-        console.log(`[Action] Discovered ${discoveredPrompts.length} prompts.`);
 
         // Delete existing prompts
-        console.log(`[Action] Deleting old prompts for server: ${serverUuid}`);
         await db.delete(promptsTable).where(eq(promptsTable.mcp_server_uuid, serverUuid));
 
         // Insert new prompts
         if (discoveredPrompts.length > 0) {
-            console.log(`[Action] Inserting ${discoveredPrompts.length} new prompts...`);
             const promptsToInsert = discoveredPrompts.map((prompt: InferredPrompt) => ({ // Use inferred type
                 mcp_server_uuid: serverUuid,
                 name: prompt.name,
@@ -221,7 +215,6 @@ export async function discoverSingleServerTools(
         if (resourceError) message += ` Resource error: ${resourceError}`;
         if (promptError) message += ` Prompt error: ${promptError}`; // Add prompt error
     }
-    console.log(`[Action] Discovery process finished for ${serverUuid}. Success: ${success}`);
 
     return { success, message, error: success ? undefined : (toolError || templateError || resourceError || promptError || 'Unknown discovery error') }; // Include promptError
 

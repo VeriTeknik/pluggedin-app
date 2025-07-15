@@ -1,6 +1,6 @@
 import { McpServerSource } from '@/db/schema';
 
-export interface ServerReview {
+interface ServerReview {
   id: string;
   rating: number;
   comment: string | null;
@@ -8,7 +8,7 @@ export interface ServerReview {
   username: string;
 }
 
-export interface ServerMetrics {
+interface ServerMetrics {
   averageRating: number;
   ratingCount: number;
   installationCount: number;

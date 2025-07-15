@@ -1,6 +1,6 @@
 'use server';
 
-import { and, desc, eq, or } from 'drizzle-orm';
+import { and, desc, eq, isNull, like, not, or } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { 
@@ -10,7 +10,8 @@ import {
   McpServerStatus, 
   McpServerType, 
   profilesTable, 
-  projectsTable, 
+  projectsTable,
+  serverInstallationsTable,
   users 
 } from '@/db/schema';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
@@ -33,6 +34,7 @@ type ServerWithMetrics = typeof mcpServersTable.$inferSelect & {
 }
 
 export async function getMcpServers(profileUuid: string): Promise<ServerWithMetrics[]> {
+  
   // Get the servers without type assertion
   const serversQuery = await db
     .select({
@@ -49,10 +51,25 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
         or(
           eq(mcpServersTable.status, McpServerStatus.ACTIVE),
           eq(mcpServersTable.status, McpServerStatus.INACTIVE)
+        ),
+        // Exclude temporary servers created during discovery tests
+        // Handle NULL descriptions properly - NULL descriptions should be included
+        or(
+          isNull(mcpServersTable.description),
+          not(like(mcpServersTable.description, 'Temporary % server for discovery test'))
         )
       )
     )
     .orderBy(desc(mcpServersTable.created_at));
+  
+  
+  // Debug: Log all servers before filtering to understand what's being excluded
+  const allServersDebug = await db
+    .select({
+      server: mcpServersTable,
+    })
+    .from(mcpServersTable)
+    .where(eq(mcpServersTable.profile_uuid, profileUuid));
 
   // Type the result correctly
   const servers: ServerWithUsername[] = serversQuery;
@@ -66,6 +83,7 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
         
         // Process server data - transport options should now be separate from env
         const processedServer: any = { ...decryptedServer };
+        
         
         // For backward compatibility, check if transport options are still in env
         if (server.type === McpServerType.STREAMABLE_HTTP && decryptedServer.env) {
@@ -158,13 +176,67 @@ export async function getMcpServerByUuid(
     return processedServer;
   }
   
-  return decryptedServer;
+  return {
+    ...decryptedServer,
+    config: decryptedServer.config as Record<string, any> | null
+  };
 }
 
 export async function deleteMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<void> {
+  // Get server details before deletion for tracking
+  const server = await db.query.mcpServersTable.findFirst({
+    where: and(
+      eq(mcpServersTable.uuid, uuid),
+      eq(mcpServersTable.profile_uuid, profileUuid)
+    ),
+  });
+
+  if (server) {
+    // Get user ID for analytics tracking
+    const profileData = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, profileUuid),
+      with: {
+        project: {
+          columns: {
+            user_id: true
+          }
+        }
+      }
+    });
+
+    const userId = profileData?.project?.user_id || 'anonymous';
+
+    // TODO: Track uninstallation to new analytics service when available
+
+    // Remove from local installations table
+    if (server.external_id && server.source) {
+      await db.delete(serverInstallationsTable)
+        .where(
+          and(
+            eq(serverInstallationsTable.server_uuid, uuid),
+            eq(serverInstallationsTable.profile_uuid, profileUuid)
+          )
+        ).catch(error => {
+          console.error('Failed to remove installation record:', error);
+        });
+    }
+  }
+
+  // Delete related activity records first to avoid foreign key constraint violation
+  try {
+    const { mcpActivityTable } = await import('@/db/schema');
+    await db
+      .delete(mcpActivityTable)
+      .where(eq(mcpActivityTable.server_uuid, uuid));
+  } catch (error) {
+    console.error('Failed to delete activity records:', error);
+    // Continue with server deletion even if activity cleanup fails
+  }
+
+  // Delete the server
   await db
     .delete(mcpServersTable)
     .where(
@@ -303,7 +375,6 @@ export async function updateMcpServer(
 
   // Trigger discovery after update
   try {
-    console.log(`[Action] Triggering tool discovery for updated server: ${uuid}`);
     // Don't await this, let it run in the background
     discoverSingleServerTools(profileUuid, uuid).catch(discoveryError => {
        console.error(`[Action Warning] Background tool discovery failed after update for server ${uuid}:`, discoveryError);
@@ -331,6 +402,8 @@ export async function createMcpServer({
   external_id,
   transport,
   streamableHTTPOptions,
+  skipDiscovery = false,
+  config,
 }: {
   name: string;
   profileUuid: string;
@@ -347,6 +420,8 @@ export async function createMcpServer({
     sessionId?: string;
     headers?: Record<string, string>;
   };
+  skipDiscovery?: boolean;
+  config?: Record<string, any>;
 }) { // Removed explicit return type to match actual returns
   try {
     const serverType = type || McpServerType.STDIO;
@@ -406,6 +481,7 @@ export async function createMcpServer({
       profile_uuid: profileUuid,
       source,
       external_id,
+      config: config || null,
       // Store transport-specific options separately
       transport: (serverType === McpServerType.STREAMABLE_HTTP) ? (transport || 'streamable_http') : undefined,
       streamableHTTPOptions: (serverType === McpServerType.STREAMABLE_HTTP && streamableHTTPOptions) ? streamableHTTPOptions : undefined,
@@ -438,17 +514,19 @@ export async function createMcpServer({
       // Continue even if tracking fails
     }
 
-    // Trigger discovery after creation
-    try {
-      console.log(`[Action] Triggering tool discovery for created server: ${newServer.uuid}`);
-      // Don't await this, let it run in the background
-      discoverSingleServerTools(profileUuid, newServer.uuid).catch(discoveryError => {
-         console.error(`[Action Warning] Background tool discovery failed after creation for server ${newServer.uuid}:`, discoveryError);
-      });
-    } catch (error) {
-      // Catch synchronous errors if discoverSingleServerTools itself throws immediately (unlikely for async)
-      console.error(`[Action Warning] Failed to trigger tool discovery after creation for server ${newServer.uuid}:`, error);
-      // Do not re-throw, allow the creation operation to be considered successful
+    // Trigger discovery after creation (unless explicitly skipped)
+    if (!skipDiscovery) {
+      try {
+        // Don't await this, let it run in the background
+        discoverSingleServerTools(profileUuid, newServer.uuid).catch(discoveryError => {
+           console.error(`[Action Warning] Background tool discovery failed after creation for server ${newServer.uuid}:`, discoveryError);
+        });
+      } catch (error) {
+        // Catch synchronous errors if discoverSingleServerTools itself throws immediately (unlikely for async)
+        console.error(`[Action Warning] Failed to trigger tool discovery after creation for server ${newServer.uuid}:`, error);
+        // Do not re-throw, allow the creation operation to be considered successful
+      }
+    } else {
     }
 
     return { success: true, data: newServer }; // Return success and the new server data
@@ -539,7 +617,6 @@ export async function bulkImportMcpServers(
 
   // Trigger discovery for all newly created servers in the background
   if (createdServerUuids.length > 0 && profileUuid) {
-      console.log(`[Action] Triggering background tool discovery for ${createdServerUuids.length} bulk imported servers...`);
       // Fire off discovery tasks without awaiting each one individually
       createdServerUuids.forEach(uuid => {
           discoverSingleServerTools(profileUuid, uuid).catch(discoveryError => {
@@ -615,7 +692,6 @@ export async function importSharedServer(
           messages: messages,
         });
         
-        console.log(`Imported custom instructions for server ${newServer.uuid}`);
       } catch (error) {
         console.error('Error importing custom instructions:', error);
         // Continue without custom instructions if there's an error

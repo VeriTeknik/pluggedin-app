@@ -211,11 +211,58 @@
       "infoTitle": "How Clients Use Instructions",
       "infoText": "These instructions can potentially be used by MCP clients (like Cline) to provide context to the AI when using this server's tools. The exact usage depends on the client implementation.",
       "saveSuccess": "Custom instructions saved successfully.",
-      "saveError": "Failed to save custom instructions."
+      "saveError": "Failed to save custom instructions.",
+      "insertTemplate": "Insert Template"
     },
     "placeholders": {
       "serverName": "Enter server name",
       "description": "Click to add a description..."
+    },
+    "smartDialog": {
+      "title": "Smart Add Server",
+      "description": "Intelligently add a server by analyzing its configuration",
+      "testSelected": "Test Selected",
+      "addServer": "Add Server",
+      "analyzing": "Analyzing...",
+      "testing": "Testing...",
+      "adding": "Adding..."
+    },
+    "intelligentDialog": {
+      "title": "Intelligent Add Server",
+      "description": "AI-powered server configuration analysis",
+      "authenticate": "Authenticate",
+      "analyzing": "Analyzing configuration...",
+      "configurationAnalysis": "Configuration Analysis",
+      "suggestions": "Suggestions",
+      "validating": "Validating..."
+    },
+    "registry": {
+      "submitStep": {
+        "title": "Submit to Registry",
+        "description": "Submit your server to the public registry",
+        "repositoryInfo": "Repository Information",
+        "packageInfo": "Package Information", 
+        "environmentVariables": "Environment Variables",
+        "validation": {
+          "missingRepository": "Missing repository information",
+          "missingEnvVars": "Missing required environment variables",
+          "preparingSubmission": "Preparing submission...",
+          "validatingConfig": "Validating configuration...",
+          "verifyingOwnership": "Verifying GitHub ownership...",
+          "submittingToRegistry": "Submitting to registry...",
+          "finalizing": "Finalizing submission..."
+        },
+        "success": {
+          "submitted": "Successfully submitted to registry!",
+          "description": "Your MCP server has been submitted to the registry."
+        },
+        "errors": {
+          "submissionFailed": "Failed to submit to registry",
+          "validationFailed": "Validation failed",
+          "ownershipFailed": "GitHub ownership verification failed",
+          "networkError": "Network error occurred"
+        }
+      }
     }
   }
 }

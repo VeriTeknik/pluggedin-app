@@ -100,4 +100,16 @@ export const RateLimiters = {
     windowMs: 60 * 60 * 1000, // 1 hour
     max: 10, // 10 requests per hour
   }),
+  
+  // Registry operations (OAuth, publishing)
+  registry: createRateLimiter({
+    windowMs: 5 * 60 * 1000, // 5 minutes
+    max: 20, // 20 requests per 5 minutes
+  }),
+  
+  // Registry OAuth callback
+  registryOAuth: createRateLimiter({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 10, // 10 OAuth attempts per 15 minutes
+  }),
 };

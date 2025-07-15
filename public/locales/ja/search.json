@@ -1,56 +1,162 @@
 {
   "search": {
-    "title": "検索",
-    "subtitle": "すべてのコンテンツを検索",
-    "explorePlugins": "プラグインを探索",
+    "title": "Search",
+    "subtitle": "Search across all content",
+    "explorePlugins": "Explore Plugins",
     "input": {
-      "placeholder": "検索..."
+      "placeholder": "Search..."
     },
-    "loading": "検索を読み込み中...",
-    "noResults": "結果が見つかりません",
+    "loading": "Loading search...",
+    "noResults": "No results found",
     "error": {
-      "general": "検索結果の読み込みエラー",
-      "profileNotFound": "プロファイルが見つかりません。サーバーの共有を解除するにはプロファイルを選択してください。",
-      "missingShareId": "共有を解除できません：共有情報がありません。",
-      "unshareFailed": "サーバーの共有解除に失敗しました"
+      "general": "Error loading search results",
+      "profileNotFound": "Profile not found. Please select a profile to unshare servers.",
+      "missingShareId": "Cannot unshare: Missing share information.",
+      "unshareFailed": "Failed to unshare server"
     },
-    "unshareSuccess": "{{name}}の共有を解除しました",
-    "sort": "並べ替え",
-    "sortBy": "並べ替え基準",
+    "unshareSuccess": "Successfully unshared {{name}}",
+    "sort": "Sort",
+    "sortBy": "Sort by",
     "sortOptions": {
-      "relevance": "関連性",
-      "popularity": "人気度",
-      "recent": "最新",
-      "stars": "GitHubスター"
+      "relevance": "Relevance",
+      "popularity": "Popularity",
+      "recent": "Most recent",
+      "stars": "GitHub stars"
     },
-    "filter": "フィルター",
-    "filterByTags": "タグでフィルタリング",
-    "noTagsAvailable": "利用可能なタグはありません",
-    "clearFilters": "フィルターをクリア",
-    "clearAllFilters": "すべてクリア",
-    "noMatchingTags": "選択したタグに一致する結果はありません",
-    "noMatchingFilters": "選択したフィルターに一致する結果はありません",
-    "category": "カテゴリ",
-    "filterByCategory": "カテゴリでフィルタリング",
-    "noCategoriesAvailable": "利用可能なカテゴリはありません",
-    "allCategories": "すべてのカテゴリ",
+    "filter": "Filter",
+    "filterByTags": "Filter by tags",
+    "noTagsAvailable": "No tags available",
+    "clearFilters": "Clear filters",
+    "clearAllFilters": "Clear all",
+    "noMatchingTags": "No results match the selected tags",
+    "noMatchingFilters": "No results match the selected filters",
+    "category": "Category",
+    "filterByCategory": "Filter by category",
+    "noCategoriesAvailable": "No categories available",
+    "allCategories": "All categories",
     "categories": {
       "LLM": "LLM",
-      "UTILITY": "ユーティリティ",
-      "TOOL": "ツール",
-      "DATA": "データアクセス",
-      "CONNECTOR": "コネクタ",
-      "SEARCH": "検索",
-      "CODE": "コード",
-      "IMAGE": "画像",
-      "AUDIO": "オーディオ",
-      "VIDEO": "ビデオ",
-      "OTHER": "その他"
+      "Utility": "Utility",
+      "Tool": "Tool",
+      "Data Access": "Data Access",
+      "Connector": "Connector",
+      "Search": "Search",
+      "Code": "Code",
+      "Image": "Image",
+      "Audio": "Audio",
+      "Video": "Video",
+      "Other": "Other"
     },
     "card": {
-      "install": "インストール",
-      "installed": "インストール済み",
-      "rate": "評価"
+      "install": "Install",
+      "installed": "Installed",
+      "rate": "Rate",
+      "details": "Details",
+      "unshare": "Unshare",
+      "showMore": "Show More",
+      "showLess": "Show Less",
+      "tabs": {
+        "overview": "Overview",
+        "technical": "Technical",
+        "community": "Community"
+      },
+      "description": "Description",
+      "tags": "Tags",
+      "packageInfo": "Package Information",
+      "package": "Package",
+      "registry": "Registry",
+      "downloads": "Downloads",
+      "command": "Command",
+      "url": "URL",
+      "arguments": "Arguments",
+      "exampleArgs": "Example Args",
+      "environmentVariables": "Environment Variables",
+      "sharedBy": "Shared By",
+      "reviews": "Reviews",
+      "viewReviews": "View {{count}} Reviews",
+      "installationStats": "Installation Statistics",
+      "installedByUsers": "Installed by {{count}} users",
+      "usageCount": "Usage Count"
+    },
+    "registries": {
+      "registry": "Registry",
+      "npm": "NPM (Node.js)",
+      "docker": "Docker",
+      "pypi": "PyPI (Python)",
+      "github": "GitHub",
+      "gitlab": "GitLab"
+    },
+    "dialogs": {
+      "claim": {
+        "title": "Claim Server",
+        "description": "Claim ownership of this server",
+        "repositoryUrl": "Repository URL",
+        "repositoryUrlPlaceholder": "https://github.com/owner/repo",
+        "errors": {
+          "repositoryUrlRequired": "Please provide a repository URL",
+          "githubAuthRequired": "Please connect your GitHub account first",
+          "authenticateFirst": "Please authenticate with GitHub first",
+          "claimFailed": "Failed to claim server",
+          "unexpectedError": "An unexpected error occurred"
+        },
+        "success": {
+          "claimedNotPublished": "Server claimed but not published",
+          "claimedAndPublished": "Server claimed and published successfully!"
+        }
+      },
+      "rate": {
+        "title": "Rate Server",
+        "updateTitle": "Update Rating",
+        "description": "Your rating helps other users find quality servers",
+        "alreadyRated": "You have already rated this server. You can update your rating below.",
+        "rating": "Rating",
+        "comment": "Comment (optional)",
+        "commentPlaceholder": "Share your experience with this server",
+        "submitRating": "Submit Rating",
+        "updateRating": "Update Rating",
+        "submitting": "Submitting...",
+        "checking": "Checking...",
+        "cancel": "Cancel",
+        "errors": {
+          "selectRating": "Please select a rating between 1 and 5 stars"
+        },
+        "success": {
+          "submitted": "Thank you for rating this server!"
+        }
+      },
+      "reviews": {
+        "title": "Reviews for {{serverName}}",
+        "description": "See what others are saying about this server.",
+        "noReviews": "No reviews yet.",
+        "anonymous": "Anonymous",
+        "errors": {
+          "loadFailed": "Failed to load reviews. Please try again later."
+        }
+      },
+      "install": {
+        "enterValue": "Enter value"
+      }
+    },
+    "trending": {
+      "title": "Trending Servers",
+      "mostActiveServers": "Most active servers",
+      "lastDays": "Last 30 days",
+      "sortBy": {
+        "installs": "Installs",
+        "calls": "Calls"
+      }
+    },
+    "packageType": "Package Type",
+    "source": "Source",
+    "registry": {
+      "addServer": {
+        "button": "Add Server"
+      }
+    }
+  },
+  "registry": {
+    "addServer": {
+      "button": "Add Server"
     }
   }
 }

@@ -16,6 +16,17 @@
     "title": "おすすめユーザー",
     "empty": "おすすめユーザーが見つかりません"
   },
+  "install": {
+    "title": "サーバーをインストール",
+    "description": "このMCPサーバーを設定してインストールします。",
+    "name": "サーバー名",
+    "command": "コマンド",
+    "args": "引数（スペース区切り）",
+    "env": "環境変数",
+    "url": "サーバーURL",
+    "successDescription": "サーバーが正常にインストールされました",
+    "errorDescription": "サーバーのインストールに失敗しました"
+  },
   "search": {
     "placeholder": "検索...",
     "noResults": "結果が見つかりません",

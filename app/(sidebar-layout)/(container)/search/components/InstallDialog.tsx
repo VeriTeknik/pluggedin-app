@@ -1,10 +1,13 @@
-import { useEffect, useState } from 'react';
+import { Package } from 'lucide-react';
+import { useEffect, useMemo,useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { mutate } from 'swr';
 
 import { trackServerInstallation } from '@/app/actions/mcp-server-metrics'; // Import trackServerInstallation
 import { createMcpServer } from '@/app/actions/mcp-servers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -48,11 +51,41 @@ export function InstallDialog({
   onOpenChange,
   serverData,
 }: InstallDialogProps) {
-  // Load 'discover' as the default namespace
-  const { t } = useTranslation('discover');
+  // Load 'discover' as the default namespace and 'common' for shared translations
+  const { t } = useTranslation(['discover', 'common']);
   const { currentProfile } = useProfiles();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Parse environment variables to extract keys and descriptions
+  const envInfo = useMemo(() => {
+    if (!serverData.env) return [];
+    return serverData.env.split('\n')
+      .filter(line => line.includes('='))
+      .map(line => {
+        const [keyValue, ...descParts] = line.split('#');
+        const [key] = keyValue.split('=');
+        const description = descParts.join('#').trim();
+        return {
+          key: key.trim(),
+          description: description || undefined
+        };
+      });
+  }, [serverData.env]);
+
+  // Extract just the keys for backward compatibility
+  const envKeys = useMemo(() => {
+    return envInfo.map(info => info.key);
+  }, [envInfo]);
+
+  // Initialize form with environment variables as separate fields
+  const defaultEnvValues = useMemo(() => {
+    const values: Record<string, string> = {};
+    envKeys.forEach(key => {
+      values[`env_${key}`] = '';
+    });
+    return values;
+  }, [envKeys]);
 
   const form = useForm({
     defaultValues: {
@@ -63,11 +96,17 @@ export function InstallDialog({
       env: serverData.env,
       url: serverData.url,
       type: serverData.type,
+      ...defaultEnvValues,
     },
   });
 
   useEffect(() => {
     if (open) {
+      const envValues: Record<string, string> = {};
+      envKeys.forEach(key => {
+        envValues[`env_${key}`] = '';
+      });
+      
       form.reset({
         name: serverData.name,
         description: serverData.description,
@@ -76,40 +115,36 @@ export function InstallDialog({
         env: serverData.env,
         url: serverData.url,
         type: serverData.type,
+        ...envValues,
       });
     }
-  }, [open, serverData, form]);
+  }, [open, serverData, form, envKeys]);
 
-  const onSubmit = async (values: {
-    name: string;
-    description: string;
-    command: string;
-    args: string;
-    env: string;
-    url: string | undefined;
-    type: McpServerType;
-  }) => {
+  const onSubmit = async (values: any) => {
     if (!currentProfile?.uuid) {
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // Extract environment variables from form fields
+      const envObject: Record<string, string> = {};
+      Object.keys(values).forEach(key => {
+        if (key.startsWith('env_')) {
+          const envKey = key.replace('env_', '');
+          if (values[key]) {
+            envObject[envKey] = values[key];
+          }
+        }
+      });
+
       const result = await createMcpServer({
         name: values.name,
         profileUuid: currentProfile.uuid,
         description: values.description,
         command: values.command,
         args: values.args.trim().split(/\s+/).filter(Boolean),
-        env: Object.fromEntries(
-          values.env
-            .split('\n')
-            .filter((line) => line.includes('='))
-            .map((line) => {
-              const [key, ...values] = line.split('=');
-              return [key.trim(), values.join('=').trim()];
-            })
-        ),
+        env: envObject,
         type: values.type,
         url: values.url,
         source: serverData.source,
@@ -123,6 +158,11 @@ export function InstallDialog({
         });
 
         // Track the installation after successful creation
+        const serverId = serverData.external_id || result.data?.uuid || serverData.name;
+        
+        // Analytics tracking removed - will be replaced with new analytics service
+        
+        // Track to metrics (existing functionality)
         if (result.data?.uuid && serverData.external_id && serverData.source) {
           await trackServerInstallation({
             serverUuid: result.data.uuid,
@@ -170,9 +210,26 @@ export function InstallDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{t('install.title')}</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            {t('install.title')}
+            {serverData.source === McpServerSource.REGISTRY && (
+              <Badge className="bg-blue-600 hover:bg-blue-700">
+                <Package className="h-3 w-3 mr-1" />
+                Registry
+              </Badge>
+            )}
+          </DialogTitle>
           <DialogDescription>{t('install.description')}</DialogDescription>
         </DialogHeader>
+
+        {serverData.source === McpServerSource.REGISTRY && (
+          <Alert className="mb-4">
+            <Package className="h-4 w-4" />
+            <AlertDescription>
+              {t('install.registryNotice', 'This server is from the official Plugged.in Registry and has been verified for compatibility.')}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -234,19 +291,36 @@ export function InstallDialog({
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="env"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('install.env')}</FormLabel>
-                      <FormControl>
-                        <Textarea {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {envInfo.length > 0 && (
+                  <div className="space-y-4">
+                    <FormLabel>{t('install.env')}</FormLabel>
+                    {envInfo.map((env) => (
+                      <FormField
+                        key={env.key}
+                        control={form.control}
+                        name={`env_${env.key}` as any}
+                        render={({ field }) => (
+                          <FormItem>
+                            <div className="space-y-2">
+                              <div className="grid grid-cols-3 gap-4 items-center">
+                                <FormLabel className="text-sm font-mono">{env.key}</FormLabel>
+                                <FormControl className="col-span-2">
+                                  <Input {...field} placeholder="Enter value" />
+                                </FormControl>
+                              </div>
+                              {env.description && (
+                                <p className="text-sm text-muted-foreground ml-1">
+                                  {env.description}
+                                </p>
+                              )}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ))}
+                  </div>
+                )}
               </>
             ) : (
               <FormField
@@ -270,10 +344,10 @@ export function InstallDialog({
                 variant="outline"
                 onClick={() => onOpenChange(false)}
               >
-                {t('common.cancel')}
+                {t('common:common.cancel')}
               </Button>
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? t('common.installing') : t('common.install')}
+                {isSubmitting ? t('common:common.installing') : t('common:common.install')}
               </Button>
             </div>
           </form>

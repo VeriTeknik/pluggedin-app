@@ -22,7 +22,7 @@ export interface McpIndex {
   package_name: string | null;
   command: string;
   args: string[];
-  envs: string[];
+  envs: string[] | Array<{ name: string; description?: string }>;
   github_stars: number | null;
   package_registry: string | null;
   package_download_count: number | null;
@@ -40,6 +40,11 @@ export interface McpIndex {
   installation_count?: number; // Number of installations
   shared_by?: string | null; // Username or name of the profile that shared the server
   shared_by_profile_url?: string | null; // URL to the profile of the user who shared the server
+  // Claim information for community servers
+  is_claimed?: boolean;
+  claimed_by_user_id?: string | null;
+  claimed_at?: string | null;
+  registry_server_uuid?: string | null;
 }
 
 export interface SearchIndex {
@@ -54,64 +59,3 @@ export interface PaginatedSearchResult {
   hasMore: boolean;
 }
 
-export interface SmitheryServer {
-  qualifiedName: string;
-  displayName: string;
-  description: string;
-  homepage: string;
-  useCount: number;
-  isDeployed: boolean;
-  createdAt: string;
-}
-
-export interface SmitheryPagination {
-  currentPage: number;
-  pageSize: number;
-  totalPages: number;
-  totalCount: number;
-}
-
-export interface SmitherySearchResponse {
-  servers: SmitheryServer[];
-  pagination: SmitheryPagination;
-}
-
-export interface SmitheryServerDetail {
-  qualifiedName: string;
-  displayName: string;
-  deploymentUrl: string;
-  connections: Array<{
-    type: string;
-    url?: string;
-    configSchema: Record<string, any>;
-  }>;
-}
-
-export interface NpmPackage {
-  name: string;
-  version: string;
-  description: string;
-  repository?: {
-    type: string;
-    url: string;
-  };
-  homepage?: string;
-  downloads: number;
-  keywords: string[];
-}
-
-export interface NpmSearchResponse {
-  objects: Array<{
-    package: NpmPackage;
-    score: {
-      final: number;
-      detail: {
-        quality: number;
-        popularity: number;
-        maintenance: number;
-      };
-    };
-    searchScore: number;
-  }>;
-  total: number;
-}

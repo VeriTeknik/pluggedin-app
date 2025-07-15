@@ -12,6 +12,7 @@ import {
   timestamp,
   unique,
   uuid,
+  varchar,
 } from 'drizzle-orm/pg-core';
 
 import { locales } from '@/i18n/config';
@@ -48,10 +49,8 @@ export enum McpServerType {
 
 export enum McpServerSource {
   PLUGGEDIN = 'PLUGGEDIN',
-  SMITHERY = 'SMITHERY',
-  NPM = 'NPM',
-  GITHUB = 'GITHUB',
   COMMUNITY = 'COMMUNITY',
+  REGISTRY = 'REGISTRY',
 }
 
 export const mcpServerStatusEnum = pgEnum(
@@ -341,11 +340,14 @@ export const mcpServersTable = pgTable(
       .default(McpServerSource.PLUGGEDIN),
     external_id: text('external_id'),
     notes: text('notes'),
+    config: jsonb('config'),
   },
   (table) => ({ // Use object syntax for indexes
     mcpServersStatusIdx: index('mcp_servers_status_idx').on(table.status),
     mcpServersProfileUuidIdx: index('mcp_servers_profile_uuid_idx').on(table.profile_uuid),
     mcpServersTypeIdx: index('mcp_servers_type_idx').on(table.type),
+    // Composite index for profile + status queries
+    mcpServersProfileStatusIdx: index('idx_mcp_servers_profile_status').on(table.profile_uuid, table.status),
   })
 );
 
@@ -482,6 +484,8 @@ export const serverInstallationsTable = pgTable(
     serverInstallationsServerUuidIdx: index('server_installations_server_uuid_idx').on(table.server_uuid),
     serverInstallationsExternalIdSourceIdx: index('server_installations_external_id_source_idx').on(table.external_id, table.source),
     serverInstallationsProfileUuidIdx: index('server_installations_profile_uuid_idx').on(table.profile_uuid),
+    // Composite index for profile + server queries
+    serverInstallationsProfileServerIdx: index('idx_server_installations_profile_server').on(table.profile_uuid, table.server_uuid),
   })
 );
 
@@ -493,6 +497,51 @@ export const serverInstallationsRelations = relations(serverInstallationsTable, 
   profile: one(profilesTable, {
     fields: [serverInstallationsTable.profile_uuid],
     references: [profilesTable.uuid],
+  }),
+}));
+
+// --- MCP Activity Table ---
+// Tracks all MCP server activity for trending calculations
+export const mcpActivityTable = pgTable(
+  'mcp_activity',
+  {
+    id: serial('id').primaryKey(),
+    profile_uuid: uuid('profile_uuid').notNull(),
+    server_uuid: uuid('server_uuid'), // For local servers
+    external_id: text('external_id'), // For registry servers
+    source: text('source').notNull(), // 'REGISTRY' or 'COMMUNITY'
+    action: text('action').notNull(), // 'install', 'uninstall', 'tool_call', 'resource_read', 'prompt_get'
+    item_name: text('item_name'), // Name of tool/resource/prompt
+    created_at: timestamp('created_at').defaultNow().notNull(),
+  },
+  (table) => {
+    return {
+      serverActivityIdx: index('idx_server_activity').on(
+        table.server_uuid,
+        table.source,
+        table.created_at
+      ),
+      externalActivityIdx: index('idx_external_activity').on(
+        table.external_id,
+        table.source,
+        table.created_at
+      ),
+      actionTimeIdx: index('idx_action_time').on(
+        table.action,
+        table.created_at
+      ),
+    };
+  }
+);
+
+export const mcpActivityRelations = relations(mcpActivityTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [mcpActivityTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  mcpServer: one(mcpServersTable, {
+    fields: [mcpActivityTable.server_uuid],
+    references: [mcpServersTable.uuid],
   }),
 }));
 
@@ -588,6 +637,8 @@ export const notificationsTable = pgTable("notifications", {
   notificationsProfileUuidIdx: index('notifications_profile_uuid_idx').on(table.profile_uuid),
   notificationsReadIdx: index('notifications_read_idx').on(table.read),
   notificationsCreatedAtIdx: index('notifications_created_at_idx').on(table.created_at),
+  // Composite index for profile + read + created queries
+  notificationsProfileReadCreatedIdx: index('idx_notifications_profile_read_created').on(table.profile_uuid, table.read, table.created_at),
 }));
 
 export const notificationsRelations = relations(notificationsTable, ({ one }) => ({
@@ -944,6 +995,13 @@ export const sharedMcpServersTable = pgTable(
       .notNull()
       .default(sql`'{}'::jsonb`),
     requires_credentials: boolean('requires_credentials').default(false).notNull(),
+    // Claim fields
+    is_claimed: boolean('is_claimed').default(false).notNull(),
+    claimed_by_user_id: text('claimed_by_user_id')
+      .references(() => users.id, { onDelete: 'set null' }),
+    claimed_at: timestamp('claimed_at', { withTimezone: true }),
+    registry_server_uuid: uuid('registry_server_uuid')
+      .references(() => registryServersTable.uuid, { onDelete: 'set null' }),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -955,6 +1013,11 @@ export const sharedMcpServersTable = pgTable(
     sharedMcpServersProfileUuidIdx: index('shared_mcp_servers_profile_uuid_idx').on(table.profile_uuid),
     sharedMcpServersServerUuidIdx: index('shared_mcp_servers_server_uuid_idx').on(table.server_uuid),
     sharedMcpServersIsPublicIdx: index('shared_mcp_servers_is_public_idx').on(table.is_public),
+    sharedMcpServersIsClaimedIdx: index('shared_mcp_servers_is_claimed_idx').on(table.is_claimed),
+    sharedMcpServersClaimedByIdx: index('shared_mcp_servers_claimed_by_idx').on(table.claimed_by_user_id),
+    // Composite indexes for performance
+    sharedMcpServersPublicProfileIdx: index('idx_shared_mcp_servers_public_profile').on(table.is_public, table.profile_uuid),
+    sharedMcpServersPublicCreatedIdx: index('idx_shared_mcp_servers_public_created').on(table.is_public, table.created_at),
   })
 );
 
@@ -966,6 +1029,14 @@ export const sharedMcpServersRelations = relations(sharedMcpServersTable, ({ one
   server: one(mcpServersTable, {
     fields: [sharedMcpServersTable.server_uuid],
     references: [mcpServersTable.uuid],
+  }),
+  claimedBy: one(users, {
+    fields: [sharedMcpServersTable.claimed_by_user_id],
+    references: [users.id],
+  }),
+  registryServer: one(registryServersTable, {
+    fields: [sharedMcpServersTable.registry_server_uuid],
+    references: [registryServersTable.uuid],
   }),
 }));
 
@@ -1037,3 +1108,215 @@ export const embeddedChatsRelations = relations(embeddedChatsTable, ({ one }) =>
 }));
 
 // Removed duplicate profilesRelationsWithSocial definition
+
+// ===== Registry Servers Tables =====
+
+export const registryServersTable = pgTable(
+  'registry_servers',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    registry_id: text('registry_id').unique(), // Official registry ID when published
+    name: text('name').notNull(), // e.g., "io.github.owner/repo"
+    github_owner: text('github_owner').notNull(),
+    github_repo: text('github_repo').notNull(),
+    repository_url: text('repository_url').notNull(),
+    description: text('description'),
+    is_claimed: boolean('is_claimed').default(false).notNull(),
+    is_published: boolean('is_published').default(false).notNull(), // Whether it's in official registry
+    claimed_by_user_id: text('claimed_by_user_id')
+      .references(() => users.id, { onDelete: 'set null' }),
+    claimed_at: timestamp('claimed_at', { withTimezone: true }),
+    published_at: timestamp('published_at', { withTimezone: true }),
+    metadata: jsonb('metadata'), // Full server data
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    registryServersGithubIdx: index('registry_servers_github_idx').on(table.github_owner, table.github_repo),
+    registryServersClaimedByIdx: index('registry_servers_claimed_by_idx').on(table.claimed_by_user_id),
+    registryServersIsPublishedIdx: index('registry_servers_is_published_idx').on(table.is_published),
+  })
+);
+
+export const serverClaimRequestsTable = pgTable(
+  'server_claim_requests',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    server_uuid: uuid('server_uuid')
+      .notNull()
+      .references(() => registryServersTable.uuid, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    status: text('status').notNull().default('pending'), // 'pending', 'approved', 'rejected'
+    github_username: text('github_username'), // From OAuth account
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    processed_at: timestamp('processed_at', { withTimezone: true }),
+  },
+  (table) => ({
+    serverClaimRequestsServerIdx: index('server_claim_requests_server_idx').on(table.server_uuid),
+    serverClaimRequestsUserIdx: index('server_claim_requests_user_idx').on(table.user_id),
+    serverClaimRequestsStatusIdx: index('server_claim_requests_status_idx').on(table.status),
+  })
+);
+
+// Relations for registry servers
+export const registryServersRelations = relations(registryServersTable, ({ one, many }) => ({
+  claimedBy: one(users, {
+    fields: [registryServersTable.claimed_by_user_id],
+    references: [users.id],
+  }),
+  claimRequests: many(serverClaimRequestsTable),
+}));
+
+export const serverClaimRequestsRelations = relations(serverClaimRequestsTable, ({ one }) => ({
+  server: one(registryServersTable, {
+    fields: [serverClaimRequestsTable.server_uuid],
+    references: [registryServersTable.uuid],
+  }),
+  user: one(users, {
+    fields: [serverClaimRequestsTable.user_id],
+    references: [users.id],
+  }),
+}));
+
+// ===== MCP Sessions Tables (for Streamable HTTP) =====
+
+export const mcpSessionsTable = pgTable(
+  'mcp_sessions',
+  {
+    id: varchar('id', { length: 128 }).primaryKey(),
+    server_uuid: uuid('server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    profile_uuid: uuid('profile_uuid')
+      .notNull()
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    session_data: jsonb('session_data').notNull().default({}),
+    last_activity: timestamp('last_activity', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expires_at: timestamp('expires_at', { withTimezone: true })
+      .notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    mcpSessionsServerIdx: index('idx_mcp_sessions_server_uuid').on(table.server_uuid),
+    mcpSessionsExpiresIdx: index('idx_mcp_sessions_expires_at').on(table.expires_at),
+    mcpSessionsProfileIdx: index('idx_mcp_sessions_profile_uuid').on(table.profile_uuid),
+  })
+);
+
+export const transportConfigsTable = pgTable(
+  'transport_configs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    server_uuid: uuid('server_uuid')
+      .notNull()
+      .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+    transport_type: varchar('transport_type', { length: 50 }).notNull(),
+    config: jsonb('config').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    transportConfigsServerIdx: index('idx_transport_configs_server_uuid').on(table.server_uuid),
+  })
+);
+
+// Relations for MCP sessions
+export const mcpSessionsRelations = relations(mcpSessionsTable, ({ one }) => ({
+  server: one(mcpServersTable, {
+    fields: [mcpSessionsTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+  profile: one(profilesTable, {
+    fields: [mcpSessionsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
+export const transportConfigsRelations = relations(transportConfigsTable, ({ one }) => ({
+  server: one(mcpServersTable, {
+    fields: [transportConfigsTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// OAuth sessions table for MCP server OAuth flows
+export const mcpOauthSessionsTable = pgTable(
+  'mcp_oauth_sessions',
+  {
+    id: serial('id').primaryKey(),
+    state: text('state').notNull().unique(),
+    server_uuid: uuid('server_uuid').notNull(),
+    profile_uuid: uuid('profile_uuid').notNull(),
+    callback_url: text('callback_url').notNull(),
+    provider: text('provider').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    expires_at: timestamp('expires_at', { withTimezone: true })
+      .notNull(),
+  },
+  (table) => ({
+    mcpOauthSessionsStateIdx: index('idx_mcp_oauth_sessions_state').on(table.state),
+    mcpOauthSessionsExpiresIdx: index('idx_mcp_oauth_sessions_expires_at').on(table.expires_at),
+  })
+);
+
+// Relations for OAuth sessions
+export const mcpOauthSessionsRelations = relations(mcpOauthSessionsTable, ({ one }) => ({
+  server: one(mcpServersTable, {
+    fields: [mcpOauthSessionsTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+  profile: one(profilesTable, {
+    fields: [mcpOauthSessionsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
+// Registry OAuth sessions table for secure token storage
+export const registryOAuthSessions = pgTable(
+  'registry_oauth_sessions',
+  {
+    id: serial('id').primaryKey(),
+    userId: varchar('user_id', { length: 255 })
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    sessionTokenHash: varchar('session_token_hash', { length: 64 }).notNull().unique(),
+    oauthToken: text('oauth_token').notNull(), // Consider encrypting in production
+    githubUsername: varchar('github_username', { length: 255 }).notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  },
+  (table) => ({
+    registryOAuthSessionsUserIdx: index('idx_registry_oauth_sessions_user_id').on(table.userId),
+    registryOAuthSessionsTokenIdx: index('idx_registry_oauth_sessions_token_hash').on(table.sessionTokenHash),
+    registryOAuthSessionsExpiresIdx: index('idx_registry_oauth_sessions_expires_at').on(table.expiresAt),
+  })
+);
+
+// Relations for registry OAuth sessions
+export const registryOAuthSessionsRelations = relations(registryOAuthSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [registryOAuthSessions.userId],
+    references: [users.id],
+  }),
+}));

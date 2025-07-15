@@ -46,5 +46,10 @@ export async function authenticateApiKey(request: Request) {
     success: true,
     apiKey: apiKeyRecord[0],
     activeProfile,
+    user: {
+      id: activeProfile.userId,
+      email: activeProfile.userEmail,
+      username: activeProfile.username,
+    },
   };
 }

@@ -1,0 +1,399 @@
+{
+    "wizard": {
+      "title": "Kayıt Defterine Sunucu Ekle",
+      "cancelTitle": "Sihirbazı İptal Et",
+      "cancelDescription": "İptal etmek istediğinizden emin misiniz? İlerlemeniz kaybolacak.",
+      "confirmCancel": "Evet, İptal Et",
+      "continueButton": "Devam Et",
+      "operationInProgress": "İşlem devam ediyor",
+      "waitForOperation": "Mevcut işlemin tamamlanmasını bekleyin.",
+      "success": "Başarılı!",
+      "successDescription": "Sunucu başarıyla kayıt defterine eklendi."
+    },
+    "steps": {
+      "github": {
+        "title": "GitHub Deposu",
+        "description": "GitHub depo URL'sini girin"
+      },
+      "ownership": {
+        "title": "Sahiplik",
+        "description": "Bu sunucuyu talep edin veya topluluğa ekleyin"
+      },
+      "configuration": {
+        "title": "Yapılandırma",
+        "description": "Ortam değişkenlerini yapılandırın"
+      },
+      "discovery": {
+        "title": "Test Keşfi",
+        "description": "Sunucu keşfi ve yeteneklerini test edin"
+      },
+      "submit": {
+        "title": "Gönder",
+        "description": "Kayıt defterine gönder"
+      }
+    },
+    "navigation": {
+      "previous": "Önceki",
+      "next": "Sonraki"
+    },
+    "addServer": {
+      "button": "Kayıt Defterine Ekle",
+      "title": "Sunucuyu Kayıt Defterine Ekle",
+      "description": {
+        "ownership": "Bu sunucuyla ilişkinizi belirleyerek başlayalım.",
+        "unclaimed": "Topluluğun keşfetmesine yardımcı olmak için bir sunucu ekleyin. Sahibi daha sonra talep edebilir.",
+        "claimed": "Sahibi olarak, bu sunucuyu doğrudan kayıt defterine yayınlayabilirsiniz.",
+        "verifying": "Sahipliğiniz doğrulanıyor...",
+        "success": "Sunucu başarıyla eklendi!"
+      },
+      "success": {
+        "unclaimed": "Sunucu topluluk kayıt defterine eklendi. Sahibi daha sonra talep edebilir.",
+        "claimed": "Sunucu kayıt defterine başarıyla yayınlandı!"
+      }
+    },
+    "github": {
+      "inputStep": {
+        "title": "GitHub Deposu Ekle",
+        "description": "MCP sunucunuzu içeren GitHub deposunun URL'sini girin. Her şeyi doğru şekilde yapılandırmanıza yardımcı olmak için analiz edeceğiz.",
+        "label": "Depo URL'si",
+        "placeholder": "https://github.com/owner/repository",
+        "validate": "Doğrula",
+        "validating": "Doğrulanıyor",
+        "supportedFormats": "Desteklenen formatlar: https://github.com/owner/repo, git@github.com:owner/repo, veya owner/repo",
+        "errors": {
+          "invalidUrl": "Lütfen geçerli bir GitHub depo URL'si girin",
+          "notFound": "Depo bulunamadı. URL'yi kontrol edin ve tekrar deneyin.",
+          "rateLimited": "GitHub API hız sınırı aşıldı. Lütfen daha sonra tekrar deneyin.",
+          "accessDenied": "Depoya erişim başarısız. Özel olabilir veya URL yanlış olabilir."
+        },
+        "privateRepoNote": "Not: Özel depolar eklenebilir, ancak yalnızca GitHub'da depoya erişimi olan kullanıcılar tarafından erişilebilir olacaktır.",
+        "repository": {
+          "private": "Özel depo",
+          "stars": "{{count}} yıldız",
+          "alreadyInRegistry": "Bu depo zaten kayıt defterinde!",
+          "claimed": "Talep Edildi",
+          "community": "Topluluk",
+          "version": "Sürüm: {{version}}"
+        }
+      }
+    },
+    "ownership": {
+      "step": {
+        "title": "Sunucu Sahipliği",
+        "description": "Bu sunucuyu kayıt defterine nasıl eklemek istediğinizi seçin.",
+        "repository": "Depo:",
+        "privateRepo": "(Özel depo)",
+        "alreadyExists": "Bu sunucu zaten kayıt defterinde!",
+        "claimedServer": "Talep Edildi",
+        "communityServer": "Topluluk",
+        "updateExisting": "Eğer sahibiyseniz, kopya oluşturmak yerine mevcut sunucuyu güncelleyebilirsiniz.",
+        "canClaim": "Depo sahibiyseniz bu topluluk sunucusunu talep edebilirsiniz."
+      },
+      "claim": {
+        "title": "Bu sunucuyu talep et",
+        "recommended": "(Önerilen)",
+        "alreadyClaimed": "(Zaten talep edildi)",
+        "description": "Sahipliği doğrula ve premium özelliklerin kilidini aç",
+        "alreadyClaimedDesc": "Bu sunucu zaten sahibi tarafından talep edildi",
+        "benefits": {
+          "verified": "Sunucunuzda doğrulanmış rozet",
+          "analytics": "Analitik ve içgörülere erişim",
+          "priority": "Arama sonuçlarında öncelik",
+          "updates": "GitHub'dan doğrudan kayıt defteri güncellemeleri",
+          "attribution": "Resmi sahiplik atfı"
+        },
+        "authenticated": "Kimlik doğrulandı:",
+        "verifying": "Depo sahipliği doğrulanıyor...",
+        "verificationFailed": "Bu depoya yönetici erişiminiz yok. Lütfen bunun yerine \"Topluluğa ekle\"yi seçin.",
+        "verificationSuccess": "Depo sahipliği doğrulandı!",
+        "authRequired": "Sunucuları talep etmek için GitHub kimlik doğrulaması gereklidir",
+        "authFailed": "Kimlik doğrulama başarısız",
+        "popupBlocked": "Açılır pencere engellendi",
+        "allowPopups": "GitHub ile kimlik doğrulaması yapmak için lütfen bu site için açılır pencerelere izin verin"
+      },
+      "community": {
+        "title": "Topluluğa ekle",
+        "alreadyInRegistry": "(Zaten kayıt defterinde)",
+        "description": "Sahiplik doğrulaması olmadan gönder",
+        "alreadyInRegistryDesc": "Bu sunucu zaten kayıt defterinde",
+        "benefits": {
+          "quick": "Hızlı gönderim süreci",
+          "noAuth": "Kimlik doğrulama gerekmiyor",
+          "available": "Tüm kullanıcılar için kullanılabilir",
+          "canBeClaimed": "Daha sonra sahibi tarafından talep edilebilir"
+        }
+      },
+      "verificationFailed": "Sahiplik doğrulaması başarısız",
+      "ownershipMessage": "Bu depoya sahiplik erişiminiz yok. Depo '{{owner}}' tarafından sahiplenildi ancak siz @{{username}} olarak oturum açtınız. Yalnızca depo sahipleri veya yönetici erişimi olan organizasyon üyeleri sunucuları talep edebilir.",
+      "serverErrorMessage": "Bu depoya sahiplik erişiminiz yok. Depo '{{owner}}' tarafından sahiplenildi ancak siz @{{username}} olarak oturum açtınız. Yalnızca depo sahipleri veya yönetici erişimi olan organizasyon üyeleri sunucuları talep edebilir.",
+      "actions": {
+        "title": "Ne yapabilirsiniz?",
+        "ifOwnerClaimed": [
+          "Bu depoya sahipseniz, mevcut sunucuyu güncelleyin",
+          "Mevcut sunucuyu kayıt defterinden profilinize aktarın",
+          "Bir sorun olduğunu düşünüyorsanız mevcut sahiple iletişime geçin"
+        ],
+        "ifOwnerUnclaimed": [
+          "Bu depoya sahipseniz, mevcut topluluk sunucusunu talep edebilirsiniz",
+          "Mevcut sunucuyu kayıt defterinden profilinize aktarın",
+          "İyileştirmeleriniz varsa topluluk sunucusunu güncelleyin"
+        ]
+      },
+      "question": "Bu sunucuya sahip misiniz?",
+      "owned": "Evet, bu sunucuya sahibim",
+      "owned.description": "Depo sahibiyim ve kayıt defterine yayınlamak istiyorum",
+      "notOwned": "Hayır, topluluk için ekliyorum",
+      "notOwned.description": "Bu sunucuyu buldum ve başkalarının keşfetmesine yardımcı olmak istiyorum"
+    },
+    "envConfig": {
+      "title": "Ortam Değişkenleri",
+      "description": "Bu MCP sunucusu tarafından gerekli ortam değişkenlerini yapılandırın. Kullanıcılar sunucuyu yüklediklerinde bunları özelleştirebilir.",
+      "loading": "Ortam değişkenleri algılanıyor...",
+      "detectedCommand": {
+        "title": "Algılanan MCP Yapılandırması",
+        "description": "Depodan algılanan komut ve argümanlar",
+        "command": "Komut:",
+        "args": "Argümanlar:"
+      },
+      "info": "Ayrıntılarını düzenlemek için herhangi bir değişkene çift tıklayın. Bu değişkenler kayıt defterinde meta veri olarak saklanacaktır.",
+      "noVarsAlert": "Ortam değişkeni algılanmadı. Gerekirse manuel olarak ekleyebilirsiniz.",
+      "requiredVarsAlert": "Lütfen tüm gerekli değişkenleri doldurun",
+      "variable": {
+        "name": "Değişken Adı",
+        "namePlaceholder": "DEGISKEN_ADI",
+        "description": "Açıklama (isteğe bağlı)",
+        "descriptionPlaceholder": "Açıklama (isteğe bağlı)",
+        "required": "Gerekli",
+        "secret": "Gizli",
+        "modified": "Değiştirildi",
+        "value": "Değer",
+        "valuePlaceholder": "{{name}} girin",
+        "defaultValue": "Varsayılan: {{value}}",
+        "source": {
+          "readme": "README",
+          "packageJson": "package.json",
+          "envExample": ".env.example",
+          "code": "Kod",
+          "registry": "Kayıt Defteri",
+          "args": "Manuel",
+          "detected": "Otomatik algılandı",
+          "manual": "Manuel"
+        },
+        "defaultDescription": "Ortam değişkeni",
+        "fromSource": "{{source}} kaynağından ortam değişkeni",
+        "apiKeyFor": "{{header}} başlığı için API anahtarı",
+        "oauthClientId": "OAuth İstemci Kimliği",
+        "githubToken": "API erişimi için GitHub kişisel erişim jetonu",
+        "notionApiKey": "Notion entegrasyon jetonu",
+        "slackBotToken": "Slack bot kullanıcı OAuth jetonu",
+        "openaiApiKey": "OpenAI API anahtarı",
+        "apiKey": "API anahtarı",
+        "noVarsDetected": "Ortam değişkeni algılanmadı. Gerekirse manuel olarak ekleyebilirsiniz."
+      },
+      "actions": {
+        "edit": "Değişkeni düzenle",
+        "delete": "{{name}} sil",
+        "save": "Değişiklikleri kaydet",
+        "cancel": "Düzenlemeyi iptal et",
+        "reset": "Orijinaline sıfırla",
+        "addVariable": "Değişken Ekle"
+      },
+      "dialog": {
+        "deleteTitle": "Ortam Değişkenini Sil",
+        "deleteDescription": "\"{{name}}\" keşfedilen değişkenini silmek istediğinizden emin misiniz? Bu {{source}} kaynağından algılandı ve sunucunun düzgün çalışması için gerekli olabilir.",
+        "deleteCancel": "İptal",
+        "deleteConfirm": "Sil"
+      },
+      "toast": {
+        "detected": "Ortam değişkenleri algılandı",
+        "detectedDescription": "{{count}} ortam değişken{{plural}} bulundu",
+        "detectionFailed": "Algılama başarısız",
+        "detectionFailedDescription": "Ortam değişkenleri otomatik olarak algılanamadı"
+      },
+      "securityNotice": "\"Gizli\" olarak işaretlenen ortam değişkenleri şifrelenecektir. Gösterilen varsayılan değerler depodan alınan örneklerdir - bunları gerçek değerlerinizle değiştirin."
+    },
+    "discovery": {
+      "title": "Sunucu Keşfini Test Et",
+      "description": "Taşıma türlerini seçin ve sunucunun doğru çalıştığını doğrulamak için bir keşif testi çalıştırın.",
+      "notStarted": "Sunucu keşfini test etmek için aşağıdaki düğmeye tıklayın.",
+      "testButton": "Sunucu Keşfini Test Et",
+      "testing": "Sunucu keşfi test ediliyor...",
+      "transport": {
+        "title": "Taşıma Türlerini Seçin",
+        "description": "Bu sunucunun desteklediği taşıma yöntemlerini seçin",
+        "stdio": {
+          "label": "STDIO",
+          "description": "Yerel komut satırı yürütme"
+        },
+        "http": {
+          "label": "Streamable HTTP",
+          "description": "Akış desteği ile modern HTTP taşıması"
+        },
+        "docker": {
+          "label": "Docker",
+          "description": "Konteyner tabanlı dağıtım"
+        },
+        "detecting": "Paket yapılandırmaları algılanıyor...",
+        "confidence": "%{{percent}} güven",
+        "source": "{{source}} aracılığıyla"
+      },
+      "test": {
+        "configTitle": "Test Yapılandırması",
+        "activeTransport": "Test için Aktif Taşıma",
+        "repository": "Depo:",
+        "command": "Komut:",
+        "package": "Paket:",
+        "image": "İmaj:",
+        "url": "URL:",
+        "headers": "Başlıklar:",
+        "headersConfigured": "{{count}} yapılandırıldı",
+        "noUrlDetected": "URL algılanmadı",
+        "confidence": "Algılama Güveni:",
+        "envVars": "Ortam Değişkenleri:",
+        "envVarsConfigured": "{{count}} yapılandırıldı"
+      },
+      "button": {
+        "test": "{{transport}} Keşfini Test Et",
+        "testing": "{{transport}} Sunucusu Test Ediliyor..."
+      },
+      "output": {
+        "title": "Keşif Çıktısı",
+        "tools": "Araçlar",
+        "resources": "Kaynaklar",
+        "prompts": "İstekler",
+        "none": "Hiçbiri"
+      },
+      "results": {
+        "success": "Keşif başarılı!",
+        "successDescription": "{{tools}} araç, {{resources}} kaynak ve {{prompts}} istek bulundu",
+        "failed": "Keşif başarısız",
+        "failedDescription": "Sunucu yetenekleri keşfedilemedi",
+        "capabilities": "Keşfedilen Yetenekler",
+        "noToolsDiscovered": "Araç keşfedilmedi",
+        "noResourcesDiscovered": "Kaynak keşfedilmedi",
+        "noPromptsDiscovered": "İstek keşfedilmedi",
+        "capabilitiesSummary": "{{total}} yetenek bulundu: {{tools}} araç, {{resources}} kaynak, {{prompts}} istek"
+      },
+      "toast": {
+        "configDetected": "Yapılandırma algılandı!",
+        "detectionError": "Algılama hatası",
+        "detectionErrorDesc": "GitHub'dan paket yapılandırması algılanamadı",
+        "profileNotFound": "Profil bulunamadı",
+        "profileNotFoundDesc": "Lütfen önce bir profil seçin",
+        "testFailed": "Keşif testi başarısız"
+      },
+      "streaming": {
+        "title": "{{serverName}} Test Ediliyor",
+        "discovering": "(Keşfediliyor...)",
+        "connected": "Keşif akışına bağlanıldı...",
+        "started": "=== MCP Keşfi Başlatıldı ===",
+        "serverUuid": "Sunucu UUID: {{uuid}}",
+        "fetchingConfig": "Veritabanından sunucu yapılandırması alınıyor...",
+        "foundConfig": "{{name}} için sunucu yapılandırması bulundu",
+        "decrypting": "Sunucu yapılandırması şifre çözülüyor...",
+        "discoveringTools": "[İLERLEME] Araçlar keşfediliyor...",
+        "discoveredTools": "{{count}} araç keşfedildi",
+        "deletingOldTools": "Sunucu için eski araçlar siliniyor: {{uuid}}",
+        "insertingTools": "{{count}} yeni araç ekleniyor...",
+        "storedTools": "{{count}} araç başarıyla saklandı",
+        "discoveringResourceTemplates": "[İLERLEME] Kaynak şablonları keşfediliyor...",
+        "discoveredResourceTemplates": "{{count}} kaynak şablonu keşfedildi",
+        "deletingOldResourceTemplates": "Sunucu için eski kaynak şablonları siliniyor: {{uuid}}",
+        "discoveringStaticResources": "[İLERLEME] Statik kaynaklar keşfediliyor...",
+        "discoveredStaticResources": "{{count}} statik kaynak keşfedildi",
+        "deletingOldStaticResources": "Sunucu için eski statik kaynaklar siliniyor: {{uuid}}",
+        "discoveringPrompts": "[İLERLEME] İstekler keşfediliyor...",
+        "liveDiscovery": "Canlı keşif devam ediyor..."
+      }
+    },
+    "submit": {
+      "title": "Kayıt Defterine Gönder",
+      "description": "Sunucu yapılandırmanızı gözden geçirin ve kayıt defterine gönderin.",
+      "metadata": {
+        "title": "Sunucu Meta Verileri",
+        "description": "Açıklama",
+        "author": "Yazar",
+        "categories": "Kategoriler",
+        "tags": "Etiketler",
+        "placeholders": {
+          "description": "Bu sunucunun ne yaptığının kısa açıklaması",
+          "tags": "Etiketleri girin ve Enter'a basın"
+        }
+      },
+      "review": {
+        "title": "Yapılandırmayı Gözden Geçir",
+        "repository": "Depo",
+        "package": "Paket",
+        "command": "Komut",
+        "envVars": "Ortam Değişkenleri",
+        "capabilities": {
+          "title": "Yetenekler",
+          "tools": "{{count}} araç",
+          "tools_plural": "{{count}} araç",
+          "resources": "{{count}} kaynak",
+          "resources_plural": "{{count}} kaynak",
+          "prompts": "{{count}} istek",
+          "prompts_plural": "{{count}} istek"
+        }
+      },
+      "submitting": "Kayıt defterine gönderiliyor...",
+      "submitButton": {
+        "claim": "Gönder ve Sunucuyu Talep Et",
+        "community": "Topluluğa Gönder"
+      },
+      "success": {
+        "title": "Başarılı!",
+        "claimed": "Sunucunuz başarıyla kayıt defterine yayınlandı!",
+        "community": "Sunucu topluluk kayıt defterine eklendi. Sahibi daha sonra talep edebilir.",
+        "viewInRegistry": "Kayıt Defterinde Görüntüle"
+      },
+      "error": {
+        "title": "Gönderim Başarısız",
+        "tryAgain": "Tekrar Dene"
+      }
+    },
+    "form": {
+      "repositoryUrl": "GitHub Depo URL'si",
+      "repositoryUrl.hint": "Örnek: https://github.com/owner/repo",
+      "description": "Açıklama",
+      "description.placeholder": "Bu sunucunun ne yaptığının kısa açıklaması",
+      "packageRegistry": "Paket Kayıt Defteri",
+      "packageName": "Paket Adı",
+      "packageVersion": "Sürüm",
+      "environmentVariables": "Ortam Değişkenleri",
+      "addEnvVar": "Değişken Ekle",
+      "submit": {
+        "unclaimed": "Sunucu Ekle",
+        "claimed": "Kayıt Defterine Yayınla"
+      }
+    },
+    "verifying": {
+      "ownership": "GitHub sahipliği doğrulanıyor..."
+    },
+    "success": {
+      "claimed": "Sunucunuz kayıt defterine yayınlandı!",
+      "unclaimed": "Sunucu eklendi! Sahibi hazır olduğunda talep edebilir."
+    },
+    "claim": {
+      "button": "Bu Sunucuyu Talep Et",
+      "dialog": {
+        "title": "Sunucuyu Talep Et",
+        "description": "Bu sunucuyu talep etmek için sahipliğinizi doğrulayın"
+      },
+      "verifying": "Sahiplik doğrulanıyor...",
+      "success": "Sunucu başarıyla talep edildi!",
+      "publishing": "Kayıt defterine yayınlanıyor...",
+      "pending": "Talep isteğiniz inceleme için gönderildi"
+    },
+    "badges": {
+      "verified": "Doğrulandı",
+      "unclaimed": "Talep Edilmedi",
+      "pending": "Talep Beklemede"
+    },
+    "errors": {
+      "notOwner": "Bu deponun sahibi olmalısınız",
+      "alreadyExists": "Bu sunucu zaten kayıt defterinde",
+      "authRequired": "Kayıt defteri kimlik doğrulaması yapılandırılmamış",
+      "publishFailed": "Sunucu kayıt defterine yayınlanamadı"
+    }
+  }

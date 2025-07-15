@@ -22,7 +22,6 @@ export async function GET(request: Request) {
 
     // If no notes found, try to fetch from GitHub
     if (!notes || notes.length === 0) {
-      console.log('No notes found in database, attempting to fetch from GitHub...');
       const updateResult = await updateReleaseNotesFromGitHub();
       if (updateResult.success) {
         // Retry fetching notes after update

@@ -16,6 +16,17 @@
     "title": "建议用户",
     "empty": "未找到建议用户"
   },
+  "install": {
+    "title": "安装服务器",
+    "description": "配置并安装此 MCP 服务器。",
+    "name": "服务器名称",
+    "command": "命令",
+    "args": "参数（空格分隔）",
+    "env": "环境变量",
+    "url": "服务器 URL",
+    "successDescription": "服务器安装成功",
+    "errorDescription": "服务器安装失败"
+  },
   "search": {
     "placeholder": "搜索...",
     "noResults": "未找到结果",

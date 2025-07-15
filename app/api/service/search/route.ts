@@ -1,56 +1,24 @@
-
 import { addDays } from 'date-fns';
 import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
 import { db } from '@/db';
-import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema'; // Added profilesTable, projectsTable, users
+import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema';
+import { createErrorResponse, getSafeErrorMessage } from '@/lib/api-errors';
+import { RateLimiters } from '@/lib/rate-limiter';
+import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
+import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 import type { PaginatedSearchResult, SearchIndex } from '@/types/search';
-import {
-  fetchAwesomeMcpServersList,
-  getGitHubRepoAsMcpServer,
-  getRepoPackageJson,
-  searchGitHubRepos,
-} from '@/utils/github';
-import { getNpmPackageAsMcpServer, searchNpmPackages } from '@/utils/npm';
-import {
-  fetchSmitheryServerDetails,
-  getMcpServerFromSmitheryServer,
-  updateMcpServerWithDetails,
-} from '@/utils/smithery';
 
 // Cache TTL in minutes for each source
 const CACHE_TTL: Record<McpServerSource, number> = {
-  [McpServerSource.SMITHERY]: 60, // 1 hour
-  [McpServerSource.NPM]: 360, // 6 hours
-  [McpServerSource.GITHUB]: 1440, // 24 hours
   [McpServerSource.PLUGGEDIN]: 1440, // 24 hours
-  [McpServerSource.COMMUNITY]: 60, // 1 hour - community content may change frequently
+  [McpServerSource.COMMUNITY]: 15, // 15 minutes - community content may change frequently
+  [McpServerSource.REGISTRY]: 1, // 1 minute for registry - to quickly reflect newly claimed servers
 };
 
-// Add inline type definition for SmitherySearchResponse
-type SmitheryServer = {
-  qualifiedName: string;
-  displayName: string;
-  description: string;
-  homepage: string;
-  useCount: number;
-  isDeployed: boolean;
-  createdAt: string;
-};
-
-type SmitheryPagination = {
-  currentPage: number;
-  pageSize: number;
-  totalPages: number;
-  totalCount: number;
-};
-
-type SmitherySearchResponse = {
-  servers: SmitheryServer[];
-  pagination: SmitheryPagination;
-};
+// Note: We no longer cache all registry servers since VP API provides efficient filtering
 
 /**
  * Search for MCP servers
@@ -60,149 +28,140 @@ type SmitherySearchResponse = {
  * @returns NextResponse with search results
  */
 export async function GET(request: NextRequest) {
+  // Apply rate limiting
+  const rateLimitResult = await RateLimiters.api(request);
+  
+  if (!rateLimitResult.allowed) {
+    const response = createErrorResponse('Too many requests', 429, 'RATE_LIMIT_EXCEEDED');
+    // Add rate limit headers
+    response.headers.set('X-RateLimit-Limit', rateLimitResult.limit.toString());
+    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString());
+    response.headers.set('X-RateLimit-Reset', rateLimitResult.reset.toString());
+    response.headers.set('Retry-After', Math.ceil((rateLimitResult.reset - Date.now()) / 1000).toString());
+    return response;
+  }
+  
   const url = new URL(request.url);
   const query = url.searchParams.get('query') || '';
   const source = (url.searchParams.get('source') as McpServerSource) || null;
-  const offset = parseInt(url.searchParams.get('offset') || '0');
-  const pageSize = parseInt(url.searchParams.get('pageSize') || '10');
+  const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0') || 0);
+  const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get('pageSize') || '10') || 10));
+  
+  // Filter parameters
+  const packageRegistry = url.searchParams.get('packageRegistry') as 'npm' | 'docker' | 'pypi' | null;
+  const repositorySource = url.searchParams.get('repositorySource');
+  const sort = url.searchParams.get('sort') || 'relevance';
 
   try {
     let results: SearchIndex = {};
 
     // If source is specified, only search that source
-    if (source) {
-      // Check cache first
-      const cachedResults = await checkCache(source, query);
-      
-      if (cachedResults) {
-        // Enrich cached results with metrics
-        const enrichedResults = await enrichWithMetrics(cachedResults);
-        // Paginate enriched results
-        const paginatedResults = paginateResults(enrichedResults, offset, pageSize);
-        return NextResponse.json(paginatedResults);
-      }
-      
-      // If not in cache, fetch data from source
-      switch (source) {
-        case McpServerSource.SMITHERY:
-          results = await searchSmithery(query);
-          break;
-        case McpServerSource.NPM:
-          results = await searchNpm(query);
-          break;
-        case McpServerSource.GITHUB:
-          results = await searchGitHub(query);
-          break;
-        case McpServerSource.COMMUNITY:
-          results = await searchCommunity(query);
-          break;
-        default:
-          // Return empty results for unsupported sources
-          return NextResponse.json({
-            results: {},
-            total: 0,
-            offset,
-            pageSize,
-            hasMore: false,
-          } as PaginatedSearchResult);
-      }
-      
-      // Enrich results with metrics before caching
-      results = await enrichWithMetrics(results);
-      
-      // Cache the enriched results
-      await cacheResults(source, query, results);
-      
-      // Paginate and return results
-      const paginatedResults = paginateResults(results, offset, pageSize);
-      return NextResponse.json(paginatedResults);
+    if (source === McpServerSource.COMMUNITY) {
+      // Community servers from local database
+      results = await searchCommunity(query);
+      const paginated = paginateResults(results, offset, pageSize);
+      return NextResponse.json(paginated);
+    }
+
+    if (source === McpServerSource.REGISTRY) {
+      // Registry servers from registry.plugged.in
+      results = await searchRegistry(query, { packageRegistry, repositorySource, sort });
+      const paginated = paginateResults(results, offset, pageSize);
+      return NextResponse.json(paginated);
     }
     
-    // If no source specified, search all (with caching per source)
-    // Check if we have ALL sources cached for this query
-    const cachedSmithery = await checkCache(McpServerSource.SMITHERY, query);
-    const cachedNpm = await checkCache(McpServerSource.NPM, query);
-    const cachedGitHub = await checkCache(McpServerSource.GITHUB, query);
-    const cachedCommunity = await checkCache(McpServerSource.COMMUNITY, query);
+    // If no source specified or invalid source, return both
+    // Get registry results - these already include stats from VP API
+    const registryResults = await searchRegistry(query, { packageRegistry, repositorySource, sort });
+    Object.assign(results, registryResults);
     
-    // If all are cached, combine and return
-    if (cachedSmithery && cachedNpm && cachedGitHub && cachedCommunity) {
-      const combinedResults: SearchIndex = {};
-      
-      // Add results with namespace prefix
-      Object.entries(cachedSmithery).forEach(([key, value]) => {
-        combinedResults[`smithery:${key}`] = value;
-      });
-      Object.entries(cachedNpm).forEach(([key, value]) => {
-        combinedResults[`npm:${key}`] = value;
-      });
-      Object.entries(cachedGitHub).forEach(([key, value]) => {
-        combinedResults[`github:${key}`] = value;
-      });
-      Object.entries(cachedCommunity).forEach(([key, value]) => {
-        combinedResults[`community:${key}`] = value;
-      });
-      
-      // Enrich combined results with metrics
-      const enrichedResults = await enrichWithMetrics(combinedResults);
-      
-      // Paginate and return
-      const paginatedResults = paginateResults(enrichedResults, offset, pageSize);
-      return NextResponse.json(paginatedResults);
-    }
-    
-    // Otherwise, fetch what's needed and merge
-    const smitheryResults = cachedSmithery || await searchSmithery(query);
-    if (!cachedSmithery) {
-      await cacheResults(McpServerSource.SMITHERY, query, smitheryResults);
-    }
-    
-    const npmResults = cachedNpm || await searchNpm(query);
-    if (!cachedNpm) {
-      await cacheResults(McpServerSource.NPM, query, npmResults);
-    }
-    
-    const githubResults = cachedGitHub || await searchGitHub(query);
-    if (!cachedGitHub) {
-      await cacheResults(McpServerSource.GITHUB, query, githubResults);
-    }
-    
-    const communityResults = cachedCommunity || await searchCommunity(query);
-    if (!cachedCommunity) {
-      await cacheResults(McpServerSource.COMMUNITY, query, communityResults);
-    }
-    
-    // Combine all results under namespaced keys to avoid collisions
-    results = {} as SearchIndex;
-    
-    // Add results with namespace prefix
-    Object.entries(smitheryResults).forEach(([key, value]) => {
-      results[`smithery:${key}`] = value;
-    });
-    Object.entries(npmResults).forEach(([key, value]) => {
-      results[`npm:${key}`] = value;
-    });
-    Object.entries(githubResults).forEach(([key, value]) => {
-      results[`github:${key}`] = value;
-    });
-    Object.entries(communityResults).forEach(([key, value]) => {
-      results[`community:${key}`] = value;
-    });
-    
-    // Enrich combined results with metrics
-    results = await enrichWithMetrics(results);
+    // Include community results - these need local metrics enrichment
+    const communityResults = await searchCommunity(query);
+    Object.assign(results, communityResults);
     
     // Paginate and return results
     const paginatedResults = paginateResults(results, offset, pageSize);
     return NextResponse.json(paginatedResults);
   } catch (_error) {
     console.error('Search error:', _error);
-    return NextResponse.json(
-      { error: 'Failed to search for MCP servers' },
-      { status: 500 }
+    console.error('Error stack:', _error instanceof Error ? _error.stack : 'No stack trace');
+    return createErrorResponse(
+      getSafeErrorMessage(_error),
+      500,
+      'SEARCH_FAILED'
     );
   }
 }
+
+interface RegistryFilters {
+  packageRegistry?: 'npm' | 'docker' | 'pypi' | null;
+  repositorySource?: string | null;
+  sort?: string;
+}
+
+/**
+ * Search for MCP servers in the Plugged.in Registry using VP API
+ */
+async function searchRegistry(query: string, filters: RegistryFilters = {}): Promise<SearchIndex> {
+  try {
+    // Use enhanced VP API with server-side filtering
+    const vpFilters: any = {};
+    
+    // Add registry_name filter if specified
+    if (filters.packageRegistry) {
+      vpFilters.registry_name = filters.packageRegistry;
+    }
+    
+    // Add search term if provided
+    if (query) {
+      vpFilters.search = query;
+    }
+    
+    // Map sort parameter to registry API format
+    if (filters.sort === 'recent') {
+      vpFilters.sort = 'release_date_desc';
+    } else {
+      // Default sort for other options (the registry API will handle relevance internally)
+      vpFilters.sort = 'release_date_desc';
+    }
+    
+    
+    // Use VP API to get servers with stats and server-side filtering
+    const response = await registryVPClient.getServersWithStats(100, undefined, McpServerSource.REGISTRY, vpFilters);
+    const servers = response.servers || [];
+    
+    // Transform and index
+    const indexed: SearchIndex = {};
+    for (const server of servers) {
+      // Client-side filter by repository source if needed (not supported by API yet)
+      if (filters.repositorySource && server.repository?.url) {
+        const repoUrl = server.repository.url.toLowerCase();
+        const source = filters.repositorySource.toLowerCase();
+        if (!repoUrl.includes(source)) continue;
+      }
+      
+      const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
+      
+      // Add stats from VP API response
+      mcpIndex.installation_count = server.installation_count || 0;
+      mcpIndex.rating = server.rating || 0;
+      mcpIndex.ratingCount = server.rating_count || 0;
+      
+      indexed[server.id] = mcpIndex;
+    }
+    
+    
+    // Return results - no need to enrich with metrics as stats are already included
+    return indexed;
+    
+  } catch (error) {
+    console.error('Registry search failed:', error);
+    console.error('Registry search will be unavailable. Returning empty results.');
+    // Return empty results on error to allow other sources to work
+    return {};
+  }
+}
+
 
 /**
  * Enrich search results with rating and installation metrics
@@ -237,134 +196,6 @@ async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
   return enrichedResults;
 }
 
-/**
- * Search for MCP servers in Smithery
- * 
- * @param query Search query
- * @returns SearchIndex of results
- */
-async function searchSmithery(query: string): Promise<SearchIndex> {
-  const apiKey = process.env.SMITHERY_API_KEY;
-  if (!apiKey) {
-    throw new Error('SMITHERY_API_KEY is not defined');
-  }
-
-  const url = new URL('https://registry.smithery.ai/servers');
-  if (query) {
-    url.searchParams.append('q', query);
-  }
-  url.searchParams.append('pageSize', '50'); // Get a reasonable number of results
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Smithery API error: ${response.status} ${response.statusText}`);
-  }
-
-  const data = await response.json() as SmitherySearchResponse;
-  
-  // Convert to our SearchIndex format
-  const results: SearchIndex = {};
-  
-  for (const server of data.servers) {
-    let mcpServer = getMcpServerFromSmitheryServer(server);
-    try {
-      // Fetch details to get command/args/url
-      const details = await fetchSmitheryServerDetails(server.qualifiedName);
-      mcpServer = updateMcpServerWithDetails(mcpServer, details);
-    } catch (detailError) {
-      console.error(`Failed to fetch details for Smithery server ${server.qualifiedName}:`, detailError);
-      // Continue with the basic info if details fail
-    }
-    results[server.qualifiedName] = mcpServer;
-  }
-
-  // Enrich results with metrics
-  return await enrichWithMetrics(results);
-}
-
-/**
- * Search for MCP servers on NPM
- * 
- * @param query Search query
- * @returns SearchIndex of results
- */
-async function searchNpm(query: string): Promise<SearchIndex> {
-  try {
-    const data = await searchNpmPackages(query);
-    
-    // Convert to our SearchIndex format
-    const results: SearchIndex = {};
-    
-    for (const item of data.objects) {
-      const mcpServer = getNpmPackageAsMcpServer(item.package);
-      results[item.package.name] = mcpServer;
-    }
-    
-    // Enrich results with metrics
-    return await enrichWithMetrics(results);
-  } catch (_error) {
-    console.error('NPM search error:', _error);
-    return {}; // Return empty results on error
-  }
-}
-
-/**
- * Search for MCP servers on GitHub
- * 
- * @param query Search query
- * @returns SearchIndex of results
- */
-async function searchGitHub(query: string): Promise<SearchIndex> {
-  try {
-    // Try to search GitHub for repos
-    const repos = await searchGitHubRepos(query);
-    
-    // Also fetch from awesome-mcp-servers list if no query
-    let awesomeRepos: any[] = [];
-    if (!query) {
-      try {
-        awesomeRepos = await fetchAwesomeMcpServersList();
-      } catch (_error) {
-        console.error('Error fetching awesome-mcp-servers list:', _error);
-      }
-    }
-    
-    // Combine and deduplicate
-    const allRepos = [...repos];
-    for (const repo of awesomeRepos) {
-      if (!allRepos.some(r => r.full_name === repo.full_name)) {
-        allRepos.push(repo);
-      }
-    }
-    
-    // Convert to our SearchIndex format
-    const results: SearchIndex = {};
-    
-    for (const repo of allRepos) {
-      // Try to fetch package.json for better metadata
-      let packageJson = null;
-      try {
-        packageJson = await getRepoPackageJson(repo);
-      } catch (_error) {
-        // Continue without package.json
-      }
-      
-      const mcpServer = getGitHubRepoAsMcpServer(repo, packageJson);
-      results[repo.full_name] = mcpServer;
-    }
-    
-    // Enrich results with metrics
-    return await enrichWithMetrics(results);
-  } catch (_error) {
-    console.error('GitHub search error:', _error);
-    return {}; // Return empty results on error
-  }
-}
 
 /**
  * Search for community MCP servers - implementation to show shared servers
@@ -385,19 +216,22 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
       .innerJoin(profilesTable, eq(sharedMcpServersTable.profile_uuid, profilesTable.uuid))
       .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid)) // Join to projects
       .innerJoin(users, eq(projectsTable.user_id, users.id)) // Join to users
-      .where(
-        query
-          ? and(
-              eq(sharedMcpServersTable.is_public, true),
-              or(
-                ilike(sharedMcpServersTable.title, `%${query}%`),
-                ilike(sharedMcpServersTable.description || '', `%${query}%`),
-                ilike(users.username, `%${query}%`), // Search by username from users table
-                ilike(users.email, `%${query}%`) // Also search by user email
-              )
-            )
-          : eq(sharedMcpServersTable.is_public, true)
-      )
+      .where((() => {
+        const conditions = [eq(sharedMcpServersTable.is_public, true)];
+        
+        if (query) {
+          conditions.push(
+            or(
+              ilike(sharedMcpServersTable.title, `%${query}%`),
+              ilike(sharedMcpServersTable.description || '', `%${query}%`),
+              ilike(users.username, `%${query}%`), // Search by username from users table
+              ilike(users.email, `%${query}%`) // Also search by user email
+            )!
+          );
+        }
+        
+        return and(...conditions);
+      })())
       .orderBy(desc(sharedMcpServersTable.created_at))
       .limit(50); // Limit to 50 results
 
@@ -405,6 +239,31 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
 
     // Convert to our SearchIndex format
     const results: SearchIndex = {};
+
+    // Collect all server UUIDs for batch metrics fetching
+    const serverUuids = resultsWithJoins.map(r => r.sharedServer.uuid);
+    
+    // Fetch all metrics in parallel to avoid N+1 queries
+    const metricsPromises = serverUuids.map(uuid => 
+      getServerRatingMetrics({
+        source: McpServerSource.COMMUNITY,
+        externalId: uuid
+      }).catch(error => {
+        console.error(`Failed to get metrics for community server ${uuid}:`, error);
+        return { success: false, metrics: null };
+      })
+    );
+    
+    const metricsResults = await Promise.all(metricsPromises);
+    
+    // Create a map of uuid to metrics for quick lookup
+    const metricsMap = new Map<string, any>();
+    serverUuids.forEach((uuid, index) => {
+      const result = metricsResults[index];
+      if (result.success && result.metrics) {
+        metricsMap.set(uuid, result.metrics);
+      }
+    });
 
     for (const { sharedServer, profile, user } of resultsWithJoins) {
       // We'll use the template field which contains the sanitized MCP server data
@@ -415,23 +274,16 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
       // Create an entry with metadata from the shared server
       const serverKey = `${sharedServer.uuid}`;
 
-      // Fetch rating metrics for this shared server
+      // Get rating metrics from the pre-fetched map
       let rating = 0;
       let ratingCount = 0;
-      let installationCount = 0; // Declare installationCount here
-      try {
-        // For community servers, metrics are linked via external_id (which is the sharedServer.uuid) and source
-        const metricsResult = await getServerRatingMetrics({ // Pass args as a single object
-          source: McpServerSource.COMMUNITY,
-          externalId: sharedServer.uuid
-        });
-        if (metricsResult.success && metricsResult.metrics) {
-          rating = metricsResult.metrics.averageRating;
-          ratingCount = metricsResult.metrics.ratingCount;
-          installationCount = metricsResult.metrics.installationCount; // Assign value here
-        }
-      } catch (metricsError) {
-        console.error(`Failed to get metrics for community server ${serverKey}:`, metricsError);
+      let installationCount = 0;
+      
+      const metrics = metricsMap.get(sharedServer.uuid);
+      if (metrics) {
+        rating = metrics.averageRating;
+        ratingCount = metrics.ratingCount;
+        installationCount = metrics.installationCount;
       }
 
       // Determine the display name for 'shared_by' - Use username from users table first, then fallback
@@ -463,10 +315,14 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
         rating: rating,
         ratingCount: ratingCount,
         installation_count: installationCount, // Use the declared variable
+        // Add claim information
+        is_claimed: sharedServer.is_claimed || false,
+        claimed_by_user_id: sharedServer.claimed_by_user_id || null,
+        claimed_at: sharedServer.claimed_at ? sharedServer.claimed_at.toISOString() : null,
+        registry_server_uuid: sharedServer.registry_server_uuid || null,
       };
     }
 
-    console.log(`Found ${Object.keys(results).length} community servers`);
     
     return results; // Return directly as metrics are fetched inside
   } catch (error) {

@@ -1,4 +1,3 @@
-import { useSession } from 'next-auth/react';
 import { useCallback } from 'react';
 import useSWR from 'swr';
 
@@ -9,10 +8,11 @@ import { notifications } from '@/lib/notification-helper';
 import type { Doc } from '@/types/library';
 
 import { useProfiles } from './use-profiles';
+import { useSafeSession } from './use-safe-session';
 import { useToast } from './use-toast';
 
 export function useLibrary() {
-  const { data: session } = useSession();
+  const { data: session } = useSafeSession();
   const { toast } = useToast();
   const { currentProject } = useProjects();
   const { currentProfile } = useProfiles();

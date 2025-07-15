@@ -29,15 +29,30 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [mounted, setMounted] = useState(false);
 
+  // Ensure we only access localStorage on the client side
   useEffect(() => {
-    const savedTheme = localStorage.getItem(storageKey);
-    if (savedTheme) {
-      setTheme(savedTheme as Theme);
+    setMounted(true);
+    
+    // Only access localStorage after component is mounted on client
+    if (typeof window !== 'undefined') {
+      try {
+        const savedTheme = localStorage.getItem(storageKey);
+        if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'system')) {
+          setTheme(savedTheme as Theme);
+        }
+      } catch (error) {
+        // localStorage might be disabled, use default theme
+        console.warn('localStorage is not available, using default theme');
+      }
     }
   }, [storageKey]);
 
   useEffect(() => {
+    // Only apply theme changes after component is mounted on client
+    if (!mounted || typeof window === 'undefined') return;
+    
     const root = window.document.documentElement;
     
     root.classList.remove("light", "dark");
@@ -51,19 +66,28 @@ export function ThemeProvider({
     }
     
     root.classList.add(theme);
-  }, [theme]);
+  }, [theme, mounted]);
 
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
+      // Only access localStorage on client side
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem(storageKey, theme);
+        } catch (error) {
+          console.warn('localStorage is not available');
+        }
+      }
       setTheme(theme);
     },
   };
 
   return (
     <ThemeProviderContext.Provider {...props} value={value}>
-      {children}
+      <div suppressHydrationWarning style={{ display: 'contents' }}>
+        {children}
+      </div>
     </ThemeProviderContext.Provider>
   );
 }

@@ -1,13 +1,13 @@
 'use client';
 
-import { Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, Trash2, XCircle } from 'lucide-react';
+import { AlertCircle, Check, CheckCircle, Globe, RefreshCw, Share2, Terminal, Trash2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools';
 import { isServerShared, unshareServer } from '@/app/actions/social';
+import { McpOAuthStatus } from '@/components/mcp/oauth-status';
 import { ShareServerDialog } from '@/components/server/share-server-dialog';
 import {
   AlertDialog,
@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
+import { StreamingCliToast } from '@/components/ui/streaming-cli-toast';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/use-toast';
@@ -65,6 +66,8 @@ export function ServerCard({
   const [sharedUuid, setSharedUuid] = useState<string | null>(null);
   const [isCheckingShareStatus, setIsCheckingShareStatus] = useState(true);
   const [isUnsharing, setIsUnsharing] = useState(false);
+  const [showStreamingToast, setShowStreamingToast] = useState(false);
+  const [requiresAuth, setRequiresAuth] = useState(false);
 
   // Check if server is shared on mount
   useEffect(() => {
@@ -84,29 +87,50 @@ export function ServerCard({
     }
     checkIfShared();
   }, [currentProfile?.uuid, server.uuid]);
+  
+  // Check if server requires auth
+  useEffect(() => {
+    const config = server.config as any;
+    
+    // Check if this is an mcp-remote server (which typically requires OAuth)
+    const isMcpRemote = server.command === 'npx' && 
+                       Array.isArray(server.args) && 
+                       server.args.includes('mcp-remote');
+    
+    // Show auth button if:
+    // 1. Server explicitly requires auth (requires_auth: true)
+    // 2. Server has completed OAuth (oauth_completed_at exists) - to show status
+    // 3. Server is mcp-remote (typically needs OAuth for services like Linear)
+    if (config?.requires_auth || config?.oauth_completed_at || isMcpRemote) {
+      setRequiresAuth(true);
+    }
+  }, [server.config, server.command, server.args]);
+
 
   const handleShareStatusChange = (newIsShared: boolean, newSharedUuid: string | null) => {
     setIsShared(newIsShared);
     setSharedUuid(newSharedUuid);
   };
 
-  const handleDiscover = async () => {
+  const handleDiscover = () => {
     if (!currentProfile?.uuid || !server.uuid) {
       toast({ title: t('common.error'), description: t('mcpServers.errors.missingInfo'), variant: 'destructive' });
       return;
     }
     setIsDiscovering(true);
-    try {
-      const result = await discoverSingleServerTools(currentProfile.uuid, server.uuid);
-      if (result.success) {
-        toast({ title: t('common.success'), description: result.message });
-      } else {
-        throw new Error(result.error || t('mcpServers.errors.discoveryFailed'));
-      }
-    } catch (error: any) {
-      toast({ title: t('common.error'), description: error.message, variant: 'destructive' });
-    } finally {
-      setIsDiscovering(false);
+    setShowStreamingToast(true);
+  };
+
+  const handleDiscoveryComplete = (success: boolean, data?: any) => {
+    setIsDiscovering(false);
+    // Don't show additional toast for success since streaming interface already shows completion
+    // Only show error toast if discovery failed
+    if (!success) {
+      toast({ 
+        title: t('common.error'), 
+        description: t('mcpServers.errors.discoveryFailed'), 
+        variant: 'destructive' 
+      });
     }
   };
 
@@ -132,11 +156,12 @@ export function ServerCard({
   };
 
   return (
-    <Card className={cn("relative", isSelected && "ring-2 ring-primary")}>
-      {/* Add selection checkbox */}
-      <div className="absolute top-2 left-2 z-10">
-        <TooltipProvider>
-          <Tooltip>
+    <>
+      <Card className={cn("relative", isSelected && "ring-2 ring-primary")}>
+        {/* Add selection checkbox */}
+        <div className="absolute top-2 left-2 z-10">
+          <TooltipProvider>
+            <Tooltip>
             <TooltipTrigger asChild>
               <div>
                 <Checkbox
@@ -196,8 +221,18 @@ export function ServerCard({
       <CardContent>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div className="flex items-center gap-1 text-muted-foreground">
-            <Badge variant="outline" className="dark:border-slate-700">
+            <Badge 
+              variant="outline" 
+              className={cn(
+                "dark:border-slate-700",
+                server.type === McpServerType.SSE && "bg-amber-500/10 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-900"
+              )}
+              title={server.type === McpServerType.SSE ? "SSE transport is deprecated. Consider migrating to Streamable HTTP." : undefined}
+            >
               {server.type}
+              {server.type === McpServerType.SSE && (
+                <AlertCircle className="ml-1 h-3 w-3" />
+              )}
             </Badge>
           </div>
           <div className="flex items-center gap-1 text-muted-foreground justify-end">
@@ -227,6 +262,17 @@ export function ServerCard({
               <p className="text-xs text-muted-foreground font-mono truncate">
                 {server.url}
               </p>
+            </div>
+          )}
+          
+          {/* OAuth Button - show for servers that require auth */}
+          {requiresAuth && (
+            <div className="col-span-2 mt-2">
+              <McpOAuthStatus 
+                serverUuid={server.uuid} 
+                serverName={server.name}
+                serverType={server.type}
+              />
             </div>
           )}
           
@@ -319,5 +365,16 @@ export function ServerCard({
         </Button>
       </CardFooter>
     </Card>
+    
+    {/* Streaming CLI Toast for discovery */}
+    <StreamingCliToast
+      isOpen={showStreamingToast}
+      onClose={() => setShowStreamingToast(false)}
+      title={`Discovering tools for ${server.name}`}
+      serverUuid={server.uuid}
+      profileUuid={currentProfile?.uuid || ''}
+      onComplete={handleDiscoveryComplete}
+    />
+  </>
   );
 }

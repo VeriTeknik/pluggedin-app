@@ -36,21 +36,127 @@
     "allCategories": "Tüm kategoriler",
     "categories": {
       "LLM": "YDM",
-      "UTILITY": "Yardımcı Program",
-      "TOOL": "Araç",
-      "DATA": "Veri Erişimi",
-      "CONNECTOR": "Bağlayıcı",
-      "SEARCH": "Arama",
-      "CODE": "Kod",
-      "IMAGE": "Görüntü",
-      "AUDIO": "Ses",
-      "VIDEO": "Video",
-      "OTHER": "Diğer"
+      "Utility": "Yardımcı Program",
+      "Tool": "Araç",
+      "Data Access": "Veri Erişimi",
+      "Connector": "Bağlayıcı",
+      "Search": "Arama",
+      "Code": "Kod",
+      "Image": "Görüntü",
+      "Audio": "Ses",
+      "Video": "Video",
+      "Other": "Diğer"
     },
     "card": {
       "install": "Yükle",
       "installed": "Yüklendi",
-      "rate": "Değerlendir"
+      "rate": "Değerlendir",
+      "details": "Detaylar",
+      "unshare": "Paylaşımı Kaldır",
+      "showMore": "Daha Fazla Göster",
+      "showLess": "Daha Az Göster",
+      "tabs": {
+        "overview": "Genel Bakış",
+        "technical": "Teknik",
+        "community": "Topluluk"
+      },
+      "description": "Açıklama",
+      "tags": "Etiketler",
+      "packageInfo": "Paket Bilgisi",
+      "package": "Paket",
+      "registry": "Kayıt",
+      "downloads": "İndirmeler",
+      "command": "Komut",
+      "url": "URL",
+      "arguments": "Argümanlar",
+      "exampleArgs": "Örnek Argümanlar",
+      "environmentVariables": "Ortam Değişkenleri",
+      "sharedBy": "Paylaşan",
+      "reviews": "Değerlendirmeler",
+      "viewReviews": "{{count}} Değerlendirmeyi Görüntüle",
+      "installationStats": "Kurulum İstatistikleri",
+      "installedByUsers": "{{count}} kullanıcı tarafından yüklendi",
+      "usageCount": "Kullanım Sayısı"
+    },
+    "registries": {
+      "registry": "Kayıt",
+      "npm": "NPM (Node.js)",
+      "docker": "Docker",
+      "pypi": "PyPI (Python)",
+      "github": "GitHub",
+      "gitlab": "GitLab"
+    },
+    "dialogs": {
+      "claim": {
+        "title": "Sunucu Sahiplen",
+        "description": "Bu sunucunun sahipliğini al",
+        "repositoryUrl": "Depo URL'si",
+        "repositoryUrlPlaceholder": "https://github.com/sahip/depo",
+        "errors": {
+          "repositoryUrlRequired": "Lütfen bir depo URL'si sağlayın",
+          "githubAuthRequired": "Lütfen önce GitHub hesabınızı bağlayın",
+          "authenticateFirst": "Lütfen önce GitHub ile kimlik doğrulama yapın",
+          "claimFailed": "Sunucu sahiplenme başarısız",
+          "unexpectedError": "Beklenmeyen bir hata oluştu"
+        },
+        "success": {
+          "claimedNotPublished": "Sunucu sahiplenildi ancak yayınlanmadı",
+          "claimedAndPublished": "Sunucu başarıyla sahiplenildi ve yayınlandı!"
+        }
+      },
+      "rate": {
+        "title": "Sunucuyu Değerlendir",
+        "updateTitle": "Değerlendirmeyi Güncelle",
+        "description": "Değerlendirmeniz diğer kullanıcıların kaliteli sunucular bulmasına yardımcı olur",
+        "alreadyRated": "Bu sunucuyu zaten değerlendirdiniz. Aşağıdan değerlendirmenizi güncelleyebilirsiniz.",
+        "rating": "Değerlendirme",
+        "comment": "Yorum (isteğe bağlı)",
+        "commentPlaceholder": "Bu sunucuyla deneyiminizi paylaşın",
+        "submitRating": "Değerlendirme Gönder",
+        "updateRating": "Değerlendirmeyi Güncelle",
+        "submitting": "Gönderiliyor...",
+        "checking": "Kontrol ediliyor...",
+        "cancel": "İptal",
+        "errors": {
+          "selectRating": "Lütfen 1 ile 5 yıldız arasında bir değerlendirme seçin"
+        },
+        "success": {
+          "submitted": "Bu sunucuyu değerlendirdiğiniz için teşekkürler!"
+        }
+      },
+      "reviews": {
+        "title": "{{serverName}} için Değerlendirmeler",
+        "description": "Diğer kişilerin bu sunucu hakkında neler söylediğini görün.",
+        "noReviews": "Henüz değerlendirme yok.",
+        "anonymous": "Anonim",
+        "errors": {
+          "loadFailed": "Değerlendirmeler yüklenemedi. Lütfen daha sonra tekrar deneyin."
+        }
+      },
+      "install": {
+        "enterValue": "Değer girin"
+      }
+    },
+    "trending": {
+      "title": "Popüler Sunucular",
+      "mostActiveServers": "En aktif sunucular",
+      "lastDays": "Son 30 gün",
+      "sortBy": {
+        "installs": "Kurulumlar",
+        "calls": "Çağrılar"
+      }
+    },
+    "packageType": "Paket Türü",
+    "source": "Kaynak",
+    "registry": {
+      "addServer": {
+        "button": "Sunucu Ekle"
+      }
+    }
+  },
+  "registry": {
+    "addServer": {
+      "button": "Sunucu Ekle"
     }
   }
 }

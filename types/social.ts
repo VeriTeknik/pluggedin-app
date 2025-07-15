@@ -5,7 +5,7 @@ import { McpServer } from './mcp-server';
 // import { users } from '@/db/schema'; 
 // type User = typeof users.$inferSelect;
 
-export interface Follower { // Represents a row in the followersTable
+interface Follower { // Represents a row in the followersTable
   uuid: string;
   follower_user_id: string; // Changed from follower_profile_uuid
   followed_user_id: string; // Changed from followed_profile_uuid

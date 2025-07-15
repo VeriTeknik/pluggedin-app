@@ -123,7 +123,6 @@ class RagService {
 
       // Use the same endpoint as queryForContext which works in playground
       const apiUrl = `${this.ragApiUrl}/rag/rag-query`;
-      console.log(`[RAG Service] Making request to: ${apiUrl} with user_id: ${ragIdentifier}`);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -187,8 +186,6 @@ class RagService {
       }
 
       const result = await response.json();
-      console.log(`RAG API upload response:`, JSON.stringify(result, null, 2));
-      console.log(`Successfully sent document ${document.id} to RAG API for ${ragIdentifier}, upload_id: ${result.upload_id}`);
       
       if (!result.upload_id) {
         console.error('Warning: No upload_id in RAG API response, falling back to legacy behavior');
@@ -232,7 +229,6 @@ class RagService {
         throw new Error(`RAG API responded with status: ${response.status}`);
       }
 
-      console.log(`Successfully removed document ${documentId} from RAG API for ${ragIdentifier}`);
       return { success: true };
     } catch (error) {
       console.error('Error removing from RAG API:', error);
@@ -293,9 +289,7 @@ class RagService {
         };
       }
 
-      console.log(`Checking upload status for uploadId: ${uploadId}, ragIdentifier: ${ragIdentifier}`);
       const statusUrl = `${this.ragApiUrl}/rag/upload-status/${uploadId}?user_id=${ragIdentifier}`;
-      console.log(`Making request to: ${statusUrl}`);
 
       const response = await fetch(statusUrl, {
         method: 'GET',
@@ -304,7 +298,6 @@ class RagService {
         },
       });
 
-      console.log(`Upload status response status: ${response.status}`);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -312,7 +305,6 @@ class RagService {
         
         // If upload not found, it might be completed already - check documents
         if (response.status === 404) {
-          console.log('Upload not found - might be completed already');
           return {
             success: false,
             error: 'Upload not found - may have completed',
@@ -323,7 +315,6 @@ class RagService {
       }
 
       const progress: UploadProgress = await response.json();
-      console.log('Upload status response:', JSON.stringify(progress, null, 2));
       
       return {
         success: true,

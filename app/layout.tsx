@@ -23,7 +23,6 @@ import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Toaster } from '@/components/ui/toaster';
-import { initializeFont } from '@/lib/font-utils';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -104,10 +103,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Initialize font on the client side
-  if (typeof window !== 'undefined') {
-    initializeFont();
-  }
+  // Font initialization moved to client-side only in sidebar layout
 
   return (
     <html lang='en' suppressHydrationWarning>
@@ -129,7 +125,7 @@ export default async function RootLayout({
                   window.dataLayer = window.dataLayer || [];
                   function gtag(){dataLayer.push(arguments);}
                   gtag('js', new Date());
-                  gtag('config', '${gaMeasurementId}', {
+                  gtag('config', ${JSON.stringify(gaMeasurementId)}, {
                     page_path: window.location.pathname,
                   });
                 `,
@@ -141,18 +137,20 @@ export default async function RootLayout({
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} ${quicksand.variable} ${nunito.variable} ${poppins.variable} ${roboto.variable} ${ubuntu.variable} ${workSans.variable} ${zillaSlab.variable} ${comfortaa.variable} antialiased`}>
-        <I18nProviderWrapper>
-          <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
-            <SessionProvider>
+        <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
+          <SessionProvider>
+            <I18nProviderWrapper>
               <NotificationProvider>
-                <LanguageSwitcher />
+                <div suppressHydrationWarning>
+                  <LanguageSwitcher />
+                </div>
                 {children}
               </NotificationProvider>
-            </SessionProvider>
-            <Toaster />
-            <SonnerToaster position="bottom-right" />
-          </ThemeProvider>
-        </I18nProviderWrapper>
+            </I18nProviderWrapper>
+          </SessionProvider>
+          <Toaster />
+          <SonnerToaster position="bottom-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

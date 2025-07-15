@@ -53,8 +53,19 @@ export const useSortedResults = (
       case 'recent':
         return Object.fromEntries(
           entries.sort((a, b) => {
-            const aDate = a[1].updated_at ? new Date(a[1].updated_at) : new Date(0);
-            const bDate = b[1].updated_at ? new Date(b[1].updated_at) : new Date(0);
+            // For community servers that were claimed, use claimed_at as the most recent date
+            const aClaimedAt = a[1].claimed_at ? new Date(a[1].claimed_at) : null;
+            const aUpdatedAt = a[1].updated_at ? new Date(a[1].updated_at) : null;
+            const aDate = aClaimedAt && aUpdatedAt ? 
+              (aClaimedAt > aUpdatedAt ? aClaimedAt : aUpdatedAt) : 
+              (aClaimedAt || aUpdatedAt || new Date(0));
+            
+            const bClaimedAt = b[1].claimed_at ? new Date(b[1].claimed_at) : null;
+            const bUpdatedAt = b[1].updated_at ? new Date(b[1].updated_at) : null;
+            const bDate = bClaimedAt && bUpdatedAt ? 
+              (bClaimedAt > bUpdatedAt ? bClaimedAt : bUpdatedAt) : 
+              (bClaimedAt || bUpdatedAt || new Date(0));
+            
             return bDate.getTime() - aDate.getTime();
           })
         );

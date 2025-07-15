@@ -58,13 +58,17 @@ const BLOCKED_HOSTS = [
  * Allowed commands for STDIO MCP servers
  */
 const ALLOWED_COMMANDS = [
-  'node',
-  'npx',
-  'python',
-  'python3',
-  'uv',
-  'uvx',
-  'uvenv',
+  // Package managers only - for security
+  'npx',      // Node.js package executor
+  'pnpm',     // pnpm package manager (uses dlx for execution)
+  'uvx',      // Python package executor (fast, secure)
+  'dnx',      // .NET package executor
+  // Legacy support - consider removing
+  'node',     // Direct Node.js execution (less secure)
+  'python',   // Direct Python execution (less secure)
+  'python3',  // Direct Python3 execution (less secure)
+  'uv',       // Python package manager
+  'uvenv',    // Python virtual environment tool
 ] as const;
 
 /**

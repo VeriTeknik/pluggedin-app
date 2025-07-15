@@ -7,7 +7,7 @@ import packageJson from './package.json';
 
 const nextConfig: NextConfig = {
   output: 'standalone',
-  allowedDevOrigins: ['plugged.in'],
+  allowedDevOrigins: ['plugged.in', 'staging.plugged.in'],
   async rewrites() {
     return [];
   },
@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
   },
   experimental: {
     serverActions: {
-      allowedOrigins: ['plugged.in'],
+      allowedOrigins: ['plugged.in', 'staging.plugged.in'],
       bodySizeLimit: '100mb', // Allow up to 100MB file uploads
     },
     staleTimes: {

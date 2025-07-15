@@ -58,39 +58,81 @@ We conducted a comprehensive security audit and implemented critical fixes:
 
 #### ✅ Completed Security Enhancements
 
-1. **Test Endpoint Removal**
+1. **Critical XSS Vulnerability Fixes**
+   - Fixed multiple Cross-Site Scripting vulnerabilities in OAuth callback routes
+   - Created security utilities (`lib/security-utils.ts`) for proper HTML/JS encoding
+   - Fixed template literal injections in `/api/auth/callback/registry/route.ts`
+   - Fixed similar vulnerabilities in `/api/auth/github-popup-callback/route.ts`
+   - Fixed XSS in `/api/mcp/oauth/callback/route.ts` success/error responses
+   - Fixed XSS in `StreamableHTTPWrapper` OAuth redirect flow
+   - Implemented proper escaping for all user-controlled data in HTML contexts
+
+2. **SSRF (Server-Side Request Forgery) Prevention**
+   - Fixed SSRF vulnerabilities in `/api/analyze-repository/route.ts`
+   - Added GitHub URL validation and identifier verification
+   - Implemented hostname verification for external API calls
+   - Prevented unauthorized requests to internal networks
+
+3. **URL Substring Sanitization Fixes**
+   - Fixed incomplete URL validation in `StreamableHTTPWrapper.ts`
+   - Fixed hostname checking in `trigger-mcp-oauth.ts`
+   - Replaced unsafe `.includes()` checks with proper domain validation
+   - Prevents subdomain attacks (e.g., `evil-github.com` matching `github.com`)
+
+4. **Open Redirect Protection**
+   - Added URL validation to prevent open redirect attacks
+   - Implemented whitelist of allowed redirect hosts
+   - Fixed unsafe redirects in OAuth callback flows
+   - Validated localStorage-sourced URLs before redirection
+
+5. **Comprehensive Security Headers**
+   - Added complete security headers to all HTML responses:
+     - Content-Security-Policy (CSP)
+     - X-Content-Type-Options: nosniff
+     - X-Frame-Options: DENY
+     - X-XSS-Protection: 1; mode=block
+     - Referrer-Policy: strict-origin-when-cross-origin
+   - Created `getSecurityHeaders()` utility for consistent application
+
+6. **Content Security Policy**
+   - Added CSP headers to all HTML responses
+   - Prevents inline script injection attacks
+   - Restricts resource loading to trusted sources
+   - Mitigates XSS attack vectors
+
+7. **Test Endpoint Removal**
    - Removed exposed `/api/test-route` and `/api/test-error` endpoints
    - Eliminated potential attack vectors from development endpoints
 
-2. **Comprehensive Rate Limiting**
+8. **Comprehensive Rate Limiting**
    - Implemented tiered in-memory rate limiting with automatic cleanup
    - Auth endpoints: 5 requests per 15 minutes (strictest)
    - API endpoints: 60 requests per minute
    - Public endpoints: 100 requests per minute
    - Sensitive operations: 10 requests per hour
 
-3. **Database Security**
+9. **Database Security**
    - Secured `/api/db-migrations` endpoint with `ADMIN_MIGRATION_SECRET`
    - Prevents unauthorized database modifications
    - Admin-only access for schema changes
 
-4. **Error Response Standardization**
-   - Created `lib/api-errors.ts` for consistent error handling
-   - Prevents internal information disclosure
-   - Sanitized error messages for security
+10. **Error Response Standardization**
+    - Created `lib/api-errors.ts` for consistent error handling
+    - Prevents internal information disclosure
+    - Sanitized error messages for security
 
-5. **Authentication Security**
-   - Enabled email verification requirement for user registration
-   - Strengthened user identity verification process
+11. **Authentication Security**
+    - Enabled email verification requirement for user registration
+    - Strengthened user identity verification process
 
-6. **File Security**
-   - Added path sanitization to file download endpoints
-   - Prevents directory traversal attacks
-   - Secure file access controls
+12. **File Security**
+    - Added path sanitization to file download endpoints
+    - Prevents directory traversal attacks
+    - Secure file access controls
 
-7. **Environment Security**
-   - Created comprehensive `.env.example` with security variables
-   - Proper configuration guidance for production deployments
+13. **Environment Security**
+    - Created comprehensive `.env.example` with security variables
+    - Proper configuration guidance for production deployments
 
 ## Authentication & Authorization
 
@@ -142,6 +184,10 @@ We conducted a comprehensive security audit and implemented critical fixes:
 
 ### Sanitization Measures
 - **XSS Prevention**: Content filtering for script tags and JavaScript URLs
+  - Use `escapeHtml()` from `lib/security-utils.ts` for HTML contexts
+  - Use `encodeForJavaScript()` for JavaScript contexts
+  - Never use template literals with user input in HTML/JS
+  - Always validate and sanitize user input before display
 - **SQL Injection Prevention**: Parameterized queries via Drizzle ORM
 - **Path Traversal Protection**: File path sanitization
 - **HTML Sanitization**: Safe rendering of user-generated content
@@ -236,8 +282,20 @@ We conducted a comprehensive security audit and implemented critical fixes:
 #### Code Security
 - **Input Validation**: Use Zod schemas for all user inputs
 - **Output Encoding**: Properly encode data before display
+  ```typescript
+  // ❌ WRONG - XSS vulnerability
+  const html = `<p>${userInput}</p>`;
+  
+  // ✅ CORRECT - Properly escaped
+  import { escapeHtml } from '@/lib/security-utils';
+  const html = `<p>${escapeHtml(userInput)}</p>`;
+  ```
 - **SQL Injection Prevention**: Use parameterized queries only
-- **XSS Prevention**: Sanitize and validate all user content
+- **XSS Prevention**: 
+  - Never use template literals with user input in HTML
+  - Use `encodeForJavaScript()` when passing data to `<script>` tags
+  - Always escape HTML entities in user content
+  - Add Content Security Policy headers to all HTML responses
 - **CSRF Protection**: Implement anti-CSRF tokens
 
 #### Authentication & Authorization
@@ -337,7 +395,7 @@ add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" alway
 
 ---
 
-**Last Updated**: January 2025  
+**Last Updated**: January 15, 2025 (Critical vulnerability fixes - XSS, SSRF, URL validation)  
 **Next Review**: April 2025
 
 For questions about this security policy, please contact our security team or create a GitHub issue. 

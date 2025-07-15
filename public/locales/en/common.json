@@ -34,7 +34,10 @@
     "viewSchema": "View Schema",
     "delete": "Delete",
     "deleting": "Deleting...",
-    "pluggedinLogo": "plugged.in Logo"
+    "pluggedinLogo": "plugged.in Logo",
+    "install": "Install",
+    "installing": "Installing...",
+    "back": "Back"
   },
   "actions": {
     "goHome": "Go Home",

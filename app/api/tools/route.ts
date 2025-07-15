@@ -44,6 +44,10 @@ function validateToolStatus(status: string | undefined): ToggleStatus {
   return ToggleStatus.ACTIVE;
 }
 
+// In-memory cache to track recent discovery attempts
+const discoveryAttempts = new Map<string, number>();
+const DISCOVERY_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes
+
 /**
  * @swagger
  * /api/tools:
@@ -95,54 +99,65 @@ export async function GET(request: Request) {
     const profileUuid = auth.activeProfile.uuid;
 
     let discoveryTriggered = false;
-    const serversBeingDiscovered: string[] = []; // Changed to const
+    const serversBeingDiscovered: string[] = [];
 
-    // 2. Fetch ACTIVE MCP servers for the profile to check for discovery needs
-    const activeServers = await db.query.mcpServersTable.findMany({
-      where: and(
+    // 2. Fetch ACTIVE MCP servers for the profile with tool counts
+    const activeServers = await db
+      .select({
+        uuid: mcpServersTable.uuid,
+        name: mcpServersTable.name,
+        toolCount: sql<number>`count(${toolsTable.uuid})`.as('toolCount'),
+      })
+      .from(mcpServersTable)
+      .leftJoin(toolsTable, eq(toolsTable.mcp_server_uuid, mcpServersTable.uuid))
+      .where(and(
         eq(mcpServersTable.profile_uuid, profileUuid),
         eq(mcpServersTable.status, McpServerStatus.ACTIVE)
-      ),
-      columns: { uuid: true, name: true },
-    });
+      ))
+      .groupBy(mcpServersTable.uuid, mcpServersTable.name);
 
-    // 3. Check each active server for existing tools and trigger discovery if needed
-    // Use Promise.allSettled for better handling if many discoveries are triggered
-    const discoveryChecks = activeServers.map(async (server) => {
+    // 3. Check each active server for discovery needs with throttling
+    const discoveryPromises = activeServers.map(async (server) => {
       try {
-        const existingToolsCountResult = await db
-          .select({ count: sql<number>`count(*)` })
-          .from(toolsTable)
-          .where(and(
-            // eq(toolsTable.profile_uuid, profileUuid), // This was the error - profile_uuid is not directly on toolsTable
-            eq(toolsTable.mcp_server_uuid, server.uuid) // We already know the server belongs to the profile from the activeServers query
-          ))
-          .limit(1);
+        const toolCount = server.toolCount || 0;
+        const serverKey = `${profileUuid}:${server.uuid}`;
+        const lastAttempt = discoveryAttempts.get(serverKey) || 0;
+        const now = Date.now();
+        
+        // Only trigger discovery if:
+        // 1. Server has no tools AND
+        // 2. No recent discovery attempt (within throttle period)
+        const shouldDiscover = toolCount === 0 && (now - lastAttempt) > DISCOVERY_THROTTLE_MS;
 
-        const count = existingToolsCountResult[0]?.count ?? 0;
-
-        // 4. Trigger discovery if server is active but has no tools
-        if (count === 0) {
-          console.log(`[API /api/tools] No tools found for active server ${server.name || 'Unnamed'} (${server.uuid}). Triggering discovery.`);
-          discoveryTriggered = true; // Set flag (note: race condition possible if multiple requests hit this, but acceptable for now)
+        if (shouldDiscover) {
+          discoveryTriggered = true;
           serversBeingDiscovered.push(server.name || server.uuid);
+
+          // Record discovery attempt to prevent duplicates
+          discoveryAttempts.set(serverKey, now);
 
           // Trigger discovery asynchronously (fire-and-forget)
           discoverSingleServerTools(profileUuid, server.uuid).catch(err => {
             console.error(`[API /api/tools] Background discovery failed for ${server.uuid}:`, err);
-            // Optionally update server status back to ACTIVE or ERROR in DB
+            // Remove from cache on failure to allow retry sooner
+            discoveryAttempts.delete(serverKey);
           });
         }
       } catch (checkError) {
-         console.error(`[API /api/tools] Error checking tools for server ${server.uuid}:`, checkError);
-         // Decide how to handle check errors, maybe log and continue
+        console.error(`[API /api/tools] Error checking tools for server ${server.uuid}:`, checkError);
       }
     });
 
-    // Wait for all checks to initiate (or fail) before proceeding
-    // This doesn't wait for discovery itself, just the check and trigger step
-    await Promise.allSettled(discoveryChecks);
+    // Wait for all checks to complete
+    await Promise.allSettled(discoveryPromises);
 
+    // Clean up old entries from discovery attempts cache
+    const cutoff = Date.now() - DISCOVERY_THROTTLE_MS;
+    for (const [key, timestamp] of discoveryAttempts.entries()) {
+      if (timestamp < cutoff) {
+        discoveryAttempts.delete(key);
+      }
+    }
 
     // --- Now, fetch the tools based on the original request parameters ---
     const { searchParams } = new URL(request.url);

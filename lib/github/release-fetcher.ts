@@ -75,14 +75,12 @@ export async function fetchReleases(repoName: 'pluggedin-app' | 'pluggedin-mcp',
 
     // If no releases found, fall back to tags
     if (releases.length === 0) {
-      console.log(`No releases found for ${repoName}, falling back to tags...`);
       return await fetchTagsAsReleases(repoName);
     }
 
     return releases;
   } catch (error) {
     console.error(`Error fetching releases for ${repoName}:`, error);
-    console.log('Falling back to tags...');
     return await fetchTagsAsReleases(repoName);
   }
 }

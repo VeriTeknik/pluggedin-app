@@ -1,4 +1,3 @@
-import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
@@ -7,12 +6,14 @@ import { getProjects } from '@/app/actions/projects';
 import { useToast } from '@/hooks/use-toast';
 import { Project } from '@/types/project';
 
+import { useSafeSession } from './use-safe-session';
+
 const CURRENT_PROJECT_KEY = 'pluggedin-current-project';
 
 export const useProjects = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { status: sessionStatus } = useSession();
+  const { status: sessionStatus } = useSafeSession();
 
   // Only fetch projects if authenticated
   const { data = [], mutate, isLoading, error } = useSWR(

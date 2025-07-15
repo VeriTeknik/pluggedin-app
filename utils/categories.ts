@@ -55,7 +55,7 @@ const CATEGORY_KEYWORDS: Record<McpServerCategory, string[]> = {
  * @param tags - Server tags
  * @returns The most likely category
  */
-export function detectCategory(
+function detectCategory(
   name: string,
   description: string = '',
   tags: string[] = []
@@ -73,8 +73,11 @@ export function detectCategory(
     if (category === McpServerCategory.OTHER) return { category, score: 0 };
     
     const score = keywords.reduce((total, keyword) => {
+      // Escape special regex characters in keyword
+      const escapedKeyword = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      
       // Count occurrences of each keyword
-      const regex = new RegExp(`\\b${keyword}\\b`, 'gi');
+      const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
       const count = (allText.match(regex) || []).length;
       
       // Weight matches in name and tags more heavily

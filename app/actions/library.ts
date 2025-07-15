@@ -265,7 +265,6 @@ async function processRagUpload(
     }, file, ragIdentifier);
     
     if (result.success) {
-      console.log('Document successfully uploaded to RAG API');
       return { ragProcessed: true, ragError: undefined, upload_id: result.upload_id };
     } else {
       throw new Error(result.error || 'RAG upload failed');

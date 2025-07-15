@@ -147,7 +147,6 @@ export async function PATCH(
        return NextResponse.json({ error: 'Failed to update server, server not found after authorization.' }, { status: 404 });
     }
 
-    console.log(`Updated notes for server ${serverUuid}`);
     return NextResponse.json(updatedServer);
 
   } catch (error: any) {

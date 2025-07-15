@@ -1,0 +1,399 @@
+{
+    "wizard": {
+      "title": "Server Toevoegen aan Register",
+      "cancelTitle": "Wizard Annuleren",
+      "cancelDescription": "Weet je zeker dat je wilt annuleren? Je voortgang gaat verloren.",
+      "confirmCancel": "Ja, Annuleren",
+      "continueButton": "Doorgaan",
+      "operationInProgress": "Bewerking in uitvoering",
+      "waitForOperation": "Wacht tot de huidige bewerking is voltooid.",
+      "success": "Succes!",
+      "successDescription": "Server is succesvol toegevoegd aan het register."
+    },
+    "steps": {
+      "github": {
+        "title": "GitHub Repository",
+        "description": "Voer de GitHub repository URL in"
+      },
+      "ownership": {
+        "title": "Eigendom",
+        "description": "Claim deze server of voeg toe aan community"
+      },
+      "configuration": {
+        "title": "Configuratie",
+        "description": "Configureer omgevingsvariabelen"
+      },
+      "discovery": {
+        "title": "Test Ontdekking",
+        "description": "Test server ontdekking en mogelijkheden"
+      },
+      "submit": {
+        "title": "Indienen",
+        "description": "Indienen bij het register"
+      }
+    },
+    "navigation": {
+      "previous": "Vorige",
+      "next": "Volgende"
+    },
+    "addServer": {
+      "button": "Toevoegen aan Register",
+      "title": "Server Toevoegen aan Register",
+      "description": {
+        "ownership": "Laten we beginnen door je relatie met deze server te bepalen.",
+        "unclaimed": "Voeg een server toe om de community te helpen het te ontdekken. De eigenaar kan het later claimen.",
+        "claimed": "Als eigenaar kun je deze server direct naar het register publiceren.",
+        "verifying": "Je eigendom wordt geverifieerd...",
+        "success": "Server succesvol toegevoegd!"
+      },
+      "success": {
+        "unclaimed": "Server toegevoegd aan het community register. De eigenaar kan het later claimen.",
+        "claimed": "Server succesvol gepubliceerd naar het register!"
+      }
+    },
+    "github": {
+      "inputStep": {
+        "title": "GitHub Repository Toevoegen",
+        "description": "Voer de URL in van de GitHub repository die uw MCP server bevat. We zullen het analyseren om u te helpen alles correct te configureren.",
+        "label": "Repository URL",
+        "placeholder": "https://github.com/owner/repository",
+        "validate": "Valideren",
+        "validating": "Valideren",
+        "supportedFormats": "Ondersteunde formaten: https://github.com/owner/repo, git@github.com:owner/repo, of owner/repo",
+        "errors": {
+          "invalidUrl": "Voer een geldige GitHub repository URL in",
+          "notFound": "Repository niet gevonden. Controleer de URL en probeer opnieuw.",
+          "rateLimited": "GitHub API snelheidslimiet overschreden. Probeer later opnieuw.",
+          "accessDenied": "Toegang tot repository mislukt. Het kan privé zijn of de URL is onjuist."
+        },
+        "privateRepoNote": "Opmerking: Privé repositories kunnen worden toegevoegd, maar zijn alleen toegankelijk voor gebruikers die toegang hebben tot de repository op GitHub.",
+        "repository": {
+          "private": "Privé repository",
+          "stars": "{{count}} sterren",
+          "alreadyInRegistry": "Deze repository staat al in het register!",
+          "claimed": "Geclaimd",
+          "community": "Community",
+          "version": "Versie: {{version}}"
+        }
+      }
+    },
+    "ownership": {
+      "step": {
+        "title": "Server Eigendom",
+        "description": "Kies hoe je deze server wilt toevoegen aan het register.",
+        "repository": "Repository:",
+        "privateRepo": "(Privé repository)",
+        "alreadyExists": "Deze server bestaat al in het register!",
+        "claimedServer": "Geclaimd",
+        "communityServer": "Community",
+        "updateExisting": "Als je de eigenaar bent, kun je de bestaande server bijwerken in plaats van een duplicaat maken.",
+        "canClaim": "Je kunt deze community server claimen als je de repository eigenaar bent."
+      },
+      "claim": {
+        "title": "Claim deze server",
+        "recommended": "(Aanbevolen)",
+        "alreadyClaimed": "(Al geclaimd)",
+        "description": "Verifieer eigendom en ontgrendel premium functies",
+        "alreadyClaimedDesc": "Deze server is al geclaimd door de eigenaar",
+        "benefits": {
+          "verified": "Geverifieerde badge op je server",
+          "analytics": "Toegang tot analyses en inzichten",
+          "priority": "Prioriteit in zoekresultaten",
+          "updates": "Directe register updates van GitHub",
+          "attribution": "Officiële eigendomstoewijzing"
+        },
+        "authenticated": "Geauthenticeerd als",
+        "verifying": "Repository eigendom verifiëren...",
+        "verificationFailed": "Je hebt geen beheerderstoegang tot deze repository. Selecteer \"Toevoegen aan community\" in plaats daarvan.",
+        "verificationSuccess": "Repository eigendom geverifieerd!",
+        "authRequired": "GitHub authenticatie is vereist om servers te claimen",
+        "authFailed": "Authenticatie mislukt",
+        "popupBlocked": "Popup geblokkeerd",
+        "allowPopups": "Sta popups toe voor deze site om te authenticeren met GitHub"
+      },
+      "community": {
+        "title": "Toevoegen aan community",
+        "alreadyInRegistry": "(Al in register)",
+        "description": "Indienen zonder eigendomsverificatie",
+        "alreadyInRegistryDesc": "Deze server staat al in het register",
+        "benefits": {
+          "quick": "Snel indiensproces",
+          "noAuth": "Geen authenticatie vereist",
+          "available": "Beschikbaar voor alle gebruikers",
+          "canBeClaimed": "Kan later worden geclaimd door de eigenaar"
+        }
+      },
+      "verificationFailed": "Eigendomsverificatie mislukt",
+      "ownershipMessage": "Je hebt geen eigendomstoegang tot deze repository. De repository is eigendom van '{{owner}}' maar je bent ingelogd als @{{username}}. Alleen repository eigenaren of organisatieleden met beheerderstoegang kunnen servers claimen.",
+      "serverErrorMessage": "Je hebt geen eigendomstoegang tot deze repository. De repository is eigendom van '{{owner}}' maar je bent ingelogd als @{{username}}. Alleen repository eigenaren of organisatieleden met beheerderstoegang kunnen servers claimen.",
+      "actions": {
+        "title": "Wat kun je doen?",
+        "ifOwnerClaimed": [
+          "Als je deze repository bezit, werk dan de bestaande server bij",
+          "Importeer de bestaande server van het register naar je profiel",
+          "Neem contact op met de huidige eigenaar als je denkt dat er een probleem is"
+        ],
+        "ifOwnerUnclaimed": [
+          "Als je deze repository bezit, kun je de bestaande community server claimen",
+          "Importeer de bestaande server van het register naar je profiel",
+          "Werk de community server bij als je verbeteringen hebt"
+        ]
+      },
+      "question": "Bezit je deze server?",
+      "owned": "Ja, ik bezit deze server",
+      "owned.description": "Ik ben de repository eigenaar en wil het publiceren naar het register",
+      "notOwned": "Nee, ik voeg het toe voor de community",
+      "notOwned.description": "Ik vond deze server en wil anderen helpen het te ontdekken"
+    },
+    "envConfig": {
+      "title": "Omgevingsvariabelen",
+      "description": "Configureer omgevingsvariabelen die door deze server vereist zijn. Deze kunnen worden aangepast door gebruikers wanneer ze de server installeren.",
+      "loading": "Omgevingsvariabelen detecteren...",
+      "detectedCommand": {
+        "title": "Gedetecteerde MCP Configuratie",
+        "description": "Commando en argumenten gedetecteerd uit de repository",
+        "command": "Commando:",
+        "args": "Argumenten:"
+      },
+      "noVarsAlert": "Geen omgevingsvariabelen gedetecteerd. Je kunt ze handmatig toevoegen indien nodig.",
+      "requiredVarsAlert": "Vul alle vereiste variabelen in",
+      "info": "Dubbelklik op een variabele om de details te bewerken. Deze variabelen worden opgeslagen als metadata in het register.",
+      "variable": {
+        "name": "Variabele Naam",
+        "namePlaceholder": "VARIABELE_NAAM",
+        "description": "Beschrijving (optioneel)",
+        "descriptionPlaceholder": "Beschrijving (optioneel)",
+        "required": "Vereist",
+        "secret": "Geheim",
+        "modified": "Gewijzigd",
+        "value": "Waarde",
+        "valuePlaceholder": "Voer {{name}} in",
+        "defaultValue": "Standaard: {{value}}",
+        "source": {
+          "readme": "README",
+          "packageJson": "package.json",
+          "envExample": ".env.example",
+          "code": "Code",
+          "registry": "Register",
+          "args": "Handmatig",
+          "detected": "Auto-gedetecteerd",
+          "manual": "Handmatig"
+        },
+        "defaultDescription": "Omgevingsvariabele",
+        "fromSource": "Omgevingsvariabele van {{source}}",
+        "apiKeyFor": "API sleutel voor {{header}} header",
+        "oauthClientId": "OAuth Client ID",
+        "githubToken": "GitHub persoonlijke toegangstoken voor API toegang",
+        "notionApiKey": "Notion integratie token",
+        "slackBotToken": "Slack bot gebruiker OAuth token",
+        "openaiApiKey": "OpenAI API sleutel",
+        "apiKey": "API sleutel",
+        "noVarsDetected": "Geen omgevingsvariabelen gedetecteerd. Je kunt ze handmatig toevoegen indien nodig."
+      },
+      "actions": {
+        "edit": "Variabele bewerken",
+        "delete": "{{name}} verwijderen",
+        "save": "Wijzigingen opslaan",
+        "cancel": "Bewerken annuleren",
+        "reset": "Resetten naar origineel",
+        "addVariable": "Variabele Toevoegen"
+      },
+      "dialog": {
+        "deleteTitle": "Omgevingsvariabele Verwijderen",
+        "deleteDescription": "Weet je zeker dat je de ontdekte variabele \"{{name}}\" wilt verwijderen? Deze werd gedetecteerd van {{source}} en kan vereist zijn voor de goede werking van de server.",
+        "deleteCancel": "Annuleren",
+        "deleteConfirm": "Verwijderen"
+      },
+      "toast": {
+        "detected": "Omgevingsvariabelen gedetecteerd",
+        "detectedDescription": "{{count}} omgevingsvariabele{{plural}} gevonden",
+        "detectionFailed": "Detectie mislukt",
+        "detectionFailedDescription": "Kon omgevingsvariabelen niet automatisch detecteren"
+      },
+      "securityNotice": "Omgevingsvariabelen gemarkeerd als \"Geheim\" worden versleuteld. De getoonde standaardwaarden zijn voorbeelden uit de repository - vervang ze door uw werkelijke waarden."
+    },
+    "discovery": {
+      "title": "Test Server Ontdekking",
+      "description": "Selecteer transporttypes en voer een ontdekkingstest uit om te verifiëren dat de server correct werkt.",
+      "notStarted": "Klik op de knop hieronder om de server ontdekking te testen.",
+      "testButton": "Test Server Ontdekking",
+      "testing": "Server ontdekking testen...",
+      "transport": {
+        "title": "Selecteer Transporttypes",
+        "description": "Kies welke transportmethoden deze server ondersteunt",
+        "stdio": {
+          "label": "STDIO",
+          "description": "Lokale commandoregel uitvoering"
+        },
+        "http": {
+          "label": "Streambare HTTP",
+          "description": "Moderne HTTP transport met streaming ondersteuning"
+        },
+        "docker": {
+          "label": "Docker",
+          "description": "Container-gebaseerde implementatie"
+        },
+        "detecting": "Pakketconfiguraties detecteren...",
+        "confidence": "{{percent}}% vertrouwen",
+        "source": "via {{source}}"
+      },
+      "test": {
+        "configTitle": "Test Configuratie",
+        "activeTransport": "Actief Transport voor Testen",
+        "repository": "Repository:",
+        "command": "Commando:",
+        "package": "Pakket:",
+        "image": "Image:",
+        "url": "URL:",
+        "headers": "Headers:",
+        "headersConfigured": "{{count}} geconfigureerd",
+        "noUrlDetected": "Geen URL gedetecteerd",
+        "confidence": "Detectie Vertrouwen:",
+        "envVars": "Omgevingsvariabelen:",
+        "envVarsConfigured": "{{count}} geconfigureerd"
+      },
+      "button": {
+        "test": "Test {{transport}} Ontdekking",
+        "testing": "{{transport}} Server Testen..."
+      },
+      "output": {
+        "title": "Ontdekkingsuitvoer",
+        "tools": "Tools",
+        "resources": "Bronnen",
+        "prompts": "Prompts",
+        "none": "Geen"
+      },
+      "results": {
+        "success": "Ontdekking succesvol!",
+        "successDescription": "{{tools}} tools, {{resources}} bronnen en {{prompts}} prompts gevonden",
+        "failed": "Ontdekking mislukt",
+        "failedDescription": "Mislukt om servermogelijkheden te ontdekken",
+        "capabilities": "Ontdekte Mogelijkheden",
+        "noToolsDiscovered": "Geen tools ontdekt",
+        "noResourcesDiscovered": "Geen bronnen ontdekt",
+        "noPromptsDiscovered": "Geen prompts ontdekt",
+        "capabilitiesSummary": "{{total}} mogelijkheden gevonden: {{tools}} tools, {{resources}} bronnen, {{prompts}} prompts"
+      },
+      "toast": {
+        "configDetected": "Configuratie gedetecteerd!",
+        "detectionError": "Detectie fout",
+        "detectionErrorDesc": "Mislukt om pakketconfiguratie van GitHub te detecteren",
+        "profileNotFound": "Profiel niet gevonden",
+        "profileNotFoundDesc": "Selecteer eerst een profiel",
+        "testFailed": "Ontdekkingstest mislukt"
+      },
+      "streaming": {
+        "title": "{{serverName}} testen",
+        "discovering": "(Aan het ontdekken...)",
+        "connected": "Verbonden met ontdekkingsstroom...",
+        "started": "=== MCP Ontdekking Gestart ===",
+        "serverUuid": "Server UUID: {{uuid}}",
+        "fetchingConfig": "Serverconfiguratie ophalen uit database...",
+        "foundConfig": "Serverconfiguratie gevonden voor {{name}}",
+        "decrypting": "Serverconfiguratie ontsleutelen...",
+        "discoveringTools": "[VOORTGANG] Tools ontdekken...",
+        "discoveredTools": "{{count}} tools ontdekt",
+        "deletingOldTools": "Oude tools verwijderen voor server: {{uuid}}",
+        "insertingTools": "{{count}} nieuwe tools invoegen...",
+        "storedTools": "{{count}} tools succesvol opgeslagen",
+        "discoveringResourceTemplates": "[VOORTGANG] Bronsjablonen ontdekken...",
+        "discoveredResourceTemplates": "{{count}} bronsjablonen ontdekt",
+        "deletingOldResourceTemplates": "Oude bronsjablonen verwijderen voor server: {{uuid}}",
+        "discoveringStaticResources": "[VOORTGANG] Statische bronnen ontdekken...",
+        "discoveredStaticResources": "{{count}} statische bronnen ontdekt",
+        "deletingOldStaticResources": "Oude statische bronnen verwijderen voor server: {{uuid}}",
+        "discoveringPrompts": "[VOORTGANG] Prompts ontdekken...",
+        "liveDiscovery": "Live ontdekking in uitvoering..."
+      }
+    },
+    "submit": {
+      "title": "Indienen bij Register",
+      "description": "Bekijk je serverconfiguratie en dien het in bij het register.",
+      "metadata": {
+        "title": "Server Metadata",
+        "description": "Beschrijving",
+        "author": "Auteur",
+        "categories": "Categorieën",
+        "tags": "Tags",
+        "placeholders": {
+          "description": "Korte beschrijving van wat deze server doet",
+          "tags": "Voer tags in en druk op Enter"
+        }
+      },
+      "review": {
+        "title": "Configuratie Bekijken",
+        "repository": "Repository",
+        "package": "Pakket",
+        "command": "Commando",
+        "envVars": "Omgevingsvariabelen",
+        "capabilities": {
+          "title": "Mogelijkheden",
+          "tools": "{{count}} tool",
+          "tools_plural": "{{count}} tools",
+          "resources": "{{count}} bron",
+          "resources_plural": "{{count}} bronnen",
+          "prompts": "{{count}} prompt",
+          "prompts_plural": "{{count}} prompts"
+        }
+      },
+      "submitting": "Indienen bij register...",
+      "submitButton": {
+        "claim": "Indienen & Server Claimen",
+        "community": "Indienen bij Community"
+      },
+      "success": {
+        "title": "Succes!",
+        "claimed": "Je server is succesvol gepubliceerd naar het register!",
+        "community": "Server is toegevoegd aan het community register. De eigenaar kan het later claimen.",
+        "viewInRegistry": "Bekijken in Register"
+      },
+      "error": {
+        "title": "Indiening Mislukt",
+        "tryAgain": "Opnieuw Proberen"
+      }
+    },
+    "form": {
+      "repositoryUrl": "GitHub Repository URL",
+      "repositoryUrl.hint": "Voorbeeld: https://github.com/owner/repo",
+      "description": "Beschrijving",
+      "description.placeholder": "Korte beschrijving van wat deze server doet",
+      "packageRegistry": "Pakketregister",
+      "packageName": "Pakketnaam",
+      "packageVersion": "Versie",
+      "environmentVariables": "Omgevingsvariabelen",
+      "addEnvVar": "Variabele Toevoegen",
+      "submit": {
+        "unclaimed": "Server Toevoegen",
+        "claimed": "Publiceren naar Register"
+      }
+    },
+    "verifying": {
+      "ownership": "GitHub eigendom verifiëren..."
+    },
+    "success": {
+      "claimed": "Je server is gepubliceerd naar het register!",
+      "unclaimed": "Server toegevoegd! De eigenaar kan het claimen wanneer ze er klaar voor zijn."
+    },
+    "claim": {
+      "button": "Claim Deze Server",
+      "dialog": {
+        "title": "Server Claimen",
+        "description": "Verifieer je eigendom om deze server te claimen"
+      },
+      "verifying": "Eigendom verifiëren...",
+      "success": "Server succesvol geclaimd!",
+      "publishing": "Publiceren naar register...",
+      "pending": "Je claim verzoek is ingediend voor beoordeling"
+    },
+    "badges": {
+      "verified": "Geverifieerd",
+      "unclaimed": "Niet geclaimd",
+      "pending": "Claim In Behandeling"
+    },
+    "errors": {
+      "notOwner": "Je moet de eigenaar van deze repository zijn",
+      "alreadyExists": "Deze server bestaat al in het register",
+      "authRequired": "Register authenticatie niet geconfigureerd",
+      "publishFailed": "Mislukt om server te publiceren naar register"
+    }
+  }
