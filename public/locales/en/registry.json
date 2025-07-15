@@ -1,5 +1,4 @@
 {
-  "registry": {
     "wizard": {
       "title": "Add Server to Registry",
       "cancelTitle": "Cancel Wizard",
@@ -54,8 +53,8 @@
     },
     "github": {
       "inputStep": {
-        "title": "GitHub Repository",
-        "description": "Enter the GitHub repository URL",
+        "title": "Add a GitHub Repository",
+        "description": "Enter the URL of the GitHub repository containing your MCP server. We'll analyze it to help you configure everything correctly.",
         "label": "Repository URL",
         "placeholder": "https://github.com/owner/repository",
         "validate": "Validate",
@@ -67,6 +66,7 @@
           "rateLimited": "GitHub API rate limit exceeded. Please try again later.",
           "accessDenied": "Failed to access repository. It might be private or the URL is incorrect."
         },
+        "privateRepoNote": "Note: Private repositories can be added, but they will only be accessible to users who have access to the repository on GitHub.",
         "repository": {
           "private": "Private repository",
           "stars": "{{count}} stars",
@@ -99,13 +99,17 @@
           "verified": "Verified badge on your server",
           "analytics": "Access to analytics and insights",
           "priority": "Priority in search results",
-          "updates": "Direct registry updates from GitHub"
+          "updates": "Direct registry updates from GitHub",
+          "attribution": "Official ownership attribution"
         },
         "authenticated": "Authenticated as",
         "verifying": "Verifying repository ownership...",
         "verificationFailed": "You do not have admin access to this repository. Please select \"Add to community\" instead.",
         "verificationSuccess": "Repository ownership verified!",
-        "authRequired": "GitHub authentication is required to claim servers"
+        "authRequired": "GitHub authentication is required to claim servers",
+        "authFailed": "Authentication failed",
+        "popupBlocked": "Popup blocked",
+        "allowPopups": "Please allow popups for this site to authenticate with GitHub"
       },
       "community": {
         "title": "Add to community",
@@ -119,6 +123,9 @@
           "canBeClaimed": "Can be claimed later by the owner"
         }
       },
+      "verificationFailed": "Ownership verification failed",
+      "ownershipMessage": "You don't have ownership access to this repository. The repository is owned by '{{owner}}' but you are signed in as @{{username}}. Only repository owners or organization members with admin access can claim servers.",
+      "serverErrorMessage": "You don't have ownership access to this repository. The repository is owned by '{{owner}}' but you are signed in as @{{username}}. Only repository owners or organization members with admin access can claim servers.",
       "actions": {
         "title": "What can you do?",
         "ifOwnerClaimed": [
@@ -140,54 +147,114 @@
     },
     "envConfig": {
       "title": "Environment Variables",
-      "description": "Configure environment variables required by this server. These can be customized by users when they install the server.",
+      "description": "Configure the environment variables required by this MCP server. Users can customize these when installing the server.",
       "loading": "Detecting environment variables...",
       "detectedCommand": {
-        "title": "Detected Command",
+        "title": "Detected MCP Configuration",
+        "description": "Command and arguments detected from the repository",
         "command": "Command:",
         "args": "Args:"
       },
       "info": "Double-click any variable to edit its details. These variables will be stored as metadata in the registry.",
+      "noVarsAlert": "No environment variables detected. You can add them manually if needed.",
+      "requiredVarsAlert": "Please fill in all required variables",
       "variable": {
-        "name": "VARIABLE_NAME",
+        "name": "Variable Name",
+        "namePlaceholder": "VARIABLE_NAME",
         "description": "Description (optional)",
+        "descriptionPlaceholder": "Description (optional)",
         "required": "Required",
         "secret": "Secret",
         "modified": "Modified",
+        "value": "Value",
+        "valuePlaceholder": "Enter {{name}}",
+        "defaultValue": "Default: {{value}}",
         "source": {
           "readme": "README",
           "packageJson": "package.json",
           "envExample": ".env.example",
+          "code": "Code",
+          "registry": "Registry",
+          "args": "Manual",
           "detected": "Auto-detected",
           "manual": "Manual"
-        },
-        "placeholder": {
-          "name": "VARIABLE_NAME",
-          "description": "Description (optional)"
         },
         "defaultDescription": "Environment variable",
         "fromSource": "Environment variable from {{source}}",
         "apiKeyFor": "API key for {{header}} header",
-          "oauthClientId": "OAuth Client ID",
-          "githubToken": "GitHub personal access token for API access",
-          "apiKey": "API key",
-          "noVarsDetected": "No environment variables detected. You can add them manually if needed."
+        "oauthClientId": "OAuth Client ID",
+        "githubToken": "GitHub personal access token for API access",
+        "notionApiKey": "Notion integration token",
+        "slackBotToken": "Slack bot user OAuth token",
+        "openaiApiKey": "OpenAI API key",
+        "apiKey": "API key",
+        "noVarsDetected": "No environment variables detected. You can add them manually if needed."
       },
       "actions": {
-        "edit": "Edit",
-        "delete": "Delete",
+        "edit": "Edit variable",
+        "delete": "Delete {{name}}",
         "save": "Save changes",
         "cancel": "Cancel editing",
-        "reset": "Reset to detected values",
+        "reset": "Reset to original",
         "addVariable": "Add Variable"
+      },
+      "dialog": {
+        "deleteTitle": "Delete Environment Variable",
+        "deleteDescription": "Are you sure you want to delete the discovered variable \"{{name}}\"? This was detected from {{source}} and may be required for the server to function properly.",
+        "deleteCancel": "Cancel",
+        "deleteConfirm": "Delete"
+      },
+      "toast": {
+        "detected": "Environment variables detected",
+        "detectedDescription": "Found {{count}} environment variable{{plural}}",
+        "detectionFailed": "Detection failed",
+        "detectionFailedDescription": "Could not detect environment variables automatically"
       }
     },
     "discovery": {
       "title": "Test Server Discovery",
-      "description": "Let's test the server to discover its capabilities and ensure it's working correctly.",
+      "description": "Select transport types and run a discovery test to verify the server works correctly.",
       "notStarted": "Click the button below to test the server discovery.",
       "testButton": "Test Server Discovery",
       "testing": "Testing server discovery...",
+      "transport": {
+        "title": "Select Transport Types",
+        "description": "Choose which transport methods this server supports",
+        "stdio": {
+          "label": "STDIO",
+          "description": "Local command-line execution"
+        },
+        "http": {
+          "label": "Streamable HTTP",
+          "description": "Modern HTTP transport with streaming support"
+        },
+        "docker": {
+          "label": "Docker",
+          "description": "Container-based deployment"
+        },
+        "detecting": "Detecting package configurations...",
+        "confidence": "{{percent}}% confidence",
+        "source": "via {{source}}"
+      },
+      "test": {
+        "configTitle": "Test Configuration",
+        "activeTransport": "Active Transport for Testing",
+        "repository": "Repository:",
+        "command": "Command:",
+        "package": "Package:",
+        "image": "Image:",
+        "url": "URL:",
+        "headers": "Headers:",
+        "headersConfigured": "{{count}} configured",
+        "noUrlDetected": "No URL detected",
+        "confidence": "Detection Confidence:",
+        "envVars": "Environment Variables:",
+        "envVarsConfigured": "{{count}} configured"
+      },
+      "button": {
+        "test": "Test {{transport}} Discovery",
+        "testing": "Testing {{transport}} Server..."
+      },
       "output": {
         "title": "Discovery Output",
         "tools": "Tools",
@@ -196,9 +263,46 @@
         "none": "None"
       },
       "results": {
-        "success": "Server discovery completed successfully!",
-        "failed": "Server discovery failed",
-        "capabilities": "Discovered Capabilities"
+        "success": "Discovery successful!",
+        "successDescription": "Found {{tools}} tools, {{resources}} resources, and {{prompts}} prompts",
+        "failed": "Discovery failed",
+        "failedDescription": "Failed to discover server capabilities",
+        "capabilities": "Discovered Capabilities",
+        "noToolsDiscovered": "No tools discovered",
+        "noResourcesDiscovered": "No resources discovered",
+        "noPromptsDiscovered": "No prompts discovered",
+        "capabilitiesSummary": "Found {{total}} capabilities: {{tools}} tools, {{resources}} resources, {{prompts}} prompts"
+      },
+      "toast": {
+        "configDetected": "Configuration detected!",
+        "detectionError": "Detection error",
+        "detectionErrorDesc": "Failed to detect package configuration from GitHub",
+        "profileNotFound": "Profile not found",
+        "profileNotFoundDesc": "Please select a profile first",
+        "testFailed": "Discovery test failed"
+      },
+      "streaming": {
+        "title": "Testing {{serverName}}",
+        "discovering": "(Discovering...)",
+        "connected": "Connected to discovery stream...",
+        "started": "=== MCP Discovery Started ===",
+        "serverUuid": "Server UUID: {{uuid}}",
+        "fetchingConfig": "Fetching server configuration from database...",
+        "foundConfig": "Found server config for {{name}}",
+        "decrypting": "Decrypting server configuration...",
+        "discoveringTools": "[PROGRESS] Discovering tools...",
+        "discoveredTools": "Discovered {{count}} tools",
+        "deletingOldTools": "Deleting old tools for server: {{uuid}}",
+        "insertingTools": "Inserting {{count}} new tools...",
+        "storedTools": "Successfully stored {{count}} tools",
+        "discoveringResourceTemplates": "[PROGRESS] Discovering resource templates...",
+        "discoveredResourceTemplates": "Discovered {{count}} resource templates",
+        "deletingOldResourceTemplates": "Deleting old resource templates for server: {{uuid}}",
+        "discoveringStaticResources": "[PROGRESS] Discovering static resources...",
+        "discoveredStaticResources": "Discovered {{count}} static resources",
+        "deletingOldStaticResources": "Deleting old static resources for server: {{uuid}}",
+        "discoveringPrompts": "[PROGRESS] Discovering prompts...",
+        "liveDiscovery": "Live discovery in progress..."
       }
     },
     "submit": {
@@ -291,5 +395,4 @@
       "authRequired": "Registry authentication not configured",
       "publishFailed": "Failed to publish server to registry"
     }
-  }
 }

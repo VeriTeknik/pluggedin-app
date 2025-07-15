@@ -2,6 +2,7 @@
 
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -25,6 +26,7 @@ interface SmartServerWizardProps {
 }
 
 export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfileUuid }: SmartServerWizardProps) {
+  const { t } = useTranslation('registry');
   const { toast } = useToast();
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const {
@@ -44,8 +46,8 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
   const handleClose = useCallback(() => {
     if (isSubmitting) {
       toast({
-        title: 'Operation in progress',
-        description: 'Please wait for the current operation to complete.',
+        title: t('wizard.operationInProgress'),
+        description: t('wizard.waitForOperation'),
         variant: 'default',
       });
       return;
@@ -58,7 +60,7 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
       resetWizard();
       onOpenChange(false);
     }
-  }, [currentStep, wizardData, isSubmitting, onOpenChange, resetWizard, toast]);
+  }, [currentStep, wizardData, isSubmitting, onOpenChange, resetWizard, toast, t]);
 
   const handleConfirmClose = useCallback(() => {
     resetWizard();
@@ -68,13 +70,13 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
 
   const handleSuccess = useCallback(() => {
     toast({
-      title: 'Success!',
-      description: 'Server has been successfully added to the registry.',
+      title: t('wizard.success'),
+      description: t('wizard.successDescription'),
     });
     resetWizard();
     onOpenChange(false);
     onSuccess?.();
-  }, [onOpenChange, onSuccess, resetWizard, toast]);
+  }, [onOpenChange, onSuccess, resetWizard, toast, t]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -127,7 +129,7 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
       <Dialog open={open} onOpenChange={handleClose}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader className="flex-shrink-0">
-            <DialogTitle>Add Server to Registry</DialogTitle>
+            <DialogTitle>{t('wizard.title')}</DialogTitle>
           </DialogHeader>
 
         {/* Progress indicator */}
@@ -154,7 +156,7 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
               className={cn(currentStep === 0 && 'invisible')}
             >
               <ChevronLeft className="mr-2 h-4 w-4" />
-              Previous
+              {t('navigation.previous')}
             </Button>
 
             {currentStep < steps.length - 1 && (
@@ -162,7 +164,7 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
                 onClick={goToNextStep}
                 disabled={!canGoNext() || isSubmitting}
               >
-                Next
+                {t('navigation.next')}
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             )}
@@ -174,10 +176,10 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
       <ConfirmDialog
         open={showConfirmDialog}
         onOpenChange={setShowConfirmDialog}
-        title="Cancel Wizard"
-        description="Are you sure you want to cancel? Your progress will be lost."
-        confirmText="Yes, Cancel"
-        cancelText="Continue"
+        title={t('wizard.cancelTitle')}
+        description={t('wizard.cancelDescription')}
+        confirmText={t('wizard.confirmCancel')}
+        cancelText={t('wizard.continueButton')}
         onConfirm={handleConfirmClose}
         variant="destructive"
       />

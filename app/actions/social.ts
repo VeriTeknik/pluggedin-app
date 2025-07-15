@@ -17,7 +17,7 @@ type User = typeof users.$inferSelect;
 type LanguageCode = typeof languageEnum.enumValues[number]; 
 
 import { getAuthSession } from '@/lib/auth';
-import { withAuth, withServerAuth } from '@/lib/auth-helpers';
+import { withAuth } from '@/lib/auth-helpers';
 
 // Additional validation schemas
 const uuidSchema = z.string().uuid('Invalid UUID format');

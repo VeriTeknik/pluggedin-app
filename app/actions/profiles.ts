@@ -8,7 +8,7 @@ import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
 import { type Locale } from '@/i18n/config';
 import { getAuthSession } from '@/lib/auth';
-import { withAuth, withProjectAuth, withProfileAuth } from '@/lib/auth-helpers';
+import { withAuth, withProfileAuth,withProjectAuth } from '@/lib/auth-helpers';
 import { Profile } from '@/types/profile';
 
 // Validation schemas

@@ -2,10 +2,11 @@
 
 import { AlertCircle, Check, Github, Loader2,Shield, Users } from 'lucide-react';
 import { useCallback,useEffect, useState } from 'react';
-import { useRegistryOAuthSession } from '@/app/hooks/useRegistryOAuthSession';
-import { getRegistryOAuthToken } from '@/app/actions/registry-oauth-session';
+import { useTranslation } from 'react-i18next';
 
+import { getRegistryOAuthToken } from '@/app/actions/registry-oauth-session';
 import { verifyGitHubOwnership } from '@/app/actions/registry-servers';
+import { useRegistryOAuthSession } from '@/app/hooks/useRegistryOAuthSession';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -43,6 +44,7 @@ const getRedirectUri = () => {
 };
 
 export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
+  const { t } = useTranslation('registry');
   const [choice, setChoice] = useState<'claim' | 'community' | ''>(
     data.willClaim === true ? 'claim' : data.willClaim === false ? 'community' : ''
   );
@@ -99,8 +101,8 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
               registryToken: 'secure_session', // Token is stored securely on server
             });
             toast({
-              title: 'Authentication successful',
-              description: `Authenticated as @${result.githubUsername || event.data.githubUsername}`,
+              title: t('ownership.claim.authenticated'),
+              description: `${t('ownership.claim.authenticated')} @${result.githubUsername || event.data.githubUsername}`,
             });
             
             // After successful authentication, verify ownership
@@ -117,8 +119,8 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
         setIsAuthenticating(false);
       } else if (event.data.type === 'github-oauth-error') {
         toast({
-          title: 'Authentication failed',
-          description: event.data.error || 'Please try again',
+          title: t('ownership.claim.authFailed', 'Authentication failed'),
+          description: event.data.error || t('common.tryAgain', 'Please try again'),
           variant: 'destructive',
         });
         window.removeEventListener('message', handleMessage);
@@ -131,8 +133,8 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
     // Check if popup was blocked
     if (!popup || popup.closed) {
       toast({
-        title: 'Popup blocked',
-        description: 'Please allow popups for this site to authenticate with GitHub',
+        title: t('ownership.claim.popupBlocked', 'Popup blocked'),
+        description: t('ownership.claim.allowPopups', 'Please allow popups for this site to authenticate with GitHub'),
         variant: 'destructive',
       });
       window.removeEventListener('message', handleMessage);
@@ -227,9 +229,9 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold mb-2">Server Ownership</h2>
+        <h2 className="text-2xl font-semibold mb-2">{t('ownership.step.title')}</h2>
         <p className="text-muted-foreground">
-          Choose how you want to add this server to the registry.
+          {t('ownership.step.description')}
         </p>
       </div>
 
@@ -237,10 +239,10 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
       <Alert>
         <Github className="h-4 w-4" />
         <AlertDescription>
-          <strong>Repository:</strong> {data.owner}/{data.repo}
+          <strong>{t('ownership.step.repository')}</strong> {data.owner}/{data.repo}
           {data.repoInfo?.private && (
             <span className="ml-2 text-amber-600 dark:text-amber-500">
-              (Private repository)
+              {t('ownership.step.privateRepo')}
             </span>
           )}
         </AlertDescription>
@@ -251,17 +253,17 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <p className="font-semibold mb-2">This server is already in the registry!</p>
+            <p className="font-semibold mb-2">{t('ownership.step.alreadyExists')}</p>
             {data.registryCheck.servers?.map((server) => (
               <div key={server.id} className="text-sm">
-                <p>• {server.name} ({server.isClaimed ? 'Claimed' : 'Community'} server)</p>
+                <p>• {server.name} ({server.isClaimed ? t('ownership.step.claimedServer') : t('ownership.step.communityServer')} server)</p>
                 {server.version && <p className="ml-2 text-xs">Version: {server.version}</p>}
               </div>
             ))}
             <p className="mt-2 text-sm">
               {data.registryCheck.servers?.some(s => s.isClaimed) 
-                ? "If you're the owner, you can update the existing server instead of creating a duplicate."
-                : "You can claim this community server if you're the repository owner."}
+                ? t('ownership.step.updateExisting')
+                : t('ownership.step.canClaim')}
             </p>
           </AlertDescription>
         </Alert>
@@ -283,14 +285,14 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
                   <Label htmlFor="claim" className="cursor-pointer">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Shield className="h-5 w-5 text-primary" />
-                      Claim this server {!data.registryCheck?.exists && '(Recommended)'}
-                      {data.registryCheck?.exists && data.registryCheck.servers?.some(s => s.isClaimed) && ' (Already claimed)'}
+                      {t('ownership.claim.title')} {!data.registryCheck?.exists && `(${t('ownership.claim.recommended')})`}
+                      {data.registryCheck?.exists && data.registryCheck.servers?.some(s => s.isClaimed) && ` (${t('ownership.claim.alreadyClaimed')})`}
                     </CardTitle>
                   </Label>
                   <CardDescription className="mt-1">
                     {data.registryCheck?.exists && data.registryCheck.servers?.some(s => s.isClaimed) 
-                      ? 'This server has already been claimed by its owner'
-                      : 'Verify ownership and unlock premium features'}
+                      ? t('ownership.claim.alreadyClaimedDesc')
+                      : t('ownership.claim.description')}
                   </CardDescription>
                 </div>
               </div>
@@ -299,19 +301,19 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Access to analytics and insights
+                  {t('ownership.claim.benefits.analytics')}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Priority in search results
+                  {t('ownership.claim.benefits.priority')}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Direct registry updates from GitHub
+                  {t('ownership.claim.benefits.updates')}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-green-500" />
-                  Official ownership attribution
+                  {t('ownership.claim.benefits.attribution', 'Official ownership attribution')}
                 </li>
               </ul>
               
@@ -322,14 +324,14 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
                       <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
                         <Check className="h-4 w-4 text-green-600" />
                         <AlertDescription>
-                          Authenticated as <strong>@{data.githubUsername}</strong>
+                          {t('ownership.claim.authenticated')} <strong>@{data.githubUsername}</strong>
                         </AlertDescription>
                       </Alert>
                       {isVerifyingOwnership && (
                         <Alert>
                           <Loader2 className="h-4 w-4 animate-spin" />
                           <AlertDescription>
-                            Verifying repository ownership...
+                            {t('ownership.claim.verifying')}
                           </AlertDescription>
                         </Alert>
                       )}
@@ -340,7 +342,7 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
                         }>
                           <AlertCircle className={`h-4 w-4 ${ownershipMessage?.includes("don't have ownership access") ? "text-blue-600" : "text-amber-600"}`} />
                           <AlertDescription>
-                            {ownershipMessage || 'You do not have admin access to this repository. Please select "Add to community" instead.'}
+                            {ownershipMessage || t('ownership.claim.verificationFailed')}
                           </AlertDescription>
                         </Alert>
                       )}
@@ -348,7 +350,7 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
                         <Alert className="border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950">
                           <Check className="h-4 w-4 text-green-600" />
                           <AlertDescription>
-                            Repository ownership verified!
+                            {t('ownership.claim.verificationSuccess')}
                           </AlertDescription>
                         </Alert>
                       )}
@@ -357,7 +359,7 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
                     <Alert>
                       <AlertCircle className="h-4 w-4" />
                       <AlertDescription>
-                        GitHub authentication is required to claim servers
+                        {t('ownership.claim.authRequired')}
                       </AlertDescription>
                     </Alert>
                   )}
@@ -380,14 +382,14 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
                   <Label htmlFor="community" className="cursor-pointer">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Users className="h-5 w-5" />
-                      Add to community
-                      {data.registryCheck?.exists && ' (Already in registry)'}
+                      {t('ownership.community.title')}
+                      {data.registryCheck?.exists && ` (${t('ownership.community.alreadyInRegistry')})`}
                     </CardTitle>
                   </Label>
                   <CardDescription className="mt-1">
                     {data.registryCheck?.exists 
-                      ? 'This server is already in the registry'
-                      : 'Submit without ownership verification'}
+                      ? t('ownership.community.alreadyInRegistryDesc')
+                      : t('ownership.community.description')}
                   </CardDescription>
                 </div>
               </div>
@@ -396,19 +398,19 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-blue-500" />
-                  Quick submission process
+                  {t('ownership.community.benefits.quick')}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-blue-500" />
-                  No authentication required
+                  {t('ownership.community.benefits.noAuth')}
                 </li>
                 <li className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-blue-500" />
-                  Available to all users
+                  {t('ownership.community.benefits.available')}
                 </li>
                 <li className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-muted-foreground" />
-                  Can be claimed later by the owner
+                  {t('ownership.community.benefits.canBeClaimed')}
                 </li>
               </ul>
             </CardContent>
@@ -421,19 +423,19 @@ export function ClaimDecisionStep({ data, onUpdate }: ClaimDecisionStepProps) {
         <Alert>
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            <p className="font-semibold">What can you do?</p>
+            <p className="font-semibold">{t('ownership.actions.title')}</p>
             <ul className="mt-2 space-y-1 text-sm">
               {data.registryCheck.servers?.some(s => s.isClaimed) ? (
                 <>
-                  <li>• If you own this repository, update the existing server instead</li>
-                  <li>• Import the existing server from the registry to your profile</li>
-                  <li>• Contact the current owner if you believe there&apos;s an issue</li>
+                  {t('ownership.actions.ifOwnerClaimed', { returnObjects: true }).map((action: string, index: number) => (
+                    <li key={index}>• {action}</li>
+                  ))}
                 </>
               ) : (
                 <>
-                  <li>• If you own this repository, you can claim the existing community server</li>
-                  <li>• Import the existing server from the registry to your profile</li>
-                  <li>• Update the community server if you have improvements</li>
+                  {t('ownership.actions.ifOwnerUnclaimed', { returnObjects: true }).map((action: string, index: number) => (
+                    <li key={index}>• {action}</li>
+                  ))}
                 </>
               )}
             </ul>

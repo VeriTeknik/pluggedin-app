@@ -2,6 +2,7 @@
 
 import { AlertCircle, CheckCircle, Terminal, X } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { cn } from '@/lib/utils';
 
@@ -31,6 +32,7 @@ export function StreamingCliToast({
   className,
   onComplete,
 }: StreamingCliToastProps) {
+  const { t } = useTranslation('registry');
   const [messages, setMessages] = useState<StreamMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [isComplete, setIsComplete] = useState(false);
@@ -245,7 +247,7 @@ export function StreamingCliToast({
   const getStatusText = () => {
     if (hasError) return 'Error';
     if (isComplete) return 'Complete';
-    if (isConnected) return 'Discovering...';
+    if (isConnected) return t('discovery.streaming.discovering');
     return 'Connecting...';
   };
 
@@ -286,7 +288,7 @@ export function StreamingCliToast({
           <div className='flex items-center gap-2 mt-2'>
             <div className='inline-block w-2 h-4 bg-blue-500 animate-pulse' />
             <span className='text-gray-500 text-xs'>
-              Connecting to discovery stream...
+              {t('discovery.streaming.connected')}
             </span>
           </div>
         )}
@@ -295,7 +297,7 @@ export function StreamingCliToast({
           <div className='flex items-center gap-2 mt-2'>
             <div className='inline-block w-2 h-4 bg-green-500 animate-pulse' />
             <span className='text-gray-500 text-xs'>
-              Live discovery in progress...
+              {t('discovery.streaming.liveDiscovery')}
             </span>
           </div>
         )}

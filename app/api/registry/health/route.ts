@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
-import { RateLimiters } from '@/lib/rate-limiter';
 import { createErrorResponse, getSafeErrorMessage } from '@/lib/api-errors';
+import { RateLimiters } from '@/lib/rate-limiter';
+import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 
 export async function GET(request: NextRequest) {
   // Apply rate limiting

@@ -6,10 +6,10 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
 import { claimCommunityServer } from '@/app/actions/community-servers';
-import { checkUserGitHubConnection } from '@/app/actions/registry-servers';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { useRegistryOAuthSession } from '@/app/hooks/useRegistryOAuthSession';
 import { getRegistryOAuthToken } from '@/app/actions/registry-oauth-session';
+import { checkUserGitHubConnection } from '@/app/actions/registry-servers';
+import { useRegistryOAuthSession } from '@/app/hooks/useRegistryOAuthSession';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

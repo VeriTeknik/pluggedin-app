@@ -1,7 +1,398 @@
 {
-  "registry": {
     "wizard": {
-      "title": "Add Server to Registry"
+      "title": "添加服务器到注册表",
+      "cancelTitle": "取消向导",
+      "cancelDescription": "您确定要取消吗？您的进度将丢失。",
+      "confirmCancel": "是的，取消",
+      "continueButton": "继续",
+      "operationInProgress": "操作进行中",
+      "waitForOperation": "请等待当前操作完成。",
+      "success": "成功！",
+      "successDescription": "服务器已成功添加到注册表。"
+    },
+    "steps": {
+      "github": {
+        "title": "GitHub 仓库",
+        "description": "输入 GitHub 仓库 URL"
+      },
+      "ownership": {
+        "title": "所有权",
+        "description": "声明此服务器或添加到社区"
+      },
+      "configuration": {
+        "title": "配置",
+        "description": "配置环境变量"
+      },
+      "discovery": {
+        "title": "测试发现",
+        "description": "测试服务器发现和功能"
+      },
+      "submit": {
+        "title": "提交",
+        "description": "提交到注册表"
+      }
+    },
+    "navigation": {
+      "previous": "上一步",
+      "next": "下一步"
+    },
+    "addServer": {
+      "button": "添加到注册表",
+      "title": "添加服务器到注册表",
+      "description": {
+        "ownership": "让我们首先确定您与此服务器的关系。",
+        "unclaimed": "添加服务器以帮助社区发现它。所有者稍后可以声明它。",
+        "claimed": "作为所有者，您可以直接将此服务器发布到注册表。",
+        "verifying": "正在验证您的所有权...",
+        "success": "服务器已成功添加！"
+      },
+      "success": {
+        "unclaimed": "服务器已添加到社区注册表。所有者稍后可以声明它。",
+        "claimed": "服务器已成功发布到注册表！"
+      }
+    },
+    "github": {
+      "inputStep": {
+        "title": "添加 GitHub 仓库",
+        "description": "输入包含您的 MCP 服务器的 GitHub 仓库 URL。我们将分析它以帮助您正确配置所有内容。",
+        "label": "仓库 URL",
+        "placeholder": "https://github.com/owner/repository",
+        "validate": "验证",
+        "validating": "验证中",
+        "supportedFormats": "支持的格式：https://github.com/owner/repo, git@github.com:owner/repo, 或 owner/repo",
+        "errors": {
+          "invalidUrl": "请输入有效的 GitHub 仓库 URL",
+          "notFound": "找不到仓库。请检查 URL 并重试。",
+          "rateLimited": "GitHub API 速率限制已超出。请稍后重试。",
+          "accessDenied": "无法访问仓库。它可能是私有的或 URL 不正确。"
+        },
+        "privateRepoNote": "注意：可以添加私有仓库，但只有在 GitHub 上有权访问仓库的用户才能访问。",
+        "repository": {
+          "private": "私有仓库",
+          "stars": "{{count}} 颗星",
+          "alreadyInRegistry": "此仓库已在注册表中！",
+          "claimed": "已声明",
+          "community": "社区",
+          "version": "版本：{{version}}"
+        }
+      }
+    },
+    "ownership": {
+      "step": {
+        "title": "服务器所有权",
+        "description": "选择如何将此服务器添加到注册表。",
+        "repository": "仓库：",
+        "privateRepo": "（私有仓库）",
+        "alreadyExists": "此服务器已在注册表中！",
+        "claimedServer": "已声明",
+        "communityServer": "社区",
+        "updateExisting": "如果您是所有者，可以更新现有服务器而不是创建重复项。",
+        "canClaim": "如果您是仓库所有者，可以声明此社区服务器。"
+      },
+      "claim": {
+        "title": "声明此服务器",
+        "recommended": "（推荐）",
+        "alreadyClaimed": "（已声明）",
+        "description": "验证所有权并解锁高级功能",
+        "alreadyClaimedDesc": "此服务器已被所有者声明",
+        "benefits": {
+          "verified": "您的服务器上的验证徽章",
+          "analytics": "访问分析和洞察",
+          "priority": "搜索结果中的优先级",
+          "updates": "来自 GitHub 的直接注册表更新",
+          "attribution": "官方所有权归属"
+        },
+        "authenticated": "已验证身份：",
+        "verifying": "正在验证仓库所有权...",
+        "verificationFailed": "您没有对此仓库的管理员访问权限。请选择\"添加到社区\"。",
+        "verificationSuccess": "仓库所有权已验证！",
+        "authRequired": "声明服务器需要 GitHub 身份验证",
+        "authFailed": "身份验证失败",
+        "popupBlocked": "弹窗被阻止",
+        "allowPopups": "请允许此网站的弹窗以通过 GitHub 进行身份验证"
+      },
+      "community": {
+        "title": "添加到社区",
+        "alreadyInRegistry": "（已在注册表中）",
+        "description": "在不验证所有权的情况下提交",
+        "alreadyInRegistryDesc": "此服务器已在注册表中",
+        "benefits": {
+          "quick": "快速提交流程",
+          "noAuth": "无需身份验证",
+          "available": "所有用户可用",
+          "canBeClaimed": "稍后可由所有者声明"
+        }
+      },
+      "verificationFailed": "所有权验证失败",
+      "ownershipMessage": "您没有对此仓库的所有权访问权限。仓库归'{{owner}}'所有，但您以@{{username}}身份登录。只有仓库所有者或具有管理员访问权限的组织成员才能声明服务器。",
+      "serverErrorMessage": "您没有对此仓库的所有权访问权限。仓库归'{{owner}}'所有，但您以@{{username}}身份登录。只有仓库所有者或具有管理员访问权限的组织成员才能声明服务器。",
+      "actions": {
+        "title": "您可以做什么？",
+        "ifOwnerClaimed": [
+          "如果您拥有此仓库，请更新现有服务器",
+          "从注册表将现有服务器导入到您的配置文件",
+          "如果您认为有问题，请联系当前所有者"
+        ],
+        "ifOwnerUnclaimed": [
+          "如果您拥有此仓库，可以声明现有的社区服务器",
+          "从注册表将现有服务器导入到您的配置文件",
+          "如果您有改进，请更新社区服务器"
+        ]
+      },
+      "question": "您拥有此服务器吗？",
+      "owned": "是的，我拥有此服务器",
+      "owned.description": "我是仓库所有者，想将其发布到注册表",
+      "notOwned": "不，我为社区添加它",
+      "notOwned.description": "我发现了这个服务器，想帮助其他人发现它"
+    },
+    "envConfig": {
+      "title": "环境变量",
+      "description": "配置此服务器所需的环境变量。用户安装服务器时可以自定义这些变量。",
+      "loading": "正在检测环境变量...",
+      "detectedCommand": {
+        "title": "检测到的 MCP 配置",
+        "description": "从仓库检测到的命令和参数",
+        "command": "命令：",
+        "args": "参数："
+      },
+      "noVarsAlert": "未检测到环境变量。如果需要，您可以手动添加它们。",
+      "requiredVarsAlert": "请填写所有必需的变量",
+      "info": "双击任何变量以编辑其详细信息。这些变量将作为元数据存储在注册表中。",
+      "variable": {
+        "name": "变量名称",
+        "namePlaceholder": "变量名称",
+        "description": "描述（可选）",
+        "descriptionPlaceholder": "描述（可选）",
+        "required": "必需",
+        "secret": "机密",
+        "modified": "已修改",
+        "value": "值",
+        "valuePlaceholder": "输入 {{name}}",
+        "defaultValue": "默认值：{{value}}",
+        "source": {
+          "readme": "README",
+          "packageJson": "package.json",
+          "envExample": ".env.example",
+          "code": "代码",
+          "registry": "注册表",
+          "args": "手动",
+          "detected": "自动检测",
+          "manual": "手动"
+        },
+        "defaultDescription": "环境变量",
+        "fromSource": "来自{{source}}的环境变量",
+        "apiKeyFor": "{{header}}标头的API密钥",
+        "oauthClientId": "OAuth 客户端 ID",
+        "githubToken": "用于 API 访问的 GitHub 个人访问令牌",
+        "notionApiKey": "Notion 集成令牌",
+        "slackBotToken": "Slack 机器人用户 OAuth 令牌",
+        "openaiApiKey": "OpenAI API 密钥",
+        "apiKey": "API 密钥",
+        "noVarsDetected": "未检测到环境变量。如果需要，您可以手动添加它们。"
+      },
+      "actions": {
+        "edit": "编辑变量",
+        "delete": "删除 {{name}}",
+        "save": "保存更改",
+        "cancel": "取消编辑",
+        "reset": "重置为原始值",
+        "addVariable": "添加变量"
+      },
+      "dialog": {
+        "deleteTitle": "删除环境变量",
+        "deleteDescription": "您确定要删除发现的变量\"{{name}}\"吗？这是从 {{source}} 检测到的，可能是服务器正常运行所必需的。",
+        "deleteCancel": "取消",
+        "deleteConfirm": "删除"
+      },
+      "toast": {
+        "detected": "检测到环境变量",
+        "detectedDescription": "找到 {{count}} 个环境变量{{plural}}",
+        "detectionFailed": "检测失败",
+        "detectionFailedDescription": "无法自动检测环境变量"
+      }
+    },
+    "discovery": {
+      "title": "测试服务器发现",
+      "description": "选择传输类型并运行发现测试以验证服务器是否正常工作。",
+      "notStarted": "点击下面的按钮测试服务器发现。",
+      "testButton": "测试服务器发现",
+      "testing": "正在测试服务器发现...",
+      "transport": {
+        "title": "选择传输类型",
+        "description": "选择此服务器支持的传输方法",
+        "stdio": {
+          "label": "STDIO",
+          "description": "本地命令行执行"
+        },
+        "http": {
+          "label": "可流式传输 HTTP",
+          "description": "支持流式传输的现代 HTTP 传输"
+        },
+        "docker": {
+          "label": "Docker",
+          "description": "基于容器的部署"
+        },
+        "detecting": "正在检测包配置...",
+        "confidence": "{{percent}}% 置信度",
+        "source": "通过 {{source}}"
+      },
+      "test": {
+        "configTitle": "测试配置",
+        "activeTransport": "测试用的活动传输",
+        "repository": "仓库：",
+        "command": "命令：",
+        "package": "包：",
+        "image": "镜像：",
+        "url": "URL：",
+        "headers": "标头：",
+        "headersConfigured": "已配置 {{count}} 个",
+        "noUrlDetected": "未检测到 URL",
+        "confidence": "检测置信度：",
+        "envVars": "环境变量：",
+        "envVarsConfigured": "已配置 {{count}} 个"
+      },
+      "button": {
+        "test": "测试 {{transport}} 发现",
+        "testing": "正在测试 {{transport}} 服务器..."
+      },
+      "output": {
+        "title": "发现输出",
+        "tools": "工具",
+        "resources": "资源",
+        "prompts": "提示",
+        "none": "无"
+      },
+      "results": {
+        "success": "发现成功！",
+        "successDescription": "找到 {{tools}} 个工具、{{resources}} 个资源和 {{prompts}} 个提示",
+        "failed": "发现失败",
+        "failedDescription": "无法发现服务器功能",
+        "capabilities": "发现的功能",
+        "noToolsDiscovered": "未发现工具",
+        "noResourcesDiscovered": "未发现资源",
+        "noPromptsDiscovered": "未发现提示",
+        "capabilitiesSummary": "找到 {{total}} 项功能：{{tools}} 个工具、{{resources}} 个资源、{{prompts}} 个提示"
+      },
+      "toast": {
+        "configDetected": "检测到配置！",
+        "detectionError": "检测错误",
+        "detectionErrorDesc": "无法从 GitHub 检测包配置",
+        "profileNotFound": "找不到配置文件",
+        "profileNotFoundDesc": "请先选择一个配置文件",
+        "testFailed": "发现测试失败"
+      },
+      "streaming": {
+        "title": "正在测试 {{serverName}}",
+        "discovering": "(正在发现...)",
+        "connected": "已连接到发现流...",
+        "started": "=== MCP 发现已启动 ===",
+        "serverUuid": "服务器 UUID: {{uuid}}",
+        "fetchingConfig": "正在从数据库获取服务器配置...",
+        "foundConfig": "找到 {{name}} 的服务器配置",
+        "decrypting": "正在解密服务器配置...",
+        "discoveringTools": "[进度] 正在发现工具...",
+        "discoveredTools": "发现了 {{count}} 个工具",
+        "deletingOldTools": "正在删除服务器的旧工具: {{uuid}}",
+        "insertingTools": "正在插入 {{count}} 个新工具...",
+        "storedTools": "成功存储了 {{count}} 个工具",
+        "discoveringResourceTemplates": "[进度] 正在发现资源模板...",
+        "discoveredResourceTemplates": "发现了 {{count}} 个资源模板",
+        "deletingOldResourceTemplates": "正在删除服务器的旧资源模板: {{uuid}}",
+        "discoveringStaticResources": "[进度] 正在发现静态资源...",
+        "discoveredStaticResources": "发现了 {{count}} 个静态资源",
+        "deletingOldStaticResources": "正在删除服务器的旧静态资源: {{uuid}}",
+        "discoveringPrompts": "[进度] 正在发现提示...",
+        "liveDiscovery": "实时发现进行中..."
+      }
+    },
+    "submit": {
+      "title": "提交到注册表",
+      "description": "查看您的服务器配置并将其提交到注册表。",
+      "metadata": {
+        "title": "服务器元数据",
+        "description": "描述",
+        "author": "作者",
+        "categories": "类别",
+        "tags": "标签",
+        "placeholders": {
+          "description": "此服务器功能的简要描述",
+          "tags": "输入标签并按 Enter"
+        }
+      },
+      "review": {
+        "title": "查看配置",
+        "repository": "仓库",
+        "package": "包",
+        "command": "命令",
+        "envVars": "环境变量",
+        "capabilities": {
+          "title": "功能",
+          "tools": "{{count}} 个工具",
+          "tools_plural": "{{count}} 个工具",
+          "resources": "{{count}} 个资源",
+          "resources_plural": "{{count}} 个资源",
+          "prompts": "{{count}} 个提示",
+          "prompts_plural": "{{count}} 个提示"
+        }
+      },
+      "submitting": "正在提交到注册表...",
+      "submitButton": {
+        "claim": "提交并声明服务器",
+        "community": "提交到社区"
+      },
+      "success": {
+        "title": "成功！",
+        "claimed": "您的服务器已成功发布到注册表！",
+        "community": "服务器已添加到社区注册表。所有者稍后可以声明它。",
+        "viewInRegistry": "在注册表中查看"
+      },
+      "error": {
+        "title": "提交失败",
+        "tryAgain": "重试"
+      }
+    },
+    "form": {
+      "repositoryUrl": "GitHub 仓库 URL",
+      "repositoryUrl.hint": "示例：https://github.com/owner/repo",
+      "description": "描述",
+      "description.placeholder": "此服务器功能的简要描述",
+      "packageRegistry": "包注册表",
+      "packageName": "包名",
+      "packageVersion": "版本",
+      "environmentVariables": "环境变量",
+      "addEnvVar": "添加变量",
+      "submit": {
+        "unclaimed": "添加服务器",
+        "claimed": "发布到注册表"
+      }
+    },
+    "verifying": {
+      "ownership": "正在验证 GitHub 所有权..."
+    },
+    "success": {
+      "claimed": "您的服务器已发布到注册表！",
+      "unclaimed": "服务器已添加！所有者准备好时可以声明。"
+    },
+    "claim": {
+      "button": "声明此服务器",
+      "dialog": {
+        "title": "声明服务器",
+        "description": "验证您的所有权以声明此服务器"
+      },
+      "verifying": "正在验证所有权...",
+      "success": "服务器已成功声明！",
+      "publishing": "正在发布到注册表...",
+      "pending": "您的声明请求已提交审核"
+    },
+    "badges": {
+      "verified": "已验证",
+      "unclaimed": "未声明",
+      "pending": "声明待处理"
+    },
+    "errors": {
+      "notOwner": "您必须是此仓库的所有者",
+      "alreadyExists": "此服务器已在注册表中",
+      "authRequired": "注册表身份验证未配置",
+      "publishFailed": "将服务器发布到注册表失败"
     }
   }
-}

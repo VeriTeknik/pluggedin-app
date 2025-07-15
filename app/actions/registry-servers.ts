@@ -5,7 +5,6 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { accounts, McpServerSource,projectsTable, registryServersTable, serverClaimRequestsTable } from '@/db/schema';
-import { getAuthSession } from '@/lib/auth';
 import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { inferTransportFromPackages,transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
@@ -182,7 +181,8 @@ export async function verifyGitHubOwnership(registryToken: string, repoUrl: stri
     return { 
       isOwner: false, 
       githubUsername,
-      reason: `You don't have ownership access to this repository. The repository is owned by '${owner}' but you are signed in as @${githubUsername}. Only repository owners or organization members with admin access can claim servers.` 
+      reason: `ownership.serverErrorMessage`,
+      reasonParams: { owner, username: githubUsername }
     };
   } catch (error) {
     console.error('Error verifying GitHub ownership:', error);

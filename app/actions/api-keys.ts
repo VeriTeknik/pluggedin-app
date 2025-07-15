@@ -6,7 +6,7 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { apiKeysTable } from '@/db/schema';
-import { withProjectAuth, withActionResponse } from '@/lib/auth-helpers';
+import {withProjectAuth } from '@/lib/auth-helpers';
 import { ApiKey } from '@/types/api-key';
 
 const nanoid = customAlphabet(

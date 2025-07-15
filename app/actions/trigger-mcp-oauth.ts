@@ -1,11 +1,10 @@
 'use server';
 
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
-import { getAuthSession } from '@/lib/auth';
+import { mcpServersTable, profilesTable } from '@/db/schema';
 import { withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { createBubblewrapConfig, createFirejailConfig } from '@/lib/mcp/client-wrapper';

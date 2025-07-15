@@ -15,6 +15,7 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useEffect,useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { detectPackageConfiguration } from '@/app/actions/detect-package';
 import { createMcpServer } from '@/app/actions/mcp-servers';
@@ -61,28 +62,29 @@ interface TransportOption {
   description: string;
 }
 
-const transportOptions: TransportOption[] = [
-  {
-    value: 'stdio',
-    label: 'STDIO',
-    icon: Terminal,
-    description: 'Local command-line execution',
-  },
-  {
-    value: 'streamable-http',
-    label: 'Streamable HTTP',
-    icon: Globe,
-    description: 'Modern HTTP transport with streaming support',
-  },
-  {
-    value: 'docker',
-    label: 'Docker',
-    icon: Package,
-    description: 'Container-based deployment',
-  },
-];
-
 export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
+  const { t } = useTranslation('registry');
+  
+  const transportOptions: TransportOption[] = [
+    {
+      value: 'stdio',
+      label: t('discovery.transport.stdio.label'),
+      icon: Terminal,
+      description: t('discovery.transport.stdio.description'),
+    },
+    {
+      value: 'streamable-http',
+      label: t('discovery.transport.http.label'),
+      icon: Globe,
+      description: t('discovery.transport.http.description'),
+    },
+    {
+      value: 'docker',
+      label: t('discovery.transport.docker.label'),
+      icon: Package,
+      description: t('discovery.transport.docker.description'),
+    },
+  ];
   const [isRunning, setIsRunning] = useState(false);
   const [showStreamingToast, setShowStreamingToast] = useState(false);
   const [tempServerUuid, setTempServerUuid] = useState<string | null>(null);
@@ -398,19 +400,18 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
   return (
     <div className='space-y-6'>
       <div>
-        <h2 className='text-2xl font-semibold mb-2'>Test Server Discovery</h2>
+        <h2 className='text-2xl font-semibold mb-2'>{t('discovery.title')}</h2>
         <p className='text-muted-foreground'>
-          Select transport types and run a discovery test to verify the server
-          works correctly.
+          {t('discovery.description')}
         </p>
       </div>
 
       {/* Transport Selection */}
       <Card>
         <CardHeader>
-          <CardTitle className='text-sm'>Select Transport Types</CardTitle>
+          <CardTitle className='text-sm'>{t('discovery.transport.title')}</CardTitle>
           <CardDescription>
-            Choose which transport methods this server supports
+            {t('discovery.transport.description')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -485,7 +486,7 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
           {isDetecting && (
             <div className='mt-4 flex items-center gap-2 text-sm text-muted-foreground'>
               <Loader2 className='h-4 w-4 animate-spin' />
-              Detecting package configurations...
+              {t('discovery.transport.detecting')}
             </div>
           )}
         </CardContent>
@@ -495,12 +496,12 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
       {selectedTransports.length > 0 && (
         <Card>
           <CardHeader className='pb-3'>
-            <CardTitle className='text-sm'>Test Configuration</CardTitle>
+            <CardTitle className='text-sm'>{t('discovery.test.configTitle')}</CardTitle>
           </CardHeader>
           <CardContent>
             {selectedTransports.length > 1 && (
               <div className='mb-4'>
-                <Label className='text-sm'>Active Transport for Testing</Label>
+                <Label className='text-sm'>{t('discovery.test.activeTransport')}</Label>
                 <Tabs
                   value={activeTransport}
                   onValueChange={(v) => setActiveTransport(v as TransportType)}>
@@ -530,7 +531,7 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
 
             <div className='space-y-2 text-sm'>
               <div className='flex items-center justify-between'>
-                <span className='text-muted-foreground'>Repository:</span>
+                <span className='text-muted-foreground'>{t('discovery.test.repository')}</span>
                 <span className='font-mono'>
                   {data.owner}/{data.repo}
                 </span>
@@ -541,13 +542,13 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
                   {activeTransport === 'stdio' && (
                     <>
                       <div className='flex items-center justify-between'>
-                        <span className='text-muted-foreground'>Command:</span>
+                        <span className='text-muted-foreground'>{t('discovery.test.command')}</span>
                         <span className='font-mono'>
                           {detectedConfigs[activeTransport].command}
                         </span>
                       </div>
                       <div className='flex items-center justify-between'>
-                        <span className='text-muted-foreground'>Package:</span>
+                        <span className='text-muted-foreground'>{t('discovery.test.package')}</span>
                         <span className='font-mono'>
                           {detectedConfigs[activeTransport].packageName ||
                             detectedConfigs[activeTransport].args?.join(' ')}
@@ -559,7 +560,7 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
                   {activeTransport === 'docker' && (
                     <>
                       <div className='flex items-center justify-between'>
-                        <span className='text-muted-foreground'>Image:</span>
+                        <span className='text-muted-foreground'>{t('discovery.test.image')}</span>
                         <span className='font-mono'>
                           {detectedConfigs[activeTransport].dockerImage}
                         </span>
@@ -570,20 +571,22 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
                   {activeTransport === 'streamable-http' && (
                     <>
                       <div className='flex items-center justify-between'>
-                        <span className='text-muted-foreground'>URL:</span>
+                        <span className='text-muted-foreground'>{t('discovery.test.url')}</span>
                         <span className='font-mono text-xs'>
                           {detectedConfigs[activeTransport].url || 
                            data.detectedTransportConfigs?.[activeTransport]?.url ||
-                           'No URL detected'}
+                           t('discovery.test.noUrlDetected')}
                         </span>
                       </div>
                       {(detectedConfigs[activeTransport].headers || 
                         data.detectedTransportConfigs?.[activeTransport]?.headers) && (
                         <div className='flex items-center justify-between'>
-                          <span className='text-muted-foreground'>Headers:</span>
+                          <span className='text-muted-foreground'>{t('discovery.test.headers')}</span>
                           <span className='text-xs'>
-                            {Object.keys(detectedConfigs[activeTransport].headers || 
-                                       data.detectedTransportConfigs?.[activeTransport]?.headers || {}).length} configured
+                            {t('discovery.test.headersConfigured', {
+                              count: Object.keys(detectedConfigs[activeTransport].headers || 
+                                       data.detectedTransportConfigs?.[activeTransport]?.headers || {}).length
+                            })}
                           </span>
                         </div>
                       )}
@@ -592,7 +595,7 @@ export function DiscoveryTestStep({ data, onUpdate }: DiscoveryTestStepProps) {
 
                   <div className='flex items-center justify-between'>
                     <span className='text-muted-foreground'>
-                      Detection Confidence:
+                      {t('discovery.test.confidence')}
                     </span>
                     <Badge
                       variant={

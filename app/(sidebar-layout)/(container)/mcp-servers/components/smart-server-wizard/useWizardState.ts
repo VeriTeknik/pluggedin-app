@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback,useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface WizardData {
   // Step 1: GitHub Input
@@ -147,6 +148,7 @@ export interface WizardStep {
 }
 
 export function useWizardState() {
+  const { t } = useTranslation('registry');
   const [currentStep, setCurrentStep] = useState(0);
   const [wizardData, setWizardData] = useState<WizardData>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -154,15 +156,15 @@ export function useWizardState() {
   const steps: WizardStep[] = [
     {
       id: 'github-input',
-      title: 'GitHub Repository',
-      description: 'Enter the GitHub repository URL',
+      title: t('steps.github.title'),
+      description: t('steps.github.description'),
       isComplete: !!wizardData.githubUrl && !!wizardData.repoInfo,
       isActive: currentStep === 0,
     },
     {
       id: 'claim-decision',
-      title: 'Ownership',
-      description: 'Claim this server or add to community',
+      title: t('steps.ownership.title'),
+      description: t('steps.ownership.description'),
       isComplete: !wizardData.registryCheck?.exists && // Can't proceed if server already exists
                   wizardData.willClaim !== undefined && 
                   (wizardData.willClaim === false || 
@@ -171,8 +173,8 @@ export function useWizardState() {
     },
     {
       id: 'env-config',
-      title: 'Configuration',
-      description: 'Configure environment variables',
+      title: t('steps.configuration.title'),
+      description: t('steps.configuration.description'),
       isComplete: wizardData.configuredEnvVars !== undefined && 
                   (!wizardData.detectedEnvVars || 
                    wizardData.detectedEnvVars.filter(v => v.required).every(v => 
@@ -183,15 +185,15 @@ export function useWizardState() {
     },
     {
       id: 'discovery-test',
-      title: 'Test Discovery',
-      description: 'Test server discovery and capabilities',
+      title: t('steps.discovery.title'),
+      description: t('steps.discovery.description'),
       isComplete: !!wizardData.discoveryResult?.success,
       isActive: currentStep === 3,
     },
     {
       id: 'registry-submit',
-      title: 'Submit',
-      description: 'Submit to the registry',
+      title: t('steps.submit.title'),
+      description: t('steps.submit.description'),
       isComplete: !!wizardData.submissionResult?.success,
       isActive: currentStep === 4,
     },

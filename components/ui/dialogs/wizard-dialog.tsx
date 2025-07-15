@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { BaseDialog, BaseDialogProps } from './base-dialog';
-import { Progress } from '@/components/ui/progress';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import React, { useCallback,useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+
+import { BaseDialog, BaseDialogProps } from './base-dialog';
 
 export interface WizardStep {
   id: string;

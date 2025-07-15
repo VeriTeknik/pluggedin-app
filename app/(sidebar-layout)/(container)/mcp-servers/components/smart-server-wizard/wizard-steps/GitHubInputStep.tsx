@@ -2,6 +2,7 @@
 
 import { AlertCircle, CheckCircle, Code, GitBranch, Github, Loader2, Lock, Star } from 'lucide-react';
 import { useCallback,useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +27,7 @@ const GITHUB_PATTERNS = [
 ];
 
 export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps) {
+  const { t } = useTranslation('registry');
   const [url, setUrl] = useState(data.githubUrl || '');
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
     const parsed = parseGitHubUrl(url);
     
     if (!parsed) {
-      setError('Please enter a valid GitHub repository URL');
+      setError(t('github.inputStep.errors.invalidUrl'));
       return;
     }
 
@@ -63,11 +65,11 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
       
       if (!response.ok) {
         if (response.status === 404) {
-          setError('Repository not found. Please check the URL and try again.');
+          setError(t('github.inputStep.errors.notFound'));
         } else if (response.status === 403) {
-          setError('GitHub API rate limit exceeded. Please try again later.');
+          setError(t('github.inputStep.errors.rateLimited'));
         } else {
-          setError('Failed to access repository. It might be private or the URL is incorrect.');
+          setError(t('github.inputStep.errors.accessDenied'));
         }
         setIsValidating(false);
         return;
@@ -160,7 +162,7 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
     } finally {
       setIsValidating(false);
     }
-  }, [url, onUpdate, onNext]);
+  }, [url, onUpdate, onNext, t]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,23 +172,22 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold mb-2">Add a GitHub Repository</h2>
+        <h2 className="text-2xl font-semibold mb-2">{t('github.inputStep.title')}</h2>
         <p className="text-muted-foreground">
-          Enter the URL of the GitHub repository containing your MCP server.
-          We&apos;ll analyze it to help you configure everything correctly.
+          {t('github.inputStep.description')}
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="github-url">Repository URL</Label>
+          <Label htmlFor="github-url">{t('github.inputStep.label')}</Label>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="github-url"
                 type="text"
-                placeholder="https://github.com/owner/repository"
+                placeholder={t('github.inputStep.placeholder')}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
                 className="pl-10"
@@ -197,15 +198,15 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
               {isValidating ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Validating
+                  {t('github.inputStep.validating')}
                 </>
               ) : (
-                'Validate'
+                t('github.inputStep.validate')
               )}
             </Button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Supports formats: https://github.com/owner/repo, git@github.com:owner/repo, or owner/repo
+            {t('github.inputStep.supportedFormats')}
           </p>
         </div>
 
@@ -235,12 +236,12 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
                 {data.repoInfo.private ? (
                   <>
                     <Lock className="h-4 w-4 text-muted-foreground" />
-                    <span>Private repository</span>
+                    <span>{t('github.inputStep.repository.private')}</span>
                   </>
                 ) : (
                   <>
                     <Star className="h-4 w-4 text-muted-foreground" />
-                    <span>{data.repoInfo.stars} stars</span>
+                    <span>{t('github.inputStep.repository.stars', { count: data.repoInfo.stars })}</span>
                   </>
                 )}
               </div>
@@ -265,7 +266,7 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
           <AlertCircle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="space-y-2">
             <p className="font-semibold text-orange-800 dark:text-orange-300">
-              This repository is already in the registry!
+              {t('github.inputStep.repository.alreadyInRegistry')}
             </p>
             {data.registryCheck.servers?.map((server) => (
               <div key={server.id} className="mt-2 space-y-1">
@@ -274,16 +275,16 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
                   {server.isClaimed ? (
                     <Badge variant="default" className="text-xs">
                       <CheckCircle className="mr-1 h-3 w-3" />
-                      Claimed
+                      {t('github.inputStep.repository.claimed')}
                     </Badge>
                   ) : (
                     <Badge variant="secondary" className="text-xs">
-                      Community
+                      {t('github.inputStep.repository.community')}
                     </Badge>
                   )}
                   {server.version && (
                     <Badge variant="outline" className="text-xs">
-                      v{server.version}
+                      {t('github.inputStep.repository.version', { version: server.version })}
                     </Badge>
                   )}
                 </div>
@@ -315,8 +316,7 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Note:</strong> Private repositories can be added, but they will only be 
-          accessible to users who have access to the repository on GitHub.
+          {t('github.inputStep.privateRepoNote')}
         </AlertDescription>
       </Alert>
     </div>

@@ -18,6 +18,7 @@ import {
   Trash2,
   X} from 'lucide-react';
 import { useEffect,useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { fetchRegistryServer } from '@/app/actions/registry-servers';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -63,6 +64,7 @@ interface EnvVar {
 }
 
 export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
+  const { t } = useTranslation('registry');
   const [envVars, setEnvVars] = useState<EnvVar[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
@@ -318,15 +320,18 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
       
       if (detectedVars.length > 0) {
         toast({
-          title: 'Environment variables detected',
-          description: `Found ${detectedVars.length} environment variable${detectedVars.length > 1 ? 's' : ''}`,
+          title: t('envConfig.toast.detected'),
+          description: t('envConfig.toast.detectedDescription', {
+            count: detectedVars.length,
+            plural: detectedVars.length > 1 ? 's' : ''
+          }),
         });
       }
     } catch (error) {
       console.error('Error detecting environment variables:', error);
       toast({
-        title: 'Detection failed',
-        description: 'Could not detect environment variables automatically',
+        title: t('envConfig.toast.detectionFailed'),
+        description: t('envConfig.toast.detectionFailedDescription'),
         variant: 'destructive',
       });
     } finally {
@@ -443,9 +448,9 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold mb-2">Environment Variables</h2>
+        <h2 className="text-2xl font-semibold mb-2">{t('envConfig.title')}</h2>
         <p className="text-muted-foreground">
-          Configure the environment variables required by this MCP server.
+          {t('envConfig.description')}
         </p>
       </div>
 
@@ -453,7 +458,7 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
         <Alert>
           <Loader2 className="h-4 w-4 animate-spin" />
           <AlertDescription>
-            Detecting environment variables...
+            {t('envConfig.loading')}
           </AlertDescription>
         </Alert>
       )}
@@ -513,7 +518,7 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                   <div className="flex-1">
                     {(envVar.source === 'manual' && envVar.name === '') || editingVars[index] ? (
                       <Input
-                        placeholder="VARIABLE_NAME"
+                        placeholder={t('envConfig.variable.namePlaceholder')}
                         value={envVar.name}
                         onChange={(e) => updateEnvVar(index, { name: e.target.value.toUpperCase().replace(/[^A-Z0-9_]/g, '_') })}
                         className="font-mono text-sm mb-2"
@@ -523,10 +528,10 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                         <CardTitle className="text-sm font-mono flex items-center gap-2">
                           {envVar.name}
                           {envVar.required && (
-                            <Badge variant="destructive" className="text-xs">Required</Badge>
+                            <Badge variant="destructive" className="text-xs">{t('envConfig.variable.required')}</Badge>
                           )}
                           {envVar.isSecret && (
-                            <Badge variant="secondary" className="text-xs">Secret</Badge>
+                            <Badge variant="secondary" className="text-xs">{t('envConfig.variable.secret')}</Badge>
                           )}
                         </CardTitle>
                         {editingVars[index] && (
@@ -539,7 +544,7 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                                   updateEnvVar(index, { required: !!checked })
                                 }
                               />
-                              <Label htmlFor={`required-${index}`}>Required</Label>
+                              <Label htmlFor={`required-${index}`}>{t('envConfig.variable.required')}</Label>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Checkbox
@@ -549,7 +554,7 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                                   updateEnvVar(index, { isSecret: !!checked })
                                 }
                               />
-                              <Label htmlFor={`secret-${index}`}>Secret</Label>
+                              <Label htmlFor={`secret-${index}`}>{t('envConfig.variable.secret')}</Label>
                             </div>
                           </div>
                         )}
@@ -559,7 +564,7 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
                       <CardDescription className="mt-1">
                         {(envVar.source === 'manual' && !envVar.description) || editingVars[index] ? (
                           <Textarea
-                            placeholder="Description (optional)"
+                            placeholder={t('envConfig.variable.descriptionPlaceholder')}
                             value={envVar.description || ''}
                             onChange={(e) => updateEnvVar(index, { description: e.target.value })}
                             className="text-xs h-16 mt-1"
@@ -718,7 +723,7 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
           className="flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
-          Add Variable
+          {t('envConfig.actions.addVariable')}
         </Button>
 
         <div className="flex items-center gap-2">

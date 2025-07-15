@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getRegistryOAuthToken, clearRegistryOAuthSession } from '@/app/actions/registry-oauth-session';
+
+import { clearRegistryOAuthSession,getRegistryOAuthToken } from '@/app/actions/registry-oauth-session';
 import { useToast } from '@/hooks/use-toast';
 
 interface OAuthSession {

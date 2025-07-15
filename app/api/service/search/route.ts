@@ -3,10 +3,10 @@ import { and, desc, eq, ilike, or } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getServerRatingMetrics } from '@/app/actions/mcp-server-metrics';
-import { RateLimiters } from '@/lib/rate-limiter';
-import { createErrorResponse, getSafeErrorMessage } from '@/lib/api-errors';
 import { db } from '@/db';
 import { McpServerSource, profilesTable, projectsTable, searchCacheTable, sharedMcpServersTable, users } from '@/db/schema';
+import { createErrorResponse, getSafeErrorMessage } from '@/lib/api-errors';
+import { RateLimiters } from '@/lib/rate-limiter';
 import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 import type { PaginatedSearchResult, SearchIndex } from '@/types/search';

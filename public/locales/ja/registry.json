@@ -1,7 +1,398 @@
 {
-  "registry": {
     "wizard": {
-      "title": "Add Server to Registry"
+      "title": "レジストリにサーバーを追加",
+      "cancelTitle": "ウィザードをキャンセル",
+      "cancelDescription": "本当にキャンセルしますか？進行状況が失われます。",
+      "confirmCancel": "はい、キャンセル",
+      "continueButton": "続行",
+      "operationInProgress": "操作が進行中です",
+      "waitForOperation": "現在の操作が完了するまでお待ちください。",
+      "success": "成功！",
+      "successDescription": "サーバーがレジストリに正常に追加されました。"
+    },
+    "steps": {
+      "github": {
+        "title": "GitHubリポジトリ",
+        "description": "GitHubリポジトリのURLを入力してください"
+      },
+      "ownership": {
+        "title": "所有権",
+        "description": "このサーバーを要求するかコミュニティに追加する"
+      },
+      "configuration": {
+        "title": "設定",
+        "description": "環境変数を設定する"
+      },
+      "discovery": {
+        "title": "テスト検出",
+        "description": "サーバーの検出と機能をテストする"
+      },
+      "submit": {
+        "title": "送信",
+        "description": "レジストリに送信する"
+      }
+    },
+    "navigation": {
+      "previous": "前へ",
+      "next": "次へ"
+    },
+    "addServer": {
+      "button": "レジストリに追加",
+      "title": "サーバーをレジストリに追加",
+      "description": {
+        "ownership": "まず、このサーバーとの関係を決定しましょう。",
+        "unclaimed": "コミュニティが発見できるようにサーバーを追加します。所有者は後でクレームできます。",
+        "claimed": "所有者として、このサーバーを直接レジストリに公開できます。",
+        "verifying": "所有権を確認しています...",
+        "success": "サーバーが正常に追加されました！"
+      },
+      "success": {
+        "unclaimed": "サーバーがコミュニティレジストリに追加されました。所有者は後でクレームできます。",
+        "claimed": "サーバーがレジストリに正常に公開されました！"
+      }
+    },
+    "github": {
+      "inputStep": {
+        "title": "GitHubリポジトリを追加",
+        "description": "MCPサーバーを含むGitHubリポジトリのURLを入力してください。すべてを正しく設定できるよう分析いたします。",
+        "label": "リポジトリURL",
+        "placeholder": "https://github.com/owner/repository",
+        "validate": "検証",
+        "validating": "検証中",
+        "supportedFormats": "サポートされる形式: https://github.com/owner/repo, git@github.com:owner/repo, または owner/repo",
+        "errors": {
+          "invalidUrl": "有効なGitHubリポジトリURLを入力してください",
+          "notFound": "リポジトリが見つかりません。URLを確認して再試行してください。",
+          "rateLimited": "GitHub APIレート制限を超過しました。しばらくしてから再試行してください。",
+          "accessDenied": "リポジトリにアクセスできませんでした。プライベートリポジトリかURLが間違っている可能性があります。"
+        },
+        "privateRepoNote": "注意：プライベートリポジトリは追加できますが、GitHubでリポジトリにアクセスできるユーザーのみがアクセス可能です。",
+        "repository": {
+          "private": "プライベートリポジトリ",
+          "stars": "{{count}}つ星",
+          "alreadyInRegistry": "このリポジトリは既にレジストリにあります！",
+          "claimed": "クレーム済み",
+          "community": "コミュニティ",
+          "version": "バージョン: {{version}}"
+        }
+      }
+    },
+    "ownership": {
+      "step": {
+        "title": "サーバー所有権",
+        "description": "このサーバーをレジストリに追加する方法を選択してください。",
+        "repository": "リポジトリ：",
+        "privateRepo": "（プライベートリポジトリ）",
+        "alreadyExists": "このサーバーは既にレジストリにあります！",
+        "claimedServer": "クレーム済み",
+        "communityServer": "コミュニティ",
+        "updateExisting": "所有者の場合は、重複を作成せずに既存のサーバーを更新できます。",
+        "canClaim": "リポジトリの所有者であれば、このコミュニティサーバーをクレームできます。"
+      },
+      "claim": {
+        "title": "このサーバーをクレーム",
+        "recommended": "（推奨）",
+        "alreadyClaimed": "（既にクレーム済み）",
+        "description": "所有権を確認してプレミアム機能のロックを解除",
+        "alreadyClaimedDesc": "このサーバーは既に所有者によってクレームされています",
+        "benefits": {
+          "verified": "サーバーに認証バッジ",
+          "analytics": "分析と洞察へのアクセス",
+          "priority": "検索結果での優先度",
+          "updates": "GitHubからの直接レジストリ更新",
+          "attribution": "公式所有権の帰属"
+        },
+        "authenticated": "認証済み：",
+        "verifying": "リポジトリの所有権を確認しています...",
+        "verificationFailed": "このリポジトリへの管理者アクセス権がありません。代わりに「コミュニティに追加」を選択してください。",
+        "verificationSuccess": "リポジトリの所有権が確認されました！",
+        "authRequired": "サーバーをクレームするにはGitHub認証が必要です",
+        "authFailed": "認証に失敗しました",
+        "popupBlocked": "ポップアップがブロックされました",
+        "allowPopups": "GitHubで認証するために、このサイトのポップアップを許可してください"
+      },
+      "community": {
+        "title": "コミュニティに追加",
+        "alreadyInRegistry": "（既にレジストリにあります）",
+        "description": "所有権確認なしで送信",
+        "alreadyInRegistryDesc": "このサーバーは既にレジストリにあります",
+        "benefits": {
+          "quick": "迅速な送信プロセス",
+          "noAuth": "認証不要",
+          "available": "すべてのユーザーが利用可能",
+          "canBeClaimed": "後で所有者がクレーム可能"
+        }
+      },
+      "verificationFailed": "所有権確認に失敗しました",
+      "ownershipMessage": "このリポジトリへの所有権アクセスがありません。リポジトリは'{{owner}}'が所有していますが、あなたは@{{username}}としてサインインしています。リポジトリの所有者または管理者アクセス権を持つ組織メンバーのみがサーバーをクレームできます。",
+      "serverErrorMessage": "このリポジトリへの所有権アクセスがありません。リポジトリは'{{owner}}'が所有していますが、あなたは@{{username}}としてサインインしています。リポジトリの所有者または管理者アクセス権を持つ組織メンバーのみがサーバーをクレームできます。",
+      "actions": {
+        "title": "何ができますか？",
+        "ifOwnerClaimed": [
+          "このリポジトリを所有している場合は、既存のサーバーを更新してください",
+          "レジストリから既存のサーバーをプロフィールにインポート",
+          "問題があると思われる場合は現在の所有者に連絡"
+        ],
+        "ifOwnerUnclaimed": [
+          "このリポジトリを所有している場合は、既存のコミュニティサーバーをクレームできます",
+          "レジストリから既存のサーバーをプロフィールにインポート",
+          "改善がある場合はコミュニティサーバーを更新"
+        ]
+      },
+      "question": "このサーバーを所有していますか？",
+      "owned": "はい、このサーバーを所有しています",
+      "owned.description": "リポジトリの所有者で、レジストリに公開したいです",
+      "notOwned": "いいえ、コミュニティのために追加しています",
+      "notOwned.description": "このサーバーを見つけて、他の人が発見できるよう手助けしたいです"
+    },
+    "envConfig": {
+      "title": "環境変数",
+      "description": "このサーバーに必要な環境変数を設定します。これらはユーザーがサーバーをインストールする際にカスタマイズできます。",
+      "loading": "環境変数を検出中...",
+      "detectedCommand": {
+        "title": "検出されたMCP設定",
+        "description": "リポジトリから検出されたコマンドと引数",
+        "command": "コマンド：",
+        "args": "引数："
+      },
+      "noVarsAlert": "環境変数が検出されませんでした。必要に応じて手動で追加できます。",
+      "requiredVarsAlert": "必要な変数をすべて入力してください",
+      "info": "変数をダブルクリックして詳細を編集します。これらの変数はレジストリにメタデータとして保存されます。",
+      "variable": {
+        "name": "変数名",
+        "namePlaceholder": "変数名",
+        "description": "説明（オプション）",
+        "descriptionPlaceholder": "説明（オプション）",
+        "required": "必須",
+        "secret": "シークレット",
+        "modified": "変更済み",
+        "value": "値",
+        "valuePlaceholder": "{{name}}を入力",
+        "defaultValue": "デフォルト: {{value}}",
+        "source": {
+          "readme": "README",
+          "packageJson": "package.json",
+          "envExample": ".env.example",
+          "code": "コード",
+          "registry": "レジストリ",
+          "args": "手動",
+          "detected": "自動検出",
+          "manual": "手動"
+        },
+        "defaultDescription": "環境変数",
+        "fromSource": "{{source}}からの環境変数",
+        "apiKeyFor": "{{header}}ヘッダー用のAPIキー",
+        "oauthClientId": "OAuth クライアントID",
+        "githubToken": "API アクセス用のGitHub個人アクセストークン",
+        "notionApiKey": "Notion統合トークン",
+        "slackBotToken": "SlackボットユーザーOAuthトークン",
+        "openaiApiKey": "OpenAI APIキー",
+        "apiKey": "APIキー",
+        "noVarsDetected": "環境変数が検出されませんでした。必要に応じて手動で追加できます。"
+      },
+      "actions": {
+        "edit": "変数を編集",
+        "delete": "{{name}}を削除",
+        "save": "変更を保存",
+        "cancel": "編集をキャンセル",
+        "reset": "元の値にリセット",
+        "addVariable": "変数を追加"
+      },
+      "dialog": {
+        "deleteTitle": "環境変数を削除",
+        "deleteDescription": "発見された変数\"{{name}}\"を削除してもよろしいですか？これは{{source}}から検出されたもので、サーバーが正常に動作するために必要な可能性があります。",
+        "deleteCancel": "キャンセル",
+        "deleteConfirm": "削除"
+      },
+      "toast": {
+        "detected": "環境変数を検出しました",
+        "detectedDescription": "{{count}}個の環境変数{{plural}}が見つかりました",
+        "detectionFailed": "検出に失敗しました",
+        "detectionFailedDescription": "環境変数を自動で検出できませんでした"
+      }
+    },
+    "discovery": {
+      "title": "サーバー検出をテスト",
+      "description": "トランスポートタイプを選択し、サーバーが正しく動作することを確認するために検出テストを実行してください。",
+      "notStarted": "サーバー検出をテストするには、下のボタンをクリックしてください。",
+      "testButton": "サーバー検出をテスト",
+      "testing": "サーバー検出をテスト中...",
+      "transport": {
+        "title": "トランスポートタイプを選択",
+        "description": "このサーバーがサポートするトランスポート方法を選択してください",
+        "stdio": {
+          "label": "STDIO",
+          "description": "ローカルコマンドライン実行"
+        },
+        "http": {
+          "label": "ストリーミング対応 HTTP",
+          "description": "ストリーミングサポート付きのモダンHTTPトランスポート"
+        },
+        "docker": {
+          "label": "Docker",
+          "description": "コンテナベースのデプロイメント"
+        },
+        "detecting": "パッケージ設定を検出中...",
+        "confidence": "{{percent}}%の信頼度",
+        "source": "{{source}}経由"
+      },
+      "test": {
+        "configTitle": "テスト設定",
+        "activeTransport": "テスト用アクティブトランスポート",
+        "repository": "リポジトリ:",
+        "command": "コマンド:",
+        "package": "パッケージ:",
+        "image": "イメージ:",
+        "url": "URL:",
+        "headers": "ヘッダー:",
+        "headersConfigured": "{{count}}個設定済み",
+        "noUrlDetected": "URLが検出されませんでした",
+        "confidence": "検出信頼度:",
+        "envVars": "環境変数:",
+        "envVarsConfigured": "{{count}}個設定済み"
+      },
+      "button": {
+        "test": "{{transport}}検出をテスト",
+        "testing": "{{transport}}サーバーをテスト中..."
+      },
+      "output": {
+        "title": "検出出力",
+        "tools": "ツール",
+        "resources": "リソース",
+        "prompts": "プロンプト",
+        "none": "なし"
+      },
+      "results": {
+        "success": "検出成功！",
+        "successDescription": "{{tools}}個のツール、{{resources}}個のリソース、{{prompts}}個のプロンプトが見つかりました",
+        "failed": "検出失敗",
+        "failedDescription": "サーバーの機能を検出できませんでした",
+        "capabilities": "発見された機能",
+        "noToolsDiscovered": "ツールは発見されませんでした",
+        "noResourcesDiscovered": "リソースは発見されませんでした",
+        "noPromptsDiscovered": "プロンプトは発見されませんでした",
+        "capabilitiesSummary": "{{total}}個の機能が見つかりました: {{tools}}個のツール、{{resources}}個のリソース、{{prompts}}個のプロンプト"
+      },
+      "toast": {
+        "configDetected": "設定が検出されました！",
+        "detectionError": "検出エラー",
+        "detectionErrorDesc": "GitHubからパッケージ設定を検出できませんでした",
+        "profileNotFound": "プロファイルが見つかりません",
+        "profileNotFoundDesc": "まずプロファイルを選択してください",
+        "testFailed": "検出テストが失敗しました"
+      },
+      "streaming": {
+        "title": "{{serverName}}をテスト中",
+        "discovering": "(検出中...)",
+        "connected": "検出ストリームに接続しました...",
+        "started": "=== MCP検出が開始されました ===",
+        "serverUuid": "サーバーUUID: {{uuid}}",
+        "fetchingConfig": "データベースからサーバー設定を取得中...",
+        "foundConfig": "{{name}}のサーバー設定が見つかりました",
+        "decrypting": "サーバー設定を復号化中...",
+        "discoveringTools": "[進行状況] ツールを検出中...",
+        "discoveredTools": "{{count}}個のツールが発見されました",
+        "deletingOldTools": "サーバーの古いツールを削除中: {{uuid}}",
+        "insertingTools": "{{count}}個の新しいツールを挿入中...",
+        "storedTools": "{{count}}個のツールが正常に保存されました",
+        "discoveringResourceTemplates": "[進行状況] リソーステンプレートを検出中...",
+        "discoveredResourceTemplates": "{{count}}個のリソーステンプレートが発見されました",
+        "deletingOldResourceTemplates": "サーバーの古いリソーステンプレートを削除中: {{uuid}}",
+        "discoveringStaticResources": "[進行状況] 静的リソースを検出中...",
+        "discoveredStaticResources": "{{count}}個の静的リソースが発見されました",
+        "deletingOldStaticResources": "サーバーの古い静的リソースを削除中: {{uuid}}",
+        "discoveringPrompts": "[進行状況] プロンプトを検出中...",
+        "liveDiscovery": "ライブ検出が進行中です..."
+      }
+    },
+    "submit": {
+      "title": "レジストリに送信",
+      "description": "サーバー設定を確認してレジストリに送信します。",
+      "metadata": {
+        "title": "サーバーメタデータ",
+        "description": "説明",
+        "author": "作成者",
+        "categories": "カテゴリ",
+        "tags": "タグ",
+        "placeholders": {
+          "description": "このサーバーが何をするかの簡潔な説明",
+          "tags": "タグを入力してEnterを押してください"
+        }
+      },
+      "review": {
+        "title": "設定を確認",
+        "repository": "リポジトリ",
+        "package": "パッケージ",
+        "command": "コマンド",
+        "envVars": "環境変数",
+        "capabilities": {
+          "title": "機能",
+          "tools": "{{count}}つのツール",
+          "tools_plural": "{{count}}つのツール",
+          "resources": "{{count}}つのリソース",
+          "resources_plural": "{{count}}つのリソース",
+          "prompts": "{{count}}つのプロンプト",
+          "prompts_plural": "{{count}}つのプロンプト"
+        }
+      },
+      "submitting": "レジストリに送信中...",
+      "submitButton": {
+        "claim": "送信してサーバーをクレーム",
+        "community": "コミュニティに送信"
+      },
+      "success": {
+        "title": "成功！",
+        "claimed": "サーバーがレジストリに正常に公開されました！",
+        "community": "サーバーがコミュニティレジストリに追加されました。所有者は後でクレームできます。",
+        "viewInRegistry": "レジストリで表示"
+      },
+      "error": {
+        "title": "送信に失敗しました",
+        "tryAgain": "再試行"
+      }
+    },
+    "form": {
+      "repositoryUrl": "GitHub リポジトリURL",
+      "repositoryUrl.hint": "例: https://github.com/owner/repo",
+      "description": "説明",
+      "description.placeholder": "このサーバーが何をするかの簡潔な説明",
+      "packageRegistry": "パッケージレジストリ",
+      "packageName": "パッケージ名",
+      "packageVersion": "バージョン",
+      "environmentVariables": "環境変数",
+      "addEnvVar": "変数を追加",
+      "submit": {
+        "unclaimed": "サーバーを追加",
+        "claimed": "レジストリに公開"
+      }
+    },
+    "verifying": {
+      "ownership": "GitHubの所有権を確認中..."
+    },
+    "success": {
+      "claimed": "サーバーがレジストリに公開されました！",
+      "unclaimed": "サーバーが追加されました！所有者は準備ができたらクレームできます。"
+    },
+    "claim": {
+      "button": "このサーバーをクレーム",
+      "dialog": {
+        "title": "サーバーをクレーム",
+        "description": "このサーバーをクレームするために所有権を確認してください"
+      },
+      "verifying": "所有権を確認中...",
+      "success": "サーバーが正常にクレームされました！",
+      "publishing": "レジストリに公開中...",
+      "pending": "クレーム要求が審査のため送信されました"
+    },
+    "badges": {
+      "verified": "認証済み",
+      "unclaimed": "未クレーム",
+      "pending": "クレーム保留中"
+    },
+    "errors": {
+      "notOwner": "このリポジトリの所有者である必要があります",
+      "alreadyExists": "このサーバーは既にレジストリにあります",
+      "authRequired": "レジストリ認証が設定されていません",
+      "publishFailed": "サーバーのレジストリへの公開に失敗しました"
     }
   }
-}

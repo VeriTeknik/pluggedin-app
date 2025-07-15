@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Button } from '@/components/ui/button';
-import { BaseDialog, BaseDialogProps } from './base-dialog';
-import { useToast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
+import React, { useCallback,useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { useToast } from '@/components/ui/use-toast';
+
+import { BaseDialog, BaseDialogProps } from './base-dialog';
 
 export interface FormDialogProps<T = any> extends Omit<BaseDialogProps, 'footer' | 'loading'> {
   onSubmit: (data: T) => Promise<void>;
