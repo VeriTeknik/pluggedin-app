@@ -87,10 +87,10 @@ export function ChatHeader({
   const { t } = useTranslation();
 
   return (
-    <div className="bg-background/95 backdrop-blur-sm border-b border-border p-4">
-      <div className="flex items-center justify-between gap-4">
+    <div className="bg-background/95 backdrop-blur-sm border-b border-border h-[72px] px-3 sm:px-4 flex items-center">
+      <div className="flex items-center justify-between gap-2 sm:gap-4 w-full">
         {/* Left: Current Model Info */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {/* Model Provider Info */}
           <div className="flex items-center gap-2 min-w-0">
             <div className="flex-shrink-0">
@@ -112,16 +112,17 @@ export function ChatHeader({
           </div>
 
           {/* Connection Status */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <div className={`w-2 h-2 rounded-full ${isSessionActive ? 'bg-green-500' : 'bg-gray-400'}`} />
             <span className="text-xs text-muted-foreground">
-              {serverCount} {serverCount === 1 ? t('playground.chat.header.serverConnected') : t('playground.chat.header.serversConnected')}
+              <span className="hidden sm:inline">{serverCount} {serverCount === 1 ? t('playground.chat.header.serverConnected') : t('playground.chat.header.serversConnected')}</span>
+              <span className="sm:hidden">{serverCount} server{serverCount !== 1 ? 's' : ''}</span>
             </span>
           </div>
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
           {/* Quick Model Switcher */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -131,9 +132,10 @@ export function ChatHeader({
                 disabled={isProcessing}
                 className="whitespace-nowrap text-xs"
               >
-                <Zap className="h-4 w-4 mr-2" />
-                {t('playground.chat.header.switchModel')}
-                <ChevronDown className="h-4 w-4 ml-2" />
+                <Zap className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">{t('playground.chat.header.switchModel')}</span>
+                <span className="sm:hidden">Switch</span>
+                <ChevronDown className="h-3 w-3 sm:h-4 sm:w-4 ml-1 sm:ml-2" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
@@ -171,20 +173,22 @@ export function ChatHeader({
             >
               {isProcessing ? (
                 <>
-                  <div className="w-4 h-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  {t('playground.chat.header.stopping')}
+                  <div className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <span className="hidden sm:inline">{t('playground.chat.header.stopping')}</span>
+                  <span className="sm:hidden">Stop</span>
                 </>
               ) : (
                 <>
-                  <X className="h-4 w-4 mr-2" />
-                  {t('playground.chat.header.stopSession')}
+                  <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
+                  <span className="hidden sm:inline">{t('playground.chat.header.stopSession')}</span>
+                  <span className="sm:hidden">Stop</span>
                 </>
               )}
             </Button>
           )}
 
           {/* Settings Button */}
-          <Button variant="ghost" size="sm" onClick={onOpenSettings}>
+          <Button variant="ghost" size="sm" onClick={onOpenSettings} className="lg:hidden">
             <Settings className="h-4 w-4" />
           </Button>
         </div>
