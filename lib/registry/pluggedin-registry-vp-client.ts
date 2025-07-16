@@ -390,7 +390,10 @@ export class PluggedinRegistryVPClient {
       });
 
       if (!response.ok) {
-        console.error('[Registry VP] Failed to get feedback:', response.status);
+        // Only log non-404 errors since 404 is expected for servers without reviews
+        if (response.status !== 404) {
+          console.error('[Registry VP] Failed to get feedback:', response.status);
+        }
         return { feedback: [], total_count: 0, has_more: false };
       }
 
