@@ -38,13 +38,13 @@ export function LandingMcpPlayground() {
   return (
     <motion.section
       id="playground"
-      className="py-16 md:py-24 lg:py-32 bg-muted/30"
+      className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 bg-muted/30"
       variants={sectionVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
     >
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         {/* Langchain Abstraction Callout */}
         <div className="mb-8 flex items-center justify-center">
           <div className="rounded-lg bg-primary/10 text-primary px-4 py-3 text-center max-w-xl w-full border border-primary/20 shadow-sm">

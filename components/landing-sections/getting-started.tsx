@@ -54,8 +54,8 @@ export function LandingGettingStartedSection() {
   ];
 
   return (
-    <section id="getting-started" className="py-16 md:py-24 lg:py-32 bg-muted/30">
-      <div className="container mx-auto px-4">
+    <section id="getting-started" className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 bg-muted/30">
+              <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="mb-12 text-center max-w-2xl mx-auto">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             {t('gettingStarted.title')}

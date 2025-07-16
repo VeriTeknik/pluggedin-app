@@ -25,16 +25,17 @@ export function LandingHeroSection() {
   }
 
   return (
-    <section className="relative overflow-hidden py-24 md:py-32 lg:py-40">
+    <section className="relative overflow-hidden py-12 sm:py-16 md:py-24 lg:py-32 xl:py-40">
       {/* Placeholder for background animation */}
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-background via-muted to-background opacity-50" />
       {/* Add more sophisticated background/animation later */}
 
-      <div className="container relative z-10 mx-auto flex max-w-4xl flex-col items-center px-4 text-center">
+      <div className="container relative z-10 mx-auto flex max-w-5xl flex-col items-center px-4 sm:px-6 lg:px-8 text-center">
         {/* Headline */}
         <h1
           className={cn(
-            'text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl transition-all duration-700 ease-in-out',
+            'text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl transition-all duration-700 ease-in-out',
+            'leading-tight sm:leading-tight md:leading-tight lg:leading-tight',
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4',
             // TODO: Apply Aurora-text / Sparkles-text here
             'bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent pb-2' // Basic gradient as fallback
@@ -46,7 +47,8 @@ export function LandingHeroSection() {
         {/* Subheadline */}
         <p
           className={cn(
-            'mt-4 text-lg text-muted-foreground sm:text-xl md:text-2xl transition-all duration-700 delay-200 ease-in-out',
+            'mt-4 text-base text-muted-foreground sm:text-lg md:text-xl lg:text-2xl transition-all duration-700 delay-200 ease-in-out',
+            'leading-relaxed max-w-3xl mx-auto px-4',
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
             // TODO: Apply Aurora-text here if desired
           )}
@@ -57,7 +59,8 @@ export function LandingHeroSection() {
         {/* Analogy */}
         <p
           className={cn(
-            'mt-2 text-sm font-medium text-primary italic transition-all duration-700 delay-300 ease-in-out',
+            'mt-3 text-xs sm:text-sm font-medium text-primary italic transition-all duration-700 delay-300 ease-in-out',
+            'max-w-2xl mx-auto px-4',
              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           )}
         >
@@ -77,7 +80,8 @@ export function LandingHeroSection() {
         {/* Actions */}
         <div
           className={cn(
-            'mt-8 flex flex-col gap-4 sm:flex-row sm:justify-center transition-all duration-700 delay-400 ease-in-out',
+            'mt-6 sm:mt-8 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:justify-center transition-all duration-700 delay-400 ease-in-out',
+            'w-full max-w-md sm:max-w-none mx-auto px-4',
             mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           )}
         >
