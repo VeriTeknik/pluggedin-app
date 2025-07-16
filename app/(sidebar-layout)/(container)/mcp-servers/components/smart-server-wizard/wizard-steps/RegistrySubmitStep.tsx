@@ -111,8 +111,6 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting,
         repo: data.repo!,
         repoInfo: data.repoInfo,
         shouldClaim: data.willClaim, // Map willClaim to shouldClaim for server action
-        registryToken: data.registryToken,
-        githubUsername: data.githubUsername,
         configuredEnvVars: data.configuredEnvVars,
         detectedEnvVars: data.detectedEnvVars,
         transportConfigs: data.transportConfigs,

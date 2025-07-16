@@ -8,6 +8,7 @@ import { accounts, McpServerSource,projectsTable, registryServersTable, serverCl
 import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { inferTransportFromPackages,transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
+import { getRegistryOAuthToken } from './registry-oauth-session';
 
 // Additional validation schemas
 const uuidSchema = z.string().uuid('Invalid UUID format');
@@ -130,22 +131,28 @@ export async function checkGitHubConnection(registryToken?: string) {
 /**
  * Verify GitHub ownership using registry OAuth token
  */
-export async function verifyGitHubOwnership(registryToken: string, repoUrl: string) {
+export async function verifyGitHubOwnership(registryToken: string | null, repoUrl: string) {
   try {
     const { owner } = extractGitHubInfo(repoUrl);
     
-    if (!registryToken) {
-      return { 
-        isOwner: false, 
-        reason: 'Please authenticate with GitHub to verify ownership',
-        needsAuth: true 
-      };
+    // If no token provided, get it from server-side session
+    let token = registryToken;
+    if (!token) {
+      const tokenResult = await getRegistryOAuthToken();
+      if (!tokenResult.success || !tokenResult.oauthToken) {
+        return { 
+          isOwner: false, 
+          reason: 'Please authenticate with GitHub to verify ownership',
+          needsAuth: true 
+        };
+      }
+      token = tokenResult.oauthToken;
     }
 
     // Check user info
     const userResponse = await fetch('https://api.github.com/user', {
       headers: {
-        Authorization: `Bearer ${registryToken}`,
+        Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github.v3+json',
       },
     });
@@ -173,7 +180,7 @@ export async function verifyGitHubOwnership(registryToken: string, repoUrl: stri
     // Check organizations
     const orgsResponse = await fetch('https://api.github.com/user/orgs', {
       headers: {
-        Authorization: `Bearer ${registryToken}`,
+        Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github.v3+json',
       },
     });
@@ -196,7 +203,7 @@ export async function verifyGitHubOwnership(registryToken: string, repoUrl: stri
     return { 
       isOwner: false, 
       githubUsername,
-      reason: `ownership.serverErrorMessage`,
+      reason: `You don't have ownership access to the repository ${owner}. Only repository owners and organization members with admin access can publish servers.`,
       reasonParams: { owner, username: githubUsername }
     };
   } catch (error) {
@@ -587,8 +594,6 @@ interface WizardSubmissionData {
   
   // Claim decision
   shouldClaim?: boolean;
-  registryToken?: string;
-  githubUsername?: string;
   
   // Environment variables
   configuredEnvVars?: Record<string, string>;
@@ -858,8 +863,17 @@ async function createCommunityServer(
 async function fetchRepositoryVersion(
   owner: string,
   repo: string,
-  registryToken: string
+  registryToken?: string
 ): Promise<{ repoId: string; version: string }> {
+  // If no token provided, get it from server-side session
+  let token = registryToken;
+  if (!token) {
+    const tokenResult = await getRegistryOAuthToken();
+    if (!tokenResult.success || !tokenResult.oauthToken) {
+      throw new Error('Authentication required to fetch repository version');
+    }
+    token = tokenResult.oauthToken;
+  }
   let repoId = `${owner}/${repo}`;
   let packageVersion = '1.0.0'; // Default fallback
   
@@ -867,7 +881,7 @@ async function fetchRepositoryVersion(
     // Get repository metadata
     const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
       headers: {
-        'Authorization': `Bearer ${registryToken}`,
+        'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github.v3+json',
       },
     });
@@ -879,7 +893,7 @@ async function fetchRepositoryVersion(
     // Try to fetch version from package.json
     const packageResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/package.json`, {
       headers: {
-        'Authorization': `Bearer ${registryToken}`,
+        'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github.v3+json',
       },
     });
@@ -946,15 +960,24 @@ async function publishClaimedServerToRegistry(
   packages: any[],
   userId: string
 ) {
-  if (!wizardData.registryToken) {
-    return { success: false, error: 'Registry token required for claimed servers' };
+  // Get OAuth token from server-side session
+  const tokenResult = await getRegistryOAuthToken();
+  
+  if (!tokenResult.success || !tokenResult.oauthToken) {
+    return { 
+      success: false, 
+      error: 'Authentication required. Please authenticate with GitHub to publish to the registry.',
+      needsAuth: true
+    };
   }
+
+  const registryToken = tokenResult.oauthToken;
 
   // Fetch repository version
   const { repoId, version } = await fetchRepositoryVersion(
     wizardData.owner,
     wizardData.repo,
-    wizardData.registryToken
+    registryToken
   );
   
   const registryPayload = {
@@ -984,7 +1007,7 @@ async function publishClaimedServerToRegistry(
   const registryResponse = await fetch('https://registry.plugged.in/v0/publish', {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${wizardData.registryToken}`,
+      'Authorization': `Bearer ${registryToken}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(registryPayload)
@@ -1104,23 +1127,11 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
       
       // Skip to submission for community servers
     }
-    // Check if this is a claimed server - ONLY do ownership verification if we don't have a registry token
-    else if (wizardData.shouldClaim && !wizardData.registryToken) {
-      
-      // Fall back to NextAuth token
-      const nextAuthToken = await getUserGitHubToken(session.user.id);
-      const githubToken = nextAuthToken || undefined;
-      
-      if (!githubToken) {
-        return {
-          success: false,
-          error: 'Please connect your GitHub account to claim servers',
-          needsAuth: true
-        };
-      }
-      
-      // Verify ownership
-      const ownership = await verifyGitHubOwnership(githubToken, wizardData.githubUrl);
+    // Check if this is a claimed server
+    else if (wizardData.shouldClaim) {
+      // For claimed servers, ownership verification will be done using the registry OAuth token
+      // The verifyGitHubOwnership function will retrieve the token from the server-side session
+      const ownership = await verifyGitHubOwnership(null, wizardData.githubUrl);
       
       if (!ownership.isOwner) {
         return { 
@@ -1129,8 +1140,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
           needsAuth: ownership.needsAuth
         };
       }
-      
-    } else if (wizardData.shouldClaim && wizardData.registryToken) {
     }
 
     // Determine package information from transport configs
@@ -1402,188 +1411,23 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
         message: 'Community server created successfully!'
       };
     }
-    // For claimed servers, publish directly to registry using the registry token
-    else if (wizardData.shouldClaim && wizardData.registryToken) {
+    // For claimed servers, use the publishClaimedServerToRegistry function
+    else if (wizardData.shouldClaim) {
+      const result = await publishClaimedServerToRegistry(wizardData, packages, session.user.id);
       
-      // Fetch GitHub repository ID and version from the repository
-      let repoId = `${wizardData.owner}/${wizardData.repo}`;
-      let packageVersion = '1.0.0'; // Default fallback
-      
-      try {
-        // Get repository metadata
-        const repoResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}`, {
-          headers: {
-            'Authorization': `Bearer ${wizardData.registryToken}`,
-            'Accept': 'application/vnd.github.v3+json',
-          },
-        });
-        if (repoResponse.ok) {
-          const repoData = await repoResponse.json();
-          repoId = repoData.id.toString(); // Use numeric ID
-        }
-
-        // Try to fetch version from package.json
-        const packageResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}/contents/package.json`, {
-          headers: {
-            'Authorization': `Bearer ${wizardData.registryToken}`,
-            'Accept': 'application/vnd.github.v3+json',
-          },
-        });
-        
-        if (packageResponse.ok) {
-          const packageData = await packageResponse.json();
-          if (packageData.content) {
-            const packageContent = JSON.parse(Buffer.from(packageData.content, 'base64').toString());
-            if (packageContent.version) {
-              packageVersion = packageContent.version;
-            }
-          }
-        } else {
-          
-          // Try pyproject.toml for Python projects
-          const pyprojectResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}/contents/pyproject.toml`, {
-            headers: {
-              'Authorization': `Bearer ${wizardData.registryToken}`,
-              'Accept': 'application/vnd.github.v3+json',
-            },
-          });
-          
-          if (pyprojectResponse.ok) {
-            const pyprojectData = await pyprojectResponse.json();
-            if (pyprojectData.content) {
-              const pyprojectContent = Buffer.from(pyprojectData.content, 'base64').toString();
-              const versionMatch = pyprojectContent.match(/version\s*=\s*["']([^"']+)["']/);
-              if (versionMatch) {
-                packageVersion = versionMatch[1];
-              }
-            }
-          } else {
-            
-            // Try Cargo.toml for Rust projects
-            const cargoResponse = await fetch(`https://api.github.com/repos/${wizardData.owner}/${wizardData.repo}/contents/Cargo.toml`, {
-              headers: {
-                'Authorization': `Bearer ${wizardData.registryToken}`,
-                'Accept': 'application/vnd.github.v3+json',
-              },
-            });
-            
-            if (cargoResponse.ok) {
-              const cargoData = await cargoResponse.json();
-              if (cargoData.content) {
-                const cargoContent = Buffer.from(cargoData.content, 'base64').toString();
-                const versionMatch = cargoContent.match(/version\s*=\s*["']([^"']+)["']/);
-                if (versionMatch) {
-                  packageVersion = versionMatch[1];
-                }
-              }
-            }
-          }
-        }
-      } catch (_error) {
-      }
-      
-      // Use registry token to publish directly - match official MCP registry format exactly
-      const finalVersion = packageVersion;
-      
-      const registryPayload = {
-        name: `io.github.${wizardData.owner}/${wizardData.repo}`,
-        description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
-        packages: [{
-          registry_name: packages[0].registry_name || 'npm',
-          name: packages[0].name || `${wizardData.repo}`,
-          version: finalVersion, // Use actual or bumped version
-          environment_variables: (wizardData.detectedEnvVars || []).map(env => ({
-            name: env.name,
-            description: env.description || `Environment variable ${env.name}`,
-            required: env.required
-          }))
-        }],
-        repository: {
-          url: wizardData.githubUrl,
-          source: 'github',
-          id: repoId // Use fetched numeric ID
-        },
-        version_detail: {
-          version: finalVersion, // Use actual or bumped version
-        },
-      };
-      
-
-
-      // Publish to registry using registry client with direct token auth
-      
-      // For claimed servers, use /v0/publish endpoint
-      const registryResponse = await fetch('https://registry.plugged.in/v0/publish', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${wizardData.registryToken}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(registryPayload)
-      });
-
-
-      if (!registryResponse.ok) {
-        const errorText = await registryResponse.text();
-        
-        // Provide specific error messages based on status code
-        let errorMessage: string;
-        switch (registryResponse.status) {
-          case 401:
-            errorMessage = 'Authentication failed. Please re-authenticate with GitHub.';
-            break;
-          case 403:
-            errorMessage = 'Permission denied. You may not have admin access to this repository.';
-            break;
-          case 409:
-            errorMessage = 'This server is already published to the registry.';
-            break;
-          case 422:
-            errorMessage = `Invalid data: ${errorText}`;
-            break;
-          case 500:
-            if (errorText.includes('version must be greater')) {
-              // Parse the current version and suggest incrementing it
-              const versionMatch = errorText.match(/existing version\s*[:=]\s*(\S+)/);
-              const existingVersion = versionMatch ? versionMatch[1] : 'unknown';
-              errorMessage = `Server already exists with version ${existingVersion}. To update, please increment the version in your package.json and try again.`;
-            } else {
-              errorMessage = `Registry server error: ${errorText}`;
-            }
-            break;
-          default:
-            errorMessage = `Registry publication failed (${registryResponse.status}): ${errorText || registryResponse.statusText}`;
-        }
-        
+      if (result.success) {
+        return {
+          success: true,
+          serverId: result.serverId,
+          data: result.data
+        };
+      } else {
         return {
           success: false,
-          error: errorMessage
+          error: result.error,
+          needsAuth: result.needsAuth
         };
       }
-
-      const registryResult = await registryResponse.json();
-      
-      // Save to our database - use just repo name for display
-      const [registryServer] = await db.insert(registryServersTable).values({
-        registry_id: registryResult.id,
-        name: wizardData.repo, // Just the repo name for cleaner display
-        github_owner: wizardData.owner,
-        github_repo: wizardData.repo,
-        repository_url: wizardData.githubUrl,
-        description: wizardData.finalDescription || wizardData.repoInfo?.description || '',
-        is_claimed: true,
-        is_published: true,
-        claimed_by_user_id: session.user.id,
-        claimed_at: new Date(),
-        published_at: new Date(),
-        metadata: registryPayload,
-      }).returning();
-
-      return {
-        success: true,
-        serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
-        data: registryServer
-      };
     } else {
       // Fall back to existing publishClaimedServer function for NextAuth flow
       const result = await publishClaimedServer(submissionData);
