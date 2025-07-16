@@ -464,7 +464,7 @@ export default function NotificationsPage() {
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex flex-col overflow-hidden items-center justify-center">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsContent value={activeTab} className="m-0 flex-1 overflow-hidden">
               {filteredNotifications.length === 0 ? (
