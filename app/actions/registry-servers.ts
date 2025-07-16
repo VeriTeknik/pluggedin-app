@@ -25,20 +25,6 @@ const repositoryUrlSchema = z.string().url().refine(
 );
 
 
-const publishClaimedServerSchema = z.object({
-  repositoryUrl: repositoryUrlSchema,
-  description: z.string(),
-  packageInfo: z.object({
-    registry: z.enum(['npm', 'docker', 'pypi']),
-    name: z.string(),
-    version: z.string(),
-  }),
-  environmentVariables: z.array(z.object({
-    name: z.string(),
-    description: z.string().optional(),
-    required: z.boolean().optional(),
-  })).optional(),
-});
 
 // Helper function to extract GitHub owner and repo from URL
 function extractGitHubInfo(url: string): { owner: string; repo: string } {
@@ -327,132 +313,6 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
   }
 }
 
-/**
- * Publish a claimed server to the official registry
- */
-export async function publishClaimedServer(data: z.infer<typeof publishClaimedServerSchema>) {
-  try {
-    return await withAuth(async (session) => {
-
-    // Validate input
-    const validated = publishClaimedServerSchema.parse(data);
-    const { owner, repo } = extractGitHubInfo(validated.repositoryUrl);
-    
-    // Get user's GitHub token
-    const githubToken = await getUserGitHubToken(session.user.id);
-    if (!githubToken) {
-      return {
-        success: false,
-        error: 'Please connect your GitHub account to publish servers',
-        needsAuth: true
-      };
-    }
-    
-    // Verify ownership
-    const ownership = await verifyGitHubOwnership(githubToken, validated.repositoryUrl);
-    if (!ownership.isOwner) {
-      return { 
-        success: false, 
-        error: ownership.reason || 'Repository ownership required. Only repository owners can publish servers.',
-        needsAuth: ownership.needsAuth
-      };
-    }
-
-    // Check if already exists
-    const existing = await db.query.registryServersTable.findFirst({
-      where: and(
-        eq(registryServersTable.github_owner, owner),
-        eq(registryServersTable.github_repo, repo)
-      ),
-    });
-
-    if (existing?.is_published) {
-      return { 
-        success: false, 
-        error: 'This server is already published to the registry' 
-      };
-    }
-
-    // Prepare registry payload
-    const registryPayload = {
-      name: `io.github.${owner}/${repo}`,
-      description: validated.description,
-      packages: [{
-        registry_name: validated.packageInfo.registry,
-        name: validated.packageInfo.name,
-        version: validated.packageInfo.version,
-        environment_variables: validated.environmentVariables,
-      }],
-      repository: {
-        url: validated.repositoryUrl,
-        source: 'github',
-        id: `${owner}/${repo}`,
-      },
-      version_detail: {
-        version: validated.packageInfo.version,
-      },
-    };
-
-    // Publish to registry
-    const client = new PluggedinRegistryClient();
-    const authToken = process.env.REGISTRY_AUTH_TOKEN;
-    
-    if (!authToken) {
-      return { success: false, error: 'Registry authentication not configured' };
-    }
-
-    const registryResult = await client.publishServer(registryPayload, authToken);
-    
-    // Save or update in our database
-    if (existing) {
-      // Update existing entry
-      const [updated] = await db.update(registryServersTable)
-        .set({
-          registry_id: registryResult.id,
-          description: validated.description,
-          is_claimed: true,
-          is_published: true,
-          claimed_by_user_id: session.user.id,
-          claimed_at: new Date(),
-          published_at: new Date(),
-          metadata: registryPayload,
-          updated_at: new Date(),
-        })
-        .where(eq(registryServersTable.uuid, existing.uuid))
-        .returning();
-      
-      return { success: true, server: updated };
-    } else {
-      // Create new entry - use just repo name for display
-      const [server] = await db.insert(registryServersTable).values({
-        registry_id: registryResult.id,
-        name: repo, // Just the repo name for cleaner display
-        github_owner: owner,
-        github_repo: repo,
-        repository_url: validated.repositoryUrl,
-        description: validated.description,
-        is_claimed: true,
-        is_published: true,
-        claimed_by_user_id: session.user.id,
-        claimed_at: new Date(),
-        published_at: new Date(),
-        metadata: registryPayload,
-      }).returning();
-      
-      return { success: true, server };
-    }
-    });
-  } catch (error) {
-    console.error('Error publishing claimed server:', error);
-    if (error instanceof z.ZodError) {
-      return { success: false, error: error.errors[0].message };
-    }
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to publish server' 
-    };
-  }
-}
 
 /**
  * Claim an existing unclaimed server
@@ -1120,14 +980,7 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
 
     // Check if this is a community server (not claimed)
     if (!wizardData.shouldClaim) {
-      
-      // For community servers, we use the REGISTRY_AUTH_TOKEN from environment
-      const registryAuthToken = process.env.REGISTRY_AUTH_TOKEN;
-      if (!registryAuthToken) {
-        return { success: false, error: 'Registry authentication not configured. Please contact the administrator.' };
-      }
-      
-      // Skip to submission for community servers
+      // Community servers are stored locally, no registry authentication needed
     }
     // Check if this is a claimed server
     else if (wizardData.shouldClaim) {
@@ -1428,22 +1281,6 @@ export async function submitWizardToRegistry(wizardData: WizardSubmissionData) {
           success: false,
           error: result.error,
           needsAuth: result.needsAuth
-        };
-      }
-    } else {
-      // Fall back to existing publishClaimedServer function for NextAuth flow
-      const result = await publishClaimedServer(submissionData);
-      
-      if (result.success) {
-        return {
-          success: true,
-          serverId: `io.github.${wizardData.owner}/${wizardData.repo}`,
-          data: result.server
-        };
-      } else {
-        return {
-          success: false,
-          error: result.error || 'Failed to submit to registry'
         };
       }
     }

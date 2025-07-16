@@ -5,7 +5,6 @@ import {
   checkGitHubConnection,
   fetchRegistryServer,
   importRegistryServer,
-  publishClaimedServer,
   claimServer,
   getClaimableServers,
   submitWizardToRegistry
@@ -364,170 +363,6 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
     });
   });
 
-  describe('publishClaimedServer', () => {
-    let mockRegistryClient: any;
-
-    beforeEach(() => {
-      mockRegistryClient = {
-        publishServer: vi.fn(),
-      };
-      vi.mocked(PluggedinRegistryClient).mockImplementation(() => mockRegistryClient);
-      process.env.REGISTRY_AUTH_TOKEN = 'test-registry-auth-token';
-    });
-
-    afterEach(() => {
-      delete process.env.REGISTRY_AUTH_TOKEN;
-    });
-
-    it('should successfully publish a new claimed server', async () => {
-      getAuthSession.mockResolvedValue(createMockSession());
-      mockedDb.query.accounts.findFirst.mockResolvedValue(createMockGitHubAccount());
-      
-      // Mock ownership verification
-      global.fetch = vi.fn()
-        .mockResolvedValueOnce(createMockFetchResponse({ login: 'testuser' }))
-        .mockResolvedValueOnce(createMockFetchResponse([]));
-
-      mockedDb.query.registryServersTable.findFirst.mockResolvedValue(null);
-      mockRegistryClient.publishServer.mockResolvedValue({ id: 'registry-123' });
-      mockedDb.returning.mockResolvedValue([createMockRegistryServer()]);
-
-      const result = await publishClaimedServer({
-        repositoryUrl: 'https://github.com/testuser/test-mcp-server',
-        description: 'Test server',
-        packageInfo: {
-          registry: 'npm',
-          name: 'test-mcp-server',
-          version: '1.0.0',
-        },
-        environmentVariables: [{ name: 'API_KEY', required: true }],
-      });
-
-      expect(result.success).toBe(true);
-      expect(result.server).toBeDefined();
-      expect(mockRegistryClient.publishServer).toHaveBeenCalled();
-    });
-
-    it('should handle unauthenticated user', async () => {
-      getAuthSession.mockResolvedValue(null);
-
-      const result = await publishClaimedServer({
-        repositoryUrl: 'https://github.com/testuser/test-mcp-server',
-        description: 'Test server',
-        packageInfo: { registry: 'npm', name: 'test-mcp-server', version: '1.0.0' },
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('You must be logged in to publish servers');
-    });
-
-    it('should handle user without GitHub connection', async () => {
-      getAuthSession.mockResolvedValue(createMockSession());
-      mockedDb.query.accounts.findFirst.mockResolvedValue(null);
-
-      const result = await publishClaimedServer({
-        repositoryUrl: 'https://github.com/testuser/test-mcp-server',
-        description: 'Test server',
-        packageInfo: { registry: 'npm', name: 'test-mcp-server', version: '1.0.0' },
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Please connect your GitHub account to publish servers');
-      expect(result.needsAuth).toBe(true);
-    });
-
-    it('should handle ownership verification failure', async () => {
-      getAuthSession.mockResolvedValue(createMockSession());
-      mockedDb.query.accounts.findFirst.mockResolvedValue(createMockGitHubAccount());
-      
-      // Mock ownership verification failure
-      global.fetch = vi.fn()
-        .mockResolvedValueOnce(createMockFetchResponse({ login: 'otheruser' }))
-        .mockResolvedValueOnce(createMockFetchResponse([]));
-
-      const result = await publishClaimedServer({
-        repositoryUrl: 'https://github.com/testuser/test-mcp-server',
-        description: 'Test server',
-        packageInfo: { registry: 'npm', name: 'test-mcp-server', version: '1.0.0' },
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Repository owner');
-    });
-
-    it('should handle already published server', async () => {
-      getAuthSession.mockResolvedValue(createMockSession());
-      mockedDb.query.accounts.findFirst.mockResolvedValue(createMockGitHubAccount());
-      
-      // Mock ownership verification
-      global.fetch = vi.fn()
-        .mockResolvedValueOnce(createMockFetchResponse({ login: 'testuser' }))
-        .mockResolvedValueOnce(createMockFetchResponse([]));
-
-      mockedDb.query.registryServersTable.findFirst.mockResolvedValue({
-        ...createMockRegistryServer(),
-        is_published: true,
-      });
-
-      const result = await publishClaimedServer({
-        repositoryUrl: 'https://github.com/testuser/test-mcp-server',
-        description: 'Test server',
-        packageInfo: { registry: 'npm', name: 'test-mcp-server', version: '1.0.0' },
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('This server is already published to the registry');
-    });
-
-    it('should handle registry auth token not configured', async () => {
-      delete process.env.REGISTRY_AUTH_TOKEN;
-      
-      getAuthSession.mockResolvedValue(createMockSession());
-      mockedDb.query.accounts.findFirst.mockResolvedValue(createMockGitHubAccount());
-      
-      // Mock ownership verification
-      global.fetch = vi.fn()
-        .mockResolvedValueOnce(createMockFetchResponse({ login: 'testuser' }))
-        .mockResolvedValueOnce(createMockFetchResponse([]));
-
-      mockedDb.query.registryServersTable.findFirst.mockResolvedValue(null);
-
-      const result = await publishClaimedServer({
-        repositoryUrl: 'https://github.com/testuser/test-mcp-server',
-        description: 'Test server',
-        packageInfo: { registry: 'npm', name: 'test-mcp-server', version: '1.0.0' },
-      });
-
-      expect(result.success).toBe(false);
-      expect(result.error).toBe('Registry authentication not configured');
-    });
-
-    it('should update existing unpublished server', async () => {
-      getAuthSession.mockResolvedValue(createMockSession());
-      mockedDb.query.accounts.findFirst.mockResolvedValue(createMockGitHubAccount());
-      
-      // Mock ownership verification
-      global.fetch = vi.fn()
-        .mockResolvedValueOnce(createMockFetchResponse({ login: 'testuser' }))
-        .mockResolvedValueOnce(createMockFetchResponse([]));
-
-      mockedDb.query.registryServersTable.findFirst.mockResolvedValue({
-        ...createMockRegistryServer(),
-        is_published: false,
-      });
-      mockRegistryClient.publishServer.mockResolvedValue({ id: 'registry-123' });
-      mockedDb.returning.mockResolvedValue([createMockRegistryServer()]);
-
-      const result = await publishClaimedServer({
-        repositoryUrl: 'https://github.com/testuser/test-mcp-server',
-        description: 'Test server',
-        packageInfo: { registry: 'npm', name: 'test-mcp-server', version: '1.0.0' },
-      });
-
-      expect(result.success).toBe(true);
-      expect(mockedDb.update).toHaveBeenCalled();
-    });
-  });
 
   describe('claimServer', () => {
     it('should successfully auto-approve claim with valid ownership', async () => {
@@ -653,13 +488,6 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
   });
 
   describe('submitWizardToRegistry', () => {
-    beforeEach(() => {
-      process.env.REGISTRY_AUTH_TOKEN = 'test-registry-auth-token';
-    });
-
-    afterEach(() => {
-      delete process.env.REGISTRY_AUTH_TOKEN;
-    });
 
     describe('Community Server Flow', () => {
       it('should successfully create community server', async () => {
@@ -872,17 +700,10 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
     });
 
     describe('Claimed Server with NextAuth', () => {
-      beforeEach(() => {
-        process.env.REGISTRY_AUTH_TOKEN = 'test-registry-auth-token';
-      });
-
-      afterEach(() => {
-        delete process.env.REGISTRY_AUTH_TOKEN;
-      });
 
       it.skip('should fall back to NextAuth flow without registry token', async () => {
         // TODO: This test is failing due to complex interaction between submitWizardToRegistry
-        // and publishClaimedServer. The NextAuth flow path needs to be refactored to better
+        // and publishClaimedServerToRegistry. The NextAuth flow path needs to be refactored to better
         // support testing or the test needs to mock more internal dependencies.
         getAuthSession.mockResolvedValue(createMockSession());
         mockedDb.query.accounts.findFirst.mockResolvedValue(createMockGitHubAccount());
@@ -892,7 +713,7 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
           .mockResolvedValueOnce(createMockFetchResponse({ login: 'testuser' }))
           .mockResolvedValueOnce(createMockFetchResponse([]));
 
-        // Mock publishClaimedServer internals
+        // Mock publishClaimedServerToRegistry internals
         mockedDb.query.registryServersTable.findFirst.mockResolvedValue(null);
         const mockRegistryClient = { publishServer: vi.fn().mockResolvedValue({ id: 'registry-123' }) };
         vi.mocked(PluggedinRegistryClient).mockImplementation(() => mockRegistryClient);
@@ -1001,22 +822,6 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
         expect(result.error).toBe('Missing repository information');
       });
 
-      it('should handle registry auth not configured for community server', async () => {
-        delete process.env.REGISTRY_AUTH_TOKEN;
-        getAuthSession.mockResolvedValue(createMockSession());
-
-        const wizardData = {
-          githubUrl: 'https://github.com/testuser/test-mcp-server',
-          owner: 'testuser',
-          repo: 'test-mcp-server',
-          shouldClaim: false,
-        };
-
-        const result = await submitWizardToRegistry(wizardData);
-
-        expect(result.success).toBe(false);
-        expect(result.error).toBe('Registry authentication not configured. Please contact the administrator.');
-      });
     });
   });
 });

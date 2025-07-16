@@ -121,7 +121,7 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting,
       
       // Debug: Log the result
       
-      if (result.success) {
+      if (result && result.success) {
         const serverId = result.serverId || `io.github.${data.owner}/${data.repo}`;
         
         setSubmissionState({ 
@@ -149,7 +149,7 @@ export function RegistrySubmitStep({ data, onUpdate, onSuccess, setIsSubmitting,
           onSuccess();
         }, 5000); // Give user 5 seconds to see the success
       } else {
-        throw new Error(result.error || 'Failed to submit to registry');
+        throw new Error(result?.error || 'Failed to submit to registry');
       }
 
     } catch (error) {
