@@ -79,7 +79,18 @@ export async function POST(request: Request) {
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
 
-    const body = await request.json();
+    // Parse JSON with error handling
+    let body;
+    try {
+      body = await request.json();
+    } catch (error) {
+      console.error('Failed to parse JSON:', error);
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      );
+    }
+
     const { action, serverName, serverUuid, externalId, source, itemName, success, errorMessage, executionTime } = mcpActivitySchema.parse(body);
 
     // Store all activity in the database for trending calculations
@@ -95,7 +106,15 @@ export async function POST(request: Request) {
         'pluggedin_discovery_cache_error',
         'pluggedin_rag',
         'pluggedin_notifications',
-        'pluggedin_proxy'
+        'pluggedin_proxy',
+        'Discovery System',
+        'Discovery System (Cache)',
+        'Discovery System (Background)',
+        'Discovery System (Cache Error)',
+        'RAG System',
+        'Notification System',
+        'Proxy System',
+        'Custom Instructions'
       ];
       
       const isBuiltInTool = serverUuid && builtInServerIds.includes(serverUuid);
@@ -122,7 +141,7 @@ export async function POST(request: Request) {
               action,
               item_name: itemName || null,
             });
-            return;
+            return NextResponse.json({ success: true });
           }
         }
       }

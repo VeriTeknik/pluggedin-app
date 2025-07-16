@@ -599,7 +599,7 @@ export class OAuthProcessManager extends EventEmitter {
       
       // Release the port if tracked
       const port = this.processPorts.get(serverName);
-      if (port && !process.env?.OAUTH_USE_LEGACY_PORTS) {
+      if (port && !global.process.env?.OAUTH_USE_LEGACY_PORTS) {
         portAllocator.releasePort(port);
         this.processPorts.delete(serverName);
       }
@@ -653,7 +653,7 @@ export class OAuthProcessManager extends EventEmitter {
       
       // Release any tracked ports
       const port = this.processPorts.get(name);
-      if (port && !process.env?.OAUTH_USE_LEGACY_PORTS) {
+      if (port && !global.process.env?.OAUTH_USE_LEGACY_PORTS) {
         portAllocator.releasePort(port);
       }
     }
