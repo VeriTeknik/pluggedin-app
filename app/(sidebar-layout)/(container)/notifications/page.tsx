@@ -54,7 +54,7 @@ import {
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 
@@ -360,21 +360,23 @@ export default function NotificationsPage() {
                   <Menu className="h-4 w-4" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-72">
-                <SheetHeader>
+              <SheetContent side="left" className="w-72 p-0">
+                <SheetHeader className="p-4 border-b">
                   <SheetTitle className="flex items-center gap-2">
                     <Mail className="h-5 w-5" />
                     Categories
                   </SheetTitle>
                 </SheetHeader>
-                <div className="mt-6">
-                  <SidebarNav />
-                </div>
+                <ScrollArea className="h-[calc(100vh-5rem)]">
+                  <div className="p-4">
+                    <SidebarNav />
+                  </div>
+                </ScrollArea>
               </SheetContent>
             </Sheet>
 
             <Mail className="h-6 w-6 text-primary" />
-          <div>
+            <div>
               <h1 className="text-xl sm:text-2xl font-semibold">{t('notifications.title')}</h1>
               <p className="text-sm text-muted-foreground hidden sm:block">
                 {notifications.length} {t('notifications.description')}
@@ -410,46 +412,6 @@ export default function NotificationsPage() {
             </DropdownMenu>
           </div>
         </div>
-      </div>
-
-      {/* Mobile Filter Tabs */}
-      <div className="lg:hidden border-b bg-card">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="w-full h-auto p-1 bg-transparent">
-            <div className="flex w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-              <TabsTrigger value="all" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                All
-                <Badge variant="secondary" className="ml-2 text-xs">
-                  {notifications.length}
-                </Badge>
-              </TabsTrigger>
-              <TabsTrigger value="unread" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                Unread
-                {unreadCount > 0 && (
-                  <Badge variant="destructive" className="ml-2 text-xs">
-                    {unreadCount}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="ALERT" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Bell className="h-4 w-4 mr-1 text-red-500" />
-                Alerts
-              </TabsTrigger>
-              <TabsTrigger value="INFO" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Mail className="h-4 w-4 mr-1 text-blue-500" />
-                Info
-              </TabsTrigger>
-              <TabsTrigger value="SUCCESS" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" />
-                Success
-              </TabsTrigger>
-              <TabsTrigger value="CUSTOM" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Star className="h-4 w-4 mr-1 text-yellow-500" />
-                Notes
-              </TabsTrigger>
-            </div>
-          </TabsList>
-        </Tabs>
       </div>
 
       {/* Gmail-style Toolbar */}
@@ -499,7 +461,7 @@ export default function NotificationsPage() {
         {/* Desktop Sidebar */}
         <div className="hidden lg:flex w-60 border-r bg-card p-2 overflow-y-auto">
           <SidebarNav />
-          </div>
+        </div>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
