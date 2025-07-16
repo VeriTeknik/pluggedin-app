@@ -990,8 +990,10 @@ async function publishClaimedServerToRegistry(
       environment_variables: (wizardData.detectedEnvVars || []).map(env => ({
         name: env.name,
         description: env.description || `Environment variable ${env.name}`,
-        required: env.required
-      }))
+        is_required: env.required !== false,
+        is_secret: false // Default to false unless we have specific information
+      })),
+      runtime_arguments: [] // Empty array as most MCP servers don't have runtime arguments
     }],
     repository: {
       url: wizardData.githubUrl,
