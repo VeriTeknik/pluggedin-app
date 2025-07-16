@@ -3,7 +3,7 @@
 import { Menu, X } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -28,9 +28,44 @@ export function LandingNavbar() {
 
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
+  // Close mobile menu on escape key
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('keydown', handleEscape);
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [isMobileMenuOpen]);
+
+  // Close mobile menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Element;
+      if (isMobileMenuOpen && !target.closest('[data-mobile-menu]')) {
+        setIsMobileMenuOpen(false);
+      }
+    };
+
+    if (isMobileMenuOpen) {
+      document.addEventListener('click', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isMobileMenuOpen]);
+
   return (
-    <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4 md:px-6 lg:px-8">
+    <nav className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60" data-mobile-menu>
+      <div className="container mx-auto flex h-14 max-w-screen-2xl items-center justify-between px-4 md:px-6 lg:px-8" data-mobile-menu>
         {/* Logo */}
         <Link href="/" className="flex items-center space-x-2">
           {mounted && (
@@ -54,7 +89,7 @@ export function LandingNavbar() {
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {t(link.labelKey)}
-            </Link>
+            </Link> 
           ))}
           <ThemeToggle />
           <Button asChild size="sm">
@@ -65,9 +100,9 @@ export function LandingNavbar() {
         </div>
 
         {/* Mobile Navigation Toggle */}
-        <div className="md:hidden flex items-center">
+        <div className="md:hidden flex items-center" data-mobile-menu>
            <ThemeToggle />
-           <Button variant="ghost" size="icon" onClick={toggleMobileMenu} className="ml-2">
+           <Button variant="ghost" size="icon" onClick={toggleMobileMenu} className="ml-2" data-mobile-menu>
             {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             <span className="sr-only">Toggle Menu</span>
           </Button>
