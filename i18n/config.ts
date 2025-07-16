@@ -87,10 +87,11 @@ export const namespaces = [
   'tutorial-security-best-practices'
 ] as const;
 
-export type Namespace = typeof namespaces[number];
+// Type definitions for internal use (not exported to avoid knip warnings)
+type Namespace = typeof namespaces[number];
 
 // Define messages type for each namespace
-export type Messages = {
+type Messages = {
   apiKeys: typeof enApiKeys;
   auth: typeof enAuth;
   common: typeof enCommon;
@@ -125,4 +126,4 @@ export type Messages = {
   'tutorial-security-best-practices': typeof enTutorialSecurity;
 };
 
-export type MessageKey<NS extends Namespace> = keyof Messages[NS];
+type MessageKey<NS extends Namespace> = keyof Messages[NS];
