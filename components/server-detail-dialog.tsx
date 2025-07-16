@@ -19,7 +19,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { McpServerSource, McpServerType } from '@/db/schema';
 import { useAuth } from '@/hooks/use-auth';
@@ -396,7 +395,7 @@ export function ServerDetailDialog({
                       Claim with GitHub
                     </Button>
                     <p className="text-sm text-muted-foreground mt-2">
-                      You'll need to prove ownership by providing the GitHub repository URL.
+                      You&apos;ll need to prove ownership by providing the GitHub repository URL.
                     </p>
                   </CardContent>
                 </Card>
@@ -493,7 +492,7 @@ export function ServerDetailDialog({
                 <ServerReviewsList 
                   serverId={server.external_id}
                   source={server.source}
-                  currentUserId={session?.user?.id}
+                  currentUserId={session?.user?.email || undefined}
                 />
               ) : (
                 <Card>
@@ -536,9 +535,9 @@ export function ServerDetailDialog({
                 </CardContent>
               </Card>
             </TabsContent>
+          </div>
           </Tabs>
         </div>
-        </ScrollArea>
 
         {showDeleteConfirm && (
           <Alert className="mt-4 border-destructive">
@@ -567,7 +566,7 @@ export function ServerDetailDialog({
           </Alert>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0 px-4 py-3 border-t">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Close
           </Button>
