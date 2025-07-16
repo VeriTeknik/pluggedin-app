@@ -350,7 +350,7 @@ export default function NotificationsPage() {
   return (
     <div className="w-full h-screen flex flex-col bg-background">
       {/* Gmail-style Header */}
-      <div className="border-b bg-card px-4 sm:px-6 py-3 sm:py-4">
+      <div className="border-b bg-card ">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             {/* Mobile Menu Button */}
