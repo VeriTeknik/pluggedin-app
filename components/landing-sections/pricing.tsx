@@ -1,23 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Check } from 'lucide-react';
+import { ArrowRight, Check, Gift, Heart, Zap } from 'lucide-react';
+import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-
-interface PricingPlan {
-  key: 'free' | 'pro' | 'enterprise';
-  recommended?: boolean;
-}
-
-const plans: PricingPlan[] = [
-  { key: 'free' },
-  { key: 'pro', recommended: true },
-  { key: 'enterprise' }
-];
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -43,74 +32,107 @@ const itemVariants = {
 export function LandingPricingSection() {
   const { t } = useTranslation('landing');
 
-  return (
-    <section id="pricing" className="py-16 md:py-24 lg:py-32">
-      <div className="container px-4 mx-auto">
-        <div className="max-w-2xl mx-auto mb-12 text-center">
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            {t('pricing.title')}
-          </h2>
-          <p className="mt-4 text-lg text-muted-foreground">
-            {t('pricing.subtitle')}
-          </p>
-        </div>
+  const features = [
+    'Unlimited AI model connections',
+    'Full data ownership and export',
+    '500+ MCP server integrations',
+    'Unlimited workspaces and projects',
+    'Community sharing and collaboration',
+    'End-to-end encryption',
+    'RAG document storage',
+    'Real-time notifications',
+    'OAuth authentication',
+    'API access'
+  ];
 
-        <motion.div
-          className="grid max-w-6xl grid-cols-1 mx-auto gap-8 lg:grid-cols-3"
+  return (
+    <section id="pricing" className="py-16 md:py-24 lg:py-32 bg-muted/30">
+      <div className="container px-4 mx-auto">
+        <motion.div 
+          className="max-w-4xl mx-auto"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, amount: 0.2 }}
         >
-          {plans.map((plan) => (
-            <motion.div key={plan.key} variants={itemVariants}>
-              <Card className={`relative flex flex-col min-h-[500px] ${plan.recommended ? 'ring-2 ring-primary' : ''}`}>
-                {plan.recommended && (
-                  <Badge className="absolute left-1/2 -translate-x-1/2 -translate-y-1/2 whitespace-nowrap px-2.5 py-0.5">
-                    Most Popular
-                  </Badge>
-                )}
-                <CardHeader className="flex-none text-center pb-6">
-                  <CardTitle className="text-2xl mb-3">
-                    {t(`pricing.${plan.key}.title`)}
-                  </CardTitle>
-                  <CardDescription className="text-sm min-h-[40px]">
-                    {t(`pricing.${plan.key}.description`)}
-                  </CardDescription>
-                  <div className="flex items-baseline justify-center gap-1 mt-4">
-                    <span className="text-4xl font-bold tracking-tight">
-                      {t(`pricing.${plan.key}.price`)}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {t(`pricing.${plan.key}.period`)}
-                    </span>
-                  </div>
-                </CardHeader>
+          {/* Header */}
+          <motion.div className="text-center mb-12" variants={itemVariants}>
+            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary rounded-full px-4 py-2 text-sm font-medium mb-4">
+              <Gift className="h-4 w-4" />
+              {t('pricing.badge')}
+            </div>
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-4">
+              {t('pricing.title')}
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              {t('pricing.subtitle')}
+            </p>
+          </motion.div>
 
-                <CardContent className="flex flex-col flex-grow px-6">
-                  <ul className="flex-grow space-y-4 mb-6">
-                    {t(`pricing.${plan.key}.features`, { returnObjects: true }).map((feature: string, index: number) => (
+          {/* Free Forever Card */}
+          <motion.div variants={itemVariants}>
+            <Card className="border-2 border-primary/20 shadow-lg">
+              <CardHeader className="text-center pb-8">
+                <div className="mb-4">
+                  <Heart className="h-12 w-12 mx-auto text-primary" />
+                </div>
+                <CardTitle className="text-2xl mb-4">
+                  {t('pricing.free.title')}
+                </CardTitle>
+                <div className="flex items-baseline justify-center gap-2">
+                  <span className="text-5xl font-bold">$0</span>
+                  <span className="text-muted-foreground">forever</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {t('pricing.free.description')}
+                </p>
+              </CardHeader>
+              
+              <CardContent>
+                <div className="mb-8">
+                  <h4 className="font-semibold mb-4 text-center">Everything included:</h4>
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {features.map((feature, index) => (
                       <li key={index} className="flex items-start">
-                        <Check className="w-5 h-5 mr-3 text-green-500 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm text-muted-foreground">
-                          {feature}
-                        </span>
+                        <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
+                        <span className="text-sm">{feature}</span>
                       </li>
                     ))}
                   </ul>
-                  <Button 
-                    asChild 
-                    className="w-full mt-auto"
-                    variant={plan.recommended ? 'default' : 'outline'}
-                  >
-                    <a href={plan.key === 'enterprise' ? '/contact' : '/register'}>
-                      {t(`pricing.${plan.key}.cta`)}
-                    </a>
+                </div>
+
+                <div className="space-y-4">
+                  <Button asChild size="lg" className="w-full">
+                    <Link href="/register">
+                      {t('pricing.free.cta')}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
                   </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          ))}
+                  
+                  <div className="text-center text-sm text-muted-foreground">
+                    <p>{t('pricing.free.note')}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          {/* Why Free */}
+          <motion.div variants={itemVariants} className="mt-12">
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-4">
+                  <Zap className="h-8 w-8 text-primary flex-shrink-0" />
+                  <div>
+                    <h3 className="font-semibold mb-2">{t('pricing.whyFree.title')}</h3>
+                    <p className="text-muted-foreground">
+                      {t('pricing.whyFree.description')}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
         </motion.div>
       </div>
     </section>

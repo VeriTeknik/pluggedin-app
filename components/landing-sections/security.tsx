@@ -21,29 +21,29 @@ interface SecurityFeature {
 
 const securityFeatures: SecurityFeature[] = [
   {
-    icon: Key,
-    titleKey: 'security.features.authentication.title',
-    descKey: 'security.features.authentication.desc'
-  },
-  {
-    icon: Shield,
-    titleKey: 'security.features.sandboxing.title',
-    descKey: 'security.features.sandboxing.desc'
+    icon: Database,
+    titleKey: 'security.features.dataOwnership.title',
+    descKey: 'security.features.dataOwnership.desc'
   },
   {
     icon: Lock,
-    titleKey: 'security.features.isolation.title',
-    descKey: 'security.features.isolation.desc'
+    titleKey: 'security.features.endToEndEncryption.title',
+    descKey: 'security.features.endToEndEncryption.desc'
   },
   {
     icon: FileCheck,
-    titleKey: 'security.features.audit.title',
-    descKey: 'security.features.audit.desc'
+    titleKey: 'security.features.auditEverything.title',
+    descKey: 'security.features.auditEverything.desc'
   },
   {
-    icon: Database,
-    titleKey: 'security.features.encryption.title',
-    descKey: 'security.features.encryption.desc'
+    icon: Shield,
+    titleKey: 'security.features.portableData.title',
+    descKey: 'security.features.portableData.desc'
+  },
+  {
+    icon: Key,
+    titleKey: 'security.features.oauthSecurity.title',
+    descKey: 'security.features.oauthSecurity.desc'
   },
   {
     icon: Server,
@@ -122,7 +122,7 @@ export function LandingSecuritySection() {
             {t('security.compliance')}
           </p>
           <Button asChild>
-            <a href="/docs/security">
+            <a href="/docs/tutorials/security-best-practices">
               {t('security.action')}
             </a>
           </Button>

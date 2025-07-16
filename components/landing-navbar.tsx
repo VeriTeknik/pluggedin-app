@@ -11,12 +11,13 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useMounted } from '@/hooks/use-mounted';
 import { useThemeLogo } from '@/hooks/use-theme-logo';
 
-// Placeholder links - update later
+// Navigation links
 const navLinks = [
+  { href: '#why-pluggedin', labelKey: 'navigation.whyPluggedin' },
   { href: '#features', labelKey: 'navigation.features' },
+  { href: '#ai-models', labelKey: 'navigation.aiModels' },
+  { href: '#pricing', labelKey: 'navigation.pricing' },
   { href: '#community', labelKey: 'navigation.community' },
-  { href: '#collections', labelKey: 'navigation.collections' },
-  { href: '#playground', labelKey: 'navigation.playground' },
   { href: '/docs', labelKey: 'navigation.documentation' },
 ];
 
