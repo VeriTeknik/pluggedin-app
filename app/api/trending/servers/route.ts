@@ -8,6 +8,42 @@ import { registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
 import { calculateTrendingServers, TRENDING_PERIODS } from '@/lib/trending-service';
 import type { SearchIndex } from '@/types/search';
 
+// Metadata for internal/built-in servers
+const INTERNAL_SERVER_METADATA: Record<string, { name: string; description: string }> = {
+  'pluggedin_rag': {
+    name: 'RAG Knowledge Base',
+    description: 'Query documents and knowledge bases stored in your Plugged.in workspace'
+  },
+  'pluggedin_notifications': {
+    name: 'Notification System',
+    description: 'Manage and track notifications across your MCP servers'
+  },
+  'pluggedin_discovery': {
+    name: 'Discovery System',
+    description: 'Discover and explore MCP servers from various sources'
+  },
+  'pluggedin_discovery_bg': {
+    name: 'Discovery System (Background)',
+    description: 'Background indexing for MCP server discovery'
+  },
+  'pluggedin_discovery_cache': {
+    name: 'Discovery System (Cache)',
+    description: 'Cached discovery results for faster access'
+  },
+  'pluggedin_discovery_cache_error': {
+    name: 'Discovery System (Cache Error)',
+    description: 'Error handling for discovery cache operations'
+  },
+  'pluggedin_proxy': {
+    name: 'MCP Proxy System',
+    description: 'Core proxy functionality for MCP server communications'
+  },
+  'Custom Instructions': {
+    name: 'Custom Instructions',
+    description: 'User-defined custom instructions for MCP operations'
+  }
+};
+
 // Query params schema
 const querySchema = z.object({
   source: z.enum(['REGISTRY', 'COMMUNITY', 'all']).optional().default('all'),
@@ -158,6 +194,15 @@ export async function GET(request: NextRequest) {
                 };
               }
             }
+          } else if (server.source === McpServerSource.PLUGGEDIN) {
+            // For PLUGGEDIN source (internal tools), check if we have metadata
+            // This handles the case where server_id might be null for older entries
+            if (!server.server_id || server.server_id === 'null') {
+              metadata = {
+                name: 'Internal Tools',
+                description: 'Aggregated activity from Plugged.in internal tools',
+              };
+            }
           } else if (server.source === McpServerSource.COMMUNITY) {
             // Fetch community server metadata from database
             const result = await db
@@ -188,6 +233,15 @@ export async function GET(request: NextRequest) {
           }
         } catch (error) {
           console.error(`Failed to fetch metadata for ${server.server_id}:`, error);
+        }
+
+        // Check if this is an internal server and use predefined metadata
+        if (!metadata.name && INTERNAL_SERVER_METADATA[server.server_id]) {
+          const internalMetadata = INTERNAL_SERVER_METADATA[server.server_id];
+          metadata = {
+            name: internalMetadata.name,
+            description: internalMetadata.description,
+          };
         }
 
         return {

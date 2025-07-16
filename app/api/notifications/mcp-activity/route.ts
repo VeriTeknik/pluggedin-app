@@ -149,7 +149,7 @@ export async function POST(request: Request) {
       await db.insert(mcpActivityTable).values({
         profile_uuid: auth.activeProfile.uuid,
         server_uuid: (serverUuid && !isBuiltInTool) ? serverUuid : null,
-        external_id: externalId || null,
+        external_id: externalId || (isBuiltInTool && serverUuid ? serverUuid : null),
         source: activitySource || McpServerSource.PLUGGEDIN,
         action,
         item_name: itemName || null,
