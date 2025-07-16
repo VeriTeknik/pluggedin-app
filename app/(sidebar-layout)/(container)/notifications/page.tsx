@@ -12,12 +12,13 @@ import {
   Clock, 
   Mail, 
   MailOpen, 
+  Menu,
   MoreHorizontal, 
   RefreshCw, 
   Search, 
   Square, 
   Star, 
-  Trash2 
+  Trash2
 } from 'lucide-react';
 import Link from 'next/link';
 import React, { useMemo, useState } from 'react';
@@ -52,7 +53,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { Tabs, TabsContent } from '@/components/ui/tabs';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
 
@@ -68,6 +70,7 @@ export default function NotificationsPage() {
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNotifications, setSelectedNotifications] = useState<string[]>([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Get date locale based on current language
   const getDateLocale = () => {
@@ -239,14 +242,139 @@ export default function NotificationsPage() {
     return sorted;
   }, [notifications, activeTab, severityFilter, searchTerm, sortOrder]);
 
+  // Sidebar Navigation Component
+  const SidebarNav = ({ className = "" }: { className?: string }) => (
+    <div className={`space-y-1 ${className}`}>
+      <button
+        onClick={() => {
+          setActiveTab('all');
+          setSidebarOpen(false);
+        }}
+        className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+          activeTab === 'all'
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`}
+      >
+        <Mail className="h-4 w-4" />
+        <span className="flex-1 text-left">All</span>
+        <Badge variant="secondary" className="text-xs">
+          {notifications.length}
+        </Badge>
+      </button>
+      
+      <button
+        onClick={() => {
+          setActiveTab('unread');
+          setSidebarOpen(false);
+        }}
+        className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+          activeTab === 'unread'
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`}
+      >
+        <Circle className="h-4 w-4" />
+        <span className="flex-1 text-left">Unread</span>
+        {unreadCount > 0 && (
+          <Badge variant="destructive" className="text-xs">
+            {unreadCount}
+          </Badge>
+        )}
+      </button>
+      
+      <Separator className="my-2" />
+      
+      <button
+        onClick={() => {
+          setActiveTab('ALERT');
+          setSidebarOpen(false);
+        }}
+        className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+          activeTab === 'ALERT'
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`}
+      >
+        <Bell className="h-4 w-4 text-red-500" />
+        <span className="flex-1 text-left">Alerts</span>
+      </button>
+      
+      <button
+        onClick={() => {
+          setActiveTab('INFO');
+          setSidebarOpen(false);
+        }}
+        className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+          activeTab === 'INFO'
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`}
+      >
+        <Mail className="h-4 w-4 text-blue-500" />
+        <span className="flex-1 text-left">Info</span>
+      </button>
+      
+      <button
+        onClick={() => {
+          setActiveTab('SUCCESS');
+          setSidebarOpen(false);
+        }}
+        className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+          activeTab === 'SUCCESS'
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`}
+      >
+        <CheckCircle2 className="h-4 w-4 text-green-500" />
+        <span className="flex-1 text-left">Success</span>
+      </button>
+      
+      <button
+        onClick={() => {
+          setActiveTab('CUSTOM');
+          setSidebarOpen(false);
+        }}
+        className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
+          activeTab === 'CUSTOM'
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+        }`}
+      >
+        <Star className="h-4 w-4 text-yellow-500" />
+        <span className="flex-1 text-left">Notes</span>
+      </button>
+    </div>
+  );
+
   return (
     <div className="w-full h-screen flex flex-col bg-background">
       {/* Gmail-style Header */}
       <div className="border-b bg-card px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
+            {/* Mobile Menu Button */}
+            <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="sm" className="lg:hidden">
+                  <Menu className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-72">
+                <SheetHeader>
+                  <SheetTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    Categories
+                  </SheetTitle>
+                </SheetHeader>
+                <div className="mt-6">
+                  <SidebarNav />
+                </div>
+              </SheetContent>
+            </Sheet>
+
             <Mail className="h-6 w-6 text-primary" />
-            <div>
+          <div>
               <h1 className="text-xl sm:text-2xl font-semibold">{t('notifications.title')}</h1>
               <p className="text-sm text-muted-foreground hidden sm:block">
                 {notifications.length} {t('notifications.description')}
@@ -282,6 +410,46 @@ export default function NotificationsPage() {
             </DropdownMenu>
           </div>
         </div>
+      </div>
+
+      {/* Mobile Filter Tabs */}
+      <div className="lg:hidden border-b bg-card">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
+          <TabsList className="w-full h-auto p-1 bg-transparent">
+            <div className="flex w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+              <TabsTrigger value="all" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                All
+                <Badge variant="secondary" className="ml-2 text-xs">
+                  {notifications.length}
+                </Badge>
+              </TabsTrigger>
+              <TabsTrigger value="unread" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                Unread
+                {unreadCount > 0 && (
+                  <Badge variant="destructive" className="ml-2 text-xs">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="ALERT" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Bell className="h-4 w-4 mr-1 text-red-500" />
+                Alerts
+              </TabsTrigger>
+              <TabsTrigger value="INFO" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Mail className="h-4 w-4 mr-1 text-blue-500" />
+                Info
+              </TabsTrigger>
+              <TabsTrigger value="SUCCESS" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" />
+                Success
+              </TabsTrigger>
+              <TabsTrigger value="CUSTOM" className="flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                <Star className="h-4 w-4 mr-1 text-yellow-500" />
+                Notes
+              </TabsTrigger>
+            </div>
+          </TabsList>
+        </Tabs>
       </div>
 
       {/* Gmail-style Toolbar */}
@@ -328,92 +496,10 @@ export default function NotificationsPage() {
 
       {/* Gmail-style Sidebar + Content */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar */}
-        <div className="w-48 sm:w-60 border-r bg-card p-2 overflow-y-auto">
-          <div className="space-y-1">
-            <button
-              onClick={() => setActiveTab('all')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
-                activeTab === 'all'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <Mail className="h-4 w-4" />
-              <span className="flex-1 text-left">All</span>
-              <Badge variant="secondary" className="text-xs">
-                {notifications.length}
-              </Badge>
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('unread')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
-                activeTab === 'unread'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <Circle className="h-4 w-4" />
-              <span className="flex-1 text-left">Unread</span>
-              {unreadCount > 0 && (
-                <Badge variant="destructive" className="text-xs">
-                  {unreadCount}
-                </Badge>
-              )}
-            </button>
-            
-            <Separator className="my-2" />
-            
-            <button
-              onClick={() => setActiveTab('ALERT')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
-                activeTab === 'ALERT'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <Bell className="h-4 w-4 text-red-500" />
-              <span className="flex-1 text-left">Alerts</span>
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('INFO')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
-                activeTab === 'INFO'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <Mail className="h-4 w-4 text-blue-500" />
-              <span className="flex-1 text-left">Info</span>
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('SUCCESS')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
-                activeTab === 'SUCCESS'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <span className="flex-1 text-left">Success</span>
-            </button>
-            
-            <button
-              onClick={() => setActiveTab('CUSTOM')}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors ${
-                activeTab === 'CUSTOM'
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-              }`}
-            >
-              <Star className="h-4 w-4 text-yellow-500" />
-              <span className="flex-1 text-left">Notes</span>
-            </button>
+        {/* Desktop Sidebar */}
+        <div className="hidden lg:flex w-60 border-r bg-card p-2 overflow-y-auto">
+          <SidebarNav />
           </div>
-        </div>
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -451,10 +537,10 @@ export default function NotificationsPage() {
                   {/* Notification List */}
                   <ScrollArea className="flex-1">
                     <div className="divide-y">
-                      {filteredNotifications.map((notification) => (
+                    {filteredNotifications.map((notification) => (
                         <div
-                          key={notification.id}
-                          className={`flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer ${
+                        key={notification.id}
+                          className={`group flex items-start gap-3 px-4 py-3 transition-colors cursor-pointer ${
                             !notification.read 
                               ? 'bg-blue-50/50 hover:bg-blue-50/80 border-l-4 border-l-blue-500' 
                               : 'hover:bg-muted/50'
@@ -467,7 +553,7 @@ export default function NotificationsPage() {
                         >
                           {/* Checkbox */}
                           <button
-                                                         onClick={(e: React.MouseEvent) => {
+                            onClick={(e: React.MouseEvent) => {
                                e.stopPropagation();
                                handleSelectNotification(notification.id);
                              }}
@@ -489,49 +575,49 @@ export default function NotificationsPage() {
                           <div className="flex-1 min-w-0">
                             <div className="flex items-start justify-between gap-2 mb-1">
                               <div className="flex items-center gap-2 min-w-0">
-                                {notification.type === 'CUSTOM' && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
+                                  {notification.type === 'CUSTOM' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                     className="p-0 h-auto"
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       handleToggleCompleted(notification.id);
                                     }}
-                                  >
-                                    {notification.completed ? (
+                                    >
+                                      {notification.completed ? (
                                       <CheckSquare className="h-4 w-4 text-green-500" />
-                                    ) : (
+                                      ) : (
                                       <Square className="h-4 w-4 text-muted-foreground" />
-                                    )}
-                                  </Button>
-                                )}
+                                      )}
+                                    </Button>
+                                  )}
                                 <h3 className={`font-medium text-sm break-words ${
                                   !notification.read ? 'font-semibold' : 'font-normal'
                                 } ${notification.completed ? 'line-through opacity-60' : ''}`}>
-                                  {notification.title}
-                                </h3>
-                                <Badge
+                                    {notification.title}
+                                  </h3>
+                                    <Badge
                                   variant={getBadgeVariant(notification.type)}
                                   className="text-xs shrink-0"
-                                >
-                                  {notification.type}
-                                </Badge>
-                              </div>
+                                    >
+                                      {notification.type}
+                                    </Badge>
+                                </div>
                               <span className="text-xs text-muted-foreground whitespace-nowrap">
                                 {formatDistanceToNow(new Date(notification.created_at), {
-                                  addSuffix: true,
-                                  locale: getDateLocale(),
+                                      addSuffix: true,
+                                      locale: getDateLocale(),
                                 })}
-                              </span>
-                            </div>
+                                </span>
+                              </div>
                             
                             <div className={`text-sm text-muted-foreground line-clamp-2 ${
                               notification.completed ? 'line-through opacity-60' : ''
                             }`}>
-                              <ReactMarkdown 
-                                remarkPlugins={[remarkGfm]}
-                                components={{
+                                <ReactMarkdown 
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
                                   p: ({ children }) => <span>{children}</span>,
                                   strong: ({ children }) => <strong>{children}</strong>,
                                   em: ({ children }) => <em>{children}</em>,
@@ -542,15 +628,15 @@ export default function NotificationsPage() {
                                   ? notification.message.substring(0, 150) + '...'
                                   : notification.message
                                 }
-                              </ReactMarkdown>
-                            </div>
+                                </ReactMarkdown>
+                              </div>
 
                             {/* Actions */}
                             <div className="flex items-center gap-2 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              {!notification.read && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
+                                  {!notification.read && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleMarkAsRead(notification.id);
@@ -559,11 +645,11 @@ export default function NotificationsPage() {
                                 >
                                   <Check className="h-3 w-3 mr-1" />
                                   Mark read
-                                </Button>
-                              )}
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                                    </Button>
+                                  )}
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleDelete(notification.id);
@@ -572,12 +658,12 @@ export default function NotificationsPage() {
                               >
                                 <Trash2 className="h-3 w-3 mr-1" />
                                 Delete
-                              </Button>
+                                  </Button>
                               {notification.link && (
                                 <Link
                                   href={notification.link}
                                   className="h-7 px-2 text-xs text-primary hover:underline flex items-center"
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
                                 >
                                   View details
                                 </Link>
@@ -585,9 +671,9 @@ export default function NotificationsPage() {
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </ScrollArea>
+                    ))}
+                  </div>
+                </ScrollArea>
                 </div>
               )}
             </TabsContent>
