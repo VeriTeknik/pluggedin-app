@@ -14,10 +14,10 @@ interface WizardProgressProps {
 
 export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgressProps) {
   return (
-    <div className="w-full py-2 md:py-4">
+    <div className="w-full py-1 md:py-2">
       {/* Mobile: Vertical layout for better space usage */}
       <div className="block md:hidden">
-        <div className="space-y-3">
+        <div className="space-y-2">
           {steps.map((step, index) => {
             const isActive = index === currentStep;
             const isComplete = step.isComplete;
@@ -25,13 +25,13 @@ export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgre
             const canNavigate = isPast || isComplete;
 
             return (
-              <div key={step.id} className="flex items-center space-x-3">
+              <div key={step.id} className="flex items-center space-x-2">
                 {/* Step circle */}
                 <button
                   onClick={() => canNavigate && onStepClick?.(index)}
                   disabled={!canNavigate}
                   className={cn(
-                    'flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all shrink-0',
+                    'flex h-7 w-7 items-center justify-center rounded-full border-2 transition-all shrink-0',
                     isActive && 'border-primary bg-primary text-primary-foreground',
                     !isActive && isComplete && 'border-primary bg-primary text-primary-foreground',
                     !isActive && !isComplete && isPast && 'border-primary bg-background',
@@ -41,7 +41,7 @@ export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgre
                   )}
                 >
                   {isComplete ? (
-                    <Check className="h-4 w-4" />
+                    <Check className="h-3 w-3" />
                   ) : (
                     <span className="text-xs font-medium">{index + 1}</span>
                   )}
@@ -70,7 +70,7 @@ export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgre
                   {index < steps.length - 1 && (
                     <div
                       className={cn(
-                        'w-0.5 h-4',
+                        'w-0.5 h-3',
                         isPast || isComplete ? 'bg-primary' : 'bg-muted'
                       )}
                     />
@@ -86,7 +86,7 @@ export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgre
       <div className="hidden md:block">
         <div className="relative">
           {/* Background line container */}
-          <div className="absolute top-5 left-0 right-0 flex items-center">
+          <div className="absolute top-4 left-0 right-0 flex items-center">
             <div className="flex-1 h-0.5 bg-muted mx-5"></div>
           </div>
           
@@ -102,7 +102,7 @@ export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgre
                 <div key={step.id} className="flex-1 flex flex-col items-center relative">
                   {/* Progress line segment */}
                   {index < steps.length - 1 && (
-                    <div className="absolute top-5 left-1/2 w-full h-0.5 z-0">
+                    <div className="absolute top-4 left-1/2 w-full h-0.5 z-0">
                       <div
                         className={cn(
                           'h-full w-full',
@@ -117,7 +117,7 @@ export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgre
                     onClick={() => canNavigate && onStepClick?.(index)}
                     disabled={!canNavigate}
                     className={cn(
-                      'relative z-10 flex h-10 w-10 items-center justify-center rounded-full border-2 transition-all bg-background',
+                      'relative z-10 flex h-8 w-8 items-center justify-center rounded-full border-2 transition-all bg-background',
                       isActive && 'border-primary bg-primary text-primary-foreground',
                       !isActive && isComplete && 'border-primary bg-primary text-primary-foreground',
                       !isActive && !isComplete && isPast && 'border-primary bg-background',
@@ -127,17 +127,17 @@ export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgre
                     )}
                   >
                     {isComplete ? (
-                      <Check className="h-5 w-5" />
+                      <Check className="h-4 w-4" />
                     ) : (
-                      <span className="text-sm font-medium">{index + 1}</span>
+                      <span className="text-xs font-medium">{index + 1}</span>
                     )}
                   </button>
 
                   {/* Step label */}
-                  <div className="mt-3 text-center max-w-24">
+                  <div className="mt-2 text-center max-w-20">
                     <p
                       className={cn(
-                        'text-sm font-medium leading-tight',
+                        'text-xs font-medium leading-tight',
                         isActive && 'text-foreground',
                         !isActive && 'text-muted-foreground'
                       )}

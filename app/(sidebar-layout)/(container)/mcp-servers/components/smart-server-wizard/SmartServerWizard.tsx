@@ -127,13 +127,13 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
   return (
     <>
       <Dialog open={open} onOpenChange={handleClose}>
-        <DialogContent className="max-w-3xl w-[95vw] max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader className="flex-shrink-0 px-3 sm:px-6 py-3 sm:py-4">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] sm:max-h-[90vh] overflow-hidden flex flex-col p-0">
+          <DialogHeader className="flex-shrink-0 px-4 sm:px-6 py-4 border-b">
             <DialogTitle className="text-lg sm:text-xl">{t('wizard.title')}</DialogTitle>
           </DialogHeader>
 
         {/* Progress indicator */}
-        <div className="flex-shrink-0 px-3 sm:px-6">
+        <div className="flex-shrink-0 px-4 sm:px-6 py-2">
           <WizardProgress
             steps={steps}
             currentStep={currentStep}
@@ -142,12 +142,12 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
         </div>
 
         {/* Step content */}
-        <div className="flex-1 overflow-y-auto px-3 sm:px-6 py-2 sm:py-4">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 pb-4">
           {renderStep()}
         </div>
 
         {/* Navigation footer */}
-        <div className="flex-shrink-0 border-t px-3 sm:px-6 py-3 sm:py-4">
+        <div className="flex-shrink-0 border-t px-4 sm:px-6 py-3">
           <div className="flex justify-between gap-3">
             <Button
               variant="outline"
