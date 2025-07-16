@@ -174,15 +174,15 @@ export function ServerDetailDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl w-[95vw] max-h-[95vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="flex-shrink-0 px-4 py-3 border-b">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <DialogTitle className="text-2xl flex items-center gap-2">
-                <Server className="h-6 w-6" />
+              <DialogTitle className="text-xl flex items-center gap-2">
+                <Server className="h-5 w-5" />
                 {server.name}
               </DialogTitle>
-              <DialogDescription className="mt-2">
+              <DialogDescription className="mt-1 text-sm">
                 {server.description || 'No description available'}
               </DialogDescription>
             </div>
@@ -191,25 +191,25 @@ export function ServerDetailDialog({
                 variant="ghost"
                 size="icon"
                 onClick={() => setShowDeleteConfirm(true)}
-                className="ml-4"
+                className="ml-4 h-8 w-8"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
             )}
           </div>
           
-          <div className="flex items-center gap-2 mt-4">
-            <Badge variant="outline">
+          <div className="flex items-center gap-2 mt-2">
+            <Badge variant="outline" className="text-xs">
               {server.type}
             </Badge>
             {server.source === McpServerSource.REGISTRY && (
-              <Badge variant="default" className="bg-blue-600 hover:bg-blue-700">
+              <Badge variant="default" className="bg-blue-600 hover:bg-blue-700 text-xs">
                 <Package className="h-3 w-3 mr-1" />
                 Registry
               </Badge>
             )}
             {server.source === McpServerSource.COMMUNITY && (
-              <Badge variant="secondary">
+              <Badge variant="secondary" className="text-xs">
                 <Users className="h-3 w-3 mr-1" />
                 Community
               </Badge>
@@ -217,95 +217,98 @@ export function ServerDetailDialog({
           </div>
         </DialogHeader>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="configuration">Configuration</TabsTrigger>
-            <TabsTrigger value="reviews">
-              <MessageSquare className="h-4 w-4 mr-2" />
-              Reviews
-            </TabsTrigger>
-            <TabsTrigger value="analytics" disabled>
-              Analytics
-            </TabsTrigger>
-          </TabsList>
+        <div className="flex-1 overflow-hidden flex flex-col">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 overflow-hidden flex flex-col">
+            <div className="flex-shrink-0 px-4 pt-2">
+              <TabsList className="grid w-full grid-cols-4 h-8">
+                <TabsTrigger value="overview" className="text-xs">Overview</TabsTrigger>
+                <TabsTrigger value="configuration" className="text-xs">Configuration</TabsTrigger>
+                <TabsTrigger value="reviews" className="text-xs">
+                  <MessageSquare className="h-3 w-3 mr-1" />
+                  Reviews
+                </TabsTrigger>
+                <TabsTrigger value="analytics" disabled className="text-xs">
+                  Analytics
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-          <ScrollArea className="flex-1 h-[500px] mt-4">
-            <TabsContent value="overview" className="space-y-4">
-              {/* Registry Information */}
-              {isLoadingRegistry && (
-                <Card>
-                  <CardContent className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                    <span>Loading registry information...</span>
-                  </CardContent>
-                </Card>
-              )}
-              
-              {registryData && !isLoadingRegistry && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Package className="h-5 w-5" />
-                      Registry Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Author</p>
-                        <p className="font-medium">{registryData.author || 'Unknown'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">License</p>
-                        <p className="font-medium">{registryData.license || 'N/A'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Version</p>
-                        <p className="font-medium">{registryData.version || 'Latest'}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Downloads</p>
-                        <p className="font-medium">{formatNumber(registryData.downloads)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Stars</p>
-                        <p className="font-medium">{formatNumber(registryData.stars)}</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Last Updated</p>
-                        <p className="font-medium">{formatDate(registryData.updated_at)}</p>
-                      </div>
-                      {server.rating !== undefined && server.ratingCount !== undefined && (
-                        <>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Rating</p>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              <span className="font-medium">{server.rating.toFixed(1)}</span>
-                              <span className="text-sm text-muted-foreground">({server.ratingCount})</span>
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-sm text-muted-foreground">Installations</p>
-                            <p className="font-medium">{formatNumber(server.installation_count || 0)}</p>
-                          </div>
-                        </>
-                      )}
-                    </div>
-
-                    {registryData.tags && registryData.tags.length > 0 && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-2">Tags</p>
-                        <div className="flex flex-wrap gap-2">
-                          {registryData.tags.map((tag) => (
-                            <Badge key={tag} variant="secondary">
-                              {tag}
-                            </Badge>
-                          ))}
+            <div className="flex-1 overflow-y-auto px-4 py-2">
+              <TabsContent value="overview" className="space-y-3 mt-0">
+                {/* Registry Information */}
+                {isLoadingRegistry && (
+                  <Card>
+                    <CardContent className="flex items-center justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                      <span className="text-sm">Loading registry information...</span>
+                    </CardContent>
+                  </Card>
+                )}
+                
+                {registryData && !isLoadingRegistry && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Package className="h-4 w-4" />
+                        Registry Information
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pt-0">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Author</p>
+                          <p className="font-medium">{registryData.author || 'Unknown'}</p>
                         </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">License</p>
+                          <p className="font-medium">{registryData.license || 'N/A'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Version</p>
+                          <p className="font-medium">{registryData.version || 'Latest'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Downloads</p>
+                          <p className="font-medium">{formatNumber(registryData.downloads)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Stars</p>
+                          <p className="font-medium">{formatNumber(registryData.stars)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Last Updated</p>
+                          <p className="font-medium">{formatDate(registryData.updated_at)}</p>
+                        </div>
+                        {server.rating !== undefined && server.ratingCount !== undefined && (
+                          <>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Rating</p>
+                              <div className="flex items-center gap-1">
+                                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                                <span className="font-medium text-sm">{server.rating.toFixed(1)}</span>
+                                <span className="text-xs text-muted-foreground">({server.ratingCount})</span>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-xs text-muted-foreground">Installations</p>
+                              <p className="font-medium">{formatNumber(server.installation_count || 0)}</p>
+                            </div>
+                          </>
+                        )}
                       </div>
-                    )}
+
+                      {registryData.tags && registryData.tags.length > 0 && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-2">Tags</p>
+                          <div className="flex flex-wrap gap-1">
+                            {registryData.tags.map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-xs">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                     <div className="flex gap-2">
                       {registryData.homepage && (
@@ -533,8 +536,9 @@ export function ServerDetailDialog({
                 </CardContent>
               </Card>
             </TabsContent>
-          </ScrollArea>
-        </Tabs>
+          </Tabs>
+        </div>
+        </ScrollArea>
 
         {showDeleteConfirm && (
           <Alert className="mt-4 border-destructive">

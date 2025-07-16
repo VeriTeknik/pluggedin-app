@@ -208,127 +208,38 @@ export function InstallDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
+      <DialogContent className="max-w-2xl w-[95vw] max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="flex-shrink-0 px-4 py-3 border-b">
+          <DialogTitle className="flex items-center gap-2 text-lg">
             {t('install.title')}
             {serverData.source === McpServerSource.REGISTRY && (
-              <Badge className="bg-blue-600 hover:bg-blue-700">
+              <Badge className="bg-blue-600 hover:bg-blue-700 text-xs">
                 <Package className="h-3 w-3 mr-1" />
                 Registry
               </Badge>
             )}
           </DialogTitle>
-          <DialogDescription>{t('install.description')}</DialogDescription>
+          <DialogDescription className="text-sm">{t('install.description')}</DialogDescription>
         </DialogHeader>
 
-        {serverData.source === McpServerSource.REGISTRY && (
-          <Alert className="mb-4">
-            <Package className="h-4 w-4" />
-            <AlertDescription>
-              {t('install.registryNotice', 'This server is from the official Plugged.in Registry and has been verified for compatibility.')}
-            </AlertDescription>
-          </Alert>
-        )}
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          {serverData.source === McpServerSource.REGISTRY && (
+            <Alert className="mb-3">
+              <Package className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                {t('install.registryNotice', 'This server is from the official Plugged.in Registry and has been verified for compatibility.')}
+              </AlertDescription>
+            </Alert>
+          )}
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('install.name')}</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>{t('install.description')}</FormLabel>
-                  <FormControl>
-                    <Textarea {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {serverData.type === McpServerType.STDIO ? (
-              <>
-                <FormField
-                  control={form.control}
-                  name="command"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('install.command')}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="args"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>{t('install.args')}</FormLabel>
-                      <FormControl>
-                        <Input {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {envInfo.length > 0 && (
-                  <div className="space-y-4">
-                    <FormLabel>{t('install.env')}</FormLabel>
-                    {envInfo.map((env) => (
-                      <FormField
-                        key={env.key}
-                        control={form.control}
-                        name={`env_${env.key}` as any}
-                        render={({ field }) => (
-                          <FormItem>
-                            <div className="space-y-2">
-                              <div className="grid grid-cols-3 gap-4 items-center">
-                                <FormLabel className="text-sm font-mono">{env.key}</FormLabel>
-                                <FormControl className="col-span-2">
-                                  <Input {...field} placeholder="Enter value" />
-                                </FormControl>
-                              </div>
-                              {env.description && (
-                                <p className="text-sm text-muted-foreground ml-1">
-                                  {env.description}
-                                </p>
-                              )}
-                            </div>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
-            ) : (
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
               <FormField
                 control={form.control}
-                name="url"
+                name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('install.url')}</FormLabel>
+                    <FormLabel className="text-sm">{t('install.name')}</FormLabel>
                     <FormControl>
                       <Input {...field} />
                     </FormControl>
@@ -336,22 +247,121 @@ export function InstallDialog({
                   </FormItem>
                 )}
               />
-            )}
 
-            <div className="flex justify-end space-x-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-              >
-                {t('common:common.cancel')}
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? t('common:common.installing') : t('common:common.install')}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm">{t('install.description')}</FormLabel>
+                    <FormControl>
+                      <Textarea {...field} className="min-h-[80px]" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              {serverData.type === McpServerType.STDIO ? (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="command"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">{t('install.command')}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="args"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm">{t('install.args')}</FormLabel>
+                        <FormControl>
+                          <Input {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {envInfo.length > 0 && (
+                    <div className="space-y-3">
+                      <FormLabel className="text-sm">{t('install.env')}</FormLabel>
+                      {envInfo.map((env) => (
+                        <FormField
+                          key={env.key}
+                          control={form.control}
+                          name={`env_${env.key}` as any}
+                          render={({ field }) => (
+                            <FormItem>
+                              <div className="space-y-1">
+                                <div className="grid grid-cols-3 gap-3 items-center">
+                                  <FormLabel className="text-xs font-mono">{env.key}</FormLabel>
+                                  <FormControl className="col-span-2">
+                                    <Input {...field} placeholder="Enter value" className="text-sm" />
+                                  </FormControl>
+                                </div>
+                                {env.description && (
+                                  <p className="text-xs text-muted-foreground ml-1">
+                                    {env.description}
+                                  </p>
+                                )}
+                              </div>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="url"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-sm">{t('install.url')}</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+            </form>
+          </Form>
+        </div>
+
+        <div className="flex-shrink-0 border-t px-4 py-3">
+          <div className="flex justify-end space-x-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              size="sm"
+            >
+              {t('common:common.cancel')}
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting}
+              size="sm"
+              onClick={form.handleSubmit(onSubmit)}
+            >
+              {isSubmitting ? t('common:common.installing') : t('common:common.install')}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
