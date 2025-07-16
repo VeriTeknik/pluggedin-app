@@ -177,8 +177,8 @@ export function PlaygroundConfig({
         </p>
       </div>
       <div className='flex-1 overflow-hidden'>
-        <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col px-4">
-          <TabsList className='grid w-full grid-cols-3 px-4'>
+        <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col ">
+          <TabsList className='grid grid-cols-3 mx-4'>
             <TabsTrigger value='servers'>{t('playground.config.tabs.servers')}</TabsTrigger>
             <TabsTrigger value='llm'>{t('playground.config.tabs.llm')}</TabsTrigger>
             <TabsTrigger value='logs' className="relative">
