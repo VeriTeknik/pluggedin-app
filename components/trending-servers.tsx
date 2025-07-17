@@ -78,53 +78,57 @@ export function TrendingServers() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5" />
-            {t('search.trending.title', 'Trending Servers')}
+    <Card className="w-full">
+      <CardHeader className="pb-4">
+        <div className="space-y-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <TrendingUp className="h-5 w-5 shrink-0" />
+            <span className="truncate">{t('search.trending.title', 'Trending Servers')}</span>
           </CardTitle>
-          <div className="flex gap-2">
+          
+          {data?.period.label && (
+            <CardDescription className="text-sm">
+              {t('search.trending.description', {
+                period: data.period.label,
+                defaultValue: `Most active servers in ${data.period.label}`,
+              })}
+            </CardDescription>
+          )}
+          
+          <div className="flex flex-col gap-2">
             <Tabs value={period} onValueChange={(v) => setPeriod(v as typeof period)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="24h" className="text-xs">
+              <TabsList className="h-8 w-full">
+                <TabsTrigger value="24h" className="text-xs flex-1">
                   {t('search.trending.period.24h', '24h')}
                 </TabsTrigger>
-                <TabsTrigger value="7d" className="text-xs">
+                <TabsTrigger value="7d" className="text-xs flex-1">
                   {t('search.trending.period.7d', '7d')}
                 </TabsTrigger>
-                <TabsTrigger value="30d" className="text-xs">
+                <TabsTrigger value="30d" className="text-xs flex-1">
                   {t('search.trending.period.30d', '30d')}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
             <Tabs value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="installs" className="text-xs">
+              <TabsList className="h-8 w-full">
+                <TabsTrigger value="installs" className="text-xs flex-1">
                   {t('search.trending.sortBy.installs', 'Installs')}
                 </TabsTrigger>
-                <TabsTrigger value="calls" className="text-xs">
+                <TabsTrigger value="calls" className="text-xs flex-1">
                   {t('search.trending.sortBy.calls', 'Calls')}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
         </div>
-        <CardDescription>
-          {data?.period.label && t('search.trending.description', {
-            period: data.period.label,
-            defaultValue: `Most active servers in ${data.period.label}`,
-          })}
-        </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-0">
         {isLoading ? (
           <div className="space-y-3">
             {[...Array(5)].map((_, i) => (
               <div key={i} className="flex items-center space-x-3">
-                <Skeleton className="h-12 w-12 rounded" />
-                <div className="flex-1 space-y-2">
+                <Skeleton className="h-10 w-10 rounded shrink-0" />
+                <div className="flex-1 space-y-2 min-w-0">
                   <Skeleton className="h-4 w-1/3" />
                   <Skeleton className="h-3 w-full" />
                 </div>
@@ -144,47 +148,53 @@ export function TrendingServers() {
               .map((server: TrendingServer, index: number) => (
               <div
                 key={server.id}
-                className="flex items-start space-x-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                className="flex items-start space-x-3 p-3 rounded-lg hover:bg-accent cursor-pointer transition-colors min-w-0"
                 onClick={() => handleServerClick(server)}
               >
                 <div className="flex-shrink-0 w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-sm font-medium">
                   {index + 1}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h4 className="font-medium text-sm truncate">{server.name}</h4>
-                    <Badge variant="outline" className="text-xs">
-                      {server.source === McpServerSource.REGISTRY ? (
-                        <Package className="h-3 w-3 mr-1" />
-                      ) : (
-                        <Users className="h-3 w-3 mr-1" />
-                      )}
-                      {server.source}
-                    </Badge>
-                    {server.category && (
-                      <Badge variant="secondary" className="text-xs">
-                        {t(`search.categories.${server.category}`, server.category)}
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <h4 className="font-medium text-sm truncate min-w-0">{server.name}</h4>
+                    <div className="flex gap-1 flex-wrap">
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {server.source === McpServerSource.REGISTRY ? (
+                          <Package className="h-3 w-3 mr-1" />
+                        ) : (
+                          <Users className="h-3 w-3 mr-1" />
+                        )}
+                        {server.source}
                       </Badge>
-                    )}
+                      {server.category && (
+                        <Badge variant="secondary" className="text-xs shrink-0 max-w-[100px]">
+                          <span className="truncate">
+                            {t(`search.categories.${server.category}`, server.category)}
+                          </span>
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   {server.description && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1">
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1 break-words">
                       {server.description}
                     </p>
                   )}
-                  <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
+                  <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+                    <span className="flex items-center gap-1 shrink-0">
                       <Activity className="h-3 w-3" />
-                      {server.install_count} {t('search.trending.installs', 'installs')}
+                      <span className="truncate">{server.install_count} {t('search.trending.installs', 'installs')}</span>
                     </span>
-                    <span className="flex items-center gap-1">
+                    <span className="flex items-center gap-1 shrink-0">
                       <TrendingUp className="h-3 w-3" />
-                      {server.tool_call_count} {t('search.trending.toolCalls', 'tool calls')}
+                      <span className="truncate">{server.tool_call_count} {t('search.trending.toolCalls', 'tool calls')}</span>
                     </span>
                     {server.shared_by && (
-                      <span className="flex items-center gap-1">
+                      <span className="flex items-center gap-1 shrink-0 max-w-[120px]">
                         <Users className="h-3 w-3" />
-                        {t('search.trending.sharedBy', { user: server.shared_by })}
+                        <span className="truncate">
+                          {t('search.trending.sharedBy', { user: server.shared_by })}
+                        </span>
                       </span>
                     )}
                   </div>

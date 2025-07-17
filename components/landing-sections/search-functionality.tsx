@@ -42,13 +42,13 @@ export function LandingSearchFunctionality() {
   return (
     <motion.section
       id="search" // Consider if this ID is needed or if it should be part of features/community etc.
-      className="py-16 md:py-24 lg:py-32"
+      className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32"
       variants={sectionVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
     >
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <motion.div className="mb-12 text-center max-w-2xl mx-auto" variants={textVariants}>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             {t('search.title')}

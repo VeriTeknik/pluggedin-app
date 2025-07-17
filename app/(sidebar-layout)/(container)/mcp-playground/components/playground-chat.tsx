@@ -64,16 +64,26 @@ export function PlaygroundChat({
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
-    if (messages.length) {
-      rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' }); 
+    if (messages.length && parentRef.current) {
+      // Use a small delay to ensure the DOM has updated
+      setTimeout(() => {
+        try {
+          rowVirtualizer.scrollToIndex(messages.length - 1, { align: 'end', behavior: 'smooth' });
+        } catch (error) {
+          // Fallback to manual scroll if virtualizer fails
+          if (parentRef.current) {
+            parentRef.current.scrollTop = parentRef.current.scrollHeight;
+          }
+        }
+      }, 10);
     }
   }, [messages.length, rowVirtualizer]);
 
   return (
-    <div className='flex flex-col h-full bg-background'>
+    <div className='flex flex-col h-full bg-background min-h-0'>
 
-      {/* Chat Messages Area */}
-      <div ref={parentRef} className='flex-1 overflow-y-auto p-4'>
+      {/* Chat Messages Area - Fixed height with proper scrolling */}
+      <div ref={parentRef} className='flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 min-h-0'>
         <div 
           style={{ 
             height: `${rowVirtualizer.getTotalSize()}px`,
@@ -81,16 +91,16 @@ export function PlaygroundChat({
             position: 'relative',
             minHeight: '100%',
             display: 'flex',
-            alignItems: 'center'
+            alignItems: messages.length === 0 ? 'center' : 'flex-start'
           }}
         >
           {messages.length === 0 ? (
-            <div className='w-full flex flex-col items-center justify-center text-center p-8'>
-              <div className='bg-muted/30 rounded-full p-6 mb-6'>
-                <Settings className='h-12 w-12 text-primary/40' />
+            <div className='w-full flex flex-col items-center justify-center text-center p-4 sm:p-8'>
+              <div className='bg-muted/30 rounded-full p-4 sm:p-6 mb-4 sm:mb-6'>
+                <Settings className='h-8 w-8 sm:h-12 sm:w-12 text-primary/40' />
               </div>
-              <h3 className='text-xl font-semibold mb-3'>{t('playground.chat.empty.title')}</h3>
-              <p className='text-muted-foreground max-w-md mb-6 leading-relaxed'>
+              <h3 className='text-lg sm:text-xl font-semibold mb-2 sm:mb-3'>{t('playground.chat.empty.title')}</h3>
+              <p className='text-muted-foreground max-w-md mb-4 sm:mb-6 leading-relaxed text-sm sm:text-base'>
                 {isSessionActive
                   ? t('playground.chat.empty.activeDescription')
                   : t('playground.chat.empty.inactiveDescription')}
@@ -126,7 +136,7 @@ export function PlaygroundChat({
                             : 'bg-secondary'
                     }`}>
                     {message.role === 'ai' && (
-                      <div className='text-xs text-muted-foreground/70 mb-2 flex items-center'>
+                      <div className='text-xs text-muted-foreground/70 mb-2 flex items-center flex-wrap'>
                         {message.timestamp && (
                           <>
                             <span>{message.timestamp instanceof Date ? message.timestamp.toLocaleTimeString() : new Date(message.timestamp).toLocaleTimeString()}</span>
@@ -160,7 +170,7 @@ export function PlaygroundChat({
                       </div>
                     )}
 
-                    <div className='whitespace-pre-wrap text-sm leading-relaxed'>
+                    <div className='whitespace-pre-wrap text-sm leading-relaxed break-words'>
                       {typeof message.content === 'string'
                         ? message.content
                         : 'Complex content (see console)'}
@@ -171,7 +181,7 @@ export function PlaygroundChat({
                         <summary className='cursor-pointer hover:text-primary'>
                           {t('playground.chat.tool.debugInfo')}
                         </summary>
-                        <div className='p-2 mt-1 bg-black/10 rounded text-xs font-mono'>
+                        <div className='p-2 mt-1 bg-black/10 rounded text-xs font-mono whitespace-pre-wrap break-words overflow-wrap-anywhere'>
                           {message.debug}
                         </div>
                       </details>
@@ -194,15 +204,17 @@ export function PlaygroundChat({
               </div>
             </div>
           )}
-        </div> 
+                </div> 
+        {/* Messages end ref for scrolling */}
+        <div ref={messagesEndRef} />
       </div>
       
       <Separator />
       
-      {/* Input Area */}
-      <div className='p-4 bg-background/95 backdrop-blur-sm'>
+      {/* Input Area - Fixed position at bottom */}
+      <div className='flex-shrink-0 p-3 sm:p-4 bg-background/95 backdrop-blur-sm border-t border-border/50'>
         {isSessionActive ? (
-          <div className='flex w-full items-end space-x-3 max-w-4xl mx-auto'>
+          <div className='flex w-full items-end space-x-2 sm:space-x-3 max-w-4xl mx-auto'>
             <Textarea
               placeholder={t('playground.chat.input.activePlaceholder')}
               value={inputValue}
@@ -214,14 +226,14 @@ export function PlaygroundChat({
                 }
               }}
               disabled={isProcessing || isThinking}
-              className='flex-1 min-h-12 max-h-32 resize-none bg-background border-border focus:border-primary/50 transition-colors'
+              className='flex-1 min-h-10 sm:min-h-12 max-h-32 resize-none bg-background border-border focus:border-primary/50 transition-colors text-sm sm:text-base'
               rows={1}
             />
             <Button
               size='icon'
               onClick={sendMessage}
               disabled={!inputValue.trim() || isProcessing || isThinking}
-              className={`h-12 w-12 transition-all ${
+              className={`h-10 w-10 sm:h-12 sm:w-12 flex-shrink-0 transition-all ${
                 isProcessing || isThinking ? 'animate-pulse' : ''
               } bg-primary hover:bg-primary/90`}>
               {isThinking ? (
@@ -232,34 +244,40 @@ export function PlaygroundChat({
             </Button>
           </div>
         ) : (
-          <div className='flex flex-col items-center justify-center text-center py-4'>
+          <div className='flex flex-col items-center justify-center text-center py-3 sm:py-4'>
             {messages.length > 0 && (
                 <p className="text-sm text-muted-foreground mb-4">
                     {t('playground.chat.sessionEnded')}
                 </p>
             )}
-            <Button
-              className='bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-6 py-2'
-              onClick={startSession}
-              disabled={
-                isProcessing ||
-                (mcpServers?.filter((s) => s.status === 'ACTIVE').length === 0 && !llmConfig.ragEnabled)
-              }>
-              {isProcessing ? (
-                <>
-                  <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
-                  {t('playground.actions.starting')}
-                </>
-              ) : (
-                <>
-                  <Send className='w-4 h-4 mr-2' />
-                  {messages.length > 0 ? t('playground.actions.startNewSession') : t('playground.actions.start')}
-                </>
+            <div className="flex flex-col sm:flex-row gap-2 items-center">
+              <Button
+                className='bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 px-4 sm:px-6 py-2 text-sm sm:text-base'
+                onClick={startSession}
+                disabled={
+                  isProcessing ||
+                  (mcpServers?.filter((s) => s.status === 'ACTIVE').length === 0 && !llmConfig.ragEnabled)
+                }>
+                {isProcessing ? (
+                  <>
+                    <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                    {t('playground.actions.starting')}
+                  </>
+                ) : (
+                  <>
+                    <Send className='w-4 h-4 mr-2' />
+                    {messages.length > 0 ? t('playground.actions.startNewSession') : t('playground.actions.start')}
+                  </>
+                )}
+              </Button>
+              
+              {/* Mobile Configuration Button */}
+              {(mcpServers?.filter((s) => s.status === 'ACTIVE').length === 0 && !llmConfig.ragEnabled) && (
+                <p className="text-xs text-muted-foreground text-center">
+                  {t('playground.chat.selectServerOrEnableRagHint')}
+                </p>
               )}
-            </Button>
-            {(mcpServers?.filter((s) => s.status === 'ACTIVE').length === 0 && !llmConfig.ragEnabled) && (
-              <p className="text-xs text-muted-foreground mt-2">{t('playground.chat.selectServerOrEnableRagHint')}</p>
-            )}
+            </div>
           </div>
         )}
       </div>

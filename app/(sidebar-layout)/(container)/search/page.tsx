@@ -202,9 +202,6 @@ function SearchContent() {
       pageSize,
       packageRegistry,
       repositorySource,
-      // Include enhanced state information from hooks
-      filterState: filter,
-      sortState,
     };
   }, [
     source,
@@ -214,8 +211,6 @@ function SearchContent() {
     pageSize,
     packageRegistry,
     repositorySource,
-    filter,
-    sortState,
   ]);
 
   // Update URL when search parameters change
@@ -238,13 +233,13 @@ function SearchContent() {
         if (searchFilters.source !== 'all') {
           params.set('source', searchFilters.source);
         }
-        if (!searchFilters.sortState.isDefault) {
+        if (sort !== 'relevance') {
           params.set('sort', searchFilters.sort);
         }
-        if (searchFilters.filterState.hasTags) {
+        if (tags.length > 0) {
           params.set('tags', searchFilters.tags);
         }
-        if (searchFilters.filterState.hasCategory) {
+        if (category) {
           params.set('category', searchFilters.category);
         }
         if (searchFilters.pageSize !== DEFAULT_PAGE_SIZE) {
@@ -274,6 +269,9 @@ function SearchContent() {
     packageRegistryParam,
     repositorySourceParam,
     router,
+    sort,
+    tags,
+    category,
   ]);
 
   const handlePageChange = (page: number) => {
@@ -371,7 +369,7 @@ function SearchContent() {
           <p className='text-muted-foreground'>{t('search.subtitle')}</p>
         </div>
         {isAuthenticated && (
-          <Button onClick={() => setShowAddServerWizard(true)} size='sm'>
+          <Button onClick={() => setShowAddServerWizard(true)} size='sm' className="shrink-0">
             <Plus className='h-4 w-4 mr-2' />
             {t('registry.addServer.button')}
           </Button>
@@ -379,23 +377,22 @@ function SearchContent() {
       </div>
 
       {/* Trending and Search Layout */}
-      <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+      <div className='grid grid-cols-1 xl:grid-cols-4 gap-6'>
         {/* Main Search Section */}
-        <div className='lg:col-span-2 space-y-4'>
+        <div className='xl:col-span-3 space-y-4 min-w-0'>
           {/* Search Controls */}
-          <div className='flex flex-wrap gap-4'>
-            <div className='w-full'>
-              <Input
-                type='search'
-                placeholder={t('search.input.placeholder')}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className='h-10 w-full'
-              />
-            </div>
+          <div className='w-full'>
+            <Input
+              type='search'
+              placeholder={t('search.input.placeholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className='h-10 w-full'
+            />
           </div>
 
-          <div className='flex flex-col md:flex-row items-center justify-between mb-4 gap-4'>
+          {/* Source Tabs - Full width on mobile */}
+          <div className='w-full'>
             <Tabs
               defaultValue={McpServerSource.REGISTRY}
               onValueChange={handleSourceChange}
@@ -403,260 +400,269 @@ function SearchContent() {
               <TabsList className='w-full h-10 flex rounded-lg'>
                 <TabsTrigger
                   value={McpServerSource.REGISTRY}
-                  className='flex-1'>
+                  className='flex-1 text-xs md:text-sm'>
                   {t('search.sources.registry', 'Plugged.in Registry')}
                 </TabsTrigger>
                 <TabsTrigger
                   value={McpServerSource.COMMUNITY}
-                  className='flex-1'>
+                  className='flex-1 text-xs md:text-sm'>
                   {t('search.sources.community', 'Community')}
                 </TabsTrigger>
-                <TabsTrigger value='all' className='flex-1'>
+                <TabsTrigger value='all' className='flex-1 text-xs md:text-sm'>
                   {t('search.sources.all', 'All')}
                 </TabsTrigger>
               </TabsList>
             </Tabs>
+          </div>
 
-            <div className='flex space-x-2 shrink-0'>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant='outline' size='sm'>
-                    <Layers className='h-4 w-4 mr-2' />
-                    {t('search.category')}
-                    {category && (
-                      <span className='ml-1'>
-                        ({t(`search.categories.${category}`)})
-                      </span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align='end' className='w-56'>
-                  <DropdownMenuLabel>
-                    {t('search.filterByCategory')}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-
-                  <DropdownMenuItem
-                    onClick={() => handleCategoryChange('')}
-                    className={!category ? 'bg-accent' : ''}>
-                    {t('search.allCategories')}
-                  </DropdownMenuItem>
-
-                  <DropdownMenuSeparator />
-
-                  {availableCategories.length > 0 ? (
-                    <div className='max-h-56 overflow-y-auto'>
-                      {availableCategories.map((cat) => (
-                        <DropdownMenuItem
-                          key={cat}
-                          onClick={() => handleCategoryChange(cat)}
-                          className={category === cat ? 'bg-accent' : ''}>
-                          {renderCategoryIcon(cat)}
-                          {t(`search.categories.${cat}`)}
-                        </DropdownMenuItem>
-                      ))}
-                    </div>
-                  ) : (
-                    <DropdownMenuItem disabled>
-                      {t('search.noCategoriesAvailable')}
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Package Type Filter - Only show for registry source */}
-              {(source === McpServerSource.REGISTRY || source === 'all') && (
+          {/* Filter Controls - Responsive horizontal scroll on mobile */}
+          <div className='w-full'>
+            <div className='flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin'>
+              <div className='flex gap-2 flex-nowrap min-w-max'>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant='outline' size='sm'>
-                      <Package className='h-4 w-4 mr-2' />
-                      {t('search.packageType', 'Package Type')}
-                      {packageRegistry && (
-                        <span className='ml-1'>
-                          ({packageRegistry.toUpperCase()})
+                    <Button variant='outline' size='sm' className="shrink-0">
+                      <Layers className='h-4 w-4 mr-2' />
+                      <span className="hidden sm:inline">{t('search.category')}</span>
+                      <span className="sm:hidden">Cat</span>
+                      {category && (
+                        <span className='ml-1 hidden md:inline'>
+                          ({t(`search.categories.${category}`)})
                         </span>
                       )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align='end' className='w-56'>
                     <DropdownMenuLabel>
-                      {t(
-                        'search.filterByPackageType',
-                        'Filter by Package Type'
-                      )}
+                      {t('search.filterByCategory')}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
 
                     <DropdownMenuItem
-                      onClick={() => setPackageRegistry('')}
-                      className={!packageRegistry ? 'bg-accent' : ''}>
-                      {t('search.allPackages', 'All Packages')}
+                      onClick={() => handleCategoryChange('')}
+                      className={!category ? 'bg-accent' : ''}>
+                      {t('search.allCategories')}
                     </DropdownMenuItem>
 
                     <DropdownMenuSeparator />
 
-                    <DropdownMenuItem
-                      onClick={() => setPackageRegistry('npm')}
-                      className={packageRegistry === 'npm' ? 'bg-accent' : ''}>
-                      <Package className='h-4 w-4 mr-2' />
-                      NPM (Node.js)
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem
-                      onClick={() => setPackageRegistry('docker')}
-                      className={
-                        packageRegistry === 'docker' ? 'bg-accent' : ''
-                      }>
-                      <Box className='h-4 w-4 mr-2' />
-                      Docker
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem
-                      onClick={() => setPackageRegistry('pypi')}
-                      className={packageRegistry === 'pypi' ? 'bg-accent' : ''}>
-                      <Package className='h-4 w-4 mr-2' />
-                      PyPI (Python)
-                    </DropdownMenuItem>
+                    {availableCategories.length > 0 ? (
+                      <div className='max-h-56 overflow-y-auto'>
+                        {availableCategories.map((cat) => (
+                          <DropdownMenuItem
+                            key={cat}
+                            onClick={() => handleCategoryChange(cat)}
+                            className={category === cat ? 'bg-accent' : ''}>
+                            {renderCategoryIcon(cat)}
+                            {t(`search.categories.${cat}`)}
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    ) : (
+                      <DropdownMenuItem disabled>
+                        {t('search.noCategoriesAvailable')}
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-              )}
 
-              {/* Repository Source Filter - Only show for registry source */}
-              {(source === McpServerSource.REGISTRY || source === 'all') && (
+                {/* Package Type Filter - Only show for registry source */}
+                {(source === McpServerSource.REGISTRY || source === 'all') && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant='outline' size='sm' className="shrink-0">
+                        <Package className='h-4 w-4 mr-2' />
+                        <span className="hidden sm:inline">{t('search.packageType', 'Package Type')}</span>
+                        <span className="sm:hidden">Pkg</span>
+                        {packageRegistry && (
+                          <span className='ml-1 hidden lg:inline'>
+                            ({packageRegistry.toUpperCase()})
+                          </span>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end' className='w-56'>
+                      <DropdownMenuLabel>
+                        {t(
+                          'search.filterByPackageType',
+                          'Filter by Package Type'
+                        )}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem
+                        onClick={() => setPackageRegistry('')}
+                        className={!packageRegistry ? 'bg-accent' : ''}>
+                        {t('search.allPackages', 'All Packages')}
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem
+                        onClick={() => setPackageRegistry('npm')}
+                        className={packageRegistry === 'npm' ? 'bg-accent' : ''}>
+                        <Package className='h-4 w-4 mr-2' />
+                        NPM (Node.js)
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        onClick={() => setPackageRegistry('docker')}
+                        className={
+                          packageRegistry === 'docker' ? 'bg-accent' : ''
+                        }>
+                        <Box className='h-4 w-4 mr-2' />
+                        Docker
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        onClick={() => setPackageRegistry('pypi')}
+                        className={packageRegistry === 'pypi' ? 'bg-accent' : ''}>
+                        <Package className='h-4 w-4 mr-2' />
+                        PyPI (Python)
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
+                {/* Repository Source Filter - Only show for registry source */}
+                {(source === McpServerSource.REGISTRY || source === 'all') && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant='outline' size='sm' className="shrink-0">
+                        <Github className='h-4 w-4 mr-2' />
+                        <span className="hidden sm:inline">{t('search.source', 'Source')}</span>
+                        <span className="sm:hidden">Src</span>
+                        {repositorySource && (
+                          <span className='ml-1 hidden lg:inline'>({repositorySource})</span>
+                        )}
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align='end' className='w-56'>
+                      <DropdownMenuLabel>
+                        {t('search.filterBySource', 'Filter by Source')}
+                      </DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem
+                        onClick={() => setRepositorySource('')}
+                        className={!repositorySource ? 'bg-accent' : ''}>
+                        {t('search.allSources', 'All Sources')}
+                      </DropdownMenuItem>
+
+                      <DropdownMenuSeparator />
+
+                      <DropdownMenuItem
+                        onClick={() => setRepositorySource('github')}
+                        className={
+                          repositorySource === 'github' ? 'bg-accent' : ''
+                        }>
+                        <Github className='h-4 w-4 mr-2' />
+                        GitHub
+                      </DropdownMenuItem>
+
+                      <DropdownMenuItem
+                        onClick={() => setRepositorySource('gitlab')}
+                        className={
+                          repositorySource === 'gitlab' ? 'bg-accent' : ''
+                        }>
+                        GitLab
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant='outline' size='sm'>
-                      <Github className='h-4 w-4 mr-2' />
-                      {t('search.source', 'Source')}
-                      {repositorySource && (
-                        <span className='ml-1'>({repositorySource})</span>
+                    <Button variant='outline' size='sm' className="shrink-0">
+                      <SortDesc className='h-4 w-4 mr-2' />
+                      <span className="hidden sm:inline">{t('search.sort')}</span>
+                      <span className="sm:hidden">Sort</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align='end' className='w-56'>
+                    <DropdownMenuLabel>{t('search.sortBy')}</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem
+                        onClick={() => handleSortChange('relevance')}
+                        className={sort === 'relevance' ? 'bg-accent' : ''}>
+                        {t('search.sortOptions.relevance')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleSortChange('popularity')}
+                        className={sort === 'popularity' ? 'bg-accent' : ''}>
+                        {t('search.sortOptions.popularity')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleSortChange('recent')}
+                        className={sort === 'recent' ? 'bg-accent' : ''}>
+                        {t('search.sortOptions.recent')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleSortChange('stars')}
+                        className={sort === 'stars' ? 'bg-accent' : ''}>
+                        {t('search.sortOptions.stars')}
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant='outline' size='sm' className="shrink-0">
+                      <Filter className='h-4 w-4 mr-2' />
+                      <span className="hidden sm:inline">{t('search.filter')}</span>
+                      <span className="sm:hidden">Filter</span>
+                      {tags.length > 0 && (
+                        <span className='ml-1'>({tags.length})</span>
                       )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align='end' className='w-56'>
                     <DropdownMenuLabel>
-                      {t('search.filterBySource', 'Filter by Source')}
+                      {t('search.filterByTags')}
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
-
-                    <DropdownMenuItem
-                      onClick={() => setRepositorySource('')}
-                      className={!repositorySource ? 'bg-accent' : ''}>
-                      {t('search.allSources', 'All Sources')}
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator />
-
-                    <DropdownMenuItem
-                      onClick={() => setRepositorySource('github')}
-                      className={
-                        repositorySource === 'github' ? 'bg-accent' : ''
-                      }>
-                      <Github className='h-4 w-4 mr-2' />
-                      GitHub
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem
-                      onClick={() => setRepositorySource('gitlab')}
-                      className={
-                        repositorySource === 'gitlab' ? 'bg-accent' : ''
-                      }>
-                      GitLab
-                    </DropdownMenuItem>
+                    {availableTags.length > 0 ? (
+                      <div className='max-h-56 overflow-y-auto'>
+                        {availableTags.map((tag) => (
+                          <DropdownMenuItem
+                            key={tag}
+                            onClick={() => handleTagToggle(tag)}
+                            className={tags.includes(tag) ? 'bg-accent' : ''}>
+                            {tag}
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
+                    ) : (
+                      <DropdownMenuItem disabled>
+                        {t('search.noTagsAvailable')}
+                      </DropdownMenuItem>
+                    )}
+                    {tags.length > 0 && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => setTags([])}>
+                          {t('search.clearFilters')}
+                        </DropdownMenuItem>
+                      </>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
-              )}
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant='outline' size='sm'>
-                    <SortDesc className='h-4 w-4 mr-2' />
-                    {t('search.sort')}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align='end' className='w-56'>
-                  <DropdownMenuLabel>{t('search.sortBy')}</DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuGroup>
-                    <DropdownMenuItem
-                      onClick={() => handleSortChange('relevance')}
-                      className={sort === 'relevance' ? 'bg-accent' : ''}>
-                      {t('search.sortOptions.relevance')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleSortChange('popularity')}
-                      className={sort === 'popularity' ? 'bg-accent' : ''}>
-                      {t('search.sortOptions.popularity')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleSortChange('recent')}
-                      className={sort === 'recent' ? 'bg-accent' : ''}>
-                      {t('search.sortOptions.recent')}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleSortChange('stars')}
-                      className={sort === 'stars' ? 'bg-accent' : ''}>
-                      {t('search.sortOptions.stars')}
-                    </DropdownMenuItem>
-                  </DropdownMenuGroup>
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant='outline' size='sm'>
-                    <Filter className='h-4 w-4 mr-2' />
-                    {t('search.filter')}
-                    {tags.length > 0 && (
-                      <span className='ml-1'>({tags.length})</span>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align='end' className='w-56'>
-                  <DropdownMenuLabel>
-                    {t('search.filterByTags')}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  {availableTags.length > 0 ? (
-                    <div className='max-h-56 overflow-y-auto'>
-                      {availableTags.map((tag) => (
-                        <DropdownMenuItem
-                          key={tag}
-                          onClick={() => handleTagToggle(tag)}
-                          className={tags.includes(tag) ? 'bg-accent' : ''}>
-                          {tag}
-                        </DropdownMenuItem>
-                      ))}
-                    </div>
-                  ) : (
-                    <DropdownMenuItem disabled>
-                      {t('search.noTagsAvailable')}
-                    </DropdownMenuItem>
-                  )}
-                  {tags.length > 0 && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setTags([])}>
-                        {t('search.clearFilters')}
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              </div>
             </div>
           </div>
-
 
           {/* Active filters display */}
           {(category ||
             tags.length > 0 ||
             packageRegistry ||
             repositorySource) && (
-            <div className='flex flex-wrap gap-2 mb-4'>
+            <div className='flex flex-wrap gap-2'>
               {category && (
                 <Badge variant='secondary' className='flex items-center gap-1'>
                   {renderCategoryIcon(category)}
-                  {t(`search.categories.${category}`)}
+                  <span className="truncate max-w-[120px]">{t(`search.categories.${category}`)}</span>
                   <button
                     className='ml-1 hover:bg-accent p-1 rounded-full'
                     onClick={() => handleCategoryChange('')}>
@@ -666,8 +672,8 @@ function SearchContent() {
               )}
 
               {tags.map((tag) => (
-                <Badge key={tag} variant='outline'>
-                  #{tag}
+                <Badge key={tag} variant='outline' className="max-w-[120px]">
+                  <span className="truncate">#{tag}</span>
                   <button
                     className='ml-1 hover:bg-accent p-1 rounded-full'
                     onClick={() => handleTagToggle(tag)}>
@@ -679,7 +685,7 @@ function SearchContent() {
               {packageRegistry && (
                 <Badge variant='secondary' className='flex items-center gap-1'>
                   <Package className='h-3 w-3' />
-                  {packageRegistry.toUpperCase()}
+                  <span className="truncate max-w-[80px]">{packageRegistry.toUpperCase()}</span>
                   <button
                     className='ml-1 hover:bg-accent p-1 rounded-full'
                     onClick={() => setPackageRegistry('')}>
@@ -691,7 +697,7 @@ function SearchContent() {
               {repositorySource && (
                 <Badge variant='secondary' className='flex items-center gap-1'>
                   <Github className='h-3 w-3' />
-                  {repositorySource}
+                  <span className="truncate max-w-[80px]">{repositorySource}</span>
                   <button
                     className='ml-1 hover:bg-accent p-1 rounded-full'
                     onClick={() => setRepositorySource('')}>
@@ -707,7 +713,7 @@ function SearchContent() {
                 <Button
                   variant='ghost'
                   size='sm'
-                  className='h-6 text-xs'
+                  className='h-6 text-xs shrink-0'
                   onClick={() => {
                     setCategory('');
                     setTags([]);
@@ -732,7 +738,7 @@ function SearchContent() {
 
           <div className='pb-3'>
             {data && data.total > 0 && (
-              <div className='flex items-center justify-between'>
+              <div className='flex flex-col sm:flex-row items-center justify-between gap-4'>
                 <PageSizeSelector
                   pageSize={pageSize}
                   onPageSizeChange={handlePageSizeChange}
@@ -749,8 +755,10 @@ function SearchContent() {
 
         {/* Trending Servers Sidebar */}
         {!searchQuery && (
-          <div className='lg:col-span-1'>
-            <TrendingServers />
+          <div className='xl:col-span-1 order-first xl:order-last'>
+            <div className="sticky top-4">
+              <TrendingServers />
+            </div>
           </div>
         )}
       </div>

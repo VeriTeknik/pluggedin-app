@@ -322,7 +322,7 @@ export default function CardGrid({
 
   return (
     <>
-      <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+      <div className='grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6'>
         {Object.entries(items).map(([key, item]) => {
           // Check if the server is installed
           const installedUuid = item.source && item.external_id
@@ -334,21 +334,22 @@ export default function CardGrid({
           const isInstalled = Boolean(installedUuid);
 
           return (
-            <UnifiedServerCard
-              key={key}
-              server={item}
-              serverKey={key}
-              isInstalled={isInstalled}
-              isOwned={isOwned}
-              selectable={selectable}
-              isSelected={isSelected}
-              onInstallClick={handleInstallClick}
-              onRateClick={handleRateClick}
-              onViewDetailsClick={handleViewDetailsClick}
-              onUnshareClick={handleUnshareClick}
-              onItemSelect={onItemSelect}
-              onReviewsClick={handleReviewsClick}
-            />
+            <div key={key} className="h-full">
+              <UnifiedServerCard
+                server={item}
+                serverKey={key}
+                isInstalled={isInstalled}
+                isOwned={isOwned}
+                selectable={selectable}
+                isSelected={isSelected}
+                onInstallClick={handleInstallClick}
+                onRateClick={handleRateClick}
+                onViewDetailsClick={handleViewDetailsClick}
+                onUnshareClick={handleUnshareClick}
+                onItemSelect={onItemSelect}
+                onReviewsClick={handleReviewsClick}
+              />
+            </div>
           );
         })}
       </div>

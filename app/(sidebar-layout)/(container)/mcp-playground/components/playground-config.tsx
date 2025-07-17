@@ -169,19 +169,13 @@ export function PlaygroundConfig({
   // Log rendering is handled inline within the 'logs' tab content below.
 
   return (
-    <div className='h-[var(--playground-content)] flex flex-col bg-background py-2'>
-      <div className='pb-3 flex-shrink-0 px-4'>
-        <h2 className="text-lg font-semibold">{t('playground.config.title')}</h2>
-        <p className="text-sm text-muted-foreground">
-          {t('playground.config.subtitle')}
-        </p>
-      </div>
+    <div className='h-full flex flex-col bg-background'>
       <div className='flex-1 overflow-hidden'>
-        <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col px-4">
-          <TabsList className='grid w-full grid-cols-3 px-4'>
-            <TabsTrigger value='servers'>{t('playground.config.tabs.servers')}</TabsTrigger>
-            <TabsTrigger value='llm'>{t('playground.config.tabs.llm')}</TabsTrigger>
-            <TabsTrigger value='logs' className="relative">
+        <Tabs defaultValue='servers' value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <TabsList className='grid grid-cols-3 mx-3 sm:mx-4 my-3 sm:my-4 flex-shrink-0'>
+            <TabsTrigger value='servers' className="text-xs sm:text-sm">{t('playground.config.tabs.servers')}</TabsTrigger>
+            <TabsTrigger value='llm' className="text-xs sm:text-sm">{t('playground.config.tabs.llm')}</TabsTrigger>
+            <TabsTrigger value='logs' className="relative text-xs sm:text-sm">
               {t('playground.config.tabs.logs')}
               {isSessionActive && (
                 <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
@@ -190,7 +184,7 @@ export function PlaygroundConfig({
           </TabsList>
 
           {/* Servers Tab */}
-          <TabsContent value='servers' className='flex-1 mt-4 overflow-y-auto px-4'>
+          <TabsContent value='servers' className='flex-1 overflow-y-auto px-3 sm:px-4 pb-4'>
             {isLoading ? (
               <div className='flex items-center justify-center py-8'>
                 <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-primary'></div>
@@ -245,8 +239,8 @@ export function PlaygroundConfig({
                       <TooltipTrigger asChild>
                         <div
                           className={`
-                            flex items-start justify-between p-3 my-2 rounded-lg
-                            transition-all duration-200
+                            flex items-start justify-between p-3 sm:p-4 my-2 rounded-lg
+                            transition-all duration-200 min-h-[60px] sm:min-h-auto
                             ${server.status === 'ACTIVE'
                               ? 'bg-primary/5 ring-1 ring-primary/20'
                               : 'hover:bg-muted/50'
@@ -259,21 +253,21 @@ export function PlaygroundConfig({
                                 {server.name}
                               </div>
                               {server.status === 'ACTIVE' ? (
-                                <Badge variant='secondary' className='ml-2 bg-green-500/10 text-green-700 flex-shrink-0'>
+                                <Badge variant='secondary' className='ml-1 sm:ml-2 bg-green-500/10 text-green-700 flex-shrink-0 text-xs px-1.5 sm:px-2'>
                                   {t('playground.status.active')}
                                 </Badge>
                               ) : (
-                                <Badge variant='secondary' className='ml-2 bg-amber-500/10 text-amber-700 flex-shrink-0'>
+                                <Badge variant='secondary' className='ml-1 sm:ml-2 bg-amber-500/10 text-amber-700 flex-shrink-0 text-xs px-1.5 sm:px-2'>
                                   {t('playground.status.inactive')}
                                 </Badge>
                               )}
                             </div>
                             <div className='text-sm text-muted-foreground flex items-center mt-1'>
-                              <Badge variant='secondary' className='mr-1.5 py-0 px-1.5 h-5 font-normal flex-shrink-0'>
+                              <Badge variant='secondary' className='mr-1 sm:mr-1.5 py-0 px-1 sm:px-1.5 h-4 sm:h-5 font-normal flex-shrink-0 text-xs'>
                                 {server.type}
                               </Badge>
                               {server.description && (
-                                <span className='truncate'>{server.description}</span>
+                                <span className='truncate text-xs sm:text-sm'>{server.description}</span>
                               )}
                             </div>
                           </div>
@@ -317,8 +311,8 @@ export function PlaygroundConfig({
           </TabsContent>
 
           {/* LLM Tab */}
-          <TabsContent value='llm' className='flex-1 mt-4 overflow-y-auto px-4'>
-            <div className='space-y-6'>
+          <TabsContent value='llm' className='flex-1 overflow-y-auto px-3 sm:px-4 pb-4'>
+                          <div className='space-y-4 sm:space-y-6'>
               
               {/* Provider Selection */}
               <div className='space-y-3'>
@@ -403,23 +397,23 @@ export function PlaygroundConfig({
 
               {/* Model Configuration Card */}
               <Card className='border-2 border-primary/20 bg-primary/5'>
-                <CardHeader className='pb-4'>
+                <CardHeader className='pb-3 sm:pb-4'>
                   <div className='flex items-center justify-between'>
-                    <div>
-                      <CardTitle className='text-lg'>Selected Model</CardTitle>
-                      <CardDescription>Currently using {llmConfig.provider === 'anthropic' ? 'Anthropic' : llmConfig.provider === 'openai' ? 'OpenAI' : 'Google'}</CardDescription>
+                    <div className='min-w-0 flex-1'>
+                      <CardTitle className='text-base sm:text-lg truncate'>Selected Model</CardTitle>
+                      <CardDescription className='text-xs sm:text-sm truncate'>Currently using {llmConfig.provider === 'anthropic' ? 'Anthropic' : llmConfig.provider === 'openai' ? 'OpenAI' : 'Google'}</CardDescription>
                     </div>
-                    <Badge className='bg-primary text-primary-foreground px-3 py-1'>
+                    <Badge className='bg-primary text-primary-foreground px-2 sm:px-3 py-1 flex-shrink-0 text-xs'>
                       {llmConfig.provider === 'anthropic' ? 'Anthropic' : llmConfig.provider === 'openai' ? 'OpenAI' : 'Google'}
                     </Badge>
                   </div>
                 </CardHeader>
-                <CardContent className='space-y-4'>
+                <CardContent className='space-y-3 sm:space-y-4'>
                   <div>
                     <Label htmlFor='model' className='text-sm font-medium mb-3 block'>
                       {t('playground.config.model.model')}
                     </Label>
-                    <div className='grid grid-cols-2 gap-4'>
+                    <div className='grid grid-cols-1 sm:grid-cols-2 gap-3'>
                       {llmConfig.provider === 'anthropic' ? (
                         <>
                           {[
@@ -432,10 +426,10 @@ export function PlaygroundConfig({
                           ].map((model) => (
                             <div
                               key={model.value}
-                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                              className={`p-3 sm:p-4 rounded-lg border cursor-pointer transition-all min-h-[60px] sm:min-h-auto ${
                                 llmConfig.model === model.value
                                   ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
-                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50'
+                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50 active:bg-muted/70'
                               }`}
                               onClick={() => switchModel({ ...llmConfig, model: model.value })}
                             >
@@ -463,10 +457,10 @@ export function PlaygroundConfig({
                           ].map((model) => (
                             <div
                               key={model.value}
-                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                              className={`p-3 sm:p-4 rounded-lg border cursor-pointer transition-all min-h-[60px] sm:min-h-auto ${
                                 llmConfig.model === model.value
                                   ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
-                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50'
+                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50 active:bg-muted/70'
                               }`}
                               onClick={() => switchModel({ ...llmConfig, model: model.value })}
                             >
@@ -491,10 +485,10 @@ export function PlaygroundConfig({
                           ].map((model) => (
                             <div
                               key={model.value}
-                              className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                              className={`p-3 sm:p-4 rounded-lg border cursor-pointer transition-all min-h-[60px] sm:min-h-auto ${
                                 llmConfig.model === model.value
                                   ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
-                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50'
+                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50 active:bg-muted/70'
                               }`}
                               onClick={() => switchModel({ ...llmConfig, model: model.value })}
                             >
@@ -681,9 +675,9 @@ export function PlaygroundConfig({
           </TabsContent>
 
           {/* Logs Tab */}
-          <TabsContent value='logs' className='flex-1 mt-4 overflow-y-auto px-4'>
-            <div className='space-y-4'>
-              <div className='flex items-center justify-between mb-2'>
+          <TabsContent value='logs' className='flex-1 overflow-y-auto px-3 sm:px-4 pb-4'>
+            <div className='flex flex-col h-full space-y-4'>
+              <div className='flex items-center justify-between flex-shrink-0'>
                 <div>
                   <Label className='text-sm font-medium mb-1 block sr-only'> {/* Hide label visually, keep for accessibility */}
                     {t('playground.config.model.logLevel')}
@@ -716,7 +710,7 @@ export function PlaygroundConfig({
                 </div>
               </div>
 
-              <div className="h-[var(--playground-content)] rounded-md border">
+              <div className="flex-1 rounded-md border">
                 {serverLogs.length === 0 && clientLogs.length === 0 ? (
                   <div className="text-center text-muted-foreground py-8">
                     {t('playground.config.logs.empty')}

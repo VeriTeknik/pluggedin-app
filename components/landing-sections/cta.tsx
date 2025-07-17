@@ -25,7 +25,7 @@ export function LandingCta() {
   return (
     <motion.section
       id="cta"
-      className="py-16 md:py-24 lg:py-32 relative overflow-hidden bg-gradient-to-t from-muted/50 to-background"
+      className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 relative overflow-hidden bg-gradient-to-t from-muted/50 to-background"
       variants={sectionVariants}
       initial="hidden"
       whileInView="visible"
@@ -38,7 +38,7 @@ export function LandingCta() {
       </div>
 
       <motion.div
-        className="container mx-auto px-4 text-center max-w-3xl"
+        className="container mx-auto px-4 sm:px-6 lg:px-8 text-center max-w-3xl"
         variants={contentVariants}
       >
         <Rocket className="h-12 w-12 mx-auto mb-4 text-primary" />

@@ -44,8 +44,8 @@ export function LandingPricingSection() {
   const { t } = useTranslation('landing');
 
   return (
-    <section id="pricing" className="py-16 md:py-24 lg:py-32">
-      <div className="container px-4 mx-auto">
+    <section id="pricing" className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32">
+              <div className="container px-4 sm:px-6 lg:px-8 mx-auto">
         <div className="max-w-2xl mx-auto mb-12 text-center">
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             {t('pricing.title')}

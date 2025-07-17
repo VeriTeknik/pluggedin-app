@@ -56,61 +56,61 @@ export function LandingCommunitySharing() {
   return (
     <motion.section
       id="community"
-      className="py-16 md:py-24 lg:py-32 overflow-hidden"
+      className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 overflow-hidden"
       variants={sectionVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
     >
-      <div className="container mx-auto px-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-16 items-center">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-10 lg:gap-12 xl:gap-16 items-center">
           {/* Text Content */}
           <motion.div variants={textVariants}>
-            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl mb-6">
+            <h2 className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl mb-4 sm:mb-6 leading-tight">
               {t('community.title')}
             </h2>
-            <p className="text-lg text-muted-foreground mb-6">
+            <p className="text-base sm:text-lg text-muted-foreground mb-4 sm:mb-6 leading-relaxed">
               {t('community.subtitle')}
             </p>
-            <p className="text-base text-muted-foreground mb-8">
+            <p className="text-sm sm:text-base text-muted-foreground mb-6 sm:mb-8 leading-relaxed">
               {t('community.description')}
             </p>
 
             {/* Community Stats */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
               {stats.map((stat) => (
                 <Card key={stat.key} className="border-muted">
-                  <CardContent className="p-4 text-center">
-                    <p className="text-2xl font-bold text-primary">{t(stat.key)}</p>
+                  <CardContent className="p-3 sm:p-4 text-center">
+                    <p className="text-lg sm:text-xl lg:text-2xl font-bold text-primary leading-tight">{t(stat.key)}</p>
                   </CardContent>
                 </Card>
               ))}
             </div>
 
             {/* Social Features */}
-            <h3 className="text-xl font-semibold mb-4">
+            <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">
               {t('community.socialFeatures.title')}
             </h3>
-            <motion.ul className="space-y-3" variants={listVariants}>
+            <motion.ul className="space-y-2 sm:space-y-3" variants={listVariants}>
               {socialFeatures.map((feature) => (
                 <motion.li key={feature.key} className="flex items-start" variants={listItemVariants}>
-                  <feature.icon className="h-5 w-5 text-primary mr-3 mt-1 flex-shrink-0" />
-                  <span className="text-muted-foreground">{t(feature.key)}</span>
+                  <feature.icon className="h-4 w-4 sm:h-5 sm:w-5 text-primary mr-2 sm:mr-3 mt-1 flex-shrink-0" />
+                  <span className="text-sm sm:text-base text-muted-foreground leading-relaxed">{t(feature.key)}</span>
                 </motion.li>
               ))}
             </motion.ul>
           </motion.div>
 
           {/* Visual Content */}
-          <motion.div variants={imageVariants} className="relative aspect-video rounded-lg overflow-hidden shadow-xl border border-border/40 bg-muted">
+          <motion.div variants={imageVariants} className="relative aspect-video rounded-lg overflow-hidden shadow-xl border border-border/40 bg-muted mt-8 lg:mt-0">
              {/* Placeholder for visual representation */}
              {/* Replace with an actual Image component or interactive demo */}
              <div className="absolute inset-0 flex items-center justify-center">
-                <p className="text-muted-foreground italic">
+                <p className="text-sm sm:text-base text-muted-foreground italic px-4 text-center">
                   {t('community.visualPlaceholder')}
                 </p>
                 {/* Example: Mockup of ratings */}
-                <div className="absolute bottom-4 left-4 bg-background/80 p-2 rounded shadow flex items-center text-xs">
+                <div className="absolute bottom-3 sm:bottom-4 left-3 sm:left-4 bg-background/90 p-1.5 sm:p-2 rounded shadow flex items-center text-xs">
                     <Star className="h-3 w-3 text-yellow-400 mr-1"/> 4.8 (12 Reviews)
                 </div>
              </div>

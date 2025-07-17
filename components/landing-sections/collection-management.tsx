@@ -39,15 +39,15 @@ export function LandingCollectionManagement() {
   return (
     <motion.section
       id="collections"
-      className="py-16 md:py-24 lg:py-32 bg-muted/30"
+      className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 bg-muted/30"
       variants={sectionVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
     >
-      <div className="container mx-auto px-4">
-        <motion.div className="mb-12 text-center max-w-2xl mx-auto" variants={textVariants}>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <motion.div className="mb-8 sm:mb-10 lg:mb-12 text-center max-w-3xl mx-auto" variants={textVariants}>
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl leading-tight">
             {t('collections.title')}
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
