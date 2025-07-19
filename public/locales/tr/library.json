@@ -48,7 +48,13 @@
   "controls": {
     "searchPlaceholder": "Belgelerde ara...",
     "grid": "Izgara",
-    "table": "Tablo"
+    "table": "Tablo",
+    "sourceFilter": {
+      "all": "Tümü",
+      "uploaded": "Yüklenen",
+      "aiGenerated": "AI Üretilen",
+      "api": "API"
+    }
   },
   "grid": {
     "noDocuments": "Belge bulunamadı.",

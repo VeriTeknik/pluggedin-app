@@ -47,6 +47,8 @@ export async function getDocs(userId: string, projectUuid?: string): Promise<Doc
       success: true,
       docs: docs.map(doc => ({
         ...doc,
+        source: doc.source as 'upload' | 'ai_generated' | 'api',
+        visibility: doc.visibility as 'private' | 'workspace' | 'public',
         created_at: new Date(doc.created_at),
         updated_at: new Date(doc.updated_at),
       })),
@@ -81,6 +83,8 @@ export async function getDocByUuid(userId: string, docUuid: string, projectUuid?
 
     return {
       ...doc,
+      source: doc.source as 'upload' | 'ai_generated' | 'api',
+      visibility: doc.visibility as 'private' | 'workspace' | 'public',
       created_at: new Date(doc.created_at),
       updated_at: new Date(doc.updated_at),
     };
@@ -347,17 +351,40 @@ export async function createDoc(
     // Step 4: Insert document record into database
     const docRecord = await insertDocRecord(userId, projectUuid, name, description, file, relativePath, tags);
     
-    // Step 5: Extract text content for RAG
-    const textContent = await extractTextContent(file, description);
+    // Step 5 & 6: Process RAG upload only for supported file types
+    let ragProcessed = false;
+    let ragError: string | undefined;
+    let upload_id: string | undefined;
     
-    // Step 6: Process RAG upload
-    const { ragProcessed, ragError, upload_id } = await processRagUpload(
-      docRecord, textContent, file, name, tags, userId, projectUuid
-    );
+    // Only send PDF, text, and markdown files to RAG
+    const supportedRagTypes = [
+      'application/pdf',
+      'text/plain',
+      'text/markdown',
+      'text/x-markdown',
+    ];
+    
+    if (process.env.ENABLE_RAG === 'true' && supportedRagTypes.includes(file.type)) {
+      // Extract text content for RAG
+      const textContent = await extractTextContent(file, description);
+      
+      // Process RAG upload
+      const ragResult = await processRagUpload(
+        docRecord, textContent, file, name, tags, userId, projectUuid
+      );
+      ragProcessed = ragResult.ragProcessed;
+      ragError = ragResult.ragError;
+      upload_id = ragResult.upload_id;
+    } else if (process.env.ENABLE_RAG === 'true') {
+      // File type not supported for RAG
+      console.log(`File type ${file.type} not supported for RAG processing`);
+    }
 
     // Step 7: Return response with formatted doc
     const doc: Doc = {
       ...docRecord,
+      source: docRecord.source as 'upload' | 'ai_generated' | 'api',
+      visibility: docRecord.visibility as 'private' | 'workspace' | 'public',
       created_at: new Date(docRecord.created_at),
       updated_at: new Date(docRecord.updated_at),
     };
