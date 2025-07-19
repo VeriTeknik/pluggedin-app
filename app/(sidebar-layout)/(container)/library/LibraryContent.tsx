@@ -10,7 +10,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { Badge, Download, Loader2, Trash2, Upload } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
@@ -28,7 +28,7 @@ import { DocsControls } from './components/DocsControls';
 import { DocsGrid } from './components/DocsGrid';
 import { DocsStats } from './components/DocsStats';
 import { DocsTable } from './components/DocsTable';
-import { UploadDialog } from './components/UploadDialog';
+import { UploadDialogWrapper as UploadDialog } from './components/UploadDialogWrapper';
 import { UploadProgress } from './components/UploadProgress';
 
 const columnHelper = createColumnHelper<Doc>();
@@ -54,7 +54,7 @@ export default function LibraryContent() {
     file: null as File | null,
   });
 
-  const formatFileSize = (bytes: number) => {
+  const formatFileSize = useCallback((bytes: number) => {
     if (bytes === 0) {
       return '0 Bytes';
     }
@@ -62,9 +62,9 @@ export default function LibraryContent() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  }, []);
 
-  const getMimeTypeIcon = (mimeType: string) => {
+  const getMimeTypeIcon = useCallback((mimeType: string) => {
     if (mimeType.includes('pdf')) {
       return '📄';
     }
@@ -81,7 +81,7 @@ export default function LibraryContent() {
       return '🎵';
     }
     return '📄';
-  };
+  }, []);
 
   const handleUpload = async () => {
     if (!uploadForm.file || !uploadForm.name) {
@@ -109,10 +109,10 @@ export default function LibraryContent() {
     }
   };
 
-  const handleDelete = (doc: Doc) => {
+  const handleDelete = useCallback((doc: Doc) => {
     setSelectedDoc(doc);
     setDeleteDialogOpen(true);
-  };
+  }, []);
 
   const confirmDelete = async () => {
     if (selectedDoc) {
@@ -129,16 +129,16 @@ export default function LibraryContent() {
     }
   };
 
-  const handleDownload = (doc: Doc) => {
+  const handleDownload = useCallback((doc: Doc) => {
     try {
       downloadDoc(doc);
     } catch (error) {
       console.error('Download failed:', error);
     }
-  };
+  }, [downloadDoc]);
 
   // Table columns configuration
-  const columns = [
+  const columns = useMemo(() => [
     columnHelper.accessor('name', {
       cell: (info) => (
         <div className="flex items-center gap-2">
@@ -207,14 +207,14 @@ export default function LibraryContent() {
       ),
       header: t('page.tableHeaders.actions'),
     }),
-  ];
+  ], [t, handleDownload, handleDelete, formatFileSize, getMimeTypeIcon]);
 
   // Filter docs based on source
-  const filteredDocs = docs.filter(doc => {
+  const filteredDocs = useMemo(() => docs.filter(doc => {
     if (sourceFilter === 'all') return true;
     // Default to 'upload' if source is not defined (backward compatibility)
     return (doc.source || 'upload') === sourceFilter;
-  });
+  }), [docs, sourceFilter]);
 
   const table = useReactTable({
     data: filteredDocs,
@@ -228,15 +228,24 @@ export default function LibraryContent() {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    autoResetPageIndex: false,
+    autoResetExpanded: false,
+    autoResetSortBy: false,
+    autoResetFilters: false,
+    autoResetRowSelection: false,
+    autoResetAll: false,
   });
 
   // Calculate stats
   const totalSize = storageUsage || 0; // Use actual storage usage from database
-  const recentUploads = docs.filter(doc => {
+  const recentUploads = useMemo(() => docs.filter(doc => {
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     return doc.created_at > weekAgo;
-  }).length;
+  }).length, [docs]);
+
+  // Get filtered rows - the table handles memoization internally
+  const filteredRows = table.getFilteredRowModel().rows;
 
   if (isLoading) {
     return (
@@ -261,13 +270,20 @@ export default function LibraryContent() {
             </p>
           </div>
           <div>
-            <Button onClick={() => setUploadDialogOpen(true)}>
+            <Button onClick={() => {
+              console.log('Button clicked, current state:', uploadDialogOpen);
+              setUploadDialogOpen(true);
+              console.log('State update requested');
+            }}>
               <Upload className="mr-2 h-4 w-4" />
               {t('uploadDialog.button')}
             </Button>
             <UploadDialog
               open={uploadDialogOpen}
-              onOpenChange={setUploadDialogOpen}
+              onOpenChange={(newOpen) => {
+                console.log('Dialog onOpenChange called with:', newOpen);
+                setUploadDialogOpen(newOpen);
+              }}
               form={uploadForm}
               setForm={setUploadForm}
               isUploading={isUploading}
@@ -305,7 +321,7 @@ export default function LibraryContent() {
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'grid' | 'table')} className="flex-1">
           <TabsContent value="grid" className="flex-1 overflow-auto">
             <DocsGrid
-              docs={table.getFilteredRowModel().rows.map(row => row.original)}
+              docs={filteredRows.map(row => row.original)}
               onDownload={handleDownload}
               onDelete={handleDelete}
               formatFileSize={formatFileSize}
