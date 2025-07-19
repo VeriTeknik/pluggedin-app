@@ -403,7 +403,7 @@
       },
       "step3": {
         "title": "3. Install MCP Proxy",
-        "desc": "Run: npx @pluggedin/mcp-proxy@latest"
+        "desc": "Run: npx @pluggedin/pluggedin-mcp-proxy@latest"
       },
       "step4": {
         "title": "4. Connect Client",

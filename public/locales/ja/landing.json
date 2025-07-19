@@ -332,7 +332,7 @@
       },
       "step3": {
         "title": "3. MCPプロキシインストール",
-        "desc": "実行：npx @pluggedin/mcp-proxy@latest"
+        "desc": "実行：npx @pluggedin/pluggedin-mcp-proxy@latest"
       },
       "step4": {
         "title": "4. クライアント接続",

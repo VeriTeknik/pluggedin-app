@@ -332,7 +332,7 @@
       },
       "step3": {
         "title": "3. MCP Proxy installeren",
-        "desc": "Voer uit: npx @pluggedin/mcp-proxy@latest"
+        "desc": "Voer uit: npx @pluggedin/pluggedin-mcp-proxy@latest"
       },
       "step4": {
         "title": "4. Client verbinden",

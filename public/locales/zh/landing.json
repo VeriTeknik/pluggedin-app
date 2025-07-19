@@ -332,7 +332,7 @@
       },
       "step3": {
         "title": "3. 安装 MCP 代理",
-        "desc": "运行：npx @pluggedin/mcp-proxy@latest"
+        "desc": "运行：npx @pluggedin/pluggedin-mcp-proxy@latest"
       },
       "step4": {
         "title": "4. 连接客户端",

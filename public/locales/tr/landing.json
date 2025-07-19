@@ -332,7 +332,7 @@
       },
       "step3": {
         "title": "3. MCP Proxy Kur",
-        "desc": "Çalıştır: npx @pluggedin/mcp-proxy@latest"
+        "desc": "Çalıştır: npx @pluggedin/pluggedin-mcp-proxy@latest"
       },
       "step4": {
         "title": "4. İstemci Bağla",
