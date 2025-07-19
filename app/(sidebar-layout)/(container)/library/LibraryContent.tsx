@@ -230,10 +230,6 @@ export default function LibraryContent() {
     getFilteredRowModel: getFilteredRowModel(),
     autoResetPageIndex: false,
     autoResetExpanded: false,
-    autoResetSortBy: false,
-    autoResetFilters: false,
-    autoResetRowSelection: false,
-    autoResetAll: false,
   });
 
   // Calculate stats
