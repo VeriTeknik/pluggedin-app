@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import { mkdir,writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'path';
@@ -213,12 +213,8 @@ export async function POST(request: NextRequest) {
     // Calculate file size
     const fileSize = Buffer.byteLength(processedContent, 'utf-8');
 
-    // Generate content hash for deduplication
-    const encoder = new TextEncoder();
-    const data = encoder.encode(processedContent);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const contentHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    // Generate content hash for deduplication using Node.js crypto
+    const contentHash = createHash('sha256').update(processedContent, 'utf-8').digest('hex');
 
     // Determine MIME type
     const mimeTypeMap: Record<string, string> = {
@@ -310,9 +306,24 @@ export async function POST(request: NextRequest) {
             tags: validatedData.tags,
             userId: apiKeyResult.user.id,
           },
-        }, dummyFile, apiKeyResult.activeProfile.project_uuid || apiKeyResult.user.id).catch(error => {
+        }, dummyFile, apiKeyResult.activeProfile.project_uuid || apiKeyResult.user.id).catch(async error => {
           console.error('Failed to send AI document to RAG:', error);
-          // Don't fail the request if RAG fails
+          
+          // Create a notification about the RAG failure
+          try {
+            await db.insert(notificationsTable).values({
+              id: randomUUID(),
+              profile_uuid: activeProfile.uuid,
+              type: 'document_rag_failed',
+              title: 'RAG Processing Failed',
+              message: `Failed to process "${validatedData.title}" for search capabilities. The document was saved but may not be searchable.`,
+              severity: 'WARNING',
+              link: `/library/${documentId}`,
+              created_at: new Date(),
+            });
+          } catch (notificationError) {
+            console.error('Failed to create RAG failure notification:', notificationError);
+          }
         });
       }
     }

@@ -7,15 +7,28 @@ import path from 'path';
 
 /**
  * Sanitizes a user ID for safe file system operations
- * Converts the user ID to a safe directory name using SHA-256 hash
+ * Generates a deterministic UUID v5 from the user ID for maximum safety
  * @param userId - The user ID to sanitize
- * @returns A safe directory name
+ * @returns A safe directory name in UUID format
  */
 export function sanitizeUserIdForFileSystem(userId: string): string {
-  // Create a hash of the user ID to ensure it's safe for file system operations
-  const hash = createHash('sha256').update(userId).digest('hex');
-  // Take first 16 characters for a reasonable length
-  return hash.substring(0, 16);
+  // Use a namespace UUID for our application (you can generate this once and hardcode it)
+  const NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // UUID v5 namespace
+  
+  // Create a deterministic UUID v5 from the user ID
+  // This ensures the same user ID always maps to the same UUID
+  const hash = createHash('sha256').update(NAMESPACE + userId).digest('hex');
+  
+  // Format as UUID v5 (8-4-4-4-12 format)
+  const uuid = [
+    hash.substring(0, 8),
+    hash.substring(8, 12),
+    '5' + hash.substring(13, 16), // Version 5
+    ((parseInt(hash.substring(16, 18), 16) & 0x3f) | 0x80).toString(16) + hash.substring(18, 20), // Variant
+    hash.substring(20, 32)
+  ].join('-');
+  
+  return uuid;
 }
 
 /**

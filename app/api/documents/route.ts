@@ -198,12 +198,12 @@ export async function GET(request: NextRequest) {
       const modelConditions = [];
       if (validatedParams.modelName) {
         modelConditions.push(
-          sql`${docsTable.ai_metadata}->>'model'->>'name' = ${validatedParams.modelName}`
+          sql`${docsTable.ai_metadata}->'model'->>'name' = ${validatedParams.modelName}`
         );
       }
       if (validatedParams.modelProvider) {
         modelConditions.push(
-          sql`${docsTable.ai_metadata}->>'model'->>'provider' = ${validatedParams.modelProvider}`
+          sql`${docsTable.ai_metadata}->'model'->>'provider' = ${validatedParams.modelProvider}`
         );
       }
       // Add model filters to main conditions instead of using having

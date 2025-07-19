@@ -52,7 +52,8 @@ export async function middleware(request: NextRequest) {
     '/settings',
     '/api-keys',
     '/notifications',
-    '/editor'
+    '/editor',
+    '/library'
   ];
   
   // Define routes that are only accessible to unauthenticated users

@@ -182,12 +182,12 @@ export async function POST(request: NextRequest) {
       // Apply model filters if specified
       if (validatedData.filters.modelName) {
         conditions.push(
-          sql`${docsTable.ai_metadata}->>'model'->>'name' = ${validatedData.filters.modelName}`
+          sql`${docsTable.ai_metadata}->'model'->>'name' = ${validatedData.filters.modelName}`
         );
       }
       if (validatedData.filters.modelProvider) {
         conditions.push(
-          sql`${docsTable.ai_metadata}->>'model'->>'provider' = ${validatedData.filters.modelProvider}`
+          sql`${docsTable.ai_metadata}->'model'->>'provider' = ${validatedData.filters.modelProvider}`
         );
       }
     }
