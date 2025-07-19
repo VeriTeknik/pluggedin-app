@@ -49,16 +49,14 @@ export async function GET(
     try {
       const fileBuffer = await readFile(requestedPath);
       
-      // Sanitize filename to prevent header injection
-      const sanitizedFilename = doc.file_name
-        .replace(/[\r\n]/g, '') // Remove line breaks
-        .replace(/"/g, '\\"')   // Escape quotes
-        .replace(/[^\x20-\x7E]/g, ''); // Remove non-printable chars
-      
       // Set appropriate headers
       const headers = new Headers();
       headers.set('Content-Type', doc.mime_type);
-      headers.set('Content-Disposition', `attachment; filename="${sanitizedFilename}"`);
+      
+      // Use RFC 2231 encoding for filename to safely handle all characters
+      // This is the most secure approach and handles international characters properly
+      headers.set('Content-Disposition', 
+        `attachment; filename*=UTF-8''${encodeURIComponent(doc.file_name)}`);
       headers.set('Content-Length', doc.file_size.toString());
 
       return new NextResponse(fileBuffer, {
