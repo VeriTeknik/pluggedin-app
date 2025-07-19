@@ -185,9 +185,9 @@
     "description": "Share your MCP servers, follow developers, get real-time notifications, and collaborate within our social platform. Build your reputation with ratings, reviews, and community contributions.",
     "action": "Join Community",
     "stats": {
-      "developers": "10K+ Developers",
+      "developers": "1K+ Developers",
       "servers": "500+ MCP Servers",
-      "collections": "1500+ Collections",
+      "collections": "Coming Soon",
       "languages": "6 Languages"
     },
     "socialFeatures": {
@@ -259,9 +259,9 @@
   },
   "collections": {
     "title": "Smart Collections & Version Control",
-    "subtitle": "Organize, version, and share your MCP server collections",
-    "description": "Create versioned collections, track installations, collaborate with teams, and maintain different configurations for dev, staging, and production.",
-    "action": "Explore Collections",
+    "subtitle": "Coming Soon: Organize, version, and share your MCP server collections",
+    "description": "Soon you'll be able to create versioned collections, track installations, collaborate with teams, and maintain different configurations for dev, staging, and production.",
+    "action": "Learn More",
     "versionControl": {
       "title": "Version Control for Collections",
       "feature1": "Create snapshots of your collections at any point",

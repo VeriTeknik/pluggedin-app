@@ -25,7 +25,39 @@
     "title": "Functies",
     "subtitle": "Alles wat u nodig heeft om uw MCP-servers te beheren",
     "sectionTitle": "Een compleet AI-ecosysteemplatform",
-    "sectionSubtitle": "Verbind, deel, ontdek en breid uw AI-mogelijkheden uit met enterprise-grade functies.",
+    "sectionSubtitle": "Van data-eigendom tot community-samenwerking - alles wat u nodig heeft in één platform.",
+    "universalAiHub": {
+      "title": "Universele AI Hub",
+      "description": "Verbind Claude, GPT, Llama en elk AI-model via één interface. Test dezelfde prompt over modellen heen direct."
+    },
+    "dataSovereignty": {
+      "title": "Data Soevereiniteit",
+      "description": "Elke prompt, configuratie en inzicht blijft onder uw controle. Exporteer uw data op elk moment in open formaten."
+    },
+    "aiAssetManagement": {
+      "title": "AI Asset Management",
+      "description": "Uw prompts, configuraties en context worden herbruikbare assets. Bouw een bibliotheek van wat werkt voor uw specifieke behoeften."
+    },
+    "crossModelMemory": {
+      "title": "Cross-Model Geheugen",
+      "description": "Binnenkort: Bouw kennis die werkt over alle AI-tools, niet opgesloten in één platform."
+    },
+    "mcpRegistry": {
+      "title": "MCP Registry",
+      "description": "Toegang tot 500+ integraties via de open MCP-standaard. Installatie met één klik met community-beoordelingen en recensies."
+    },
+    "endToEndEncryption": {
+      "title": "End-to-End Encryptie",
+      "description": "Militaire-grade bescherming voor uw AI intellectueel eigendom. Uw configuraties en data blijven veilig in rust en tijdens transport."
+    },
+    "trendingAnalytics": {
+      "title": "Trending Analytics",
+      "description": "Ontdek populaire servers met real-time analytics. Leer van de community terwijl u uw data privé houdt."
+    },
+    "oauthTokenManagement": {
+      "title": "OAuth & Token Management",
+      "description": "Veilige authenticatiestromen met ingebouwde OAuth-ondersteuning. Beheer tokens en machtigingen over al uw AI-services."
+    },
     "communitySharing": {
       "title": "Sociaal platform & Community",
       "description": "Deel MCP-servers, volg ontwikkelaars, ontvang meldingen en bouw uw AI-netwerk. Openbare profielen, beoordelingen en collaboratieve ontdekking."
@@ -96,9 +128,9 @@
     "description": "Deel uw MCP-servers, volg ontwikkelaars, ontvang real-time meldingen en werk samen binnen ons sociale platform. Bouw uw reputatie op met beoordelingen, recensies en community-bijdragen.",
     "action": "Word lid van de community",
     "stats": {
-      "developers": "10K+ Ontwikkelaars",
-      "servers": "5000+ MCP Servers",
-      "collections": "1500+ Collecties",
+      "developers": "1K+ Ontwikkelaars",
+      "servers": "500+ MCP Servers",
+      "collections": "Binnenkort",
       "languages": "6 Talen"
     },
     "socialFeatures": {
@@ -170,9 +202,9 @@
   },
   "collections": {
     "title": "Slimme collecties & versiebeheer",
-    "subtitle": "Organiseer, versioneer en deel uw MCP-servercollecties",
-    "description": "Creëer collecties met versiebeheer, volg installaties, werk samen met teams en onderhoud verschillende configuraties voor dev, staging en productie.",
-    "action": "Verken collecties",
+    "subtitle": "Binnenkort: Organiseer, versioneer en deel uw MCP-servercollecties",
+    "description": "Binnenkort kunt u collecties met versiebeheer creëren, installaties volgen, samenwerken met teams en verschillende configuraties onderhouden voor dev, staging en productie.",
+    "action": "Meer informatie",
     "versionControl": {
       "title": "Versiebeheer voor collecties",
       "feature1": "Creëer snapshots van uw collecties op elk moment",
