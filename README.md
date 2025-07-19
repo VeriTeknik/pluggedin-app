@@ -46,6 +46,13 @@ This application enables seamless integration with any MCP client (Claude, Cline
 - **Secure Server Sharing**: Shared servers use sanitized templates that don't expose sensitive credentials
 - **Transparent Operation**: Encryption and decryption happen automatically without affecting the user experience
 
+### 🤖 New in v2.8.0 - AI Document Exchange (RAG v2)
+- **AI-Generated Documents**: MCP servers can create and manage documents in your library with full attribution
+- **Model Attribution Tracking**: Complete history of which AI models created or updated each document
+- **Advanced Document Search**: Semantic search with filtering by AI model, date, tags, and source type
+- **Document Versioning**: Track changes and maintain version history for AI-generated content
+- **Multi-Source Support**: Documents from uploads, AI generation, or API integrations
+
 ### 📚 Features from v2.1.0
 - **Document Library with RAG**: Upload and manage documents that serve as knowledge context for AI interactions
 - **Real-Time Notifications**: Get instant notifications for MCP activities with optional email delivery
@@ -204,17 +211,180 @@ FIREJAIL_MCP_WORKSPACE=/home/pluggedin/mcp-workspace
 
 ### Feature Configuration
 
-#### Document Library & RAG
+#### Document Library & RAG v2
+The plugged.in platform now features advanced RAG v2 capabilities with AI document exchange:
+
+**Core RAG Features:**
 1. Enable RAG in playground settings
 2. Upload documents through the Library page
 3. Documents are automatically indexed for context retrieval
-4. Supported formats: PDF, TXT, MD, DOCX, and more
+4. Supported formats: PDF, TXT, MD, DOCX, JSON, HTML, and more
+
+**New RAG v2 Features:**
+1. **AI Document Generation**: MCP servers can create documents directly in your library
+   - Full model attribution tracking (which AI created/updated the document)
+   - Version history with change tracking
+   - Content deduplication via SHA-256 hashing
+   
+2. **Advanced Document Sources**:
+   - `upload`: Traditional file uploads
+   - `ai_generated`: Documents created by AI models via MCP
+   - `api`: Documents created via API integrations
+   
+3. **Smart Document Search**:
+   - Semantic search with relevance scoring
+   - Filter by AI model, provider, date range, tags, and source
+   - Automatic snippet generation with keyword highlighting
+   
+4. **Document Management**:
+   - Visibility levels: private, workspace, or public
+   - Parent-child relationships for document versions
+   - Profile-based organization alongside project-based scoping
+
+**Example: AI Creating a Document via MCP**
+```json
+POST /api/documents/ai
+{
+  "title": "Analysis Report",
+  "content": "# Market Analysis\n\nDetailed findings...",
+  "format": "md",
+  "tags": ["analysis", "market"],
+  "category": "report",
+  "metadata": {
+    "model": {
+      "name": "Claude",
+      "provider": "Anthropic",
+      "version": "3"
+    },
+    "visibility": "workspace"
+  }
+}
+```
 
 #### Notifications
 1. Real-time notifications for MCP activities
 2. Optional email delivery for important alerts
 3. Configurable notification preferences per profile
 4. Activity logging for debugging and monitoring
+
+### API Examples for RAG v2
+
+#### Creating AI-Generated Documents
+
+```bash
+# AI model creates a document
+curl -X POST https://your-domain.com/api/documents/ai \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Technical Analysis Report",
+    "content": "# Technical Analysis\n\n## Summary\n\nThis document contains...",
+    "format": "md",
+    "tags": ["technical", "analysis", "ai-generated"],
+    "category": "report",
+    "metadata": {
+      "model": {
+        "name": "Claude 3 Opus",
+        "provider": "Anthropic",
+        "version": "20240229"
+      },
+      "context": "User requested technical analysis of system architecture",
+      "visibility": "private"
+    }
+  }'
+
+# Response
+{
+  "success": true,
+  "documentId": "550e8400-e29b-41d4-a716-446655440000",
+  "message": "Document successfully created",
+  "url": "/library/550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+#### Searching Documents with AI Filters
+
+```bash
+# Search for documents created by specific AI models
+curl -X POST https://your-domain.com/api/documents/search \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "system architecture",
+    "filters": {
+      "modelName": "Claude 3 Opus",
+      "modelProvider": "Anthropic",
+      "source": "ai_generated",
+      "dateFrom": "2024-01-01T00:00:00Z",
+      "tags": ["technical"]
+    },
+    "limit": 10,
+    "offset": 0
+  }'
+
+# Response
+{
+  "results": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Technical Analysis Report",
+      "description": "AI-generated report by Claude 3 Opus",
+      "snippet": "...system architecture analysis shows that...",
+      "relevanceScore": 0.85,
+      "source": "ai_generated",
+      "aiMetadata": {
+        "model": {
+          "name": "Claude 3 Opus",
+          "provider": "Anthropic",
+          "version": "20240229"
+        }
+      },
+      "tags": ["technical", "analysis", "ai-generated"],
+      "modelAttributions": [
+        {
+          "model_name": "Claude 3 Opus",
+          "model_provider": "Anthropic",
+          "contribution_type": "created"
+        }
+      ]
+    }
+  ],
+  "total": 1,
+  "limit": 10,
+  "offset": 0,
+  "hasMore": false
+}
+```
+
+#### Document Upload Progress Tracking
+
+When uploading large documents, track the RAG processing progress:
+
+```bash
+# Check upload status
+curl -X GET https://your-domain.com/api/documents/upload-status/UPLOAD_ID \
+  -H "Authorization: Bearer YOUR_API_KEY"
+
+# Response
+{
+  "success": true,
+  "progress": {
+    "status": "processing",
+    "progress": {
+      "step": "embeddings",
+      "current": 45,
+      "total": 100,
+      "step_progress": {
+        "chunks_processed": 45,
+        "total_chunks": 100,
+        "percentage": 45,
+        "estimated_remaining_time": "2m 30s"
+      }
+    },
+    "message": "Generating embeddings for document chunks..."
+  }
+}
+```
 
 ## 💻 Production Deployment
 
