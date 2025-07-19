@@ -302,21 +302,31 @@
     "action": "Bekijk documentatie"
   },
   "pricing": {
-    "title": "Eenvoudige, transparante prijzen",
-    "subtitle": "Begin gratis, schaal mee met uw groei",
+    "badge": "100% Gratis Voor Altijd",
+    "title": "Volledig Gratis - Geen Verborgen Kosten",
+    "subtitle": "We geloven in het democratiseren van AI data-eigendom. Elke functie, voor iedereen, voor altijd.",
     "free": {
-      "title": "Gratis voor altijd",
-      "price": "€0",
-      "period": "/maand",
-      "description": "Perfect voor individuen en kleine teams",
-      "features": [
-        "Onbeperkte MCP-servers",
-        "Alle AI-modellen ondersteund",
-        "5 RAG kennisbases",
-        "Openbaar profiel & delen",
-        "Community ondersteuning"
-      ],
-      "cta": "Gratis beginnen"
+      "title": "Alles Inbegrepen",
+      "description": "Geen limieten, geen lagen, geen verrassingen",
+      "cta": "Nu Beginnen",
+      "note": "Geen creditcard vereist • Altijd gratis voor persoonlijk gebruik",
+      "everything_included": "Alles inbegrepen:"
+    },
+    "features": {
+      "unlimited_ai_model_connections": "Onbeperkte AI model verbindingen",
+      "full_data_ownership_and_export": "Volledige data-eigendom en export",
+      "mcp_server_integrations": "500+ MCP server integraties",
+      "unlimited_workspaces_and_projects": "Onbeperkte werkruimtes en projecten",
+      "community_sharing_and_collaboration": "Community delen en samenwerking",
+      "end_to_end_encryption": "End-to-end encryptie",
+      "rag_document_storage": "RAG document opslag",
+      "real_time_notifications": "Real-time notificaties",
+      "oauth_authentication": "OAuth authenticatie",
+      "api_access": "API toegang"
+    },
+    "whyFree": {
+      "title": "Waarom is plugged.in gratis?",
+      "description": "We bouwen de toekomst van AI data-eigendom. Onze missie is ervoor te zorgen dat iedereen controle heeft over hun AI-gegenereerde data. Door het platform gratis te houden, creëren we het grootste ecosysteem waar ontwikkelaars kunnen delen, leren en samen bouwen."
     },
     "pro": {
       "title": "Pro",

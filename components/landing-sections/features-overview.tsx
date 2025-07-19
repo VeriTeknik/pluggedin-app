@@ -26,6 +26,7 @@ interface Feature {
   icon: React.ElementType;
   titleKey: string;
   descriptionKey: string;
+  comingSoon?: boolean;
 }
 
 // Feature data organized by priority - data ownership first
@@ -49,7 +50,8 @@ const features: Feature[] = [
   {
     icon: Clock,
     titleKey: 'features.crossModelMemory.title',
-    descriptionKey: 'features.crossModelMemory.description'
+    descriptionKey: 'features.crossModelMemory.description',
+    comingSoon: true
   },
   // Technical Features
   {
@@ -118,14 +120,13 @@ const itemVariants = {
 };
 
 // Feature Card Component
-function FeatureCard({ icon: Icon, titleKey, descriptionKey }: Feature) {
+function FeatureCard({ icon: Icon, titleKey, descriptionKey, comingSoon }: Feature) {
   const { t } = useTranslation('landing');
-  const isComingSoon = titleKey === 'features.crossModelMemory.title';
   
   return (
     <motion.div variants={itemVariants}>
       <Card className="h-full hover:shadow-lg transition-shadow duration-300 border border-border/40 relative">
-        {isComingSoon && (
+        {comingSoon && (
           <div className="absolute top-4 right-4 bg-primary/20 text-primary text-xs font-semibold px-2 py-1 rounded-full">
             Coming Soon
           </div>

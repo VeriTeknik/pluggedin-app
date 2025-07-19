@@ -138,22 +138,17 @@ export function LandingWhyPluggedin() {
               <div className="flex flex-col items-center justify-center space-y-8">
                 {/* AI Models */}
                 <div className="flex flex-wrap justify-center gap-4">
-                  <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2">
-                    <Brain className="h-5 w-5" />
-                    <span>Claude</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2">
-                    <Brain className="h-5 w-5" />
-                    <span>GPT-4</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2">
-                    <Brain className="h-5 w-5" />
-                    <span>Llama</span>
-                  </div>
-                  <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2">
-                    <Brain className="h-5 w-5" />
-                    <span>Gemini</span>
-                  </div>
+                  {[
+                    { key: 'whyPluggedin.aiModels.claude', name: 'Claude' },
+                    { key: 'whyPluggedin.aiModels.gpt4', name: 'GPT-4' },
+                    { key: 'whyPluggedin.aiModels.llama', name: 'Llama' },
+                    { key: 'whyPluggedin.aiModels.gemini', name: 'Gemini' }
+                  ].map((model) => (
+                    <div key={model.key} className="flex items-center gap-2 rounded-lg bg-muted px-4 py-2">
+                      <Brain className="h-5 w-5" />
+                      <span>{t(model.key) || model.name}</span>
+                    </div>
+                  ))}
                 </div>
                 
                 {/* Arrow Down */}

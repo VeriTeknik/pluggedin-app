@@ -53,6 +53,12 @@
     "cta": {
       "title": "One platform. All models. Your data. Your future.",
       "subtitle": "Join thousands who've taken control of their AI-generated data"
+    },
+    "aiModels": {
+      "claude": "Claude",
+      "gpt4": "GPT-4",
+      "llama": "Llama",
+      "gemini": "Gemini"
     }
   },
   "aiModels": {
@@ -366,7 +372,20 @@
       "title": "Everything Included",
       "description": "No limits, no tiers, no surprises",
       "cta": "Get Started Now",
-      "note": "No credit card required • Always free for personal use"
+      "note": "No credit card required • Always free for personal use",
+      "everything_included": "Everything included:"
+    },
+    "features": {
+      "unlimited_ai_model_connections": "Unlimited AI model connections",
+      "full_data_ownership_and_export": "Full data ownership and export",
+      "mcp_server_integrations": "500+ MCP server integrations",
+      "unlimited_workspaces_and_projects": "Unlimited workspaces and projects",
+      "community_sharing_and_collaboration": "Community sharing and collaboration",
+      "end_to_end_encryption": "End-to-end encryption",
+      "rag_document_storage": "RAG document storage",
+      "real_time_notifications": "Real-time notifications",
+      "oauth_authentication": "OAuth authentication",
+      "api_access": "API access"
     },
     "whyFree": {
       "title": "Why is plugged.in free?",

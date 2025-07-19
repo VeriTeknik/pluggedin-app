@@ -53,6 +53,12 @@
     "cta": {
       "title": "Tek platform. Tüm modeller. Verileriniz. Geleceğiniz.",
       "subtitle": "AI tarafından üretilen verilerin kontrolünü ele alan binlerce kişiye katılın"
+    },
+    "aiModels": {
+      "claude": "Claude",
+      "gpt4": "GPT-4",
+      "llama": "Llama",
+      "gemini": "Gemini"
     }
   },
   "aiModels": {
@@ -366,7 +372,20 @@
       "title": "Her Şey Dahil",
       "description": "Sınır yok, katman yok, sürpriz yok",
       "cta": "Şimdi Başlayın",
-      "note": "Kredi kartı gerekmez • Kişisel kullanım için her zaman ücretsiz"
+      "note": "Kredi kartı gerekmez • Kişisel kullanım için her zaman ücretsiz",
+      "everything_included": "Her şey dahil:"
+    },
+    "features": {
+      "unlimited_ai_model_connections": "Sınırsız AI model bağlantıları",
+      "full_data_ownership_and_export": "Tam veri sahipliği ve dışa aktarma",
+      "mcp_server_integrations": "500+ MCP sunucu entegrasyonu",
+      "unlimited_workspaces_and_projects": "Sınırsız çalışma alanları ve projeler",
+      "community_sharing_and_collaboration": "Topluluk paylaşımı ve işbirliği",
+      "end_to_end_encryption": "Uçtan uca şifreleme",
+      "rag_document_storage": "RAG belge depolama",
+      "real_time_notifications": "Gerçek zamanlı bildirimler",
+      "oauth_authentication": "OAuth kimlik doğrulama",
+      "api_access": "API erişimi"
     },
     "whyFree": {
       "title": "plugged.in neden ücretsiz?",

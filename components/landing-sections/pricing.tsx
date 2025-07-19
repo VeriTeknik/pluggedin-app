@@ -33,16 +33,16 @@ export function LandingPricingSection() {
   const { t } = useTranslation('landing');
 
   const features = [
-    'Unlimited AI model connections',
-    'Full data ownership and export',
-    '500+ MCP server integrations',
-    'Unlimited workspaces and projects',
-    'Community sharing and collaboration',
-    'End-to-end encryption',
-    'RAG document storage',
-    'Real-time notifications',
-    'OAuth authentication',
-    'API access'
+    'pricing.features.unlimited_ai_model_connections',
+    'pricing.features.full_data_ownership_and_export',
+    'pricing.features.mcp_server_integrations',
+    'pricing.features.unlimited_workspaces_and_projects',
+    'pricing.features.community_sharing_and_collaboration',
+    'pricing.features.end_to_end_encryption',
+    'pricing.features.rag_document_storage',
+    'pricing.features.real_time_notifications',
+    'pricing.features.oauth_authentication',
+    'pricing.features.api_access'
   ];
 
   return (
@@ -90,12 +90,12 @@ export function LandingPricingSection() {
               
               <CardContent>
                 <div className="mb-8">
-                  <h4 className="font-semibold mb-4 text-center">Everything included:</h4>
+                  <h4 className="font-semibold mb-4 text-center">{t('pricing.free.everything_included')}</h4>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {features.map((feature, index) => (
                       <li key={index} className="flex items-start">
                         <Check className="h-5 w-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
+                        <span className="text-sm">{t(feature)}</span>
                       </li>
                     ))}
                   </ul>

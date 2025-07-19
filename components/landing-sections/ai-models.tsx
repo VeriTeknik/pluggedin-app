@@ -30,6 +30,31 @@ const itemVariants = {
   },
 };
 
+// Reusable Feature Card Component
+interface FeatureCardProps {
+  icon: React.ElementType;
+  titleKey: string;
+  descriptionKey: string;
+}
+
+function FeatureCard({ icon: Icon, titleKey, descriptionKey }: FeatureCardProps) {
+  const { t } = useTranslation('landing');
+  
+  return (
+    <motion.div variants={itemVariants}>
+      <Card className="h-full">
+        <CardContent className="p-6">
+          <Icon className="h-10 w-10 text-primary mb-4" />
+          <h3 className="font-semibold mb-2">{t(titleKey)}</h3>
+          <p className="text-sm text-muted-foreground">
+            {t(descriptionKey)}
+          </p>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 // AI model logos - using text placeholders for now
 const aiModels = [
   { name: 'Claude', icon: '🤖', color: 'from-orange-500 to-orange-600' },
@@ -105,41 +130,14 @@ export function LandingAiModelsSection() {
             className="grid grid-cols-1 md:grid-cols-3 gap-6"
             variants={containerVariants}
           >
-            <motion.div variants={itemVariants}>
-              <Card className="h-full">
-                <CardContent className="p-6">
-                  <Brain className="h-10 w-10 text-primary mb-4" />
-                  <h3 className="font-semibold mb-2">{t('aiModels.feature1.title')}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t('aiModels.feature1.description')}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <Card className="h-full">
-                <CardContent className="p-6">
-                  <Brain className="h-10 w-10 text-primary mb-4" />
-                  <h3 className="font-semibold mb-2">{t('aiModels.feature2.title')}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t('aiModels.feature2.description')}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div variants={itemVariants}>
-              <Card className="h-full">
-                <CardContent className="p-6">
-                  <Brain className="h-10 w-10 text-primary mb-4" />
-                  <h3 className="font-semibold mb-2">{t('aiModels.feature3.title')}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {t('aiModels.feature3.description')}
-                  </p>
-                </CardContent>
-              </Card>
-            </motion.div>
+            {[1, 2, 3].map((num) => (
+              <FeatureCard
+                key={num}
+                icon={Brain}
+                titleKey={`aiModels.feature${num}.title`}
+                descriptionKey={`aiModels.feature${num}.description`}
+              />
+            ))}
           </motion.div>
 
           {/* CTA */}

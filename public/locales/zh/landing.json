@@ -53,6 +53,12 @@
     "cta": {
       "title": "一个平台。所有模型。您的数据。您的未来。",
       "subtitle": "加入数千名已经掌控其 AI 生成数据的人"
+    },
+    "aiModels": {
+      "claude": "Claude",
+      "gpt4": "GPT-4",
+      "llama": "Llama",
+      "gemini": "Gemini"
     }
   },
   "aiModels": {
@@ -327,36 +333,31 @@
     "action": "查看文档"
   },
   "pricing": {
-    "title": "简单、透明的定价",
-    "subtitle": "免费开始，随着增长而扩展",
+    "badge": "100% 永久免费",
+    "title": "完全免费 - 无隐藏费用",
+    "subtitle": "我们相信 AI 数据所有权的民主化。每个功能，面向每个人，永远免费。",
     "free": {
-      "title": "永久免费",
-      "price": "¥0",
-      "period": "/月",
-      "description": "完美适合个人和小团队",
-      "features": [
-        "无限制 MCP 服务器",
-        "支持所有 AI 模型",
-        "5 个 RAG 知识库",
-        "公开档案和分享",
-        "社区支持"
-      ],
-      "cta": "免费开始"
+      "title": "一切包含",
+      "description": "无限制、无层级、无惊喜",
+      "cta": "立即开始",
+      "note": "无需信用卡 • 个人使用永远免费",
+      "everything_included": "包含所有功能："
     },
-    "pro": {
-      "title": "专业版",
-      "price": "¥148",
-      "period": "/月",
-      "description": "专业开发者和团队",
-      "features": [
-        "免费版的所有功能",
-        "无限制 RAG 知识库",
-        "私有集合",
-        "优先支持",
-        "高级分析",
-        "团队协作"
-      ],
-      "cta": "开始专业版试用"
+    "features": {
+      "unlimited_ai_model_connections": "无限制 AI 模型连接",
+      "full_data_ownership_and_export": "完全数据所有权和导出",
+      "mcp_server_integrations": "500+ MCP 服务器集成",
+      "unlimited_workspaces_and_projects": "无限制工作空间和项目",
+      "community_sharing_and_collaboration": "社区共享和协作",
+      "end_to_end_encryption": "端到端加密",
+      "rag_document_storage": "RAG 文档存储",
+      "real_time_notifications": "实时通知",
+      "oauth_authentication": "OAuth 身份验证",
+      "api_access": "API 访问"
+    },
+    "whyFree": {
+      "title": "为什么 plugged.in 是免费的？",
+      "description": "我们正在构建 AI 数据所有权的未来。我们的使命是确保每个人都能控制他们的 AI 生成数据。通过保持平台免费，我们正在创建最大的生态系统，让开发者可以共享、学习和共同构建。"
     },
     "enterprise": {
       "title": "企业版",
