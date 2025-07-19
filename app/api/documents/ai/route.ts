@@ -4,10 +4,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'path';
 import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
+import { sanitizeUserIdForFileSystem, isPathWithinDirectory, isValidFilename } from '@/lib/security';
 
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable, notificationsTable } from '@/db/schema';
+import { rateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 // Validation schema for AI document creation
 const createAIDocumentSchema = z.object({
@@ -117,6 +119,22 @@ const createAIDocumentSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimiter = rateLimit(RATE_LIMITS.aiDocumentCreation);
+    const rateLimitResponse = await rateLimiter(request);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
+    // Check Content-Length header to prevent large payloads early
+    const contentLength = request.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'Request body too large. Maximum size is 10MB' },
+        { status: 413 }
+      );
+    }
+
     // Authenticate request
     const apiKeyResult = await authenticateApiKey(request);
     if (apiKeyResult.error) {
@@ -154,12 +172,40 @@ export async function POST(request: NextRequest) {
     const safeTitle = validatedData.title.replace(/[^a-zA-Z0-9-_]/g, '_').substring(0, 50);
     const filename = `${timestamp.toISOString().split('T')[0]}_${safeModelName}_${safeTitle}.${validatedData.format}`;
 
-    // Determine upload directory path
+    // Validate filename is safe
+    if (!isValidFilename(filename)) {
+      return NextResponse.json(
+        { error: 'Invalid filename' },
+        { status: 400 }
+      );
+    }
+
+    // Determine upload directory path with sanitized user ID
     const baseUploadDir = process.env.UPLOAD_DIR || join(process.cwd(), 'uploads');
-    const userUploadDir = join(baseUploadDir, 'documents', user.id);
+    const sanitizedUserId = sanitizeUserIdForFileSystem(user.id);
+    const userUploadDir = join(baseUploadDir, 'documents', sanitizedUserId);
+    
+    // Ensure the user upload directory is within the base upload directory
+    if (!isPathWithinDirectory(userUploadDir, baseUploadDir)) {
+      console.error('Path traversal attempt detected:', userUploadDir);
+      return NextResponse.json(
+        { error: 'Invalid upload path' },
+        { status: 400 }
+      );
+    }
+    
     await mkdir(userUploadDir, { recursive: true });
 
     const filePath = join(userUploadDir, filename);
+    
+    // Double-check the final file path is within allowed directory
+    if (!isPathWithinDirectory(filePath, userUploadDir)) {
+      console.error('Path traversal attempt detected in file path:', filePath);
+      return NextResponse.json(
+        { error: 'Invalid file path' },
+        { status: 400 }
+      );
+    }
 
     // Write content to file
     await writeFile(filePath, processedContent, 'utf-8');
@@ -285,11 +331,18 @@ export async function POST(request: NextRequest) {
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
+        { 
+          error: 'Invalid request data', 
+          details: error.errors.map(e => ({
+            path: e.path.join('.'),
+            message: e.message
+          }))
+        },
         { status: 400 }
       );
     }
 
+    // Don't expose internal error details
     return NextResponse.json(
       { error: 'Failed to create document' },
       { status: 500 }

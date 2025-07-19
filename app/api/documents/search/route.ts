@@ -5,10 +5,19 @@ import { z } from 'zod';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable } from '@/db/schema';
+import { escapeLikePattern } from '@/lib/security';
+import { rateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 // Search query schema
 const searchDocumentsSchema = z.object({
-  query: z.string().min(1).max(500),
+  query: z.string().min(1).max(500).refine(
+    (val) => {
+      // Prevent potential ReDoS attacks by limiting special characters
+      const specialCharCount = (val.match(/[.*+?^${}()|[\]\\]/g) || []).length;
+      return specialCharCount < 10;
+    },
+    { message: "Query contains too many special characters" }
+  ),
   filters: z.object({
     modelName: z.string().optional(),
     modelProvider: z.string().optional(),
@@ -18,6 +27,7 @@ const searchDocumentsSchema = z.object({
     source: z.enum(['all', 'upload', 'ai_generated', 'api']).optional().default('all'),
   }).optional(),
   limit: z.number().int().min(1).max(50).optional().default(10),
+  offset: z.number().int().min(0).optional().default(0),
 });
 
 /**
@@ -69,6 +79,10 @@ const searchDocumentsSchema = z.object({
  *                 minimum: 1
  *                 maximum: 50
  *                 default: 10
+ *               offset:
+ *                 type: integer
+ *                 minimum: 0
+ *                 default: 0
  *     responses:
  *       200:
  *         description: Search results
@@ -102,6 +116,12 @@ const searchDocumentsSchema = z.object({
  *                           type: string
  *                 total:
  *                   type: integer
+ *                 limit:
+ *                   type: integer
+ *                 offset:
+ *                   type: integer
+ *                 hasMore:
+ *                   type: boolean
  *       400:
  *         description: Invalid request
  *       401:
@@ -111,6 +131,13 @@ const searchDocumentsSchema = z.object({
  */
 export async function POST(request: NextRequest) {
   try {
+    // Apply rate limiting
+    const rateLimiter = rateLimit(RATE_LIMITS.documentSearch);
+    const rateLimitResponse = await rateLimiter(request);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Authenticate request
     const apiKeyResult = await authenticateApiKey(request);
     if (apiKeyResult.error) {
@@ -165,6 +192,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Escape the query for safe use in ILIKE patterns
+    const escapedQuery = escapeLikePattern(validatedData.query);
+    
     // Build the search query
     // Using PostgreSQL full-text search with relevance scoring
     const searchQuery = db
@@ -188,7 +218,7 @@ export async function POST(request: NextRequest) {
             plainto_tsquery('english', ${validatedData.query})
           ) +
           CASE 
-            WHEN ${docsTable.name} ILIKE ${'%' + validatedData.query + '%'} THEN 0.5
+            WHEN ${docsTable.name} ILIKE ${`%${escapedQuery}%`} THEN 0.5
             ELSE 0
           END
         `,
@@ -204,8 +234,8 @@ export async function POST(request: NextRequest) {
           sql`(
             to_tsvector('english', ${docsTable.name} || ' ' || COALESCE(${docsTable.description}, ''))
             @@ plainto_tsquery('english', ${validatedData.query})
-            OR ${docsTable.name} ILIKE ${'%' + validatedData.query + '%'}
-            OR ${docsTable.description} ILIKE ${'%' + validatedData.query + '%'}
+            OR ${docsTable.name} ILIKE ${`%${escapedQuery}%`}
+            OR ${docsTable.description} ILIKE ${`%${escapedQuery}%`}
           )`
         )
       )
@@ -216,18 +246,42 @@ export async function POST(request: NextRequest) {
             plainto_tsquery('english', ${validatedData.query})
           ) +
           CASE 
-            WHEN ${docsTable.name} ILIKE ${'%' + validatedData.query + '%'} THEN 0.5
+            WHEN ${docsTable.name} ILIKE ${`%${escapedQuery}%`} THEN 0.5
             ELSE 0
           END
         `))
-      .limit(validatedData.limit);
+      .limit(validatedData.limit)
+      .offset(validatedData.offset);
 
-    // Execute search
+    // Execute search with count query for pagination
     console.log('[Document Search] Profile UUID:', activeProfile.uuid);
     console.log('[Document Search] Query:', validatedData.query);
     console.log('[Document Search] Filters:', validatedData.filters);
     
-    const results = await searchQuery;
+    // Get total count for pagination
+    const countQuery = db
+      .select({ count: sql<number>`COUNT(*)` })
+      .from(docsTable)
+      .leftJoin(
+        documentModelAttributionsTable,
+        eq(docsTable.uuid, documentModelAttributionsTable.document_id)
+      )
+      .where(
+        and(
+          ...conditions,
+          sql`(
+            to_tsvector('english', ${docsTable.name} || ' ' || COALESCE(${docsTable.description}, ''))
+            @@ plainto_tsquery('english', ${validatedData.query})
+            OR ${docsTable.name} ILIKE ${`%${escapedQuery}%`}
+            OR ${docsTable.description} ILIKE ${`%${escapedQuery}%`}
+          )`
+        )
+      );
+    
+    const [results, [{ count: totalCount }]] = await Promise.all([
+      searchQuery,
+      countQuery
+    ]);
     
     console.log('[Document Search] Results found:', results.length);
     if (results.length > 0) {
@@ -275,18 +329,28 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       results: formattedResults,
-      total: formattedResults.length,
+      total: totalCount,
+      limit: validatedData.limit,
+      offset: validatedData.offset,
+      hasMore: validatedData.offset + formattedResults.length < totalCount,
     });
   } catch (error) {
     console.error('Error searching documents:', error);
 
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Invalid request data', details: error.errors },
+        { 
+          error: 'Invalid request data', 
+          details: error.errors.map(e => ({
+            path: e.path.join('.'),
+            message: e.message
+          }))
+        },
         { status: 400 }
       );
     }
 
+    // Don't expose internal error details
     return NextResponse.json(
       { error: 'Failed to search documents' },
       { status: 500 }
