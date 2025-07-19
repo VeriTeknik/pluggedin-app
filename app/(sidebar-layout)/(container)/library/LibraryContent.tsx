@@ -10,7 +10,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { Badge, Download, Loader2, Trash2, Upload } from 'lucide-react';
-import { useState, useMemo, useCallback } from 'react';
+import { useCallback,useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
@@ -28,7 +28,7 @@ import { DocsControls } from './components/DocsControls';
 import { DocsGrid } from './components/DocsGrid';
 import { DocsStats } from './components/DocsStats';
 import { DocsTable } from './components/DocsTable';
-import { UploadDialogWrapper as UploadDialog } from './components/UploadDialogWrapper';
+import { UploadDialog } from './components/UploadDialog';
 import { UploadProgress } from './components/UploadProgress';
 
 const columnHelper = createColumnHelper<Doc>();
