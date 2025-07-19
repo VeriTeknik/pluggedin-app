@@ -155,8 +155,10 @@ export const sanitizeHtmlConfig = {
       if (attribs.href && attribs.href.startsWith('http')) {
         attribs.rel = 'noopener noreferrer';
       }
-      // Remove javascript: URLs
-      if (attribs.href && attribs.href.toLowerCase().startsWith('javascript:')) {
+      // Remove dangerous URL schemes
+      const dangerousSchemes = ['javascript:', 'data:', 'vbscript:'];
+      const hrefLower = attribs.href?.toLowerCase().trim();
+      if (hrefLower && dangerousSchemes.some(scheme => hrefLower.startsWith(scheme))) {
         delete attribs.href;
       }
       return {
