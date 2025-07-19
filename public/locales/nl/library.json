@@ -48,7 +48,13 @@
   "controls": {
     "searchPlaceholder": "Zoek documenten...",
     "grid": "Raster",
-    "table": "Tabel"
+    "table": "Tabel",
+    "sourceFilter": {
+      "all": "Alle",
+      "uploaded": "Geüpload",
+      "aiGenerated": "AI Gegenereerd",
+      "api": "API"
+    }
   },
   "grid": {
     "noDocuments": "Geen documenten gevonden.",

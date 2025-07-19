@@ -1,7 +1,16 @@
+export interface ModelAttribution {
+  modelName: string;
+  modelProvider: string;
+  contributionType: 'created' | 'updated';
+  timestamp: string;
+  metadata?: any;
+}
+
 export interface Doc {
   uuid: string;
   user_id: string;
   project_uuid?: string | null;
+  profile_uuid?: string | null;
   name: string;
   description?: string | null;
   file_name: string;
@@ -10,8 +19,30 @@ export interface Doc {
   file_path: string;
   tags?: string[] | null;
   rag_document_id?: string | null;
+  source: 'upload' | 'ai_generated' | 'api';
+  ai_metadata?: {
+    model?: {
+      name: string;
+      provider: string;
+      version?: string;
+    };
+    context?: string;
+    timestamp?: string;
+    sessionId?: string;
+    lastUpdatedBy?: {
+      name: string;
+      provider: string;
+      version?: string;
+    };
+    lastUpdateTimestamp?: string;
+  } | null;
+  content_hash?: string | null;
+  visibility: 'private' | 'workspace' | 'public';
+  version: number;
+  parent_document_id?: string | null;
   created_at: Date;
   updated_at: Date;
+  modelAttributions?: ModelAttribution[];
 }
 
 // New interfaces for RAG progress tracking

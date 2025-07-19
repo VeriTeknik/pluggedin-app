@@ -48,7 +48,13 @@
   "controls": {
     "searchPlaceholder": "Search documents...",
     "grid": "Grid",
-    "table": "Table"
+    "table": "Table",
+    "sourceFilter": {
+      "all": "All",
+      "uploaded": "Uploaded",
+      "aiGenerated": "AI Generated",
+      "api": "API"
+    }
   },
   "grid": {
     "noDocuments": "No documents found.",

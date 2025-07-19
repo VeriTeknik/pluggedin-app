@@ -48,7 +48,13 @@
   "controls": {
     "searchPlaceholder": "ドキュメントを検索...",
     "grid": "グリッド",
-    "table": "テーブル"
+    "table": "テーブル",
+    "sourceFilter": {
+      "all": "すべて",
+      "uploaded": "アップロード済み",
+      "aiGenerated": "AI生成",
+      "api": "API"
+    }
   },
   "grid": {
     "noDocuments": "ドキュメントが見つかりません。",

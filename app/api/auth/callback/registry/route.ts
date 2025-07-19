@@ -3,13 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { storeRegistryOAuthToken } from '@/app/actions/registry-oauth-session';
 import { RateLimiters } from '@/lib/rate-limiter';
 import { 
-  escapeHtml, 
-  encodeForJavaScript, 
-  isValidRedirectUrl, 
   getAllowedRedirectHosts,
-  sanitizeErrorMessage,
-  getSecurityHeaders
-} from '@/lib/security-utils';
+  isValidRedirectUrl, 
+  sanitizeErrorMessage} from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
   // Apply rate limiting

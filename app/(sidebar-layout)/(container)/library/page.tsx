@@ -9,10 +9,11 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Badge, Download, Loader2, Trash2 } from 'lucide-react';
+import { Badge, Download, Loader2, Trash2, Upload } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 // Internal components
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -43,6 +44,7 @@ export default function LibraryPage() {
   const [selectedDoc, setSelectedDoc] = useState<Doc | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'upload' | 'ai_generated' | 'api'>('all');
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -142,7 +144,17 @@ export default function LibraryPage() {
         <div className="flex items-center gap-2">
           <span className="text-lg">{getMimeTypeIcon(info.row.original.mime_type)}</span>
           <div>
-            <div className="font-medium">{info.getValue()}</div>
+            <div className="font-medium flex items-center gap-2">
+              {info.getValue()}
+              {info.row.original.source === 'ai_generated' && info.row.original.ai_metadata?.model && (
+                <ModelAttributionBadge
+                  modelName={info.row.original.ai_metadata.model.name}
+                  modelProvider={info.row.original.ai_metadata.model.provider}
+                  modelVersion={info.row.original.ai_metadata.model.version}
+                  timestamp={info.row.original.ai_metadata.timestamp}
+                />
+              )}
+            </div>
             <div className="text-sm text-muted-foreground">{info.row.original.file_name}</div>
           </div>
         </div>
@@ -197,8 +209,15 @@ export default function LibraryPage() {
     }),
   ];
 
+  // Filter docs based on source
+  const filteredDocs = docs.filter(doc => {
+    if (sourceFilter === 'all') return true;
+    // Default to 'upload' if source is not defined (backward compatibility)
+    return (doc.source || 'upload') === sourceFilter;
+  });
+
   const table = useReactTable({
-    data: docs,
+    data: filteredDocs,
     columns,
     state: {
       sorting,
@@ -241,16 +260,22 @@ export default function LibraryPage() {
               {t('page.description')}
             </p>
           </div>
-          <UploadDialog
-            open={uploadDialogOpen}
-            onOpenChange={setUploadDialogOpen}
-            form={uploadForm}
-            setForm={setUploadForm}
-            isUploading={isUploading}
-            onUpload={handleUpload}
-            formatFileSize={formatFileSize}
-            storageUsage={storageUsage}
-          />
+          <div>
+            <Button onClick={() => setUploadDialogOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" />
+              {t('uploadDialog.button')}
+            </Button>
+            <UploadDialog
+              open={uploadDialogOpen}
+              onOpenChange={setUploadDialogOpen}
+              form={uploadForm}
+              setForm={setUploadForm}
+              isUploading={isUploading}
+              onUpload={handleUpload}
+              formatFileSize={formatFileSize}
+              storageUsage={storageUsage}
+            />
+          </div>
         </div>
 
         {/* Upload Progress */}
@@ -271,6 +296,8 @@ export default function LibraryPage() {
             onSearchChange={setGlobalFilter}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
+            sourceFilter={sourceFilter}
+            onSourceFilterChange={setSourceFilter}
           />
         </div>
 

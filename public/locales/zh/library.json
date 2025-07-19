@@ -48,7 +48,13 @@
   "controls": {
     "searchPlaceholder": "搜索文档...",
     "grid": "网格",
-    "table": "表格"
+    "table": "表格",
+    "sourceFilter": {
+      "all": "全部",
+      "uploaded": "已上传",
+      "aiGenerated": "AI 生成",
+      "api": "API"
+    }
   },
   "grid": {
     "noDocuments": "未找到文档。",

@@ -10,6 +10,7 @@ import { customInstructionsTable, mcpServersTable, McpServerStatus } from '@/db/
 type McpPromptListEntry = {
   name: string;
   description?: string;
+  instruction?: any; // Include the actual instruction content from messages column
   arguments?: Array<{ name: string; description?: string; required?: boolean }>;
   _serverUuid?: string; // Include server UUID for potential client use
 };
@@ -95,6 +96,7 @@ export async function GET(request: Request) {
         uuid: customInstructionsTable.uuid, // Use uuid instead of id
         // name: customInstructionsTable.name, // 'name' column is commented out in schema
         description: customInstructionsTable.description,
+        instruction: customInstructionsTable.messages, // Add the messages column
         serverUuid: customInstructionsTable.mcp_server_uuid,
         serverName: mcpServersTable.name, // Get server name for prefixing
       })
@@ -122,6 +124,7 @@ export async function GET(request: Request) {
         return {
             name: generatedName, // Use the generated name
             description: instr.description ?? undefined,
+            instruction: instr.instruction, // Include the actual instruction messages
             arguments: [], // Custom instructions don't have arguments
             _serverUuid: instr.serverUuid, // Include server UUID from the selected data
         };

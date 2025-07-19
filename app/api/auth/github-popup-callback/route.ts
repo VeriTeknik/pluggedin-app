@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { encodeForJavaScript, sanitizeErrorMessage, getSecurityHeaders } from '@/lib/security-utils';
+
+import { encodeForJavaScript, getSecurityHeaders,sanitizeErrorMessage } from '@/lib/security-utils';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

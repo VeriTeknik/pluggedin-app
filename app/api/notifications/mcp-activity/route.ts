@@ -107,6 +107,7 @@ export async function POST(request: Request) {
         'pluggedin_rag',
         'pluggedin_notifications',
         'pluggedin_proxy',
+        'pluggedin_documents',
         'Discovery System',
         'Discovery System (Cache)',
         'Discovery System (Background)',
@@ -114,6 +115,7 @@ export async function POST(request: Request) {
         'RAG System',
         'Notification System',
         'Proxy System',
+        'Document System',
         'Custom Instructions'
       ];
       

@@ -48,7 +48,13 @@
   "controls": {
     "searchPlaceholder": "दस्तावेज़ खोजें...",
     "grid": "ग्रिड",
-    "table": "तालिका"
+    "table": "तालिका",
+    "sourceFilter": {
+      "all": "सभी",
+      "uploaded": "अपलोड किया गया",
+      "aiGenerated": "AI जनित",
+      "api": "API"
+    }
   },
   "grid": {
     "noDocuments": "कोई दस्तावेज़ नहीं मिला।",

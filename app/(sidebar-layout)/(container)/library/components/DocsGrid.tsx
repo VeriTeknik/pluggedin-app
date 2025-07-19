@@ -3,6 +3,7 @@
 import { Download, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -47,14 +48,25 @@ export function DocsGrid({
         >
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="text-2xl">{getMimeTypeIcon(doc.mime_type)}</span>
-                <CardTitle
-                  className="text-base font-semibold truncate max-w-[160px] md:max-w-[180px] lg:max-w-[200px]"
-                  title={doc.name}
-                >
-                  {doc.name}
-                </CardTitle>
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <span className="text-2xl flex-shrink-0">{getMimeTypeIcon(doc.mime_type)}</span>
+                <div className="min-w-0 flex-1">
+                  <CardTitle
+                    className="text-base font-semibold truncate"
+                    title={doc.name}
+                  >
+                    {doc.name}
+                  </CardTitle>
+                  {doc.source === 'ai_generated' && doc.ai_metadata?.model && (
+                    <ModelAttributionBadge
+                      modelName={doc.ai_metadata.model.name}
+                      modelProvider={doc.ai_metadata.model.provider}
+                      modelVersion={doc.ai_metadata.model.version}
+                      timestamp={doc.ai_metadata.timestamp}
+                      className="mt-1"
+                    />
+                  )}
+                </div>
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
