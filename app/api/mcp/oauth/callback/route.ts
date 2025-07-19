@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
 import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
 import { RateLimiters } from '@/lib/rate-limiter';
-import { escapeHtml, isValidRedirectUrl, getAllowedRedirectHosts, getSecurityHeaders } from '@/lib/security-utils';
+import { escapeHtml, getAllowedRedirectHosts, getSecurityHeaders,isValidRedirectUrl } from '@/lib/security-utils';
 
 export async function GET(request: NextRequest) {
   // Apply rate limiting

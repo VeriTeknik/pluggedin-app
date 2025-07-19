@@ -1,9 +1,10 @@
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
+import { escapeHtml, getSecurityHeaders } from '@/lib/security-utils';
+
 import { oauthStateManager } from '../oauth/OAuthStateManager';
 import { getSessionManager } from '../sessions/SessionManager';
-import { escapeHtml, getSecurityHeaders } from '@/lib/security-utils';
 
 /**
  * Wrapper for StreamableHTTPClientTransport that captures and manages session IDs

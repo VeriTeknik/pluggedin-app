@@ -107,15 +107,30 @@ export function isValidMessageOrigin(origin: string): boolean {
  * Generate a secure random state parameter for OAuth
  */
 export function generateOAuthState(): string {
-  // In a real implementation, use crypto.randomBytes
-  return Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+  // Use Node.js crypto module for server-side generation
+  if (typeof window === 'undefined') {
+    // Server-side: use Node.js crypto
+    const crypto = require('crypto');
+    return crypto.randomBytes(32).toString('base64url');
+  } else {
+    // Client-side: use Web Crypto API
+    return Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+  }
 }
 
 /**
  * Generate a secure nonce for CSP
  */
 export function generateNonce(): string {
-  return Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64');
+  // Use Node.js crypto module for server-side generation
+  if (typeof window === 'undefined') {
+    // Server-side: use Node.js crypto
+    const crypto = require('crypto');
+    return crypto.randomBytes(16).toString('base64');
+  } else {
+    // Client-side: use Web Crypto API
+    return Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString('base64');
+  }
 }
 
 /**
