@@ -1,4 +1,4 @@
-import { and, desc,eq, sql } from 'drizzle-orm';
+import { and, desc, eq, or, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -150,10 +150,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = searchDocumentsSchema.parse(body);
 
-    // Build search conditions
+    // Build search conditions - include both profile and project-level documents
     const conditions = [
-      eq(docsTable.profile_uuid, activeProfile.uuid),
-      sql`${docsTable.profile_uuid} IS NOT NULL`, // Explicitly exclude null profiles
+      or(
+        eq(docsTable.profile_uuid, activeProfile.uuid),
+        and(
+          eq(docsTable.project_uuid, activeProfile.project_uuid),
+          sql`${docsTable.profile_uuid} IS NULL`
+        )
+      ),
     ];
 
     // Apply filters

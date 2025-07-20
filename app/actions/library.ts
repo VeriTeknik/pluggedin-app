@@ -64,20 +64,41 @@ export async function getDocs(userId: string, projectUuid?: string): Promise<Doc
 
 export async function getDocByUuid(userId: string, docUuid: string, projectUuid?: string): Promise<Doc | null> {
   try {
-    // First check if user owns the document
-    const doc = await db.query.docsTable.findFirst({
-      where: and(
-        eq(docsTable.uuid, docUuid),
-        eq(docsTable.user_id, userId)
-      ),
-    });
-
-    if (!doc) {
-      return null;
+    console.log('[getDocByUuid] Input:', { userId, docUuid, projectUuid });
+    
+    // Check if user owns the document directly OR if it's a project-level document
+    let doc;
+    
+    if (projectUuid) {
+      // If projectUuid is provided, look for documents that either:
+      // 1. Belong to the user directly in this project
+      // 2. Are project-level documents (profile_uuid is NULL) in this project
+      doc = await db.query.docsTable.findFirst({
+        where: and(
+          eq(docsTable.uuid, docUuid),
+          eq(docsTable.project_uuid, projectUuid),
+          eq(docsTable.user_id, userId)
+        ),
+      });
+    } else {
+      // If no projectUuid, just check user ownership
+      doc = await db.query.docsTable.findFirst({
+        where: and(
+          eq(docsTable.uuid, docUuid),
+          eq(docsTable.user_id, userId)
+        ),
+      });
     }
 
-    // If projectUuid provided, verify document belongs to this project
-    if (projectUuid && doc.project_uuid && doc.project_uuid !== projectUuid) {
+    console.log('[getDocByUuid] Query result:', doc ? 'Document found' : 'Document not found');
+    console.log('[getDocByUuid] Document details:', doc ? { 
+      uuid: doc.uuid, 
+      user_id: doc.user_id,
+      project_uuid: doc.project_uuid,
+      profile_uuid: doc.profile_uuid 
+    } : null);
+
+    if (!doc) {
       return null;
     }
 

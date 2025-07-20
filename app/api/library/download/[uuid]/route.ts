@@ -5,26 +5,59 @@ import { join, normalize, resolve } from 'path';
 import { getDocByUuid } from '@/app/actions/library';
 import { ErrorResponses } from '@/lib/api-errors';
 import { getAuthSession } from '@/lib/auth';
+import { authenticateApiKey } from '@/app/api/auth';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ uuid: string }> }
 ) {
   try {
-    // Check authentication
-    const session = await getAuthSession();
-    if (!session?.user?.id) {
-      return ErrorResponses.unauthorized();
+    // Check authentication - support both session and API key
+    let userId: string;
+    let authenticatedProjectUuid: string | undefined;
+    
+    // First try API key authentication
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const apiKeyResult = await authenticateApiKey(request);
+      if (apiKeyResult.error) {
+        // If API key auth fails, try session auth
+        const session = await getAuthSession();
+        if (!session?.user?.id) {
+          return ErrorResponses.unauthorized();
+        }
+        userId = session.user.id;
+      } else {
+        userId = apiKeyResult.user.id;
+        authenticatedProjectUuid = apiKeyResult.activeProfile.project_uuid;
+      }
+    } else {
+      // No API key, try session auth
+      const session = await getAuthSession();
+      if (!session?.user?.id) {
+        return ErrorResponses.unauthorized();
+      }
+      userId = session.user.id;
     }
 
     // Extract uuid from params and projectUuid from query
     const { uuid } = await params;
     const { searchParams } = new URL(request.url);
-    const projectUuid = searchParams.get('projectUuid');
+    const projectUuid = searchParams.get('projectUuid') || authenticatedProjectUuid;
 
     // Get the document using the authenticated user's ID and project UUID
     // This ensures users can only access documents within their own project
-    const doc = await getDocByUuid(session.user.id, uuid, projectUuid || undefined);
+    console.log('[Download] Attempting to get document:', {
+      userId,
+      uuid,
+      projectUuid,
+      authenticatedProjectUuid
+    });
+    
+    const doc = await getDocByUuid(userId, uuid, projectUuid || undefined);
+    
+    console.log('[Download] Document result:', doc ? 'Found' : 'Not found');
+    
     if (!doc) {
       return ErrorResponses.notFound();
     }
