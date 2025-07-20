@@ -92,12 +92,22 @@ export function Footer({ className }: { className?: string }) {
               </li>
               <li>
                 <a 
-                  href="https://discord.gg/pluggedin" 
+                  href="https://www.reddit.com/r/plugged_in/" 
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                 >
-                  Discord <MessageSquare className="h-3 w-3" />
+                  Reddit <MessageSquare className="h-3 w-3" />
+                </a>
+              </li>
+              <li>
+                <a 
+                  href="https://x.com/PluggedIntoAI" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  X
                 </a>
               </li>
             </ul>

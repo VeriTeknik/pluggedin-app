@@ -183,8 +183,13 @@ export default function DocsPageClient() {
             <Link href="/legal/contact">Contact Support</Link>
           </Button>
           <Button asChild variant="outline">
-            <a href="https://discord.gg/pluggedin" target="_blank" rel="noopener noreferrer">
-              Join Discord
+            <a href="https://www.reddit.com/r/plugged_in/" target="_blank" rel="noopener noreferrer">
+              Join Reddit
+            </a>
+          </Button>
+          <Button asChild variant="outline">
+            <a href="https://x.com/PluggedIntoAI" target="_blank" rel="noopener noreferrer">
+              Follow on X
             </a>
           </Button>
         </div>

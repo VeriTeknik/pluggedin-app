@@ -367,7 +367,8 @@ public/locales/
 - **Memory Bank**: Start with `memory-bank/` directory
 - **README**: Project setup and features
 - **Issues**: Existing problems and discussions
-- **Discord/Community**: [Link to community if available]
+- **Reddit Community**: https://www.reddit.com/r/plugged_in/
+- **X (Twitter)**: https://x.com/PluggedIntoAI
 
 ### Contact
 - Create an issue for bugs or feature requests
