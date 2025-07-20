@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'path';
 import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
-import { sanitizeUserIdForFileSystem, isPathWithinDirectory, isValidFilename } from '@/lib/security';
+import { isPathWithinDirectory, isValidFilename } from '@/lib/security';
 
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
@@ -180,10 +180,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine upload directory path with sanitized user ID
+    // Determine upload directory path with user ID
     const baseUploadDir = process.env.UPLOADS_DIR || '/home/pluggedin/uploads';
-    const sanitizedUserId = sanitizeUserIdForFileSystem(user.id);
-    const userUploadDir = join(baseUploadDir, sanitizedUserId);
+    const userUploadDir = join(baseUploadDir, user.id);
     
     // Ensure the user upload directory is within the base upload directory
     if (!isPathWithinDirectory(userUploadDir, baseUploadDir)) {
@@ -197,7 +196,7 @@ export async function POST(request: NextRequest) {
     await mkdir(userUploadDir, { recursive: true });
 
     const filePath = join(userUploadDir, filename);
-    const relativePath = `${sanitizedUserId}/${filename}`;
+    const relativePath = `${user.id}/${filename}`;
     
     // Double-check the final file path is within allowed directory
     if (!isPathWithinDirectory(filePath, userUploadDir)) {
