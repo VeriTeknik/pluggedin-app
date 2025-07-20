@@ -181,9 +181,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Determine upload directory path with sanitized user ID
-    const baseUploadDir = process.env.UPLOAD_DIR || join(process.cwd(), 'uploads');
+    const baseUploadDir = process.env.UPLOADS_DIR || '/home/pluggedin/uploads';
     const sanitizedUserId = sanitizeUserIdForFileSystem(user.id);
-    const userUploadDir = join(baseUploadDir, 'documents', sanitizedUserId);
+    const userUploadDir = join(baseUploadDir, sanitizedUserId);
     
     // Ensure the user upload directory is within the base upload directory
     if (!isPathWithinDirectory(userUploadDir, baseUploadDir)) {
@@ -197,6 +197,7 @@ export async function POST(request: NextRequest) {
     await mkdir(userUploadDir, { recursive: true });
 
     const filePath = join(userUploadDir, filename);
+    const relativePath = `${sanitizedUserId}/${filename}`;
     
     // Double-check the final file path is within allowed directory
     if (!isPathWithinDirectory(filePath, userUploadDir)) {
@@ -238,7 +239,7 @@ export async function POST(request: NextRequest) {
         file_name: filename,
         file_size: fileSize,
         mime_type: mimeType,
-        file_path: filePath,
+        file_path: relativePath,
         tags: validatedData.tags,
         source: 'ai_generated',
         ai_metadata: {
