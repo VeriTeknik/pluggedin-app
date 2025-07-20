@@ -45,6 +45,20 @@
     "sort": {
       "newest": "Newest first",
       "oldest": "Oldest first"
+    },
+    "metadata": {
+      "source": {
+        "via": "via {{source}}",
+        "mcp": "MCP: {{server}}",
+        "api": "API: {{key}}",
+        "system": "System",
+        "user": "User"
+      },
+      "actions": {
+        "markedRead": "Read {{time}}",
+        "completed": "Completed {{time}}",
+        "completedVia": "Completed via {{method}} {{time}}"
+      }
     }
   }
 }

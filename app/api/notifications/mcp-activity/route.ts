@@ -5,6 +5,7 @@ import { createNotification } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { mcpActivityTable, McpServerSource } from '@/db/schema';
+import type { NotificationMetadata } from '@/lib/types/notifications';
 
 const mcpActivitySchema = z.object({
   action: z.enum(['tool_call', 'prompt_get', 'resource_read', 'install', 'uninstall']),
@@ -188,12 +189,31 @@ export async function POST(request: Request) {
         message += ` (${executionTime}ms)`;
       }
       
+      const metadata: NotificationMetadata = {
+        source: {
+          type: 'mcp',
+          profileUuid: auth.activeProfile.uuid,
+          mcpServer: serverName,
+          mcpServerUuid: serverUuid,
+          apiKeyId: auth.apiKey?.id,
+          apiKeyName: auth.apiKey?.name
+        },
+        mcpActivity: {
+          action,
+          itemName,
+          success: false,
+          errorMessage,
+          executionTime
+        }
+      };
+
       await createNotification({
         profileUuid: auth.activeProfile.uuid,
         type: 'ALERT',
         title,
         message,
         expiresInDays: 7, // MCP activity notifications expire in 7 days
+        metadata
       });
     }
 

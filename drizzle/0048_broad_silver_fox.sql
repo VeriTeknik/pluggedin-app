@@ -1,0 +1,1 @@
+ALTER TABLE "notifications" ADD COLUMN "metadata" jsonb DEFAULT '{}'::jsonb;

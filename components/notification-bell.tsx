@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { NotificationMetadataDisplay } from '@/components/ui/notification-metadata';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function NotificationBell() {
@@ -129,12 +130,15 @@ export function NotificationBell() {
                         <ExternalLink className="h-3 w-3 ml-1 text-muted-foreground" />
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDistanceToNow(new Date(notification.created_at), { 
-                        addSuffix: true,
-                        locale: getDateLocale() 
-                      })}
-                    </span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(notification.created_at), { 
+                          addSuffix: true,
+                          locale: getDateLocale() 
+                        })}
+                      </span>
+                      <NotificationMetadataDisplay metadata={notification.metadata} compact className="text-[10px]" />
+                    </div>
                   </div>
                   <div className="text-sm text-muted-foreground notification-markdown">
                     <ReactMarkdown 
