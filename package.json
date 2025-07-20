@@ -35,7 +35,7 @@
     "@langchain/google-genai": "^0.2.14",
     "@langchain/langgraph": "^0.3.6",
     "@langchain/openai": "^0.5.18",
-    "@modelcontextprotocol/sdk": "^1.15.0",
+    "@modelcontextprotocol/sdk": "^1.16.0",
     "@monaco-editor/react": "^4.7.0",
     "@octokit/rest": "^22.0.0",
     "@radix-ui/react-accordion": "^1.2.11",

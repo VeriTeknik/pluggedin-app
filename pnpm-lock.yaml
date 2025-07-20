@@ -33,8 +33,8 @@ importers:
         specifier: ^0.5.18
         version: 0.5.18(@langchain/core@0.3.62(openai@5.7.0(ws@8.18.2)(zod@3.25.75)))(ws@8.18.2)
       '@modelcontextprotocol/sdk':
-        specifier: ^1.15.0
-        version: 1.15.0
+        specifier: ^1.16.0
+        version: 1.16.0
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.52.2)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
@@ -1346,8 +1346,8 @@ packages:
     peerDependencies:
       '@langchain/core': '>=0.3.58 <0.4.0'
 
-  '@modelcontextprotocol/sdk@1.15.0':
-    resolution: {integrity: sha512-67hnl/ROKdb03Vuu0YOr+baKTvf1/5YBHBm9KnZdjdAh8hjt4FRCPD5ucwxGB237sBpzlqQsLy1PFu7z/ekZ9Q==}
+  '@modelcontextprotocol/sdk@1.16.0':
+    resolution: {integrity: sha512-8ofX7gkZcLj9H9rSd50mCgm3SSF8C7XoclxJuLoV0Cz3rEQ1tv9MZRYYvJtm9n1BiEQQMzSmE/w2AEkNacLYfg==}
     engines: {node: '>=18'}
 
   '@monaco-editor/loader@1.5.0':
@@ -7569,7 +7569,7 @@ snapshots:
     dependencies:
       '@h1deya/json-schema-to-zod': 0.1.1(zod@3.25.75)
       '@langchain/core': 0.3.62(openai@5.7.0(ws@8.18.2)(zod@3.25.75))
-      '@modelcontextprotocol/sdk': 1.15.0
+      '@modelcontextprotocol/sdk': 1.16.0
       zod: 3.25.75
     transitivePeerDependencies:
       - openai
@@ -7802,7 +7802,7 @@ snapshots:
     transitivePeerDependencies:
       - ws
 
-  '@modelcontextprotocol/sdk@1.15.0':
+  '@modelcontextprotocol/sdk@1.16.0':
     dependencies:
       ajv: 6.12.6
       content-type: 1.0.5
