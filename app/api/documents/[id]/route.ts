@@ -1,6 +1,7 @@
-import { and, desc,eq } from 'drizzle-orm';
+import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import { readFile, writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
+import { join, resolve } from 'path';
 import { z } from 'zod';
 
 import { authenticateApiKey } from '@/app/api/auth';
@@ -95,7 +96,13 @@ export async function GET(
       .where(
         and(
           eq(docsTable.uuid, documentId),
-          eq(docsTable.profile_uuid, activeProfile.uuid)
+          or(
+            eq(docsTable.profile_uuid, activeProfile.uuid),
+            and(
+              eq(docsTable.project_uuid, activeProfile.project_uuid),
+              isNull(docsTable.profile_uuid)
+            )
+          )
         )
       );
 
@@ -160,11 +167,54 @@ export async function GET(
     // Include content if requested
     if (validatedParams.includeContent === 'true') {
       try {
-        const content = await readFile(document.file_path, 'utf-8');
-        response.content = content;
+        // Resolve the file path - handle both relative and absolute paths
+        const uploadsDir = process.env.UPLOADS_DIR || '/home/pluggedin/uploads';
+        const filePath = document.file_path.startsWith('/') 
+          ? document.file_path 
+          : join(uploadsDir, document.file_path);
+        
+        // Validate the resolved path is within uploads directory
+        const resolvedPath = resolve(filePath);
+        const resolvedUploadsDir = resolve(uploadsDir);
+        
+        if (!resolvedPath.startsWith(resolvedUploadsDir)) {
+          console.error('Path traversal attempt detected:', document.file_path);
+          return NextResponse.json(
+            { error: 'Invalid file path' },
+            { status: 403 }
+          );
+        }
+        
+        const mimeType = document.mime_type || 'text/plain';
+        
+        // Check if file is binary
+        const isBinary = !mimeType.startsWith('text/') && 
+                         mimeType !== 'application/json' &&
+                         mimeType !== 'application/xml';
+        
+        if (isBinary) {
+          // Read as buffer and encode to base64
+          const buffer = await readFile(filePath);
+          response.content = buffer.toString('base64');
+          response.contentEncoding = 'base64';
+        } else {
+          // Read as text
+          const content = await readFile(filePath, 'utf-8');
+          response.content = content;
+          response.contentEncoding = 'utf-8';
+        }
       } catch (error) {
         console.error('Error reading document content:', error);
-        response.contentError = 'Failed to read document content';
+        console.error('File path attempted:', document.file_path);
+        // Return error status instead of success with error field
+        return NextResponse.json(
+          { 
+            error: 'Failed to read document content', 
+            details: error instanceof Error ? error.message : 'Unknown error',
+            ...(process.env.NODE_ENV === 'development' && { filePath: document.file_path })
+          },
+          { status: 500 }
+        );
       }
     }
 
