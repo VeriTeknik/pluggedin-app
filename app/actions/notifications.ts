@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { notificationsTable } from '@/db/schema';
 import type { NotificationMetadata } from '@/lib/types/notifications';
+import { sanitizeMetadata } from '@/lib/types/notifications';
 
 export type NotificationType = 'SYSTEM' | 'ALERT' | 'INFO' | 'SUCCESS' | 'WARNING' | 'CUSTOM';
 export type NotificationSeverity = 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT';
@@ -50,6 +51,37 @@ export async function createNotification(options: CreateNotificationOptions) {
   }
 }
 
+/**
+ * Shared helper to fetch a notification and sanitize its metadata.
+ * Reduces duplication across mark/read and toggle functions.
+ */
+async function getNotificationWithMetadata(
+  id: string,
+  profileUuid: string
+): Promise<{
+  notification: typeof notificationsTable.$inferSelect | null;
+  metadata: NotificationMetadata;
+}> {
+  const results = await db.select()
+    .from(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.id, id),
+        eq(notificationsTable.profile_uuid, profileUuid)
+      )
+    )
+    .limit(1);
+
+  if (results.length === 0) {
+    return { notification: null, metadata: {} };
+  }
+
+  const notification = results[0];
+  const metadata = sanitizeMetadata(notification.metadata);
+
+  return { notification, metadata };
+}
+
 export async function getNotifications(profileUuid: string, onlyUnread = false) {
   try {
     let query = db.select()
@@ -83,29 +115,19 @@ export async function getNotifications(profileUuid: string, onlyUnread = false) 
 
 export async function markNotificationAsRead(id: string, profileUuid: string) {
   try {
-    // First get the current notification to preserve existing metadata
-    const notification = await db.select()
-      .from(notificationsTable)
-      .where(
-        and(
-          eq(notificationsTable.id, id),
-          eq(notificationsTable.profile_uuid, profileUuid)
-        )
-      )
-      .limit(1);
+    const { notification, metadata } = await getNotificationWithMetadata(id, profileUuid);
     
-    if (notification.length === 0) {
+    if (!notification) {
       return { 
         success: false, 
         error: 'Notification not found' 
       };
     }
     
-    const existingMetadata = notification[0].metadata as NotificationMetadata || {};
     const updatedMetadata: NotificationMetadata = {
-      ...existingMetadata,
+      ...metadata,
       actions: {
-        ...existingMetadata.actions,
+        ...metadata.actions,
         markedReadAt: new Date().toISOString(),
         markedReadProfileUuid: profileUuid
       }
@@ -201,31 +223,21 @@ export async function deleteAllNotifications(profileUuid: string) {
 
 export async function toggleNotificationCompleted(id: string, profileUuid: string) {
   try {
-    // First get the current completed status
-    const notification = await db.select()
-      .from(notificationsTable)
-      .where(
-        and(
-          eq(notificationsTable.id, id),
-          eq(notificationsTable.profile_uuid, profileUuid)
-        )
-      )
-      .limit(1);
+    const { notification, metadata } = await getNotificationWithMetadata(id, profileUuid);
     
-    if (notification.length === 0) {
+    if (!notification) {
       return { 
         success: false, 
         error: 'Notification not found' 
       };
     }
     
-    const existingMetadata = notification[0].metadata as NotificationMetadata || {};
-    const isCompleting = !notification[0].completed;
+    const isCompleting = !notification.completed;
     
     const updatedMetadata: NotificationMetadata = {
-      ...existingMetadata,
+      ...metadata,
       actions: {
-        ...existingMetadata.actions,
+        ...metadata.actions,
         ...(isCompleting ? {
           completedAt: new Date().toISOString(),
           completedProfileUuid: profileUuid,
@@ -269,31 +281,21 @@ export async function toggleNotificationCompletedViaAPI(
   apiKeyName?: string
 ) {
   try {
-    // First get the current completed status
-    const notification = await db.select()
-      .from(notificationsTable)
-      .where(
-        and(
-          eq(notificationsTable.id, id),
-          eq(notificationsTable.profile_uuid, profileUuid)
-        )
-      )
-      .limit(1);
+    const { notification, metadata } = await getNotificationWithMetadata(id, profileUuid);
     
-    if (notification.length === 0) {
+    if (!notification) {
       return { 
         success: false, 
         error: 'Notification not found' 
       };
     }
     
-    const existingMetadata = notification[0].metadata as NotificationMetadata || {};
-    const isCompleting = !notification[0].completed;
+    const isCompleting = !notification.completed;
     
     const updatedMetadata: NotificationMetadata = {
-      ...existingMetadata,
+      ...metadata,
       actions: {
-        ...existingMetadata.actions,
+        ...metadata.actions,
         ...(isCompleting ? {
           completedAt: new Date().toISOString(),
           completedProfileUuid: profileUuid,
@@ -307,7 +309,8 @@ export async function toggleNotificationCompletedViaAPI(
       // Add API source info if completing
       ...(isCompleting && apiKeyId ? {
         source: {
-          ...existingMetadata.source,
+          ...(metadata.source || {}),
+          type: metadata.source?.type || 'api',
           apiKeyId,
           apiKeyName
         }

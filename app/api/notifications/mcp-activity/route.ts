@@ -195,8 +195,8 @@ export async function POST(request: Request) {
           profileUuid: auth.activeProfile.uuid,
           mcpServer: serverName,
           mcpServerUuid: serverUuid,
-          apiKeyId: auth.apiKey?.id,
-          apiKeyName: auth.apiKey?.name
+          apiKeyId: auth.apiKey?.uuid,
+          apiKeyName: auth.apiKey?.name || undefined
         },
         mcpActivity: {
           action,

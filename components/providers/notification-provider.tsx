@@ -54,7 +54,12 @@ export function NotificationProvider({
     try {
       const result = await getNotifications(profileUuid);
       if (result.success) {
-        setNotifications(result.notifications || []);
+        // Transform null metadata to undefined to match the Notification type
+        const transformedNotifications = (result.notifications || []).map(n => ({
+          ...n,
+          metadata: n.metadata || undefined
+        }));
+        setNotifications(transformedNotifications);
       } else {
         console.error('Failed to load notifications:', result.error);
       }

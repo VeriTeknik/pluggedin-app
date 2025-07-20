@@ -86,8 +86,8 @@ export async function POST(request: Request) {
       source: {
         type: 'api',
         profileUuid: auth.activeProfile.uuid,
-        apiKeyId: auth.apiKey?.id,
-        apiKeyName: auth.apiKey?.name
+        apiKeyId: auth.apiKey?.uuid,
+        apiKeyName: auth.apiKey?.name || undefined
       },
       task: {
         priority: severity === 'ALERT' ? 'high' : severity === 'WARNING' ? 'medium' : 'low'

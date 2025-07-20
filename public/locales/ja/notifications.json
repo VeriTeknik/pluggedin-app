@@ -57,7 +57,12 @@
       "actions": {
         "markedRead": "{{time}} に既読",
         "completed": "{{time}} に完了",
-        "completedVia": "{{method}} で {{time}} に完了"
+        "completedVia": "{{method}} で {{time}} に完了",
+        "method": {
+          "mcp": "MCP",
+          "web": "ウェブ",
+          "api": "API"
+        }
       }
     }
   }

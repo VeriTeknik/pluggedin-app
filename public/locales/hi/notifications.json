@@ -57,7 +57,12 @@
       "actions": {
         "markedRead": "{{time}} पढ़ा गया",
         "completed": "{{time}} पूर्ण",
-        "completedVia": "{{method}} के माध्यम से {{time}} पूर्ण"
+        "completedVia": "{{method}} के माध्यम से {{time}} पूर्ण",
+        "method": {
+          "mcp": "MCP",
+          "web": "वेब",
+          "api": "API"
+        }
       }
     }
   }

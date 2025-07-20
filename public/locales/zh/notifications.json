@@ -57,7 +57,12 @@
       "actions": {
         "markedRead": "已读 {{time}}",
         "completed": "已完成 {{time}}",
-        "completedVia": "通过 {{method}} 完成于 {{time}}"
+        "completedVia": "通过 {{method}} 完成于 {{time}}",
+        "method": {
+          "mcp": "MCP",
+          "web": "网页",
+          "api": "API"
+        }
       }
     }
   }

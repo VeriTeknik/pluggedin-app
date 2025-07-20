@@ -57,7 +57,12 @@
       "actions": {
         "markedRead": "Gelezen {{time}}",
         "completed": "Voltooid {{time}}",
-        "completedVia": "Voltooid via {{method}} {{time}}"
+        "completedVia": "Voltooid via {{method}} {{time}}",
+        "method": {
+          "mcp": "MCP",
+          "web": "Web",
+          "api": "API"
+        }
       }
     }
   }

@@ -57,7 +57,12 @@
       "actions": {
         "markedRead": "Read {{time}}",
         "completed": "Completed {{time}}",
-        "completedVia": "Completed via {{method}} {{time}}"
+        "completedVia": "Completed via {{method}} {{time}}",
+        "method": {
+          "mcp": "MCP",
+          "web": "Web",
+          "api": "API"
+        }
       }
     }
   }

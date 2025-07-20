@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { enUS, hi, ja, nl, tr, zhCN } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 
-import type { NotificationMetadata } from '@/lib/types/notifications';
+import type { NotificationMetadata, CompletedVia } from '@/lib/types/notifications';
 
 interface NotificationMetadataDisplayProps {
   metadata?: NotificationMetadata;
@@ -69,8 +69,17 @@ export function NotificationMetadataDisplay({
         return t('notifications.metadata.actions.completed', { time });
       }
       
+      // Map completion methods to translation keys
+      const methodTranslationKeys: Record<CompletedVia, string> = {
+        mcp: 'notifications.metadata.actions.method.mcp',
+        web: 'notifications.metadata.actions.method.web',
+        api: 'notifications.metadata.actions.method.api',
+      };
+
+      const methodKey = methodTranslationKeys[completedVia] || completedVia;
+
       return t('notifications.metadata.actions.completedVia', { 
-        method: completedVia === 'mcp' ? 'MCP' : 'Web',
+        method: t(methodKey),
         time 
       });
     }

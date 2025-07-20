@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { validate as validateUUID } from 'uuid';
 
 import { markNotificationAsRead } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
@@ -55,9 +56,8 @@ export async function PATCH(
       );
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(notificationId)) {
+    // Validate UUID format using library
+    if (!validateUUID(notificationId)) {
       return NextResponse.json(
         { error: 'Invalid notification ID format. Please use the UUID from the notification list.' },
         { status: 400 }

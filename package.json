@@ -65,6 +65,7 @@
     "@types/lodash": "^4.17.20",
     "@types/sanitize-html": "^2.16.0",
     "@types/swagger-ui-react": "^5.18.0",
+    "@types/uuid": "^10.0.0",
     "bcrypt": "^6.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -96,6 +97,7 @@
     "tailwind-merge": "^3.3.1",
     "tailwindcss-animate": "^1.0.7",
     "use-debounce": "^10.0.5",
+    "uuid": "^11.1.0",
     "vitest": "^3.2.4",
     "zod": "^3.25.75"
   },

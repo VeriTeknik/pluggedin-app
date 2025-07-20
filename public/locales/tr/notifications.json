@@ -57,7 +57,12 @@
       "actions": {
         "markedRead": "{{time}} okundu",
         "completed": "{{time}} tamamlandı",
-        "completedVia": "{{method}} ile {{time}} tamamlandı"
+        "completedVia": "{{method}} ile {{time}} tamamlandı",
+        "method": {
+          "mcp": "MCP",
+          "web": "Web",
+          "api": "API"
+        }
       }
     }
   }
