@@ -34,6 +34,36 @@
       "deleteAllError": "すべての通知の削除に失敗しました",
       "toggleCompleteError": "ノートのステータスを更新できませんでした"
     },
-    "customNotificationTitle": "カスタム通知"
+    "customNotificationTitle": "カスタム通知",
+    "search": {
+      "placeholder": "通知を検索..."
+    },
+    "filter": {
+      "severity": "重要度でフィルター",
+      "allSeverities": "すべての重要度"
+    },
+    "sort": {
+      "newest": "新しい順",
+      "oldest": "古い順"
+    },
+    "metadata": {
+      "source": {
+        "via": "{{source}} 経由",
+        "mcp": "MCP: {{server}}",
+        "api": "API: {{key}}",
+        "system": "システム",
+        "user": "ユーザー"
+      },
+      "actions": {
+        "markedRead": "{{time}} に既読",
+        "completed": "{{time}} に完了",
+        "completedVia": "{{method}} で {{time}} に完了",
+        "method": {
+          "mcp": "MCP",
+          "web": "ウェブ",
+          "api": "API"
+        }
+      }
+    }
   }
 }

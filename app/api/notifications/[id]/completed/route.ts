@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { validate as validateUUID } from 'uuid';
 
-import { markNotificationAsRead } from '@/app/actions/notifications';
+import { toggleNotificationCompletedViaAPI } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
 
 /**
  * @swagger
- * /api/notifications/{id}/read:
+ * /api/notifications/{id}/completed:
  *   patch:
- *     summary: Mark notification as read
- *     description: Marks a specific notification as read for the authenticated profile. Requires API key authentication.
+ *     summary: Toggle notification completed status
+ *     description: Toggles the completed status of a specific notification for the authenticated profile. Used for task-style notifications. Requires API key authentication.
  *     tags:
  *       - Notifications
  *     security:
@@ -23,7 +23,7 @@ import { authenticateApiKey } from '@/app/api/auth';
  *         description: The notification ID
  *     responses:
  *       200:
- *         description: Notification marked as read successfully
+ *         description: Notification completed status toggled successfully
  *         content:
  *           application/json:
  *             schema:
@@ -33,6 +33,9 @@ import { authenticateApiKey } from '@/app/api/auth';
  *                   type: boolean
  *                 message:
  *                   type: string
+ *                 completed:
+ *                   type: boolean
+ *                   description: The new completed status
  *       401:
  *         description: Unauthorized - Invalid API key
  *       404:
@@ -64,10 +67,12 @@ export async function PATCH(
       );
     }
 
-    // Mark the notification as read
-    const result = await markNotificationAsRead(
+    // Toggle the notification completed status
+    const result = await toggleNotificationCompletedViaAPI(
       notificationId,
-      auth.activeProfile.uuid
+      auth.activeProfile.uuid,
+      auth.apiKey?.uuid,
+      auth.apiKey?.name || undefined
     );
 
     if (!result.success) {
@@ -80,20 +85,20 @@ export async function PATCH(
       }
 
       return NextResponse.json(
-        { error: result.error || 'Failed to mark notification as read' },
+        { error: result.error || 'Failed to toggle notification completed status' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Notification marked as read',
+      message: 'Notification completed status toggled',
     });
   } catch (error) {
-    console.error('Error marking notification as read:', error);
+    console.error('Error toggling notification completed status:', error);
 
     return NextResponse.json(
-      { error: 'Failed to mark notification as read' },
+      { error: 'Failed to toggle notification completed status' },
       { status: 500 }
     );
   }

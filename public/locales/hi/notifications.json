@@ -34,6 +34,36 @@
       "deleteAllError": "सभी सूचनाएं हटाने में विफल",
       "toggleCompleteError": "नोट स्थिति अपडेट करने में विफल"
     },
-    "customNotificationTitle": "कस्टम सूचना"
+    "customNotificationTitle": "कस्टम सूचना",
+    "search": {
+      "placeholder": "सूचनाएं खोजें..."
+    },
+    "filter": {
+      "severity": "गंभीरता के अनुसार फ़िल्टर करें",
+      "allSeverities": "सभी गंभीरता स्तर"
+    },
+    "sort": {
+      "newest": "नवीनतम पहले",
+      "oldest": "सबसे पुराना पहले"
+    },
+    "metadata": {
+      "source": {
+        "via": "{{source}} के माध्यम से",
+        "mcp": "MCP: {{server}}",
+        "api": "API: {{key}}",
+        "system": "सिस्टम",
+        "user": "उपयोगकर्ता"
+      },
+      "actions": {
+        "markedRead": "{{time}} पढ़ा गया",
+        "completed": "{{time}} पूर्ण",
+        "completedVia": "{{method}} के माध्यम से {{time}} पूर्ण",
+        "method": {
+          "mcp": "MCP",
+          "web": "वेब",
+          "api": "API"
+        }
+      }
+    }
   }
 }

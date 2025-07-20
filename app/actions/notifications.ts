@@ -5,6 +5,8 @@ import { revalidatePath } from 'next/cache';
 
 import { db } from '@/db';
 import { notificationsTable } from '@/db/schema';
+import type { NotificationMetadata } from '@/lib/types/notifications';
+import { sanitizeMetadata } from '@/lib/types/notifications';
 
 export type NotificationType = 'SYSTEM' | 'ALERT' | 'INFO' | 'SUCCESS' | 'WARNING' | 'CUSTOM';
 export type NotificationSeverity = 'INFO' | 'SUCCESS' | 'WARNING' | 'ALERT';
@@ -17,6 +19,7 @@ interface CreateNotificationOptions {
   link?: string;
   expiresInDays?: number;
   severity?: NotificationSeverity;
+  metadata?: NotificationMetadata;
 }
 
 export async function createNotification(options: CreateNotificationOptions) {
@@ -32,6 +35,7 @@ export async function createNotification(options: CreateNotificationOptions) {
       message: options.message,
       link: options.link,
       severity: options.severity,
+      metadata: options.metadata || {},
       created_at: new Date(),
       expires_at: expiresAt,
     });
@@ -45,6 +49,37 @@ export async function createNotification(options: CreateNotificationOptions) {
       error: error instanceof Error ? error.message : 'Unknown error' 
     };
   }
+}
+
+/**
+ * Shared helper to fetch a notification and sanitize its metadata.
+ * Reduces duplication across mark/read and toggle functions.
+ */
+async function getNotificationWithMetadata(
+  id: string,
+  profileUuid: string
+): Promise<{
+  notification: typeof notificationsTable.$inferSelect | null;
+  metadata: NotificationMetadata;
+}> {
+  const results = await db.select()
+    .from(notificationsTable)
+    .where(
+      and(
+        eq(notificationsTable.id, id),
+        eq(notificationsTable.profile_uuid, profileUuid)
+      )
+    )
+    .limit(1);
+
+  if (results.length === 0) {
+    return { notification: null, metadata: {} };
+  }
+
+  const notification = results[0];
+  const metadata = sanitizeMetadata(notification.metadata);
+
+  return { notification, metadata };
 }
 
 export async function getNotifications(profileUuid: string, onlyUnread = false) {
@@ -80,8 +115,29 @@ export async function getNotifications(profileUuid: string, onlyUnread = false) 
 
 export async function markNotificationAsRead(id: string, profileUuid: string) {
   try {
+    const { notification, metadata } = await getNotificationWithMetadata(id, profileUuid);
+    
+    if (!notification) {
+      return { 
+        success: false, 
+        error: 'Notification not found' 
+      };
+    }
+    
+    const updatedMetadata: NotificationMetadata = {
+      ...metadata,
+      actions: {
+        ...metadata.actions,
+        markedReadAt: new Date().toISOString(),
+        markedReadProfileUuid: profileUuid
+      }
+    };
+    
     await db.update(notificationsTable)
-      .set({ read: true })
+      .set({ 
+        read: true,
+        metadata: updatedMetadata
+      })
       .where(
         and(
           eq(notificationsTable.id, id),
@@ -167,27 +223,39 @@ export async function deleteAllNotifications(profileUuid: string) {
 
 export async function toggleNotificationCompleted(id: string, profileUuid: string) {
   try {
-    // First get the current completed status
-    const notification = await db.select()
-      .from(notificationsTable)
-      .where(
-        and(
-          eq(notificationsTable.id, id),
-          eq(notificationsTable.profile_uuid, profileUuid)
-        )
-      )
-      .limit(1);
+    const { notification, metadata } = await getNotificationWithMetadata(id, profileUuid);
     
-    if (notification.length === 0) {
+    if (!notification) {
       return { 
         success: false, 
         error: 'Notification not found' 
       };
     }
     
+    const isCompleting = !notification.completed;
+    
+    const updatedMetadata: NotificationMetadata = {
+      ...metadata,
+      actions: {
+        ...metadata.actions,
+        ...(isCompleting ? {
+          completedAt: new Date().toISOString(),
+          completedProfileUuid: profileUuid,
+          completedVia: 'web'
+        } : {
+          completedAt: undefined,
+          completedProfileUuid: undefined,
+          completedVia: undefined
+        })
+      }
+    };
+    
     // Toggle the completed status
     await db.update(notificationsTable)
-      .set({ completed: !notification[0].completed })
+      .set({ 
+        completed: isCompleting,
+        metadata: updatedMetadata
+      })
       .where(
         and(
           eq(notificationsTable.id, id),
@@ -197,6 +265,73 @@ export async function toggleNotificationCompleted(id: string, profileUuid: strin
     
     revalidatePath('/notifications');
     return { success: true };
+  } catch (error) {
+    console.error('Toggle notification completed error:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
+
+export async function toggleNotificationCompletedViaAPI(
+  id: string, 
+  profileUuid: string,
+  apiKeyId?: string,
+  apiKeyName?: string
+) {
+  try {
+    const { notification, metadata } = await getNotificationWithMetadata(id, profileUuid);
+    
+    if (!notification) {
+      return { 
+        success: false, 
+        error: 'Notification not found' 
+      };
+    }
+    
+    const isCompleting = !notification.completed;
+    
+    const updatedMetadata: NotificationMetadata = {
+      ...metadata,
+      actions: {
+        ...metadata.actions,
+        ...(isCompleting ? {
+          completedAt: new Date().toISOString(),
+          completedProfileUuid: profileUuid,
+          completedVia: 'mcp'
+        } : {
+          completedAt: undefined,
+          completedProfileUuid: undefined,
+          completedVia: undefined
+        })
+      },
+      // Add API source info if completing
+      ...(isCompleting && apiKeyId ? {
+        source: {
+          ...(metadata.source || {}),
+          type: metadata.source?.type || 'api',
+          apiKeyId,
+          apiKeyName
+        }
+      } : {})
+    };
+    
+    // Toggle the completed status
+    await db.update(notificationsTable)
+      .set({ 
+        completed: isCompleting,
+        metadata: updatedMetadata
+      })
+      .where(
+        and(
+          eq(notificationsTable.id, id),
+          eq(notificationsTable.profile_uuid, profileUuid)
+        )
+      );
+    
+    revalidatePath('/notifications');
+    return { success: true, completed: isCompleting };
   } catch (error) {
     console.error('Toggle notification completed error:', error);
     return { 

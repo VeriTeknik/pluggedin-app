@@ -34,6 +34,36 @@
       "deleteAllError": "删除所有通知失败",
       "toggleCompleteError": "无法更新笔记状态"
     },
-    "customNotificationTitle": "自定义通知"
+    "customNotificationTitle": "自定义通知",
+    "search": {
+      "placeholder": "搜索通知..."
+    },
+    "filter": {
+      "severity": "按严重程度筛选",
+      "allSeverities": "所有严重程度"
+    },
+    "sort": {
+      "newest": "最新优先",
+      "oldest": "最旧优先"
+    },
+    "metadata": {
+      "source": {
+        "via": "通过 {{source}}",
+        "mcp": "MCP: {{server}}",
+        "api": "API: {{key}}",
+        "system": "系统",
+        "user": "用户"
+      },
+      "actions": {
+        "markedRead": "已读 {{time}}",
+        "completed": "已完成 {{time}}",
+        "completedVia": "通过 {{method}} 完成于 {{time}}",
+        "method": {
+          "mcp": "MCP",
+          "web": "网页",
+          "api": "API"
+        }
+      }
+    }
   }
 }

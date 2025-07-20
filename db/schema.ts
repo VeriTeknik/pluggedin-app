@@ -1,4 +1,5 @@
 import { relations,sql } from 'drizzle-orm';
+import type { NotificationMetadata } from '@/lib/types/notifications';
 import {
   boolean,
   index,
@@ -630,6 +631,7 @@ export const notificationsTable = pgTable("notifications", {
   link: text("link"),
   severity: text("severity"), // For MCP notifications: INFO, SUCCESS, WARNING, ALERT
   completed: boolean("completed").default(false).notNull(), // For todo-style checkmarks on custom notifications
+  metadata: jsonb("metadata").default({}).$type<NotificationMetadata>(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   expires_at: timestamp("expires_at", { withTimezone: true }),
 },

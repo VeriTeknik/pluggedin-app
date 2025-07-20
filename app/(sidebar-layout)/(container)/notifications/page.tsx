@@ -34,6 +34,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
+import { NotificationMetadataDisplay } from '@/components/ui/notification-metadata';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Select,
@@ -448,6 +449,7 @@ export default function NotificationsPage() {
                                   {notification.message}
                                 </ReactMarkdown>
                               </div>
+                              <NotificationMetadataDisplay metadata={notification.metadata} />
                               <div className="flex justify-between items-center mt-3">
                                 {notification.link ? (
                                   <Link

@@ -34,6 +34,36 @@
       "deleteAllError": "Verwijderen van alle notificaties mislukt",
       "toggleCompleteError": "Bijwerken van notitie status mislukt"
     },
-    "customNotificationTitle": "Aangepaste melding"
+    "customNotificationTitle": "Aangepaste melding",
+    "search": {
+      "placeholder": "Zoek notificaties..."
+    },
+    "filter": {
+      "severity": "Filter op ernst",
+      "allSeverities": "Alle ernstniveaus"
+    },
+    "sort": {
+      "newest": "Nieuwste eerst",
+      "oldest": "Oudste eerst"
+    },
+    "metadata": {
+      "source": {
+        "via": "via {{source}}",
+        "mcp": "MCP: {{server}}",
+        "api": "API: {{key}}",
+        "system": "Systeem",
+        "user": "Gebruiker"
+      },
+      "actions": {
+        "markedRead": "Gelezen {{time}}",
+        "completed": "Voltooid {{time}}",
+        "completedVia": "Voltooid via {{method}} {{time}}",
+        "method": {
+          "mcp": "MCP",
+          "web": "Web",
+          "api": "API"
+        }
+      }
+    }
   }
 }

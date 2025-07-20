@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { createNotification } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
 import { sendEmail as sendEmailHelper } from '@/lib/email';
+import type { NotificationMetadata } from '@/lib/types/notifications';
 
 const customNotificationSchema = z.object({
   title: z.string().optional(),
@@ -81,6 +82,18 @@ export async function POST(request: Request) {
     // Use provided title or default English title (localization handled by UI)
     const title = providedTitle || "Custom notification";
     
+    const metadata: NotificationMetadata = {
+      source: {
+        type: 'api',
+        profileUuid: auth.activeProfile.uuid,
+        apiKeyId: auth.apiKey?.uuid,
+        apiKeyName: auth.apiKey?.name || undefined
+      },
+      task: {
+        priority: severity === 'ALERT' ? 'high' : severity === 'WARNING' ? 'medium' : 'low'
+      }
+    };
+
     await createNotification({
       profileUuid: auth.activeProfile.uuid,
       type: 'CUSTOM', // Always use CUSTOM type for custom notifications
@@ -88,6 +101,7 @@ export async function POST(request: Request) {
       message,
       severity, // Pass the severity for MCP notifications
       expiresInDays: 30, // Custom notifications expire in 30 days
+      metadata
     });
 
     let emailSent = false;
