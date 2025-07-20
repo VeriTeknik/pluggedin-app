@@ -54,10 +54,22 @@ export function LandingHeroSection() {
           {t('hero.subheadline')}
         </p>
 
+        {/* Value Banner */}
+        <div
+          className={cn(
+            'mt-6 p-4 rounded-lg bg-primary/5 border border-primary/20 max-w-2xl transition-all duration-700 delay-250 ease-in-out',
+            mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+          )}
+        >
+          <p className="text-base font-medium text-foreground">
+            {t('hero.valueBanner')}
+          </p>
+        </div>
+
         {/* Analogy */}
         <p
           className={cn(
-            'mt-2 text-sm font-medium text-primary italic transition-all duration-700 delay-300 ease-in-out',
+            'mt-4 text-sm font-medium text-primary italic transition-all duration-700 delay-300 ease-in-out',
              mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
           )}
         >
@@ -89,8 +101,7 @@ export function LandingHeroSection() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-             {/* TODO: Update href to a relevant section or docs page */}
-            <Link href="#features">
+            <Link href="#why-pluggedin">
               {t('hero.cta.learnMore')}
             </Link>
           </Button>

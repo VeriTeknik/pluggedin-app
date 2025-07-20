@@ -1,31 +1,126 @@
 {
   "navigation": {
     "enterApp": "Enter App",
+    "whyPluggedin": "Why plugged.in",
     "features": "Features",
+    "aiModels": "AI Models",
+    "pricing": "Pricing",
     "community": "Community",
     "collections": "Collections",
     "playground": "Playground",
     "documentation": "Documentation",
-    "getStarted": "Get Started"
+    "getStarted": "Start Free"
   },
   "hero": {
     "title": "The AI Crossroads",
     "subtitle": "Connect, create, and extend your AI capabilities with a unified platform. Build and manage plugins that enhance your AI workflows.",
-    "headline": "Connect, Share, and Discover MCP Servers",
-    "subheadline": "The community hub, universal proxy, and AI knowledge platform for the Model Context Protocol",
+    "headline": "The AI Crossroads: Connect Every Model, Own Every Interaction",
+    "subheadline": "Powered by MCP Registry - The Open Standard for AI Data Ownership",
     "analogy": "\"Your AI ecosystem, unified and social\"",
+    "valueBanner": "Your AI-Generated Data. Every Model. Every Interaction. Under Your Control.",
     "openSource": "Proudly Open Source",
-    "version": "v1.0.0",
+    "version": "v2.7.0",
     "cta": {
-      "getStarted": "Join the Community",
-      "learnMore": "Explore Features"
+      "getStarted": "Start Free",
+      "learnMore": "Why plugged.in"
+    }
+  },
+  "whyPluggedin": {
+    "title": "Why plugged.in?",
+    "subtitle": "The crossroads where all your AI interactions converge",
+    "problem": {
+      "title": "The Problem We Solve",
+      "description": "Every time you interact with AI - whether it's Claude, GPT, or any other model - valuable data is generated. Insights, configurations, successful prompts, and contextual knowledge. But this data lives in silos, controlled by different platforms, impossible to leverage across tools."
+    },
+    "solution": {
+      "title": "Our Solution",
+      "description": "plugged.in acts as the universal crossroads where:",
+      "benefit1": "Every AI interaction flows through your controlled environment",
+      "benefit2": "Every piece of generated data remains yours to own, analyze, and reuse",
+      "benefit3": "Every model connects through a single, unified interface",
+      "benefit4": "Every insight builds upon the last, creating compounding value"
+    },
+    "bridge": {
+      "title": "Built on Open Standards",
+      "description": "We leverage Model Context Protocol (MCP) as the technical foundation - not because it's trendy, but because it's the open standard that makes true data ownership possible. MCP ensures your data isn't locked in proprietary platforms but instead becomes your portable asset."
+    },
+    "visual": {
+      "hub": "plugged.in Hub",
+      "hubDesc": "Your controlled environment",
+      "yourData": "Your Data",
+      "yourDataDesc": "Owned, portable, and reusable"
+    },
+    "cta": {
+      "title": "One platform. All models. Your data. Your future.",
+      "subtitle": "Join thousands who've taken control of their AI-generated data"
+    },
+    "aiModels": {
+      "claude": "Claude",
+      "gpt4": "GPT-4",
+      "llama": "Llama",
+      "gemini": "Gemini"
+    }
+  },
+  "aiModels": {
+    "badge": "Powered by Langchain",
+    "title": "One Platform, Every Model",
+    "subtitle": "Test the same prompt across models instantly. Your data works everywhere - no retraining needed.",
+    "moreModels": "Plus dozens more models through our Langchain integration",
+    "viewAll": "View All Models",
+    "feature1": {
+      "title": "Instant Model Switching",
+      "description": "Compare responses from different models side-by-side with one click."
+    },
+    "feature2": {
+      "title": "Unified Prompting",
+      "description": "Your prompts and context work seamlessly across all AI models."
+    },
+    "feature3": {
+      "title": "Model-Agnostic Data",
+      "description": "Build once, use everywhere. Your AI assets aren't locked to any model."
+    },
+    "cta": {
+      "title": "Ready to test with multiple models?",
+      "button": "Try the Playground"
     }
   },
   "features": {
     "title": "Features",
     "subtitle": "Everything you need to manage your MCP servers",
-    "sectionTitle": "A Complete AI Ecosystem Platform",
-    "sectionSubtitle": "Connect, share, discover, and extend your AI capabilities with enterprise-grade features.",
+    "sectionTitle": "Own Your AI Journey",
+    "sectionSubtitle": "From data ownership to community collaboration - everything you need in one platform.",
+    "universalAiHub": {
+      "title": "Universal AI Hub",
+      "description": "Connect Claude, GPT, Llama, and any AI model through one interface. Test the same prompt across models instantly."
+    },
+    "dataSovereignty": {
+      "title": "Data Sovereignty",
+      "description": "Every prompt, configuration, and insight stays under your control. Export your data anytime in open formats."
+    },
+    "aiAssetManagement": {
+      "title": "AI Asset Management",
+      "description": "Your prompts, configurations, and context become reusable assets. Build a library of what works for your specific needs."
+    },
+    "crossModelMemory": {
+      "title": "Cross-Model Memory",
+      "description": "Coming Soon: Build knowledge that works across all AI tools, not trapped in one platform."
+    },
+    "mcpRegistry": {
+      "title": "MCP Registry",
+      "description": "Access 500+ integrations through the open MCP standard. One-click installation with community ratings and reviews."
+    },
+    "endToEndEncryption": {
+      "title": "End-to-End Encryption",
+      "description": "Military-grade protection for your AI intellectual property. Your configurations and data stay secure at rest and in transit."
+    },
+    "trendingAnalytics": {
+      "title": "Trending Analytics",
+      "description": "Discover popular servers with real-time analytics. Learn from the community while keeping your data private."
+    },
+    "oauthTokenManagement": {
+      "title": "OAuth & Token Management",
+      "description": "Secure authentication flows with built-in OAuth support. Manage tokens and permissions across all your AI services."
+    },
     "communitySharing": {
       "title": "Social Platform & Community",
       "description": "Share MCP servers, follow developers, get notifications, and build your AI network. Public profiles, ratings, and collaborative discovery."
@@ -96,9 +191,9 @@
     "description": "Share your MCP servers, follow developers, get real-time notifications, and collaborate within our social platform. Build your reputation with ratings, reviews, and community contributions.",
     "action": "Join Community",
     "stats": {
-      "developers": "10K+ Developers",
-      "servers": "5000+ MCP Servers",
-      "collections": "1500+ Collections",
+      "developers": "1K+ Developers",
+      "servers": "500+ MCP Servers",
+      "collections": "Coming Soon",
       "languages": "6 Languages"
     },
     "socialFeatures": {
@@ -170,9 +265,9 @@
   },
   "collections": {
     "title": "Smart Collections & Version Control",
-    "subtitle": "Organize, version, and share your MCP server collections",
-    "description": "Create versioned collections, track installations, collaborate with teams, and maintain different configurations for dev, staging, and production.",
-    "action": "Explore Collections",
+    "subtitle": "Coming Soon: Organize, version, and share your MCP server collections",
+    "description": "Soon you'll be able to create versioned collections, track installations, collaborate with teams, and maintain different configurations for dev, staging, and production.",
+    "action": "Learn More",
     "versionControl": {
       "title": "Version Control for Collections",
       "feature1": "Create snapshots of your collections at any point",
@@ -201,37 +296,37 @@
     "action": "Start Sharing"
   },
   "security": {
-    "title": "Enterprise-Grade Security",
-    "subtitle": "Your AI infrastructure, protected at every layer",
-    "description": "Built with security-first architecture featuring multi-layer authentication, sandboxed execution, and comprehensive audit trails.",
+    "title": "Your Data, Your Rules",
+    "subtitle": "Complete control over your AI-generated intellectual property",
+    "description": "We believe security means ownership. Every piece of data you generate remains yours, protected by enterprise-grade security and exportable anytime.",
     "features": {
-      "authentication": {
-        "title": "Multi-Layer Authentication",
-        "desc": "OAuth providers, API keys, and session management with JWT tokens"
+      "dataOwnership": {
+        "title": "Full Data Ownership",
+        "desc": "Every prompt, response, and configuration belongs to you. Export anytime in open formats."
       },
-      "sandboxing": {
-        "title": "Firejail Sandboxing",
-        "desc": "Automatic security sandboxing for all STDIO MCP servers on Linux"
+      "endToEndEncryption": {
+        "title": "End-to-End Encryption",
+        "desc": "Your AI configurations and data stay secure at rest and in transit with military-grade encryption"
       },
-      "isolation": {
-        "title": "Project Isolation",
-        "desc": "Complete data isolation between projects with role-based access control"
+      "auditEverything": {
+        "title": "Audit Everything",
+        "desc": "Full transparency on how your AI data is used. Track every operation and API call."
       },
-      "audit": {
-        "title": "Comprehensive Audit Trails",
-        "desc": "Track all operations, API calls, and user actions for compliance"
+      "portableData": {
+        "title": "Portable Encryption",
+        "desc": "Take your encrypted data anywhere. No vendor lock-in, ever."
       },
-      "encryption": {
-        "title": "Data Encryption",
-        "desc": "End-to-end encryption for sensitive data and API communications"
+      "oauthSecurity": {
+        "title": "OAuth & Token Security",
+        "desc": "Secure authentication flows with fine-grained permissions across all your AI services"
       },
       "selfhost": {
         "title": "Self-Hosting Option",
-        "desc": "Deploy on your infrastructure for complete control and compliance"
+        "desc": "Ultimate control with on-premise deployment. Your data never leaves your infrastructure."
       }
     },
-    "compliance": "SOC2 Type II compliant infrastructure with regular security audits",
-    "action": "View Security Details"
+    "compliance": "Your data sovereignty is our priority. GDPR compliant with right to deletion and data portability.",
+    "action": "Learn About Data Ownership"
   },
   "developers": {
     "title": "Built for Developers",
@@ -270,36 +365,31 @@
     "action": "View Documentation"
   },
   "pricing": {
-    "title": "Simple, Transparent Pricing",
-    "subtitle": "Start free, scale as you grow",
+    "badge": "100% Free Forever",
+    "title": "Completely Free - No Hidden Costs",
+    "subtitle": "We believe in democratizing AI data ownership. Every feature, for everyone, forever.",
     "free": {
-      "title": "Free Forever",
-      "price": "$0",
-      "period": "/month",
-      "description": "Perfect for individuals and small teams",
-      "features": [
-        "Unlimited MCP servers",
-        "All AI models supported",
-        "5 RAG knowledge bases",
-        "Public profile & sharing",
-        "Community support"
-      ],
-      "cta": "Get Started Free"
+      "title": "Everything Included",
+      "description": "No limits, no tiers, no surprises",
+      "cta": "Get Started Now",
+      "note": "No credit card required • Always free for personal use",
+      "everything_included": "Everything included:"
     },
-    "pro": {
-      "title": "Pro",
-      "price": "$19",
-      "period": "/month",
-      "description": "For professional developers and teams",
-      "features": [
-        "Everything in Free",
-        "Unlimited RAG knowledge bases",
-        "Private collections",
-        "Priority support",
-        "Advanced analytics",
-        "Team collaboration"
-      ],
-      "cta": "Start Pro Trial"
+    "features": {
+      "unlimited_ai_model_connections": "Unlimited AI model connections",
+      "full_data_ownership_and_export": "Full data ownership and export",
+      "mcp_server_integrations": "500+ MCP server integrations",
+      "unlimited_workspaces_and_projects": "Unlimited workspaces and projects",
+      "community_sharing_and_collaboration": "Community sharing and collaboration",
+      "end_to_end_encryption": "End-to-end encryption",
+      "rag_document_storage": "RAG document storage",
+      "real_time_notifications": "Real-time notifications",
+      "oauth_authentication": "OAuth authentication",
+      "api_access": "API access"
+    },
+    "whyFree": {
+      "title": "Why is plugged.in free?",
+      "description": "We're building the future of AI data ownership. Our mission is to ensure everyone has control over their AI-generated data. By keeping the platform free, we're creating the largest ecosystem where developers can share, learn, and build together."
     },
     "enterprise": {
       "title": "Enterprise",
@@ -332,7 +422,7 @@
       },
       "step3": {
         "title": "3. Install MCP Proxy",
-        "desc": "Run: npx @pluggedin/mcp-proxy@latest"
+        "desc": "Run: npx @pluggedin/pluggedin-mcp-proxy@latest"
       },
       "step4": {
         "title": "4. Connect Client",

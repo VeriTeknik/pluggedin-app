@@ -5,11 +5,17 @@ import {
   Bell,
   Blocks, 
   Box, 
+  Brain,
+  Clock,
   Database,
   Globe, 
+  Key,
+  Lock,
+  Package,
   Search, 
   Share2, 
   Shield,
+  TrendingUp,
   TerminalSquare} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -20,10 +26,55 @@ interface Feature {
   icon: React.ElementType;
   titleKey: string;
   descriptionKey: string;
+  comingSoon?: boolean;
 }
 
-// Feature data with all 9 major features
+// Feature data organized by priority - data ownership first
 const features: Feature[] = [
+  // Data Ownership Features (Priority)
+  {
+    icon: Brain,
+    titleKey: 'features.universalAiHub.title',
+    descriptionKey: 'features.universalAiHub.description'
+  },
+  {
+    icon: Shield,
+    titleKey: 'features.dataSovereignty.title',
+    descriptionKey: 'features.dataSovereignty.description'
+  },
+  {
+    icon: Database,
+    titleKey: 'features.aiAssetManagement.title',
+    descriptionKey: 'features.aiAssetManagement.description'
+  },
+  {
+    icon: Clock,
+    titleKey: 'features.crossModelMemory.title',
+    descriptionKey: 'features.crossModelMemory.description',
+    comingSoon: true
+  },
+  // Technical Features
+  {
+    icon: Package,
+    titleKey: 'features.mcpRegistry.title',
+    descriptionKey: 'features.mcpRegistry.description'
+  },
+  {
+    icon: Lock,
+    titleKey: 'features.endToEndEncryption.title',
+    descriptionKey: 'features.endToEndEncryption.description'
+  },
+  {
+    icon: TrendingUp,
+    titleKey: 'features.trendingAnalytics.title',
+    descriptionKey: 'features.trendingAnalytics.description'
+  },
+  {
+    icon: Key,
+    titleKey: 'features.oauthTokenManagement.title',
+    descriptionKey: 'features.oauthTokenManagement.description'
+  },
+  // Community Features
   {
     icon: Share2,
     titleKey: 'features.communitySharing.title',
@@ -40,34 +91,9 @@ const features: Feature[] = [
     descriptionKey: 'features.workspaceOrganization.description'
   },
   {
-    icon: Search,
-    titleKey: 'features.advancedSearch.title',
-    descriptionKey: 'features.advancedSearch.description'
-  },
-  {
-    icon: TerminalSquare,
-    titleKey: 'features.mcpPlayground.title',
-    descriptionKey: 'features.mcpPlayground.description'
-  },
-  {
     icon: Database,
     titleKey: 'features.ragIntegration.title',
     descriptionKey: 'features.ragIntegration.description'
-  },
-  {
-    icon: Bell,
-    titleKey: 'features.notifications.title',
-    descriptionKey: 'features.notifications.description'
-  },
-  {
-    icon: Shield,
-    titleKey: 'features.security.title',
-    descriptionKey: 'features.security.description'
-  },
-  {
-    icon: Globe,
-    titleKey: 'features.internationalization.title',
-    descriptionKey: 'features.internationalization.description'
   }
 ];
 
@@ -94,11 +120,17 @@ const itemVariants = {
 };
 
 // Feature Card Component
-function FeatureCard({ icon: Icon, titleKey, descriptionKey }: Feature) {
+function FeatureCard({ icon: Icon, titleKey, descriptionKey, comingSoon }: Feature) {
   const { t } = useTranslation('landing');
+  
   return (
     <motion.div variants={itemVariants}>
-      <Card className="h-full hover:shadow-lg transition-shadow duration-300 border border-border/40">
+      <Card className="h-full hover:shadow-lg transition-shadow duration-300 border border-border/40 relative">
+        {comingSoon && (
+          <div className="absolute top-4 right-4 bg-primary/20 text-primary text-xs font-semibold px-2 py-1 rounded-full">
+            Coming Soon
+          </div>
+        )}
         <CardHeader>
           <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Icon className="h-6 w-6" />

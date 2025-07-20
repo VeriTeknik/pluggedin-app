@@ -96,9 +96,9 @@
     "description": "MCPサーバーを共有し、開発者をフォローし、リアルタイム通知を受け取り、ソーシャルプラットフォーム内で協力します。評価、レビュー、コミュニティ貢献で評判を構築します。",
     "action": "コミュニティに参加",
     "stats": {
-      "developers": "10,000+開発者",
-      "servers": "5,000+MCPサーバー",
-      "collections": "1,500+コレクション",
+      "developers": "1,000+開発者",
+      "servers": "500+MCPサーバー",
+      "collections": "近日公開",
       "languages": "6言語"
     },
     "socialFeatures": {
@@ -170,9 +170,9 @@
   },
   "collections": {
     "title": "スマートコレクション＆バージョン管理",
-    "subtitle": "MCPサーバーコレクションを整理、バージョン管理、共有",
-    "description": "バージョン管理されたコレクションを作成し、インストールを追跡し、チームと協力し、開発、ステージング、本番用の異なる構成を維持します。",
-    "action": "コレクションを探索",
+    "subtitle": "近日公開：MCPサーバーコレクションを整理、バージョン管理、共有",
+    "description": "まもなくバージョン管理されたコレクションを作成し、インストールを追跡し、チームと協力し、開発、ステージング、本番用の異なる構成を維持できるようになります。",
+    "action": "詳しく見る",
     "versionControl": {
       "title": "コレクションのバージョン管理",
       "feature1": "任意の時点でコレクションのスナップショットを作成",
@@ -270,36 +270,31 @@
     "action": "ドキュメントを表示"
   },
   "pricing": {
-    "title": "シンプルで透明な価格設定",
-    "subtitle": "無料で始めて、成長に合わせてスケール",
+    "badge": "100% 永久無料",
+    "title": "完全無料 - 隠れたコストなし",
+    "subtitle": "AIデータ所有権の民主化を信じています。すべての機能を、すべての人に、永遠に。",
     "free": {
-      "title": "永続無料",
-      "price": "$0",
-      "period": "/月",
-      "description": "個人および小規模チームに最適",
-      "features": [
-        "無制限MCPサーバー",
-        "すべてのAIモデルサポート",
-        "5つのRAG知識ベース",
-        "公開プロフィール＆共有",
-        "コミュニティサポート"
-      ],
-      "cta": "無料で始める"
+      "title": "すべて含まれています",
+      "description": "制限なし、階層なし、驚きなし",
+      "cta": "今すぐ始める",
+      "note": "クレジットカード不要 • 個人使用は常に無料",
+      "everything_included": "すべての機能が含まれています："
     },
-    "pro": {
-      "title": "プロ",
-      "price": "$19",
-      "period": "/月",
-      "description": "プロフェッショナル開発者とチーム向け",
-      "features": [
-        "無料プランのすべて",
-        "無制限RAG知識ベース",
-        "非公開コレクション",
-        "優先サポート",
-        "高度な分析",
-        "チーム協力"
-      ],
-      "cta": "プロトライアル開始"
+    "features": {
+      "unlimited_ai_model_connections": "無制限のAIモデル接続",
+      "full_data_ownership_and_export": "完全なデータ所有権とエクスポート",
+      "mcp_server_integrations": "500以上のMCPサーバー統合",
+      "unlimited_workspaces_and_projects": "無制限のワークスペースとプロジェクト",
+      "community_sharing_and_collaboration": "コミュニティ共有とコラボレーション",
+      "end_to_end_encryption": "エンドツーエンド暗号化",
+      "rag_document_storage": "RAGドキュメントストレージ",
+      "real_time_notifications": "リアルタイム通知",
+      "oauth_authentication": "OAuth認証",
+      "api_access": "APIアクセス"
+    },
+    "whyFree": {
+      "title": "なぜplugged.inは無料なのか？",
+      "description": "私たちはAIデータ所有権の未来を構築しています。私たちの使命は、誰もがAI生成データをコントロールできるようにすることです。プラットフォームを無料に保つことで、開発者が共有し、学び、一緒に構築できる最大のエコシステムを作り出しています。"
     },
     "enterprise": {
       "title": "エンタープライズ",
@@ -332,7 +327,7 @@
       },
       "step3": {
         "title": "3. MCPプロキシインストール",
-        "desc": "実行：npx @pluggedin/mcp-proxy@latest"
+        "desc": "実行：npx @pluggedin/pluggedin-mcp-proxy@latest"
       },
       "step4": {
         "title": "4. クライアント接続",

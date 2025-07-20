@@ -118,7 +118,7 @@ pnpm generate-encryption-key
   "mcpServers": {
     "pluggedin": {
       "command": "npx",
-      "args": ["-y", "@pluggedin/mcp-proxy@latest"],
+      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy@latest"],
       "env": {
         "PLUGGEDIN_API_KEY": "YOUR_API_KEY",
         "PLUGGEDIN_API_BASE_URL": "http://localhost:12005" // For self-hosted instances
@@ -133,7 +133,7 @@ pnpm generate-encryption-key
 For Cursor, you can use command-line arguments:
 
 ```bash
-npx -y @pluggedin/mcp-proxy@latest --pluggedin-api-key YOUR_API_KEY --pluggedin-api-base-url http://localhost:12005
+npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key YOUR_API_KEY --pluggedin-api-base-url http://localhost:12005
 ```
 
 ## 🏗️ System Architecture
