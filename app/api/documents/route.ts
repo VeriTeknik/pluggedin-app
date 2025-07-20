@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, lte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, isNull, lte, or, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
@@ -157,8 +157,16 @@ export async function GET(request: NextRequest) {
     // Build query conditions
     const conditions = [];
 
-    // Always filter by profile
-    conditions.push(eq(docsTable.profile_uuid, activeProfile.uuid));
+    // Filter by profile OR by project (for hub-wide library documents)
+    conditions.push(
+      or(
+        eq(docsTable.profile_uuid, activeProfile.uuid),
+        and(
+          eq(docsTable.project_uuid, activeProfile.project_uuid),
+          isNull(docsTable.profile_uuid)
+        )
+      )
+    );
 
     // Source filter
     if (validatedParams.source !== 'all') {
