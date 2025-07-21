@@ -19,6 +19,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
+import { SUPPORTED_FILE_TYPES } from '@/lib/file-types-config';
 import { cn } from '@/lib/utils';
 
 // 100 MB workspace storage limit
@@ -93,38 +94,7 @@ export function UploadDialog({
     onDrop,
     multiple: false,
     maxSize: STORAGE_LIMIT, // 100MB limit per file
-    accept: {
-      // Documents
-      'application/pdf': ['.pdf'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      
-      // Text files
-      'text/plain': ['.txt'],
-      'text/markdown': ['.md'],
-      'application/json': ['.json'],
-      'text/yaml': ['.yml', '.yaml'],
-      'application/xml': ['.xml'],
-      'text/html': ['.html'],
-      'text/css': ['.css'],
-      
-      // Programming languages
-      'text/javascript': ['.js'],
-      'application/javascript': ['.js'],
-      'text/typescript': ['.ts'],
-      'application/typescript': ['.ts', '.tsx'],
-      'text/jsx': ['.jsx'],
-      'text/python': ['.py'],
-      'text/java': ['.java'],
-      'text/c': ['.c', '.h'],
-      'text/cpp': ['.cpp'],
-      'text/go': ['.go'],
-      'text/rust': ['.rs'],
-      'application/x-sh': ['.sh'],
-      'text/x-shellscript': ['.bash'],
-      
-      // Images
-      'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp'],
-    }
+    accept: SUPPORTED_FILE_TYPES
   });
 
   return (

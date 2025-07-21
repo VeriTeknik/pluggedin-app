@@ -25,6 +25,8 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
+import { useProjects } from '@/hooks/use-projects';
+import { useDocxContent } from '@/hooks/useDocxContent';
 import { getFileLanguage, isDocxFile, isImageFile, isMarkdownFile, isPDFFile, isTextFile, isTextFileByExtension, isValidTextMimeType, ZOOM_LIMITS } from '@/lib/file-utils';
 import { Doc } from '@/types/library';
 
@@ -54,13 +56,15 @@ export function DocumentPreview({
   formatFileSize,
 }: DocumentPreviewProps) {
   const { t } = useTranslation('library');
+  const { currentProject } = useProjects();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [imageZoom, setImageZoom] = useState(1);
   const [currentDocIndex, setCurrentDocIndex] = useState(0);
   const [textContent, setTextContent] = useState<string | null>(null);
   const [isLoadingText, setIsLoadingText] = useState(false);
-  const [docxContent, setDocxContent] = useState<string | null>(null);
-  const [isLoadingDocx, setIsLoadingDocx] = useState(false);
+
+  // Use hook for DOCX content
+  const { docxContent, isLoadingDocx } = useDocxContent(doc, open, currentProject?.uuid);
 
   // Update current doc index when doc changes
   useEffect(() => {
@@ -86,7 +90,8 @@ export function DocumentPreview({
 
     if (isTextFile(doc.mime_type, doc.file_name)) {
       setIsLoadingText(true);
-      fetch(`/api/library/download/${doc.uuid}`)
+      const downloadUrl = `/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`;
+      fetch(downloadUrl)
         .then(res => {
           // Validate content type before processing
           const contentType = res.headers.get('content-type');
@@ -122,50 +127,9 @@ export function DocumentPreview({
           setIsLoadingText(false);
         });
     }
-  }, [doc, open]);
+  }, [doc, open, currentProject?.uuid]);
 
-  // Fetch DOCX content for DOCX files
-  useEffect(() => {
-    if (!doc || !open) {
-      setDocxContent(null);
-      return;
-    }
-
-    if (!isDocxFile(doc.mime_type, doc.name)) {
-      setDocxContent(null);
-      return;
-    }
-
-    setIsLoadingDocx(true);
-    setDocxContent(null);
-
-    fetch(`/api/documents/files/${doc.uuid}`)
-      .then(res => {
-        if (!res.ok) {
-          throw new Error('Failed to fetch DOCX file');
-        }
-        return res.arrayBuffer();
-      })
-      .then(async arrayBuffer => {
-        const mammoth = await import('mammoth');
-        const result = await mammoth.convertToHtml({ arrayBuffer });
-        
-        // Use DOMPurify for HTML sanitization
-        const DOMPurify = (await import('dompurify')).default;
-        const sanitized = DOMPurify.sanitize(result.value, { 
-          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'table', 'tr', 'td', 'th', 'thead', 'tbody'],
-          ALLOWED_ATTR: []
-        });
-        
-        setDocxContent(sanitized);
-        setIsLoadingDocx(false);
-      })
-      .catch(err => {
-        console.error('Failed to fetch DOCX content:', err);
-        setDocxContent(null);
-        setIsLoadingDocx(false);
-      });
-  }, [doc, open]);
+  // DOCX content now handled by useDocxContent hook
 
   const navigateToDoc = useCallback((direction: 'prev' | 'next') => {
     if (docs.length <= 1 || !onDocChange) return;
@@ -231,7 +195,7 @@ export function DocumentPreview({
     if (isPDF) {
       return (
         <PDFViewer
-          fileUrl={`/api/library/download/${doc.uuid}`}
+                      fileUrl={`/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`}
           className="w-full h-full"
         />
       );
@@ -245,7 +209,7 @@ export function DocumentPreview({
             style={{ transform: `scale(${imageZoom})` }}
           >
             <img
-              src={`/api/library/download/${doc.uuid}`}
+              src={`/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`}
               alt={doc.name}
               className="max-w-full max-h-full object-contain"
               draggable={false}
