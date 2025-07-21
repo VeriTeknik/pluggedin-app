@@ -94,13 +94,17 @@ export function DocumentPreview({
           }
           return res.text();
         })
-        .then(text => {
-          // Basic sanitization - remove any potential script tags or dangerous content
-          // For production, consider using a proper sanitization library like DOMPurify
-          const sanitized = text
-            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-            .replace(/javascript:/gi, '')
-            .replace(/on\w+\s*=/gi, '');
+        .then(async text => {
+          // Use DOMPurify for robust HTML sanitization
+          // Since we're dealing with text/code files, we want to strip ALL HTML
+          const DOMPurify = (await import('dompurify')).default;
+          
+          // For text files, we don't want any HTML at all - just plain text
+          const sanitized = DOMPurify.sanitize(text, { 
+            ALLOWED_TAGS: [],  // No HTML tags allowed
+            ALLOWED_ATTR: [],  // No attributes allowed
+            KEEP_CONTENT: true // Keep text content
+          });
           
           setTextContent(sanitized);
           setIsLoadingText(false);
