@@ -158,7 +158,6 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
             >
               <ChevronLeft className="mr-2 h-4 w-4" />
               <span className="hidden sm:inline">{t('navigation.previous')}</span>
-              <span className="sm:hidden">Geri</span>
             </Button>
 
             {currentStep < steps.length - 1 && (
@@ -169,7 +168,6 @@ export function SmartServerWizard({ open, onOpenChange, onSuccess, currentProfil
                 size="sm"
               >
                 <span className="hidden sm:inline">{t('navigation.next')}</span>
-                <span className="sm:hidden">İleri</span>
                 <ChevronRight className="ml-2 h-4 w-4" />
               </Button>
             )}
