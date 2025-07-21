@@ -272,9 +272,13 @@ export default function SidebarLayout({
             </SidebarGroup>
           </SidebarContent>
           <SidebarFooter className="mt-auto px-2 py-4">
-            <SidebarSeparator />
-            <div className="pt-2">
+            <SidebarSeparator className="group-data-[collapsible=icon]:hidden" />
+            <div className="pt-2 group-data-[collapsible=icon]:pt-0">
               <div className="group-data-[collapsible=icon]:hidden">
+                <UserMenu />
+              </div>
+              {/* Collapsed state - show compact user menu */}
+              <div className="hidden group-data-[collapsible=icon]:block group-data-[collapsible=icon]:text-center">
                 <UserMenu />
               </div>
             </div>

@@ -5,7 +5,6 @@ import { ArrowRight, Brain, Cloud, Database, Lock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 
 const containerVariants = {
   hidden: { opacity: 0 },

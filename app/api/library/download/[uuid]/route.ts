@@ -1,6 +1,6 @@
 import { readFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
-import { join, normalize, resolve } from 'path';
+import { join, resolve } from 'path';
 
 import { getDocByUuid } from '@/app/actions/library';
 import { authenticateApiKey } from '@/app/api/auth';
@@ -57,6 +57,10 @@ export async function GET(
     const doc = await getDocByUuid(userId, uuid, projectUuid || undefined);
     
     console.log('[Download] Document result:', doc ? 'Found' : 'Not found');
+    if (doc) {
+      console.log('[Download] Document file_path:', doc.file_path);
+      console.log('[Download] Platform:', process.platform);
+    }
     
     if (!doc) {
       return ErrorResponses.notFound();
@@ -68,19 +72,24 @@ export async function GET(
     
     // Check if running in local development (macOS)
     if (process.platform === 'darwin') {
-      // Local development - use the full path as stored in DB
-      requestedPath = resolve(normalize(doc.file_path));
-      // For local dev, we need to determine the uploads root from the path itself
-      // Assuming paths contain '/uploads/' directory
-      const uploadsIndex = requestedPath.indexOf('/uploads/');
-      if (uploadsIndex === -1) {
-        console.error('Invalid file path - missing uploads directory:', doc.file_path);
-        return ErrorResponses.forbidden();
-      }
-      uploadsRoot = requestedPath.substring(0, uploadsIndex + '/uploads'.length);
+      // Local development - use project uploads directory
+      const getDefaultUploadsDir = () => {
+        return join(process.cwd(), 'uploads');
+      };
+      uploadsRoot = resolve(process.env.UPLOADS_DIR || getDefaultUploadsDir());
+      requestedPath = resolve(join(uploadsRoot, doc.file_path));
+      console.log('[Download] macOS - uploadsRoot:', uploadsRoot);
+      console.log('[Download] macOS - requestedPath:', requestedPath);
     } else {
-      // Production/staging - use uploads directory
-      uploadsRoot = resolve(process.env.UPLOADS_DIR || '/home/pluggedin/uploads');
+      // Production/staging - use platform-specific uploads directory
+      const getDefaultUploadsDir = () => {
+        if (process.platform === 'win32') {
+          return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
+        } else {
+          return '/home/pluggedin/uploads';
+        }
+      };
+      uploadsRoot = resolve(process.env.UPLOADS_DIR || getDefaultUploadsDir());
       requestedPath = resolve(join(uploadsRoot, doc.file_path));
     }
     

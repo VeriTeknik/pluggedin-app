@@ -145,79 +145,92 @@ export function RateServerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
+      <DialogContent className="max-w-lg w-[95vw] max-h-[90vh] overflow-hidden flex flex-col p-0">
+        <DialogHeader className="flex-shrink-0 px-4 py-3 border-b">
+          <DialogTitle className="text-lg">
             {existingRating ? 'Update' : 'Rate'} &quot;{serverData.name}&quot;
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             {existingRating 
               ? 'You have already rated this server. You can update your rating below.'
               : 'Your rating helps other users find quality servers'}
           </DialogDescription>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-4'>
-            <FormField
-              control={form.control}
-              name='rating'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Rating</FormLabel>
-                  <FormControl>
-                    <div className="flex justify-center p-2">
-                      <Star.Group
-                        value={field.value}
-                        onChange={field.onChange}
-                        size="lg"
-                      >
-                        <Star.Item value={1} />
-                        <Star.Item value={2} />
-                        <Star.Item value={3} />
-                        <Star.Item value={4} />
-                        <Star.Item value={5} />
-                      </Star.Group>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name='comment'
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Comment (optional)</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Share your experience with this server"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <div className='flex justify-end gap-4'>
-              <Button
-                variant='outline'
-                type='button'
-                onClick={() => onOpenChange(false)}>
-                Cancel
-              </Button>
-              <Button type='submit' disabled={isSubmitting || isCheckingRating}>
-                {isCheckingRating 
-                  ? 'Checking...' 
-                  : isSubmitting 
-                    ? 'Submitting...' 
-                    : existingRating 
-                      ? 'Update Rating' 
-                      : 'Submit Rating'}
-              </Button>
-            </div>
-          </form>
-        </Form>
+
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-3'>
+              <FormField
+                control={form.control}
+                name='rating'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm">Rating</FormLabel>
+                    <FormControl>
+                      <div className="flex justify-center p-2">
+                        <Star.Group
+                          value={field.value}
+                          onChange={field.onChange}
+                          size="lg"
+                        >
+                          <Star.Item value={1} />
+                          <Star.Item value={2} />
+                          <Star.Item value={3} />
+                          <Star.Item value={4} />
+                          <Star.Item value={5} />
+                        </Star.Group>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name='comment'
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm">Comment (optional)</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Share your experience with this server"
+                        className="min-h-[80px]"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </form>
+          </Form>
+        </div>
+
+        <div className="flex-shrink-0 border-t px-4 py-3">
+          <div className='flex justify-end gap-2'>
+            <Button
+              variant='outline'
+              type='button'
+              size="sm"
+              onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button 
+              type='submit' 
+              disabled={isSubmitting || isCheckingRating}
+              size="sm"
+              onClick={form.handleSubmit(onSubmit)}
+            >
+              {isCheckingRating 
+                ? 'Checking...' 
+                : isSubmitting 
+                  ? 'Submitting...' 
+                  : existingRating 
+                    ? 'Update Rating' 
+                    : 'Submit Rating'}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

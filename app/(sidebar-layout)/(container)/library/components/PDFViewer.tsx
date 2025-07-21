@@ -1,7 +1,7 @@
 'use client';
 
 import { ChevronLeft, ChevronRight, Download, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
-import { useCallback,useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Document, Page, pdfjs } from 'react-pdf';
 
@@ -10,10 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
 // Set up PDF.js worker
-// Use CDN directly for reliability in production
 if (typeof window !== 'undefined') {
-  // Use a specific version to ensure compatibility
-  pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
 }
 
 interface PDFViewerProps {
@@ -24,10 +22,46 @@ interface PDFViewerProps {
 export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
   const { t } = useTranslation('library');
   const [numPages, setNumPages] = useState<number>(0);
-  const [pageNumber, setPageNumber] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1.0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [userScale, setUserScale] = useState<number>(1.0); // User zoom control
+  const [autoScale, setAutoScale] = useState<number>(1.0); // Auto-calculated scale to fit container
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [containerDimensions, setContainerDimensions] = useState({ width: 0, height: 0 });
+  const [pageDimensions, setPageDimensions] = useState({ width: 0, height: 0 });
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Calculate container dimensions
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current && headerRef.current) {
+        const containerRect = containerRef.current.getBoundingClientRect();
+        const headerRect = headerRef.current.getBoundingClientRect();
+        const availableHeight = containerRect.height - headerRect.height;
+        
+        setContainerDimensions({
+          width: containerRect.width - 32, // Remove padding
+          height: availableHeight - 32 // Remove padding
+        });
+      }
+    };
+
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
+
+  // Calculate auto scale when page dimensions are known
+  useEffect(() => {
+    if (pageDimensions.width > 0 && containerDimensions.width > 0) {
+      // Always start with 100% scale (1.0) for best quality
+      // User can adjust if needed with zoom controls
+      setAutoScale(1.0);
+    }
+  }, [pageDimensions, containerDimensions, numPages]);
 
   const onDocumentLoadSuccess = useCallback(({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
@@ -41,34 +75,60 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
     setIsLoading(false);
   }, []);
 
-  const goToPrevPage = useCallback(() => {
-    setPageNumber(prev => Math.max(prev - 1, 1));
-  }, []);
-
-  const goToNextPage = useCallback(() => {
-    setPageNumber(prev => Math.min(prev + 1, numPages));
-  }, [numPages]);
-
-  const goToPage = useCallback((page: number) => {
-    const pageNum = Math.max(1, Math.min(page, numPages));
-    setPageNumber(pageNum);
-  }, [numPages]);
+  const onPageLoadSuccess = useCallback((page: any) => {
+    if (pageDimensions.width === 0) {
+      const { width, height } = page;
+      setPageDimensions({ width, height });
+    }
+  }, [pageDimensions.width]);
 
   const zoomIn = useCallback(() => {
-    setScale(prev => Math.min(prev * 1.2, 3.0));
+    setUserScale(prev => {
+      const newScale = Math.min(prev * 1.2, 3.0);
+      return Math.round(newScale * 10) / 10; // Round to 1 decimal place
+    });
   }, []);
 
   const zoomOut = useCallback(() => {
-    setScale(prev => Math.max(prev / 1.2, 0.5));
+    setUserScale(prev => {
+      const newScale = Math.max(prev / 1.2, 0.2);
+      return Math.round(newScale * 10) / 10; // Round to 1 decimal place
+    });
   }, []);
 
   const resetZoom = useCallback(() => {
-    setScale(1.0);
+    setUserScale(1.0);
   }, []);
+
+  // Page navigation functions
+  const goToPage = useCallback((pageNumber: number) => {
+    const validPage = Math.max(1, Math.min(pageNumber, numPages));
+    setCurrentPage(validPage);
+    
+    // Scroll to the specific page
+    if (scrollContainerRef.current) {
+      const pageElements = scrollContainerRef.current.querySelectorAll('[data-page-number]');
+      const targetPage = pageElements[validPage - 1] as HTMLElement;
+      if (targetPage) {
+        targetPage.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }
+  }, [numPages]);
+
+  const goToPrevPage = useCallback(() => {
+    goToPage(currentPage - 1);
+  }, [currentPage, goToPage]);
+
+  const goToNextPage = useCallback(() => {
+    goToPage(currentPage + 1);
+  }, [currentPage, goToPage]);
+
+  // Final scale is auto scale * user scale
+  const finalScale = autoScale * userScale;
 
   if (error) {
     return (
-      <div className={`flex items-center justify-center ${className}`}>
+      <div className={`flex items-center justify-center h-full ${className}`}>
         <div className="text-center">
           <p className="text-destructive mb-2">{t('preview.pdfError')}</p>
           <p className="text-sm text-muted-foreground">{error}</p>
@@ -86,52 +146,72 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
   }
 
   return (
-    <div className={`flex flex-col ${className}`}>
+    <div ref={containerRef} className={`relative h-full w-full ${className}`}>
       {/* PDF Controls */}
-      <div className="flex items-center justify-between p-4 border-b bg-background">
-        <div className="flex items-center gap-2">
-          {/* Page navigation */}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToPrevPage}
-            disabled={pageNumber <= 1 || isLoading}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          
+      <div 
+        ref={headerRef}
+        className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur"
+      >
+        <div className="flex items-center gap-4">
+          {/* Page Navigation */}
+          {numPages > 1 && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToPrevPage}
+                disabled={currentPage <= 1 || isLoading}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              
+              <div className="flex items-center gap-1">
+                <Input
+                  type="number"
+                  value={currentPage}
+                  onChange={(e) => {
+                    const page = parseInt(e.target.value) || 1;
+                    goToPage(page);
+                  }}
+                  className="w-16 h-8 text-center text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  min={1}
+                  max={numPages}
+                  disabled={isLoading}
+                />
+                <span className="text-sm text-muted-foreground">
+                  / {numPages}
+                </span>
+              </div>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={goToNextPage}
+                disabled={currentPage >= numPages || isLoading}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* PDF Info */}
           <div className="flex items-center gap-2">
-            <Input
-              type="number"
-              value={pageNumber}
-              onChange={(e) => goToPage(parseInt(e.target.value) || 1)}
-              className="w-16 text-center"
-              min={1}
-              max={numPages}
-              disabled={isLoading}
-            />
             <span className="text-sm text-muted-foreground">
-              / {numPages || 0}
+              {numPages > 0 ? `${numPages} sayfa` : 'Yükleniyor...'}
+            </span>
+            <span className="text-xs text-muted-foreground">
+              • Zoom: {Math.round(userScale * 100)}%
             </span>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={goToNextPage}
-            disabled={pageNumber >= numPages || isLoading}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Zoom controls */}
           <Button
             variant="outline"
             size="sm"
             onClick={zoomOut}
-            disabled={scale <= 0.5 || isLoading}
+            disabled={userScale <= 0.2 || isLoading}
+            title="Küçült"
           >
             <ZoomOut className="h-4 w-4" />
           </Button>
@@ -141,16 +221,18 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
             size="sm"
             onClick={resetZoom}
             disabled={isLoading}
-            className="min-w-[60px]"
+            className="min-w-[70px]"
+            title="Zoom'u sıfırla (%100)"
           >
-            {Math.round(scale * 100)}%
+            {Math.round(userScale * 100)}%
           </Button>
 
           <Button
             variant="outline"
             size="sm"
             onClick={zoomIn}
-            disabled={scale >= 3.0 || isLoading}
+            disabled={userScale >= 3.0 || isLoading}
+            title="Büyüt"
           >
             <ZoomIn className="h-4 w-4" />
           </Button>
@@ -167,10 +249,13 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
         </div>
       </div>
 
-      {/* PDF Content */}
-      <div className="flex-1 overflow-auto bg-gray-100 dark:bg-gray-900 p-4">
-        <div className="flex justify-center">
-          <div className="bg-white shadow-lg">
+      {/* PDF Content - scrollable area */}
+      <div 
+        ref={scrollContainerRef}
+        className="absolute inset-0 pt-[73px] overflow-auto bg-gray-100 dark:bg-gray-900"
+      >
+        <div className="p-4">
+          <div className="flex flex-col items-center gap-4">
             {isLoading && (
               <div className="flex items-center justify-center h-96">
                 <div className="flex items-center gap-2">
@@ -185,15 +270,26 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
               onLoadSuccess={onDocumentLoadSuccess}
               onLoadError={onDocumentLoadError}
               loading=""
-              className="max-w-full"
             >
-              <Page
-                pageNumber={pageNumber}
-                scale={scale}
-                renderTextLayer={false}
-                renderAnnotationLayer={false}
-                className="max-w-full"
-              />
+              {numPages > 0 && Array.from(
+                { length: numPages },
+                (_, index) => (
+                  <div 
+                    key={`page_${index + 1}`} 
+                    data-page-number={index + 1}
+                    className="bg-white shadow-lg mb-4 last:mb-0 rounded-lg overflow-hidden"
+                  >
+                    <Page
+                      pageNumber={index + 1}
+                      scale={finalScale}
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                      onLoadSuccess={index === 0 ? onPageLoadSuccess : undefined}
+                      className="block"
+                    />
+                  </div>
+                )
+              )}
             </Document>
           </div>
         </div>

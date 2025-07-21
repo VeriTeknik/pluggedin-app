@@ -124,9 +124,8 @@ export function UnifiedServerCard({
     
     if (selectable && !isInstalled && onItemSelect) {
       onItemSelect(serverKey, !isSelected);
-    } else {
-      setIsExpanded(!isExpanded);
     }
+    // Remove automatic expansion on card click to prevent UX issues
   };
   
   const handleInstall = (e: React.MouseEvent) => {
@@ -167,310 +166,364 @@ export function UnifiedServerCard({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.2 }}
+      className="h-full"
     >
       <Card
         className={cn(
-          "relative overflow-hidden transition-all duration-200",
-          "hover:shadow-lg dark:hover:shadow-primary/5",
+          "relative overflow-hidden transition-all duration-200 h-full flex",
           selectable && !isInstalled && "hover:border-primary cursor-pointer",
           isSelected && "ring-2 ring-primary",
-          isInstalled && "opacity-80",
-          isExpanded && "md:col-span-2 lg:col-span-3"
+          isInstalled && "opacity-80"
         )}
         onClick={handleCardClick}
       >
         {/* Main Card Content */}
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg break-words flex items-center gap-2">
-                {server.name}
-                {isInstalled && (
-                  <Badge variant="secondary" className="text-xs">
-                    Installed
-                  </Badge>
-                )}
-              </CardTitle>
-              <CardDescription className="mt-1 line-clamp-2">
-                {server.description}
-              </CardDescription>
-            </div>
-            <div className="flex flex-col items-end gap-2">
-              <SourceBadge source={server.source} />
-              {server.category && <CategoryBadge category={server.category} />}
-            </div>
-          </div>
-        </CardHeader>
-        
-        <CardContent className="pb-3">
-          {/* Key Stats - Only show if meaningful */}
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            {formatRating(server.rating, server.ratingCount)}
-            
-            {server.installation_count !== undefined && server.installation_count > 0 && (
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <UserPlus className="h-4 w-4" />
-                <span>{server.installation_count} installs</span>
-              </div>
-            )}
-            
-            {server.github_stars !== undefined && server.github_stars !== null && server.github_stars > 0 && (
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <Github className="h-4 w-4" />
-                <span>{server.github_stars} stars</span>
-              </div>
-            )}
-            
-            {/* Transport Type Badge */}
-            <Badge variant="outline" className="gap-1">
-              <Server className="h-3 w-3" />
-              {transportType}
-            </Badge>
-          </div>
-          
-          {/* Expand/Collapse Button */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mt-3 w-full"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsExpanded(!isExpanded);
-            }}
-          >
-            {isExpanded ? (
-              <>
-                <ChevronUp className="h-4 w-4 mr-2" />
-                {t('search.card.showLess')}
-              </>
-            ) : (
-              <>
-                <ChevronDown className="h-4 w-4 mr-2" />
-                {t('search.card.showMore')}
-              </>
-            )}
-          </Button>
-        </CardContent>
-        
-        {/* Expanded Details Section */}
         <AnimatePresence>
-          {isExpanded && (
+          {!isExpanded && (
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="overflow-hidden"
+              initial={{ opacity: 1, x: 0 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '-100%' }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="flex-1 flex flex-col min-w-0"
             >
-              <CardContent className="pt-0 pb-4">
-                <Tabs defaultValue="overview" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 tabs-trigger">
-                    <TabsTrigger value="overview">{t('search.card.tabs.overview')}</TabsTrigger>
-                    <TabsTrigger value="technical">{t('search.card.tabs.technical')}</TabsTrigger>
-                    <TabsTrigger value="community">{t('search.card.tabs.community')}</TabsTrigger>
-                  </TabsList>
+              <CardHeader className="pb-3 flex-shrink-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-lg leading-tight flex items-center gap-2 mb-1">
+                      <span className="truncate">{server.name}</span>
+                      {isInstalled && (
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          Installed
+                        </Badge>
+                      )}
+                    </CardTitle>
+                    <CardDescription className="mt-1 line-clamp-2 text-sm">
+                      {server.description}
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <SourceBadge source={server.source} />
+                    {server.category && <CategoryBadge category={server.category} />}
+                  </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="pb-3 flex-1 flex flex-col">
+                {/* Key Stats - Only show if meaningful */}
+                <div className="flex flex-wrap items-center gap-3 text-sm mb-3">
+                  {formatRating(server.rating, server.ratingCount)}
                   
-                  <TabsContent value="overview" className="mt-4 space-y-4">
-                    {/* Full Description */}
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">{t('search.card.description')}</h4>
-                      <p className="text-sm text-muted-foreground">{server.description}</p>
+                  {server.installation_count !== undefined && server.installation_count > 0 && (
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <UserPlus className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{server.installation_count} installs</span>
                     </div>
-                    
-                    {/* Tags */}
-                    {server.tags && server.tags.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">{t('search.card.tags')}</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {server.tags.map((tag) => (
-                            <Badge key={tag} variant="outline">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Package Info */}
-                    {server.package_name && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">{t('search.card.packageInfo')}</h4>
-                        <div className="space-y-1 text-sm text-muted-foreground">
-                          <p>{t('search.card.package')}: {server.package_name}</p>
-                          {server.package_registry && (
-                            <p>{t('search.card.registry')}: {server.package_registry}</p>
-                          )}
-                          {server.package_download_count !== null && (
-                            <p>{t('search.card.downloads')}: {server.package_download_count}</p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
+                  )}
                   
-                  <TabsContent value="technical" className="mt-4 space-y-4">
-                    {/* Command/URL */}
-                    <div>
-                      <h4 className="text-sm font-medium mb-2">
-                        {transportType === McpServerType.SSE ? t('search.card.url') : t('search.card.command')}
-                      </h4>
-                      <code className="block p-2 bg-muted rounded text-xs break-all">
-                        {transportType === McpServerType.SSE ? server.url : server.command}
-                      </code>
+                  {server.github_stars !== undefined && server.github_stars !== null && server.github_stars > 0 && (
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Github className="h-4 w-4 shrink-0" />
+                      <span className="truncate">{server.github_stars} stars</span>
                     </div>
-                    
-                    {/* Arguments */}
-                    {transportType === McpServerType.STDIO && server.args && server.args.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">{t('search.card.arguments')}</h4>
-                        <code className="block p-2 bg-muted rounded text-xs break-all">
-                          {server.args.join(' ')}
-                        </code>
-                      </div>
-                    )}
-                    
-                    {/* Environment Variables */}
-                    {formattedEnvs.length > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">{t('search.card.environmentVariables')}</h4>
-                        <div className="space-y-2">
-                          {formattedEnvs.map((env) => (
-                            <div key={env.name} className="p-2 bg-muted rounded">
-                              <code className="text-xs break-all">{env.name}=&lt;value&gt;</code>
-                              {env.description && (
-                                <p className="text-xs text-muted-foreground mt-1">{env.description}</p>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </TabsContent>
+                  )}
                   
-                  <TabsContent value="community" className="mt-4 space-y-4">
-                    {/* Shared By */}
-                    {server.shared_by && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">{t('search.card.sharedBy')}</h4>
-                        <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          {server.shared_by_profile_url ? (
-                            <Link
-                              href={server.shared_by_profile_url}
-                              className="text-sm hover:underline"
-                              onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                            >
-                              {server.shared_by}
-                            </Link>
-                          ) : (
-                            <span className="text-sm">{server.shared_by}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    
-                    {/* Reviews */}
-                    {server.ratingCount !== undefined && server.ratingCount > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">{t('search.card.reviews')}</h4>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={handleReviews}
-                        >
-                          {t('search.card.viewReviews', { count: server.ratingCount })}
-                        </Button>
-                      </div>
-                    )}
-                    
-                    {/* Installation Stats */}
-                    {server.installation_count !== undefined && server.installation_count > 0 && (
-                      <div>
-                        <h4 className="text-sm font-medium mb-2">{t('search.card.installationStats')}</h4>
-                        <p className="text-sm text-muted-foreground">
-                          {t('search.card.installedByUsers', { count: server.installation_count })}
-                        </p>
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                  {/* Transport Type Badge */}
+                  <Badge variant="outline" className="gap-1 shrink-0">
+                    <Server className="h-3 w-3" />
+                    {transportType}
+                  </Badge>
+                </div>
+                
+                {/* Expand/Collapse Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full mb-3 border-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsExpanded(!isExpanded);
+                  }}
+                >
+                  {isExpanded ? (
+                    <>
+                      <ChevronUp className="h-4 w-4 mr-2" />
+                      {t('search.card.showLess')}
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="h-4 w-4 mr-2" />
+                      {t('search.card.showMore')}
+                    </>
+                  )}
+                </Button>
               </CardContent>
+              
+              {/* Card Footer - Action Buttons */}
+              <CardFooter className="pt-3 flex-shrink-0">
+                <div className="flex flex-col gap-2 w-full">
+                  {/* Main action buttons row */}
+                  <div className="flex gap-2">
+                    {/* Install/Unshare buttons */}
+                    <div className="flex gap-2 flex-1">
+                      {/* Show install button for everyone, including owners */}
+                      {isInstalled ? (
+                        <Button variant="outline" size="sm" disabled className="flex-1">
+                          <span className="truncate">{t('search.card.installed')}</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={handleInstall}
+                          className="flex-1"
+                        >
+                          <Download className="w-4 h-4 mr-2" />
+                          <span className="truncate">{t('search.card.install')}</span>
+                        </Button>
+                      )}
+                      
+                      {/* Show unshare button only for owners */}
+                      {isOwned && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleUnshare}
+                          className="flex-1"
+                        >
+                          <span className="truncate">{t('search.card.unshare')}</span>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Secondary action buttons row */}
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleViewDetails}
+                      className="w-full"
+                    >
+                      <Eye className="w-4 h-4 mr-2" />
+                      <span className="truncate">{t('search.card.details')}</span>
+                    </Button>
+                    
+                    {server.githubUrl && (
+                      <Button variant="outline" size="sm" asChild className="w-full">
+                        <Link
+                          href={server.githubUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        >
+                          <Github className="w-4 h-4 mr-2" />
+                          GitHub
+                        </Link>
+                      </Button>
+                    )}
+                    
+                    {/* Rate button - only show if not owned */}
+                    {server.source && server.external_id && !isOwned && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRate}
+                        className="w-full"
+                      >
+                        <Star className="w-4 h-4 mr-2" />
+                        <span className="truncate">{t('search.card.rate')}</span>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </CardFooter>
             </motion.div>
           )}
         </AnimatePresence>
-        
-        {/* Card Footer - Action Buttons */}
-        <CardFooter className="pt-3 flex flex-wrap gap-2 justify-between">
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleViewDetails}
+
+        {/* Side Panel for Expanded Details */}
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              initial={{ opacity: 0, x: '100%' }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: '100%' }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="absolute inset-0 bg-background overflow-hidden"
             >
-              <Eye className="w-4 h-4 mr-2" />
-              {t('search.card.details')}
-            </Button>
-            
-            {server.githubUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <Link
-                  href={server.githubUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                >
-                  <Github className="w-4 h-4 mr-2" />
-                  GitHub
-                </Link>
-              </Button>
-            )}
-          </div>
-          
-          <div className="flex gap-2">
-            {/* Rate button - only show if not owned */}
-            {server.source && server.external_id && !isOwned && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRate}
-              >
-                <Star className="w-4 h-4 mr-2" />
-                {t('search.card.rate')}
-              </Button>
-            )}
-            
-            {/* Install/Unshare buttons */}
-            <div className="flex gap-2">
-              {/* Show install button for everyone, including owners */}
-              {isInstalled ? (
-                <Button variant="outline" size="sm" disabled>
-                  {t('search.card.installed')}
-                </Button>
-              ) : (
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={handleInstall}
-                >
-                  <Download className="w-4 h-4 mr-2" />
-                  {t('search.card.install')}
-                </Button>
-              )}
-              
-              {/* Show unshare button only for owners */}
-              {isOwned && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={handleUnshare}
-                >
-                  {t('search.card.unshare')}
-                </Button>
-              )}
-            </div>
-          </div>
-        </CardFooter>
+              <div className="w-full h-full overflow-y-auto">
+                {/* Panel Header with Back Button and Close Button */}
+                <div className="sticky top-0 bg-background border-b p-2 flex items-center justify-between z-10">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsExpanded(false);
+                      }}
+                      className="h-7 w-7 p-0 hover:bg-muted rounded-full flex-shrink-0"
+                      title="Geri"
+                    >
+                      <svg 
+                        className="h-4 w-4 text-muted-foreground hover:text-foreground" 
+                        fill="none" 
+                        viewBox="0 0 24 24" 
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                      </svg>
+                    </Button>
+                    <h3 className="font-medium text-sm truncate">{t('search.card.moreDetails', 'More Details')}</h3>
+                  </div>
+                </div>
+                
+                {/* Panel Content with reduced padding */}
+                <div className="p-2">
+                  <Tabs defaultValue="overview" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 h-9 mb-3 text-xs">
+                      <TabsTrigger value="overview" className="text-xs px-2 py-1 min-w-0">
+                        <span className="truncate">Overview</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="technical" className="text-xs px-2 py-1 min-w-0">
+                        <span className="truncate">Technical</span>
+                      </TabsTrigger>
+                      <TabsTrigger value="community" className="text-xs px-2 py-1 min-w-0">
+                        <span className="truncate">Community</span>
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="overview" className="space-y-3 mt-0">
+                      {/* Full Description */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">{t('search.card.description')}</h4>
+                        <p className="text-sm text-muted-foreground break-words leading-relaxed">{server.description}</p>
+                      </div>
+                      
+                      {/* Tags */}
+                      {server.tags && server.tags.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">{t('search.card.tags')}</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {server.tags.map((tag) => (
+                              <Badge key={tag} variant="outline" className="text-xs">
+                                <span className="truncate">{tag}</span>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Package Info */}
+                      {server.package_name && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">{t('search.card.packageInfo')}</h4>
+                          <div className="space-y-1 text-sm text-muted-foreground">
+                            <p className="break-words">{t('search.card.package')}: {server.package_name}</p>
+                            {server.package_registry && (
+                              <p>{t('search.card.registry')}: {server.package_registry}</p>
+                            )}
+                            {server.package_download_count !== null && (
+                              <p>{t('search.card.downloads')}: {server.package_download_count}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="technical" className="space-y-3 mt-0">
+                      {/* Command/URL */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">
+                          {transportType === McpServerType.SSE ? t('search.card.url') : t('search.card.command')}
+                        </h4>
+                        <code className="block p-2 bg-muted rounded-md text-xs break-all font-mono">
+                          {transportType === McpServerType.SSE ? server.url : server.command}
+                        </code>
+                      </div>
+                      
+                      {/* Arguments */}
+                      {transportType === McpServerType.STDIO && server.args && server.args.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">{t('search.card.arguments')}</h4>
+                          <code className="block p-2 bg-muted rounded-md text-xs break-all font-mono">
+                            {server.args.join(' ')}
+                          </code>
+                        </div>
+                      )}
+                      
+                      {/* Environment Variables */}
+                      {formattedEnvs.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">{t('search.card.environmentVariables')}</h4>
+                          <div className="space-y-2 max-h-48 overflow-y-auto">
+                            {formattedEnvs.map((env) => (
+                              <div key={env.name} className="p-2 bg-muted rounded-md">
+                                <code className="text-xs break-all font-mono">{env.name}=&lt;value&gt;</code>
+                                {env.description && (
+                                  <p className="text-xs text-muted-foreground mt-1 break-words">{env.description}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+                    
+                    <TabsContent value="community" className="space-y-3 mt-0">
+                      {/* Shared By */}
+                      {server.shared_by && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">{t('search.card.sharedBy')}</h4>
+                          <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                            {server.shared_by_profile_url ? (
+                              <Link
+                                href={server.shared_by_profile_url}
+                                className="text-sm hover:underline truncate"
+                                onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                              >
+                                {server.shared_by}
+                              </Link>
+                            ) : (
+                              <span className="text-sm truncate">{server.shared_by}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Reviews */}
+                      {server.ratingCount !== undefined && server.ratingCount > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">{t('search.card.reviews')}</h4>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={handleReviews}
+                          >
+                            {t('search.card.viewReviews', { count: server.ratingCount })}
+                          </Button>
+                        </div>
+                      )}
+                      
+                      {/* Installation Stats */}
+                      {server.installation_count !== undefined && server.installation_count > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium mb-2">{t('search.card.installationStats')}</h4>
+                          <p className="text-sm text-muted-foreground">
+                            {t('search.card.installedByUsers', { count: server.installation_count })}
+                          </p>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </Card>
     </motion.div>
   );

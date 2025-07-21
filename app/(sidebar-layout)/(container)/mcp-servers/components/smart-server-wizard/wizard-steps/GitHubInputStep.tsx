@@ -183,23 +183,23 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div>
-        <h2 className="text-2xl font-semibold mb-2">{t('github.inputStep.title')}</h2>
-        <p className="text-muted-foreground">
+        <h2 className="text-xl font-semibold mb-1">{t('github.inputStep.title')}</h2>
+        <p className="text-sm text-muted-foreground">
           {t('github.inputStep.description')}
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3">
         <div className="space-y-2">
-          <Label htmlFor="github-url">{t('github.inputStep.label')}</Label>
+          <Label htmlFor="github-url" className="text-sm">{t('github.inputStep.label')}</Label>
           <div className="flex gap-2">
             <div className="relative flex-1">
               <Github className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
               <Input
                 id="github-url"
-                type="text"
+                type="url"
                 placeholder={t('github.inputStep.placeholder')}
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
@@ -209,18 +209,12 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
             </div>
             <Button type="submit" disabled={!url.trim() || isValidating}>
               {isValidating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {t('github.inputStep.validating')}
-                </>
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 t('github.inputStep.validate')
               )}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            {t('github.inputStep.supportedFormats')}
-          </p>
         </div>
 
         {error && (
@@ -231,21 +225,23 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
         )}
       </form>
 
-      {/* Repository preview (if we have cached data) */}
+      {/* Repository Info */}
       {data.repoInfo && (
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Github className="h-5 w-5" />
-              {data.owner}/{data.repo}
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-green-600" />
+              {data.repoInfo.name}
             </CardTitle>
             {data.repoInfo.description && (
-              <CardDescription>{data.repoInfo.description}</CardDescription>
+              <CardDescription className="text-sm">
+                {data.repoInfo.description}
+              </CardDescription>
             )}
           </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div className="flex items-center gap-2">
+          <CardContent className="pt-0">
+            <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+              <div className="flex items-center gap-1">
                 {data.repoInfo.private ? (
                   <>
                     <Lock className="h-4 w-4 text-muted-foreground" />
@@ -258,12 +254,12 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
                   </>
                 )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <GitBranch className="h-4 w-4 text-muted-foreground" />
                 <span>{data.repoInfo.defaultBranch}</span>
               </div>
               {data.repoInfo.language && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1">
                   <Code className="h-4 w-4 text-muted-foreground" />
                   <span>{data.repoInfo.language}</span>
                 </div>
@@ -278,7 +274,7 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
         <Alert variant="default" className="border-orange-500 bg-orange-50 dark:bg-orange-950/20">
           <AlertCircle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="space-y-2">
-            <p className="font-semibold text-orange-800 dark:text-orange-300">
+            <p className="font-medium text-orange-800 dark:text-orange-300 text-sm">
               {t('github.inputStep.repository.alreadyInRegistry')}
             </p>
             {data.registryCheck.servers?.map((server) => (
@@ -306,7 +302,7 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
                 </p>
               </div>
             ))}
-            <div className="mt-3 text-sm text-muted-foreground">
+            <div className="mt-2 text-xs text-muted-foreground">
               {data.registryCheck.servers?.some(s => s.isClaimed) ? (
                 <>
                   <p>This is a claimed server. You can:</p>
@@ -328,7 +324,7 @@ export function GitHubInputStep({ data, onUpdate, onNext }: GitHubInputStepProps
 
       <Alert>
         <AlertCircle className="h-4 w-4" />
-        <AlertDescription>
+        <AlertDescription className="text-sm">
           {t('github.inputStep.privateRepoNote')}
         </AlertDescription>
       </Alert>

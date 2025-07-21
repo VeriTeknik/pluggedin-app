@@ -2,21 +2,17 @@
 
 import { motion } from 'framer-motion';
 import { 
-  Bell,
   Blocks, 
   Box, 
   Brain,
   Clock,
   Database,
-  Globe, 
   Key,
   Lock,
   Package,
-  Search, 
   Share2, 
   Shield,
-  TrendingUp,
-  TerminalSquare} from 'lucide-react';
+  TrendingUp} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';

@@ -15,8 +15,21 @@ import type {
 } from '@/types/library';
 
 // Create uploads directory if it doesn't exist
-// Use environment variable or fallback to /home/pluggedin/uploads (outside project directory)
-const UPLOADS_BASE_DIR = process.env.UPLOADS_DIR || '/home/pluggedin/uploads';
+// Use environment variable or fallback to platform-specific paths
+const getDefaultUploadsDir = () => {
+  if (process.platform === 'darwin') {
+    // macOS: Use project's uploads directory for local development
+    return join(process.cwd(), 'uploads');
+  } else if (process.platform === 'win32') {
+    // Windows: Use temp directory
+    return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
+  } else {
+    // Linux: Use /home/pluggedin/uploads
+    return '/home/pluggedin/uploads';
+  }
+};
+
+const UPLOADS_BASE_DIR = process.env.UPLOADS_DIR || getDefaultUploadsDir();
 
 // Workspace storage limit: 100 MB
 const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
