@@ -10,7 +10,7 @@
     "fileTooLarge": "File too large for remaining storage",
     "dropFileHere": "Drop the file here",
     "clickToSelect": "Click to select or drag and drop",
-    "supportedFormats": "PDF, TXT, MD, DOCX, Images (max 10MB per file)",
+    "supportedFormats": "PDF, TXT, MD, JSON, DOCX, Images (max 10MB per file)",
     "documentName": "Document Name",
     "documentNamePlaceholder": "Enter document name",
     "descriptionLabel": "Description (optional)",
