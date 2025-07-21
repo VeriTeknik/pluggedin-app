@@ -168,7 +168,16 @@ export async function GET(
     if (validatedParams.includeContent === 'true') {
       try {
         // Resolve the file path - handle both relative and absolute paths
-        const uploadsDir = process.env.UPLOADS_DIR || '/home/pluggedin/uploads';
+        const getDefaultUploadsDir = () => {
+          if (process.platform === 'darwin') {
+            return join(process.cwd(), 'uploads');
+          } else if (process.platform === 'win32') {
+            return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
+          } else {
+            return '/home/pluggedin/uploads';
+          }
+        };
+        const uploadsDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
         const filePath = document.file_path.startsWith('/') 
           ? document.file_path 
           : join(uploadsDir, document.file_path);

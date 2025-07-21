@@ -180,8 +180,21 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine upload directory path with user ID
-    const baseUploadDir = process.env.UPLOADS_DIR || '/home/pluggedin/uploads';
+    // Determine upload directory path with user ID - use platform-specific defaults
+    const getDefaultUploadsDir = () => {
+      if (process.platform === 'darwin') {
+        // macOS: Use project's uploads directory for local development
+        return join(process.cwd(), 'uploads');
+      } else if (process.platform === 'win32') {
+        // Windows: Use temp directory
+        return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
+      } else {
+        // Linux: Use /home/pluggedin/uploads
+        return '/home/pluggedin/uploads';
+      }
+    };
+    
+    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
     const userUploadDir = join(baseUploadDir, user.id);
     
     // Ensure the user upload directory is within the base upload directory

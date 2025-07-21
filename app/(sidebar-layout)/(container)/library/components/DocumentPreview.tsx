@@ -4,7 +4,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  ExternalLink,
   FileText,
   Image as ImageIcon,
   Loader2,
@@ -15,18 +14,19 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useState, useCallback, useEffect } from 'react';
+import { useCallback, useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { ErrorBoundary } from '@/components/ui/error-boundary';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
+import { getFileLanguage, isImageFile, isMarkdownFile, isPDFFile, isTextFile, isValidTextMimeType,ZOOM_LIMITS } from '@/lib/file-utils';
 import { Doc } from '@/types/library';
-import { isTextFile, isPDFFile, isImageFile, getFileLanguage, isMarkdownFile, ZOOM_LIMITS, isValidTextMimeType } from '@/lib/file-utils';
 
 // Dynamic imports for heavy components
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
@@ -298,6 +298,12 @@ export function DocumentPreview({
         className={`max-w-7xl ${isFullscreen ? 'h-screen max-h-screen' : 'h-[90vh]'} p-0 gap-0`}
         onInteractOutside={(e) => e.preventDefault()}
       >
+        <VisuallyHidden>
+          <DialogTitle>{doc?.name ? `${t('preview.documentTitle', 'Document')} - ${doc.name}` : t('preview.documentTitle', 'Document')}</DialogTitle>
+          <DialogDescription>
+            {doc ? `${t('preview.documentDescription', 'Preview of document')} ${doc.name} (${formatFileSize(doc.file_size)})` : t('preview.documentDescription', 'Preview of document')}
+          </DialogDescription>
+        </VisuallyHidden>
         <div className="flex flex-col h-full">
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -384,7 +390,7 @@ export function DocumentPreview({
           {/* Content */}
           <div className="flex flex-1 min-h-0 overflow-hidden">
             {/* Main content area */}
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 h-full">
               <ErrorBoundary>
                 {renderDocumentContent()}
               </ErrorBoundary>

@@ -60,6 +60,8 @@ const nextConfig: NextConfig = {
           tls: false,
         },
       };
+
+      // PDF.js worker is now served as static file from /public/pdf.worker.min.mjs
     }
 
     return config;
