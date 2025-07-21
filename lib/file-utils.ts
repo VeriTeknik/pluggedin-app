@@ -48,6 +48,7 @@ export interface FileType {
   isText: boolean;
   isPDF: boolean;
   isImage: boolean;
+  isDocx: boolean;
 }
 
 export function getFileType(mimeType: string, fileName: string): FileType {
@@ -55,6 +56,7 @@ export function getFileType(mimeType: string, fileName: string): FileType {
     isText: isTextFile(mimeType, fileName),
     isPDF: isPDFFile(mimeType),
     isImage: isImageFile(mimeType),
+    isDocx: isDocxFile(mimeType),
   };
 }
 
@@ -69,6 +71,10 @@ export function isPDFFile(mimeType: string): boolean {
 
 export function isImageFile(mimeType: string): boolean {
   return mimeType.startsWith('image/');
+}
+
+export function isDocxFile(mimeType: string): boolean {
+  return mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 }
 
 export function getFileLanguage(fileName: string): string {
@@ -90,7 +96,25 @@ export function isValidTextMimeType(mimeType: string | null): boolean {
     'application/javascript',
     'application/typescript',
     'application/xml',
+    'application/octet-stream', // For generic files that might be text
+    'application/x-sh', // Shell scripts
+    'application/x-python', // Python files
+    'application/x-yaml', // YAML files
   ];
   
   return validTypes.some(type => mimeType.startsWith(type));
+}
+
+// Check if file extension suggests it's a text file (fallback for content-type issues)
+export function isTextFileByExtension(fileName: string): boolean {
+  const textExtensions = [
+    '.txt', '.md', '.json', '.js', '.ts', '.tsx', '.jsx', '.py', 
+    '.yml', '.yaml', '.xml', '.html', '.css', '.scss', '.java', 
+    '.c', '.cpp', '.h', '.go', '.rs', '.sh', '.bash', '.php',
+    '.rb', '.swift', '.kt', '.dart', '.r', '.sql', '.log',
+    '.cfg', '.conf', '.ini', '.toml', '.dockerfile', '.gitignore'
+  ];
+  
+  const ext = '.' + fileName.split('.').pop()?.toLowerCase();
+  return textExtensions.includes(ext);
 }

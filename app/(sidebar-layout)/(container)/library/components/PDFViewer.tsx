@@ -155,42 +155,42 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
         <div className="flex items-center gap-4">
           {/* Page Navigation */}
           {numPages > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goToPrevPage}
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToPrevPage}
                 disabled={currentPage <= 1 || isLoading}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          
               <div className="flex items-center gap-1">
-                <Input
-                  type="number"
+            <Input
+              type="number"
                   value={currentPage}
                   onChange={(e) => {
                     const page = parseInt(e.target.value) || 1;
                     goToPage(page);
                   }}
                   className="w-16 h-8 text-center text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                  min={1}
-                  max={numPages}
-                  disabled={isLoading}
-                />
-                <span className="text-sm text-muted-foreground">
+              min={1}
+              max={numPages}
+              disabled={isLoading}
+            />
+            <span className="text-sm text-muted-foreground">
                   / {numPages}
-                </span>
-              </div>
+            </span>
+          </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={goToNextPage}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={goToNextPage}
                 disabled={currentPage >= numPages || isLoading}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
             </div>
           )}
 
@@ -278,15 +278,15 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
                     key={`page_${index + 1}`} 
                     data-page-number={index + 1}
                     className="bg-white shadow-lg mb-4 last:mb-0 rounded-lg overflow-hidden"
-                  >
-                    <Page
+            >
+              <Page
                       pageNumber={index + 1}
                       scale={finalScale}
-                      renderTextLayer={false}
-                      renderAnnotationLayer={false}
+                renderTextLayer={false}
+                renderAnnotationLayer={false}
                       onLoadSuccess={index === 0 ? onPageLoadSuccess : undefined}
                       className="block"
-                    />
+              />
                   </div>
                 )
               )}
