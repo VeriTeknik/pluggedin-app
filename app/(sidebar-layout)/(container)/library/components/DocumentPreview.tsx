@@ -179,12 +179,10 @@ export function DocumentPreview({
 
     if (isPDF) {
       return (
-        <div className="flex-1 overflow-hidden">
-          <PDFViewer
-            fileUrl={`/api/library/download/${doc.uuid}`}
-            className="w-full h-full"
-          />
-        </div>
+        <PDFViewer
+          fileUrl={`/api/library/download/${doc.uuid}`}
+          className="w-full h-full"
+        />
       );
     }
 
@@ -384,9 +382,9 @@ export function DocumentPreview({
           </div>
 
           {/* Content */}
-          <div className="flex flex-1 min-h-0">
+          <div className="flex flex-1 min-h-0 overflow-hidden">
             {/* Main content area */}
-            <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <ErrorBoundary>
                 {renderDocumentContent()}
               </ErrorBoundary>

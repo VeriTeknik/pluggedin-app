@@ -1,17 +1,20 @@
 'use client';
 
 import { ChevronLeft, ChevronRight, Download, Loader2, ZoomIn, ZoomOut } from 'lucide-react';
-import { useState, useCallback } from 'react';
-import { Document, Page, pdfjs } from 'react-pdf';
+import { useCallback,useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Document, Page, pdfjs } from 'react-pdf';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
-// Set up PDF.js worker - use local worker for security
-// In production, ensure the worker file is served from your own domain
-pdfjs.GlobalWorkerOptions.workerSrc = '/api/pdf-worker';
+// Set up PDF.js worker
+// Use CDN directly for reliability in production
+if (typeof window !== 'undefined') {
+  // Use a specific version to ensure compatibility
+  pdfjs.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js';
+}
 
 interface PDFViewerProps {
   fileUrl: string;
