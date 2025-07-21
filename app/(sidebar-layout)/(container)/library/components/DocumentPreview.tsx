@@ -91,11 +91,12 @@ export function DocumentPreview({
           // Validate content type before processing
           const contentType = res.headers.get('content-type');
           
-          // Check both content-type and file extension as fallback
-          const isValidByContentType = isValidTextMimeType(contentType);
+          // Allow all text files - prioritize extension over MIME type
           const isValidByExtension = doc?.name ? isTextFileByExtension(doc.name) : false;
+          const isValidByContentType = isValidTextMimeType(contentType);
           
-          if (!isValidByContentType && !isValidByExtension) {
+          // If file has text extension, allow it regardless of MIME type
+          if (!isValidByExtension && !isValidByContentType) {
             throw new Error('Invalid content type for text processing');
           }
           return res.text();
@@ -130,7 +131,7 @@ export function DocumentPreview({
       return;
     }
 
-    if (!isDocxFile(doc.mime_type)) {
+    if (!isDocxFile(doc.mime_type, doc.name)) {
       setDocxContent(null);
       return;
     }
@@ -282,7 +283,7 @@ export function DocumentPreview({
     }
 
     // DOCX files
-    if (isDocxFile(doc.mime_type)) {
+    if (isDocxFile(doc.mime_type, doc.name)) {
       if (isLoadingDocx) {
         return (
           <div className="flex-1 flex items-center justify-center">

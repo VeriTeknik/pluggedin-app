@@ -56,7 +56,7 @@ export function getFileType(mimeType: string, fileName: string): FileType {
     isText: isTextFile(mimeType, fileName),
     isPDF: isPDFFile(mimeType),
     isImage: isImageFile(mimeType),
-    isDocx: isDocxFile(mimeType),
+    isDocx: isDocxFile(mimeType, fileName),
   };
 }
 
@@ -73,8 +73,10 @@ export function isImageFile(mimeType: string): boolean {
   return mimeType.startsWith('image/');
 }
 
-export function isDocxFile(mimeType: string): boolean {
-  return mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+export function isDocxFile(mimeType: string, fileName?: string): boolean {
+  const isDocxMime = mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  const isDocxExt = fileName?.toLowerCase().endsWith('.docx') || false;
+  return isDocxMime || isDocxExt;
 }
 
 export function getFileLanguage(fileName: string): string {
