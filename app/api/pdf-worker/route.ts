@@ -1,5 +1,5 @@
-import { NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
+import { NextResponse } from 'next/server';
 import { join } from 'path';
 
 // Cache the worker content in memory for better performance
