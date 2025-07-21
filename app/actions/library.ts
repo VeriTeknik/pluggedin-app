@@ -6,7 +6,6 @@ import { join } from 'path';
 
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
-import { extractTextContent } from '@/lib/file-utils';
 import { ragService } from '@/lib/rag-service';
 import type { 
   Doc, 
@@ -387,7 +386,19 @@ export async function createDoc(
     
     if (process.env.ENABLE_RAG === 'true' && supportedRagTypes.includes(file.type)) {
       // Extract text content for RAG
-      const textContent = await extractTextContent(file, description);
+      // For now, we'll use a simple approach for text files
+      // PDF extraction would require additional libraries like pdf-parse
+      let textContent = '';
+      
+      if (file.type === 'text/plain' || file.type === 'text/markdown' || file.type === 'text/x-markdown') {
+        // For text files, convert to string
+        const arrayBuffer = await file.arrayBuffer();
+        textContent = new TextDecoder().decode(arrayBuffer);
+      } else if (file.type === 'application/pdf') {
+        // For PDFs, we'd need a library like pdf-parse
+        // For now, just use the description as placeholder
+        textContent = description || 'PDF content extraction not implemented';
+      }
       
       // Process RAG upload
       const ragResult = await processRagUpload(

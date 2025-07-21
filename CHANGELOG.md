@@ -34,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Progress indicators for text extraction, chunking, embeddings, and database insertion
   - Estimated time remaining for large document processing
   - Failure recovery with detailed error notifications
+- **Document Preview Modal**
+  - Full-featured document viewer with multi-format support
+  - PDF viewer with page navigation using react-pdf
+  - Image viewer with zoom controls (10%-500%) and pan functionality
+  - Text/code viewer with proper formatting for 20+ file types
+  - Markdown rendering for .md files
+  - Document navigation for browsing between multiple files
+  - Fullscreen mode for immersive viewing
+  - Metadata sidebar with document details
 
 ### Changed
 - **Document Schema Updates**
@@ -45,9 +54,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Model attribution badges for AI-generated documents
   - Enhanced document metadata display
   - Improved progress tracking UI for uploads
+  - Click-to-preview functionality in grid and table views
+  - Extracted file type detection logic to reusable utilities
 
 ### Security
 - Rate limiting for AI document creation (10 requests per hour)
+- Enhanced directory traversal protection in document download endpoint
+- Path normalization and validation to prevent unauthorized file access
 - Sanitization of AI-generated HTML/Markdown content
 - Path traversal protection for document storage
 - Content length validation (10MB limit)
