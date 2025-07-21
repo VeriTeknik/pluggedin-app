@@ -89,6 +89,7 @@
     "react-dom": "^19.1.0",
     "react-dropzone": "^14.3.8",
     "react-markdown": "^10.1.0",
+    "react-pdf": "9.1.1",
     "remark-gfm": "^4.0.1",
     "sanitize-html": "^2.17.0",
     "sonner": "^2.0.6",

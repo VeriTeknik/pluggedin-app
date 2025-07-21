@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Download, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
@@ -19,6 +19,7 @@ export interface DocsGridProps {
   docs: Doc[];
   onDownload: (doc: Doc) => void;
   onDelete: (doc: Doc) => void;
+  onPreview?: (doc: Doc) => void;
   formatFileSize: (bytes: number) => string;
   getMimeTypeIcon: (mimeType: string) => string;
 }
@@ -27,6 +28,7 @@ export function DocsGrid({
   docs, 
   onDownload, 
   onDelete, 
+  onPreview,
   formatFileSize, 
   getMimeTypeIcon 
 }: DocsGridProps) {
@@ -44,7 +46,8 @@ export function DocsGrid({
       {docs.map((doc) => (
         <Card
           key={doc.uuid}
-          className="hover:shadow-lg transition-shadow h-full flex flex-col justify-between bg-card border-border"
+          className="hover:shadow-lg transition-shadow h-full flex flex-col justify-between bg-card border-border cursor-pointer"
+          onClick={() => onPreview?.(doc)}
         >
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
@@ -70,21 +73,44 @@ export function DocsGrid({
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-6 w-6 p-0"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <MoreHorizontal className="h-4 w-4" />
                     <span className="sr-only">{t('grid.openMenu')}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  {onPreview && (
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPreview(doc);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <Eye className="mr-2 h-4 w-4" />
+                      {t('grid.preview')}
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem 
-                    onClick={() => onDownload(doc)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDownload(doc);
+                    }}
                     className="cursor-pointer"
                   >
                     <Download className="mr-2 h-4 w-4" />
                     {t('grid.download')}
                   </DropdownMenuItem>
                   <DropdownMenuItem 
-                    onClick={() => onDelete(doc)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(doc);
+                    }}
                     className="cursor-pointer text-destructive focus:text-destructive"
                   >
                     <Trash2 className="mr-2 h-4 w-4" />

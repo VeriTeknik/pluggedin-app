@@ -9,7 +9,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Badge, Download, Loader2, Trash2, Upload } from 'lucide-react';
+import { Badge, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
 import { useCallback,useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -24,6 +24,7 @@ import { useLibrary } from '@/hooks/use-library';
 import type { Doc } from '@/types/library';
 
 // Local components
+import { DocumentPreview } from './components/DocumentPreview';
 import { DocsControls } from './components/DocsControls';
 import { DocsGrid } from './components/DocsGrid';
 import { DocsStats } from './components/DocsStats';
@@ -45,6 +46,8 @@ export default function LibraryContent() {
   const [isUploading, setIsUploading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [sourceFilter, setSourceFilter] = useState<'all' | 'upload' | 'ai_generated' | 'api'>('all');
+  const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -137,6 +140,11 @@ export default function LibraryContent() {
     }
   }, [downloadDoc]);
 
+  const handlePreview = useCallback((doc: Doc) => {
+    setPreviewDoc(doc);
+    setPreviewOpen(true);
+  }, []);
+
   // Table columns configuration
   const columns = useMemo(() => [
     columnHelper.accessor('name', {
@@ -192,6 +200,13 @@ export default function LibraryContent() {
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => handlePreview(info.row.original)}
+          >
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => handleDownload(info.row.original)}
           >
             <Download className="h-4 w-4" />
@@ -207,7 +222,7 @@ export default function LibraryContent() {
       ),
       header: t('page.tableHeaders.actions'),
     }),
-  ], [t, handleDownload, handleDelete, formatFileSize, getMimeTypeIcon]);
+  ], [t, handleDownload, handleDelete, handlePreview, formatFileSize, getMimeTypeIcon]);
 
   // Filter docs based on source
   const filteredDocs = useMemo(() => docs.filter(doc => {
@@ -320,6 +335,7 @@ export default function LibraryContent() {
               docs={filteredRows.map(row => row.original)}
               onDownload={handleDownload}
               onDelete={handleDelete}
+              onPreview={handlePreview}
               formatFileSize={formatFileSize}
               getMimeTypeIcon={getMimeTypeIcon}
             />
@@ -331,6 +347,17 @@ export default function LibraryContent() {
             />
           </TabsContent>
         </Tabs>
+
+        {/* Document Preview Modal */}
+        <DocumentPreview
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+          doc={previewDoc}
+          docs={filteredRows.map(row => row.original)}
+          onDownload={handleDownload}
+          onDelete={handleDelete}
+          formatFileSize={formatFileSize}
+        />
 
         {/* Delete Dialog */}
         <ConfirmDialog

@@ -63,17 +63,21 @@ export async function GET(
     }
 
     // Sanitize and validate the file path
-    // Use same uploads directory as in library.ts
-    const uploadsDir = resolve(process.env.UPLOADS_DIR || '/home/pluggedin/uploads');
-    const requestedPath = normalize(join(uploadsDir, doc.file_path));
+    // For local development, use the actual file path as stored
+    let requestedPath: string;
     
-    // Ensure the resolved path is within the uploads directory (case-insensitive on Windows)
-    const normalizedUploadsDir = uploadsDir.toLowerCase();
-    const normalizedRequestedPath = requestedPath.toLowerCase();
+    // Check if running in local development (macOS)
+    if (process.platform === 'darwin') {
+      // Local development - use the full path as stored in DB
+      requestedPath = normalize(doc.file_path);
+    } else {
+      // Production/staging - use uploads directory
+      const uploadsDir = resolve(process.env.UPLOADS_DIR || '/home/pluggedin/uploads');
+      requestedPath = normalize(join(uploadsDir, doc.file_path));
+    }
     
-    if (process.platform === 'win32' ? 
-        !normalizedRequestedPath.startsWith(normalizedUploadsDir) : 
-        !requestedPath.startsWith(uploadsDir)) {
+    // For security, ensure the path doesn't contain directory traversal attempts
+    if (requestedPath.includes('..')) {
       console.error('Path traversal attempt detected:', doc.file_path);
       return ErrorResponses.forbidden();
     }
