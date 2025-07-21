@@ -3,9 +3,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { join, normalize, resolve } from 'path';
 
 import { getDocByUuid } from '@/app/actions/library';
+import { authenticateApiKey } from '@/app/api/auth';
 import { ErrorResponses } from '@/lib/api-errors';
 import { getAuthSession } from '@/lib/auth';
-import { authenticateApiKey } from '@/app/api/auth';
 
 export async function GET(
   request: NextRequest,
