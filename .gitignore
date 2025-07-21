@@ -20,6 +20,9 @@
 # production
 /build
 
+# pdf.js worker
+/public/pdf.worker.min.mjs
+
 # misc
 .DS_Store
 *.pem
