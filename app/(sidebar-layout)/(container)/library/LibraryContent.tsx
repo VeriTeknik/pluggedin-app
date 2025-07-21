@@ -354,6 +354,7 @@ export default function LibraryContent() {
           onOpenChange={setPreviewOpen}
           doc={previewDoc}
           docs={filteredRows.map(row => row.original)}
+          onDocChange={setPreviewDoc}
           onDownload={handleDownload}
           onDelete={handleDelete}
           formatFileSize={formatFileSize}

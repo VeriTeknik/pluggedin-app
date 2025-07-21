@@ -26,6 +26,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Doc } from '@/types/library';
+import { isTextFile, isPDFFile, isImageFile, getFileLanguage, isMarkdownFile } from '@/lib/file-utils';
 
 // Dynamic imports for heavy components
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
@@ -36,6 +37,7 @@ interface DocumentPreviewProps {
   onOpenChange: (open: boolean) => void;
   doc: Doc | null;
   docs: Doc[];
+  onDocChange?: (doc: Doc) => void;
   onDownload: (doc: Doc) => void;
   onDelete: (doc: Doc) => void;
   formatFileSize: (bytes: number) => string;
@@ -46,6 +48,7 @@ export function DocumentPreview({
   onOpenChange,
   doc,
   docs,
+  onDocChange,
   onDownload,
   onDelete,
   formatFileSize,
@@ -79,30 +82,7 @@ export function DocumentPreview({
       return;
     }
 
-    const isTextFile = doc.mime_type.startsWith('text/') || 
-                      doc.file_name.endsWith('.md') || 
-                      doc.file_name.endsWith('.json') ||
-                      doc.file_name.endsWith('.js') ||
-                      doc.file_name.endsWith('.ts') ||
-                      doc.file_name.endsWith('.tsx') ||
-                      doc.file_name.endsWith('.jsx') ||
-                      doc.file_name.endsWith('.py') ||
-                      doc.file_name.endsWith('.yml') ||
-                      doc.file_name.endsWith('.yaml') ||
-                      doc.file_name.endsWith('.xml') ||
-                      doc.file_name.endsWith('.html') ||
-                      doc.file_name.endsWith('.css') ||
-                      doc.file_name.endsWith('.scss') ||
-                      doc.file_name.endsWith('.java') ||
-                      doc.file_name.endsWith('.c') ||
-                      doc.file_name.endsWith('.cpp') ||
-                      doc.file_name.endsWith('.h') ||
-                      doc.file_name.endsWith('.go') ||
-                      doc.file_name.endsWith('.rs') ||
-                      doc.file_name.endsWith('.sh') ||
-                      doc.file_name.endsWith('.bash');
-
-    if (isTextFile) {
+    if (isTextFile(doc.mime_type, doc.file_name)) {
       setIsLoadingText(true);
       fetch(`/api/library/download/${doc.uuid}`)
         .then(res => res.text())
@@ -118,7 +98,7 @@ export function DocumentPreview({
   }, [doc, open]);
 
   const navigateToDoc = useCallback((direction: 'prev' | 'next') => {
-    if (docs.length <= 1) return;
+    if (docs.length <= 1 || !onDocChange) return;
     
     let newIndex;
     if (direction === 'prev') {
@@ -128,9 +108,8 @@ export function DocumentPreview({
     }
     
     setCurrentDocIndex(newIndex);
-    // Note: We'd need to update the parent component to change the current doc
-    // For now, we'll just track the index
-  }, [currentDocIndex, docs.length]);
+    onDocChange(docs[newIndex]);
+  }, [currentDocIndex, docs, onDocChange]);
 
   const handleZoomIn = () => setImageZoom(prev => Math.min(prev * 1.2, 5));
   const handleZoomOut = () => setImageZoom(prev => Math.max(prev / 1.2, 0.1));
@@ -142,30 +121,9 @@ export function DocumentPreview({
     return <FileText className="h-5 w-5" />;
   };
 
-  const isImage = doc?.mime_type.startsWith('image/');
-  const isPDF = doc?.mime_type === 'application/pdf';
-  const isText = doc ? (doc.mime_type.startsWith('text/') || 
-                       doc.file_name.endsWith('.md') || 
-                       doc.file_name.endsWith('.json') ||
-                       doc.file_name.endsWith('.js') ||
-                       doc.file_name.endsWith('.ts') ||
-                       doc.file_name.endsWith('.tsx') ||
-                       doc.file_name.endsWith('.jsx') ||
-                       doc.file_name.endsWith('.py') ||
-                       doc.file_name.endsWith('.yml') ||
-                       doc.file_name.endsWith('.yaml') ||
-                       doc.file_name.endsWith('.xml') ||
-                       doc.file_name.endsWith('.html') ||
-                       doc.file_name.endsWith('.css') ||
-                       doc.file_name.endsWith('.scss') ||
-                       doc.file_name.endsWith('.java') ||
-                       doc.file_name.endsWith('.c') ||
-                       doc.file_name.endsWith('.cpp') ||
-                       doc.file_name.endsWith('.h') ||
-                       doc.file_name.endsWith('.go') ||
-                       doc.file_name.endsWith('.rs') ||
-                       doc.file_name.endsWith('.sh') ||
-                       doc.file_name.endsWith('.bash')) : false;
+  const isImage = doc ? isImageFile(doc.mime_type) : false;
+  const isPDF = doc ? isPDFFile(doc.mime_type) : false;
+  const isText = doc ? isTextFile(doc.mime_type, doc.file_name) : false;
 
   const renderDocumentContent = () => {
     if (!doc) return null;
@@ -236,37 +194,9 @@ export function DocumentPreview({
       }
 
       if (textContent) {
-        const getLanguage = (fileName: string) => {
-          const ext = fileName.split('.').pop()?.toLowerCase();
-          const languageMap: Record<string, string> = {
-            js: 'javascript',
-            jsx: 'javascript',
-            ts: 'typescript',
-            tsx: 'typescript',
-            py: 'python',
-            java: 'java',
-            c: 'c',
-            cpp: 'cpp',
-            h: 'c',
-            go: 'go',
-            rs: 'rust',
-            sh: 'bash',
-            bash: 'bash',
-            yml: 'yaml',
-            yaml: 'yaml',
-            xml: 'xml',
-            html: 'html',
-            css: 'css',
-            scss: 'scss',
-            json: 'json',
-            md: 'markdown',
-          };
-          return languageMap[ext || ''] || 'text';
-        };
+        const language = getFileLanguage(doc.file_name);
 
-        const language = getLanguage(doc.file_name);
-
-        if (doc.file_name.endsWith('.md')) {
+        if (isMarkdownFile(doc.file_name)) {
           return (
             <ScrollArea className="flex-1 p-6">
               <div className="prose prose-sm dark:prose-invert max-w-none">

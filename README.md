@@ -48,6 +48,9 @@ This application enables seamless integration with any MCP client (Claude, Cline
 
 ### 🤖 New in v2.8.0 - AI Document Exchange (RAG v2)
 - **AI-Generated Documents**: MCP servers can create and manage documents in your library with full attribution
+- **Document Preview Modal**: View PDFs, images, and text files directly in the browser with zoom controls
+- **Enhanced Document Viewer**: Navigate between documents, fullscreen mode, and metadata display
+- **Multi-Format Support**: Native rendering for PDFs, images, markdown, and various code file formats
 - **Model Attribution Tracking**: Complete history of which AI models created or updated each document
 - **Advanced Document Search**: Semantic search with filtering by AI model, date, tags, and source type
 - **Document Versioning**: Track changes and maintain version history for AI-generated content

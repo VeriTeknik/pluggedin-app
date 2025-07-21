@@ -63,22 +63,35 @@ export async function GET(
     }
 
     // Sanitize and validate the file path
-    // For local development, use the actual file path as stored
     let requestedPath: string;
+    let uploadsRoot: string;
     
     // Check if running in local development (macOS)
     if (process.platform === 'darwin') {
       // Local development - use the full path as stored in DB
-      requestedPath = normalize(doc.file_path);
+      requestedPath = resolve(normalize(doc.file_path));
+      // For local dev, we need to determine the uploads root from the path itself
+      // Assuming paths contain '/uploads/' directory
+      const uploadsIndex = requestedPath.indexOf('/uploads/');
+      if (uploadsIndex === -1) {
+        console.error('Invalid file path - missing uploads directory:', doc.file_path);
+        return ErrorResponses.forbidden();
+      }
+      uploadsRoot = requestedPath.substring(0, uploadsIndex + '/uploads'.length);
     } else {
       // Production/staging - use uploads directory
-      const uploadsDir = resolve(process.env.UPLOADS_DIR || '/home/pluggedin/uploads');
-      requestedPath = normalize(join(uploadsDir, doc.file_path));
+      uploadsRoot = resolve(process.env.UPLOADS_DIR || '/home/pluggedin/uploads');
+      requestedPath = resolve(join(uploadsRoot, doc.file_path));
     }
     
-    // For security, ensure the path doesn't contain directory traversal attempts
-    if (requestedPath.includes('..')) {
-      console.error('Path traversal attempt detected:', doc.file_path);
+    // Security check: ensure the resolved path is within the uploads directory
+    // This handles all forms of directory traversal including encoded sequences
+    if (!requestedPath.startsWith(uploadsRoot)) {
+      console.error('Path traversal attempt detected:', {
+        requested: requestedPath,
+        root: uploadsRoot,
+        original: doc.file_path
+      });
       return ErrorResponses.forbidden();
     }
     

@@ -83,7 +83,11 @@ export function DocsGrid({
                     <span className="sr-only">{t('grid.openMenu')}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuContent 
+                  align="end" 
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
                   {onPreview && (
                     <DropdownMenuItem 
                       onClick={(e) => {
