@@ -11,7 +11,6 @@ import {
   Maximize2,
   Minimize2,
   Trash2,
-  X,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -134,6 +133,36 @@ export function DocumentPreview({
   const handleZoomIn = () => setImageZoom(prev => Math.min(prev * ZOOM_LIMITS.STEP, ZOOM_LIMITS.MAX));
   const handleZoomOut = () => setImageZoom(prev => Math.max(prev / ZOOM_LIMITS.STEP, ZOOM_LIMITS.MIN));
   const resetZoom = () => setImageZoom(1);
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent shortcuts when typing in inputs
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          navigateToDoc('prev');
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          navigateToDoc('next');
+          break;
+        case 'Escape':
+          e.preventDefault();
+          onOpenChange(false);
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [open, navigateToDoc, onOpenChange]);
 
   const getFileIcon = (mimeType: string) => {
     if (mimeType.includes('pdf')) return <FileText className="h-5 w-5" />;
@@ -351,14 +380,6 @@ export function DocumentPreview({
               >
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onOpenChange(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
 
@@ -373,8 +394,9 @@ export function DocumentPreview({
 
             {/* Sidebar with metadata */}
             {!isFullscreen && (
-              <div className="w-80 border-l bg-muted/30 p-4 overflow-y-auto">
-                <div className="space-y-4">
+              <div className="w-80 border-l bg-muted/30">
+                <ScrollArea className="h-full p-4">
+                  <div className="space-y-4">
                   <div>
                     <h3 className="font-medium mb-2">{t('preview.metadata')}</h3>
                     <div className="space-y-2 text-sm">
@@ -436,7 +458,8 @@ export function DocumentPreview({
                       )}
                     </div>
                   </div>
-                </div>
+                  </div>
+                </ScrollArea>
               </div>
             )}
           </div>
