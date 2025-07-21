@@ -281,20 +281,13 @@ export default function LibraryContent() {
             </p>
           </div>
           <div>
-            <Button onClick={() => {
-              console.log('Button clicked, current state:', uploadDialogOpen);
-              setUploadDialogOpen(true);
-              console.log('State update requested');
-            }}>
+            <Button onClick={() => setUploadDialogOpen(true)}>
               <Upload className="mr-2 h-4 w-4" />
               {t('uploadDialog.button')}
             </Button>
             <UploadDialog
               open={uploadDialogOpen}
-              onOpenChange={(newOpen) => {
-                console.log('Dialog onOpenChange called with:', newOpen);
-                setUploadDialogOpen(newOpen);
-              }}
+              onOpenChange={setUploadDialogOpen}
               form={uploadForm}
               setForm={setUploadForm}
               isUploading={isUploading}

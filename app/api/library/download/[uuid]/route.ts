@@ -95,20 +95,79 @@ export async function GET(
       return ErrorResponses.forbidden();
     }
     
-    // Read the file
+    // Check for range request (for efficient streaming of large files)
+    const range = request.headers.get('range');
+    
     try {
-      const fileBuffer = await readFile(requestedPath);
+      // Get file stats for size
+      const { stat } = await import('fs/promises');
+      const fileStats = await stat(requestedPath);
+      const fileSize = fileStats.size;
       
-      // Set appropriate headers
+      // Set common headers
       const headers = new Headers();
       headers.set('Content-Type', doc.mime_type);
+      headers.set('Accept-Ranges', 'bytes');
+      headers.set('Cache-Control', 'private, max-age=3600');
       
-      // Use RFC 2231 encoding for filename to safely handle all characters
-      // This is the most secure approach and handles international characters properly
+      // Use RFC 2231 encoding for filename
       headers.set('Content-Disposition', 
         `attachment; filename*=UTF-8''${encodeURIComponent(doc.file_name)}`);
-      headers.set('Content-Length', doc.file_size.toString());
-
+      
+      // Handle range request for partial content
+      if (range) {
+        const parts = range.replace(/bytes=/, '').split('-');
+        const start = parseInt(parts[0], 10);
+        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
+        const chunkSize = end - start + 1;
+        
+        // Use createReadStream for memory efficiency
+        const { createReadStream } = await import('fs');
+        const stream = createReadStream(requestedPath, { start, end });
+        
+        headers.set('Content-Range', `bytes ${start}-${end}/${fileSize}`);
+        headers.set('Content-Length', chunkSize.toString());
+        
+        // Convert stream to Web Stream for NextResponse
+        const webStream = new ReadableStream({
+          start(controller) {
+            stream.on('data', (chunk) => controller.enqueue(chunk));
+            stream.on('end', () => controller.close());
+            stream.on('error', (error) => controller.error(error));
+          },
+        });
+        
+        return new NextResponse(webStream, {
+          status: 206, // Partial Content
+          headers,
+        });
+      }
+      
+      // For full file requests, still use streaming for large files
+      if (fileSize > 10 * 1024 * 1024) { // 10MB threshold
+        const { createReadStream } = await import('fs');
+        const stream = createReadStream(requestedPath);
+        
+        headers.set('Content-Length', fileSize.toString());
+        
+        const webStream = new ReadableStream({
+          start(controller) {
+            stream.on('data', (chunk) => controller.enqueue(chunk));
+            stream.on('end', () => controller.close());
+            stream.on('error', (error) => controller.error(error));
+          },
+        });
+        
+        return new NextResponse(webStream, {
+          status: 200,
+          headers,
+        });
+      }
+      
+      // For small files, use regular readFile
+      const fileBuffer = await readFile(requestedPath);
+      headers.set('Content-Length', fileSize.toString());
+      
       return new NextResponse(fileBuffer, {
         status: 200,
         headers,

@@ -25,8 +25,9 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { Doc } from '@/types/library';
-import { isTextFile, isPDFFile, isImageFile, getFileLanguage, isMarkdownFile } from '@/lib/file-utils';
+import { isTextFile, isPDFFile, isImageFile, getFileLanguage, isMarkdownFile, ZOOM_LIMITS, isValidTextMimeType } from '@/lib/file-utils';
 
 // Dynamic imports for heavy components
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
@@ -85,13 +86,28 @@ export function DocumentPreview({
     if (isTextFile(doc.mime_type, doc.file_name)) {
       setIsLoadingText(true);
       fetch(`/api/library/download/${doc.uuid}`)
-        .then(res => res.text())
+        .then(res => {
+          // Validate content type before processing
+          const contentType = res.headers.get('content-type');
+          if (!isValidTextMimeType(contentType)) {
+            throw new Error('Invalid content type for text processing');
+          }
+          return res.text();
+        })
         .then(text => {
-          setTextContent(text);
+          // Basic sanitization - remove any potential script tags or dangerous content
+          // For production, consider using a proper sanitization library like DOMPurify
+          const sanitized = text
+            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+            .replace(/javascript:/gi, '')
+            .replace(/on\w+\s*=/gi, '');
+          
+          setTextContent(sanitized);
           setIsLoadingText(false);
         })
         .catch(err => {
           console.error('Failed to fetch text content:', err);
+          setTextContent(null);
           setIsLoadingText(false);
         });
     }
@@ -111,8 +127,8 @@ export function DocumentPreview({
     onDocChange(docs[newIndex]);
   }, [currentDocIndex, docs, onDocChange]);
 
-  const handleZoomIn = () => setImageZoom(prev => Math.min(prev * 1.2, 5));
-  const handleZoomOut = () => setImageZoom(prev => Math.max(prev / 1.2, 0.1));
+  const handleZoomIn = () => setImageZoom(prev => Math.min(prev * ZOOM_LIMITS.STEP, ZOOM_LIMITS.MAX));
+  const handleZoomOut = () => setImageZoom(prev => Math.max(prev / ZOOM_LIMITS.STEP, ZOOM_LIMITS.MIN));
   const resetZoom = () => setImageZoom(1);
 
   const getFileIcon = (mimeType: string) => {
@@ -346,7 +362,9 @@ export function DocumentPreview({
           <div className="flex flex-1 min-h-0">
             {/* Main content area */}
             <div className="flex-1 flex flex-col min-h-0">
-              {renderDocumentContent()}
+              <ErrorBoundary>
+                {renderDocumentContent()}
+              </ErrorBoundary>
             </div>
 
             {/* Sidebar with metadata */}

@@ -9,8 +9,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 
-// Set up PDF.js worker
-pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.js`;
+// Set up PDF.js worker - use local worker for security
+// In production, ensure the worker file is served from your own domain
+pdfjs.GlobalWorkerOptions.workerSrc = '/api/pdf-worker';
 
 interface PDFViewerProps {
   fileUrl: string;
