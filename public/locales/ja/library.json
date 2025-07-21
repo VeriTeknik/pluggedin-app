@@ -10,7 +10,7 @@
     "fileTooLarge": "残りストレージに対してファイルが大きすぎます",
     "dropFileHere": "ファイルをここにドロップ",
     "clickToSelect": "クリックして選択またはドラッグ&ドロップ",
-    "supportedFormats": "PDF, TXT, MD, JSON, DOCX, 画像 (ファイルあたり最大10MB)",
+    "supportedFormats": "PDF, DOCX, TXT, MD, JSON, YAML, XML, HTML, CSS, JS/TS, Python, Java, C/C++, Go, Rust, Shellスクリプト, 画像 (ファイルあたり最大10MB)",
     "documentName": "ドキュメント名",
     "documentNamePlaceholder": "ドキュメント名を入力",
     "descriptionLabel": "説明 (オプション)",

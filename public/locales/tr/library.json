@@ -10,7 +10,7 @@
     "fileTooLarge": "Dosya kalan depolama için çok büyük",
     "dropFileHere": "Dosyayı buraya bırakın",
     "clickToSelect": "Seçmek için tıklayın veya sürükleyip bırakın",
-    "supportedFormats": "PDF, TXT, MD, JSON, DOCX, Resimler (dosya başına maks 10MB)",
+    "supportedFormats": "PDF, DOCX, TXT, MD, JSON, YAML, XML, HTML, CSS, JS/TS, Python, Java, C/C++, Go, Rust, Shell scriptleri, Resimler (dosya başına maks 10MB)",
     "documentName": "Belge Adı",
     "documentNamePlaceholder": "Belge adını girin",
     "descriptionLabel": "Açıklama (isteğe bağlı)",

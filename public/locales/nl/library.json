@@ -10,7 +10,7 @@
     "fileTooLarge": "Bestand te groot voor resterende opslag",
     "dropFileHere": "Zet het bestand hier neer",
     "clickToSelect": "Klik om te selecteren of sleep en zet neer",
-    "supportedFormats": "PDF, TXT, MD, JSON, DOCX, Afbeeldingen (max 10MB per bestand)",
+    "supportedFormats": "PDF, DOCX, TXT, MD, JSON, YAML, XML, HTML, CSS, JS/TS, Python, Java, C/C++, Go, Rust, Shell scripts, Afbeeldingen (max 10MB per bestand)",
     "documentName": "Document Naam",
     "documentNamePlaceholder": "Voer document naam in",
     "descriptionLabel": "Beschrijving (optioneel)",

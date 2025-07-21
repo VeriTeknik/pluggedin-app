@@ -94,12 +94,36 @@ export function UploadDialog({
     multiple: false,
     maxSize: STORAGE_LIMIT, // 100MB limit per file
     accept: {
+      // Documents
       'application/pdf': ['.pdf'],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
+      
+      // Text files
       'text/plain': ['.txt'],
       'text/markdown': ['.md'],
       'application/json': ['.json'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
+      'text/yaml': ['.yml', '.yaml'],
+      'application/xml': ['.xml'],
+      'text/html': ['.html'],
+      'text/css': ['.css'],
+      
+      // Programming languages
+      'text/javascript': ['.js'],
+      'application/javascript': ['.js'],
+      'text/typescript': ['.ts'],
+      'application/typescript': ['.ts', '.tsx'],
+      'text/jsx': ['.jsx'],
+      'text/python': ['.py'],
+      'text/java': ['.java'],
+      'text/c': ['.c', '.h'],
+      'text/cpp': ['.cpp'],
+      'text/go': ['.go'],
+      'text/rust': ['.rs'],
+      'application/x-sh': ['.sh'],
+      'text/x-shellscript': ['.bash'],
+      
+      // Images
+      'image/*': ['.jpg', '.jpeg', '.png', '.gif', '.svg', '.webp', '.bmp'],
     }
   });
 

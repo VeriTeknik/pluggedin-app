@@ -10,7 +10,7 @@
     "fileTooLarge": "शेष भंडारण के लिए फ़ाइल बहुत बड़ी है",
     "dropFileHere": "फ़ाइल को यहाँ छोड़ें",
     "clickToSelect": "चुनने के लिए क्लिक करें या खींचें और छोड़ें",
-    "supportedFormats": "PDF, TXT, MD, JSON, DOCX, चित्र (प्रति फ़ाइल अधिकतम 10MB)",
+    "supportedFormats": "PDF, DOCX, TXT, MD, JSON, YAML, XML, HTML, CSS, JS/TS, Python, Java, C/C++, Go, Rust, Shell स्क्रिप्ट, चित्र (प्रति फ़ाइल अधिकतम 10MB)",
     "documentName": "दस्तावेज़ नाम",
     "documentNamePlaceholder": "दस्तावेज़ नाम दर्ज करें",
     "descriptionLabel": "विवरण (वैकल्पिक)",

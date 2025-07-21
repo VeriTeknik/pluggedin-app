@@ -10,7 +10,7 @@
     "fileTooLarge": "文件对于剩余存储空间来说太大",
     "dropFileHere": "将文件拖放到这里",
     "clickToSelect": "点击选择或拖放",
-    "supportedFormats": "PDF, TXT, MD, JSON, DOCX, 图片 (每个文件最大10MB)",
+    "supportedFormats": "PDF, DOCX, TXT, MD, JSON, YAML, XML, HTML, CSS, JS/TS, Python, Java, C/C++, Go, Rust, Shell脚本, 图片 (每个文件最大10MB)",
     "documentName": "文档名称",
     "documentNamePlaceholder": "输入文档名称",
     "descriptionLabel": "描述 (可选)",
