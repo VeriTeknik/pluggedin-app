@@ -70,7 +70,7 @@ export default function NotificationsPage() {
   const profileUuid = currentProfile?.uuid || '';
   const { notifications, refreshNotifications, unreadCount, markAllAsRead } =
     useNotifications();
-  const [_activeTab, _setActiveTab] = useState('all');
+
   const [severityFilter, setSeverityFilter] = useState<string>('all');
   const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [searchTerm, setSearchTerm] = useState('');
@@ -201,11 +201,11 @@ export default function NotificationsPage() {
     return {
       all: notifications.length,
       unread: notifications.filter(n => !n.read).length,
-      success: notifications.filter(n => n.type === 'SUCCESS').length,
-      warning: notifications.filter(n => n.type === 'WARNING').length,
-      alert: notifications.filter(n => n.type === 'ALERT').length,
-      info: notifications.filter(n => n.type === 'INFO').length,
-      custom: notifications.filter(n => n.type === 'CUSTOM').length,
+      success: notifications.filter(n => n.type && n.type.toUpperCase() === 'SUCCESS').length,
+      warning: notifications.filter(n => n.type && n.type.toUpperCase() === 'WARNING').length,
+      alert: notifications.filter(n => n.type && n.type.toUpperCase() === 'ALERT').length,
+      info: notifications.filter(n => n.type && n.type.toUpperCase() === 'INFO').length,
+      custom: notifications.filter(n => n.type && n.type.toUpperCase() === 'CUSTOM').length,
     };
   }, [notifications]);
 

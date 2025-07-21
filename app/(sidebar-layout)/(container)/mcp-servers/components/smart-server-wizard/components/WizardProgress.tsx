@@ -19,8 +19,8 @@ export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgre
       <div className="block md:hidden">
         <div className="space-y-2">
           {steps.map((step, index) => {
+            const { isComplete } = step;
             const isActive = index === currentStep;
-            const isComplete = step.isComplete;
             const isPast = index < currentStep;
             const canNavigate = isPast || isComplete;
 
@@ -93,8 +93,8 @@ export function WizardProgress({ steps, currentStep, onStepClick }: WizardProgre
           {/* Steps container */}
           <div className="relative flex items-start justify-between">
             {steps.map((step, index) => {
+              const { isComplete } = step;
               const isActive = index === currentStep;
-              const isComplete = step.isComplete;
               const isPast = index < currentStep;
               const canNavigate = isPast || isComplete;
 

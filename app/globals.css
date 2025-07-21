@@ -39,6 +39,7 @@ html {
 }
 
 .scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
   height: 6px;
 }
 
@@ -173,29 +174,7 @@ html {
   }
 }
 
-/* Custom scrollbar styles for wizard progress mobile */
-.scrollbar-thin {
-  scrollbar-width: thin;
-  scrollbar-color: theme(colors.gray.300) theme(colors.gray.100);
-}
 
-.scrollbar-thin::-webkit-scrollbar {
-  height: 4px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-track {
-  background: theme(colors.gray.100);
-  border-radius: 2px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb {
-  background: theme(colors.gray.300);
-  border-radius: 2px;
-}
-
-.scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: theme(colors.gray.400);
-}
 
 /* Ensure proper text wrapping and overflow handling for chat */
 .break-words {
