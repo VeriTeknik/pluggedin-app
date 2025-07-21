@@ -173,7 +173,7 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
                     const page = parseInt(e.target.value) || 1;
                     goToPage(page);
                   }}
-                  className="w-16 h-8 text-center text-sm"
+                  className="w-16 h-8 text-center text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   min={1}
                   max={numPages}
                   disabled={isLoading}
@@ -277,7 +277,7 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
                   <div 
                     key={`page_${index + 1}`} 
                     data-page-number={index + 1}
-                    className="bg-white shadow-lg mb-4 last:mb-0"
+                    className="bg-white shadow-lg mb-4 last:mb-0 rounded-lg overflow-hidden"
                   >
                     <Page
                       pageNumber={index + 1}
@@ -285,6 +285,7 @@ export default function PDFViewer({ fileUrl, className }: PDFViewerProps) {
                       renderTextLayer={false}
                       renderAnnotationLayer={false}
                       onLoadSuccess={index === 0 ? onPageLoadSuccess : undefined}
+                      className="block"
                     />
                   </div>
                 )

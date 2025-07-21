@@ -295,7 +295,7 @@ export function DocumentPreview({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={`max-w-7xl ${isFullscreen ? 'h-screen max-h-screen' : 'h-[90vh]'} p-0 gap-0`}
+        className={`${isFullscreen ? 'w-screen h-screen max-w-none max-h-none rounded-none' : 'max-w-7xl h-[90vh] rounded-lg'} p-0 gap-0 overflow-hidden`}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <VisuallyHidden>
@@ -306,7 +306,7 @@ export function DocumentPreview({
         </VisuallyHidden>
         <div className="flex flex-col h-full">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <div className="flex items-center justify-between p-4 pr-12 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 rounded-t-lg">
             <div className="flex items-center gap-3 min-w-0 flex-1">
               {getFileIcon(doc.mime_type)}
               <div className="min-w-0 flex-1">
