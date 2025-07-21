@@ -412,7 +412,14 @@ export default function NotificationsPage() {
                    selectedCategory.toUpperCase()}
                 </h2>
                 <Badge variant="secondary">
-                  {filteredNotifications.length}
+                  {selectedCategory === 'all' ? categoryCounts.all :
+                   selectedCategory === 'unread' ? categoryCounts.unread :
+                   selectedCategory === 'success' ? categoryCounts.success :
+                   selectedCategory === 'info' ? categoryCounts.info :
+                   selectedCategory === 'warning' ? categoryCounts.warning :
+                   selectedCategory === 'alert' ? categoryCounts.alert :
+                   selectedCategory === 'custom' ? categoryCounts.custom :
+                   filteredNotifications.length}
                 </Badge>
               </div>
 
