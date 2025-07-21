@@ -5,11 +5,17 @@ import {
   Bell,
   Blocks, 
   Box, 
+  Brain,
+  Clock,
   Database,
   Globe, 
+  Key,
+  Lock,
+  Package,
   Search, 
   Share2, 
   Shield,
+  TrendingUp,
   TerminalSquare} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -20,10 +26,55 @@ interface Feature {
   icon: React.ElementType;
   titleKey: string;
   descriptionKey: string;
+  comingSoon?: boolean;
 }
 
-// Feature data with all 9 major features
+// Feature data organized by priority - data ownership first
 const features: Feature[] = [
+  // Data Ownership Features (Priority)
+  {
+    icon: Brain,
+    titleKey: 'features.universalAiHub.title',
+    descriptionKey: 'features.universalAiHub.description'
+  },
+  {
+    icon: Shield,
+    titleKey: 'features.dataSovereignty.title',
+    descriptionKey: 'features.dataSovereignty.description'
+  },
+  {
+    icon: Database,
+    titleKey: 'features.aiAssetManagement.title',
+    descriptionKey: 'features.aiAssetManagement.description'
+  },
+  {
+    icon: Clock,
+    titleKey: 'features.crossModelMemory.title',
+    descriptionKey: 'features.crossModelMemory.description',
+    comingSoon: true
+  },
+  // Technical Features
+  {
+    icon: Package,
+    titleKey: 'features.mcpRegistry.title',
+    descriptionKey: 'features.mcpRegistry.description'
+  },
+  {
+    icon: Lock,
+    titleKey: 'features.endToEndEncryption.title',
+    descriptionKey: 'features.endToEndEncryption.description'
+  },
+  {
+    icon: TrendingUp,
+    titleKey: 'features.trendingAnalytics.title',
+    descriptionKey: 'features.trendingAnalytics.description'
+  },
+  {
+    icon: Key,
+    titleKey: 'features.oauthTokenManagement.title',
+    descriptionKey: 'features.oauthTokenManagement.description'
+  },
+  // Community Features
   {
     icon: Share2,
     titleKey: 'features.communitySharing.title',
@@ -40,34 +91,9 @@ const features: Feature[] = [
     descriptionKey: 'features.workspaceOrganization.description'
   },
   {
-    icon: Search,
-    titleKey: 'features.advancedSearch.title',
-    descriptionKey: 'features.advancedSearch.description'
-  },
-  {
-    icon: TerminalSquare,
-    titleKey: 'features.mcpPlayground.title',
-    descriptionKey: 'features.mcpPlayground.description'
-  },
-  {
     icon: Database,
     titleKey: 'features.ragIntegration.title',
     descriptionKey: 'features.ragIntegration.description'
-  },
-  {
-    icon: Bell,
-    titleKey: 'features.notifications.title',
-    descriptionKey: 'features.notifications.description'
-  },
-  {
-    icon: Shield,
-    titleKey: 'features.security.title',
-    descriptionKey: 'features.security.description'
-  },
-  {
-    icon: Globe,
-    titleKey: 'features.internationalization.title',
-    descriptionKey: 'features.internationalization.description'
   }
 ];
 
@@ -94,19 +120,25 @@ const itemVariants = {
 };
 
 // Feature Card Component
-function FeatureCard({ icon: Icon, titleKey, descriptionKey }: Feature) {
+function FeatureCard({ icon: Icon, titleKey, descriptionKey, comingSoon }: Feature) {
   const { t } = useTranslation('landing');
+  
   return (
     <motion.div variants={itemVariants}>
-      <Card className="h-full hover:shadow-lg transition-shadow duration-300 border border-border/40">
-        <CardHeader className="pb-3">
-          <div className="mb-3 flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
+      <Card className="h-full hover:shadow-lg transition-shadow duration-300 border border-border/40 relative">
+        {comingSoon && (
+          <div className="absolute top-4 right-4 bg-primary/20 text-primary text-xs font-semibold px-2 py-1 rounded-full">
+            Coming Soon
           </div>
-          <CardTitle className="text-lg sm:text-xl leading-tight">{t(titleKey)}</CardTitle>
+        )}
+        <CardHeader>
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Icon className="h-6 w-6" />
+          </div>
+          <CardTitle>{t(titleKey)}</CardTitle>
         </CardHeader>
-        <CardContent className="pt-0">
-          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
             {t(descriptionKey)}
           </p>
         </CardContent>
@@ -120,19 +152,19 @@ export function LandingFeaturesOverview() {
   const { t } = useTranslation('landing');
 
   return (
-    <section id="features" className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 bg-muted/30">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="mb-8 sm:mb-10 lg:mb-12 text-center max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl lg:text-4xl leading-tight">
+    <section id="features" className="py-16 md:py-24 lg:py-32 bg-muted/30">
+      <div className="container mx-auto px-4">
+        <div className="mb-12 text-center max-w-2xl mx-auto">
+          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
             {t('features.sectionTitle')}
           </h2>
-          <p className="mt-3 sm:mt-4 text-base sm:text-lg text-muted-foreground leading-relaxed px-4">
+          <p className="mt-4 text-lg text-muted-foreground">
             {t('features.sectionSubtitle')}
           </p>
         </div>
 
         <motion.div
-          className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-7xl mx-auto"
+          className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
           variants={containerVariants}
           initial="hidden"
           whileInView="visible"

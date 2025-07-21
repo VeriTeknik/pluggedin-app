@@ -78,7 +78,7 @@ const itemVariants = {
 export function LandingDevelopersSection() {
   const { t } = useTranslation('landing');
 
-  const codeExample = `npx -y @pluggedin/mcp-proxy@latest \\
+  const codeExample = `npx -y @pluggedin/pluggedin-mcp-proxy@latest \\
   --pluggedin-api-key YOUR_API_KEY`;
 
   return (

@@ -45,6 +45,25 @@
     "sort": {
       "newest": "En yeni önce",
       "oldest": "En eski önce"
+    },
+    "metadata": {
+      "source": {
+        "via": "{{source}} ile",
+        "mcp": "MCP: {{server}}",
+        "api": "API: {{key}}",
+        "system": "Sistem",
+        "user": "Kullanıcı"
+      },
+      "actions": {
+        "markedRead": "{{time}} okundu",
+        "completed": "{{time}} tamamlandı",
+        "completedVia": "{{method}} ile {{time}} tamamlandı",
+        "method": {
+          "mcp": "MCP",
+          "web": "Web",
+          "api": "API"
+        }
+      }
     }
   }
 }

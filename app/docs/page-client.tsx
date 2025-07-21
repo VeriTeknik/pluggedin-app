@@ -87,30 +87,30 @@ export default function DocsPageClient() {
   const { t } = useTranslation('docs');
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
-      <div className="text-center mb-8 sm:mb-12">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4">{t('title')}</h1>
-        <p className="text-base sm:text-lg text-muted-foreground max-w-xl sm:max-w-2xl mx-auto px-2">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold mb-4">{t('title')}</h1>
+        <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
           {t('description')}
         </p>
       </div>
 
       {/* Search */}
-      <div className="w-full max-w-md sm:max-w-xl lg:max-w-2xl mx-auto mb-8 sm:mb-12 px-2 sm:px-0">
+      <div className="max-w-2xl mx-auto mb-12">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
             type="search"
             placeholder={t('search.placeholder')}
-            className="pl-10 h-10 sm:h-12 text-sm sm:text-base"
+            className="pl-10 h-12"
           />
         </div>
       </div>
 
       {/* Categories */}
       <motion.div
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
         variants={containerVariants}
         initial="hidden"
         animate="visible"
@@ -120,15 +120,15 @@ export default function DocsPageClient() {
           return (
             <motion.div key={category.id} variants={itemVariants}>
               <Link href={category.href}>
-                <Card className="h-full hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <div className={`inline-flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-lg ${category.bgColor} mb-3 sm:mb-4`}>
-                      <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${category.color}`} />
+                <Card className="h-full hover:shadow-lg transition-all duration-300 hover:scale-105 cursor-pointer">
+                  <CardHeader>
+                    <div className={`inline-flex items-center justify-center w-12 h-12 rounded-lg ${category.bgColor} mb-4`}>
+                      <Icon className={`h-6 w-6 ${category.color}`} />
                     </div>
-                    <CardTitle className="text-base sm:text-lg">{t(`categories.${category.id}`)}</CardTitle>
+                    <CardTitle>{t(`categories.${category.id}`)}</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-0">
-                    <CardDescription className="text-sm">
+                  <CardContent>
+                    <CardDescription>
                       {/* We'll add descriptions for each category in the translation files later */}
                       Learn more about {t(`categories.${category.id}`).toLowerCase()}
                     </CardDescription>
@@ -141,50 +141,55 @@ export default function DocsPageClient() {
       </motion.div>
 
       {/* Popular Articles Section (placeholder for now) */}
-      <div className="mt-12 sm:mt-16">
-        <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6 px-2 sm:px-0">Popular Articles</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+      <div className="mt-16">
+        <h2 className="text-2xl font-bold mb-6">Popular Articles</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* These will be populated dynamically later */}
           <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3 sm:pb-6">
-              <CardTitle className="text-base sm:text-lg">Quick Start Guide</CardTitle>
-              <CardDescription className="text-sm">Get up and running with Plugged.in in 5 minutes</CardDescription>
+            <CardHeader>
+              <CardTitle className="text-lg">Quick Start Guide</CardTitle>
+              <CardDescription>Get up and running with Plugged.in in 5 minutes</CardDescription>
             </CardHeader>
           </Card>
           <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3 sm:pb-6">
-              <CardTitle className="text-base sm:text-lg">MCP Server Setup</CardTitle>
-              <CardDescription className="text-sm">Learn how to configure and manage MCP servers</CardDescription>
+            <CardHeader>
+              <CardTitle className="text-lg">MCP Server Setup</CardTitle>
+              <CardDescription>Learn how to configure and manage MCP servers</CardDescription>
             </CardHeader>
           </Card>
           <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3 sm:pb-6">
-              <CardTitle className="text-base sm:text-lg">API Authentication</CardTitle>
-              <CardDescription className="text-sm">Secure your API calls with proper authentication</CardDescription>
+            <CardHeader>
+              <CardTitle className="text-lg">API Authentication</CardTitle>
+              <CardDescription>Secure your API calls with proper authentication</CardDescription>
             </CardHeader>
           </Card>
           <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3 sm:pb-6">
-              <CardTitle className="text-base sm:text-lg">Building Custom Tools</CardTitle>
-              <CardDescription className="text-sm">Create custom MCP tools for your workflow</CardDescription>
+            <CardHeader>
+              <CardTitle className="text-lg">Building Custom Tools</CardTitle>
+              <CardDescription>Create custom MCP tools for your workflow</CardDescription>
             </CardHeader>
           </Card>
         </div>
       </div>
 
       {/* Help Section */}
-      <div className="mt-12 sm:mt-16 text-center bg-muted/30 rounded-lg p-6 sm:p-8 mx-2 sm:mx-0">
-        <h3 className="text-lg sm:text-xl font-semibold mb-3 sm:mb-4">Need Help?</h3>
-        <p className="text-muted-foreground mb-4 sm:mb-6 text-sm sm:text-base">
+      <div className="mt-16 text-center bg-muted/30 rounded-lg p-8">
+        <h3 className="text-xl font-semibold mb-4">Need Help?</h3>
+        <p className="text-muted-foreground mb-6">
           Can&apos;t find what you&apos;re looking for? We&apos;re here to help.
         </p>
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center">
-          <Button asChild variant="outline" className="w-full sm:w-auto">
+        <div className="flex gap-4 justify-center">
+          <Button asChild variant="outline">
             <Link href="/legal/contact">Contact Support</Link>
           </Button>
-          <Button asChild variant="outline" className="w-full sm:w-auto">
-            <a href="https://discord.gg/pluggedin" target="_blank" rel="noopener noreferrer">
-              Join Discord
+          <Button asChild variant="outline">
+            <a href="https://www.reddit.com/r/plugged_in/" target="_blank" rel="noopener noreferrer">
+              Join Reddit
+            </a>
+          </Button>
+          <Button asChild variant="outline">
+            <a href="https://x.com/PluggedIntoAI" target="_blank" rel="noopener noreferrer">
+              Follow on X
             </a>
           </Button>
         </div>

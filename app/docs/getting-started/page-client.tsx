@@ -231,7 +231,7 @@ export default function GettingStartedPageClient() {
                   
                   {step.key === 'installProxy' && (
                     <div className="space-y-4">
-                      <CodeSnippet code="npx @pluggedin/mcp-proxy@latest --help" />
+                      <CodeSnippet code="npx @pluggedin/pluggedin-mcp-proxy@latest --help" />
                       <p className="text-sm text-muted-foreground">
                         {t('quickStart.installProxy.note')}
                       </p>
@@ -254,7 +254,7 @@ export default function GettingStartedPageClient() {
   "mcpServers": {
     "pluggedin": {
       "command": "npx",
-      "args": ["-y", "@pluggedin/mcp-proxy@latest"],
+      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy@latest"],
       "env": {
         "PLUGGEDIN_API_KEY": "YOUR_API_KEY_HERE"
       }
@@ -268,7 +268,7 @@ export default function GettingStartedPageClient() {
                           {t('quickStart.configureClient.cursor.instruction')}
                         </p>
                         <CodeSnippet 
-                          code="npx -y @pluggedin/mcp-proxy@latest --pluggedin-api-key YOUR_API_KEY_HERE"
+                          code="npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key YOUR_API_KEY_HERE"
                         />
                       </TabsContent>
                     </Tabs>
@@ -558,7 +558,7 @@ Arguments: /path/to/allowed/directory`}
             <h3 className="font-semibold mb-3">{t('quickReference.commands.title')}</h3>
             <div className="space-y-3">
               <CodeSnippet code="# Install MCP Proxy
-npx @pluggedin/mcp-proxy@latest
+npx @pluggedin/pluggedin-mcp-proxy@latest
 
 # Generate encryption key (self-hosted)
 pnpm generate-encryption-key
@@ -582,7 +582,7 @@ pnpm db:migrate" />
   "mcpServers": {
     "pluggedin": {
       "command": "npx",
-      "args": ["-y", "@pluggedin/mcp-proxy@latest"],
+      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy@latest"],
       "env": {
         "PLUGGEDIN_API_KEY": "your-api-key"
       }
@@ -600,7 +600,7 @@ pnpm db:migrate" />
       "command": "npx",
       "args": [
         "-y", 
-        "@pluggedin/mcp-proxy@latest",
+        "@pluggedin/pluggedin-mcp-proxy@latest",
         "--profile", "production",
         "--enable-notifications"
       ],

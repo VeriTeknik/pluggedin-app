@@ -169,7 +169,8 @@
       "links": [
         { "text": "GitHub - pluggedin-app", "href": "https://github.com/VeriTeknik/pluggedin-app", "external": true },
         { "text": "GitHub - pluggedin-mcp", "href": "https://github.com/VeriTeknik/pluggedin-mcp", "external": true },
-        { "text": "Discord Sunucusu", "href": "https://discord.gg/pluggedin", "external": true }
+        { "text": "Reddit Topluluğu", "href": "https://www.reddit.com/r/plugged_in/", "external": true },
+        { "text": "X (Twitter)", "href": "https://x.com/PluggedIntoAI", "external": true }
       ]
     }
   },

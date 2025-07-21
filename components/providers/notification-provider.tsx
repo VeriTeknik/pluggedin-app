@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { getNotifications, markAllNotificationsAsRead,markNotificationAsRead } from '@/app/actions/notifications';
 import { useProfiles } from '@/hooks/use-profiles';
 import { useToast } from '@/hooks/use-toast';
+import type { NotificationMetadata } from '@/lib/types/notifications';
 
 // Notification type from the database
 export interface Notification {
@@ -16,6 +17,7 @@ export interface Notification {
   link?: string | null;
   severity?: string | null;
   completed: boolean;
+  metadata?: NotificationMetadata;
   created_at: Date;
 }
 
@@ -52,7 +54,12 @@ export function NotificationProvider({
     try {
       const result = await getNotifications(profileUuid);
       if (result.success) {
-        setNotifications(result.notifications || []);
+        // Transform null metadata to undefined to match the Notification type
+        const transformedNotifications = (result.notifications || []).map(n => ({
+          ...n,
+          metadata: n.metadata || undefined
+        }));
+        setNotifications(transformedNotifications);
       } else {
         console.error('Failed to load notifications:', result.error);
       }

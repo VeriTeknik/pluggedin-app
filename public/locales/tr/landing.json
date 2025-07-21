@@ -1,31 +1,126 @@
 {
   "navigation": {
     "enterApp": "Uygulamaya Gir",
+    "whyPluggedin": "Neden plugged.in", 
     "features": "Özellikler",
+    "aiModels": "AI Modelleri", 
+    "pricing": "Fiyatlandırma", 
     "community": "Topluluk",
     "collections": "Koleksiyonlar",
     "playground": "Oyun Alanı",
     "documentation": "Dokümantasyon",
-    "getStarted": "Başlayın"
+    "getStarted": "Ücretsiz Başla"
   },
   "hero": {
     "title": "Yapay Zeka Kavşağı",
     "subtitle": "Birleşik bir platformla yapay zeka yeteneklerinizi bağlayın, oluşturun ve genişletin. Yapay zeka iş akışlarınızı geliştiren eklentiler oluşturun ve yönetin.",
-    "headline": "MCP Sunucularını Bağlayın, Paylaşın ve Keşfedin",
-    "subheadline": "Model Context Protocol için topluluk merkezi, evrensel proxy ve yapay zeka bilgi platformu",
+    "headline": "Yapay Zeka Kavşağı: Her Modeli Bağlayın, Her Etkileşimi Sahiplenin",
+    "subheadline": "MCP Registry tarafından destekleniyor - AI Veri Sahipliği için Açık Standart",
     "analogy": "\"Yapay zeka ekosistemin, birleşik ve sosyal\"",
+    "valueBanner": "AI Tarafından Üretilen Verileriniz. Her Model. Her Etkileşim. Sizin Kontrolünüzde.",
     "openSource": "Gururla Açık Kaynak",
-    "version": "v1.0.0",
+    "version": "v2.7.0",
     "cta": {
-      "getStarted": "Topluluğa Katıl",
-      "learnMore": "Özellikleri Keşfet"
+      "getStarted": "Ücretsiz Başla",
+      "learnMore": "Neden plugged.in"
+    }
+  },
+  "whyPluggedin": {
+    "title": "Neden plugged.in?",
+    "subtitle": "Tüm AI etkileşimlerinizin birleştiği kavşak",
+    "problem": {
+      "title": "Çözdüğümüz Problem",
+      "description": "AI ile her etkileşimde - ister Claude, GPT veya başka bir model olsun - değerli veriler üretilir. İçgörüler, yapılandırmalar, başarılı komutlar ve bağlamsal bilgi. Ancak bu veriler farklı platformlar tarafından kontrol edilen silolarda yaşar, araçlar arasında kullanılamaz."
+    },
+    "solution": {
+      "title": "Çözümümüz",
+      "description": "plugged.in evrensel kavşak görevi görür:",
+      "benefit1": "Her AI etkileşimi kontrollü ortamınızdan geçer",
+      "benefit2": "Üretilen her veri parçası sahiplenmeniz, analiz etmeniz ve yeniden kullanmanız için sizin kalır",
+      "benefit3": "Her model tek, birleşik bir arayüz üzerinden bağlanır",
+      "benefit4": "Her içgörü bir öncekinin üzerine eklenir, bileşik değer yaratır"
+    },
+    "bridge": {
+      "title": "Açık Standartlar Üzerine İnşa Edildi",
+      "description": "Model Context Protocol'ü (MCP) teknik temel olarak kullanıyoruz - popüler olduğu için değil, gerçek veri sahipliğini mümkün kılan açık standart olduğu için. MCP, verilerinizin tescilli platformlarda kilitli kalmamasını, bunun yerine taşınabilir varlığınız olmasını sağlar."
+    },
+    "visual": {
+      "hub": "plugged.in Hub",
+      "hubDesc": "Kontrollü ortamınız",
+      "yourData": "Verileriniz",
+      "yourDataDesc": "Sahip olunan, taşınabilir ve yeniden kullanılabilir"
+    },
+    "cta": {
+      "title": "Tek platform. Tüm modeller. Verileriniz. Geleceğiniz.",
+      "subtitle": "AI tarafından üretilen verilerin kontrolünü ele alan binlerce kişiye katılın"
+    },
+    "aiModels": {
+      "claude": "Claude",
+      "gpt4": "GPT-4",
+      "llama": "Llama",
+      "gemini": "Gemini"
+    }
+  },
+  "aiModels": {
+    "badge": "Langchain ile Güçlendirildi",
+    "title": "Tek Platform, Her Model",
+    "subtitle": "Aynı komutu modeller arasında anında test edin. Verileriniz her yerde çalışır - yeniden eğitime gerek yok.",
+    "moreModels": "Langchain entegrasyonumuz ile düzinelerce model daha",
+    "viewAll": "Tüm Modelleri Görüntüle",
+    "feature1": {
+      "title": "Anında Model Değiştirme",
+      "description": "Farklı modellerden gelen yanıtları tek tıkla yan yana karşılaştırın."
+    },
+    "feature2": {
+      "title": "Birleşik Komut Verme",
+      "description": "Komutlarınız ve bağlamınız tüm AI modellerinde sorunsuz çalışır."
+    },
+    "feature3": {
+      "title": "Modelden Bağımsız Veri",
+      "description": "Bir kez oluşturun, her yerde kullanın. AI varlıklarınız hiçbir modele kilitli değil."
+    },
+    "cta": {
+      "title": "Birden fazla modelle test etmeye hazır mısınız?",
+      "button": "Oyun Alanını Deneyin"
     }
   },
   "features": {
     "title": "Özellikler",
     "subtitle": "MCP sunucularınızı yönetmek için ihtiyacınız olan her şey",
-    "sectionTitle": "Eksiksiz Yapay Zeka Ekosistem Platformu",
-    "sectionSubtitle": "Kurumsal düzeyde özelliklerle yapay zeka yeteneklerinizi bağlayın, paylaşın, keşfedin ve genişletin.",
+    "sectionTitle": "AI Yolculuğunuzu Sahiplenin",
+    "sectionSubtitle": "Veri sahipliğinden topluluk işbirliğine - tek platformda ihtiyacınız olan her şey.",
+    "universalAiHub": {
+      "title": "Evrensel AI Hub",
+      "description": "Claude, GPT, Llama ve herhangi bir AI modelini tek arayüz üzerinden bağlayın. Aynı komutu modeller arasında anında test edin."
+    },
+    "dataSovereignty": {
+      "title": "Veri Egemenliği",
+      "description": "Her komut, yapılandırma ve içgörü kontrolünüz altında kalır. Verilerinizi istediğiniz zaman açık formatlarda dışa aktarın."
+    },
+    "aiAssetManagement": {
+      "title": "AI Varlık Yönetimi",
+      "description": "Komutlarınız, yapılandırmalarınız ve bağlamınız yeniden kullanılabilir varlıklar haline gelir. Özel ihtiyaçlarınız için işe yarayan bir kütüphane oluşturun."
+    },
+    "crossModelMemory": {
+      "title": "Çapraz Model Belleği",
+      "description": "Yakında: Tek bir platformda hapsolmayan, tüm AI araçlarında çalışan bilgi oluşturun."
+    },
+    "mcpRegistry": {
+      "title": "MCP Registry",
+      "description": "Açık MCP standardı üzerinden 500+ entegrasyona erişin. Topluluk derecelendirmeleri ve yorumları ile tek tıkla kurulum."
+    },
+    "endToEndEncryption": {
+      "title": "Uçtan Uca Şifreleme",
+      "description": "AI fikri mülkiyetiniz için askeri düzeyde koruma. Yapılandırmalarınız ve verileriniz dinlenme ve aktarım sırasında güvende kalır."
+    },
+    "trendingAnalytics": {
+      "title": "Trend Analitiği",
+      "description": "Gerçek zamanlı analitiklerle popüler sunucuları keşfedin. Verilerinizi gizli tutarken topluluktan öğrenin."
+    },
+    "oauthTokenManagement": {
+      "title": "OAuth ve Token Yönetimi",
+      "description": "Yerleşik OAuth desteği ile güvenli kimlik doğrulama akışları. Tüm AI hizmetlerinizde token ve izinleri yönetin."
+    },
     "communitySharing": {
       "title": "Sosyal Platform ve Topluluk",
       "description": "MCP sunucularını paylaşın, geliştiricileri takip edin, bildirimler alın ve yapay zeka ağınızı kurun. Herkese açık profiller, derecelendirmeler ve işbirlikçi keşif."
@@ -96,9 +191,9 @@
     "description": "MCP sunucularınızı paylaşın, geliştiricileri takip edin, gerçek zamanlı bildirimler alın ve sosyal platformumuz içinde işbirliği yapın. Derecelendirmeler, yorumlar ve topluluk katkılarıyla itibarınızı oluşturun.",
     "action": "Topluluğa Katılın",
     "stats": {
-      "developers": "10K+ Geliştirici",
-      "servers": "5000+ MCP Sunucusu",
-      "collections": "1500+ Koleksiyon",
+      "developers": "1K+ Geliştirici",
+      "servers": "500+ MCP Sunucusu",
+      "collections": "Yakında",
       "languages": "6 Dil"
     },
     "socialFeatures": {
@@ -170,9 +265,9 @@
   },
   "collections": {
     "title": "Akıllı Koleksiyonlar ve Sürüm Kontrolü",
-    "subtitle": "MCP sunucu koleksiyonlarınızı düzenleyin, sürümleyin ve paylaşın",
-    "description": "Sürümlendirilmiş koleksiyonlar oluşturun, kurulumları takip edin, ekiplerle işbirliği yapın ve geliştirme, hazırlık ve üretim için farklı yapılandırmalar sürdürün.",
-    "action": "Koleksiyonları Keşfet",
+    "subtitle": "Yakında: MCP sunucu koleksiyonlarınızı düzenleyin, sürümleyin ve paylaşın",
+    "description": "Yakında sürümlendirilmiş koleksiyonlar oluşturabilecek, kurulumları takip edebilecek, ekiplerle işbirliği yapabilecek ve geliştirme, hazırlık ve üretim için farklı yapılandırmalar sürdürebileceksiniz.",
+    "action": "Daha Fazla Bilgi",
     "versionControl": {
       "title": "Koleksiyonlar için Sürüm Kontrolü",
       "feature1": "Koleksiyonlarınızın herhangi bir noktasında anlık görüntüler oluşturun",
@@ -201,37 +296,37 @@
     "action": "Paylaşmaya Başlayın"
   },
   "security": {
-    "title": "Kurumsal Düzeyde Güvenlik",
-    "subtitle": "Yapay zeka altyapınız, her katmanda korundu",
-    "description": "Çok katmanlı kimlik doğrulama, sandbox yürütme ve kapsamlı denetim izleri ile güvenlik öncelikli mimari ile oluşturuldu.",
+    "title": "Verileriniz, Kurallarınız",
+    "subtitle": "AI tarafından üretilen fikri mülkiyetiniz üzerinde tam kontrol",
+    "description": "Güvenliğin sahiplik anlamına geldiğine inanıyoruz. Ürettiğiniz her veri parçası sizin kalır, kurumsal düzeyde güvenlikle korunur ve istediğiniz zaman dışa aktarılabilir.",
     "features": {
-      "authentication": {
-        "title": "Çok Katmanlı Kimlik Doğrulama",
-        "desc": "OAuth sağlayıcıları, API anahtarları ve JWT belirteçleri ile oturum yönetimi"
+      "dataOwnership": {
+        "title": "Tam Veri Sahipliği",
+        "desc": "Her komut, yanıt ve yapılandırma size aittir. İstediğiniz zaman açık formatlarda dışa aktarın."
       },
-      "sandboxing": {
-        "title": "Firejail Sandboxing",
-        "desc": "Linux'ta tüm STDIO MCP sunucuları için otomatik güvenlik sandboxing"
+      "endToEndEncryption": {
+        "title": "Uçtan Uca Şifreleme",
+        "desc": "AI yapılandırmalarınız ve verileriniz askeri düzeyde şifreleme ile dinlenme ve aktarım sırasında güvende kalır"
       },
-      "isolation": {
-        "title": "Proje İzolasyonu",
-        "desc": "Rol tabanlı erişim kontrolü ile projeler arasında tam veri izolasyonu"
+      "auditEverything": {
+        "title": "Her Şeyi Denetle",
+        "desc": "AI verilerinizin nasıl kullanıldığı konusunda tam şeffaflık. Her işlemi ve API çağrısını takip edin."
       },
-      "audit": {
-        "title": "Kapsamlı Denetim İzleri",
-        "desc": "Uyumluluk için tüm işlemleri, API çağrılarını ve kullanıcı eylemlerini takip edin"
+      "portableData": {
+        "title": "Taşınabilir Şifreleme",
+        "desc": "Şifrelenmiş verilerinizi her yere götürün. Satıcı bağımlılığı yok, asla."
       },
-      "encryption": {
-        "title": "Veri Şifreleme",
-        "desc": "Hassas veriler ve API iletişimi için uçtan uca şifreleme"
+      "oauthSecurity": {
+        "title": "OAuth ve Token Güvenliği",
+        "desc": "Tüm AI hizmetlerinizde ince ayarlı izinlerle güvenli kimlik doğrulama akışları"
       },
       "selfhost": {
         "title": "Kendi Kendine Barındırma Seçeneği",
-        "desc": "Tam kontrol ve uyumluluk için kendi altyapınızda dağıtın"
+        "desc": "Yerinde dağıtım ile nihai kontrol. Verileriniz asla altyapınızdan ayrılmaz."
       }
     },
-    "compliance": "Düzenli güvenlik denetimleri ile SOC2 Type II uyumlu altyapı",
-    "action": "Güvenlik Ayrıntılarını Görüntüle"
+    "compliance": "Veri egemenliğiniz önceliğimizdir. Silme hakkı ve veri taşınabilirliği ile GDPR uyumlu.",
+    "action": "Veri Sahipliği Hakkında Bilgi Edinin"
   },
   "developers": {
     "title": "Geliştiriciler İçin Oluşturuldu",
@@ -260,7 +355,7 @@
       },
       "community": {
         "title": "Aktif Topluluk",
-        "desc": "Discord, GitHub tartışmaları ve topluluk desteği"
+        "desc": "Reddit, X, GitHub tartışmaları ve topluluk desteği"
       }
     },
     "codeExample": {
@@ -270,36 +365,31 @@
     "action": "Belgeleri Görüntüle"
   },
   "pricing": {
-    "title": "Basit, Şeffaf Fiyatlandırma",
-    "subtitle": "Ücretsiz başlayın, büyüdükçe ölçeklendirin",
+    "badge": "%100 Sonsuza Kadar Ücretsiz",
+    "title": "Tamamen Ücretsiz - Gizli Maliyet Yok",
+    "subtitle": "AI veri sahipliğini demokratikleştirmeye inanıyoruz. Her özellik, herkes için, sonsuza kadar.",
     "free": {
-      "title": "Sonsuza Kadar Ücretsiz",
-      "price": "₺0",
-      "period": "/ay",
-      "description": "Bireyler ve küçük ekipler için mükemmel",
-      "features": [
-        "Sınırsız MCP sunucusu",
-        "Tüm yapay zeka modelleri desteklenir",
-        "5 RAG bilgi tabanı",
-        "Herkese açık profil ve paylaşım",
-        "Topluluk desteği"
-      ],
-      "cta": "Ücretsiz Başla"
+      "title": "Her Şey Dahil",
+      "description": "Sınır yok, katman yok, sürpriz yok",
+      "cta": "Şimdi Başlayın",
+      "note": "Kredi kartı gerekmez • Kişisel kullanım için her zaman ücretsiz",
+      "everything_included": "Her şey dahil:"
     },
-    "pro": {
-      "title": "Pro",
-      "price": "₺549",
-      "period": "/ay",
-      "description": "Profesyonel geliştiriciler ve ekipler için",
-      "features": [
-        "Ücretsiz'deki her şey",
-        "Sınırsız RAG bilgi tabanı",
-        "Özel koleksiyonlar",
-        "Öncelikli destek",
-        "Gelişmiş analitik",
-        "Ekip işbirliği"
-      ],
-      "cta": "Pro Deneme Başlat"
+    "features": {
+      "unlimited_ai_model_connections": "Sınırsız AI model bağlantıları",
+      "full_data_ownership_and_export": "Tam veri sahipliği ve dışa aktarma",
+      "mcp_server_integrations": "500+ MCP sunucu entegrasyonu",
+      "unlimited_workspaces_and_projects": "Sınırsız çalışma alanları ve projeler",
+      "community_sharing_and_collaboration": "Topluluk paylaşımı ve işbirliği",
+      "end_to_end_encryption": "Uçtan uca şifreleme",
+      "rag_document_storage": "RAG belge depolama",
+      "real_time_notifications": "Gerçek zamanlı bildirimler",
+      "oauth_authentication": "OAuth kimlik doğrulama",
+      "api_access": "API erişimi"
+    },
+    "whyFree": {
+      "title": "plugged.in neden ücretsiz?",
+      "description": "AI veri sahipliğinin geleceğini inşa ediyoruz. Misyonumuz herkesin AI tarafından üretilen veriler üzerinde kontrol sahibi olmasını sağlamak. Platformu ücretsiz tutarak, geliştiricilerin paylaşabileceği, öğrenebileceği ve birlikte inşa edebileceği en büyük ekosistemi yaratıyoruz."
     },
     "enterprise": {
       "title": "Kurumsal",
@@ -332,7 +422,7 @@
       },
       "step3": {
         "title": "3. MCP Proxy Kur",
-        "desc": "Çalıştır: npx @pluggedin/mcp-proxy@latest"
+        "desc": "Çalıştır: npx @pluggedin/pluggedin-mcp-proxy@latest"
       },
       "step4": {
         "title": "4. İstemci Bağla",

@@ -5,6 +5,71 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.8.0] - 2025-01-27
+
+### Added
+- **AI Document Exchange (RAG v2)**: Revolutionary document management with AI model attribution
+  - AI-generated documents via `/api/documents/ai` endpoint for MCP servers
+  - Complete model attribution tracking (model name, provider, version)
+  - Document versioning with change history and diffs
+  - Content hash-based deduplication
+  - Support for multiple document sources: 'upload', 'ai_generated', 'api'
+- **Enhanced Document Management**
+  - Profile-based document scoping alongside project-based organization
+  - Document visibility levels: private, workspace, public
+  - Parent-child document relationships for version tracking
+  - Advanced filtering by source type in library UI
+- **Document Model Attribution System**
+  - Track which AI models created, updated, or reviewed documents
+  - Comprehensive contribution metadata with timestamps
+  - Full attribution history with contribution types
+  - Model-specific metadata storage (tokens used, changes summary)
+- **Advanced Document Search API**
+  - Semantic search using PostgreSQL full-text search with relevance scoring
+  - Filter by AI model, provider, date range, tags, and source type
+  - Automatic snippet generation with keyword highlighting
+  - Pagination support with total count tracking
+- **RAG Processing Enhancements**
+  - Real-time upload progress tracking with detailed steps
+  - Progress indicators for text extraction, chunking, embeddings, and database insertion
+  - Estimated time remaining for large document processing
+  - Failure recovery with detailed error notifications
+- **Document Preview Modal**
+  - Full-featured document viewer with multi-format support
+  - PDF viewer with page navigation using react-pdf
+  - Image viewer with zoom controls (10%-500%) and pan functionality
+  - Text/code viewer with proper formatting for 20+ file types
+  - Markdown rendering for .md files
+  - Document navigation for browsing between multiple files
+  - Fullscreen mode for immersive viewing
+  - Metadata sidebar with document details
+
+### Changed
+- **Document Schema Updates**
+  - Added `source`, `ai_metadata`, `content_hash`, `visibility`, `version`, and `parent_document_id` fields
+  - Enhanced document table with profile UUID support
+  - Optimized indexes for search performance and filtering
+- **Library UI Improvements**
+  - New source filter dropdown (All, Uploaded, AI Generated, API)
+  - Model attribution badges for AI-generated documents
+  - Enhanced document metadata display
+  - Improved progress tracking UI for uploads
+  - Click-to-preview functionality in grid and table views
+  - Extracted file type detection logic to reusable utilities
+
+### Security
+- Rate limiting for AI document creation (10 requests per hour)
+- Enhanced directory traversal protection in document download endpoint
+- Path normalization and validation to prevent unauthorized file access
+- Sanitization of AI-generated HTML/Markdown content
+- Path traversal protection for document storage
+- Content length validation (10MB limit)
+
+### Database
+- New `document_versions` table for version history
+- New `document_model_attributions` table for AI attribution tracking
+- Migration `0047_youthful_mockingbird.sql` adds all v2 fields and tables
+
 ## [2.7.0] - 2025-01-26
 
 ### Added

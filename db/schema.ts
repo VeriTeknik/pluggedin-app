@@ -1,4 +1,5 @@
 import { relations,sql } from 'drizzle-orm';
+import type { NotificationMetadata } from '@/lib/types/notifications';
 import {
   boolean,
   index,
@@ -630,6 +631,7 @@ export const notificationsTable = pgTable("notifications", {
   link: text("link"),
   severity: text("severity"), // For MCP notifications: INFO, SUCCESS, WARNING, ALERT
   completed: boolean("completed").default(false).notNull(), // For todo-style checkmarks on custom notifications
+  metadata: jsonb("metadata").default({}).$type<NotificationMetadata>(),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   expires_at: timestamp("expires_at", { withTimezone: true }),
 },
@@ -857,6 +859,8 @@ export const docsTable = pgTable(
       .references(() => users.id, { onDelete: 'cascade' }),
     project_uuid: uuid('project_uuid')
       .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
+    profile_uuid: uuid('profile_uuid')
+      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     name: text('name').notNull(),
     description: text('description'),
     file_name: text('file_name').notNull(),
@@ -865,6 +869,19 @@ export const docsTable = pgTable(
     file_path: text('file_path').notNull(),
     tags: text('tags').array().default(sql`'{}'::text[]`),
     rag_document_id: text('rag_document_id'),
+    // New fields for AI Document Exchange
+    source: text('source').notNull().default('upload'), // 'upload', 'ai_generated', 'api'
+    ai_metadata: jsonb('ai_metadata')
+      .$type<{
+        model?: { name: string; provider: string; version?: string };
+        context?: string;
+        timestamp?: string;
+        sessionId?: string;
+      }>(),
+    content_hash: text('content_hash'), // For deduplication
+    visibility: text('visibility').notNull().default('private'), // 'private', 'workspace', 'public'
+    version: integer('version').notNull().default(1),
+    parent_document_id: uuid('parent_document_id'), // For version tracking
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -875,12 +892,18 @@ export const docsTable = pgTable(
   (table) => ({
     docsUserIdIdx: index('docs_user_id_idx').on(table.user_id),
     docsProjectUuidIdx: index('docs_project_uuid_idx').on(table.project_uuid),
+    docsProfileUuidIdx: index('docs_profile_uuid_idx').on(table.profile_uuid),
     docsNameIdx: index('docs_name_idx').on(table.name),
     docsCreatedAtIdx: index('docs_created_at_idx').on(table.created_at),
+    // New indexes for AI document features
+    docsSourceIdx: index('docs_source_idx').on(table.source),
+    docsVisibilityIdx: index('docs_visibility_idx').on(table.visibility),
+    docsContentHashIdx: index('docs_content_hash_idx').on(table.content_hash),
+    docsParentDocumentIdIdx: index('docs_parent_document_id_idx').on(table.parent_document_id),
   })
 );
 
-export const docsRelations = relations(docsTable, ({ one }) => ({
+export const docsRelations = relations(docsTable, ({ one, many }) => ({
   user: one(users, {
     fields: [docsTable.user_id],
     references: [users.id],
@@ -888,6 +911,89 @@ export const docsRelations = relations(docsTable, ({ one }) => ({
   project: one(projectsTable, {
     fields: [docsTable.project_uuid],
     references: [projectsTable.uuid],
+  }),
+  profile: one(profilesTable, {
+    fields: [docsTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  versions: many(documentVersionsTable),
+  modelAttributions: many(documentModelAttributionsTable),
+}));
+
+// New table for document versions
+export const documentVersionsTable = pgTable(
+  'document_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    document_id: uuid('document_id')
+      .notNull()
+      .references(() => docsTable.uuid, { onDelete: 'cascade' }),
+    version_number: integer('version_number').notNull(),
+    content: text('content').notNull(),
+    content_diff: jsonb('content_diff')
+      .$type<{ 
+        additions?: number; 
+        deletions?: number; 
+        changes?: Array<{ type: string; content: string }> 
+      }>(),
+    created_by_model: jsonb('created_by_model')
+      .$type<{
+        name: string;
+        provider: string;
+        version?: string;
+      }>()
+      .notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    change_summary: text('change_summary'),
+  },
+  (table) => ({
+    documentVersionsDocumentIdIdx: index('document_versions_document_id_idx').on(table.document_id),
+    documentVersionsCompositeIdx: index('document_versions_composite_idx').on(table.document_id, table.version_number),
+  })
+);
+
+export const documentVersionsRelations = relations(documentVersionsTable, ({ one }) => ({
+  document: one(docsTable, {
+    fields: [documentVersionsTable.document_id],
+    references: [docsTable.uuid],
+  }),
+}));
+
+// New table for tracking model attributions
+export const documentModelAttributionsTable = pgTable(
+  'document_model_attributions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    document_id: uuid('document_id')
+      .notNull()
+      .references(() => docsTable.uuid, { onDelete: 'cascade' }),
+    model_name: text('model_name').notNull(),
+    model_provider: text('model_provider').notNull(),
+    contribution_type: text('contribution_type').notNull(), // 'created', 'updated', 'reviewed'
+    contribution_timestamp: timestamp('contribution_timestamp', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    contribution_metadata: jsonb('contribution_metadata')
+      .$type<{
+        version?: string;
+        changes_summary?: string;
+        tokens_used?: number;
+        [key: string]: any;
+      }>(),
+  },
+  (table) => ({
+    documentModelAttributionsDocumentIdIdx: index('document_model_attributions_document_id_idx').on(table.document_id),
+    documentModelAttributionsModelIdx: index('document_model_attributions_model_idx').on(table.model_name, table.model_provider),
+    documentModelAttributionsTimestampIdx: index('document_model_attributions_timestamp_idx').on(table.contribution_timestamp),
+  })
+);
+
+export const documentModelAttributionsRelations = relations(documentModelAttributionsTable, ({ one }) => ({
+  document: one(docsTable, {
+    fields: [documentModelAttributionsTable.document_id],
+    references: [docsTable.uuid],
   }),
 }));
 

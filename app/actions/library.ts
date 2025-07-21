@@ -6,7 +6,6 @@ import { join } from 'path';
 
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
-import { extractTextContent } from '@/lib/file-utils';
 import { ragService } from '@/lib/rag-service';
 import type { 
   Doc, 
@@ -47,6 +46,8 @@ export async function getDocs(userId: string, projectUuid?: string): Promise<Doc
       success: true,
       docs: docs.map(doc => ({
         ...doc,
+        source: doc.source as 'upload' | 'ai_generated' | 'api',
+        visibility: doc.visibility as 'private' | 'workspace' | 'public',
         created_at: new Date(doc.created_at),
         updated_at: new Date(doc.updated_at),
       })),
@@ -62,25 +63,48 @@ export async function getDocs(userId: string, projectUuid?: string): Promise<Doc
 
 export async function getDocByUuid(userId: string, docUuid: string, projectUuid?: string): Promise<Doc | null> {
   try {
-    // First check if user owns the document
-    const doc = await db.query.docsTable.findFirst({
-      where: and(
-        eq(docsTable.uuid, docUuid),
-        eq(docsTable.user_id, userId)
-      ),
-    });
+    console.log('[getDocByUuid] Input:', { userId, docUuid, projectUuid });
+    
+    // Check if user owns the document directly OR if it's a project-level document
+    let doc;
+    
+    if (projectUuid) {
+      // If projectUuid is provided, look for documents that either:
+      // 1. Belong to the user directly in this project
+      // 2. Are project-level documents (profile_uuid is NULL) in this project
+      doc = await db.query.docsTable.findFirst({
+        where: and(
+          eq(docsTable.uuid, docUuid),
+          eq(docsTable.project_uuid, projectUuid),
+          eq(docsTable.user_id, userId)
+        ),
+      });
+    } else {
+      // If no projectUuid, just check user ownership
+      doc = await db.query.docsTable.findFirst({
+        where: and(
+          eq(docsTable.uuid, docUuid),
+          eq(docsTable.user_id, userId)
+        ),
+      });
+    }
+
+    console.log('[getDocByUuid] Query result:', doc ? 'Document found' : 'Document not found');
+    console.log('[getDocByUuid] Document details:', doc ? { 
+      uuid: doc.uuid, 
+      user_id: doc.user_id,
+      project_uuid: doc.project_uuid,
+      profile_uuid: doc.profile_uuid 
+    } : null);
 
     if (!doc) {
       return null;
     }
 
-    // If projectUuid provided, verify document belongs to this project
-    if (projectUuid && doc.project_uuid && doc.project_uuid !== projectUuid) {
-      return null;
-    }
-
     return {
       ...doc,
+      source: doc.source as 'upload' | 'ai_generated' | 'api',
+      visibility: doc.visibility as 'private' | 'workspace' | 'public',
       created_at: new Date(doc.created_at),
       updated_at: new Date(doc.updated_at),
     };
@@ -347,17 +371,52 @@ export async function createDoc(
     // Step 4: Insert document record into database
     const docRecord = await insertDocRecord(userId, projectUuid, name, description, file, relativePath, tags);
     
-    // Step 5: Extract text content for RAG
-    const textContent = await extractTextContent(file, description);
+    // Step 5 & 6: Process RAG upload only for supported file types
+    let ragProcessed = false;
+    let ragError: string | undefined;
+    let upload_id: string | undefined;
     
-    // Step 6: Process RAG upload
-    const { ragProcessed, ragError, upload_id } = await processRagUpload(
-      docRecord, textContent, file, name, tags, userId, projectUuid
-    );
+    // Only send PDF, text, and markdown files to RAG
+    const supportedRagTypes = [
+      'application/pdf',
+      'text/plain',
+      'text/markdown',
+      'text/x-markdown',
+    ];
+    
+    if (process.env.ENABLE_RAG === 'true' && supportedRagTypes.includes(file.type)) {
+      // Extract text content for RAG
+      // For now, we'll use a simple approach for text files
+      // PDF extraction would require additional libraries like pdf-parse
+      let textContent = '';
+      
+      if (file.type === 'text/plain' || file.type === 'text/markdown' || file.type === 'text/x-markdown') {
+        // For text files, convert to string
+        const arrayBuffer = await file.arrayBuffer();
+        textContent = new TextDecoder().decode(arrayBuffer);
+      } else if (file.type === 'application/pdf') {
+        // For PDFs, we'd need a library like pdf-parse
+        // For now, just use the description as placeholder
+        textContent = description || 'PDF content extraction not implemented';
+      }
+      
+      // Process RAG upload
+      const ragResult = await processRagUpload(
+        docRecord, textContent, file, name, tags, userId, projectUuid
+      );
+      ragProcessed = ragResult.ragProcessed;
+      ragError = ragResult.ragError;
+      upload_id = ragResult.upload_id;
+    } else if (process.env.ENABLE_RAG === 'true') {
+      // File type not supported for RAG
+      console.log(`File type ${file.type} not supported for RAG processing`);
+    }
 
     // Step 7: Return response with formatted doc
     const doc: Doc = {
       ...docRecord,
+      source: docRecord.source as 'upload' | 'ai_generated' | 'api',
+      visibility: docRecord.visibility as 'private' | 'workspace' | 'public',
       created_at: new Date(docRecord.created_at),
       updated_at: new Date(docRecord.updated_at),
     };

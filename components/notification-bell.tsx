@@ -19,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { NotificationMetadataDisplay } from '@/components/ui/notification-metadata';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function NotificationBell() {
@@ -37,6 +38,8 @@ export function NotificationBell() {
       default: return enUS;
     }
   };
+  
+  // Removed unused getVariantByType function
   
   // Function to get icon color based on notification type
   const getColorByType = (type: string) => {
@@ -60,7 +63,7 @@ export function NotificationBell() {
   const getIconByType = (type: string) => {
     switch (type.toUpperCase()) {
       case 'CUSTOM':
-        return <Circle className="h-4 w-4 mr-2 text-yellow-500 shrink-0" />;
+        return <Circle className="h-4 w-4 mr-2 text-yellow-500" />;
       default:
         return null;
     }
@@ -81,24 +84,23 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-80 sm:w-96 max-w-[calc(100vw-2rem)]">
+      <DropdownMenuContent align="end" className="w-80 ml-1">
         <div className="flex items-center justify-between p-4 border-b">
-          <div className="font-semibold text-sm truncate flex-1 mr-2">{t('notifications.title')}</div>
+          <div className="font-semibold">{t('notifications.title')}</div>
           {unreadCount > 0 && (
             <Button 
               variant="ghost" 
               size="sm" 
-              className="h-8 text-xs shrink-0"
+              className="h-8 text-xs"
               onClick={() => markAllAsRead()}
             >
-              <span className="hidden sm:inline">{t('notifications.actions.markAllAsRead')}</span>
-              <span className="sm:hidden">Mark all</span>
+              {t('notifications.actions.markAllAsRead')}
             </Button>
           )}
         </div>
         <ScrollArea className="h-[400px]">
           {notifications.length === 0 ? (
-            <div className="p-4 text-center text-muted-foreground text-sm">
+            <div className="p-4 text-center text-muted-foreground">
               {t('notifications.empty.title')}
             </div>
           ) : (
@@ -117,36 +119,39 @@ export function NotificationBell() {
                   }
                 }}
               >
-                <div className="flex flex-col gap-2 w-full min-w-0">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-start gap-1 min-w-0 flex-1">
+                <div className="flex flex-col gap-1 w-full">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center">
                       {getIconByType(notification.type)}
-                      <span className={`font-medium text-sm break-words ${getColorByType(notification.type)} leading-tight`}>
+                      <span className={`font-medium ${getColorByType(notification.type)}`}>
                         {notification.title}
                       </span>
                       {notification.link && (
-                        <ExternalLink className="h-3 w-3 text-muted-foreground shrink-0 mt-0.5" />
+                        <ExternalLink className="h-3 w-3 ml-1 text-muted-foreground" />
                       )}
                     </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-                      {formatDistanceToNow(new Date(notification.created_at), { 
-                        addSuffix: true,
-                        locale: getDateLocale() 
-                      })}
-                    </span>
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(notification.created_at), { 
+                          addSuffix: true,
+                          locale: getDateLocale() 
+                        })}
+                      </span>
+                      <NotificationMetadataDisplay metadata={notification.metadata} compact className="text-[10px]" />
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground notification-markdown line-clamp-3">
+                  <div className="text-sm text-muted-foreground notification-markdown">
                     <ReactMarkdown 
                       remarkPlugins={[remarkGfm]}
                       components={{
-                        p: ({ children }) => <p className="mb-1 last:mb-0 break-words">{children}</p>,
+                        p: ({ children }) => <p className="mb-1 last:mb-0">{children}</p>,
                         ul: ({ children }) => <ul className="list-disc pl-4 mb-1">{children}</ul>,
                         ol: ({ children }) => <ol className="list-decimal pl-4 mb-1">{children}</ol>,
-                        li: ({ children }) => <li className="mb-0.5 break-words">{children}</li>,
+                        li: ({ children }) => <li className="mb-0.5">{children}</li>,
                         a: ({ href, children }) => (
                           <a 
                             href={href} 
-                            className="text-primary hover:underline break-all"
+                            className="text-primary hover:underline"
                             onClick={(e) => e.stopPropagation()}
                             target="_blank"
                             rel="noopener noreferrer"
@@ -154,25 +159,22 @@ export function NotificationBell() {
                             {children}
                           </a>
                         ),
-                        code: ({ children }) => <code className="px-1 py-0.5 bg-muted rounded text-xs break-all">{children}</code>,
+                        code: ({ children }) => <code className="px-1 py-0.5 bg-muted rounded text-xs">{children}</code>,
                         pre: ({ children }) => <pre className="p-2 bg-muted rounded text-xs overflow-x-auto mb-1">{children}</pre>,
-                        strong: ({ children }) => <strong className="font-semibold break-words">{children}</strong>,
-                        em: ({ children }) => <em className="italic break-words">{children}</em>,
-                        h1: ({ children }) => <h1 className="text-sm font-bold mb-1 break-words">{children}</h1>,
-                        h2: ({ children }) => <h2 className="text-sm font-bold mb-1 break-words">{children}</h2>,
-                        h3: ({ children }) => <h3 className="text-sm font-semibold mb-1 break-words">{children}</h3>,
+                        strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        h1: ({ children }) => <h1 className="text-base font-bold mb-1">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-sm font-bold mb-1">{children}</h2>,
+                        h3: ({ children }) => <h3 className="text-sm font-semibold mb-1">{children}</h3>,
                       }}
                     >
-                      {notification.message.length > 150 
-                        ? notification.message.substring(0, 150) + '...'
-                        : notification.message
-                      }
+                      {notification.message}
                     </ReactMarkdown>
                   </div>
                   
                   {!notification.read && (
-                    <div className="flex justify-end">
-                      <Badge variant="secondary" className="text-xs shrink-0">{t('notifications.status.unread')}</Badge>
+                    <div className="flex justify-end mt-1">
+                      <Badge variant="secondary" className="text-xs">{t('notifications.status.unread')}</Badge>
                     </div>
                   )}
                 </div>
@@ -183,7 +185,7 @@ export function NotificationBell() {
         <DropdownMenuSeparator />
         <div className="p-2">
           <Link href="/notifications" className="block w-full">
-            <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => {}}>
+            <Button variant="outline" size="sm" className="w-full" onClick={() => {}}>
               {t('notifications.actions.viewAll')}
             </Button>
           </Link>

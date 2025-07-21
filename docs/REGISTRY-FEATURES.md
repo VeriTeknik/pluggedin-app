@@ -325,7 +325,8 @@ Check browser console for:
 ### Resources
 - **Documentation**: docs.plugged.in
 - **GitHub Issues**: github.com/pluggedin/app/issues
-- **Discord**: discord.gg/pluggedin
+- **Reddit**: r/plugged_in
+- **X (Twitter)**: @PluggedIntoAI
 - **Email**: support@plugged.in
 
 ### Reporting Issues

@@ -48,11 +48,18 @@
   "controls": {
     "searchPlaceholder": "Search documents...",
     "grid": "Grid",
-    "table": "Table"
+    "table": "Table",
+    "sourceFilter": {
+      "all": "All",
+      "uploaded": "Uploaded",
+      "aiGenerated": "AI Generated",
+      "api": "API"
+    }
   },
   "grid": {
     "noDocuments": "No documents found.",
     "openMenu": "Open menu",
+    "preview": "Preview",
     "download": "Download",
     "delete": "Delete"
   },
@@ -65,6 +72,23 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "deleting": "Deleting..."
+  },
+  "preview": {
+    "metadata": "Document Information",
+    "fileName": "File Name",
+    "fileType": "File Type",
+    "size": "Size",
+    "created": "Created",
+    "description": "Description",
+    "tags": "Tags",
+    "aiMetadata": "AI Information",
+    "textContentNote": "Text content preview coming soon",
+    "downloadToView": "Download the file to view its contents",
+    "unsupportedType": "Preview not available",
+    "download": "Download File",
+    "pdfError": "Error loading PDF",
+    "downloadPDF": "Download PDF",
+    "loadingPDF": "Loading PDF..."
   },
   "uploadProgress": {
     "title": "Upload Progress",

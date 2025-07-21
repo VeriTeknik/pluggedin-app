@@ -109,15 +109,32 @@ export default function ContactPage() {
             <div className="flex items-center gap-3">
               <MessageSquare className="h-5 w-5 text-primary" />
               <div>
-                <h3 className="font-medium">Discord</h3>
+                <h3 className="font-medium">Reddit</h3>
                 <p className="text-sm text-muted-foreground">
                   <a 
-                    href="https://discord.gg/pluggedin" 
+                    href="https://www.reddit.com/r/plugged_in/" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-primary hover:underline"
                   >
-                    discord.gg/pluggedin
+                    r/plugged_in
+                  </a>
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="h-5 w-5 text-primary flex items-center justify-center">𝕏</div>
+              <div>
+                <h3 className="font-medium">X (Twitter)</h3>
+                <p className="text-sm text-muted-foreground">
+                  <a 
+                    href="https://x.com/PluggedIntoAI" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    @PluggedIntoAI
                   </a>
                 </p>
               </div>
