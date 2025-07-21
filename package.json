@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --port=12005",
     "build": "next build",
+    "postbuild": "node scripts/copy-pdf-worker.js",
     "start": "PORT=12005 node .next/standalone/server.js",
     "lint": "next lint",
     "postinstall": "node scripts/copy-pdf-worker.js",
