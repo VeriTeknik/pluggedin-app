@@ -66,11 +66,30 @@
     "noDocuments": "Belge bulunamadı."
   },
   "deleteDialog": {
-    "title": "Belgeyi Sil",
+    "title": "Belgeyi Sil", 
     "description": "\"{{name}}\" belgesini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
     "cancel": "İptal",
     "delete": "Sil",
     "deleting": "Siliniyor..."
+  },
+  "preview": {
+    "documentTitle": "Belge",
+    "documentDescription": "Belge önizlemesi",
+    "metadata": "Meta Veriler",
+    "fileName": "Dosya Adı",
+    "fileType": "Dosya Türü", 
+    "size": "Boyut",
+    "created": "Oluşturuldu",
+    "description": "Açıklama",
+    "tags": "Etiketler",
+    "aiMetadata": "AI Bilgileri",
+    "textContentNote": "Metin içeriği önizlemesi yakında gelecek",
+    "downloadToView": "İçeriği görüntülemek için dosyayı indirin",
+    "unsupportedType": "Önizleme mevcut değil",
+    "download": "Dosyayı İndir",
+    "pdfError": "PDF yüklenirken hata",
+    "downloadPDF": "PDF İndir",
+    "loadingPDF": "PDF Yükleniyor..."
   },
   "uploadProgress": {
     "title": "Yükleme İlerlemesi",
