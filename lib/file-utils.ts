@@ -1,10 +1,21 @@
 // File type detection utilities
 
 export const TEXT_FILE_EXTENSIONS = [
-  '.md', '.json', '.js', '.ts', '.tsx', '.jsx', '.py', 
-  '.yml', '.yaml', '.xml', '.html', '.css', '.scss', 
-  '.java', '.c', '.cpp', '.h', '.go', '.rs', '.sh', '.bash'
+  '.txt', '.md', '.json', '.js', '.ts', '.tsx', '.jsx', '.py',
+  '.yml', '.yaml', '.xml', '.html', '.css', '.scss', '.java',
+  '.c', '.cpp', '.h', '.go', '.rs', '.sh', '.bash', '.php',
+  '.rb', '.swift', '.kt', '.dart', '.r', '.sql', '.log',
+  '.cfg', '.conf', '.ini', '.toml', '.dockerfile', '.gitignore',
+  '.env', '.lock', '.config'
 ] as const;
+
+// Set for efficient O(1) lookups
+const TEXT_EXT_SET = new Set(TEXT_FILE_EXTENSIONS as readonly string[]);
+
+// Helper to normalize file extension
+function getFileExtension(fileName: string): string {
+  return '.' + fileName.split('.').pop()?.toLowerCase();
+}
 
 export const LANGUAGE_MAP: Record<string, string> = {
   js: 'javascript',
@@ -61,8 +72,7 @@ export function getFileType(mimeType: string, fileName: string): FileType {
 }
 
 export function isTextFile(mimeType: string, fileName: string): boolean {
-  return mimeType.startsWith('text/') || 
-         TEXT_FILE_EXTENSIONS.some(ext => fileName.endsWith(ext));
+  return mimeType.startsWith('text/') || TEXT_EXT_SET.has(getFileExtension(fileName));
 }
 
 export function isPDFFile(mimeType: string): boolean {
@@ -109,14 +119,5 @@ export function isValidTextMimeType(mimeType: string | null): boolean {
 
 // Check if file extension suggests it's a text file (fallback for content-type issues)
 export function isTextFileByExtension(fileName: string): boolean {
-  const textExtensions = [
-    '.txt', '.md', '.json', '.js', '.ts', '.tsx', '.jsx', '.py', 
-    '.yml', '.yaml', '.xml', '.html', '.css', '.scss', '.java', 
-    '.c', '.cpp', '.h', '.go', '.rs', '.sh', '.bash', '.php',
-    '.rb', '.swift', '.kt', '.dart', '.r', '.sql', '.log',
-    '.cfg', '.conf', '.ini', '.toml', '.dockerfile', '.gitignore'
-  ];
-  
-  const ext = '.' + fileName.split('.').pop()?.toLowerCase();
-  return textExtensions.includes(ext);
+  return TEXT_EXT_SET.has(getFileExtension(fileName));
 }
