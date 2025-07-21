@@ -40,9 +40,9 @@ export function UserMenu() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center w-full gap-2 px-3 py-2 rounded-md hover:bg-sidebar-accent focus:outline-none">
+      <DropdownMenuTrigger className="flex items-center w-full gap-2  rounded-md  focus:outline-none">
         <div className="flex items-center gap-2 flex-1 min-w-0">
-          <Avatar className="h-8 w-8 border-2 border-background flex-shrink-0">
+          <Avatar className="  border-2 border-background flex-shrink-0">
             <AvatarImage src={session?.user?.image || ''} alt={session?.user?.name || 'User'} />
             <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
           </Avatar>
