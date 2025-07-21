@@ -14,12 +14,12 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
+import { SUPPORTED_FILE_TYPES } from '@/lib/file-types-config';
 import { cn } from '@/lib/utils';
 
 // 100 MB workspace storage limit
@@ -94,13 +94,7 @@ export function UploadDialog({
     onDrop,
     multiple: false,
     maxSize: STORAGE_LIMIT, // 100MB limit per file
-    accept: {
-      'application/pdf': ['.pdf'],
-      'text/plain': ['.txt'],
-      'text/markdown': ['.md'],
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': ['.docx'],
-      'image/*': ['.jpg', '.jpeg', '.png', '.gif'],
-    }
+    accept: SUPPORTED_FILE_TYPES
   });
 
   return (

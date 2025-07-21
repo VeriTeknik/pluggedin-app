@@ -1,10 +1,21 @@
 // File type detection utilities
 
 export const TEXT_FILE_EXTENSIONS = [
-  '.md', '.json', '.js', '.ts', '.tsx', '.jsx', '.py', 
-  '.yml', '.yaml', '.xml', '.html', '.css', '.scss', 
-  '.java', '.c', '.cpp', '.h', '.go', '.rs', '.sh', '.bash'
+  '.txt', '.md', '.json', '.js', '.ts', '.tsx', '.jsx', '.py',
+  '.yml', '.yaml', '.xml', '.html', '.css', '.scss', '.java',
+  '.c', '.cpp', '.h', '.go', '.rs', '.sh', '.bash', '.php',
+  '.rb', '.swift', '.kt', '.dart', '.r', '.sql', '.log',
+  '.cfg', '.conf', '.ini', '.toml', '.dockerfile', '.gitignore',
+  '.env', '.lock', '.config'
 ] as const;
+
+// Set for efficient O(1) lookups
+const TEXT_EXT_SET = new Set(TEXT_FILE_EXTENSIONS as readonly string[]);
+
+// Helper to normalize file extension
+function getFileExtension(fileName: string): string {
+  return '.' + fileName.split('.').pop()?.toLowerCase();
+}
 
 export const LANGUAGE_MAP: Record<string, string> = {
   js: 'javascript',
@@ -48,6 +59,7 @@ export interface FileType {
   isText: boolean;
   isPDF: boolean;
   isImage: boolean;
+  isDocx: boolean;
 }
 
 export function getFileType(mimeType: string, fileName: string): FileType {
@@ -55,12 +67,12 @@ export function getFileType(mimeType: string, fileName: string): FileType {
     isText: isTextFile(mimeType, fileName),
     isPDF: isPDFFile(mimeType),
     isImage: isImageFile(mimeType),
+    isDocx: isDocxFile(mimeType, fileName),
   };
 }
 
 export function isTextFile(mimeType: string, fileName: string): boolean {
-  return mimeType.startsWith('text/') || 
-         TEXT_FILE_EXTENSIONS.some(ext => fileName.endsWith(ext));
+  return mimeType.startsWith('text/') || TEXT_EXT_SET.has(getFileExtension(fileName));
 }
 
 export function isPDFFile(mimeType: string): boolean {
@@ -69,6 +81,12 @@ export function isPDFFile(mimeType: string): boolean {
 
 export function isImageFile(mimeType: string): boolean {
   return mimeType.startsWith('image/');
+}
+
+export function isDocxFile(mimeType: string, fileName?: string): boolean {
+  const isDocxMime = mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  const isDocxExt = fileName?.toLowerCase().endsWith('.docx') || false;
+  return isDocxMime || isDocxExt;
 }
 
 export function getFileLanguage(fileName: string): string {
@@ -90,7 +108,16 @@ export function isValidTextMimeType(mimeType: string | null): boolean {
     'application/javascript',
     'application/typescript',
     'application/xml',
+    'application/octet-stream', // For generic files that might be text
+    'application/x-sh', // Shell scripts
+    'application/x-python', // Python files
+    'application/x-yaml', // YAML files
   ];
   
   return validTypes.some(type => mimeType.startsWith(type));
+}
+
+// Check if file extension suggests it's a text file (fallback for content-type issues)
+export function isTextFileByExtension(fileName: string): boolean {
+  return TEXT_EXT_SET.has(getFileExtension(fileName));
 }
