@@ -1,5 +1,15 @@
--- CREATE TYPE "public"."profile_capability" AS ENUM('TOOLS_MANAGEMENT');--> statement-breakpoint -- Type already exists, removed to prevent migration error
--- CREATE TYPE "public"."toggle_status" AS ENUM('ACTIVE', 'INACTIVE');--> statement-breakpoint -- Type likely already exists, removed to prevent migration error
+DO $$ BEGIN
+    CREATE TYPE "public"."profile_capability" AS ENUM('TOOLS_MANAGEMENT');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+    CREATE TYPE "public"."toggle_status" AS ENUM('ACTIVE', 'INACTIVE');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "tools" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
