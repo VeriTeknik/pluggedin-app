@@ -10,7 +10,7 @@ LICENSE
 .vscode
 .next
 *.swp
-/scripts
+# /scripts - Needed for postinstall
 
 # TypeDoc
 typedoc.json
