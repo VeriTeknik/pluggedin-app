@@ -13,7 +13,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
     depends_on:
-      - pluggedin-postgres
+      pluggedin-postgres:
+        condition: service_healthy
 
   pluggedin-postgres:
     container_name: pluggedin-postgres
@@ -27,6 +28,11 @@ services:
       - '5432:5432'
     volumes:
       - pluggedin-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pluggedin -d pluggedin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   drizzle-migrate:
     container_name: pluggedin-migrate
@@ -34,11 +40,26 @@ services:
       context: .
       dockerfile: Dockerfile
       target: migrator
-    command: pnpm drizzle-kit migrate
+    command: >
+      sh -c "
+        echo 'Waiting for database to be ready...';
+        until pg_isready -h pluggedin-postgres -p 5432 -U pluggedin; do
+          echo 'Database is unavailable - sleeping';
+          sleep 2;
+        done;
+        echo 'Database is up - running migrations';
+        pnpm drizzle-kit migrate
+      "
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
+      - PGUSER=pluggedin
+      - PGHOST=pluggedin-postgres
+      - PGDATABASE=pluggedin
     depends_on:
-      - pluggedin-postgres
+      pluggedin-postgres:
+        condition: service_healthy
 
 volumes:
   pluggedin-postgres:

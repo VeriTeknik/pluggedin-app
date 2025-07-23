@@ -1,4 +1,9 @@
--- CREATE TYPE "public"."mcp_server_source" AS ENUM('PLUGGEDIN', 'SMITHERY', 'NPM', 'GITHUB');--> statement-breakpoint -- Type already exists, removed to prevent migration error
+DO $$ BEGIN
+    CREATE TYPE "public"."mcp_server_source" AS ENUM('PLUGGEDIN');
+EXCEPTION
+    WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "search_cache" (
 	"uuid" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"source" "mcp_server_source" NOT NULL,

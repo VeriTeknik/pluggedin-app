@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --port=12005",
     "build": "next build",
+    "postbuild": "node scripts/copy-pdf-worker.js",
     "start": "PORT=12005 node .next/standalone/server.js",
     "lint": "next lint",
     "postinstall": "node scripts/copy-pdf-worker.js",
@@ -81,6 +82,7 @@
     "i18next-browser-languagedetector": "^8.2.0",
     "lodash": "^4.17.21",
     "lru-cache": "^11.1.0",
+    "mammoth": "^1.9.1",
     "marked": "^15.0.12",
     "nanoid": "^5.1.5",
     "next": "15.3.5",

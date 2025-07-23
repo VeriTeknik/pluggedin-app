@@ -9,6 +9,8 @@ WORKDIR /app
 
 # Files needed for pnpm install
 COPY package.json pnpm-lock.yaml* ./
+# Copy scripts directory for postinstall
+COPY scripts ./scripts
 RUN pnpm install --frozen-lockfile
 
 # Rebuild the source code only when needed
@@ -25,6 +27,9 @@ RUN pnpm build
 # Migration stage
 FROM base AS migrator
 WORKDIR /app
+
+# Install PostgreSQL client for wait script
+RUN apk add --no-cache postgresql-client
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .

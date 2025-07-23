@@ -25,7 +25,9 @@ import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
-import { getFileLanguage, isImageFile, isMarkdownFile, isPDFFile, isTextFile, isValidTextMimeType,ZOOM_LIMITS } from '@/lib/file-utils';
+import { useProjects } from '@/hooks/use-projects';
+import { useDocxContent } from '@/hooks/useDocxContent';
+import { getFileLanguage, isDocxFile, isImageFile, isMarkdownFile, isPDFFile, isTextFile, isTextFileByExtension, isValidTextMimeType, ZOOM_LIMITS } from '@/lib/file-utils';
 import { Doc } from '@/types/library';
 
 // Dynamic imports for heavy components
@@ -54,11 +56,15 @@ export function DocumentPreview({
   formatFileSize,
 }: DocumentPreviewProps) {
   const { t } = useTranslation('library');
+  const { currentProject } = useProjects();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [imageZoom, setImageZoom] = useState(1);
   const [currentDocIndex, setCurrentDocIndex] = useState(0);
   const [textContent, setTextContent] = useState<string | null>(null);
   const [isLoadingText, setIsLoadingText] = useState(false);
+
+  // Use hook for DOCX content
+  const { docxContent, isLoadingDocx } = useDocxContent(doc, open, currentProject?.uuid);
 
   // Update current doc index when doc changes
   useEffect(() => {
@@ -84,11 +90,18 @@ export function DocumentPreview({
 
     if (isTextFile(doc.mime_type, doc.file_name)) {
       setIsLoadingText(true);
-      fetch(`/api/library/download/${doc.uuid}`)
+      const downloadUrl = `/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`;
+      fetch(downloadUrl)
         .then(res => {
           // Validate content type before processing
           const contentType = res.headers.get('content-type');
-          if (!isValidTextMimeType(contentType)) {
+          
+          // Allow all text files - prioritize extension over MIME type
+          const isValidByExtension = doc?.name ? isTextFileByExtension(doc.name) : false;
+          const isValidByContentType = isValidTextMimeType(contentType);
+          
+          // If file has text extension, allow it regardless of MIME type
+          if (!isValidByExtension && !isValidByContentType) {
             throw new Error('Invalid content type for text processing');
           }
           return res.text();
@@ -114,7 +127,9 @@ export function DocumentPreview({
           setIsLoadingText(false);
         });
     }
-  }, [doc, open]);
+  }, [doc, open, currentProject?.uuid]);
+
+  // DOCX content now handled by useDocxContent hook
 
   const navigateToDoc = useCallback((direction: 'prev' | 'next') => {
     if (docs.length <= 1 || !onDocChange) return;
@@ -180,7 +195,7 @@ export function DocumentPreview({
     if (isPDF) {
       return (
         <PDFViewer
-          fileUrl={`/api/library/download/${doc.uuid}`}
+                      fileUrl={`/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`}
           className="w-full h-full"
         />
       );
@@ -194,7 +209,7 @@ export function DocumentPreview({
             style={{ transform: `scale(${imageZoom})` }}
           >
             <img
-              src={`/api/library/download/${doc.uuid}`}
+              src={`/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`}
               alt={doc.name}
               className="max-w-full max-h-full object-contain"
               draggable={false}
@@ -231,6 +246,43 @@ export function DocumentPreview({
       );
     }
 
+    // DOCX files
+    if (isDocxFile(doc.mime_type, doc.name)) {
+      if (isLoadingDocx) {
+        return (
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        );
+      }
+
+      if (docxContent) {
+        return (
+          <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
+            <div className="p-6">
+              <div 
+                className="prose prose-sm dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: docxContent }}
+              />
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center text-muted-foreground">
+            <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <p>Failed to load DOCX content</p>
+            <Button onClick={() => doc && onDownload(doc)} className="mt-4">
+              <Download className="mr-2 h-4 w-4" />
+              {t('preview.download')}
+            </Button>
+          </div>
+        </div>
+      );
+    }
+
     if (isText) {
       if (isLoadingText) {
         return (
@@ -245,22 +297,26 @@ export function DocumentPreview({
 
         if (isMarkdownFile(doc.file_name)) {
           return (
-            <ScrollArea className="flex-1 p-6">
-              <div className="prose prose-sm dark:prose-invert max-w-none">
-                <ReactMarkdown>{textContent}</ReactMarkdown>
+            <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
+              <div className="p-6">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  <ReactMarkdown>{textContent}</ReactMarkdown>
+                </div>
               </div>
-            </ScrollArea>
+            </div>
           );
         }
 
         return (
-          <ScrollArea className="flex-1">
-            <pre className="p-6 text-sm overflow-x-auto">
-              <code className={`language-${language}`}>
-                {textContent}
-              </code>
-            </pre>
-          </ScrollArea>
+          <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
+            <div className="p-6">
+              <pre className="text-sm overflow-x-auto">
+                <code className={`language-${language}`}>
+                  {textContent}
+                </code>
+              </pre>
+            </div>
+          </div>
         );
       }
 
@@ -390,7 +446,7 @@ export function DocumentPreview({
           {/* Content */}
           <div className="flex flex-1 min-h-0 overflow-hidden">
             {/* Main content area */}
-            <div className="flex-1 flex flex-col min-h-0 h-full">
+            <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden relative">
               <ErrorBoundary>
                 {renderDocumentContent()}
               </ErrorBoundary>
