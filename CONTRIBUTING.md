@@ -1,387 +1,240 @@
-# Contributing to Plugged.in
+# Contributing to Plugged.in - Building the Future of AI Data Exchanges
 
-Welcome to Plugged.in! We're excited to have you contribute to the leading social platform for the Model Context Protocol (MCP) ecosystem. This guide will help you understand our project structure, development patterns, and contribution process.
+Welcome to the plugged.in community! You're not just contributing code - you're building the infrastructure that will define how humanity interacts with AI. Every line of code, every bug report, and every idea brings us closer to a world where AI enhances human capability without compromising autonomy.
 
-## Table of Contents
+## Why We Build
 
-1. [Project Overview](#project-overview)
-2. [Getting Started](#getting-started)
-3. [Project Structure](#project-structure)
-4. [Development Patterns](#development-patterns)
-5. [Contributing Guidelines](#contributing-guidelines)
-6. [Code Standards](#code-standards)
-7. [Testing](#testing)
-8. [Documentation](#documentation)
-9. [Security](#security)
-10. [Internationalization](#internationalization)
-11. [Database Changes](#database-changes)
-
-## Project Overview
-
-Plugged.in is a collaborative social platform for managing, sharing, and discovering MCP servers and collections. The project consists of two main repositories:
-
-- **pluggedin-app**: Next.js 14/React 19 web application with social features
-- **pluggedin-mcp**: TypeScript-based MCP proxy server
-
-### Key Features
-- Social platform with user profiles and following system
-- MCP server and collection sharing
-- Internationalization (6 languages: en, tr, zh, hi, ja, nl)
-- Interactive playground with RAG integration
-- Resource management with templates and notes
-- Comprehensive security and rate limiting
+Plugged.in exists because we believe in a fundamental principle: **Your AI, Your Data, Your Control**. We're creating the crossroads where AI models and human intentions meet, ensuring that as AI becomes more powerful, humans become more empowered.
 
 ## Getting Started
 
-### Prerequisites
-- Node.js 18.17.0+
-- PostgreSQL 14+
-- pnpm 8.6.0+
-- Git
+### Understanding the Vision
+
+Before diving into code, understand what we're building:
+
+- Read our [ROADMAP.md](./ROADMAP.md) to see where we're heading
+- Read our [CLAUDE.md](./CLAUDE.md) to understand the project architecture
+- Try the platform at [plugged.in](https://plugged.in) to experience the "what"
 
 ### Development Setup
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd pluggedin-app
-   ```
+```bash
+# Clone the monorepo
+git clone https://github.com/VeriTeknik/pluggedin-app
+cd pluggedin-app
 
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
+# Install dependencies
+pnpm install
 
-3. **Environment setup**
-   ```bash
-   cp .env.example .env
-   # Edit .env with your database URL and other settings
-   ```
+# Set up your environment
+cp .env.example .env
+# Edit .env with your configuration
 
-4. **Generate encryption key**
-   ```bash
-   pnpm run generate-encryption-key
-   # Add the output to .env as NEXTAUTH_SECRET
-   ```
+# Generate encryption key
+pnpm generate-encryption-key
 
-5. **Database setup**
-   ```bash
-   pnpm db:generate
-   pnpm db:migrate
-   ```
+# Set up database
+pnpm db:generate
+pnpm db:migrate
 
-6. **Start development server**
-   ```bash
-   pnpm dev
-   ```
+# Start the development environment
+pnpm dev
 
-## Project Structure
-
-### Directory Layout
-```
-pluggedin-app/
-├── app/                     # Next.js App Router
-│   ├── (auth)/             # Authentication pages
-│   ├── (sidebar-layout)/   # Main app layout
-│   ├── actions/            # Server Actions
-│   └── api/                # API Routes
-├── components/             # React components
-│   ├── ui/                # Shadcn/ui components
-│   ├── auth/              # Authentication components
-│   ├── profile/           # Profile-related components
-│   └── settings/          # Settings components
-├── db/                    # Database schema & utils
-├── hooks/                 # Custom React hooks
-├── i18n/                  # Internationalization config
-├── lib/                   # Utility libraries
-├── docs/                  # Project documentation
-├── public/locales/        # Translation files
-└── types/                 # TypeScript type definitions
+# Run tests
+pnpm test
 ```
 
-### Key Architecture Patterns
+## Architecture Overview
 
-#### User-Centric Social Model
-- Users table stores core identity and social fields
-- Following relationships are user-to-user (not profile-based)
-- Profiles organize servers/workspaces within projects
-- Sharing occurs at the profile level but discovery is user-centric
+Plugged.in consists of interconnected systems working in harmony:
 
-#### Database Schema
-```mermaid
-graph TD
-    User[Users] --> Project[Projects]
-    User --> Follower[Followers]
-    Project --> Profile[Profiles]
-    Profile --> Server[Servers]
-    Profile --> Collection[Collections]
-    Server --> SharedServer[Shared Servers]
-    Collection --> SharedCollection[Shared Collections]
-```
+- **Web App (Next.js)**: The control center for AI orchestration
+- **MCP Proxy (TypeScript)**: The intelligent router for AI data flows
+- **Database (PostgreSQL)**: The source of truth for configurations
+- **Cache (Redis)**: The speed layer for real-time operations
 
-## Development Patterns
+## How to Contribute
 
-### Frontend Patterns
-- **React Server Components**: Use for data fetching and server-side rendering
-- **Server Actions**: Use for all mutations (create, update, delete, follow, share)
-- **SWR**: Use for client-side data fetching and caching
-- **TypeScript**: Maintain strict type safety throughout
-- **Tailwind CSS**: Use for all styling
+### Finding Your Path
 
-### Backend Patterns
-- **Server Actions**: Primary method for mutations with type safety
-- **API Routes**: Use for queries, search, and webhook endpoints
-- **Drizzle ORM**: Type-safe database operations
-- **Rate Limiting**: Implemented across all endpoints with tiered limits
+Choose your adventure based on your interests and expertise:
 
-### Authentication & Authorization
-- **NextAuth.js**: Handles sessions and authentication
-- **Resource Ownership**: Users own Projects → Profiles → Servers/Collections
-- **Sharing Logic**: Public/private flags with profile-based sharing
+#### 🏗️ Infrastructure Warriors
+- Optimize database queries for million-user scale
+- Implement distributed caching strategies
+- Build resilient error recovery systems
+- Create monitoring and observability tools
 
-## Contributing Guidelines
+#### 🔒 Security Guardians
+- Audit authentication and authorization flows
+- Implement privacy-preserving features
+- Build compliance tooling
+- Research encryption methods for AI data
 
-### Before You Start
-1. **Read CLAUDE.md**: Always read the `CLAUDE.md` file in the root directory for comprehensive project guidance
-2. **Check Documentation**: Review project documentation for current priorities and patterns
-3. **Search Issues**: Look for existing issues or discussions on your topic
+#### 🎨 Experience Crafters
+- Design intuitive UI for complex AI workflows
+- Create delightful onboarding experiences
+- Build responsive, accessible interfaces
+- Optimize frontend performance
 
-### Types of Contributions
+#### 🤖 AI Architects
+- Develop new MCP server integrations
+- Create intelligent routing algorithms
+- Build multi-agent orchestration systems
+- Research context compression techniques
 
-#### 🐛 Bug Fixes
-- Focus on critical and high-priority bugs first
-- Include reproduction steps in your PR description
-- Add tests to prevent regression
+#### 📚 Knowledge Sharers
+- Write clear, helpful documentation
+- Create video tutorials
+- Build example projects
+- Answer community questions
 
-#### ✨ New Features
-- Discuss large features in issues before implementing
-- Follow established patterns (see `memory-bank/systemPatterns.md`)
-- Update documentation and tests
-- Consider internationalization needs
+### Contribution Process
 
-#### 📚 Documentation
-- Update documentation after significant changes
-- Keep README.md current with new features
-- Include code examples in documentation
-- Maintain CLAUDE.md for project guidance
+1. **Find an Issue**
+   - Check our [issue tracker](https://github.com/VeriTeknik/pluggedin-app/issues)
+   - Look for `good first issue` or `help wanted` labels
+   - Or propose your own idea!
 
-#### 🌍 Internationalization
-- All new text must be added to ALL 6 language files
-- Use translation keys, never hardcode text
-- Test with different languages enabled
+2. **Discuss First**
+   - Comment on the issue or create a new one
+   - Join our [Discord](https://discord.gg/pluggedin) for real-time discussion
+   - Get alignment before major work
 
-### Pull Request Process
-
-1. **Branch Naming**
-   ```
-   feature/description-of-feature
-   fix/description-of-bug
-   docs/description-of-docs-change
+3. **Code with Purpose**
+   ```typescript
+   // Every function should answer: How does this empower users?
+   async function enableUserControl() {
+     // Your code here
+   }
    ```
 
-2. **Commit Messages**
-   ```
-   type(scope): description
-   
-   Examples:
-   feat(social): add user profile sharing
-   fix(playground): resolve session loss issue
-   docs(memory-bank): update active context
-   i18n(translations): add missing keys for notifications
-   ```
+4. **Test Thoroughly**
+   - Unit tests for logic
+   - Integration tests for workflows
+   - E2E tests for critical paths
+   - Manual testing for UX
 
-3. **PR Checklist**
-   - [ ] Code follows project patterns
-   - [ ] Tests added/updated
-   - [ ] Documentation updated
-   - [ ] Internationalization considered
-   - [ ] Documentation updated if needed
-   - [ ] No security vulnerabilities introduced
+5. **Submit with Pride**
+   - Clear PR description explaining the "why"
+   - Link to related issues
+   - Include screenshots for UI changes
+   - Add documentation updates
 
 ## Code Standards
 
-### TypeScript
-- Use strict type checking
-- Define interfaces for all data structures
-- Use Zod for runtime validation
-- Avoid `any` types
+We believe in code that's as elegant as the future we're building:
 
-### React Components
-- Use functional components with hooks
-- Follow Server Component patterns where appropriate
-- Use `useTranslation` hook for all text
-- Implement proper error boundaries
+- **TypeScript First**: Type safety prevents runtime surprises
+- **Functional Patterns**: Prefer pure functions and immutability
+- **Clear Naming**: Code should read like documentation
+- **Performance Matters**: Every millisecond counts at scale
+- **Security by Default**: Never trust, always verify
+- **Internationalization**: Support all 6 languages (en, tr, zh, hi, ja, nl)
 
-### Database Operations
-- Use Drizzle ORM for type safety
-- Follow existing schema patterns
-- Include migrations for schema changes
-- Use transactions for complex operations
+### Testing Philosophy
+- **Test Behavior, Not Implementation**: Tests should survive refactoring
+- **Real-World Scenarios**: Test actual user workflows
+- **Edge Cases Matter**: AI interactions can be unpredictable
+- **Performance Tests**: Ensure we scale gracefully
 
-### API Design
-- Use Server Actions for mutations
-- Implement proper error handling with `lib/api-errors.ts`
-- Include input validation with Zod
-- Follow rate limiting patterns
+### Key Development Patterns
 
-## Testing
+#### Server Actions
+```typescript
+'use server';
 
-### Test Types
-- **Unit Tests**: For utility functions and components
-- **Integration Tests**: For API endpoints and database operations
-- **E2E Tests**: For critical user flows
-
-### Running Tests
-```bash
-# Run all tests
-pnpm test
-
-# Run specific test file
-pnpm test path/to/test.file.ts
-
-# Run tests in watch mode
-pnpm test:watch
+export async function serverAction(params) {
+  try {
+    // Validate with Zod
+    const validated = schema.parse(params);
+    // Business logic
+    const result = await businessLogic(validated);
+    // Return success
+    return { success: true, data: result };
+  } catch (error) {
+    // Standardized error handling
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Unknown error' 
+    };
+  }
+}
 ```
 
-### Test Standards
-- Test critical user flows
-- Mock external dependencies
-- Use proper test data cleanup
-- Include both success and error cases
+#### Internationalization
+```typescript
+// Always use translations
+import { useTranslation } from 'react-i18next';
 
-## Documentation
-
-### Project Documentation System
-Our project uses comprehensive documentation to guide development:
-
-#### Key Documentation Files
-- **CLAUDE.md**: Primary project guidance document with comprehensive information about the ecosystem
-- **README.md**: Project overview and setup instructions
-- **CONTRIBUTING.md**: This file - contribution guidelines
-- **API Documentation**: Document all endpoints with examples
-- **Architecture Docs**: Document key architectural decisions
-
-#### Documentation Rules
-1. **Always read CLAUDE.md before starting work** - it contains critical project guidance
-2. **Update documentation after significant changes**
-3. **Keep documentation current with ongoing work**
-4. **Document architectural decisions and patterns**
-5. **Ensure all new features are documented**
-
-### Code Documentation
-- Use JSDoc for complex functions
-- Include README files for new modules
-- Document API endpoints with examples
-- Maintain up-to-date type definitions
-
-## Security
-
-### Security Requirements
-- **Input Validation**: Use Zod schemas for all inputs
-- **Authentication**: Verify user permissions for all operations
-- **Rate Limiting**: Implement appropriate limits for all endpoints
-- **Error Handling**: Use sanitized error messages
-- **Data Privacy**: Ensure users can only access their own data
-
-### Security Review Process
-1. Review all data access patterns
-2. Validate input sanitization
-3. Check authentication/authorization logic
-4. Test for common vulnerabilities (OWASP Top 10)
-5. Review error message information disclosure
-
-### Reporting Security Issues
-- Create a private issue for security vulnerabilities
-- Include reproduction steps and impact assessment
-- Follow responsible disclosure practices
-
-## Internationalization
-
-### Adding New Text
-1. **Never hardcode text** - always use translation keys
-2. **Add to ALL languages**: en, tr, zh, hi, ja, nl
-3. **Use appropriate namespaces**: common, auth, playground, etc.
-4. **Test with different languages** enabled
-
-### Translation File Structure
-```
-public/locales/
-├── en/
-│   ├── common.json
-│   ├── auth.json
-│   ├── playground.json
-│   └── ...
-├── tr/
-├── zh/
-├── hi/
-├── ja/
-└── nl/
+export function Component() {
+  const { t } = useTranslation();
+  return <h1>{t('welcome.title')}</h1>;
+}
 ```
 
-### Translation Guidelines
-- Use descriptive keys: `profile.settings.username.label`
-- Include context in complex translations
-- Handle pluralization properly
-- Consider cultural differences
+## Community Guidelines
 
-## Database Changes
+### Our Values
+- **User Empowerment**: Every decision should increase user control
+- **Open Collaboration**: The best ideas come from diverse perspectives
+- **Pragmatic Innovation**: Ship working solutions, iterate to perfection
+- **Respectful Discourse**: Disagree on ideas, not individuals
+- **Sustainable Development**: Build for the long term
 
-### Schema Changes
-1. **Create migration files** in `drizzle/migrations/`
-2. **Update schema.ts** with new definitions
-3. **Generate Drizzle client**: `pnpm db:generate`
-4. **Apply migrations**: `pnpm db:migrate`
-5. **Update TypeScript types** as needed
-
-### Migration Best Practices
-- Always create reversible migrations
-- Test migrations on development data
-- Consider data migration needs
-- Update seed data if necessary
-
-### Schema Patterns
-- Follow existing naming conventions (snake_case for columns)
-- Use appropriate constraints and indexes
-- Include created_at/updated_at timestamps
-- Follow foreign key relationships
-
-## Release Process
-
-### Version Management
-- Follow semantic versioning (MAJOR.MINOR.PATCH)
-- Update version in package.json
-- Create release notes
-- Tag releases in Git
-
-### Pre-Release Checklist
-- [ ] All tests passing
-- [ ] Documentation updated (including CLAUDE.md if needed)
-- [ ] Security review completed
-- [ ] Performance testing done
-- [ ] Documentation updated
-- [ ] Translation completeness verified
-
-## Getting Help
-
-### Resources
-- **CLAUDE.md**: Start with the comprehensive project guidance in `CLAUDE.md`
-- **README**: Project setup and features
-- **Issues**: Existing problems and discussions
-- **Reddit Community**: https://www.reddit.com/r/plugged_in/
-- **X (Twitter)**: https://x.com/PluggedIntoAI
-
-### Contact
-- Create an issue for bugs or feature requests
-- Use discussions for questions and ideas
-- Tag maintainers for urgent security issues
+### Getting Help
+- **Discord**: Join our community for real-time help
+- **Documentation**: Check our docs for guides
+- **Issues**: Search existing issues before creating new ones
+- **Office Hours**: Weekly community calls every Thursday
 
 ## Recognition
 
-We appreciate all contributions! Contributors will be:
-- Listed in project contributors
-- Mentioned in release notes for significant contributions
-- Invited to join maintainer discussions for regular contributors
+We believe in celebrating our contributors:
+
+- **Contributors Page**: All contributors listed in our hall of fame
+- **Swag Program**: Active contributors receive plugged.in merchandise
+- **Conference Tickets**: Top contributors get conference sponsorships
+- **Feature Credits**: Your name in release notes for significant features
+
+## The Future We're Building
+
+Every contribution to plugged.in is a vote for a future where:
+
+- AI amplifies human capability without replacing human agency
+- Data ownership is a fundamental right, not a privilege
+- The benefits of AI are accessible to all, not just the few
+- Technology serves humanity, not the other way around
+
+Join us in building this future. Your code today shapes tomorrow's possibilities.
+
+> *"At the crossroads of human intention and artificial intelligence, we build bridges, not barriers."*
+
+Welcome to plugged.in. Let's build something extraordinary together. 🚀
 
 ---
 
-Thank you for contributing to Plugged.in! Together, we're building the future of AI collaboration through MCP. 🚀 
+## Quick Reference
+
+### Important Files
+- `CLAUDE.md` - Comprehensive project guidance
+- `ROADMAP.md` - Our vision and future plans
+- `README.md` - Project overview and setup
+- `.env.example` - Environment configuration template
+
+### Key Commands
+```bash
+pnpm dev                    # Start development
+pnpm build                  # Build for production
+pnpm test                   # Run tests
+pnpm lint                   # Check code style
+pnpm db:migrate             # Run migrations
+pnpm generate-encryption-key # Generate auth secret
+```
+
+### Useful Links
+- [GitHub Repository](https://github.com/VeriTeknik/pluggedin-app)
+- [Issue Tracker](https://github.com/VeriTeknik/pluggedin-app/issues)
+- [Discord Community](https://discord.gg/pluggedin)
+- [Reddit Community](https://www.reddit.com/r/plugged_in/)
+- [X (Twitter)](https://x.com/PluggedIntoAI)
