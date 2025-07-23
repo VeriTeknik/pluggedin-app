@@ -15,7 +15,6 @@ Welcome to Plugged.in! We're excited to have you contribute to the leading socia
 9. [Security](#security)
 10. [Internationalization](#internationalization)
 11. [Database Changes](#database-changes)
-12. [Memory Bank System](#memory-bank-system)
 
 ## Project Overview
 
@@ -95,7 +94,7 @@ pluggedin-app/
 ├── hooks/                 # Custom React hooks
 ├── i18n/                  # Internationalization config
 ├── lib/                   # Utility libraries
-├── memory-bank/           # Project documentation
+├── docs/                  # Project documentation
 ├── public/locales/        # Translation files
 └── types/                 # TypeScript type definitions
 ```
@@ -143,8 +142,8 @@ graph TD
 ## Contributing Guidelines
 
 ### Before You Start
-1. **Read the Memory Bank**: Always read all files in `memory-bank/` before starting work
-2. **Check Active Context**: Review `memory-bank/activeContext.md` for current priorities
+1. **Read CLAUDE.md**: Always read the `CLAUDE.md` file in the root directory for comprehensive project guidance
+2. **Check Documentation**: Review project documentation for current priorities and patterns
 3. **Search Issues**: Look for existing issues or discussions on your topic
 
 ### Types of Contributions
@@ -161,9 +160,10 @@ graph TD
 - Consider internationalization needs
 
 #### 📚 Documentation
-- Update Memory Bank after significant changes
+- Update documentation after significant changes
 - Keep README.md current with new features
 - Include code examples in documentation
+- Maintain CLAUDE.md for project guidance
 
 #### 🌍 Internationalization
 - All new text must be added to ALL 6 language files
@@ -195,7 +195,7 @@ graph TD
    - [ ] Tests added/updated
    - [ ] Documentation updated
    - [ ] Internationalization considered
-   - [ ] Memory Bank updated if needed
+   - [ ] Documentation updated if needed
    - [ ] No security vulnerabilities introduced
 
 ## Code Standards
@@ -251,22 +251,22 @@ pnpm test:watch
 
 ## Documentation
 
-### Memory Bank System
-Our project uses a comprehensive Memory Bank system for documentation:
+### Project Documentation System
+Our project uses comprehensive documentation to guide development:
 
-#### Core Files (Always Update When Relevant)
-- `projectbrief.md`: Foundation and goals
-- `activeContext.md`: Current work focus and recent changes
-- `progress.md`: What works, what's in progress, what's left
-- `systemPatterns.md`: Architecture and design patterns
-- `techContext.md`: Technology stack and setup
-- `productContext.md`: Product vision and user needs
+#### Key Documentation Files
+- **CLAUDE.md**: Primary project guidance document with comprehensive information about the ecosystem
+- **README.md**: Project overview and setup instructions
+- **CONTRIBUTING.md**: This file - contribution guidelines
+- **API Documentation**: Document all endpoints with examples
+- **Architecture Docs**: Document key architectural decisions
 
 #### Documentation Rules
-1. **Always read Memory Bank before starting work**
-2. **Update Memory Bank after significant changes**
-3. **Keep activeContext.md current with ongoing work**
-4. **Document architectural decisions in systemPatterns.md**
+1. **Always read CLAUDE.md before starting work** - it contains critical project guidance
+2. **Update documentation after significant changes**
+3. **Keep documentation current with ongoing work**
+4. **Document architectural decisions and patterns**
+5. **Ensure all new features are documented**
 
 ### Code Documentation
 - Use JSDoc for complex functions
@@ -355,7 +355,7 @@ public/locales/
 
 ### Pre-Release Checklist
 - [ ] All tests passing
-- [ ] Memory Bank updated
+- [ ] Documentation updated (including CLAUDE.md if needed)
 - [ ] Security review completed
 - [ ] Performance testing done
 - [ ] Documentation updated
@@ -364,7 +364,7 @@ public/locales/
 ## Getting Help
 
 ### Resources
-- **Memory Bank**: Start with `memory-bank/` directory
+- **CLAUDE.md**: Start with the comprehensive project guidance in `CLAUDE.md`
 - **README**: Project setup and features
 - **Issues**: Existing problems and discussions
 - **Reddit Community**: https://www.reddit.com/r/plugged_in/
