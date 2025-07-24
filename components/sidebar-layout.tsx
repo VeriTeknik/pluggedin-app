@@ -5,6 +5,7 @@
 import {
   Bell,
   Blocks,
+  BotIcon,
   Code2,
   FileText,
   FlaskConical,

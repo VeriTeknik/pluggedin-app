@@ -180,6 +180,9 @@ export const projectsTable = pgTable(
     user_id: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
+    // Embedded chat fields
+    embedded_chat_enabled: boolean('embedded_chat_enabled').default(false),
+    embedded_chat_uuid: uuid('embedded_chat_uuid'),
   },
   (table) => ({ // Use object syntax for indexes
     projectsUserIdIdx: index('projects_user_id_idx').on(table.user_id),
@@ -221,6 +224,10 @@ export const projectsRelations = relations(projectsTable, ({ one, many }) => ({
     fields: [projectsTable.active_profile_uuid],
     references: [profilesTable.uuid],
     relationName: 'activeProfile',
+  }),
+  embeddedChat: one(embeddedChatsTable, {
+    fields: [projectsTable.embedded_chat_uuid],
+    references: [embeddedChatsTable.uuid],
   }),
 }));
 
@@ -1177,21 +1184,74 @@ export const sharedCollectionsRelations = relations(sharedCollectionsTable, ({ o
   }),
 }));
 
+// ===== Enhanced Embedded Chat Tables (v2) =====
+
 export const embeddedChatsTable = pgTable(
   'embedded_chats',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
-    profile_uuid: uuid('profile_uuid')
+    project_uuid: uuid('project_uuid')
       .notNull()
-      .references(() => profilesTable.uuid, { onDelete: 'cascade' }),
-    title: text('title').notNull(),
-    description: text('description'),
-    settings: jsonb('settings')
-      .$type<{ [key: string]: any }>()
-      .notNull()
-      .default(sql`'{}'::jsonb`),
-    is_public: boolean('is_public').default(true).notNull(),
+      .references(() => projectsTable.uuid, { onDelete: 'cascade' })
+      .unique(),
+    name: varchar('name', { length: 255 }).notNull().default('AI Assistant'),
+    
+    // MCP servers selection
+    enabled_mcp_server_uuids: text('enabled_mcp_server_uuids').array().default(sql`'{}'::text[]`),
+    enable_rag: boolean('enable_rag').default(true),
+    allowed_domains: text('allowed_domains').array().default(sql`'{}'::text[]`),
+    contact_routing: jsonb('contact_routing').default(sql`'{}'::jsonb`),
+    custom_instructions: text('custom_instructions'),
+    welcome_message: text('welcome_message'),
+    suggested_questions: text('suggested_questions').array().default(sql`'{}'::text[]`),
+    theme_config: jsonb('theme_config').default(sql`'{}'::jsonb`),
+    position: varchar('position', { length: 20 }).default('bottom-right'),
+    install_count: integer('install_count').default(0),
+    last_active_at: timestamp('last_active_at', { withTimezone: true }),
+    
+    // Model configuration
+    model_config: jsonb('model_config').default(sql`'{
+      "provider": "openai",
+      "model": "gpt-4",
+      "temperature": 0.7,
+      "max_tokens": 1000,
+      "top_p": 1.0,
+      "frequency_penalty": 0.0,
+      "presence_penalty": 0.0
+    }'::jsonb`),
+    
+    // Human-in-the-loop configuration
+    human_oversight: jsonb('human_oversight').default(sql`'{
+      "enabled": false,
+      "mode": "monitor",
+      "notification_channels": ["app", "email"],
+      "auto_assign": false,
+      "business_hours": null
+    }'::jsonb`),
+    
+    // Context management
+    context_window_size: integer('context_window_size').default(10),
+    max_conversation_length: integer('max_conversation_length').default(100),
+    
+    // Offline handling
+    offline_config: jsonb('offline_config').default(sql`'{
+      "enabled": true,
+      "message": "We''ll get back to you soon!",
+      "email_notification": true,
+      "capture_contact": true
+    }'::jsonb`),
+    
+    // Public sharing
+    is_public: boolean('is_public').default(false).notNull(),
     is_active: boolean('is_active').default(true).notNull(),
+    
+    // API Key Authentication
+    api_key: varchar('api_key', { length: 64 }).unique(),
+    api_key_created_at: timestamp('api_key_created_at', { withTimezone: true }),
+    require_api_key: boolean('require_api_key').default(false),
+    api_key_last_used_at: timestamp('api_key_last_used_at', { withTimezone: true }),
+    
+    // Timestamps
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -1199,18 +1259,23 @@ export const embeddedChatsTable = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (table) => ({ // Use object syntax for indexes
-    embeddedChatsProfileUuidIdx: index('embedded_chats_profile_uuid_idx').on(table.profile_uuid),
-    embeddedChatsIsPublicIdx: index('embedded_chats_is_public_idx').on(table.is_public),
-    embeddedChatsIsActiveIdx: index('embedded_chats_is_active_idx').on(table.is_active),
+  (table) => ({
+    embeddedChatsProjectIdx: index('idx_embedded_chats_project').on(table.project_uuid),
+    embeddedChatsPublicIdx: index('idx_embedded_chats_public').on(table.is_public),
+    embeddedChatsActiveIdx: index('idx_embedded_chats_active').on(table.is_active),
+    embeddedChatsApiKeyIdx: index('idx_embedded_chats_api_key').on(table.api_key),
   })
 );
 
-export const embeddedChatsRelations = relations(embeddedChatsTable, ({ one }) => ({
-  profile: one(profilesTable, {
-    fields: [embeddedChatsTable.profile_uuid],
-    references: [profilesTable.uuid],
+export const embeddedChatsRelations = relations(embeddedChatsTable, ({ one, many }) => ({
+  project: one(projectsTable, {
+    fields: [embeddedChatsTable.project_uuid],
+    references: [projectsTable.uuid],
   }),
+  conversations: many(chatConversationsTable),
+  personas: many(chatPersonasTable),
+  analytics: many(chatAnalyticsTable),
+  usage: many(chatUsageTable),
 }));
 
 // Removed duplicate profilesRelationsWithSocial definition
@@ -1424,5 +1489,394 @@ export const registryOAuthSessionsRelations = relations(registryOAuthSessions, (
   user: one(users, {
     fields: [registryOAuthSessions.userId],
     references: [users.id],
+  }),
+}));
+
+// ===== Chat Conversations Table =====
+export const chatConversationsTable = pgTable(
+  'chat_conversations',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    embedded_chat_uuid: uuid('embedded_chat_uuid')
+      .notNull()
+      .references(() => embeddedChatsTable.uuid, { onDelete: 'cascade' }),
+    visitor_id: text('visitor_id').notNull(),
+    visitor_name: text('visitor_name'),
+    visitor_email: text('visitor_email'),
+    visitor_ip: text('visitor_ip'),
+    visitor_user_agent: text('visitor_user_agent'),
+    referrer_url: text('referrer_url'),
+    page_url: text('page_url'),
+    started_at: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    ended_at: timestamp('ended_at', { withTimezone: true }),
+    metadata: jsonb('metadata').default(sql`'{}'::jsonb`),
+    
+    // Human oversight fields
+    status: varchar('status', { length: 20 }).default('active')
+      .$type<'active' | 'waiting' | 'human_controlled' | 'ended'>(),
+    assigned_user_id: text('assigned_user_id').references(() => users.id),
+    assigned_at: timestamp('assigned_at', { withTimezone: true }),
+    takeover_at: timestamp('takeover_at', { withTimezone: true }),
+    
+    // Recovery and persistence
+    recovery_token: varchar('recovery_token', { length: 64 }).default(sql`md5(random()::text || clock_timestamp()::text)`),
+    last_heartbeat: timestamp('last_heartbeat', { withTimezone: true }).defaultNow(),
+    
+    // GDPR compliance
+    gdpr_consent: boolean('gdpr_consent').default(false),
+    gdpr_consent_timestamp: timestamp('gdpr_consent_timestamp', { withTimezone: true }),
+    deletion_requested_at: timestamp('deletion_requested_at', { withTimezone: true }),
+    
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    conversationsChatIdx: index('idx_conversations_chat').on(table.embedded_chat_uuid),
+    conversationsVisitorIdx: index('idx_conversations_visitor').on(table.visitor_id),
+    conversationsStatusIdx: index('idx_conversations_status').on(table.status),
+    conversationsAssignedIdx: index('idx_conversations_assigned').on(table.assigned_user_id),
+    conversationsHeartbeatIdx: index('idx_conversations_heartbeat').on(table.last_heartbeat),
+  })
+);
+
+// ===== Chat Messages Table =====
+export const chatMessagesTable = pgTable(
+  'chat_messages',
+  {
+    id: serial('id').primaryKey(),
+    conversation_uuid: uuid('conversation_uuid')
+      .notNull()
+      .references(() => chatConversationsTable.uuid, { onDelete: 'cascade' }),
+    role: varchar('role', { length: 20 }).notNull()
+      .$type<'user' | 'assistant' | 'system' | 'human' | 'instruction'>(),
+    content: text('content').notNull(),
+    persona_id: integer('persona_id'),
+    tool_calls: jsonb('tool_calls'),
+    tool_results: jsonb('tool_results'),
+    metadata: jsonb('metadata').default(sql`'{}'::jsonb`),
+    
+    // Human oversight fields
+    created_by: varchar('created_by', { length: 20 }).default('ai')
+      .$type<'ai' | 'human' | 'system'>(),
+    human_user_id: text('human_user_id').references(() => users.id),
+    is_internal: boolean('is_internal').default(false),
+    
+    // Model tracking
+    model_provider: varchar('model_provider', { length: 50 }),
+    model_name: varchar('model_name', { length: 100 }),
+    model_config: jsonb('model_config'),
+    tokens_used: integer('tokens_used'),
+    
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    messagesConversationIdx: index('idx_messages_conversation').on(table.conversation_uuid),
+    messagesCreatedIdx: index('idx_messages_created').on(table.created_at),
+    messagesInternalIdx: index('idx_messages_internal').on(table.is_internal),
+  })
+);
+
+// ===== Chat Personas Table =====
+export const chatPersonasTable = pgTable(
+  'chat_personas',
+  {
+    id: serial('id').primaryKey(),
+    embedded_chat_uuid: uuid('embedded_chat_uuid')
+      .notNull()
+      .references(() => embeddedChatsTable.uuid, { onDelete: 'cascade' }),
+    name: varchar('name', { length: 100 }).notNull(),
+    role: varchar('role', { length: 100 }),
+    instructions: text('instructions').notNull(),
+    avatar_url: text('avatar_url'),
+    contact_email: text('contact_email'),
+    contact_phone: text('contact_phone'),
+    contact_calendar_link: text('contact_calendar_link'),
+    is_active: boolean('is_active').default(true),
+    is_default: boolean('is_default').default(false),
+    display_order: integer('display_order').default(0),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    personasChatIdx: index('idx_personas_chat').on(table.embedded_chat_uuid),
+    personasActiveIdx: index('idx_personas_active').on(table.is_active),
+  })
+);
+
+// ===== Chat Contacts Table =====
+export const chatContactsTable = pgTable(
+  'chat_contacts',
+  {
+    id: serial('id').primaryKey(),
+    conversation_uuid: uuid('conversation_uuid')
+      .references(() => chatConversationsTable.uuid, { onDelete: 'cascade' }),
+    embedded_chat_uuid: uuid('embedded_chat_uuid')
+      .notNull()
+      .references(() => embeddedChatsTable.uuid, { onDelete: 'cascade' }),
+    persona_id: integer('persona_id').references(() => chatPersonasTable.id),
+    name: text('name').notNull(),
+    email: text('email').notNull(),
+    phone: text('phone'),
+    company: text('company'),
+    message: text('message').notNull(),
+    inquiry_type: varchar('inquiry_type', { length: 50 }),
+    status: varchar('status', { length: 20 }).default('new')
+      .$type<'new' | 'contacted' | 'converted' | 'archived'>(),
+    metadata: jsonb('metadata').default(sql`'{}'::jsonb`),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    contactsChatIdx: index('idx_contacts_chat').on(table.embedded_chat_uuid),
+    contactsStatusIdx: index('idx_contacts_status').on(table.status),
+    contactsCreatedIdx: index('idx_contacts_created').on(table.created_at),
+  })
+);
+
+// ===== Chat Analytics Table =====
+export const chatAnalyticsTable = pgTable(
+  'chat_analytics',
+  {
+    id: serial('id').primaryKey(),
+    embedded_chat_uuid: uuid('embedded_chat_uuid')
+      .notNull()
+      .references(() => embeddedChatsTable.uuid, { onDelete: 'cascade' }),
+    date: timestamp('date', { mode: 'date' }).notNull(),
+    conversations_started: integer('conversations_started').default(0),
+    messages_sent: integer('messages_sent').default(0),
+    messages_received: integer('messages_received').default(0),
+    contacts_captured: integer('contacts_captured').default(0),
+    avg_conversation_duration: integer('avg_conversation_duration'), // in seconds
+    unique_visitors: integer('unique_visitors').default(0),
+    domains: jsonb('domains').default(sql`'{}'::jsonb`), // domain -> count mapping
+    
+    // Enhanced metrics
+    tool_usage: jsonb('tool_usage').default(sql`'{}'::jsonb`), // tool_name -> count
+    rag_queries: integer('rag_queries').default(0),
+    rag_hit_rate: integer('rag_hit_rate'), // Percentage as integer (0-100)
+    persona_usage: jsonb('persona_usage').default(sql`'{}'::jsonb`), // persona_id -> count
+    human_interventions: integer('human_interventions').default(0),
+    human_takeovers: integer('human_takeovers').default(0),
+    avg_response_time: integer('avg_response_time'), // in milliseconds
+    conversation_completion_rate: integer('conversation_completion_rate'), // Percentage as integer
+    drop_off_points: jsonb('drop_off_points').default(sql`'[]'::jsonb`), // Array of message indices
+    
+    // Model usage
+    tokens_used: jsonb('tokens_used').default(sql`'{}'::jsonb`), // model -> token count
+    estimated_cost: integer('estimated_cost'), // in cents
+    
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    analyticsChatDateIdx: index('idx_analytics_chat_date').on(table.embedded_chat_uuid, table.date),
+    uniqueAnalyticsChatDate: unique('unique_analytics_chat_date').on(table.embedded_chat_uuid, table.date),
+  })
+);
+
+// ===== Chat Templates Table =====
+export const chatTemplatesTable = pgTable(
+  'chat_templates',
+  {
+    id: serial('id').primaryKey(),
+    name: varchar('name', { length: 100 }).notNull(),
+    description: text('description'),
+    category: varchar('category', { length: 50 })
+      .$type<'support' | 'sales' | 'documentation' | 'general' | 'custom'>(),
+    config: jsonb('config').notNull(), // Full chat configuration
+    preview_image_url: text('preview_image_url'),
+    is_premium: boolean('is_premium').default(false),
+    is_public: boolean('is_public').default(false),
+    created_by: text('created_by').references(() => users.id),
+    install_count: integer('install_count').default(0),
+    rating: integer('rating'), // Store as integer (0-500 for 0.00-5.00)
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    templatesCategoryIdx: index('idx_templates_category').on(table.category),
+    templatesPublicIdx: index('idx_templates_public').on(table.is_public),
+  })
+);
+
+// ===== Chat Monitoring Sessions Table =====
+export const chatMonitoringSessionsTable = pgTable(
+  'chat_monitoring_sessions',
+  {
+    id: serial('id').primaryKey(),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id),
+    conversation_uuid: uuid('conversation_uuid')
+      .references(() => chatConversationsTable.uuid),
+    started_at: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+    ended_at: timestamp('ended_at', { withTimezone: true }),
+    actions_taken: jsonb('actions_taken').default(sql`'[]'::jsonb`), // Log of all admin actions
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    monitoringUserIdx: index('idx_monitoring_user').on(table.user_id),
+    monitoringConversationIdx: index('idx_monitoring_conversation').on(table.conversation_uuid),
+  })
+);
+
+// ===== Chat Usage Table =====
+export const chatUsageTable = pgTable(
+  'chat_usage',
+  {
+    id: serial('id').primaryKey(),
+    embedded_chat_uuid: uuid('embedded_chat_uuid')
+      .references(() => embeddedChatsTable.uuid),
+    date: timestamp('date', { mode: 'date' }).notNull(),
+    conversations: integer('conversations').default(0),
+    messages: integer('messages').default(0),
+    tokens_used: jsonb('tokens_used').default(sql`'{}'::jsonb`),
+    mcp_tool_calls: integer('mcp_tool_calls').default(0),
+    rag_queries: integer('rag_queries').default(0),
+    human_interventions: integer('human_interventions').default(0),
+    estimated_cost: integer('estimated_cost'), // in cents
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    usageChatDateIdx: index('idx_usage_chat_date').on(table.embedded_chat_uuid, table.date),
+    uniqueUsageChatDate: unique('unique_usage_chat_date').on(table.embedded_chat_uuid, table.date),
+  })
+);
+
+// ===== Chat Billing Table =====
+export const chatBillingTable = pgTable(
+  'chat_billing',
+  {
+    id: serial('id').primaryKey(),
+    user_id: text('user_id').references(() => users.id),
+    plan_type: varchar('plan_type', { length: 20 })
+      .$type<'free' | 'starter' | 'pro' | 'enterprise'>(),
+    billing_period_start: timestamp('billing_period_start', { mode: 'date' }).notNull(),
+    billing_period_end: timestamp('billing_period_end', { mode: 'date' }).notNull(),
+    conversations_limit: integer('conversations_limit'),
+    conversations_used: integer('conversations_used').default(0),
+    messages_limit: integer('messages_limit'),
+    messages_used: integer('messages_used').default(0),
+    overage_charges: integer('overage_charges').default(0), // in cents
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    billingUserPeriodIdx: index('idx_billing_user_period').on(table.user_id, table.billing_period_start),
+  })
+);
+
+// ===== Chat Data Requests Table =====
+export const chatDataRequestsTable = pgTable(
+  'chat_data_requests',
+  {
+    id: serial('id').primaryKey(),
+    conversation_uuid: uuid('conversation_uuid')
+      .references(() => chatConversationsTable.uuid),
+    visitor_email: text('visitor_email').notNull(),
+    request_type: varchar('request_type', { length: 20 })
+      .$type<'export' | 'deletion'>(),
+    status: varchar('status', { length: 20 }).default('pending'),
+    completed_at: timestamp('completed_at', { withTimezone: true }),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  }
+);
+
+// ===== Chat Relations =====
+export const chatConversationsRelations = relations(chatConversationsTable, ({ one, many }) => ({
+  embeddedChat: one(embeddedChatsTable, {
+    fields: [chatConversationsTable.embedded_chat_uuid],
+    references: [embeddedChatsTable.uuid],
+  }),
+  assignedUser: one(users, {
+    fields: [chatConversationsTable.assigned_user_id],
+    references: [users.id],
+  }),
+  messages: many(chatMessagesTable),
+  contacts: many(chatContactsTable),
+  monitoringSessions: many(chatMonitoringSessionsTable),
+  dataRequests: many(chatDataRequestsTable),
+}));
+
+export const chatMessagesRelations = relations(chatMessagesTable, ({ one }) => ({
+  conversation: one(chatConversationsTable, {
+    fields: [chatMessagesTable.conversation_uuid],
+    references: [chatConversationsTable.uuid],
+  }),
+  persona: one(chatPersonasTable, {
+    fields: [chatMessagesTable.persona_id],
+    references: [chatPersonasTable.id],
+  }),
+  humanUser: one(users, {
+    fields: [chatMessagesTable.human_user_id],
+    references: [users.id],
+  }),
+}));
+
+export const chatPersonasRelations = relations(chatPersonasTable, ({ one, many }) => ({
+  embeddedChat: one(embeddedChatsTable, {
+    fields: [chatPersonasTable.embedded_chat_uuid],
+    references: [embeddedChatsTable.uuid],
+  }),
+  messages: many(chatMessagesTable),
+  contacts: many(chatContactsTable),
+}));
+
+export const chatContactsRelations = relations(chatContactsTable, ({ one }) => ({
+  conversation: one(chatConversationsTable, {
+    fields: [chatContactsTable.conversation_uuid],
+    references: [chatConversationsTable.uuid],
+  }),
+  embeddedChat: one(embeddedChatsTable, {
+    fields: [chatContactsTable.embedded_chat_uuid],
+    references: [embeddedChatsTable.uuid],
+  }),
+  persona: one(chatPersonasTable, {
+    fields: [chatContactsTable.persona_id],
+    references: [chatPersonasTable.id],
+  }),
+}));
+
+export const chatAnalyticsRelations = relations(chatAnalyticsTable, ({ one }) => ({
+  embeddedChat: one(embeddedChatsTable, {
+    fields: [chatAnalyticsTable.embedded_chat_uuid],
+    references: [embeddedChatsTable.uuid],
+  }),
+}));
+
+export const chatTemplatesRelations = relations(chatTemplatesTable, ({ one }) => ({
+  createdBy: one(users, {
+    fields: [chatTemplatesTable.created_by],
+    references: [users.id],
+  }),
+}));
+
+export const chatMonitoringSessionsRelations = relations(chatMonitoringSessionsTable, ({ one }) => ({
+  user: one(users, {
+    fields: [chatMonitoringSessionsTable.user_id],
+    references: [users.id],
+  }),
+  conversation: one(chatConversationsTable, {
+    fields: [chatMonitoringSessionsTable.conversation_uuid],
+    references: [chatConversationsTable.uuid],
+  }),
+}));
+
+export const chatUsageRelations = relations(chatUsageTable, ({ one }) => ({
+  embeddedChat: one(embeddedChatsTable, {
+    fields: [chatUsageTable.embedded_chat_uuid],
+    references: [embeddedChatsTable.uuid],
+  }),
+}));
+
+export const chatBillingRelations = relations(chatBillingTable, ({ one }) => ({
+  user: one(users, {
+    fields: [chatBillingTable.user_id],
+    references: [users.id],
+  }),
+}));
+
+export const chatDataRequestsRelations = relations(chatDataRequestsTable, ({ one }) => ({
+  conversation: one(chatConversationsTable, {
+    fields: [chatDataRequestsTable.conversation_uuid],
+    references: [chatConversationsTable.uuid],
   }),
 }));
