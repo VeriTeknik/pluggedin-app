@@ -10,10 +10,231 @@
         "title": "隐私政策",
         "description": "我们如何收集、使用和保护您的数据",
         "content": {
-          "intro": "欢迎来到 Plugged.in（“我们”、“我们的”）。本隐私政策解释了当您使用我们的服务时，我们如何收集、使用、披露和保护您的信息。请仔细阅读本隐私政策。",
+          "intro": "欢迎来到 Plugged.in（\"我们\"、\"我们的\"）。本隐私政策解释了当您使用我们的服务时，我们如何收集、使用、披露和保护您的信息。请仔细阅读本隐私政策。",
           "disclaimer": "如果您不同意本隐私政策的条款，请不要访问该服务。",
           "note": "重要提示：Plugged.in 目前处于发布候选状态。随着服务的成熟和附加功能的实施，本隐私政策可能会更新。",
           "thirdParty": "我们无法控制任何第三方网站或服务的内容、隐私政策或做法，也不承担任何责任。"
+        },
+        "sections": {
+          "introduction": {
+            "title": "1. 简介",
+            "content": "本隐私政策适用于由 VeriTeknik B.V. 运营的 AI 交叉平台 Plugged.in。本政策描述了我们如何根据《通用数据保护条例》(GDPR) 和其他适用的数据保护法律收集、使用、披露和保护您的个人数据。"
+          },
+          "controller": {
+            "title": "2. 数据控制者",
+            "intro": "负责您个人数据的数据控制者是：",
+            "company": "公司：",
+            "companyName": "VeriTeknik B.V.",
+            "address": "地址：",
+            "addressDetails": "Prinses Margrietplantsoen 33, 2595 AM 海牙，荷兰",
+            "email": "电子邮件：",
+            "emailAddress": "privacy@plugged.in"
+          },
+          "dataCollection": {
+            "title": "3. 我们收集的数据",
+            "intro": "我们收集以下类别的个人数据：",
+            "account": {
+              "title": "账户信息",
+              "email": "电子邮件地址",
+              "name": "姓名（可选）",
+              "username": "用户名",
+              "bio": "个人简介/描述（可选）",
+              "avatar": "头像图片（可选）",
+              "language": "语言偏好"
+            },
+            "auth": {
+              "title": "身份验证数据",
+              "oauth": "OAuth 令牌和刷新令牌",
+              "providers": "第三方账户标识符（GitHub、Google、Twitter）"
+            },
+            "usage": {
+              "title": "使用数据",
+              "projects": "您创建的项目和配置文件",
+              "servers": "MCP 服务器和配置（加密 - 见安全部分）",
+              "social": "社交互动（关注者、共享内容）",
+              "documents": "上传到库的文档",
+              "logs": "活动日志和审计跟踪"
+            },
+            "technical": {
+              "title": "技术数据",
+              "analytics": "分析数据（如果启用了 Google Analytics）",
+              "cookies": "用于身份验证的会话 cookie",
+              "localStorage": "用于偏好设置的本地存储（主题、语言、字体）"
+            }
+          },
+          "legalBasis": {
+            "title": "4. 处理的法律依据",
+            "intro": "我们基于以下法律依据处理您的个人数据：",
+            "contract": {
+              "title": "履行合同：",
+              "desc": "为您提供我们的服务并履行我们的合同义务"
+            },
+            "legitimate": {
+              "title": "合法利益：",
+              "desc": "用于安全、欺诈预防和服务改进"
+            },
+            "consent": {
+              "title": "同意：",
+              "desc": "用于营销通信和分析（如适用）"
+            },
+            "legal": {
+              "title": "法律义务：",
+              "desc": "遵守适用的法律法规"
+            }
+          },
+          "dataUse": {
+            "title": "5. 我们如何使用您的数据",
+            "intro": "我们将您的个人数据用于以下目的：",
+            "service": "提供和维护我们的服务",
+            "communication": "就您的账户和服务更新与您沟通",
+            "security": "确保我们平台的安全性和完整性",
+            "improvement": "改进和开发新功能",
+            "legal": "遵守法律义务"
+          },
+          "rights": {
+            "title": "6. 您的权利",
+            "intro": "根据 GDPR，您拥有以下权利：",
+            "access": {
+              "title": "访问权：",
+              "desc": "您有权请求获取您的个人数据副本"
+            },
+            "rectification": {
+              "title": "更正权：",
+              "desc": "您有权要求更正不准确的个人数据"
+            },
+            "erasure": {
+              "title": "删除权：",
+              "desc": "您有权要求删除您的个人数据"
+            },
+            "portability": {
+              "title": "数据可移植权：",
+              "desc": "您有权要求将您的数据转移到另一个服务"
+            },
+            "object": {
+              "title": "反对权：",
+              "desc": "您有权反对处理您的个人数据"
+            },
+            "restriction": {
+              "title": "限制权：",
+              "desc": "您有权要求限制处理"
+            },
+            "withdraw": {
+              "title": "撤回同意权：",
+              "desc": "当处理基于同意时，您可以随时撤回同意"
+            },
+            "complaint": {
+              "title": "投诉权：",
+              "desc": "您有权向荷兰数据保护机构（Autoriteit Persoonsgegevens）提出投诉"
+            },
+            "exercise": "要行使这些权利，请通过 privacy@plugged.in 联系我们"
+          },
+          "sharing": {
+            "title": "7. 数据共享",
+            "intro": "我们可能与以下方共享您的数据：",
+            "providers": {
+              "title": "服务提供商：",
+              "desc": "帮助我们运营平台的第三方服务（托管、电子邮件）"
+            },
+            "legal": {
+              "title": "法律要求：",
+              "desc": "当法律要求或保护我们的权利时"
+            },
+            "consent": {
+              "title": "经您同意：",
+              "desc": "当您明确同意共享您的数据时"
+            }
+          },
+          "thirdParty": {
+            "title": "8. 第三方服务",
+            "intro": "我们使用以下第三方服务：",
+            "auth": {
+              "title": "身份验证提供商：",
+              "desc": "GitHub、Google、Twitter 用于 OAuth 身份验证"
+            },
+            "analytics": {
+              "title": "分析：",
+              "desc": "Google Analytics（可选，仅在启用时）"
+            },
+            "email": {
+              "title": "电子邮件服务：",
+              "desc": "用于发送通知邮件（配置时）"
+            }
+          },
+          "retention": {
+            "title": "9. 数据保留",
+            "intro": "我们按如下方式保留您的数据：",
+            "account": {
+              "title": "账户数据：",
+              "desc": "在您的账户处于活动状态期间保留"
+            },
+            "logs": {
+              "title": "活动日志：",
+              "desc": "根据配置的保留策略保留"
+            },
+            "deleted": {
+              "title": "已删除账户：",
+              "desc": "个人数据在账户删除后 30 天内匿名化或删除"
+            }
+          },
+          "international": {
+            "title": "10. 国际数据传输",
+            "content": "您的数据可能会被传输到欧洲经济区 (EEA) 以外的国家并在那里处理。当我们将数据传输到 EEA 以外时，我们确保采取适当的保护措施，例如标准合同条款或充分性决定。"
+          },
+          "security": {
+            "title": "11. 安全措施",
+            "intro": "我们实施适当的技术和组织措施来保护您的数据，包括：",
+            "encryption": "密码和敏感数据的加密",
+            "access": "访问控制和身份验证",
+            "monitoring": "安全监控和入侵检测",
+            "validation": "输入验证和净化",
+            "mcpEncryption": {
+              "title": "MCP 服务器配置加密：",
+              "desc": "所有 MCP 服务器配置，包括命令、参数、环境变量和 URL，都使用具有配置文件特定密钥的 AES-256-GCM 加密进行加密。这意味着：",
+              "items": [
+                "您的 MCP 服务器配置在我们的数据库中是加密的，即使我们想要也无法访问",
+                "每个配置文件都有自己独特的加密密钥，该密钥源自您的配置文件 UUID",
+                "只有您可以解密和访问您的 MCP 服务器配置",
+                "即使我们的数据库管理员也无法查看您的 MCP 服务器敏感数据"
+              ]
+            }
+          },
+          "cookies": {
+            "title": "12. Cookie 和类似技术",
+            "intro": "我们使用以下类型的 cookie：",
+            "essential": {
+              "title": "必要 Cookie：",
+              "desc": "身份验证和核心功能所需"
+            },
+            "analytics": {
+              "title": "分析 Cookie：",
+              "desc": "Google Analytics cookie（仅在您同意时）"
+            },
+            "localStorage": "我们还使用浏览器本地存储来保存您的偏好设置（主题、语言、字体设置）。"
+          },
+          "children": {
+            "title": "13. 儿童隐私",
+            "content": "我们的服务不适用于 16 岁以下的用户。我们不会故意收集 16 岁以下儿童的个人数据。如果您发现有儿童向我们提供了个人数据，请联系我们。"
+          },
+          "changes": {
+            "title": "14. 本政策的变更",
+            "content": "我们可能会不时更新本隐私政策。我们将通过在此页面上发布新的隐私政策并更新\"最后更新\"日期来通知您任何更改。对于重大更改，我们将通过电子邮件通知注册用户。"
+          },
+          "contact": {
+            "title": "15. 联系我们",
+            "intro": "如果您对本隐私政策有疑问或想要行使您的权利，请通过以下方式联系我们：",
+            "email": {
+              "title": "电子邮件：",
+              "address": "privacy@plugged.in"
+            },
+            "form": {
+              "title": "联系表格：",
+              "link": "法律联系页面"
+            },
+            "dpa": {
+              "title": "荷兰 DPA：",
+              "desc": "您也可以通过 autoriteitpersoonsgegevens.nl 联系 Autoriteit Persoonsgegevens"
+            }
+          }
         }
       },
       "terms": {
@@ -28,6 +249,34 @@
               "不得将 MCP 服务器用于任何非法或未经授权的目的",
               "对您配置或部署的 MCP 服务器负责"
             ]
+          },
+          "changes": {
+            "title": "条款变更",
+            "description": "我们保留随时修改这些条款的权利。当我们这样做时，我们将在此页面上发布更新的条款并更新\"最后更新\"日期。"
+          },
+          "account": {
+            "title": "账户条款",
+            "description": "当您与我们创建账户时，您必须提供准确、完整且始终保持最新的信息。",
+            "items": [
+              "您有责任保护密码",
+              "您同意对您账户下发生的所有活动承担责任",
+              "您必须在意识到任何安全漏洞后立即通知我们"
+            ],
+            "note": "我们保留自行决定拒绝服务、终止账户或删除内容的权利。"
+          },
+          "mcp": {
+            "title": "MCP 服务器使用",
+            "description": "通过我们的平台使用 MCP 服务器时：",
+            "items": [
+              "您了解 MCP 服务器可能有自己的条款和条件",
+              "您有责任确保您的使用符合所有适用法律",
+              "我们不保证任何 MCP 服务器的可用性或功能",
+              "您使用 MCP 服务器的风险由您自行承担"
+            ]
+          },
+          "intellectual": {
+            "title": "知识产权",
+            "description": "服务及其原始内容、功能和功能是并将继续是 Plugged.in 及其许可方的专有财产。"
           }
         }
       },
@@ -36,7 +285,41 @@
         "description": "重要法律声明",
         "content": {
           "title": "免责声明和责任限制",
-          "thirdParty": "该服务可能包含指向非我们所有或控制的第三方网站或服务的链接。我们无法控制任何第三方网站或服务的内容、隐私政策或做法，也不承担任何责任。"
+          "thirdParty": "该服务可能包含指向非我们所有或控制的第三方网站或服务的链接。我们无法控制任何第三方网站或服务的内容、隐私政策或做法，也不承担任何责任。",
+          "releaseCandidate": {
+            "title": "发布候选通知",
+            "important": "重要",
+            "status": "Plugged.in 目前处于发布候选 (RC) 状态。",
+            "note": "这意味着虽然核心功能已实现并经过测试，但仍可能存在错误、问题或功能不完整。",
+            "items": [
+              "服务可能会遇到意外停机或错误",
+              "功能可能会在没有通知的情况下添加、修改或删除",
+              "可能会发生数据丢失，尽管我们努力防止这种情况",
+              "性能可能会有所不同，并且不能保证"
+            ]
+          },
+          "general": {
+            "title": "一般免责声明",
+            "description": "通过 Plugged.in 提供的信息和服务是基于\"现状\"和\"可用\"的基础提供的。",
+            "risk": "您明确同意使用或无法使用该服务的风险由您自行承担。"
+          },
+          "warranty": {
+            "title": "无保证",
+            "description": "我们不作任何明示或暗示的保证，并在此否认和否定所有其他保证，包括但不限于对适销性、特定用途适用性或不侵犯知识产权或其他权利的暗示保证或条件。",
+            "note": "我们不保证：",
+            "items": [
+              "服务将不间断、安全或在任何特定时间或地点可用",
+              "任何错误或缺陷都将得到纠正",
+              "服务没有病毒或其他有害组件",
+              "使用服务的结果将满足您的要求"
+            ]
+          },
+          "liability": {
+            "title": "责任限制",
+            "description": "在任何情况下，Plugged.in 及其董事、员工、合作伙伴、代理、供应商或关联公司均不对任何间接、附带、特殊、后果性或惩罚性损害负责。",
+            "security": "我们无法保证传输到我们服务的数据的绝对安全性。",
+            "rcDisclaimer": "在发布候选阶段，这些限制尤其重要，因为服务仍在完善中。"
+          }
         }
       },
       "contact": {

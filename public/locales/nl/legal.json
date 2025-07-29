@@ -14,6 +14,227 @@
           "disclaimer": "Als u niet akkoord gaat met de voorwaarden van dit privacybeleid, maak dan geen gebruik van de service.",
           "note": "BELANGRIJKE OPMERKING: Plugged.in bevindt zich momenteel in de Release Candidate-status. Dit privacybeleid kan worden bijgewerkt naarmate de service volwassener wordt en extra functies worden geïmplementeerd.",
           "thirdParty": "We hebben geen controle over en aanvaarden geen verantwoordelijkheid voor de inhoud, het privacybeleid of de praktijken van sites of services van derden."
+        },
+        "sections": {
+          "introduction": {
+            "title": "1. Inleiding",
+            "content": "Dit Privacybeleid is van toepassing op Plugged.in, het AI-kruispuntplatform dat wordt beheerd door VeriTeknik B.V. Dit beleid beschrijft hoe we uw persoonsgegevens verzamelen, gebruiken, openbaar maken en beveiligen in overeenstemming met de Algemene Verordening Gegevensbescherming (AVG) en andere toepasselijke gegevensbeschermingswetten."
+          },
+          "controller": {
+            "title": "2. Verwerkingsverantwoordelijke",
+            "intro": "De verwerkingsverantwoordelijke voor uw persoonsgegevens is:",
+            "company": "Bedrijf:",
+            "companyName": "VeriTeknik B.V.",
+            "address": "Adres:",
+            "addressDetails": "Prinses Margrietplantsoen 33, 2595 AM Den Haag, Nederland",
+            "email": "E-mail:",
+            "emailAddress": "privacy@plugged.in"
+          },
+          "dataCollection": {
+            "title": "3. Gegevens die wij verzamelen",
+            "intro": "Wij verzamelen de volgende categorieën persoonsgegevens:",
+            "account": {
+              "title": "Accountgegevens",
+              "email": "E-mailadres",
+              "name": "Naam (optioneel)",
+              "username": "Gebruikersnaam",
+              "bio": "Bio/beschrijving (optioneel)",
+              "avatar": "Profielfoto (optioneel)",
+              "language": "Taalvoorkeur"
+            },
+            "auth": {
+              "title": "Authenticatiegegevens",
+              "oauth": "OAuth-tokens en vernieuwingstokens",
+              "providers": "Accountidentificaties van derden (GitHub, Google, Twitter)"
+            },
+            "usage": {
+              "title": "Gebruiksgegevens",
+              "projects": "Projecten en profielen die u aanmaakt",
+              "servers": "MCP-servers en configuraties (versleuteld - zie Beveiliging sectie)",
+              "social": "Sociale interacties (volgers, gedeelde inhoud)",
+              "documents": "Documenten geüpload naar de bibliotheek",
+              "logs": "Activiteitenlogs en auditsporen"
+            },
+            "technical": {
+              "title": "Technische gegevens",
+              "analytics": "Analysegegevens (indien Google Analytics is ingeschakeld)",
+              "cookies": "Sessiecookies voor authenticatie",
+              "localStorage": "Lokale opslag voor voorkeuren (thema, taal, lettertype)"
+            }
+          },
+          "legalBasis": {
+            "title": "4. Rechtsgrondslagen voor verwerking",
+            "intro": "Wij verwerken uw persoonsgegevens op basis van de volgende rechtsgrondslagen:",
+            "contract": {
+              "title": "Uitvoering van een overeenkomst:",
+              "desc": "Om u onze diensten te leveren en onze contractuele verplichtingen na te komen"
+            },
+            "legitimate": {
+              "title": "Gerechtvaardigd belang:",
+              "desc": "Voor beveiliging, fraudepreventie en verbetering van de dienst"
+            },
+            "consent": {
+              "title": "Toestemming:",
+              "desc": "Voor marketingcommunicatie en analyses (waar van toepassing)"
+            },
+            "legal": {
+              "title": "Wettelijke verplichtingen:",
+              "desc": "Om te voldoen aan toepasselijke wetten en regelgeving"
+            }
+          },
+          "dataUse": {
+            "title": "5. Hoe wij uw gegevens gebruiken",
+            "intro": "Wij gebruiken uw persoonsgegevens voor de volgende doeleinden:",
+            "service": "Om onze dienst te leveren en te onderhouden",
+            "communication": "Om met u te communiceren over uw account en service-updates",
+            "security": "Om de veiligheid en integriteit van ons platform te waarborgen",
+            "improvement": "Om nieuwe functies te verbeteren en te ontwikkelen",
+            "legal": "Om te voldoen aan wettelijke verplichtingen"
+          },
+          "rights": {
+            "title": "6. Uw rechten",
+            "intro": "Onder de AVG heeft u de volgende rechten:",
+            "access": {
+              "title": "Recht op inzage:",
+              "desc": "U heeft het recht om kopieën van uw persoonsgegevens op te vragen"
+            },
+            "rectification": {
+              "title": "Recht op rectificatie:",
+              "desc": "U heeft het recht om correctie van onjuiste persoonsgegevens te vragen"
+            },
+            "erasure": {
+              "title": "Recht op gegevenswissing:",
+              "desc": "U heeft het recht om verwijdering van uw persoonsgegevens te vragen"
+            },
+            "portability": {
+              "title": "Recht op gegevensoverdraagbaarheid:",
+              "desc": "U heeft het recht om overdracht van uw gegevens naar een andere dienst te vragen"
+            },
+            "object": {
+              "title": "Recht van bezwaar:",
+              "desc": "U heeft het recht om bezwaar te maken tegen verwerking van uw persoonsgegevens"
+            },
+            "restriction": {
+              "title": "Recht op beperking:",
+              "desc": "U heeft het recht om beperking van de verwerking te vragen"
+            },
+            "withdraw": {
+              "title": "Recht om toestemming in te trekken:",
+              "desc": "Wanneer verwerking is gebaseerd op toestemming, kunt u deze te allen tijde intrekken"
+            },
+            "complaint": {
+              "title": "Recht om een klacht in te dienen:",
+              "desc": "U heeft het recht om een klacht in te dienen bij de Autoriteit Persoonsgegevens"
+            },
+            "exercise": "Om een van deze rechten uit te oefenen, neem contact met ons op via privacy@plugged.in"
+          },
+          "sharing": {
+            "title": "7. Gegevensdeling",
+            "intro": "Wij kunnen uw gegevens delen met:",
+            "providers": {
+              "title": "Dienstverleners:",
+              "desc": "Derde partijen die ons helpen ons platform te beheren (hosting, e-mail)"
+            },
+            "legal": {
+              "title": "Wettelijke vereisten:",
+              "desc": "Wanneer vereist door de wet of om onze rechten te beschermen"
+            },
+            "consent": {
+              "title": "Met uw toestemming:",
+              "desc": "Wanneer u expliciet akkoord gaat met het delen van uw gegevens"
+            }
+          },
+          "thirdParty": {
+            "title": "8. Diensten van derden",
+            "intro": "Wij gebruiken de volgende diensten van derden:",
+            "auth": {
+              "title": "Authenticatieproviders:",
+              "desc": "GitHub, Google, Twitter voor OAuth-authenticatie"
+            },
+            "analytics": {
+              "title": "Analyses:",
+              "desc": "Google Analytics (optioneel, alleen wanneer ingeschakeld)"
+            },
+            "email": {
+              "title": "E-maildiensten:",
+              "desc": "Voor het verzenden van notificatie-e-mails (indien geconfigureerd)"
+            }
+          },
+          "retention": {
+            "title": "9. Gegevensbewaring",
+            "intro": "Wij bewaren uw gegevens als volgt:",
+            "account": {
+              "title": "Accountgegevens:",
+              "desc": "Bewaard zolang uw account actief is"
+            },
+            "logs": {
+              "title": "Activiteitenlogs:",
+              "desc": "Bewaard volgens geconfigureerde bewaarbeleid"
+            },
+            "deleted": {
+              "title": "Verwijderde accounts:",
+              "desc": "Persoonsgegevens worden binnen 30 dagen na verwijdering van het account geanonimiseerd of verwijderd"
+            }
+          },
+          "international": {
+            "title": "10. Internationale gegevensoverdracht",
+            "content": "Uw gegevens kunnen worden overgedragen naar en verwerkt in landen buiten de Europese Economische Ruimte (EER). Wanneer we gegevens buiten de EER overdragen, zorgen we voor passende waarborgen, zoals standaardcontractbepalingen of adequaatheidsbesluiten."
+          },
+          "security": {
+            "title": "11. Beveiligingsmaatregelen",
+            "intro": "Wij implementeren passende technische en organisatorische maatregelen om uw gegevens te beschermen, waaronder:",
+            "encryption": "Versleuteling van wachtwoorden en gevoelige gegevens",
+            "access": "Toegangscontroles en authenticatie",
+            "monitoring": "Beveiligingsmonitoring en inbraakdetectie",
+            "validation": "Invoervalidatie en sanitering",
+            "mcpEncryption": {
+              "title": "MCP Server Configuratie Versleuteling:",
+              "desc": "Alle MCP-serverconfiguraties, inclusief commando's, argumenten, omgevingsvariabelen en URL's, worden versleuteld met AES-256-GCM-versleuteling met profielspecifieke sleutels. Dit betekent:",
+              "items": [
+                "Uw MCP-serverconfiguraties zijn versleuteld in onze database en kunnen niet door ons worden geopend, zelfs als we dat zouden willen",
+                "Elk profiel heeft zijn eigen unieke versleutelingssleutel afgeleid van uw profiel-UUID",
+                "Alleen u kunt uw MCP-serverconfiguraties ontsleutelen en openen",
+                "Zelfs onze databasebeheerders kunnen uw gevoelige MCP-servergegevens niet bekijken"
+              ]
+            }
+          },
+          "cookies": {
+            "title": "12. Cookies en vergelijkbare technologieën",
+            "intro": "Wij gebruiken de volgende soorten cookies:",
+            "essential": {
+              "title": "Essentiële cookies:",
+              "desc": "Vereist voor authenticatie en kernfunctionaliteit"
+            },
+            "analytics": {
+              "title": "Analytische cookies:",
+              "desc": "Google Analytics-cookies (alleen wanneer u toestemming geeft)"
+            },
+            "localStorage": "We gebruiken ook lokale browseropslag om uw voorkeuren op te slaan (thema, taal, lettertype-instellingen)."
+          },
+          "children": {
+            "title": "13. Privacy van kinderen",
+            "content": "Onze dienst is niet bedoeld voor gebruikers onder de 16 jaar. We verzamelen niet bewust persoonsgegevens van kinderen onder de 16. Als u zich ervan bewust wordt dat een kind ons persoonsgegevens heeft verstrekt, neem dan contact met ons op."
+          },
+          "changes": {
+            "title": "14. Wijzigingen in dit beleid",
+            "content": "We kunnen dit Privacybeleid van tijd tot tijd bijwerken. We zullen u op de hoogte stellen van eventuele wijzigingen door het nieuwe Privacybeleid op deze pagina te plaatsen en de datum \"Laatst bijgewerkt\" bij te werken. We zullen geregistreerde gebruikers via e-mail op de hoogte stellen van materiële wijzigingen."
+          },
+          "contact": {
+            "title": "15. Contact opnemen",
+            "intro": "Als u vragen heeft over dit Privacybeleid of uw rechten wilt uitoefenen, neem dan contact met ons op via:",
+            "email": {
+              "title": "E-mail:",
+              "address": "privacy@plugged.in"
+            },
+            "form": {
+              "title": "Contactformulier:",
+              "link": "Juridisch Contactpagina"
+            },
+            "dpa": {
+              "title": "Nederlandse AP:",
+              "desc": "U kunt ook contact opnemen met de Autoriteit Persoonsgegevens via autoriteitpersoonsgegevens.nl"
+            }
+          }
         }
       },
       "terms": {
