@@ -1,0 +1,1 @@
+ALTER TABLE "embedded_chats" ALTER COLUMN "api_key" SET DATA TYPE varchar(66);

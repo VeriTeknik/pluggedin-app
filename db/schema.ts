@@ -1246,7 +1246,7 @@ export const embeddedChatsTable = pgTable(
     is_active: boolean('is_active').default(true).notNull(),
     
     // API Key Authentication
-    api_key: varchar('api_key', { length: 64 }).unique(),
+    api_key: varchar('api_key', { length: 66 }).unique(),
     api_key_created_at: timestamp('api_key_created_at', { withTimezone: true }),
     require_api_key: boolean('require_api_key').default(false),
     api_key_last_used_at: timestamp('api_key_last_used_at', { withTimezone: true }),

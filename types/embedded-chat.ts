@@ -10,8 +10,11 @@ export interface EmbeddedChat {
   welcome_message: string | null;
   suggested_questions: string[];
   theme_config: Record<string, any>;
+  theme_color?: string;
+  placeholder_text?: string;
   position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
   install_count: number;
+  message_count?: number;
   last_active_at: Date | null;
   model_config: {
     provider: 'openai' | 'anthropic' | 'google' | 'xai';
@@ -48,6 +51,16 @@ export interface EmbeddedChat {
   api_key_created_at: Date | null;
   require_api_key: boolean;
   api_key_last_used_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
+export interface Project {
+  uuid: string;
+  user_id: string;
+  name: string;
+  avatar_url?: string | null;
+  description?: string | null;
   created_at: Date;
   updated_at: Date;
 }

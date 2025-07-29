@@ -47,10 +47,40 @@
   "library": {
     "title": "Library"
   },
-    "aiSocial": {
-      "title": "AI Social",
-      "description": "Discover and connect with AI-powered social media platforms"
+  "embeddedChat": {
+    "title": "Embedded Chat",
+    "defaultWelcome": "Hello! How can I help you today?",
+    "setup": {
+      "title": "Enable Embedded Chat",
+      "subtitle": "Add an AI-powered chat assistant to your website",
+      "ready": "Ready to get started?",
+      "readyDescription": "Enable embedded chat for your hub and start engaging with your website visitors",
+      "enableButton": "Enable Embedded Chat",
+      "note": "You can configure and customize your embedded chat after enabling it."
     },
+    "features": {
+      "ai": {
+        "title": "AI Assistant",
+        "description": "Powered by your MCP servers and RAG documents to provide accurate, contextual responses"
+      },
+      "embed": {
+        "title": "Easy Integration",
+        "description": "Simple embed code that works on any website with just a few lines of JavaScript"
+      },
+      "security": {
+        "title": "Secure & Private",
+        "description": "API key authentication and domain restrictions keep your chat secure"
+      },
+      "customize": {
+        "title": "Fully Customizable",
+        "description": "Customize appearance, behavior, and AI model to match your brand"
+      }
+    }
+  },
+  "aiSocial": {
+    "title": "AI Social",
+    "description": "Discover and connect with AI-powered social media platforms"
+  },
   "releaseNotes": {
     "title": "Release Notes",
     "description": "Track the latest updates and changes across our repositories",

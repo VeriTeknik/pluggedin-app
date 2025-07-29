@@ -9,6 +9,7 @@ import {
   Code2,
   FileText,
   FlaskConical,
+  MessageSquare,
   Plus,
   Trash2,
   Unplug,
@@ -256,6 +257,15 @@ export default function SidebarLayout({
                       <Link href='/library'>
                         <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden">{t('library.title')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('embeddedChat.title', 'Embedded Chat')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/embedded-chat'>
+                        <MessageSquare className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('embeddedChat.title', 'Embedded Chat')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

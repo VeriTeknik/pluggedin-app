@@ -351,6 +351,13 @@
       "when": 1753385404904,
       "tag": "0049_graceful_guardsmen",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1753402276568,
+      "tag": "0050_watery_valkyrie",
+      "breakpoints": true
     }
   ]
 }

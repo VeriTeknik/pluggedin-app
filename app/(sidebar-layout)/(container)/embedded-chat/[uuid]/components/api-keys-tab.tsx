@@ -161,7 +161,7 @@ export function ApiKeysTab({ chat: initialChat, chatUuid }: ApiKeysTabProps) {
     }
   };
 
-  const maskedApiKey = chat.api_key 
+  const maskedApiKey = chat.api_key && typeof chat.api_key === 'string'
     ? `${chat.api_key.substring(0, 7)}...${chat.api_key.substring(chat.api_key.length - 4)}`
     : '';
 

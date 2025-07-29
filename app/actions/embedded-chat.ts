@@ -17,7 +17,7 @@ import { getAuthSession } from '@/lib/auth';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
 import { generateId } from '@/lib/utils';
-import { generateEmbeddedChatApiKey } from '@/lib/api-key';
+import { generateEmbeddedChatApiKey as generateApiKey } from '@/lib/api-key';
 
 // ===== Schema Validation =====
 
@@ -200,6 +200,8 @@ export async function createEmbeddedChat(data: z.infer<typeof CreateEmbeddedChat
       .where(eq(projectsTable.uuid, validatedData.projectUuid));
     
     revalidatePath(`/projects/${validatedData.projectUuid}`);
+    revalidatePath('/embedded-chat');
+    revalidatePath('/settings');
     
     return { success: true, data: newChat };
   } catch (error) {
@@ -284,7 +286,7 @@ export async function updateEmbeddedChatConfig(
       .where(eq(embeddedChatsTable.uuid, chatUuid))
       .returning();
     
-    revalidatePath(`/embedded-chats/${chatUuid}`);
+    revalidatePath(`/embedded-chat/${chatUuid}`);
     
     return { success: true, data: updatedChat };
   } catch (error) {
@@ -326,7 +328,7 @@ export async function createChatPersona(
       })
       .returning();
     
-    revalidatePath(`/embedded-chats/${chatUuid}`);
+    revalidatePath(`/embedded-chat/${chatUuid}`);
     
     return { success: true, data: newPersona };
   } catch (error) {
@@ -371,7 +373,7 @@ export async function updateChatPersona(
       ))
       .returning();
     
-    revalidatePath(`/embedded-chats/${chatUuid}`);
+    revalidatePath(`/embedded-chat/${chatUuid}`);
     
     return { success: true, data: updatedPersona };
   } catch (error) {
@@ -399,7 +401,7 @@ export async function deleteChatPersona(chatUuid: string, personaId: number) {
         eq(chatPersonasTable.embedded_chat_uuid, chatUuid)
       ));
     
-    revalidatePath(`/embedded-chats/${chatUuid}`);
+    revalidatePath(`/embedded-chat/${chatUuid}`);
     
     return { success: true };
   } catch (error) {
@@ -708,7 +710,7 @@ export async function generateEmbeddedChatApiKey(chatUuid: string) {
 
     await validateEmbeddedChatAccess(chatUuid, session.user.id);
     
-    const apiKey = generateEmbeddedChatApiKey();
+    const apiKey = generateApiKey();
     
     const [updated] = await db
       .update(embeddedChatsTable)
@@ -720,9 +722,9 @@ export async function generateEmbeddedChatApiKey(chatUuid: string) {
       .where(eq(embeddedChatsTable.uuid, chatUuid))
       .returning();
     
-    revalidatePath(`/embedded-chats/${chatUuid}`);
+    revalidatePath(`/embedded-chat/${chatUuid}`);
     
-    return { success: true, data: { api_key: apiKey } };
+    return { success: true, data: updated };
   } catch (error) {
     console.error('Error generating API key:', error);
     return { 
@@ -741,7 +743,7 @@ export async function regenerateEmbeddedChatApiKey(chatUuid: string) {
 
     await validateEmbeddedChatAccess(chatUuid, session.user.id);
     
-    const apiKey = generateEmbeddedChatApiKey();
+    const apiKey = generateApiKey();
     
     const [updated] = await db
       .update(embeddedChatsTable)
@@ -754,9 +756,9 @@ export async function regenerateEmbeddedChatApiKey(chatUuid: string) {
       .where(eq(embeddedChatsTable.uuid, chatUuid))
       .returning();
     
-    revalidatePath(`/embedded-chats/${chatUuid}`);
+    revalidatePath(`/embedded-chat/${chatUuid}`);
     
-    return { success: true, data: { api_key: apiKey } };
+    return { success: true, data: updated };
   } catch (error) {
     console.error('Error regenerating API key:', error);
     return { 
@@ -784,7 +786,7 @@ export async function toggleApiKeyRequirement(chatUuid: string, required: boolea
       .where(eq(embeddedChatsTable.uuid, chatUuid))
       .returning();
     
-    revalidatePath(`/embedded-chats/${chatUuid}`);
+    revalidatePath(`/embedded-chat/${chatUuid}`);
     
     return { success: true, data: updated };
   } catch (error) {
@@ -817,7 +819,7 @@ export async function revokeEmbeddedChatApiKey(chatUuid: string) {
       .where(eq(embeddedChatsTable.uuid, chatUuid))
       .returning();
     
-    revalidatePath(`/embedded-chats/${chatUuid}`);
+    revalidatePath(`/embedded-chat/${chatUuid}`);
     
     return { success: true, data: updated };
   } catch (error) {

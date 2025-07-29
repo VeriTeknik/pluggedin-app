@@ -47,7 +47,6 @@ import { removeConnectedAccount } from '../actions';
 import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
-import { EmbeddedChatSection } from './embedded-chat-section';
 import { ProfileSocialSection } from './profile-social-section';
 type User = typeof users.$inferSelect;
 
@@ -541,9 +540,6 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
 
       {/* Current Project Section */}
       <CurrentProjectSection />
-
-      {/* Embedded Chat Section */}
-      <EmbeddedChatSection />
 
       {/* Appearance Section */}
       <AppearanceSection />
