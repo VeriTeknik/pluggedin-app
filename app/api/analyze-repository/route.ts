@@ -33,6 +33,7 @@ interface TransportConfig {
     tokenUrl?: string;
     scopes?: string[];
   };
+  source?: 'npm-package' | 'mcp-config' | 'readme' | 'detection';
 }
 
 export async function GET(request: NextRequest) {
@@ -193,7 +194,7 @@ export async function GET(request: NextRequest) {
               command: 'npx',
               args: ['-y', npmPackageName],
               env: config.env,
-              source: 'npm-package' as any
+              source: 'npm-package'
             };
           }
         }
@@ -279,7 +280,7 @@ export async function GET(request: NextRequest) {
       transportConfigs[repo] = {
         command: 'npx',
         args: ['-y', npmPackageName],
-        source: 'npm-package' as any
+        source: 'npm-package'
       };
     }
 

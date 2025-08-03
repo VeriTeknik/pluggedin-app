@@ -59,6 +59,7 @@ export interface WizardData {
       tokenUrl?: string;
       scopes?: string[];
     };
+    source?: 'npm-package' | 'mcp-config' | 'readme' | 'detection';
   }>;
 
   // Step 4: Discovery Test
