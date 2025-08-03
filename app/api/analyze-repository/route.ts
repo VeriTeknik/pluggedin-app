@@ -135,17 +135,68 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Try to fetch package.json to check if this is an npm package
+    let packageJson: any = null;
+    let npmPackageName: string | null = null;
+    
+    try {
+      const packageJsonUrl = `https://api.github.com/repos/${owner}/${repo}/contents/package.json`;
+      const packageResponse = await fetch(packageJsonUrl, { headers });
+      
+      if (packageResponse.ok) {
+        const packageData = await packageResponse.json();
+        const packageContent = Buffer.from(packageData.content, 'base64').toString('utf-8');
+        packageJson = JSON.parse(packageContent);
+        
+        // Check if the package exists on npm
+        if (packageJson.name) {
+          try {
+            const npmCheckResponse = await fetch(`https://registry.npmjs.org/${packageJson.name}`);
+            if (npmCheckResponse.ok) {
+              npmPackageName = packageJson.name;
+            }
+          } catch (e) {
+            // Package doesn't exist on npm, ignore
+          }
+        }
+      }
+    } catch (e) {
+      // Failed to fetch or parse package.json, continue
+    }
+
     if (mcpConfig?.mcpServers) {
       // Extract configuration from all servers
       for (const [serverName, serverConfig] of Object.entries(mcpConfig.mcpServers)) {
         const config = serverConfig as any;
         
         // Store transport configuration
-        const transportConfig: TransportConfig = {
+        let transportConfig: TransportConfig = {
           command: config.command,
           args: config.args,
           env: config.env
         };
+        
+        // Override with npm package configuration if this is an npm package
+        if (npmPackageName && config.command) {
+          // Check if the current config looks like a local development setup
+          const isLocalDev = 
+            config.command === 'node' || 
+            config.command === 'tsx' || 
+            config.command === 'ts-node' ||
+            (config.command === 'npm' && config.args?.includes('run')) ||
+            (config.command === 'pnpm' && config.args?.includes('run')) ||
+            (config.command === 'yarn' && config.args?.includes('run'));
+          
+          if (isLocalDev) {
+            // Override with npm package command
+            transportConfig = {
+              command: 'npx',
+              args: ['-y', npmPackageName],
+              env: config.env,
+              source: 'npm-package' as any
+            };
+          }
+        }
         
         // Check for Streamable HTTP configuration
         if (config.transport === 'streamable-http' || config.transport === 'streamable_http' || config.url) {
@@ -221,6 +272,15 @@ export async function GET(request: NextRequest) {
           }
         }
       }
+    }
+    
+    // If no MCP config was found but we have an npm package, create a default config
+    if (Object.keys(transportConfigs).length === 0 && npmPackageName) {
+      transportConfigs[repo] = {
+        command: 'npx',
+        args: ['-y', npmPackageName],
+        source: 'npm-package' as any
+      };
     }
 
     // If no config found, try to detect from README

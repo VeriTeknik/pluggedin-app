@@ -69,6 +69,8 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
   const [isDetecting, setIsDetecting] = useState(false);
   const [showSecrets, setShowSecrets] = useState<Record<string, boolean>>({});
   const [editingVars, setEditingVars] = useState<Record<number, boolean>>({});
+  const [editingConfig, setEditingConfig] = useState<Record<string, boolean>>({});
+  const [editedConfigs, setEditedConfigs] = useState<Record<string, any>>({});
   const { toast } = useToast();
 
   // Initialize from wizard data or detect on mount
@@ -505,32 +507,156 @@ export function EnvVarConfigStep({ data, onUpdate }: EnvVarConfigStepProps) {
       {data.detectedTransportConfigs && Object.keys(data.detectedTransportConfigs).length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Terminal className="h-5 w-5" />
-              Detected MCP Configuration
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Terminal className="h-5 w-5" />
+                Detected MCP Configuration
+              </div>
             </CardTitle>
             <CardDescription>
-              Command and arguments detected from the repository
+              Command and arguments detected from the repository. You can edit these if needed.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            {Object.entries(data.detectedTransportConfigs).map(([serverName, config]) => (
-              <div key={serverName} className="space-y-2">
-                <Label className="text-sm font-medium">{serverName}</Label>
-                <div className="bg-muted p-3 rounded-md font-mono text-sm space-y-1">
-                  {config.command && (
-                    <div>
-                      <span className="text-muted-foreground">Command:</span> {config.command}
+            {Object.entries(data.detectedTransportConfigs).map(([serverName, config]) => {
+              const isEditing = editingConfig[serverName];
+              const currentConfig = editedConfigs[serverName] || config;
+              
+              return (
+                <div key={serverName} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">{serverName}</Label>
+                    <div className="flex items-center gap-2">
+                      {config.source === 'npm-package' && (
+                        <Badge variant="secondary" className="text-xs">NPM Package</Badge>
+                      )}
+                      {isEditing ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              // Save changes
+                              const updatedConfigs = { ...data.detectedTransportConfigs };
+                              updatedConfigs[serverName] = editedConfigs[serverName];
+                              onUpdate({ detectedTransportConfigs: updatedConfigs });
+                              setEditingConfig(prev => ({ ...prev, [serverName]: false }));
+                            }}
+                            title="Save changes"
+                          >
+                            <Save className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              // Cancel editing
+                              setEditedConfigs(prev => {
+                                const updated = { ...prev };
+                                delete updated[serverName];
+                                return updated;
+                              });
+                              setEditingConfig(prev => ({ ...prev, [serverName]: false }));
+                            }}
+                            title="Cancel editing"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                          {editedConfigs[serverName] && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => {
+                                // Reset to original
+                                setEditedConfigs(prev => {
+                                  const updated = { ...prev };
+                                  delete updated[serverName];
+                                  return updated;
+                                });
+                              }}
+                              title="Reset to original"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setEditingConfig(prev => ({ ...prev, [serverName]: true }));
+                            setEditedConfigs(prev => ({ ...prev, [serverName]: { ...config } }));
+                          }}
+                          title="Edit configuration"
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                      )}
                     </div>
-                  )}
-                  {config.args && config.args.length > 0 && (
-                    <div>
-                      <span className="text-muted-foreground">Args:</span> {config.args?.join(' ') || ''}
+                  </div>
+                  
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <div>
+                        <Label htmlFor={`cmd-${serverName}`} className="text-xs">Command</Label>
+                        <Input
+                          id={`cmd-${serverName}`}
+                          value={currentConfig.command || ''}
+                          onChange={(e) => {
+                            setEditedConfigs(prev => ({
+                              ...prev,
+                              [serverName]: {
+                                ...prev[serverName],
+                                command: e.target.value
+                              }
+                            }));
+                          }}
+                          className="font-mono text-sm"
+                          placeholder="e.g., npx, node, docker"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor={`args-${serverName}`} className="text-xs">Arguments (space-separated)</Label>
+                        <Input
+                          id={`args-${serverName}`}
+                          value={currentConfig.args?.join(' ') || ''}
+                          onChange={(e) => {
+                            const argsArray = e.target.value.split(' ').filter(arg => arg.trim());
+                            setEditedConfigs(prev => ({
+                              ...prev,
+                              [serverName]: {
+                                ...prev[serverName],
+                                args: argsArray
+                              }
+                            }));
+                          }}
+                          className="font-mono text-sm"
+                          placeholder="e.g., -y package-name"
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-muted p-3 rounded-md font-mono text-sm space-y-1">
+                      {currentConfig.command && (
+                        <div>
+                          <span className="text-muted-foreground">Command:</span> {currentConfig.command}
+                        </div>
+                      )}
+                      {currentConfig.args && currentConfig.args.length > 0 && (
+                        <div>
+                          <span className="text-muted-foreground">Args:</span> {currentConfig.args?.join(' ') || ''}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </CardContent>
         </Card>
       )}
