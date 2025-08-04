@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/db/db';
+import { getAuthSession } from '@/lib/auth';
+import { db } from '@/db';
 import { embeddedChatsTable, projectsTable } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { z } from 'zod';
@@ -47,13 +47,15 @@ const UpdateEmbeddedChatSchema = z.object({
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { uuid: string } }
+  { params }: { params: Promise<{ uuid: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getAuthSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { uuid } = await params;
 
     // Get embedded chat with project info
     const result = await db
@@ -61,7 +63,7 @@ export async function GET(
       .from(embeddedChatsTable)
       .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
       .where(and(
-        eq(embeddedChatsTable.uuid, params.uuid),
+        eq(embeddedChatsTable.uuid, uuid),
         eq(projectsTable.user_id, session.user.id)
       ))
       .limit(1);
@@ -82,14 +84,15 @@ export async function GET(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { uuid: string } }
+  { params }: { params: Promise<{ uuid: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getAuthSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { uuid } = await params;
     const body = await req.json();
     const validatedData = UpdateEmbeddedChatSchema.parse(body);
 
@@ -99,7 +102,7 @@ export async function PUT(
       .from(embeddedChatsTable)
       .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
       .where(and(
-        eq(embeddedChatsTable.uuid, params.uuid),
+        eq(embeddedChatsTable.uuid, uuid),
         eq(projectsTable.user_id, session.user.id)
       ))
       .limit(1);
@@ -115,7 +118,7 @@ export async function PUT(
         ...validatedData,
         updated_at: new Date(),
       })
-      .where(eq(embeddedChatsTable.uuid, params.uuid))
+      .where(eq(embeddedChatsTable.uuid, uuid))
       .returning();
 
     return NextResponse.json(updated);
@@ -136,13 +139,15 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { uuid: string } }
+  { params }: { params: Promise<{ uuid: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getAuthSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    const { uuid } = await params;
 
     // Verify ownership
     const ownership = await db
@@ -150,7 +155,7 @@ export async function DELETE(
       .from(embeddedChatsTable)
       .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
       .where(and(
-        eq(embeddedChatsTable.uuid, params.uuid),
+        eq(embeddedChatsTable.uuid, uuid),
         eq(projectsTable.user_id, session.user.id)
       ))
       .limit(1);
@@ -162,7 +167,7 @@ export async function DELETE(
     // Delete embedded chat (cascade will handle related records)
     await db
       .delete(embeddedChatsTable)
-      .where(eq(embeddedChatsTable.uuid, params.uuid));
+      .where(eq(embeddedChatsTable.uuid, uuid));
 
     // Update project to disable embedded chat
     await db

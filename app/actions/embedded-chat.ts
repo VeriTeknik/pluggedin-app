@@ -16,7 +16,6 @@ import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { getAuthSession } from '@/lib/auth';
 import { z } from 'zod';
 import { revalidatePath } from 'next/cache';
-import { generateId } from '@/lib/utils';
 import { generateEmbeddedChatApiKey as generateApiKey } from '@/lib/api-key';
 
 // ===== Schema Validation =====
@@ -92,7 +91,7 @@ const CreatePersonaSchema = z.object({
 
 // ===== Helper Functions =====
 
-async function getCurrentProject(userId: string) {
+export async function getCurrentProject(userId: string) {
   // Get all projects for the user
   const projects = await db
     .select()
@@ -684,7 +683,7 @@ export async function testEmbeddedChatConfig(
       success: true,
       model: result.chat.model_config,
       message: testMessage,
-      response: `This is a test response from ${result.chat.model_config.provider}/${result.chat.model_config.model}. Your embedded chat is configured correctly!`,
+      response: `This is a test response from ${(result.chat.model_config as any).provider}/${(result.chat.model_config as any).model}. Your embedded chat is configured correctly!`,
       tokens_used: 50,
       response_time: 1234,
     };

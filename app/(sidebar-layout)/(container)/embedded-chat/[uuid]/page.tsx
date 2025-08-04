@@ -1,18 +1,19 @@
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { notFound, redirect } from 'next/navigation';
 
 import { db } from '@/db';
-import { embeddedChatsTable } from '@/db/schema';
+import { embeddedChatsTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { EmbeddedChat } from '@/types/embedded-chat';
 
 import { ChatConfigurationTabs } from './components/chat-configuration-tabs';
 
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     uuid: string;
-  };
+  }>;
 }
 
 export default async function EmbeddedChatConfigPage({ params }: PageProps) {
@@ -22,19 +23,63 @@ export default async function EmbeddedChatConfigPage({ params }: PageProps) {
     redirect('/login');
   }
 
-  // Get the embedded chat
-  const [chat] = await db
-    .select()
+  // Await params as required in Next.js 15
+  const { uuid } = await params;
+
+  // Get the embedded chat WITH ownership verification
+  const [chatWithProject] = await db
+    .select({
+      chat: embeddedChatsTable,
+      project: projectsTable,
+    })
     .from(embeddedChatsTable)
-    .where(eq(embeddedChatsTable.uuid, params.uuid))
+    .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
+    .where(and(
+      eq(embeddedChatsTable.uuid, uuid),
+      eq(projectsTable.user_id, session.user.id) // CRITICAL: Verify ownership
+    ))
     .limit(1);
 
-  if (!chat) {
+  if (!chatWithProject) {
+    // User doesn't own this chat - show 404 to avoid leaking information
     notFound();
   }
 
-  // Verify user has access (through project ownership)
-  // This is handled by validateEmbeddedChatAccess in server actions
+  const { chat: dbChat } = chatWithProject;
+  
+  // Transform database chat to match EmbeddedChat type
+  const chat: EmbeddedChat = {
+    uuid: dbChat.uuid,
+    project_uuid: dbChat.project_uuid,
+    name: dbChat.name,
+    enabled_mcp_server_uuids: dbChat.enabled_mcp_server_uuids || [],
+    enable_rag: dbChat.enable_rag ?? false,
+    allowed_domains: dbChat.allowed_domains || [],
+    contact_routing: dbChat.contact_routing || {},
+    custom_instructions: dbChat.custom_instructions,
+    welcome_message: dbChat.welcome_message,
+    suggested_questions: dbChat.suggested_questions || [],
+    theme_config: dbChat.theme_config || {},
+    theme_color: undefined,
+    placeholder_text: undefined,
+    position: (dbChat.position as EmbeddedChat['position']) || 'bottom-right',
+    install_count: dbChat.install_count || 0,
+    message_count: undefined,
+    last_active_at: dbChat.last_active_at,
+    model_config: dbChat.model_config as EmbeddedChat['model_config'],
+    human_oversight: dbChat.human_oversight as EmbeddedChat['human_oversight'],
+    context_window_size: dbChat.context_window_size || 4096,
+    max_conversation_length: dbChat.max_conversation_length || 100,
+    offline_config: dbChat.offline_config as EmbeddedChat['offline_config'],
+    is_public: dbChat.is_public ?? false,
+    is_active: dbChat.is_active ?? true,
+    api_key: dbChat.api_key,
+    api_key_created_at: dbChat.api_key_created_at,
+    require_api_key: dbChat.require_api_key ?? false,
+    api_key_last_used_at: dbChat.api_key_last_used_at,
+    created_at: dbChat.created_at,
+    updated_at: dbChat.updated_at,
+  };
   
   return (
     <div className="container mx-auto py-10">
@@ -47,7 +92,7 @@ export default async function EmbeddedChatConfigPage({ params }: PageProps) {
 
       <ChatConfigurationTabs 
         chat={chat}
-        chatUuid={params.uuid}
+        chatUuid={uuid}
       />
     </div>
   );

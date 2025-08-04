@@ -39,7 +39,7 @@ const generalSettingsSchema = z.object({
   enable_rag: z.boolean(),
   is_public: z.boolean(),
   is_active: z.boolean(),
-  allowed_domains: z.array(z.string()).default([]),
+  allowed_domains: z.array(z.string()),
 });
 
 type GeneralSettingsValues = z.infer<typeof generalSettingsSchema>;
@@ -58,8 +58,8 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: {
       name: chat.name,
-      welcome_message: chat.welcome_message || '',
-      custom_instructions: chat.custom_instructions || '',
+      welcome_message: chat.welcome_message || undefined,
+      custom_instructions: chat.custom_instructions || undefined,
       suggested_questions: chat.suggested_questions || [],
       enable_rag: chat.enable_rag,
       is_public: chat.is_public,
@@ -71,7 +71,14 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
   const onSubmit = async (values: GeneralSettingsValues) => {
     setIsLoading(true);
     try {
-      const result = await updateEmbeddedChatConfig(chatUuid, values);
+      // Filter out empty suggested questions
+      const cleanedValues = {
+        ...values,
+        suggested_questions: values.suggested_questions?.filter(q => q && q.trim()) || [],
+        allowed_domains: values.allowed_domains?.filter(d => d && d.trim()) || [],
+      };
+      
+      const result = await updateEmbeddedChatConfig(chatUuid, cleanedValues);
       
       if (!result.success) {
         throw new Error(result.error || 'Failed to update settings');
@@ -196,7 +203,7 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
                         {t('embeddedChat.general.isPublic', 'Public Chat')}
                       </FormLabel>
                       <FormDescription>
-                        {t('embeddedChat.general.isPublicDescription', 'Make this chat available for public embedding')}
+                        {t('embeddedChat.general.isPublicDescription', 'Make this chat available on your public profile and for public embedding')}
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -234,27 +241,63 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
             </div>
 
             <div className="space-y-4">
-              <Label>{t('embeddedChat.general.suggestedQuestions', 'Suggested Questions')}</Label>
-              <FormDescription>
-                {t('embeddedChat.general.suggestedQuestionsDescription', 'Quick prompts users can click to start a conversation')}
-              </FormDescription>
-              {[0, 1, 2, 3, 4].map((index) => (
-                <FormField
-                  key={index}
-                  control={form.control}
-                  name={`suggested_questions.${index}`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          placeholder={`Question ${index + 1}`}
-                          value={field.value || ''}
-                        />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+              <div className="flex items-center justify-between">
+                <div>
+                  <Label>
+                    {t('embeddedChat.general.suggestedQuestions', 'Suggested Questions')}
+                    <span className="text-muted-foreground text-sm ml-2">(Optional)</span>
+                  </Label>
+                  <FormDescription>
+                    {t('embeddedChat.general.suggestedQuestionsDescription', 'Quick prompts users can click to start a conversation.')}
+                  </FormDescription>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    const questions = form.getValues('suggested_questions') || [];
+                    if (questions.length < 5) {
+                      form.setValue('suggested_questions', [...questions, '']);
+                    }
+                  }}
+                  disabled={form.watch('suggested_questions')?.length >= 5}
+                >
+                  Add Question
+                </Button>
+              </div>
+              {(form.watch('suggested_questions') || []).map((_, index) => (
+                <div key={index} className="flex gap-2">
+                  <FormField
+                    control={form.control}
+                    name={`suggested_questions.${index}`}
+                    render={({ field }) => (
+                      <FormItem className="flex-1">
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder={`Question ${index + 1}`}
+                            value={field.value || ''}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const questions = form.getValues('suggested_questions') || [];
+                      form.setValue(
+                        'suggested_questions',
+                        questions.filter((_, i) => i !== index)
+                      );
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
               ))}
             </div>
 

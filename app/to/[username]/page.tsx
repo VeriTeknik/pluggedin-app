@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 
 import { getUserByUsername, getUserFollowerCount, getUserFollowingCount, isFollowingUser } from '@/app/actions/social';
+import { getUserPublicEmbeddedChat } from '@/app/actions/public-embedded-chat';
 import { ProfileHeader } from '@/components/profile/profile-header';
 import { ProfileTabs } from '@/components/profile/profile-tabs';
 import { users } from '@/db/schema';
@@ -17,6 +18,7 @@ function UserProfileDisplay({
   followerCount,
   followingCount,
   isOwner,
+  embeddedChatData,
 }: {
   user: User;
   username: string;
@@ -25,6 +27,7 @@ function UserProfileDisplay({
   followerCount: number;
   followingCount: number;
   isOwner: boolean;
+  embeddedChatData: any;
 }) {
   return (
     <div className="container py-8 pb-16 max-w-5xl mx-auto">
@@ -40,6 +43,7 @@ function UserProfileDisplay({
         <ProfileTabs
           isOwner={isOwner}
           username={username}
+          embeddedChatData={embeddedChatData}
         />
       </div>
     </div>
@@ -90,6 +94,10 @@ export default async function ProfilePage({ params }: PageProps) {
   const followerCount = await getUserFollowerCount(user.id);
   const followingCount = await getUserFollowingCount(user.id);
   const currentlyFollowing = currentUserId ? await isFollowingUser(currentUserId, user.id) : false;
+  
+  // Get user's public embedded chat if available
+  const embeddedChatResult = await getUserPublicEmbeddedChat(user.id);
+  const embeddedChatData = embeddedChatResult.success ? embeddedChatResult.data : null;
 
   return (
     <div className="space-y-8">
@@ -101,6 +109,7 @@ export default async function ProfilePage({ params }: PageProps) {
         followerCount={followerCount}
         followingCount={followingCount}
         isOwner={isOwner}
+        embeddedChatData={embeddedChatData}
       />
     </div>
   );

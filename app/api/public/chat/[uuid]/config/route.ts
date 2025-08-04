@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/db/db';
+import { db } from '@/db';
 import { embeddedChatsTable, chatPersonasTable } from '@/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 import { extractApiKey } from '@/lib/api-key';
@@ -39,14 +39,16 @@ async function validateApiKeyAccess(chatUuid: string, apiKey: string | null) {
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { uuid: string } }
+  { params }: { params: Promise<{ uuid: string }> }
 ) {
   try {
+    const { uuid } = await params;
+    
     // Extract API key from request
     const apiKey = extractApiKey(req);
     
     // Validate API key access first
-    const hasApiKeyAccess = await validateApiKeyAccess(params.uuid, apiKey);
+    const hasApiKeyAccess = await validateApiKeyAccess(uuid, apiKey);
     if (!hasApiKeyAccess) {
       return NextResponse.json(
         { error: 'Invalid or missing API key' }, 
@@ -72,7 +74,7 @@ export async function GET(
       })
       .from(embeddedChatsTable)
       .where(and(
-        eq(embeddedChatsTable.uuid, params.uuid),
+        eq(embeddedChatsTable.uuid, uuid),
         eq(embeddedChatsTable.is_public, true),
         eq(embeddedChatsTable.is_active, true)
       ))
@@ -83,7 +85,7 @@ export async function GET(
     }
 
     // Validate domain if whitelist is configured
-    if (chat.allowed_domains.length > 0 && origin) {
+    if (chat.allowed_domains && chat.allowed_domains.length > 0 && origin) {
       const originUrl = new URL(origin);
       const isAllowed = chat.allowed_domains.some(domain => {
         // Support wildcards like *.example.com
@@ -109,7 +111,7 @@ export async function GET(
       })
       .from(chatPersonasTable)
       .where(and(
-        eq(chatPersonasTable.embedded_chat_uuid, params.uuid),
+        eq(chatPersonasTable.embedded_chat_uuid, uuid),
         eq(chatPersonasTable.is_active, true)
       ))
       .orderBy(chatPersonasTable.display_order);

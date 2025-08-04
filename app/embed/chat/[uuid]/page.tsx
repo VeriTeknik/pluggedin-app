@@ -5,13 +5,14 @@ import { eq, and } from 'drizzle-orm';
 import { EmbeddedChatWidget } from './components/embedded-chat-widget';
 
 interface PageProps {
-  params: { uuid: string };
-  searchParams: { key?: string };
+  params: Promise<{ uuid: string }>;
+  searchParams: Promise<{ key?: string }>;
 }
 
 export default async function EmbeddedChatPage({ params, searchParams }: PageProps) {
-  const { uuid: chatUuid } = params;
-  const apiKey = searchParams.key || '';
+  const { uuid: chatUuid } = await params;
+  const { key } = await searchParams;
+  const apiKey = key || '';
 
   // Fetch embedded chat configuration with project info
   const [chatConfig] = await db

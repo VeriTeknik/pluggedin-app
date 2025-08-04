@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/db/db';
+import { db } from '@/db';
 import { embeddedChatsTable } from '@/db/schema';
 import { eq, and, sql } from 'drizzle-orm';
 
@@ -53,11 +53,13 @@ const EMBED_SCRIPT_TEMPLATE = `
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { uuid: string } }
+  { params }: { params: Promise<{ uuid: string }> }
 ) {
   try {
+    // Await params in Next.js 15
+    const { uuid } = await params;
     // Remove .js extension if present
-    const chatUuid = params.uuid.replace(/\.js$/, '');
+    const chatUuid = uuid.replace(/\.js$/, '');
     
     // Extract API key from query params
     const url = new URL(req.url);

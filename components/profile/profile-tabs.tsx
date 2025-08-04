@@ -3,6 +3,9 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
+import { Bot } from 'lucide-react';
+import { ProfileEmbeddedChat } from '@/components/profile/profile-embedded-chat';
+import { EmbeddedChatInfo } from '@/components/profile/embedded-chat-info';
 
 import CardGrid from '@/app/(sidebar-layout)/(container)/search/components/CardGrid';
 import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
@@ -23,13 +26,15 @@ const PAGE_SIZE = 6;
 interface ProfileTabsProps {
   // Remove props for data fetched internally
   // sharedCollections: SharedCollection[]; 
-  // embeddedChats: EmbeddedChat[];
   isOwner: boolean;
-  username: string; 
+  username: string;
+  embeddedChatData?: any; // Chat data from parent
 }
 
 export function ProfileTabs({ 
-  username 
+  username,
+  isOwner,
+  embeddedChatData
 }: ProfileTabsProps) {
   const { t } = useTranslation();
   const { currentProfile } = useProfiles();
@@ -170,9 +175,33 @@ export function ProfileTabs({
       </TabsContent>
       
       <TabsContent value="chats" className="pt-6">
-         {/* Placeholder - Fetch and render EmbeddedChats here */}
-         <p className="text-center text-muted-foreground py-12">Embedded chats coming soon.</p>
-        {/* <EmbeddedChats chats={fetchedChats} isLoading={isLoadingChats} /> */}
+        {embeddedChatData ? (
+          <>
+            {/* Show chat info card */}
+            <EmbeddedChatInfo 
+              chatData={embeddedChatData} 
+              isOwner={isOwner}
+            />
+            
+            {/* Show floating chat widget only for non-owners */}
+            {!isOwner && (
+              <ProfileEmbeddedChat 
+                chatData={embeddedChatData} 
+                isOwner={false}
+              />
+            )}
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+            <p className="text-lg font-medium mb-2">No Embedded Chat</p>
+            <p className="text-muted-foreground">
+              {isOwner 
+                ? "You haven't configured an embedded chat yet. Visit the Embedded Chat section to set one up."
+                : "This user hasn't set up an embedded chat assistant yet."}
+            </p>
+          </div>
+        )}
       </TabsContent>
     </Tabs>
   );

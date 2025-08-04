@@ -46,12 +46,8 @@ export function EmbeddedChatSetup({ project }: EmbeddedChatSetupProps) {
           throw new Error(result.error || 'Failed to create embedded chat');
         }
         
-        // Redirect to the configuration page
-        if (result.data?.uuid) {
-          router.push(`/embedded-chat/${result.data.uuid}`);
-        } else {
-          router.refresh();
-        }
+        // Redirect to the dashboard
+        router.push('/embedded-chat/dashboard');
       } else {
         // Just enable the existing chat
         const result = await toggleEmbeddedChat(true);
@@ -59,8 +55,8 @@ export function EmbeddedChatSetup({ project }: EmbeddedChatSetupProps) {
           throw new Error(result.error || 'Failed to enable embedded chat');
         }
         
-        // Redirect to configuration page
-        router.push(`/embedded-chat/${project.embedded_chat_uuid}`);
+        // Redirect to dashboard
+        router.push('/embedded-chat/dashboard');
       }
     } catch (error) {
       toast({

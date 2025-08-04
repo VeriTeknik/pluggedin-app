@@ -44,7 +44,10 @@ export function ApiKeysTab({ chat: initialChat, chatUuid }: ApiKeysTabProps) {
         throw new Error(result.error || 'Failed to generate API key');
       }
 
-      setChat(result.data);
+      setChat({
+        ...result.data,
+        enabled_mcp_server_uuids: result.data.enabled_mcp_server_uuids || [],
+      } as EmbeddedChat);
       setShowApiKey(true);
       
       toast({
@@ -75,7 +78,10 @@ export function ApiKeysTab({ chat: initialChat, chatUuid }: ApiKeysTabProps) {
         throw new Error(result.error || 'Failed to regenerate API key');
       }
 
-      setChat(result.data);
+      setChat({
+        ...result.data,
+        enabled_mcp_server_uuids: result.data.enabled_mcp_server_uuids || [],
+      } as EmbeddedChat);
       setShowApiKey(true);
       
       toast({
@@ -106,7 +112,10 @@ export function ApiKeysTab({ chat: initialChat, chatUuid }: ApiKeysTabProps) {
         throw new Error(result.error || 'Failed to revoke API key');
       }
 
-      setChat(result.data);
+      setChat({
+        ...result.data,
+        enabled_mcp_server_uuids: result.data.enabled_mcp_server_uuids || [],
+      } as EmbeddedChat);
       
       toast({
         title: t('common.success'),
@@ -132,7 +141,10 @@ export function ApiKeysTab({ chat: initialChat, chatUuid }: ApiKeysTabProps) {
         throw new Error(result.error || 'Failed to update API key requirement');
       }
 
-      setChat(result.data);
+      setChat({
+        ...result.data,
+        enabled_mcp_server_uuids: result.data.enabled_mcp_server_uuids || [],
+      } as EmbeddedChat);
       
       toast({
         title: t('common.success'),

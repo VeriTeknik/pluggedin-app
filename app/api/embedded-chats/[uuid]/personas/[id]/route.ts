@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
-import { db } from '@/db/db';
+import { getAuthSession } from '@/lib/auth';
+import { db } from '@/db';
 import { 
   embeddedChatsTable, 
   projectsTable, 
@@ -25,17 +25,18 @@ const UpdatePersonaSchema = z.object({
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { uuid: string; id: string } }
+  { params }: { params: Promise<{ uuid: string; id: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getAuthSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { uuid, id } = await params;
     const body = await req.json();
     const validatedData = UpdatePersonaSchema.parse(body);
-    const personaId = parseInt(params.id);
+    const personaId = parseInt(id);
 
     if (isNaN(personaId)) {
       return NextResponse.json({ error: 'Invalid persona ID' }, { status: 400 });
@@ -47,7 +48,7 @@ export async function PUT(
       .from(embeddedChatsTable)
       .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
       .where(and(
-        eq(embeddedChatsTable.uuid, params.uuid),
+        eq(embeddedChatsTable.uuid, uuid),
         eq(projectsTable.user_id, session.user.id)
       ))
       .limit(1);
@@ -61,7 +62,7 @@ export async function PUT(
       await db
         .update(chatPersonasTable)
         .set({ is_default: false })
-        .where(eq(chatPersonasTable.embedded_chat_uuid, params.uuid));
+        .where(eq(chatPersonasTable.embedded_chat_uuid, uuid));
     }
 
     // Update persona
@@ -73,7 +74,7 @@ export async function PUT(
       })
       .where(and(
         eq(chatPersonasTable.id, personaId),
-        eq(chatPersonasTable.embedded_chat_uuid, params.uuid)
+        eq(chatPersonasTable.embedded_chat_uuid, uuid)
       ))
       .returning();
 
@@ -99,15 +100,16 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { uuid: string; id: string } }
+  { params }: { params: Promise<{ uuid: string; id: string }> }
 ) {
   try {
-    const session = await auth();
+    const session = await getAuthSession();
     if (!session?.user?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const personaId = parseInt(params.id);
+    const { uuid, id } = await params;
+    const personaId = parseInt(id);
     if (isNaN(personaId)) {
       return NextResponse.json({ error: 'Invalid persona ID' }, { status: 400 });
     }
@@ -118,7 +120,7 @@ export async function DELETE(
       .from(embeddedChatsTable)
       .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
       .where(and(
-        eq(embeddedChatsTable.uuid, params.uuid),
+        eq(embeddedChatsTable.uuid, uuid),
         eq(projectsTable.user_id, session.user.id)
       ))
       .limit(1);
@@ -132,7 +134,7 @@ export async function DELETE(
       .delete(chatPersonasTable)
       .where(and(
         eq(chatPersonasTable.id, personaId),
-        eq(chatPersonasTable.embedded_chat_uuid, params.uuid)
+        eq(chatPersonasTable.embedded_chat_uuid, uuid)
       ));
 
     return NextResponse.json({ success: true });

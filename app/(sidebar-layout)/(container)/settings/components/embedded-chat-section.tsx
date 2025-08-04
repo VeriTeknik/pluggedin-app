@@ -2,10 +2,10 @@
 
 import { BotIcon, ExternalLink, Key, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { createEmbeddedChat, toggleEmbeddedChat } from '@/app/actions/embedded-chat';
+import { createEmbeddedChat, toggleEmbeddedChat, getCurrentProject } from '@/app/actions/embedded-chat';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -24,6 +24,20 @@ export function EmbeddedChatSection() {
   const { currentProject, mutate } = useProjects();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [embeddedChatEnabled, setEmbeddedChatEnabled] = useState(false);
+  const [embeddedChatUuid, setEmbeddedChatUuid] = useState<string | null>(null);
+
+  // Load the full project data on mount
+  useEffect(() => {
+    if (currentProject) {
+      getCurrentProject('').then((fullProject) => {
+        if (fullProject) {
+          setEmbeddedChatEnabled(fullProject.embedded_chat_enabled ?? false);
+          setEmbeddedChatUuid(fullProject.embedded_chat_uuid);
+        }
+      });
+    }
+  }, [currentProject]);
 
   if (!currentProject) {
     return null;
@@ -32,7 +46,7 @@ export function EmbeddedChatSection() {
   const handleToggle = async (enabled: boolean) => {
     setIsLoading(true);
     try {
-      if (enabled && !currentProject.embedded_chat_uuid) {
+      if (enabled && !embeddedChatUuid) {
         // Create embedded chat
         const result = await createEmbeddedChat({
           projectUuid: currentProject.uuid,
@@ -41,12 +55,17 @@ export function EmbeddedChatSection() {
         if (!result.success) {
           throw new Error(result.error || 'Failed to create embedded chat');
         }
+        // Update local state with the new chat UUID
+        setEmbeddedChatUuid(result.data?.uuid || null);
+        setEmbeddedChatEnabled(true);
       } else {
         // Just toggle the enabled state
         const result = await toggleEmbeddedChat(enabled);
         if (!result.success) {
           throw new Error(result.error || 'Failed to toggle embedded chat');
         }
+        // Update local state
+        setEmbeddedChatEnabled(enabled);
       }
       
       await mutate();
@@ -69,8 +88,8 @@ export function EmbeddedChatSection() {
   };
 
   const handleConfigureClick = () => {
-    if (currentProject.embedded_chat_uuid) {
-      router.push(`/embedded-chat/${currentProject.embedded_chat_uuid}`);
+    if (embeddedChatUuid) {
+      router.push(`/embedded-chat/${embeddedChatUuid}`);
     }
   };
 
@@ -96,13 +115,13 @@ export function EmbeddedChatSection() {
             </p>
           </div>
           <Switch
-            checked={currentProject.embedded_chat_enabled || false}
+            checked={embeddedChatEnabled}
             onCheckedChange={handleToggle}
             disabled={isLoading}
           />
         </div>
 
-        {currentProject.embedded_chat_enabled && currentProject.embedded_chat_uuid && (
+        {embeddedChatEnabled && embeddedChatUuid && (
           <div className="space-y-4 border-t pt-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <Button
@@ -117,7 +136,7 @@ export function EmbeddedChatSection() {
               <Button
                 variant="outline"
                 className="justify-start"
-                onClick={() => router.push(`/embedded-chat/${currentProject.embedded_chat_uuid}/api-keys`)}
+                onClick={() => router.push(`/embedded-chat/${embeddedChatUuid}/api-keys`)}
               >
                 <Key className="mr-2 h-4 w-4" />
                 {t('settings.embeddedChat.apiKeys', 'API Keys')}
@@ -131,7 +150,7 @@ export function EmbeddedChatSection() {
                   variant="link"
                   size="sm"
                   className="h-auto p-0 text-xs"
-                  onClick={() => router.push(`/embedded-chat/${currentProject.embedded_chat_uuid}/embed`)}
+                  onClick={() => router.push(`/embedded-chat/${embeddedChatUuid}/embed`)}
                 >
                   {t('settings.embeddedChat.getCode', 'Get embed code')}
                   <ExternalLink className="ml-1 h-3 w-3" />

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { embeddedChatsTable, projectsTable, chatMessagesTable, chatConversationsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { embeddedChatsTable, projectsTable, chatMessagesTable, chatConversationsTable, apiKeysTable } from '@/db/schema';
+import { eq, and, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { sendMessageToMCPProxy, sendMessageViaHTTP } from '@/lib/embedded-chat/mcp-integration';
+import { generateSimpleAIResponse } from '@/lib/embedded-chat/simple-ai-integration';
 
 export async function POST(req: NextRequest) {
   try {
@@ -61,9 +63,8 @@ export async function POST(req: NextRequest) {
       content: message,
     });
 
-    // Here you would integrate with your MCP proxy or AI service
-    // For now, we'll return a placeholder response
-    const response = await generateChatResponse(message, chat, project);
+    // Generate AI response using MCP integration
+    const response = await generateChatResponse(message, chat, project, activeConversationId);
 
     // Store assistant message
     await db.insert(chatMessagesTable).values({
@@ -72,10 +73,10 @@ export async function POST(req: NextRequest) {
       content: response,
     });
 
-    // Update conversation last activity
+    // Update conversation last activity (using last_heartbeat as proxy)
     await db
       .update(chatConversationsTable)
-      .set({ last_message_at: new Date() })
+      .set({ last_heartbeat: new Date() })
       .where(eq(chatConversationsTable.uuid, activeConversationId));
 
     // Update chat last activity
@@ -102,18 +103,82 @@ export async function POST(req: NextRequest) {
 async function generateChatResponse(
   message: string, 
   chat: typeof embeddedChatsTable.$inferSelect, 
-  project: typeof projectsTable.$inferSelect
+  project: typeof projectsTable.$inferSelect,
+  conversationId?: string
 ): Promise<string> {
-  // TODO: Integrate with MCP proxy or AI service
-  // This is where you would:
-  // 1. Connect to the MCP proxy using project credentials
-  // 2. Send the message to the appropriate MCP server
-  // 3. Return the response
-  
-  // For now, return a placeholder response
-  return `Thank you for your message. This is a placeholder response from ${chat.name}. 
-  
-In a full implementation, this would connect to your MCP servers and provide intelligent responses based on the configured tools and capabilities.
+  try {
+    // Get the project's API key for MCP proxy authentication
+    const [apiKey] = await db
+      .select()
+      .from(apiKeysTable)
+      .where(eq(apiKeysTable.project_uuid, project.uuid))
+      .orderBy(desc(apiKeysTable.created_at))
+      .limit(1);
 
-Your message: "${message}"`;
+    // Check if we have an API key for MCP proxy
+    const hasMCPKey = apiKey && apiKey.api_key;
+
+    // Get conversation history if conversationId is provided
+    let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    
+    if (conversationId) {
+      const messages = await db
+        .select({
+          role: chatMessagesTable.role,
+          content: chatMessagesTable.content,
+        })
+        .from(chatMessagesTable)
+        .where(eq(chatMessagesTable.conversation_uuid, conversationId))
+        .orderBy(chatMessagesTable.created_at)
+        .limit(10); // Keep last 10 messages for context
+      
+      conversationHistory = messages.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+      }));
+    }
+
+    // Try MCP proxy first if API key is available
+    if (hasMCPKey) {
+      try {
+        const mcpResponse = await sendMessageToMCPProxy(
+          message,
+          {
+            projectUuid: project.uuid,
+            apiKey: apiKey.api_key,
+            customInstructions: chat.custom_instructions || undefined,
+            enableRag: chat.enable_rag ?? false,
+          },
+          conversationHistory
+        );
+
+        // If there was an error but we got a response, use it
+        if (mcpResponse.error) {
+          console.error('MCP error (but got response):', mcpResponse.error);
+        }
+
+        return mcpResponse.content;
+      } catch (mcpError) {
+        console.error('MCP proxy failed, falling back to simple AI:', mcpError);
+        // Fall through to simple AI
+      }
+    }
+    
+    // Fallback to simple AI response (demo mode)
+    const simpleResponse = await generateSimpleAIResponse(
+      message,
+      {
+        provider: 'local',
+        customInstructions: chat.custom_instructions || undefined,
+      },
+      conversationHistory
+    );
+    
+    return simpleResponse.content;
+  } catch (error) {
+    console.error('Error generating chat response:', error);
+    
+    // Fallback response if MCP integration fails
+    return `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`;
+  }
 }

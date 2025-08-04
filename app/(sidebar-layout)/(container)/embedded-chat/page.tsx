@@ -16,10 +16,15 @@ export default async function EmbeddedChatPage() {
     redirect('/');
   }
 
-  // If embedded chat is already set up, redirect to the configuration page
+  // If embedded chat is already set up, redirect to the dashboard
   if (currentProject.embedded_chat_uuid && currentProject.embedded_chat_enabled) {
-    redirect(`/embedded-chat/${currentProject.embedded_chat_uuid}`);
+    redirect('/embedded-chat/dashboard');
   }
 
-  return <EmbeddedChatSetup project={currentProject} />;
+  return <EmbeddedChatSetup project={{
+    uuid: currentProject.uuid,
+    name: currentProject.name,
+    embedded_chat_enabled: currentProject.embedded_chat_enabled ?? false,
+    embedded_chat_uuid: currentProject.embedded_chat_uuid,
+  }} />;
 }
