@@ -7,6 +7,7 @@ import {
   Blocks,
   BotIcon,
   Code2,
+  Eye,
   FileText,
   FlaskConical,
   MessageSquare,
@@ -266,6 +267,15 @@ export default function SidebarLayout({
                       <Link href='/embedded-chat'>
                         <MessageSquare className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden">{t('embeddedChat.title', 'Embedded Chat')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('chatMonitor.title', 'Chat Monitor')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/chat-monitor'>
+                        <Eye className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('chatMonitor.title', 'Chat Monitor')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

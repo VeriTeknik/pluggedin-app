@@ -28,12 +28,28 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Send ready message to parent
+  // Send ready message to parent and handle parent messages
   useEffect(() => {
     if (window.parent !== window) {
-      window.parent.postMessage({ type: 'chat:ready' }, '*');
+      // Send ready message
+      window.parent.postMessage({ type: 'chat:ready', chatUuid: chat.uuid }, '*');
+      
+      // Listen for parent messages
+      const handleParentMessage = (event: MessageEvent) => {
+        // In production, verify the origin
+        if (event.data?.type === 'chat:minimize') {
+          // Handle minimize from parent
+        } else if (event.data?.type === 'chat:maximize') {
+          // Handle maximize from parent  
+        } else if (event.data?.type === 'chat:close') {
+          // Handle close from parent
+        }
+      };
+      
+      window.addEventListener('message', handleParentMessage);
+      return () => window.removeEventListener('message', handleParentMessage);
     }
-  }, []);
+  }, [chat.uuid]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -167,7 +183,28 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
         {messages.length === 0 ? (
           <div className="text-center text-muted-foreground py-8">
             <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-            <p className="text-sm">{chat.welcome_message || 'Start a conversation'}</p>
+            <p className="text-sm mb-4">{chat.welcome_message || 'Start a conversation'}</p>
+            
+            {/* Suggested Questions */}
+            {chat.suggested_questions && chat.suggested_questions.length > 0 && (
+              <div className="space-y-2 px-4">
+                <p className="text-xs text-muted-foreground mb-2">Try asking:</p>
+                {chat.suggested_questions.slice(0, 3).map((question, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs justify-start"
+                    onClick={() => {
+                      setInput(question);
+                      inputRef.current?.focus();
+                    }}
+                  >
+                    {question}
+                  </Button>
+                ))}
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

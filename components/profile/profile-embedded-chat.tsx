@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { MessageSquare, X, Maximize2, Minimize2, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Sparkles, Loader2 } from 'lucide-react';
 
 interface ProfileEmbeddedChatProps {
   chatData: {
@@ -28,131 +27,124 @@ interface ProfileEmbeddedChatProps {
 }
 
 export function ProfileEmbeddedChat({ chatData, isOwner = false }: ProfileEmbeddedChatProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [iframeLoaded, setIframeLoaded] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
 
-  // Get the base URL for the iframe
+  // Get the base URL for the iframe (SSR-safe)
   const getIframeUrl = () => {
-    const baseUrl = window.location.origin;
-    // No API key needed for public chats
-    return `${baseUrl}/embed/chat/${chatData.chatUuid}`;
+    // Use relative URL to avoid SSR issues
+    return `/embed/chat/${chatData.chatUuid}`;
   };
 
-  // Handle escape key to close
+  // Handle iframe messages
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isOpen) {
-        setIsOpen(false);
+    const handleIframeMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'chat:ready') {
+        setIframeLoaded(true);
+        // Hide welcome after a delay
+        setTimeout(() => setShowWelcome(false), 1500);
       }
     };
-    window.addEventListener('keydown', handleEscape);
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isOpen]);
+    
+    window.addEventListener('message', handleIframeMessage);
+    return () => window.removeEventListener('message', handleIframeMessage);
+  }, []);
 
   if (isOwner) {
-    // Don't show the floating widget for owners
-    // The info card is handled by EmbeddedChatInfo component
+    // Don't show the embedded widget for owners
     return null;
   }
 
   return (
-    <>
-      {/* Floating Chat Button */}
-      {!isOpen && (
-        <div className="fixed bottom-6 right-6 z-40">
-          <Button
-            onClick={() => setIsOpen(true)}
-            size="lg"
-            className="rounded-full h-14 w-14 shadow-lg hover:scale-105 transition-transform"
-          >
-            <MessageSquare className="h-6 w-6" />
-            <span className="sr-only">Chat with {chatData.user.name || chatData.user.username}</span>
-          </Button>
-        </div>
-      )}
-
-      {/* Chat Window */}
-      {isOpen && (
-        <div
-          className={cn(
-            "fixed z-50 bg-background border rounded-lg shadow-2xl transition-all duration-300",
-            isFullscreen ? "inset-4" : isMinimized ? "bottom-6 right-6 w-80 h-20" : "bottom-6 right-6 w-96 h-[600px]",
-            "flex flex-col"
-          )}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b bg-muted/50 rounded-t-lg">
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-primary" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-background" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm">{chatData.chatName}</h3>
-                <p className="text-xs text-muted-foreground">
-                  by {chatData.user.name || chatData.user.username}
-                </p>
-              </div>
+    <div className="w-full space-y-6 animate-in fade-in-50 duration-500">
+      {/* Welcome Section with Gradient Background */}
+      {showWelcome && (
+        <div className={cn(
+          "relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-500/10 via-blue-500/10 to-pink-500/10 p-8 transition-all duration-700",
+          !iframeLoaded && "animate-pulse"
+        )}>
+          {/* Decorative Elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-purple-400/20 to-transparent rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-blue-400/20 to-transparent rounded-full blur-2xl" />
+          
+          <div className="relative z-10 text-center">
+            <div className="inline-flex items-center gap-2 mb-4">
+              <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400 animate-pulse" />
+              <h3 className="text-2xl font-semibold bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400 bg-clip-text text-transparent">
+                Meet {chatData.chatName}
+              </h3>
+              <Sparkles className="h-5 w-5 text-blue-600 dark:text-blue-400 animate-pulse" />
             </div>
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setIsMinimized(!isMinimized)}
-              >
-                <Minimize2 className="h-3 w-3" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setIsFullscreen(!isFullscreen)}
-              >
-                {isFullscreen ? (
-                  <Minimize2 className="h-3 w-3" />
-                ) : (
-                  <Maximize2 className="h-3 w-3" />
-                )}
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={() => setIsOpen(false)}
-              >
-                <X className="h-3 w-3" />
-              </Button>
+            
+            {chatData.welcomeMessage && (
+              <p className="text-muted-foreground max-w-md mx-auto mb-4 text-sm">
+                "{chatData.welcomeMessage}"
+              </p>
+            )}
+            
+            <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                <span>Always ready</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>💡</span>
+                <span>Super helpful</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <span>🔒</span>
+                <span>Private & safe</span>
+              </div>
             </div>
           </div>
-
-          {/* Chat Content */}
-          {!isMinimized && (
-            <div className="flex-1 relative">
-              {!iframeLoaded && (
-                <div className="absolute inset-0 flex items-center justify-center bg-background">
-                  <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-2" />
-                    <p className="text-sm text-muted-foreground">Loading chat...</p>
-                  </div>
-                </div>
-              )}
-              <iframe
-                src={getIframeUrl()}
-                className="w-full h-full rounded-b-lg"
-                frameBorder="0"
-                title={`Chat with ${chatData.user.name || chatData.user.username}`}
-                onLoad={() => setIframeLoaded(true)}
-                allow="clipboard-write"
-              />
-            </div>
-          )}
         </div>
       )}
-    </>
+
+      {/* Embedded Chat Frame */}
+      <div className="relative w-full group">
+        {/* Gradient Border Effect */}
+        <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl opacity-20 group-hover:opacity-30 blur transition duration-300" />
+        
+        {/* Chat Container */}
+        <div className="relative bg-background rounded-2xl shadow-xl overflow-hidden border border-border/50">
+          {/* Loading State */}
+          {!iframeLoaded && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/95 backdrop-blur-sm z-10">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-4 border-purple-200 dark:border-purple-900" />
+                <div className="absolute top-0 left-0 w-16 h-16 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" />
+              </div>
+              <p className="mt-4 text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Waking up the assistant...
+              </p>
+            </div>
+          )}
+          
+          {/* Iframe */}
+          <iframe
+            src={getIframeUrl()}
+            className={cn(
+              "w-full h-[600px] rounded-2xl transition-opacity duration-500",
+              iframeLoaded ? "opacity-100" : "opacity-0"
+            )}
+            frameBorder="0"
+            title={`Chat with ${chatData.chatName}`}
+            onLoad={() => setIframeLoaded(true)}
+            allow="clipboard-write"
+          />
+        </div>
+
+        {/* Decorative Bottom Gradient */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-background via-background/50 to-transparent pointer-events-none rounded-b-2xl" />
+      </div>
+
+      {/* Fun Footer Message */}
+      {iframeLoaded && !showWelcome && (
+        <p className="text-center text-xs text-muted-foreground animate-in slide-in-from-bottom-2 duration-500">
+          💬 {chatData.chatName} is powered by {chatData.user.name || chatData.user.username}'s knowledge
+        </p>
+      )}
+    </div>
   );
 }

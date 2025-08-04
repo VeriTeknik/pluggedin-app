@@ -101,8 +101,12 @@ class OpenAILLM implements LLM {
   private client: OpenAI;
 
   constructor(config: any) {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY is not configured');
+    }
     this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
+      apiKey,
     });
   }
 
@@ -135,8 +139,12 @@ class AnthropicLLM implements LLM {
   private client: Anthropic;
 
   constructor(config: any) {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new Error('ANTHROPIC_API_KEY is not configured');
+    }
     this.client = new Anthropic({
-      apiKey: process.env.ANTHROPIC_API_KEY,
+      apiKey,
     });
   }
 
@@ -167,7 +175,11 @@ class GoogleLLM implements LLM {
   private client: GoogleGenerativeAI;
 
   constructor(config: any) {
-    this.client = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (!apiKey) {
+      throw new Error('GOOGLE_API_KEY is not configured');
+    }
+    this.client = new GoogleGenerativeAI(apiKey);
   }
 
   async *generate(
@@ -467,6 +479,25 @@ export class ChatEngine {
         updated_at: new Date(),
       })
       .where(eq(chatConversationsTable.uuid, conversationId));
+    
+    // TODO: Broadcast instruction via WebSocket when monitoring is enabled
+    // Commented out for now as WebSocket server is optional
+    /*
+    if (typeof window === 'undefined') {
+      try {
+        const { getWebSocketServer } = await import('@/lib/websocket/chat-websocket-server');
+        const wsServer = getWebSocketServer();
+        wsServer.broadcastMessage(conversationId, {
+          type: 'instruction',
+          conversationId,
+          instruction,
+          timestamp: new Date(),
+        });
+      } catch (error) {
+        console.error('Failed to broadcast instruction:', error);
+      }
+    }
+    */
   }
 
   async transferToHuman(conversationId: string, userId: string) {
@@ -480,6 +511,25 @@ export class ChatEngine {
         updated_at: new Date(),
       })
       .where(eq(chatConversationsTable.uuid, conversationId));
+    
+    // TODO: Broadcast takeover via WebSocket when monitoring is enabled
+    // Commented out for now as WebSocket server is optional
+    /*
+    if (typeof window === 'undefined') {
+      try {
+        const { getWebSocketServer } = await import('@/lib/websocket/chat-websocket-server');
+        const wsServer = getWebSocketServer();
+        wsServer.broadcastMessage(conversationId, {
+          type: 'takeover',
+          conversationId,
+          takenBy: userId,
+          timestamp: new Date(),
+        });
+      } catch (error) {
+        console.error('Failed to broadcast takeover:', error);
+      }
+    }
+    */
   }
 
   private async trackAnalytics(conversationId: string, metrics: any) {

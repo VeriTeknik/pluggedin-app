@@ -121,17 +121,19 @@ export function ProfileTabs({
   // TODO: Implement fetching for collections and chats similarly using useSWR if needed
 
   return (
-    <Tabs defaultValue="servers" className="w-full">
+    <Tabs defaultValue={embeddedChatData ? "assistant" : "servers"} className="w-full">
       <TabsList className="grid w-full grid-cols-3">
+        <TabsTrigger value="assistant" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/10 data-[state=active]:to-blue-500/10">
+          <span className="flex items-center gap-1.5">
+            <span>AI Assistant</span>
+            <span className="text-base">✨</span>
+          </span>
+        </TabsTrigger>
         <TabsTrigger value="servers">
           MCP Servers ({totalSharedServers}) 
         </TabsTrigger>
         <TabsTrigger value="collections">
           Collections ({collections?.length ?? 0})
-        </TabsTrigger>
-        <TabsTrigger value="chats">
-           {/* Update count when chats data is fetched */}
-          Embedded Chats (0)
         </TabsTrigger>
       </TabsList>
       
@@ -174,7 +176,7 @@ export function ProfileTabs({
         />
       </TabsContent>
       
-      <TabsContent value="chats" className="pt-6">
+      <TabsContent value="assistant" className="pt-6">
         {embeddedChatData ? (
           <>
             {/* Show chat info card */}
@@ -183,7 +185,7 @@ export function ProfileTabs({
               isOwner={isOwner}
             />
             
-            {/* Show floating chat widget only for non-owners */}
+            {/* Show embedded chat for non-owners */}
             {!isOwner && (
               <ProfileEmbeddedChat 
                 chatData={embeddedChatData} 
@@ -192,13 +194,15 @@ export function ProfileTabs({
             )}
           </>
         ) : (
-          <div className="text-center py-12">
-            <Bot className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium mb-2">No Embedded Chat</p>
-            <p className="text-muted-foreground">
+          <div className="text-center py-16 px-4">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 mb-6">
+              <Bot className="h-10 w-10 text-purple-600 dark:text-purple-400" />
+            </div>
+            <p className="text-xl font-medium mb-3">No AI Assistant Yet</p>
+            <p className="text-muted-foreground max-w-md mx-auto">
               {isOwner 
-                ? "You haven't configured an embedded chat yet. Visit the Embedded Chat section to set one up."
-                : "This user hasn't set up an embedded chat assistant yet."}
+                ? "✨ Ready to add your AI assistant? Head to the Embedded Chat section to bring your profile to life!"
+                : "This profile doesn't have an AI assistant yet. Check back soon!"}
             </p>
           </div>
         )}

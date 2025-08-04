@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { embeddedChatsTable, projectsTable, chatMessagesTable, chatConversationsTable, apiKeysTable } from '@/db/schema';
+import { embeddedChatsTable, projectsTable, chatMessagesTable, chatConversationsTable, chatPersonasTable } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
-import { sendMessageToMCPProxy, sendMessageViaHTTP } from '@/lib/embedded-chat/mcp-integration';
+import { ChatEngine } from '@/lib/chat-engine';
+import { sendMessageToMCPProxy } from '@/lib/embedded-chat/mcp-integration';
 import { generateSimpleAIResponse } from '@/lib/embedded-chat/simple-ai-integration';
 
 export async function POST(req: NextRequest) {
@@ -107,17 +108,6 @@ async function generateChatResponse(
   conversationId?: string
 ): Promise<string> {
   try {
-    // Get the project's API key for MCP proxy authentication
-    const [apiKey] = await db
-      .select()
-      .from(apiKeysTable)
-      .where(eq(apiKeysTable.project_uuid, project.uuid))
-      .orderBy(desc(apiKeysTable.created_at))
-      .limit(1);
-
-    // Check if we have an API key for MCP proxy
-    const hasMCPKey = apiKey && apiKey.api_key;
-
     // Get conversation history if conversationId is provided
     let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
     
@@ -130,7 +120,7 @@ async function generateChatResponse(
         .from(chatMessagesTable)
         .where(eq(chatMessagesTable.conversation_uuid, conversationId))
         .orderBy(chatMessagesTable.created_at)
-        .limit(10); // Keep last 10 messages for context
+        .limit(chat.context_window_size || 10);
       
       conversationHistory = messages.map(msg => ({
         role: msg.role as 'user' | 'assistant',
@@ -138,33 +128,115 @@ async function generateChatResponse(
       }));
     }
 
-    // Try MCP proxy first if API key is available
-    if (hasMCPKey) {
-      try {
-        const mcpResponse = await sendMessageToMCPProxy(
-          message,
-          {
-            projectUuid: project.uuid,
-            apiKey: apiKey.api_key,
-            customInstructions: chat.custom_instructions || undefined,
-            enableRag: chat.enable_rag ?? false,
-          },
-          conversationHistory
-        );
+    // Get active personas if configured
+    let activePersona = null;
+    if (chat.uuid) {
+      const personas = await db
+        .select()
+        .from(chatPersonasTable)
+        .where(and(
+          eq(chatPersonasTable.embedded_chat_uuid, chat.uuid),
+          eq(chatPersonasTable.is_active, true),
+          eq(chatPersonasTable.is_default, true)
+        ))
+        .limit(1);
+      
+      if (personas.length > 0) {
+        activePersona = personas[0];
+      }
+    }
 
-        // If there was an error but we got a response, use it
-        if (mcpResponse.error) {
-          console.error('MCP error (but got response):', mcpResponse.error);
+    // Check if we have a configured model
+    const modelConfig = chat.model_config as any;
+    
+    if (modelConfig && modelConfig.provider) {
+      try {
+        // Create chat config for ChatEngine
+        const chatConfig = {
+          uuid: chat.uuid,
+          project_uuid: project.uuid,
+          name: chat.name,
+          model_config: modelConfig,
+          enabled_mcp_server_uuids: chat.enabled_mcp_server_uuids || [],
+          enable_rag: chat.enable_rag || false,
+          context_window_size: chat.context_window_size || 10,
+          max_conversation_length: chat.max_conversation_length || 100,
+          custom_instructions: chat.custom_instructions || undefined,
+          welcome_message: chat.welcome_message || undefined,
+          human_oversight: (chat.human_oversight as any) || {
+            enabled: false,
+            mode: 'monitor' as const,
+            notification_channels: ['app'],
+            auto_assign: false,
+            business_hours: null,
+          },
+          offline_config: (chat.offline_config as any) || {
+            enabled: true,
+            message: "We'll get back to you soon!",
+            email_notification: true,
+            capture_contact: true,
+          },
+        };
+        
+        // Use ChatEngine with configured model
+        const chatEngine = new ChatEngine(chatConfig, project.uuid);
+        
+        // Apply persona instructions to custom instructions if needed
+        if (activePersona) {
+          const personaInstructions = `You are ${activePersona.name}${activePersona.role ? `, ${activePersona.role}` : ''}. ${activePersona.instructions}`;
+          chatConfig.custom_instructions = chatConfig.custom_instructions 
+            ? `${personaInstructions}\n\n${chatConfig.custom_instructions}`
+            : personaInstructions;
         }
 
-        return mcpResponse.content;
-      } catch (mcpError) {
-        console.error('MCP proxy failed, falling back to simple AI:', mcpError);
-        // Fall through to simple AI
+        // Generate response using ChatEngine's processMessage
+        let fullResponse = '';
+        const responseStream = chatEngine.processMessage(
+          message,
+          conversationId || '',
+          false // Not waiting for instruction
+        );
+        
+        for await (const chunk of responseStream) {
+          if (chunk.type === 'text') {
+            fullResponse += chunk.content;
+          } else if (chunk.type === 'error') {
+            console.error('Chat engine error:', chunk);
+            throw new Error(chunk.content || 'Chat engine error');
+          } else if (chunk.type === 'system') {
+            // Log system messages for debugging
+            console.log('System message:', chunk.content);
+          }
+        }
+
+        // Track token usage if available
+        // TODO: Add token tracking to database
+
+        return fullResponse;
+      } catch (engineError) {
+        console.error('ChatEngine failed, trying MCP proxy:', engineError);
+        
+        // Try MCP proxy as fallback
+        try {
+          const mcpResponse = await sendMessageToMCPProxy(
+            message,
+            {
+              projectUuid: project.uuid,
+              apiKey: '', // We don't need MCP API key for this
+              customInstructions: chat.custom_instructions || undefined,
+              enableRag: chat.enable_rag ?? false,
+            },
+            conversationHistory
+          );
+          
+          return mcpResponse.content;
+        } catch (mcpError) {
+          console.error('MCP proxy also failed:', mcpError);
+        }
       }
     }
     
-    // Fallback to simple AI response (demo mode)
+    // Final fallback to simple AI response (demo mode)
     const simpleResponse = await generateSimpleAIResponse(
       message,
       {
@@ -178,7 +250,7 @@ async function generateChatResponse(
   } catch (error) {
     console.error('Error generating chat response:', error);
     
-    // Fallback response if MCP integration fails
+    // Fallback response if everything fails
     return `I apologize, but I'm having trouble processing your request right now. Please try again in a moment.`;
   }
 }

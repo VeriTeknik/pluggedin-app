@@ -1,7 +1,7 @@
 'use client';
 
-import { Bot, MessageSquare, Shield, Sparkles } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Bot, Sparkles } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -19,68 +19,83 @@ interface EmbeddedChatInfoProps {
 }
 
 export function EmbeddedChatInfo({ chatData, isOwner }: EmbeddedChatInfoProps) {
+  if (!isOwner) {
+    // Don't show info card for visitors - they get the embedded chat directly
+    return null;
+  }
+
   return (
-    <Card>
-      <CardHeader>
+    <Card className="overflow-hidden border-2 border-purple-100 dark:border-purple-900/30">
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 via-transparent to-blue-500/5" />
+      <CardHeader className="relative">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Bot className="h-6 w-6 text-primary" />
+            <div className="relative">
+              <div className="p-3 bg-gradient-to-br from-purple-500/10 to-blue-500/10 rounded-xl">
+                <Bot className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+              </div>
+              <Sparkles className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
             </div>
             <div>
-              <CardTitle>{chatData.chatName}</CardTitle>
-              <CardDescription className="mt-1">
-                AI Assistant by {chatData.user.name || chatData.user.username}
-              </CardDescription>
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                {chatData.chatName}
+                <span className="text-sm">✨</span>
+              </h3>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Your AI assistant lives here!
+              </p>
             </div>
           </div>
-          <Badge variant={chatData.requireApiKey ? 'secondary' : 'default'}>
-            {chatData.requireApiKey ? 'Private' : 'Public'}
+          <Badge 
+            variant={chatData.requireApiKey ? 'secondary' : 'default'}
+            className="rounded-full px-3"
+          >
+            {chatData.requireApiKey ? '🔒 Private' : '🌍 Public'}
           </Badge>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="relative space-y-4">
         {chatData.welcomeMessage && (
-          <div className="p-3 bg-muted rounded-lg">
-            <p className="text-sm">{chatData.welcomeMessage}</p>
-          </div>
-        )}
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="flex items-center gap-2">
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">Interactive Chat</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">AI Powered</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Shield className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">Secure</span>
-          </div>
-        </div>
-
-        {isOwner && (
-          <div className="pt-4 border-t">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                This chat appears on your public profile
-              </p>
-              <Button variant="outline" size="sm" asChild>
-                <a href="/embedded-chat/dashboard">Manage Chat</a>
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {!isOwner && (
-          <div className="pt-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              💬 Click the chat button in the bottom right corner to start a conversation with {chatData.user.name || chatData.user.username}'s AI assistant.
+          <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-xl">
+            <p className="text-sm italic">
+              "{chatData.welcomeMessage}"
             </p>
           </div>
         )}
+        
+        <div className="flex flex-wrap gap-3 text-xs">
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400 rounded-full">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+            <span>Always online</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 dark:bg-purple-900/20 text-purple-700 dark:text-purple-400 rounded-full">
+            <span>🎯</span>
+            <span>Smart & helpful</span>
+          </div>
+          <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 rounded-full">
+            <span>💬</span>
+            <span>Chat ready</span>
+          </div>
+        </div>
+
+        <div className="pt-4 border-t border-purple-100 dark:border-purple-900/30">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-muted-foreground">
+              Visitors can chat with your assistant below 👇
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              asChild
+              className="rounded-full hover:bg-purple-50 dark:hover:bg-purple-900/20 hover:border-purple-300 dark:hover:border-purple-700"
+            >
+              <a href="/embedded-chat/dashboard">
+                <Sparkles className="h-3 w-3 mr-1.5" />
+                Customize
+              </a>
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
