@@ -1,12 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
+import { Server } from 'lucide-react';
 
-import { updateEmbeddedChatConfig } from '@/app/actions/embedded-chat';
+import { updateEmbeddedChatConfig, getMCPServersForEmbeddedChat } from '@/app/actions/embedded-chat';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -31,6 +33,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { EmbeddedChat } from '@/types/embedded-chat';
 
+interface MCPServer {
+  uuid: string;
+  name: string;
+  type: string;
+  status: string;
+  description?: string | null;
+  profileName: string;
+}
+
 const generalSettingsSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
   welcome_message: z.string().max(1000).optional(),
@@ -40,6 +51,7 @@ const generalSettingsSchema = z.object({
   is_public: z.boolean(),
   is_active: z.boolean(),
   allowed_domains: z.array(z.string()),
+  enabled_mcp_server_uuids: z.array(z.string()),
 });
 
 type GeneralSettingsValues = z.infer<typeof generalSettingsSchema>;
@@ -53,6 +65,8 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
   const { t } = useTranslation();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
+  const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
+  const [loadingServers, setLoadingServers] = useState(false);
 
   const form = useForm<GeneralSettingsValues>({
     resolver: zodResolver(generalSettingsSchema),
@@ -65,8 +79,32 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
       is_public: chat.is_public,
       is_active: chat.is_active,
       allowed_domains: chat.allowed_domains || [],
+      enabled_mcp_server_uuids: chat.enabled_mcp_server_uuids || [],
     },
   });
+
+  // Load MCP servers on mount
+  useEffect(() => {
+    loadMCPServers();
+  }, [chat.project_uuid]);
+
+  const loadMCPServers = async () => {
+    setLoadingServers(true);
+    try {
+      const result = await getMCPServersForEmbeddedChat(chat.project_uuid);
+      if (result.success && result.data) {
+        setMcpServers(result.data as MCPServer[]);
+      }
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: 'Failed to load MCP servers',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingServers(false);
+    }
+  };
 
   const onSubmit = async (values: GeneralSettingsValues) => {
     setIsLoading(true);
@@ -238,6 +276,96 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* MCP Server Selection */}
+            <div className="space-y-4">
+              <div>
+                <Label className="text-base font-semibold">
+                  {t('embeddedChat.general.mcpServers', 'MCP Server Access')}
+                </Label>
+                <FormDescription className="mt-1">
+                  {t('embeddedChat.general.mcpServersDescription', 'Select which MCP servers this chat can access. Leave all unchecked to enable all servers.')}
+                </FormDescription>
+              </div>
+              
+              {loadingServers ? (
+                <div className="text-sm text-muted-foreground">
+                  {t('common.loading')}
+                </div>
+              ) : mcpServers.length === 0 ? (
+                <div className="text-sm text-muted-foreground p-4 border rounded-lg text-center">
+                  <Server className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  {t('embeddedChat.general.noMcpServers', 'No MCP servers available. Add servers to your workspaces first.')}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {/* Group servers by profile/workspace */}
+                  {Object.entries(
+                    mcpServers.reduce((acc, server) => {
+                      if (!acc[server.profileName]) {
+                        acc[server.profileName] = [];
+                      }
+                      acc[server.profileName].push(server);
+                      return acc;
+                    }, {} as Record<string, MCPServer[]>)
+                  ).map(([profileName, servers]) => (
+                    <div key={profileName} className="space-y-2">
+                      <div className="text-sm font-medium text-muted-foreground">
+                        {profileName}
+                      </div>
+                      {servers.map((server) => (
+                        <FormField
+                          key={server.uuid}
+                          control={form.control}
+                          name="enabled_mcp_server_uuids"
+                          render={({ field }) => {
+                            const isEnabled = field.value?.includes(server.uuid) || false;
+                            return (
+                              <FormItem>
+                                <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <Server className="h-4 w-4 text-muted-foreground" />
+                                      <span className="font-medium">{server.name}</span>
+                                      <Badge variant="secondary" className="text-xs">
+                                        {server.type}
+                                      </Badge>
+                                      {server.status === 'ERROR' && (
+                                        <Badge variant="destructive" className="text-xs">
+                                          Error
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {server.description && (
+                                      <p className="text-sm text-muted-foreground mt-1">
+                                        {server.description}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <FormControl>
+                                    <Switch
+                                      checked={isEnabled}
+                                      onCheckedChange={(checked) => {
+                                        const currentValues = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...currentValues, server.uuid]);
+                                        } else {
+                                          field.onChange(currentValues.filter(id => id !== server.uuid));
+                                        }
+                                      }}
+                                    />
+                                  </FormControl>
+                                </div>
+                              </FormItem>
+                            );
+                          }}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="space-y-4">

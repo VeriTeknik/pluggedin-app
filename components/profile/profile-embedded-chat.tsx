@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, X, Maximize2, Minimize2 } from 'lucide-react';
+import { MessageSquare, X, Maximize2, Minimize2, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProfileEmbeddedChatProps {

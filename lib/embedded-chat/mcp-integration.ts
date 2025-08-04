@@ -2,6 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { CallToolResultSchema } from '@modelcontextprotocol/sdk/types.js';
 import { embeddedChatsTable, projectsTable } from '@/db/schema';
+import { z } from 'zod';
 
 interface MCPChatConfig {
   projectUuid: string;
@@ -116,7 +117,7 @@ export async function sendMessageToMCPProxy(
     // First, list available tools to find the best one
     const toolsResult = await client.request(
       { method: 'tools/list', params: {} },
-      { tools: Array }
+      z.object({ tools: z.array(z.any()) })
     );
 
     // Look for a chat or completion tool

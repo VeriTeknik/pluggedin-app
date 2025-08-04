@@ -29,7 +29,9 @@
     "knip:exports": "knip --exports"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.57.0",
     "@auth/drizzle-adapter": "^1.10.0",
+    "@google/generative-ai": "^0.24.1",
     "@h1deya/langchain-mcp-tools": "^0.3.1",
     "@hookform/resolvers": "^5.1.1",
     "@langchain/anthropic": "^0.3.24",
@@ -89,6 +91,7 @@
     "next": "15.3.5",
     "next-auth": "^4.24.11",
     "nodemailer": "^7.0.5",
+    "openai": "^5.11.0",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
     "prism-react-renderer": "^2.4.1",

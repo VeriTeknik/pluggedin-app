@@ -93,7 +93,7 @@ interface LLM {
   generate(
     messages: Array<{ role: string; content: string }>,
     config: any
-  ): Promise<AsyncGenerator<string>>;
+  ): AsyncGenerator<string>;
 }
 
 // OpenAI Implementation

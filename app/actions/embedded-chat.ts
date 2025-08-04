@@ -146,6 +146,52 @@ async function validateEmbeddedChatAccess(chatUuid: string, userId: string) {
 
 // ===== Server Actions =====
 
+export async function getMCPServersForEmbeddedChat(projectUuid: string) {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Validate project access
+    await validateProjectAccess(projectUuid, session.user.id);
+    
+    // Get all profiles in the project
+    const profiles = await db
+      .select()
+      .from(profilesTable)
+      .where(eq(profilesTable.project_uuid, projectUuid));
+    
+    const profileUuids = profiles.map(p => p.uuid);
+    
+    // Get all MCP servers from all profiles
+    const servers = profileUuids.length > 0 
+      ? await db
+          .select({
+            server: mcpServersTable,
+            profile: profilesTable,
+          })
+          .from(mcpServersTable)
+          .innerJoin(profilesTable, eq(mcpServersTable.profile_uuid, profilesTable.uuid))
+          .where(inArray(mcpServersTable.profile_uuid, profileUuids))
+      : [];
+    
+    return { 
+      success: true, 
+      data: servers.map(s => ({
+        ...s.server,
+        profileName: s.profile.name,
+      }))
+    };
+  } catch (error) {
+    console.error('Error getting MCP servers:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to get MCP servers' 
+    };
+  }
+}
+
 export async function createEmbeddedChat(data: z.infer<typeof CreateEmbeddedChatSchema>) {
   try {
     const session = await getAuthSession();
@@ -828,6 +874,52 @@ export async function revokeEmbeddedChatApiKey(chatUuid: string) {
       error: error instanceof Error ? error.message : 'Failed to revoke API key' 
     };
   }
+}
+
+// ===== Provider Validation =====
+
+export async function validateModelProvider(provider: string) {
+  const envKeys: Record<string, string> = {
+    'openai': 'OPENAI_API_KEY',
+    'anthropic': 'ANTHROPIC_API_KEY',
+    'google': 'GOOGLE_API_KEY',
+    'xai': 'XAI_API_KEY',
+  };
+  
+  const envKey = envKeys[provider];
+  if (!envKey) {
+    return { success: false, error: 'Invalid provider' };
+  }
+  
+  const hasKey = !!process.env[envKey];
+  return { 
+    success: true, 
+    data: { 
+      provider,
+      configured: hasKey,
+      message: hasKey 
+        ? `${provider} is configured` 
+        : `${provider} API key is not configured. Please set ${envKey} environment variable.`
+    }
+  };
+}
+
+export async function getConfiguredProviders() {
+  const providers = ['openai', 'anthropic', 'google', 'xai'];
+  const results = await Promise.all(
+    providers.map(async (provider) => {
+      const result = await validateModelProvider(provider);
+      return {
+        provider,
+        configured: result.data?.configured || false,
+      };
+    })
+  );
+  
+  return { 
+    success: true, 
+    data: results.filter(r => r.configured).map(r => r.provider)
+  };
 }
 
 // Toggle embedded chat enabled status
