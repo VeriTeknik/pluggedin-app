@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { embeddedChatsTable, projectsTable, chatMessagesTable, chatConversationsTable, chatPersonasTable } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { nanoid } from 'nanoid';
+import { randomUUID } from 'crypto';
 import { ChatEngine } from '@/lib/chat-engine';
 import { sendMessageToMCPProxy } from '@/lib/embedded-chat/mcp-integration';
 import { generateSimpleAIResponse } from '@/lib/embedded-chat/simple-ai-integration';
@@ -45,12 +46,12 @@ export async function POST(req: NextRequest) {
     let activeConversationId = conversationId;
     
     if (!activeConversationId) {
-      // Create new conversation
-      const newConversationId = nanoid();
+      // Create new conversation with proper UUID
+      const newConversationId = randomUUID();
       await db.insert(chatConversationsTable).values({
         uuid: newConversationId,
         embedded_chat_uuid: chatUuid,
-        visitor_id: nanoid(), // Could be tied to a session/cookie
+        visitor_id: nanoid(), // visitor_id can be a regular string
         started_at: new Date(),
         metadata: {},
       });

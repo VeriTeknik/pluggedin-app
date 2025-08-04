@@ -107,6 +107,12 @@ export const users = pgTable('users', {
   is_public: boolean('is_public').default(false).notNull(),
   language: languageEnum('language').default('en'),
   avatar_url: text('avatar_url'),
+  // Additional profile fields
+  website: varchar('website', { length: 255 }),
+  location: varchar('location', { length: 255 }),
+  company: varchar('company', { length: 255 }),
+  twitter_handle: varchar('twitter_handle', { length: 100 }),
+  github_handle: varchar('github_handle', { length: 100 }),
 },
 (table) => ({
   usersUsernameIdx: index('users_username_idx').on(table.username),
@@ -1195,6 +1201,7 @@ export const embeddedChatsTable = pgTable(
       .references(() => projectsTable.uuid, { onDelete: 'cascade' })
       .unique(),
     name: varchar('name', { length: 255 }).notNull().default('AI Assistant'),
+    slug: varchar('slug', { length: 100 }), // URL-friendly slug for /to/username/slug
     
     // MCP servers selection
     enabled_mcp_server_uuids: text('enabled_mcp_server_uuids').array().default(sql`'{}'::text[]`),

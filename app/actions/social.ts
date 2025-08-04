@@ -172,6 +172,11 @@ export async function updateUserSocial(
     is_public?: boolean;
     avatar_url?: string;
     language?: string; // Added language
+    website?: string;
+    location?: string;
+    company?: string;
+    twitter_handle?: string;
+    github_handle?: string;
   }
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {

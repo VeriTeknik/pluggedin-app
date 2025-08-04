@@ -2,6 +2,7 @@ export interface EmbeddedChat {
   uuid: string;
   project_uuid: string;
   name: string;
+  slug?: string | null;
   enabled_mcp_server_uuids: string[];
   enable_rag: boolean;
   allowed_domains: string[];

@@ -44,6 +44,11 @@ interface MCPServer {
 
 const generalSettingsSchema = z.object({
   name: z.string().min(1, 'Name is required').max(255),
+  slug: z.string()
+    .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens')
+    .min(3, 'Slug must be at least 3 characters')
+    .max(50, 'Slug must be at most 50 characters')
+    .optional(),
   welcome_message: z.string().max(1000).optional(),
   custom_instructions: z.string().max(2000).optional(),
   suggested_questions: z.array(z.string().max(200)).max(5),
@@ -72,6 +77,7 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
     resolver: zodResolver(generalSettingsSchema),
     defaultValues: {
       name: chat.name,
+      slug: chat.slug || undefined,
       welcome_message: chat.welcome_message || undefined,
       custom_instructions: chat.custom_instructions || undefined,
       suggested_questions: chat.suggested_questions || [],
@@ -159,6 +165,31 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
                   </FormControl>
                   <FormDescription>
                     {t('embeddedChat.general.nameDescription', 'The name displayed in the chat widget')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('embeddedChat.general.slug', 'URL Slug')}</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="my-assistant" 
+                      onChange={(e) => {
+                        // Convert to lowercase and replace spaces with hyphens
+                        const value = e.target.value.toLowerCase().replace(/\s+/g, '-');
+                        field.onChange(value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t('embeddedChat.general.slugDescription', 'Short URL for accessing this chat (e.g., /to/username/my-assistant)')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
