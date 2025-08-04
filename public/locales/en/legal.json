@@ -14,6 +14,227 @@
           "disclaimer": "If you do not agree with the terms of this privacy policy, please do not access the service.",
           "note": "IMPORTANT NOTE: Plugged.in is currently in Release Candidate status. This privacy policy may be updated as the service matures and additional features are implemented.",
           "thirdParty": "We have no control over and assume no responsibility for the content, privacy policies or practices of any third-party sites or services."
+        },
+        "sections": {
+          "introduction": {
+            "title": "1. Introduction",
+            "content": "This Privacy Policy applies to Plugged.in, the AI crossroads platform operated by VeriTeknik B.V. This policy describes how we collect, use, disclose, and safeguard your personal data in accordance with the General Data Protection Regulation (GDPR) and other applicable data protection laws."
+          },
+          "controller": {
+            "title": "2. Data Controller",
+            "intro": "The data controller responsible for your personal data is:",
+            "company": "Company:",
+            "companyName": "VeriTeknik B.V.",
+            "address": "Address:",
+            "addressDetails": "Prinses Margrietplantsoen 33, 2595 AM Den Haag, Netherlands",
+            "email": "Email:",
+            "emailAddress": "privacy@plugged.in"
+          },
+          "dataCollection": {
+            "title": "3. Data We Collect",
+            "intro": "We collect the following categories of personal data:",
+            "account": {
+              "title": "Account Information",
+              "email": "Email address",
+              "name": "Name (optional)",
+              "username": "Username",
+              "bio": "Bio/description (optional)",
+              "avatar": "Avatar image (optional)",
+              "language": "Language preference"
+            },
+            "auth": {
+              "title": "Authentication Data",
+              "oauth": "OAuth tokens and refresh tokens",
+              "providers": "Third-party account identifiers (GitHub, Google, Twitter)"
+            },
+            "usage": {
+              "title": "Usage Data",
+              "projects": "Projects and profiles you create",
+              "servers": "MCP servers and configurations (encrypted - see Security section)",
+              "social": "Social interactions (followers, shared content)",
+              "documents": "Documents uploaded to the library",
+              "logs": "Activity logs and audit trails"
+            },
+            "technical": {
+              "title": "Technical Data",
+              "analytics": "Analytics data (if Google Analytics is enabled)",
+              "cookies": "Session cookies for authentication",
+              "localStorage": "Local storage for preferences (theme, language, font)"
+            }
+          },
+          "legalBasis": {
+            "title": "4. Legal Basis for Processing",
+            "intro": "We process your personal data based on the following legal grounds:",
+            "contract": {
+              "title": "Performance of Contract:",
+              "desc": "To provide you with our services and fulfill our contractual obligations"
+            },
+            "legitimate": {
+              "title": "Legitimate Interests:",
+              "desc": "For security, fraud prevention, and service improvement"
+            },
+            "consent": {
+              "title": "Consent:",
+              "desc": "For marketing communications and analytics (where applicable)"
+            },
+            "legal": {
+              "title": "Legal Obligations:",
+              "desc": "To comply with applicable laws and regulations"
+            }
+          },
+          "dataUse": {
+            "title": "5. How We Use Your Data",
+            "intro": "We use your personal data for the following purposes:",
+            "service": "To provide and maintain our service",
+            "communication": "To communicate with you about your account and service updates",
+            "security": "To ensure the security and integrity of our platform",
+            "improvement": "To improve and develop new features",
+            "legal": "To comply with legal obligations"
+          },
+          "rights": {
+            "title": "6. Your Rights",
+            "intro": "Under the GDPR, you have the following rights:",
+            "access": {
+              "title": "Right to Access:",
+              "desc": "You have the right to request copies of your personal data"
+            },
+            "rectification": {
+              "title": "Right to Rectification:",
+              "desc": "You have the right to request correction of inaccurate personal data"
+            },
+            "erasure": {
+              "title": "Right to Erasure:",
+              "desc": "You have the right to request deletion of your personal data"
+            },
+            "portability": {
+              "title": "Right to Data Portability:",
+              "desc": "You have the right to request transfer of your data to another service"
+            },
+            "object": {
+              "title": "Right to Object:",
+              "desc": "You have the right to object to processing of your personal data"
+            },
+            "restriction": {
+              "title": "Right to Restriction:",
+              "desc": "You have the right to request restriction of processing"
+            },
+            "withdraw": {
+              "title": "Right to Withdraw Consent:",
+              "desc": "Where processing is based on consent, you can withdraw it at any time"
+            },
+            "complaint": {
+              "title": "Right to Complaint:",
+              "desc": "You have the right to lodge a complaint with the Dutch Data Protection Authority (Autoriteit Persoonsgegevens)"
+            },
+            "exercise": "To exercise any of these rights, please contact us at privacy@plugged.in"
+          },
+          "sharing": {
+            "title": "7. Data Sharing",
+            "intro": "We may share your data with:",
+            "providers": {
+              "title": "Service Providers:",
+              "desc": "Third-party services that help us operate our platform (hosting, email)"
+            },
+            "legal": {
+              "title": "Legal Requirements:",
+              "desc": "When required by law or to protect our rights"
+            },
+            "consent": {
+              "title": "With Your Consent:",
+              "desc": "When you explicitly agree to share your data"
+            }
+          },
+          "thirdParty": {
+            "title": "8. Third-Party Services",
+            "intro": "We use the following third-party services:",
+            "auth": {
+              "title": "Authentication Providers:",
+              "desc": "GitHub, Google, Twitter for OAuth authentication"
+            },
+            "analytics": {
+              "title": "Analytics:",
+              "desc": "Google Analytics (optional, only when enabled)"
+            },
+            "email": {
+              "title": "Email Services:",
+              "desc": "For sending notification emails (when configured)"
+            }
+          },
+          "retention": {
+            "title": "9. Data Retention",
+            "intro": "We retain your data as follows:",
+            "account": {
+              "title": "Account Data:",
+              "desc": "Retained as long as your account is active"
+            },
+            "logs": {
+              "title": "Activity Logs:",
+              "desc": "Retained according to configured retention policies"
+            },
+            "deleted": {
+              "title": "Deleted Accounts:",
+              "desc": "Personal data is anonymized or deleted within 30 days of account deletion"
+            }
+          },
+          "international": {
+            "title": "10. International Data Transfers",
+            "content": "Your data may be transferred to and processed in countries outside the European Economic Area (EEA). When we transfer data outside the EEA, we ensure appropriate safeguards are in place, such as Standard Contractual Clauses or adequacy decisions."
+          },
+          "security": {
+            "title": "11. Security Measures",
+            "intro": "We implement appropriate technical and organizational measures to protect your data, including:",
+            "encryption": "Encryption of passwords and sensitive data",
+            "access": "Access controls and authentication",
+            "monitoring": "Security monitoring and intrusion detection",
+            "validation": "Input validation and sanitization",
+            "mcpEncryption": {
+              "title": "MCP Server Configuration Encryption:",
+              "desc": "All MCP server configurations, including commands, arguments, environment variables, and URLs, are encrypted using AES-256-GCM encryption with profile-specific keys. This means:",
+              "items": [
+                "Your MCP server configurations are encrypted in our database and cannot be accessed by us, even if we wanted to",
+                "Each profile has its own unique encryption key derived from your profile UUID",
+                "Only you can decrypt and access your MCP server configurations",
+                "Even our database administrators cannot view your MCP server sensitive data"
+              ]
+            }
+          },
+          "cookies": {
+            "title": "12. Cookies and Similar Technologies",
+            "intro": "We use the following types of cookies:",
+            "essential": {
+              "title": "Essential Cookies:",
+              "desc": "Required for authentication and core functionality"
+            },
+            "analytics": {
+              "title": "Analytics Cookies:",
+              "desc": "Google Analytics cookies (only when you consent)"
+            },
+            "localStorage": "We also use browser local storage to save your preferences (theme, language, font settings)."
+          },
+          "children": {
+            "title": "13. Children's Privacy",
+            "content": "Our service is not intended for users under the age of 16. We do not knowingly collect personal data from children under 16. If you become aware that a child has provided us with personal data, please contact us."
+          },
+          "changes": {
+            "title": "14. Changes to This Policy",
+            "content": "We may update this Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the \"Last Updated\" date. We will notify registered users via email for material changes."
+          },
+          "contact": {
+            "title": "15. Contact Us",
+            "intro": "If you have questions about this Privacy Policy or want to exercise your rights, contact us at:",
+            "email": {
+              "title": "Email:",
+              "address": "privacy@plugged.in"
+            },
+            "form": {
+              "title": "Contact Form:",
+              "link": "Legal Contact Page"
+            },
+            "dpa": {
+              "title": "Dutch DPA:",
+              "desc": "You can also contact the Autoriteit Persoonsgegevens at autoriteitpersoonsgegevens.nl"
+            }
+          }
         }
       },
       "terms": {

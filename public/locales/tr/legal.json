@@ -14,6 +14,227 @@
           "disclaimer": "Bu gizlilik politikasının şartlarını kabul etmiyorsanız, lütfen hizmete erişmeyin.",
           "note": "ÖNEMLİ NOT: Plugged.in şu anda Yayın Adayı durumundadır. Bu gizlilik politikası, hizmet olgunlaştıkça ve ek özellikler uygulandıkça güncellenebilir.",
           "thirdParty": "Üçüncü taraf sitelerinin veya hizmetlerinin içeriği, gizlilik politikaları veya uygulamaları üzerinde hiçbir kontrolümüz yoktur ve sorumluluk kabul etmeyiz."
+        },
+        "sections": {
+          "introduction": {
+            "title": "1. Giriş",
+            "content": "Bu Gizlilik Politikası, VeriTeknik B.V. tarafından işletilen yapay zeka kavşak platformu Plugged.in için geçerlidir. Bu politika, kişisel verilerinizi Genel Veri Koruma Yönetmeliği (GDPR) ve diğer uygulanabilir veri koruma yasalarına uygun olarak nasıl topladığımızı, kullandığımızı, açıkladığımızı ve koruduğumuzu açıklar."
+          },
+          "controller": {
+            "title": "2. Veri Sorumlusu",
+            "intro": "Kişisel verilerinizden sorumlu veri sorumlusu:",
+            "company": "Şirket:",
+            "companyName": "VeriTeknik B.V.",
+            "address": "Adres:",
+            "addressDetails": "Prinses Margrietplantsoen 33, 2595 AM Den Haag, Hollanda",
+            "email": "E-posta:",
+            "emailAddress": "privacy@plugged.in"
+          },
+          "dataCollection": {
+            "title": "3. Topladığımız Veriler",
+            "intro": "Aşağıdaki kişisel veri kategorilerini topluyoruz:",
+            "account": {
+              "title": "Hesap Bilgileri",
+              "email": "E-posta adresi",
+              "name": "Ad (isteğe bağlı)",
+              "username": "Kullanıcı adı",
+              "bio": "Biyografi/açıklama (isteğe bağlı)",
+              "avatar": "Profil resmi (isteğe bağlı)",
+              "language": "Dil tercihi"
+            },
+            "auth": {
+              "title": "Kimlik Doğrulama Verileri",
+              "oauth": "OAuth belirteçleri ve yenileme belirteçleri",
+              "providers": "Üçüncü taraf hesap tanımlayıcıları (GitHub, Google, Twitter)"
+            },
+            "usage": {
+              "title": "Kullanım Verileri",
+              "projects": "Oluşturduğunuz projeler ve profiller",
+              "servers": "MCP sunucuları ve yapılandırmaları (şifrelenmiş - Güvenlik bölümüne bakın)",
+              "social": "Sosyal etkileşimler (takipçiler, paylaşılan içerik)",
+              "documents": "Kütüphaneye yüklenen belgeler",
+              "logs": "Etkinlik günlükleri ve denetim izleri"
+            },
+            "technical": {
+              "title": "Teknik Veriler",
+              "analytics": "Analiz verileri (Google Analytics etkinse)",
+              "cookies": "Kimlik doğrulama için oturum çerezleri",
+              "localStorage": "Tercihler için yerel depolama (tema, dil, yazı tipi)"
+            }
+          },
+          "legalBasis": {
+            "title": "4. İşlemenin Hukuki Dayanakları",
+            "intro": "Kişisel verilerinizi aşağıdaki hukuki dayanaklara göre işliyoruz:",
+            "contract": {
+              "title": "Sözleşmenin İfası:",
+              "desc": "Size hizmetlerimizi sunmak ve sözleşmeden doğan yükümlülüklerimizi yerine getirmek için"
+            },
+            "legitimate": {
+              "title": "Meşru Menfaatler:",
+              "desc": "Güvenlik, dolandırıcılık önleme ve hizmet iyileştirme için"
+            },
+            "consent": {
+              "title": "Rıza:",
+              "desc": "Pazarlama iletişimleri ve analizler için (uygulanabilir olduğunda)"
+            },
+            "legal": {
+              "title": "Yasal Yükümlülükler:",
+              "desc": "Geçerli yasa ve düzenlemelere uymak için"
+            }
+          },
+          "dataUse": {
+            "title": "5. Verilerinizi Nasıl Kullanıyoruz",
+            "intro": "Kişisel verilerinizi aşağıdaki amaçlar için kullanıyoruz:",
+            "service": "Hizmetimizi sağlamak ve sürdürmek için",
+            "communication": "Hesabınız ve hizmet güncellemeleri hakkında sizinle iletişim kurmak için",
+            "security": "Platformumuzun güvenliğini ve bütünlüğünü sağlamak için",
+            "improvement": "Yeni özellikleri geliştirmek ve iyileştirmek için",
+            "legal": "Yasal yükümlülüklere uymak için"
+          },
+          "rights": {
+            "title": "6. Haklarınız",
+            "intro": "GDPR kapsamında aşağıdaki haklara sahipsiniz:",
+            "access": {
+              "title": "Erişim Hakkı:",
+              "desc": "Kişisel verilerinizin kopyalarını talep etme hakkına sahipsiniz"
+            },
+            "rectification": {
+              "title": "Düzeltme Hakkı:",
+              "desc": "Yanlış kişisel verilerin düzeltilmesini talep etme hakkına sahipsiniz"
+            },
+            "erasure": {
+              "title": "Silme Hakkı:",
+              "desc": "Kişisel verilerinizin silinmesini talep etme hakkına sahipsiniz"
+            },
+            "portability": {
+              "title": "Veri Taşınabilirliği Hakkı:",
+              "desc": "Verilerinizin başka bir hizmete aktarılmasını talep etme hakkına sahipsiniz"
+            },
+            "object": {
+              "title": "İtiraz Hakkı:",
+              "desc": "Kişisel verilerinizin işlenmesine itiraz etme hakkına sahipsiniz"
+            },
+            "restriction": {
+              "title": "Kısıtlama Hakkı:",
+              "desc": "İşlemenin kısıtlanmasını talep etme hakkına sahipsiniz"
+            },
+            "withdraw": {
+              "title": "Rızayı Geri Çekme Hakkı:",
+              "desc": "İşleme rızaya dayalı olduğunda, rızanızı istediğiniz zaman geri çekebilirsiniz"
+            },
+            "complaint": {
+              "title": "Şikayet Hakkı:",
+              "desc": "Hollanda Veri Koruma Kurumu'na (Autoriteit Persoonsgegevens) şikayette bulunma hakkına sahipsiniz"
+            },
+            "exercise": "Bu haklardan herhangi birini kullanmak için lütfen privacy@plugged.in adresinden bizimle iletişime geçin"
+          },
+          "sharing": {
+            "title": "7. Veri Paylaşımı",
+            "intro": "Verilerinizi şu taraflarla paylaşabiliriz:",
+            "providers": {
+              "title": "Hizmet Sağlayıcılar:",
+              "desc": "Platformumuzu işletmemize yardımcı olan üçüncü taraf hizmetler (barındırma, e-posta)"
+            },
+            "legal": {
+              "title": "Yasal Gereklilikler:",
+              "desc": "Yasaların gerektirdiği veya haklarımızı korumak için gerekli olduğunda"
+            },
+            "consent": {
+              "title": "Rızanızla:",
+              "desc": "Verilerinizi paylaşmayı açıkça kabul ettiğinizde"
+            }
+          },
+          "thirdParty": {
+            "title": "8. Üçüncü Taraf Hizmetleri",
+            "intro": "Aşağıdaki üçüncü taraf hizmetlerini kullanıyoruz:",
+            "auth": {
+              "title": "Kimlik Doğrulama Sağlayıcıları:",
+              "desc": "OAuth kimlik doğrulaması için GitHub, Google, Twitter"
+            },
+            "analytics": {
+              "title": "Analizler:",
+              "desc": "Google Analytics (isteğe bağlı, yalnızca etkinleştirildiğinde)"
+            },
+            "email": {
+              "title": "E-posta Hizmetleri:",
+              "desc": "Bildirim e-postaları göndermek için (yapılandırıldığında)"
+            }
+          },
+          "retention": {
+            "title": "9. Veri Saklama",
+            "intro": "Verilerinizi aşağıdaki şekilde saklıyoruz:",
+            "account": {
+              "title": "Hesap Verileri:",
+              "desc": "Hesabınız aktif olduğu sürece saklanır"
+            },
+            "logs": {
+              "title": "Etkinlik Günlükleri:",
+              "desc": "Yapılandırılmış saklama politikalarına göre saklanır"
+            },
+            "deleted": {
+              "title": "Silinen Hesaplar:",
+              "desc": "Kişisel veriler hesap silinmesinden sonra 30 gün içinde anonimleştirilir veya silinir"
+            }
+          },
+          "international": {
+            "title": "10. Uluslararası Veri Aktarımları",
+            "content": "Verileriniz Avrupa Ekonomik Alanı (AEA) dışındaki ülkelere aktarılabilir ve buralarda işlenebilir. Verileri AEA dışına aktardığımızda, Standart Sözleşme Maddeleri veya yeterlilik kararları gibi uygun koruma önlemlerinin alındığından emin oluruz."
+          },
+          "security": {
+            "title": "11. Güvenlik Önlemleri",
+            "intro": "Verilerinizi korumak için aşağıdakiler dahil uygun teknik ve organizasyonel önlemleri uyguluyoruz:",
+            "encryption": "Şifrelerin ve hassas verilerin şifrelenmesi",
+            "access": "Erişim kontrolleri ve kimlik doğrulama",
+            "monitoring": "Güvenlik izleme ve saldırı tespiti",
+            "validation": "Girdi doğrulama ve temizleme",
+            "mcpEncryption": {
+              "title": "MCP Sunucu Yapılandırma Şifrelemesi:",
+              "desc": "Komutlar, argümanlar, ortam değişkenleri ve URL'ler dahil tüm MCP sunucu yapılandırmaları, profile özgü anahtarlarla AES-256-GCM şifreleme kullanılarak şifrelenir. Bu şu anlama gelir:",
+              "items": [
+                "MCP sunucu yapılandırmalarınız veritabanımızda şifrelenir ve istesek bile tarafımızdan erişilemez",
+                "Her profilin, profil UUID'nizden türetilen kendine özgü bir şifreleme anahtarı vardır",
+                "MCP sunucu yapılandırmalarınızın şifresini yalnızca siz çözebilir ve erişebilirsiniz",
+                "Veritabanı yöneticilerimiz bile hassas MCP sunucu verilerinizi görüntüleyemez"
+              ]
+            }
+          },
+          "cookies": {
+            "title": "12. Çerezler ve Benzer Teknolojiler",
+            "intro": "Aşağıdaki çerez türlerini kullanıyoruz:",
+            "essential": {
+              "title": "Zorunlu Çerezler:",
+              "desc": "Kimlik doğrulama ve temel işlevsellik için gereklidir"
+            },
+            "analytics": {
+              "title": "Analiz Çerezleri:",
+              "desc": "Google Analytics çerezleri (yalnızca izin verdiğinizde)"
+            },
+            "localStorage": "Ayrıca tercihlerinizi kaydetmek için tarayıcı yerel depolamasını kullanıyoruz (tema, dil, yazı tipi ayarları)."
+          },
+          "children": {
+            "title": "13. Çocukların Gizliliği",
+            "content": "Hizmetimiz 16 yaşın altındaki kullanıcılar için tasarlanmamıştır. 16 yaşın altındaki çocuklardan bilerek kişisel veri toplamıyoruz. Bir çocuğun bize kişisel veri sağladığının farkına varırsanız, lütfen bizimle iletişime geçin."
+          },
+          "changes": {
+            "title": "14. Bu Politikadaki Değişiklikler",
+            "content": "Bu Gizlilik Politikasını zaman zaman güncelleyebiliriz. Yeni Gizlilik Politikasını bu sayfada yayınlayarak ve \"Son Güncelleme\" tarihini güncelleyerek herhangi bir değişiklik hakkında sizi bilgilendireceğiz. Önemli değişiklikler için kayıtlı kullanıcıları e-posta yoluyla bilgilendireceğiz."
+          },
+          "contact": {
+            "title": "15. Bize Ulaşın",
+            "intro": "Bu Gizlilik Politikası hakkında sorularınız varsa veya haklarınızı kullanmak istiyorsanız, bizimle iletişime geçin:",
+            "email": {
+              "title": "E-posta:",
+              "address": "privacy@plugged.in"
+            },
+            "form": {
+              "title": "İletişim Formu:",
+              "link": "Yasal İletişim Sayfası"
+            },
+            "dpa": {
+              "title": "Hollanda DPA:",
+              "desc": "Ayrıca autoriteitpersoonsgegevens.nl adresinden Autoriteit Persoonsgegevens ile iletişime geçebilirsiniz"
+            }
+          }
         }
       },
       "terms": {

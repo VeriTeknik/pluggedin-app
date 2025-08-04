@@ -90,8 +90,8 @@ function extractCommand(pkg?: RegistryPackage): string {
   
   switch (pkg.registry_name) {
     case 'npm':
-      // Use pnpm dlx for better performance and to avoid npm warnings
-      return pkg.runtime_hint || 'pnpm';
+      // Use npx as the default for npm packages to maintain compatibility
+      return pkg.runtime_hint || 'npx';
     case 'docker':
       return 'docker';
     case 'pypi':
@@ -177,9 +177,6 @@ function extractArgs(pkg?: RegistryPackage): string[] {
       break;
       
     case 'npm':
-      // For pnpm, we need to add 'dlx' subcommand
-      args.push('dlx');
-      
       // First add runtime arguments (e.g., --yes for npx)
       if (pkg.runtime_arguments) {
         const runtimeArgs = extractArgumentsFromSchema(pkg.runtime_arguments);
