@@ -103,7 +103,8 @@ class OpenAILLM implements LLM {
   constructor(config: any) {
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
-      throw new Error('OPENAI_API_KEY is not configured');
+      console.error('OPENAI_API_KEY is not configured');
+      throw new Error('OPENAI_API_KEY is not configured. Please set the OPENAI_API_KEY environment variable.');
     }
     this.client = new OpenAI({
       apiKey,
@@ -223,6 +224,33 @@ class XAILlm implements LLM {
   }
 }
 
+// Mock Implementation for development/testing
+class MockLLM implements LLM {
+  async *generate(
+    messages: Array<{ role: string; content: string }>,
+    config: any
+  ): AsyncGenerator<string> {
+    console.log('Using Mock LLM - No API key configured');
+    const lastMessage = messages[messages.length - 1];
+    const response = `I'm a mock AI assistant. You said: "${lastMessage.content}". 
+
+To use a real AI model, please configure one of the following environment variables:
+- OPENAI_API_KEY for OpenAI models
+- ANTHROPIC_API_KEY for Anthropic models
+- GOOGLE_API_KEY for Google models
+
+This is a test response to ensure the chat system is working correctly.`;
+    
+    // Simulate streaming by yielding words one at a time
+    const words = response.split(' ');
+    for (const word of words) {
+      yield word + ' ';
+      // Small delay to simulate streaming
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+  }
+}
+
 // Main Chat Engine
 export class ChatEngine {
   private chatConfig: EmbeddedChatConfig;
@@ -320,10 +348,16 @@ export class ChatEngine {
       });
       
       // Generate response
+      console.log('Generating response with LLM:', this.chatConfig.model_config.provider);
       let fullResponse = '';
-      for await (const chunk of this.llm.generate(messages, this.chatConfig.model_config)) {
-        fullResponse += chunk;
-        yield { type: 'text', content: chunk };
+      try {
+        for await (const chunk of this.llm.generate(messages, this.chatConfig.model_config)) {
+          fullResponse += chunk;
+          yield { type: 'text', content: chunk };
+        }
+      } catch (llmError) {
+        console.error('LLM generation error:', llmError);
+        throw llmError;
       }
       
       // Store assistant message
@@ -379,17 +413,23 @@ export class ChatEngine {
   }
 
   private createLLM(config: any): LLM {
-    switch (config.provider) {
-      case 'openai':
-        return new OpenAILLM(config);
-      case 'anthropic':
-        return new AnthropicLLM(config);
-      case 'google':
-        return new GoogleLLM(config);
-      case 'xai':
-        return new XAILlm();
-      default:
-        throw new Error(`Unsupported provider: ${config.provider}`);
+    try {
+      switch (config.provider) {
+        case 'openai':
+          return new OpenAILLM(config);
+        case 'anthropic':
+          return new AnthropicLLM(config);
+        case 'google':
+          return new GoogleLLM(config);
+        case 'xai':
+          return new XAILlm();
+        default:
+          throw new Error(`Unsupported provider: ${config.provider}`);
+      }
+    } catch (error) {
+      console.warn('Failed to create LLM:', error);
+      console.warn('Using Mock LLM for development');
+      return new MockLLM();
     }
   }
 

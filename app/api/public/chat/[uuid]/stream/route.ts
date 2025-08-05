@@ -53,6 +53,11 @@ const ChatRequestSchema = z.object({
     name: z.string().optional(),
     email: z.string().email().optional(),
   }),
+  authenticated_user: z.object({
+    id: z.string(),
+    name: z.string(),
+    avatar: z.string().optional(),
+  }).optional(),
   persona_id: z.number().optional(),
 });
 
@@ -63,19 +68,32 @@ export async function POST(
   try {
     const { uuid } = await params;
     
-    // Extract API key from request
-    const apiKey = extractApiKey(req);
-    
-    // Validate API key access first
-    const hasApiKeyAccess = await validateApiKeyAccess(uuid, apiKey);
-    if (!hasApiKeyAccess) {
-      return NextResponse.json(
-        { error: 'Invalid or missing API key' }, 
-        { status: 401 }
-      );
-    }
+    console.log('Chat stream request for UUID:', uuid);
     
     const origin = req.headers.get('origin') || req.headers.get('referer');
+    
+    // Check if this is an internal request (same origin)
+    const host = req.headers.get('host');
+    const isInternalRequest = !origin || (origin && new URL(origin).hostname === host?.split(':')[0]);
+    console.log('Is internal request:', isInternalRequest, 'Origin:', origin, 'Host:', host);
+    
+    // Extract API key from request
+    const apiKey = extractApiKey(req);
+    console.log('API key provided:', !!apiKey);
+    
+    // Skip API key validation for internal requests
+    if (!isInternalRequest) {
+      // Validate API key access for external requests
+      const hasApiKeyAccess = await validateApiKeyAccess(uuid, apiKey);
+      console.log('API key access granted:', hasApiKeyAccess);
+      
+      if (!hasApiKeyAccess) {
+        return NextResponse.json(
+          { error: 'Invalid or missing API key' }, 
+          { status: 401 }
+        );
+      }
+    }
     
     // Get embedded chat config
     const [chat] = await db
@@ -92,8 +110,8 @@ export async function POST(
       return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
     }
 
-    // Validate domain
-    if (chat.allowed_domains && chat.allowed_domains.length > 0 && origin) {
+    // Validate domain (skip for internal requests)
+    if (!isInternalRequest && chat.allowed_domains && chat.allowed_domains.length > 0 && origin) {
       const originUrl = new URL(origin);
       const isAllowed = chat.allowed_domains.some(domain => {
         const regex = new RegExp(
@@ -127,6 +145,10 @@ export async function POST(
           visitor_user_agent: req.headers.get('user-agent'),
           referrer_url: origin,
           page_url: req.headers.get('referer'),
+          // Add authenticated user info if provided
+          authenticated_user_id: validatedData.authenticated_user?.id,
+          authenticated_user_name: validatedData.authenticated_user?.name,
+          authenticated_user_avatar: validatedData.authenticated_user?.avatar,
         })
         .returning();
       
@@ -163,6 +185,7 @@ export async function POST(
     }
 
     // Initialize chat engine
+    console.log('Chat model config:', chat.model_config);
     const chatEngine = new ChatEngine(chat as any, chat.project_uuid);
     await chatEngine.initialize();
 
@@ -180,10 +203,12 @@ export async function POST(
           );
 
           // Process message
+          console.log('Processing message:', validatedData.message);
           for await (const chunk of chatEngine.processMessage(
             validatedData.message,
             conversationId
           )) {
+            console.log('Chat chunk:', chunk);
             controller.enqueue(
               encoder.encode(`data: ${JSON.stringify(chunk)}\n\n`)
             );
@@ -196,11 +221,12 @@ export async function POST(
           
           controller.close();
         } catch (error) {
-          console.error('Stream error:', error);
+          console.error('Stream error details:', error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ 
               type: 'error', 
-              content: 'An error occurred' 
+              content: `An error occurred: ${errorMessage}` 
             })}\n\n`)
           );
           controller.close();

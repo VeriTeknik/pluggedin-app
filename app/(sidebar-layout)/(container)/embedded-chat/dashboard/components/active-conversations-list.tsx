@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { 
   MessageSquare, 
   User, 
@@ -22,6 +22,9 @@ interface Conversation {
   visitor_id: string;
   visitor_name?: string;
   visitor_email?: string;
+  authenticated_user_id?: string;
+  authenticated_user_name?: string;
+  authenticated_user_avatar?: string;
   started_at: Date;
   status: 'active' | 'waiting' | 'human_controlled' | 'ended';
   message_count: number;
@@ -58,12 +61,20 @@ export function ActiveConversationsList({
   };
 
   const getVisitorDisplay = (conv: Conversation) => {
+    // If we have authenticated user info, use that
+    if (conv.authenticated_user_id && conv.authenticated_user_name) {
+      return conv.authenticated_user_name;
+    }
     return formatVisitorName(conv.visitor_id, conv.visitor_name, conv.visitor_email);
   };
 
   const getVisitorIcon = (conv: Conversation) => {
-    const isAuth = isAuthenticatedVisitor(conv.visitor_id, conv.metadata);
+    const isAuth = conv.authenticated_user_id || isAuthenticatedVisitor(conv.visitor_id, conv.metadata);
     return isAuth ? Shield : User;
+  };
+
+  const isAuthenticated = (conv: Conversation) => {
+    return !!conv.authenticated_user_id;
   };
 
   if (conversations.length === 0) {
@@ -90,8 +101,14 @@ export function ActiveConversationsList({
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarFallback className={isAuthenticatedVisitor(conv.visitor_id, conv.metadata) ? 'bg-primary/10' : ''}>
-                  {isAuthenticatedVisitor(conv.visitor_id, conv.metadata) ? (
+                {conv.authenticated_user_avatar && (
+                  <AvatarImage 
+                    src={conv.authenticated_user_avatar} 
+                    alt={conv.authenticated_user_name || 'User'} 
+                  />
+                )}
+                <AvatarFallback className={isAuthenticated(conv) ? 'bg-primary/10' : ''}>
+                  {isAuthenticated(conv) ? (
                     <Shield className="h-4 w-4 text-primary" />
                   ) : (
                     getVisitorInitials(conv.visitor_id, conv.visitor_name, conv.visitor_email)
@@ -101,7 +118,7 @@ export function ActiveConversationsList({
               <div>
                 <p className="font-medium text-sm flex items-center gap-2">
                   {getVisitorDisplay(conv)}
-                  {isAuthenticatedVisitor(conv.visitor_id, conv.metadata) && (
+                  {isAuthenticated(conv) && (
                     <Badge variant="outline" className="text-xs px-1 py-0">
                       Authenticated
                     </Badge>

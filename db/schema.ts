@@ -1532,6 +1532,11 @@ export const chatConversationsTable = pgTable(
     recovery_token: varchar('recovery_token', { length: 64 }).default(sql`md5(random()::text || clock_timestamp()::text)`),
     last_heartbeat: timestamp('last_heartbeat', { withTimezone: true }).defaultNow(),
     
+    // Authenticated user fields
+    authenticated_user_id: text('authenticated_user_id').references(() => users.id),
+    authenticated_user_name: text('authenticated_user_name'),
+    authenticated_user_avatar: text('authenticated_user_avatar'),
+    
     // GDPR compliance
     gdpr_consent: boolean('gdpr_consent').default(false),
     gdpr_consent_timestamp: timestamp('gdpr_consent_timestamp', { withTimezone: true }),
@@ -1546,6 +1551,7 @@ export const chatConversationsTable = pgTable(
     conversationsStatusIdx: index('idx_conversations_status').on(table.status),
     conversationsAssignedIdx: index('idx_conversations_assigned').on(table.assigned_user_id),
     conversationsHeartbeatIdx: index('idx_conversations_heartbeat').on(table.last_heartbeat),
+    conversationsAuthenticatedUserIdx: index('idx_conversations_authenticated_user').on(table.authenticated_user_id),
   })
 );
 
@@ -1798,6 +1804,10 @@ export const chatConversationsRelations = relations(chatConversationsTable, ({ o
   }),
   assignedUser: one(users, {
     fields: [chatConversationsTable.assigned_user_id],
+    references: [users.id],
+  }),
+  authenticatedUser: one(users, {
+    fields: [chatConversationsTable.authenticated_user_id],
     references: [users.id],
   }),
   messages: many(chatMessagesTable),

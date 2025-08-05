@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable, users } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
+import { NativeEmbeddedChat } from '@/components/embedded-chat/native-embedded-chat';
 
 interface PageProps {
   params: Promise<{
@@ -72,6 +73,14 @@ export default async function ChatPage({ params }: PageProps) {
 
   const { chat } = result[0];
 
+  // Log chat configuration for debugging
+  console.log('Chat config:', {
+    uuid: chat.uuid,
+    require_api_key: chat.require_api_key,
+    is_public: chat.is_public,
+    is_active: chat.is_active,
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
         <div className="container mx-auto px-4 py-8">
@@ -86,12 +95,13 @@ export default async function ChatPage({ params }: PageProps) {
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-            <iframe
-              src={`/embed/chat/${chat.uuid}`}
-              className="w-full h-[600px] border-0"
-              title={chat.name}
-              allow="clipboard-write"
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden h-[600px]">
+            <NativeEmbeddedChat
+              chatUuid={chat.uuid}
+              position="relative"
+              className="h-full"
+              welcomeMessage={chat.welcome_message || `Hi! Welcome to ${user.name || user.username}'s chat assistant. How can I help you today?`}
+              placeholder="Type your message..."
             />
           </div>
 

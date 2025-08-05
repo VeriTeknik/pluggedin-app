@@ -379,6 +379,13 @@
       "when": 1754387265235,
       "tag": "0053_dry_steel_serpent",
       "breakpoints": true
+    },
+    {
+      "idx": 54,
+      "version": "7",
+      "when": 1754399970031,
+      "tag": "0054_shiny_jimmy_woo",
+      "breakpoints": true
     }
   ]
 }
