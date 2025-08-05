@@ -219,6 +219,9 @@ export async function POST(
             encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
           );
           
+          // Clean up chat engine resources
+          await chatEngine.cleanup();
+          
           controller.close();
         } catch (error) {
           console.error('Stream error details:', error);
@@ -229,6 +232,10 @@ export async function POST(
               content: `An error occurred: ${errorMessage}` 
             })}\n\n`)
           );
+          
+          // Clean up chat engine resources on error
+          await chatEngine.cleanup();
+          
           controller.close();
         }
       },

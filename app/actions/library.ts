@@ -513,6 +513,64 @@ export async function queryRag(ragIdentifier: string, query: string): Promise<{ 
   return ragService.queryForResponse(ragIdentifier, query);
 }
 
+export async function searchDocuments({
+  query,
+  profileUuid,
+  limit = 5,
+}: {
+  query: string;
+  profileUuid: string;
+  limit?: number;
+}): Promise<{
+  success: boolean;
+  results?: Array<{
+    id: string;
+    title: string;
+    content: string;
+    content_preview?: string;
+    relevance_score?: number;
+    metadata?: any;
+  }>;
+  error?: string;
+}> {
+  try {
+    // Get RAG identifier for the profile
+    const ragIdentifier = `profile_${profileUuid}`;
+    
+    // Query RAG service
+    const ragResponse = await ragService.queryForResponse(ragIdentifier, query);
+    
+    if (!ragResponse.success || !ragResponse.response) {
+      return {
+        success: false,
+        error: ragResponse.error || 'No results found',
+      };
+    }
+    
+    // Parse the RAG response and format as search results
+    // For now, we'll return a simple format
+    // In a real implementation, the RAG service would return structured results
+    const results = [{
+      id: 'rag-result-1',
+      title: 'RAG Search Result',
+      content: ragResponse.response,
+      content_preview: ragResponse.response.substring(0, 200) + '...',
+      relevance_score: 1.0,
+    }];
+    
+    return {
+      success: true,
+      results: results.slice(0, limit),
+    };
+  } catch (error) {
+    console.error('Error searching documents:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to search documents',
+    };
+  }
+}
+
 
 
  

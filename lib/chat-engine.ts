@@ -12,6 +12,17 @@ import { eq, and, desc, inArray, sql } from 'drizzle-orm';
 import { OpenAI } from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { HumanMessage, AIMessage, SystemMessage, BaseMessage } from '@langchain/core/messages';
+import { createReactAgent } from '@langchain/langgraph/prebuilt';
+import { ChatAnthropic } from '@langchain/anthropic';
+import { ChatOpenAI } from '@langchain/openai';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
+import { McpServerType } from '@/db/schema';
+import { searchDocuments } from '@/app/actions/library';
+import { progressivelyInitializeMcpServersClient } from '@/lib/progressive-mcp-client';
+import { MemorySaver } from '@langchain/langgraph';
+import type { McpServer } from '@/types/mcp-server';
 
 // Types
 export interface ChatChunk {
@@ -255,8 +266,11 @@ This is a test response to ensure the chat system is working correctly.`;
 export class ChatEngine {
   private chatConfig: EmbeddedChatConfig;
   private projectUuid: string;
-  private mcpServers: any[] = [];
+  private mcpServers: McpServer[] = [];
   private llm: LLM;
+  private agent: any;
+  private mcpCleanup: McpServerCleanupFn | null = null;
+  private agentInitialized = false;
 
   constructor(chatConfig: EmbeddedChatConfig, projectUuid: string) {
     this.chatConfig = chatConfig;
@@ -279,10 +293,150 @@ export class ChatEngine {
         .from(mcpServersTable)
         .where(inArray(mcpServersTable.profile_uuid, profileUuids));
       
-      // Filter enabled servers
-      this.mcpServers = this.chatConfig.enabled_mcp_server_uuids.length > 0
+      // Filter enabled servers and map to McpServer type
+      this.mcpServers = (this.chatConfig.enabled_mcp_server_uuids.length > 0
         ? allServers.filter(s => this.chatConfig.enabled_mcp_server_uuids.includes(s.uuid))
-        : allServers; // If empty, use all servers
+        : allServers
+      ).map(s => ({
+        ...s,
+        config: s.config as Record<string, any> | null,
+      })) as McpServer[];
+    }
+    
+    // Initialize LangChain agent with MCP tools
+    await this.initializeAgent();
+  }
+
+  private async initializeAgent() {
+    if (this.agentInitialized) return;
+    
+    try {
+      let tools = [];
+      
+      if (this.mcpServers.length > 0) {
+        console.log('Initializing MCP servers:', this.mcpServers.length);
+        
+        // Format servers for progressive initialization
+        const mcpServersConfig: Record<string, any> = {};
+        
+        for (const server of this.mcpServers) {
+          // Skip servers without command or URL
+          if (!server.command && !server.url) {
+            console.warn(`Skipping server ${server.name}: no command or URL specified`);
+            continue;
+          }
+          
+          mcpServersConfig[server.name] = {
+            command: server.command,
+            args: server.args,
+            env: server.env,
+            url: server.url,
+            type: server.type,
+            uuid: server.uuid,
+            config: server.config,
+          };
+          
+          // Add transport field based on server type
+          if (server.type === McpServerType.STDIO) {
+            mcpServersConfig[server.name].transport = 'stdio';
+            mcpServersConfig[server.name].applySandboxing = true; // Enable sandboxing
+          } else if (server.type === McpServerType.SSE) {
+            mcpServersConfig[server.name].transport = 'sse';
+          } else if (server.type === McpServerType.STREAMABLE_HTTP) {
+            mcpServersConfig[server.name].transport = 'streamable_http';
+          }
+        }
+        
+        // Map provider for langchain-mcp-tools
+        let mappedProvider: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none' = 'none';
+        const provider = this.chatConfig.model_config.provider;
+        
+        if (provider === 'anthropic') {
+          mappedProvider = 'anthropic';
+        } else if (provider === 'openai') {
+          mappedProvider = 'openai';
+        } else if (provider === 'google') {
+          mappedProvider = 'openai'; // Use openai format for Google
+        }
+        
+        // Create a simple logger that doesn't use server actions
+        const simpleLogger = {
+          log: (...args: any[]) => console.log('[MCP]', ...args),
+          error: (...args: any[]) => console.error('[MCP]', ...args),
+          warn: (...args: any[]) => console.warn('[MCP]', ...args),
+          info: (...args: any[]) => console.info('[MCP]', ...args),
+          debug: (...args: any[]) => console.debug('[MCP]', ...args),
+        };
+        
+        // Use client-safe progressive initialization
+        const initResult = await progressivelyInitializeMcpServersClient(
+          mcpServersConfig,
+          {
+            logger: simpleLogger,
+            perServerTimeout: 20000,
+            totalTimeout: 60000,
+            llmProvider: mappedProvider,
+          }
+        );
+        
+        tools = initResult.tools;
+        this.mcpCleanup = initResult.cleanup;
+        
+        if (initResult.failedServers.length > 0) {
+          console.warn('Some MCP servers failed to initialize:', initResult.failedServers);
+        }
+      }
+      
+      // Create LangChain model based on provider
+      let model;
+      const config = this.chatConfig.model_config;
+      
+      switch (config.provider) {
+        case 'anthropic':
+          model = new ChatAnthropic({
+            apiKey: process.env.ANTHROPIC_API_KEY,
+            modelName: config.model,
+            temperature: config.temperature,
+            maxTokens: config.max_tokens,
+            topP: config.top_p,
+          });
+          break;
+        case 'openai':
+          model = new ChatOpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+            modelName: config.model,
+            temperature: config.temperature,
+            maxTokens: config.max_tokens,
+            topP: config.top_p,
+            frequencyPenalty: config.frequency_penalty,
+            presencePenalty: config.presence_penalty,
+          });
+          break;
+        case 'google':
+          model = new ChatGoogleGenerativeAI({
+            apiKey: process.env.GOOGLE_API_KEY,
+            model: config.model,
+            temperature: config.temperature,
+            maxOutputTokens: config.max_tokens,
+            topP: config.top_p,
+          });
+          break;
+        default:
+          throw new Error(`Unsupported provider for LangChain: ${config.provider}`);
+      }
+      
+      // Create the agent with tools
+      this.agent = createReactAgent({
+        llm: model,
+        tools,
+        checkpointSaver: new MemorySaver(),
+      });
+      
+      this.agentInitialized = true;
+      console.log('LangChain agent initialized with', tools.length, 'MCP tools');
+    } catch (error) {
+      console.error('Failed to initialize agent:', error);
+      throw error;
     }
   }
 
@@ -322,22 +476,6 @@ export class ChatEngine {
         return;
       }
       
-      // Get conversation context
-      const context = await this.getConversationContext(conversationId);
-      
-      // Build messages array
-      const messages = [
-        {
-          role: 'system',
-          content: this.buildSystemPrompt(),
-        },
-        ...context,
-        {
-          role: 'user',
-          content: message,
-        },
-      ];
-      
       // Store user message
       await db.insert(chatMessagesTable).values({
         conversation_uuid: conversationId,
@@ -347,30 +485,13 @@ export class ChatEngine {
         created_at: new Date(),
       });
       
-      // Generate response
-      console.log('Generating response with LLM:', this.chatConfig.model_config.provider);
-      let fullResponse = '';
-      try {
-        for await (const chunk of this.llm.generate(messages, this.chatConfig.model_config)) {
-          fullResponse += chunk;
-          yield { type: 'text', content: chunk };
-        }
-      } catch (llmError) {
-        console.error('LLM generation error:', llmError);
-        throw llmError;
+      // Use LangChain agent if initialized, otherwise fall back to direct LLM
+      if (this.agentInitialized && this.agent) {
+        yield* this.processWithAgent(message, conversationId);
+      } else {
+        // Fallback to direct LLM generation
+        yield* this.processWithDirectLLM(message, conversationId);
       }
-      
-      // Store assistant message
-      await db.insert(chatMessagesTable).values({
-        conversation_uuid: conversationId,
-        role: 'assistant',
-        content: fullResponse,
-        created_by: 'ai',
-        model_provider: this.chatConfig.model_config.provider,
-        model_name: this.chatConfig.model_config.model,
-        model_config: this.chatConfig.model_config,
-        created_at: new Date(),
-      });
       
       // Update conversation heartbeat
       await db
@@ -396,6 +517,193 @@ export class ChatEngine {
     }
   }
 
+  private async *processWithAgent(
+    message: string,
+    conversationId: string
+  ): AsyncGenerator<ChatChunk> {
+    try {
+      // Get conversation context
+      const context = await this.getConversationContext(conversationId);
+      
+      // Build messages for LangChain
+      const messages: BaseMessage[] = [];
+      
+      // Build system prompt with RAG context if available
+      let systemPrompt = this.buildSystemPrompt();
+      if (this.chatConfig.enable_rag) {
+        const ragContext = await this.getRagContext(message);
+        if (ragContext) {
+          systemPrompt += `\n\nContext from knowledge base:\n${ragContext}`;
+        }
+      }
+      
+      // Add system message first
+      messages.push(new SystemMessage(systemPrompt));
+      
+      // Add conversation history
+      for (const msg of context) {
+        if (msg.role === 'user') {
+          messages.push(new HumanMessage(msg.content));
+        } else if (msg.role === 'assistant') {
+          messages.push(new AIMessage(msg.content));
+        }
+      }
+      
+      // Add current message
+      messages.push(new HumanMessage(message));
+      
+      // Stream response from agent
+      console.log('Processing with LangChain agent');
+      const stream = await this.agent.stream({
+        messages,
+      });
+      
+      let fullResponse = '';
+      let hasToolCalls = false;
+      
+      for await (const chunk of stream) {
+        // Handle different types of chunks from the agent
+        if (chunk.messages) {
+          for (const msg of chunk.messages) {
+            if (msg._getType() === 'ai') {
+              const aiMsg = msg as AIMessage;
+              if (aiMsg.content && typeof aiMsg.content === 'string') {
+                fullResponse += aiMsg.content;
+                yield { type: 'text', content: aiMsg.content };
+              }
+              
+              // Handle tool calls
+              if (aiMsg.tool_calls && aiMsg.tool_calls.length > 0) {
+                hasToolCalls = true;
+                for (const toolCall of aiMsg.tool_calls) {
+                  yield { 
+                    type: 'tool_call', 
+                    content: `Calling tool: ${toolCall.name}`,
+                    metadata: toolCall
+                  };
+                }
+              }
+            } else if (msg._getType() === 'tool') {
+              // Handle tool results
+              yield { 
+                type: 'tool_result', 
+                content: typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content),
+                metadata: { tool_call_id: msg.tool_call_id }
+              };
+            }
+          }
+        }
+      }
+      
+      // Store assistant message
+      await db.insert(chatMessagesTable).values({
+        conversation_uuid: conversationId,
+        role: 'assistant',
+        content: fullResponse,
+        created_by: 'ai',
+        model_provider: this.chatConfig.model_config.provider,
+        model_name: this.chatConfig.model_config.model,
+        model_config: this.chatConfig.model_config,
+        metadata: hasToolCalls ? { used_tools: true } : null,
+        created_at: new Date(),
+      });
+      
+    } catch (error) {
+      console.error('Agent processing error:', error);
+      // Fall back to direct LLM
+      yield* this.processWithDirectLLM(message, conversationId);
+    }
+  }
+
+  private async *processWithDirectLLM(
+    message: string,
+    conversationId: string
+  ): AsyncGenerator<ChatChunk> {
+    // Get conversation context
+    const context = await this.getConversationContext(conversationId);
+    
+    // Build messages array
+    const messages = [
+      {
+        role: 'system',
+        content: this.buildSystemPrompt(),
+      },
+      ...context,
+      {
+        role: 'user',
+        content: message,
+      },
+    ];
+    
+    // Generate response
+    console.log('Generating response with direct LLM:', this.chatConfig.model_config.provider);
+    let fullResponse = '';
+    try {
+      for await (const chunk of this.llm.generate(messages, this.chatConfig.model_config)) {
+        fullResponse += chunk;
+        yield { type: 'text', content: chunk };
+      }
+    } catch (llmError) {
+      console.error('LLM generation error:', llmError);
+      throw llmError;
+    }
+    
+    // Store assistant message
+    await db.insert(chatMessagesTable).values({
+      conversation_uuid: conversationId,
+      role: 'assistant',
+      content: fullResponse,
+      created_by: 'ai',
+      model_provider: this.chatConfig.model_config.provider,
+      model_name: this.chatConfig.model_config.model,
+      model_config: this.chatConfig.model_config,
+      created_at: new Date(),
+    });
+  }
+
+  private async getRagContext(query: string): Promise<string | null> {
+    try {
+      // Get all profile UUIDs for the project
+      const profiles = await db
+        .select()
+        .from(profilesTable)
+        .where(eq(profilesTable.project_uuid, this.projectUuid));
+      
+      if (profiles.length === 0) return null;
+      
+      // Search across all profiles in the project
+      const allResults = [];
+      for (const profile of profiles) {
+        const result = await searchDocuments({
+          query,
+          profileUuid: profile.uuid,
+          limit: 3,
+        });
+        
+        if (result.success && result.results) {
+          allResults.push(...result.results);
+        }
+      }
+      
+      if (allResults.length === 0) return null;
+      
+      // Sort by relevance and take top results
+      const topResults = allResults
+        .sort((a, b) => (b.relevance_score || 0) - (a.relevance_score || 0))
+        .slice(0, 5);
+      
+      // Format context
+      const context = topResults
+        .map(doc => `[${doc.title}]\n${doc.content_preview || doc.content}\n`)
+        .join('\n---\n');
+      
+      return context;
+    } catch (error) {
+      console.error('Failed to get RAG context:', error);
+      return null;
+    }
+  }
+
   private buildSystemPrompt(): string {
     const parts = [
       `You are ${this.chatConfig.name}, an AI assistant.`,
@@ -407,6 +715,16 @@ export class ChatEngine {
     
     if (this.chatConfig.welcome_message) {
       parts.push(`When greeting users, use this message: ${this.chatConfig.welcome_message}`);
+    }
+    
+    // Add MCP tools information if available
+    if (this.mcpServers.length > 0 && this.agentInitialized) {
+      parts.push(`You have access to MCP tools from ${this.mcpServers.length} connected servers. Use them when appropriate to help answer questions or perform tasks.`);
+    }
+    
+    // Add RAG information if enabled
+    if (this.chatConfig.enable_rag) {
+      parts.push('You have access to a knowledge base. Relevant context will be provided when available.');
     }
     
     return parts.join('\n\n');
@@ -574,5 +892,18 @@ export class ChatEngine {
 
   private async trackAnalytics(conversationId: string, metrics: any) {
     // TODO: Implement analytics tracking
+  }
+
+  async cleanup() {
+    // Clean up MCP connections using the cleanup function from progressive init
+    if (this.mcpCleanup) {
+      try {
+        await this.mcpCleanup();
+        console.log('Cleaned up MCP server connections');
+      } catch (error) {
+        console.error('Failed to cleanup MCP connections:', error);
+      }
+    }
+    this.agentInitialized = false;
   }
 }
