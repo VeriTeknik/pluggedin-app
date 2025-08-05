@@ -45,6 +45,63 @@
   "library": {
     "title": "Bibliotheek"
   },
+  "embeddedChat": {
+    "title": "Ingebedde Chat",
+    "defaultWelcome": "Hallo! Hoe kan ik u vandaag helpen?",
+    "setup": {
+      "title": "Ingebedde Chat Inschakelen",
+      "subtitle": "Voeg een AI-gestuurde chatassistent toe aan uw website",
+      "ready": "Klaar om te beginnen?",
+      "readyDescription": "Schakel ingebedde chat in voor uw hub en begin met het betrekken van uw websitebezoekers",
+      "enableButton": "Ingebedde Chat Inschakelen",
+      "note": "Na het inschakelen kunt u uw ingebedde chat configureren en aanpassen."
+    },
+    "features": {
+      "ai": {
+        "title": "AI Assistent",
+        "description": "Aangedreven door uw MCP-servers en RAG-documenten om nauwkeurige, contextuele antwoorden te geven"
+      },
+      "embed": {
+        "title": "Eenvoudige Integratie",
+        "description": "Simpele insluitcode die op elke website werkt met slechts een paar regels JavaScript"
+      },
+      "security": {
+        "title": "Veilig en Privé",
+        "description": "API-sleutelauthenticatie en domeinbeperkingen houden uw chat veilig"
+      },
+      "customize": {
+        "title": "Volledig Aanpasbaar",
+        "description": "Pas uiterlijk, gedrag en AI-model aan om bij uw merk te passen"
+      }
+    },
+    "tabs": {
+      "general": "Algemeen",
+      "model": "Model",
+      "personas": "Persona's",
+      "appearance": "Uiterlijk",
+      "apiKeys": "API-sleutels",
+      "embed": "Insluiten",
+      "dangerZone": "Gevarenzone"
+    },
+    "dangerZone": {
+      "title": "Gevarenzone",
+      "description": "Onomkeerbare en destructieve acties",
+      "deleteTitle": "Ingebedde Chat Verwijderen",
+      "warning": "Deze actie kan niet ongedaan worden gemaakt!",
+      "deleteDescription": "Verwijder deze ingebedde chat permanent en alle bijbehorende gegevens inclusief:",
+      "deleteItem1": "Alle chatgesprekken en berichten",
+      "deleteItem2": "Alle contactgegevens van bezoekers",
+      "deleteItem3": "Alle chatpersona's en configuraties",
+      "deleteItem4": "Alle analyse- en gebruiksgegevens",
+      "deleteItem5": "Alle API-sleutels en integraties",
+      "gdprNote": "Deze verwijdering is GDPR-compliant en zal alle persoonlijke gegevens die aan deze chat zijn gekoppeld verwijderen.",
+      "deleteButton": "Ingebedde Chat Verwijderen",
+      "confirmTitle": "Ingebedde Chat Verwijderen?",
+      "confirmDescription": "Weet u zeker dat u \"{{chatName}}\" wilt verwijderen? Dit zal alle gesprekken, berichten en bijbehorende gegevens permanent verwijderen. Deze actie kan niet ongedaan worden gemaakt.",
+      "confirmButton": "Permanent Verwijderen",
+      "deleteSuccess": "Ingebedde chat is permanent verwijderd"
+    }
+  },
   "aiSocial": {
     "title": "AI Social",
     "description": "Ontdek en verbind met AI-gestuurde sociale media platforms"

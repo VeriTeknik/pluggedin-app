@@ -8,6 +8,8 @@ import {
   chatPersonasTable,
   chatContactsTable,
   chatAnalyticsTable,
+  chatUsageTable,
+  chatBillingTable,
   projectsTable,
   profilesTable,
   mcpServersTable,
@@ -986,6 +988,72 @@ export async function toggleEmbeddedChat(enabled: boolean) {
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to toggle embedded chat' 
+    };
+  }
+}
+
+// ===== Delete Embedded Chat (GDPR Compliant) =====
+export async function deleteEmbeddedChat(chatUuid: string) {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify ownership by checking if the chat belongs to a project owned by the user
+    const [chatWithProject] = await db
+      .select({
+        chat: embeddedChatsTable,
+        project: projectsTable,
+      })
+      .from(embeddedChatsTable)
+      .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
+      .where(and(
+        eq(embeddedChatsTable.uuid, chatUuid),
+        eq(projectsTable.user_id, session.user.id)
+      ))
+      .limit(1);
+
+    if (!chatWithProject) {
+      return { success: false, error: 'Chat not found or unauthorized' };
+    }
+
+    // Use a transaction to ensure atomic deletion
+    await db.transaction(async (tx) => {
+      // Delete chat usage records (not cascaded)
+      await tx
+        .delete(chatUsageTable)
+        .where(eq(chatUsageTable.embedded_chat_uuid, chatUuid));
+
+      // Delete the embedded chat - this will cascade delete:
+      // - chatConversationsTable (and its messages, contacts, monitoring sessions, data requests)
+      // - chatPersonasTable
+      // - chatContactsTable
+      // - chatAnalyticsTable
+      await tx
+        .delete(embeddedChatsTable)
+        .where(eq(embeddedChatsTable.uuid, chatUuid));
+
+      // Update the project to remove the embedded_chat_uuid reference
+      await tx
+        .update(projectsTable)
+        .set({ 
+          embedded_chat_uuid: null,
+          embedded_chat_enabled: false 
+        })
+        .where(eq(projectsTable.uuid, chatWithProject.project.uuid));
+    });
+
+    // Revalidate paths
+    revalidatePath('/embedded-chat');
+    revalidatePath(`/embedded-chat/${chatUuid}`);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting embedded chat:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to delete embedded chat' 
     };
   }
 }

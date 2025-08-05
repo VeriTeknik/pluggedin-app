@@ -45,6 +45,63 @@
   "library": {
     "title": "资料库"
   },
+  "embeddedChat": {
+    "title": "嵌入式聊天",
+    "defaultWelcome": "您好！今天我能为您做些什么？",
+    "setup": {
+      "title": "启用嵌入式聊天",
+      "subtitle": "向您的网站添加 AI 驱动的聊天助手",
+      "ready": "准备好开始了吗？",
+      "readyDescription": "为您的中心启用嵌入式聊天，开始与网站访客互动",
+      "enableButton": "启用嵌入式聊天",
+      "note": "启用后，您可以配置和自定义您的嵌入式聊天。"
+    },
+    "features": {
+      "ai": {
+        "title": "AI 助手",
+        "description": "由您的 MCP 服务器和 RAG 文档提供支持，提供准确的上下文响应"
+      },
+      "embed": {
+        "title": "轻松集成",
+        "description": "简单的嵌入代码，只需几行 JavaScript 即可在任何网站上运行"
+      },
+      "security": {
+        "title": "安全私密",
+        "description": "API 密钥认证和域名限制确保您的聊天安全"
+      },
+      "customize": {
+        "title": "完全可定制",
+        "description": "自定义外观、行为和 AI 模型以匹配您的品牌"
+      }
+    },
+    "tabs": {
+      "general": "常规",
+      "model": "模型",
+      "personas": "角色",
+      "appearance": "外观",
+      "apiKeys": "API 密钥",
+      "embed": "嵌入",
+      "dangerZone": "危险区域"
+    },
+    "dangerZone": {
+      "title": "危险区域",
+      "description": "不可逆和破坏性操作",
+      "deleteTitle": "删除嵌入式聊天",
+      "warning": "此操作无法撤销！",
+      "deleteDescription": "永久删除此嵌入式聊天和所有相关数据，包括：",
+      "deleteItem1": "所有聊天对话和消息",
+      "deleteItem2": "所有访客联系信息",
+      "deleteItem3": "所有聊天角色和配置",
+      "deleteItem4": "所有分析和使用数据",
+      "deleteItem5": "所有 API 密钥和集成",
+      "gdprNote": "此删除符合 GDPR 要求，将删除与此聊天相关的所有个人数据。",
+      "deleteButton": "删除嵌入式聊天",
+      "confirmTitle": "删除嵌入式聊天？",
+      "confirmDescription": "您确定要删除 \"{{chatName}}\" 吗？这将永久删除所有对话、消息和相关数据。此操作无法撤销。",
+      "confirmButton": "永久删除",
+      "deleteSuccess": "嵌入式聊天已永久删除"
+    }
+  },
   "aiSocial": {
     "title": "AI 社交",
     "description": "发现和连接 AI 驱动的社交媒体平台"

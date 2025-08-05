@@ -45,6 +45,63 @@
   "library": {
     "title": "ライブラリ"
   },
+  "embeddedChat": {
+    "title": "埋め込みチャット",
+    "defaultWelcome": "こんにちは！今日はどのようなお手伝いができますか？",
+    "setup": {
+      "title": "埋め込みチャットを有効化",
+      "subtitle": "ウェブサイトにAI搭載のチャットアシスタントを追加",
+      "ready": "始める準備はできていますか？",
+      "readyDescription": "ハブの埋め込みチャットを有効にして、ウェブサイトの訪問者との対話を開始しましょう",
+      "enableButton": "埋め込みチャットを有効化",
+      "note": "有効化後、埋め込みチャットを設定およびカスタマイズできます。"
+    },
+    "features": {
+      "ai": {
+        "title": "AIアシスタント",
+        "description": "MCPサーバーとRAGドキュメントにより、正確で文脈に沿った応答を提供"
+      },
+      "embed": {
+        "title": "簡単な統合",
+        "description": "数行のJavaScriptでどのウェブサイトでも動作するシンプルな埋め込みコード"
+      },
+      "security": {
+        "title": "安全でプライベート",
+        "description": "APIキー認証とドメイン制限によりチャットのセキュリティを確保"
+      },
+      "customize": {
+        "title": "完全にカスタマイズ可能",
+        "description": "外観、動作、AIモデルをブランドに合わせてカスタマイズ"
+      }
+    },
+    "tabs": {
+      "general": "一般",
+      "model": "モデル",
+      "personas": "ペルソナ",
+      "appearance": "外観",
+      "apiKeys": "APIキー",
+      "embed": "埋め込み",
+      "dangerZone": "危険ゾーン"
+    },
+    "dangerZone": {
+      "title": "危険ゾーン",
+      "description": "取り返しのつかない破壊的な操作",
+      "deleteTitle": "埋め込みチャットを削除",
+      "warning": "この操作は元に戻せません！",
+      "deleteDescription": "この埋め込みチャットと以下を含むすべての関連データを永久に削除します：",
+      "deleteItem1": "すべてのチャット会話とメッセージ",
+      "deleteItem2": "すべての訪問者の連絡先情報",
+      "deleteItem3": "すべてのチャットペルソナと設定",
+      "deleteItem4": "すべての分析と使用データ",
+      "deleteItem5": "すべてのAPIキーと統合",
+      "gdprNote": "この削除はGDPRに準拠しており、このチャットに関連するすべての個人データが削除されます。",
+      "deleteButton": "埋め込みチャットを削除",
+      "confirmTitle": "埋め込みチャットを削除しますか？",
+      "confirmDescription": "本当に「{{chatName}}」を削除しますか？これにより、すべての会話、メッセージ、および関連データが永久に削除されます。この操作は元に戻せません。",
+      "confirmButton": "永久に削除",
+      "deleteSuccess": "埋め込みチャットは永久に削除されました"
+    }
+  },
   "aiSocial": {
     "title": "AIソーシャル",
     "description": "AIソーシャル ソーシャルメディアプラットフォームを発見し、接続します"

@@ -75,6 +75,33 @@
         "title": "Fully Customizable",
         "description": "Customize appearance, behavior, and AI model to match your brand"
       }
+    },
+    "tabs": {
+      "general": "General",
+      "model": "Model",
+      "personas": "Personas",
+      "appearance": "Appearance",
+      "apiKeys": "API Keys",
+      "embed": "Embed",
+      "dangerZone": "Danger Zone"
+    },
+    "dangerZone": {
+      "title": "Danger Zone",
+      "description": "Irreversible and destructive actions",
+      "deleteTitle": "Delete Embedded Chat",
+      "warning": "This action cannot be undone!",
+      "deleteDescription": "Permanently delete this embedded chat and all associated data including:",
+      "deleteItem1": "All chat conversations and messages",
+      "deleteItem2": "All visitor contact information",
+      "deleteItem3": "All chat personas and configurations",
+      "deleteItem4": "All analytics and usage data",
+      "deleteItem5": "All API keys and integrations",
+      "gdprNote": "This deletion is GDPR compliant and will remove all personal data associated with this chat.",
+      "deleteButton": "Delete Embedded Chat",
+      "confirmTitle": "Delete Embedded Chat?",
+      "confirmDescription": "Are you sure you want to delete \"{{chatName}}\"? This will permanently delete all conversations, messages, and associated data. This action cannot be undone.",
+      "confirmButton": "Delete Permanently",
+      "deleteSuccess": "Embedded chat has been permanently deleted"
     }
   },
   "aiSocial": {

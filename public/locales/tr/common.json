@@ -45,6 +45,63 @@
   "library": {
     "title": "Kütüphane"
   },
+  "embeddedChat": {
+    "title": "Gömülü Sohbet",
+    "defaultWelcome": "Merhaba! Size nasıl yardımcı olabilirim?",
+    "setup": {
+      "title": "Gömülü Sohbeti Etkinleştir",
+      "subtitle": "Web sitenize AI destekli bir sohbet asistanı ekleyin",
+      "ready": "Başlamaya hazır mısınız?",
+      "readyDescription": "Hub'ınız için gömülü sohbeti etkinleştirin ve web sitesi ziyaretçilerinizle etkileşime geçmeye başlayın",
+      "enableButton": "Gömülü Sohbeti Etkinleştir",
+      "note": "Etkinleştirdikten sonra gömülü sohbetinizi yapılandırabilir ve özelleştirebilirsiniz."
+    },
+    "features": {
+      "ai": {
+        "title": "YZ Asistanı",
+        "description": "Doğru, bağlamsal yanıtlar sağlamak için MCP sunucularınız ve RAG belgelerinizle desteklenir"
+      },
+      "embed": {
+        "title": "Kolay Entegrasyon",
+        "description": "Sadece birkaç satır JavaScript ile herhangi bir web sitesinde çalışan basit gömme kodu"
+      },
+      "security": {
+        "title": "Güvenli ve Gizli",
+        "description": "API anahtarı doğrulaması ve alan adı kısıtlamaları sohbetinizi güvende tutar"
+      },
+      "customize": {
+        "title": "Tamamen Özelleştirilebilir",
+        "description": "Görünüm, davranış ve YZ modelini markanıza uyacak şekilde özelleştirin"
+      }
+    },
+    "tabs": {
+      "general": "Genel",
+      "model": "Model",
+      "personas": "Kişilikler",
+      "appearance": "Görünüm",
+      "apiKeys": "API Anahtarları",
+      "embed": "Gömme",
+      "dangerZone": "Tehlike Bölgesi"
+    },
+    "dangerZone": {
+      "title": "Tehlike Bölgesi",
+      "description": "Geri alınamaz ve yıkıcı işlemler",
+      "deleteTitle": "Gömülü Sohbeti Sil",
+      "warning": "Bu işlem geri alınamaz!",
+      "deleteDescription": "Bu gömülü sohbeti ve aşağıdakiler dahil tüm ilişkili verileri kalıcı olarak silin:",
+      "deleteItem1": "Tüm sohbet konuşmaları ve mesajlar",
+      "deleteItem2": "Tüm ziyaretçi iletişim bilgileri",
+      "deleteItem3": "Tüm sohbet kişilikleri ve yapılandırmaları",
+      "deleteItem4": "Tüm analitik ve kullanım verileri",
+      "deleteItem5": "Tüm API anahtarları ve entegrasyonlar",
+      "gdprNote": "Bu silme işlemi GDPR uyumludur ve bu sohbetle ilişkili tüm kişisel verileri kaldıracaktır.",
+      "deleteButton": "Gömülü Sohbeti Sil",
+      "confirmTitle": "Gömülü Sohbet Silinsin mi?",
+      "confirmDescription": "\"{{chatName}}\" adlı sohbeti silmek istediğinizden emin misiniz? Bu işlem tüm konuşmaları, mesajları ve ilişkili verileri kalıcı olarak silecektir. Bu işlem geri alınamaz.",
+      "confirmButton": "Kalıcı Olarak Sil",
+      "deleteSuccess": "Gömülü sohbet kalıcı olarak silindi"
+    }
+  },
   "aiSocial": {
     "title": "YZ Sosyal",
     "description": "Yapay zeka destekli sosyal medya platformlarını keşfet ve bağlantı kurun"
