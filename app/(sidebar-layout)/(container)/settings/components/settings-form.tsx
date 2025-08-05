@@ -281,24 +281,21 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
                 </Avatar>
                 <div>
                   <Label htmlFor="avatar" className="cursor-pointer">
-                    <Button 
-                      type="button" 
-                      variant="outline" 
-                      className="flex items-center gap-2" 
-                      disabled={isUploading}
+                    <div 
+                      className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
                     >
                       <ImagePlus className="h-4 w-4" />
                       {t('settings.profile.avatar')}
-                    </Button>
-                    <Input
-                      id="avatar"
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleAvatarUpload}
-                      disabled={isUploading}
-                    />
+                    </div>
                   </Label>
+                  <Input
+                    id="avatar"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    disabled={isUploading}
+                  />
                 </div>
               </div>
               <FormField

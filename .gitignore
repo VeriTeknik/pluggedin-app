@@ -66,6 +66,7 @@ console-log-backup-*/
 
 # User uploads
 uploads/
+public/avatars/
 
 CLAUDE.md
 # Sentry Config File
