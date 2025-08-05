@@ -15,10 +15,13 @@ import {
   Download,
   Star,
   Clock,
-  MessageSquare
+  MessageSquare,
+  Shield,
+  User
 } from 'lucide-react';
 import Link from 'next/link';
 import { format, formatDistanceToNow } from 'date-fns';
+import { formatVisitorName, isAuthenticatedVisitor } from '@/lib/visitor-utils';
 
 interface Conversation {
   uuid: string;
@@ -31,6 +34,7 @@ interface Conversation {
   message_count: number;
   rating?: number;
   page_url?: string;
+  metadata?: any;
 }
 
 interface RecentConversationsTableProps {
@@ -60,9 +64,7 @@ export function RecentConversationsTable({
   };
 
   const getVisitorDisplay = (conv: Conversation) => {
-    if (conv.visitor_name) return conv.visitor_name;
-    if (conv.visitor_email) return conv.visitor_email;
-    return `Visitor ${conv.visitor_id.slice(0, 8)}`;
+    return formatVisitorName(conv.visitor_id, conv.visitor_name, conv.visitor_email);
   };
 
   const getDuration = (conv: Conversation) => {
@@ -122,7 +124,19 @@ export function RecentConversationsTable({
           {displayConversations.map((conv) => (
             <TableRow key={conv.uuid}>
               <TableCell className="font-medium">
-                {getVisitorDisplay(conv)}
+                <div className="flex items-center gap-2">
+                  {isAuthenticatedVisitor(conv.visitor_id, conv.metadata) ? (
+                    <Shield className="h-4 w-4 text-primary" />
+                  ) : (
+                    <User className="h-4 w-4 text-muted-foreground" />
+                  )}
+                  <span>{getVisitorDisplay(conv)}</span>
+                  {isAuthenticatedVisitor(conv.visitor_id, conv.metadata) && (
+                    <Badge variant="outline" className="text-xs px-1 py-0 ml-1">
+                      Auth
+                    </Badge>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 <div className="flex items-center gap-1 text-sm">

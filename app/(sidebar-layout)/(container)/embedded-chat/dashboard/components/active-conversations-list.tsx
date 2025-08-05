@@ -10,10 +10,12 @@ import {
   Globe, 
   Clock,
   Eye,
-  UserPlus
+  UserPlus,
+  Shield
 } from 'lucide-react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
+import { formatVisitorName, getVisitorInitials, isAuthenticatedVisitor } from '@/lib/visitor-utils';
 
 interface Conversation {
   uuid: string;
@@ -25,6 +27,8 @@ interface Conversation {
   message_count: number;
   last_message_at?: Date;
   page_url?: string;
+  last_heartbeat?: Date;
+  metadata?: any;
 }
 
 interface ActiveConversationsListProps {
@@ -54,9 +58,12 @@ export function ActiveConversationsList({
   };
 
   const getVisitorDisplay = (conv: Conversation) => {
-    if (conv.visitor_name) return conv.visitor_name;
-    if (conv.visitor_email) return conv.visitor_email;
-    return `Visitor ${conv.visitor_id.slice(0, 8)}`;
+    return formatVisitorName(conv.visitor_id, conv.visitor_name, conv.visitor_email);
+  };
+
+  const getVisitorIcon = (conv: Conversation) => {
+    const isAuth = isAuthenticatedVisitor(conv.visitor_id, conv.metadata);
+    return isAuth ? Shield : User;
   };
 
   if (conversations.length === 0) {
@@ -83,12 +90,23 @@ export function ActiveConversationsList({
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-3">
               <Avatar className="h-8 w-8">
-                <AvatarFallback>
-                  <User className="h-4 w-4" />
+                <AvatarFallback className={isAuthenticatedVisitor(conv.visitor_id, conv.metadata) ? 'bg-primary/10' : ''}>
+                  {isAuthenticatedVisitor(conv.visitor_id, conv.metadata) ? (
+                    <Shield className="h-4 w-4 text-primary" />
+                  ) : (
+                    getVisitorInitials(conv.visitor_id, conv.visitor_name, conv.visitor_email)
+                  )}
                 </AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-medium text-sm">{getVisitorDisplay(conv)}</p>
+                <p className="font-medium text-sm flex items-center gap-2">
+                  {getVisitorDisplay(conv)}
+                  {isAuthenticatedVisitor(conv.visitor_id, conv.metadata) && (
+                    <Badge variant="outline" className="text-xs px-1 py-0">
+                      Authenticated
+                    </Badge>
+                  )}
+                </p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <Clock className="h-3 w-3" />
                   {formatDistanceToNow(new Date(conv.started_at), { addSuffix: true })}

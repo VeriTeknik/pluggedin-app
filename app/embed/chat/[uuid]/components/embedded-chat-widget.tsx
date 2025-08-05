@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { getOrCreateVisitorId, formatVisitorName, getUserInfoFromParent } from '@/lib/visitor-utils';
 import type { EmbeddedChat, Project } from '@/types/embedded-chat';
 
 interface Message {
@@ -25,14 +26,47 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [visitorId, setVisitorId] = useState<string>('');
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [visitorInfo, setVisitorInfo] = useState<{
+    name?: string;
+    email?: string;
+  }>({});
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize visitor ID and restore conversation
+  useEffect(() => {
+    // Get or create visitor ID
+    const id = getOrCreateVisitorId();
+    setVisitorId(id);
+    
+    // Try to restore conversation ID from session storage
+    const storedConversationId = sessionStorage.getItem(`chat-${chat.uuid}-conversation`);
+    if (storedConversationId) {
+      setConversationId(storedConversationId);
+    }
+    
+    // Check for user info from parent
+    const userInfo = getUserInfoFromParent();
+    if (userInfo) {
+      setVisitorInfo({
+        name: userInfo.userName,
+        email: userInfo.userEmail,
+      });
+    }
+  }, [chat.uuid]);
 
   // Send ready message to parent and handle parent messages
   useEffect(() => {
     if (window.parent !== window) {
-      // Send ready message
-      window.parent.postMessage({ type: 'chat:ready', chatUuid: chat.uuid }, '*');
+      // Send ready message with visitor info
+      window.parent.postMessage({ 
+        type: 'chat:ready', 
+        chatUuid: chat.uuid,
+        visitorId: visitorId 
+      }, '*');
       
       // Listen for parent messages
       const handleParentMessage = (event: MessageEvent) => {
@@ -43,13 +77,22 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
           // Handle maximize from parent  
         } else if (event.data?.type === 'chat:close') {
           // Handle close from parent
+          handleClose();
+        } else if (event.data?.type === 'chat:userInfo') {
+          // Handle user info from parent
+          if (event.data.userId) {
+            setVisitorInfo({
+              name: event.data.userName,
+              email: event.data.userEmail,
+            });
+          }
         }
       };
       
       window.addEventListener('message', handleParentMessage);
       return () => window.removeEventListener('message', handleParentMessage);
     }
-  }, [chat.uuid]);
+  }, [chat.uuid, visitorId]);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
@@ -57,6 +100,41 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
       scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // Set up heartbeat for active conversation
+  useEffect(() => {
+    if (conversationId) {
+      // Send heartbeat every 30 seconds
+      const sendHeartbeat = async () => {
+        try {
+          await fetch(`/api/public/chat/${chat.uuid}/heartbeat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversation_id: conversationId,
+            }),
+          });
+        } catch (error) {
+          console.error('Error sending heartbeat:', error);
+        }
+      };
+
+      // Send initial heartbeat
+      sendHeartbeat();
+
+      // Set up interval
+      heartbeatIntervalRef.current = setInterval(sendHeartbeat, 30000);
+
+      return () => {
+        if (heartbeatIntervalRef.current) {
+          clearInterval(heartbeatIntervalRef.current);
+          heartbeatIntervalRef.current = null;
+        }
+      };
+    }
+  }, [conversationId, chat.uuid]);
 
   // Handle message submission
   const handleSubmit = async (e: React.FormEvent) => {
@@ -76,16 +154,21 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
     setIsLoading(true);
 
     try {
-      // Send message to backend
-      const response = await fetch('/api/embedded-chat/message', {
+      // Send message to backend with visitor info
+      const response = await fetch(`/api/public/chat/${chat.uuid}/stream`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          chatUuid: chat.uuid,
           message: userMessage.content,
-          conversationId: sessionStorage.getItem(`chat-${chat.uuid}-conversation`) || undefined,
+          conversation_id: conversationId || undefined,
+          visitor_info: {
+            visitor_id: visitorId,
+            name: visitorInfo.name,
+            email: visitorInfo.email,
+          },
+          persona_id: undefined, // Can be set if using personas
         }),
       });
 
@@ -93,22 +176,60 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
         throw new Error('Failed to send message');
       }
 
-      const data = await response.json();
-
-      // Store conversation ID for context
-      if (data.conversationId) {
-        sessionStorage.setItem(`chat-${chat.uuid}-conversation`, data.conversationId);
-      }
-
-      // Add assistant response
-      const assistantMessage: Message = {
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
-        content: data.response,
+        content: '',
         timestamp: new Date(),
       };
-
+      
+      // Add empty assistant message that we'll update
       setMessages(prev => [...prev, assistantMessage]);
+
+      if (reader) {
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  
+                  if (data.type === 'conversation') {
+                    // Store conversation ID
+                    setConversationId(data.conversation_id);
+                    sessionStorage.setItem(`chat-${chat.uuid}-conversation`, data.conversation_id);
+                  } else if (data.type === 'content') {
+                    // Update assistant message content
+                    assistantMessage.content += data.content;
+                    setMessages(prev => 
+                      prev.map(msg => 
+                        msg.id === assistantMessage.id 
+                          ? { ...msg, content: assistantMessage.content }
+                          : msg
+                      )
+                    );
+                  } else if (data.type === 'error') {
+                    throw new Error(data.content || 'Stream error');
+                  }
+                } catch (e) {
+                  console.error('Error parsing SSE data:', e);
+                }
+              }
+            }
+          }
+        } finally {
+          reader.releaseLock();
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       
@@ -129,7 +250,24 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
   };
 
   // Handle close button
-  const handleClose = () => {
+  const handleClose = async () => {
+    // End the conversation if it exists
+    if (conversationId) {
+      try {
+        await fetch(`/api/public/chat/${chat.uuid}/end`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            conversation_id: conversationId,
+          }),
+        });
+      } catch (error) {
+        console.error('Error ending conversation:', error);
+      }
+    }
+    
     if (window.parent !== window) {
       window.parent.postMessage({ type: 'chat:close' }, '*');
     }

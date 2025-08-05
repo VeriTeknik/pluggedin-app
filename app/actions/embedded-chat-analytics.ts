@@ -21,13 +21,15 @@ export async function getDashboardMetrics(chatUuid: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Get active conversations count
+    // Get active conversations count - exclude stale ones
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
     const [activeCount] = await db
       .select({ count: count() })
       .from(chatConversationsTable)
       .where(and(
         eq(chatConversationsTable.embedded_chat_uuid, chatUuid),
-        eq(chatConversationsTable.status, 'active')
+        eq(chatConversationsTable.status, 'active'),
+        gte(chatConversationsTable.last_heartbeat, thirtyMinutesAgo)
       ));
 
     // Get today's conversations
@@ -134,6 +136,9 @@ export async function getActiveConversations(chatUuid: string) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Only get truly active conversations (heartbeat within last 30 minutes)
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    
     const conversations = await db
       .select({
         uuid: chatConversationsTable.uuid,
@@ -143,6 +148,8 @@ export async function getActiveConversations(chatUuid: string) {
         started_at: chatConversationsTable.started_at,
         status: chatConversationsTable.status,
         page_url: chatConversationsTable.page_url,
+        last_heartbeat: chatConversationsTable.last_heartbeat,
+        metadata: chatConversationsTable.metadata,
         message_count: sql<number>`(
           SELECT COUNT(*) FROM ${chatMessagesTable} 
           WHERE ${chatMessagesTable.conversation_uuid} = ${chatConversationsTable.uuid}
@@ -155,7 +162,8 @@ export async function getActiveConversations(chatUuid: string) {
       .from(chatConversationsTable)
       .where(and(
         eq(chatConversationsTable.embedded_chat_uuid, chatUuid),
-        eq(chatConversationsTable.status, 'active')
+        eq(chatConversationsTable.status, 'active'),
+        gte(chatConversationsTable.last_heartbeat, thirtyMinutesAgo)
       ))
       .orderBy(desc(chatConversationsTable.started_at));
 
