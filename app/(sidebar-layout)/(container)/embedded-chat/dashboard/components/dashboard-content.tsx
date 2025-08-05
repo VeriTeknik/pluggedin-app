@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   MessageSquare, 
   Users, 
@@ -21,7 +22,7 @@ import { MetricCard } from './metric-card';
 import { ActiveConversationsList } from './active-conversations-list';
 import { RecentConversationsTable } from './recent-conversations-table';
 import { ConversationChart } from './conversation-chart';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface DashboardMetrics {
   activeConversations: number;
@@ -59,9 +60,13 @@ export function DashboardContent({
   activeConversations: initialActive 
 }: DashboardContentProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeConversations, setActiveConversations] = useState(initialActive);
   const [recentConversations, setRecentConversations] = useState(initialRecent);
+  
+  // Check for error messages
+  const error = searchParams.get('error');
 
   // Auto-refresh active conversations every 30 seconds
   useEffect(() => {
@@ -89,6 +94,16 @@ export function DashboardContent({
 
   return (
     <div className="space-y-6">
+      {/* Error Alert */}
+      {error === 'wrong-hub' && (
+        <Alert className="border-orange-200 bg-orange-50 dark:bg-orange-900/20">
+          <AlertCircle className="h-4 w-4 text-orange-600" />
+          <AlertDescription className="text-orange-800 dark:text-orange-200">
+            This embedded chat belongs to a different Hub. Please switch to the correct Hub to access it.
+          </AlertDescription>
+        </Alert>
+      )}
+      
       {/* Quick Actions Bar */}
       <div className="flex justify-between items-center">
         <div className="flex gap-2">

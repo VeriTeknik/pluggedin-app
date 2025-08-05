@@ -18,7 +18,11 @@ export async function withAuth<T>(fn: AuthenticatedFunction<T>): Promise<T> {
   const session = await getAuthSession();
   
   if (!session?.user?.id) {
-    throw new Error('Unauthorized - you must be logged in to perform this action');
+    // Create an error with a specific code that can be handled by the client
+    const error = new Error('NEXT_AUTH_REQUIRED');
+    // Mark it so we don't log it
+    (error as any).isAuthError = true;
+    throw error;
   }
 
   return fn(session as Session & { user: { id: string } });

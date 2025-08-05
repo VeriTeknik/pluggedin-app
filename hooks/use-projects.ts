@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -13,12 +14,13 @@ const CURRENT_PROJECT_KEY = 'pluggedin-current-project';
 export const useProjects = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const { status: sessionStatus } = useSafeSession();
+  const router = useRouter();
+  const { data: session, status: sessionStatus } = useSafeSession();
 
-  // Only fetch projects if authenticated
+  // Only fetch projects if authenticated with a valid session
   const { data = [], mutate, isLoading, error } = useSWR(
-    // Only fetch if authenticated
-    sessionStatus === 'authenticated' ? 'projects' : null,
+    // Only fetch if authenticated and session has user id
+    sessionStatus === 'authenticated' && session?.user?.id ? 'projects' : null,
     getProjects,
     {
       onError: (_error: Error) => {
@@ -32,13 +34,18 @@ export const useProjects = () => {
           variant: 'destructive',
         });
         
-        // For auth issues, clear the stored project
+        // For auth issues, clear the stored project and redirect to login
         const isAuthIssue = 
-          error?.message?.toLowerCase().includes('unauthorized') ||
-          error?.message?.toLowerCase().includes('session expired');
+          _error?.message?.toLowerCase().includes('unauthorized') ||
+          _error?.message?.toLowerCase().includes('session expired') ||
+          _error?.message?.includes('you must be logged in') ||
+          _error?.message === 'NEXT_AUTH_REQUIRED';
           
         if (isAuthIssue) {
           localStorage.removeItem(CURRENT_PROJECT_KEY);
+          // Use window.location for a full page redirect to ensure session is cleared
+          window.location.href = '/login';
+          return;
         }
         
         return [];

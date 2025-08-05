@@ -75,6 +75,9 @@ export function EmbeddedChatSetup({ project }: EmbeddedChatSetupProps) {
         <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
           <MessageSquare className="h-8 w-8 text-primary" />
         </div>
+        <div className="text-sm text-muted-foreground mb-2">
+          Hub: <span className="font-medium">{project.name}</span>
+        </div>
         <h1 className="text-3xl font-bold tracking-tight">
           {t('embeddedChat.setup.title', 'Enable Embedded Chat')}
         </h1>

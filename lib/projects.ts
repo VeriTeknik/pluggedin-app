@@ -9,7 +9,15 @@ export async function getCurrentProject(userId: string, preferredProjectUuid?: s
   try {
     // Get all projects for the user
     const userProjects = await db
-      .select()
+      .select({
+        uuid: projectsTable.uuid,
+        name: projectsTable.name,
+        created_at: projectsTable.created_at,
+        active_profile_uuid: projectsTable.active_profile_uuid,
+        user_id: projectsTable.user_id,
+        embedded_chat_enabled: projectsTable.embedded_chat_enabled,
+        embedded_chat_uuid: projectsTable.embedded_chat_uuid,
+      })
       .from(projectsTable)
       .where(eq(projectsTable.user_id, userId));
     
@@ -25,20 +33,9 @@ export async function getCurrentProject(userId: string, preferredProjectUuid?: s
       }
     }
     
-    // Try to get the stored project preference from cookies
-    // Note: We can't access localStorage in server components
-    try {
-      const headersList = await headers();
-      const cookie = headersList.get('cookie');
-      if (cookie) {
-        // Look for the project UUID in cookies (would need to be set from client)
-        // For now, we'll just return the first project
-      }
-    } catch (e) {
-      // Headers not available or error accessing them
-    }
-    
     // Return the first project as fallback
+    // Note: This is a server function, so it can't access client-side state
+    // The preferredProjectUuid should be passed from the client
     return userProjects[0];
   } catch (error) {
     console.error('Error fetching current project:', error);
@@ -51,7 +48,15 @@ export async function getCurrentProject(userId: string, preferredProjectUuid?: s
 export async function getUserProjects(userId: string) {
   try {
     const userProjects = await db
-      .select()
+      .select({
+        uuid: projectsTable.uuid,
+        name: projectsTable.name,
+        created_at: projectsTable.created_at,
+        active_profile_uuid: projectsTable.active_profile_uuid,
+        user_id: projectsTable.user_id,
+        embedded_chat_enabled: projectsTable.embedded_chat_enabled,
+        embedded_chat_uuid: projectsTable.embedded_chat_uuid,
+      })
       .from(projectsTable)
       .where(eq(projectsTable.user_id, userId));
     

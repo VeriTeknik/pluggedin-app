@@ -153,10 +153,10 @@ export async function getMCPServersForEmbeddedChat(projectUuid: string) {
       return { success: false, error: 'Unauthorized' };
     }
 
-    // Validate project access
-    await validateProjectAccess(projectUuid, session.user.id);
+    // Validate project access - this ensures the project belongs to the current user
+    const project = await validateProjectAccess(projectUuid, session.user.id);
     
-    // Get all profiles in the project
+    // Get all profiles in the project that belong to this user
     const profiles = await db
       .select()
       .from(profilesTable)
@@ -164,7 +164,7 @@ export async function getMCPServersForEmbeddedChat(projectUuid: string) {
     
     const profileUuids = profiles.map(p => p.uuid);
     
-    // Get all MCP servers from all profiles
+    // Get all MCP servers from all profiles, ensuring they belong to this project
     const servers = profileUuids.length > 0 
       ? await db
           .select({

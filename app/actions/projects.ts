@@ -47,8 +47,9 @@ export async function getProject(projectUuid: string) {
 }
 
 export async function getProjects() {
-  return withAuth(async (session) => {
-    try {
+  try {
+    return await withAuth(async (session) => {
+      try {
       // First verify the user exists in the database
       const userExists = await db.query.users.findFirst({
         where: (users, { eq }) => eq(users.id, session.user.id),
@@ -61,7 +62,15 @@ export async function getProjects() {
       }
 
       let projects = await db
-        .select()
+        .select({
+          uuid: projectsTable.uuid,
+          name: projectsTable.name,
+          created_at: projectsTable.created_at,
+          active_profile_uuid: projectsTable.active_profile_uuid,
+          user_id: projectsTable.user_id,
+          embedded_chat_enabled: projectsTable.embedded_chat_enabled,
+          embedded_chat_uuid: projectsTable.embedded_chat_uuid,
+        })
         .from(projectsTable)
         .where(eq(projectsTable.user_id, session.user.id));
 
@@ -96,7 +105,15 @@ export async function getProjects() {
               .update(projectsTable)
               .set({ active_profile_uuid: profile.uuid })
               .where(eq(projectsTable.uuid, project.uuid))
-              .returning();
+              .returning({
+                uuid: projectsTable.uuid,
+                name: projectsTable.name,
+                created_at: projectsTable.created_at,
+                active_profile_uuid: projectsTable.active_profile_uuid,
+                user_id: projectsTable.user_id,
+                embedded_chat_enabled: projectsTable.embedded_chat_enabled,
+                embedded_chat_uuid: projectsTable.embedded_chat_uuid,
+              });
 
             return updatedProject;
           });
@@ -116,6 +133,15 @@ export async function getProjects() {
       return [];
     }
   });
+  } catch (error) {
+    // Handle auth errors gracefully
+    if (error instanceof Error && error.message === 'NEXT_AUTH_REQUIRED') {
+      // Don't log auth errors as they're expected when not logged in
+      return [];
+    }
+    console.error('Error in getProjects wrapper:', error);
+    throw error;
+  }
 }
 
 export async function updateProjectName(projectUuid: string, newName: string) {

@@ -6,7 +6,7 @@ import { embeddedChatsTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { EmbeddedChat } from '@/types/embedded-chat';
 
-import { ChatConfigurationTabs } from './components/chat-configuration-tabs';
+import { ConfigurationClient } from './configuration-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -41,8 +41,8 @@ export default async function EmbeddedChatConfigPage({ params }: PageProps) {
     .limit(1);
 
   if (!chatWithProject) {
-    // User doesn't own this chat - show 404 to avoid leaking information
-    notFound();
+    // User doesn't own this chat - redirect to their own embedded chat
+    redirect('/embedded-chat');
   }
 
   const { chat: dbChat } = chatWithProject;
@@ -81,19 +81,13 @@ export default async function EmbeddedChatConfigPage({ params }: PageProps) {
     updated_at: dbChat.updated_at,
   };
   
+  // Use client component to handle Hub validation
   return (
-    <div className="container mx-auto py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">{chat.name}</h1>
-        <p className="text-muted-foreground mt-2">
-          Configure your embedded AI assistant
-        </p>
-      </div>
-
-      <ChatConfigurationTabs 
-        chat={chat}
-        chatUuid={uuid}
-      />
-    </div>
+    <ConfigurationClient
+      chat={chat}
+      chatUuid={uuid}
+      projectName={chatWithProject.project.name}
+      projectUuid={chatWithProject.project.uuid}
+    />
   );
 }
