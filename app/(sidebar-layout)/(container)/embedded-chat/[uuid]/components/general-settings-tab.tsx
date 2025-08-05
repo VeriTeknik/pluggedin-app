@@ -49,6 +49,7 @@ const generalSettingsSchema = z.object({
     .min(3, 'Slug must be at least 3 characters')
     .max(50, 'Slug must be at most 50 characters')
     .optional(),
+  description: z.string().max(500).optional(),
   welcome_message: z.string().max(1000).optional(),
   custom_instructions: z.string().max(2000).optional(),
   suggested_questions: z.array(z.string().max(200)).max(5),
@@ -78,6 +79,7 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
     defaultValues: {
       name: chat.name,
       slug: chat.slug || undefined,
+      description: chat.description || undefined,
       welcome_message: chat.welcome_message || undefined,
       custom_instructions: chat.custom_instructions || undefined,
       suggested_questions: chat.suggested_questions || [],
@@ -118,6 +120,8 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
       // Filter out empty suggested questions
       const cleanedValues = {
         ...values,
+        slug: values.slug?.trim() || null, // Explicitly include slug, trim and convert empty to null
+        description: values.description?.trim() || null, // Explicitly include description, trim and convert empty to null
         suggested_questions: values.suggested_questions?.filter(q => q && q.trim()) || [],
         allowed_domains: values.allowed_domains?.filter(d => d && d.trim()) || [],
       };
@@ -190,6 +194,27 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
                   </FormControl>
                   <FormDescription>
                     {t('embeddedChat.general.slugDescription', 'Short URL for accessing this chat (e.g., /to/username/my-assistant)')}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('embeddedChat.general.description', 'Description')}</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      placeholder="This AI assistant helps with..."
+                      rows={3}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t('embeddedChat.general.descriptionDescription', 'A brief description of what this assistant does (shown on your profile)')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

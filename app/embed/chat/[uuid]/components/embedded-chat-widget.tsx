@@ -266,8 +266,8 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
         )}
       </ScrollArea>
 
-      {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t">
+      {/* Input - Extra right padding to accommodate language switcher */}
+      <form onSubmit={handleSubmit} className="p-4 pr-16 border-t">
         <div className="flex gap-2">
           <Input
             ref={inputRef}

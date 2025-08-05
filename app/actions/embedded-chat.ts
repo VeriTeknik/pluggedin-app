@@ -53,6 +53,15 @@ const CreateEmbeddedChatSchema = z.object({
 
 const UpdateEmbeddedChatSchema = z.object({
   name: z.string().min(1).max(255).optional(),
+  slug: z.union([
+    z.string()
+      .regex(/^[a-z0-9-]+$/, 'Slug can only contain lowercase letters, numbers, and hyphens')
+      .min(3, 'Slug must be at least 3 characters')
+      .max(50, 'Slug must be at most 50 characters'),
+    z.literal(''),
+    z.null(),
+  ]).optional(),
+  description: z.union([z.string().max(500), z.literal(''), z.null()]).optional(),
   enabled_mcp_server_uuids: z.array(z.string().uuid()).optional(),
   enable_rag: z.boolean().optional(),
   allowed_domains: z.array(z.string()).optional(),
@@ -254,6 +263,28 @@ export async function createEmbeddedChat(data: z.infer<typeof CreateEmbeddedChat
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to create embedded chat' 
+    };
+  }
+}
+
+export async function getEmbeddedChat(chatUuid: string) {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    const result = await validateEmbeddedChatAccess(chatUuid, session.user.id);
+    
+    return { 
+      success: true, 
+      data: result.chat
+    };
+  } catch (error) {
+    console.error('Error getting embedded chat:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to get embedded chat' 
     };
   }
 }

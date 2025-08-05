@@ -365,6 +365,20 @@
       "when": 1754343822814,
       "tag": "0051_true_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1754356146123,
+      "tag": "0052_cute_terror",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1754387265235,
+      "tag": "0053_dry_steel_serpent",
+      "breakpoints": true
     }
   ]
 }

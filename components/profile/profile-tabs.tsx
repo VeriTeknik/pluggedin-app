@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { Bot } from 'lucide-react';
 import { ProfileEmbeddedChat } from '@/components/profile/profile-embedded-chat';
 import { EmbeddedChatInfo } from '@/components/profile/embedded-chat-info';
+import { AssistantCard } from '@/components/profile/assistant-card';
 
 import CardGrid from '@/app/(sidebar-layout)/(container)/search/components/CardGrid';
 import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
@@ -28,13 +29,15 @@ interface ProfileTabsProps {
   // sharedCollections: SharedCollection[]; 
   isOwner: boolean;
   username: string;
-  embeddedChatData?: any; // Chat data from parent
+  embeddedChats: any[]; // All embedded chats from parent
+  aiAssistantsDescription?: string | null;
 }
 
 export function ProfileTabs({ 
   username,
   isOwner,
-  embeddedChatData
+  embeddedChats,
+  aiAssistantsDescription
 }: ProfileTabsProps) {
   const { t } = useTranslation();
   const { currentProfile } = useProfiles();
@@ -121,11 +124,11 @@ export function ProfileTabs({
   // TODO: Implement fetching for collections and chats similarly using useSWR if needed
 
   return (
-    <Tabs defaultValue={embeddedChatData ? "assistant" : "servers"} className="w-full">
+    <Tabs defaultValue={embeddedChats.length > 0 ? "assistant" : "servers"} className="w-full">
       <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="assistant" className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-500/10 data-[state=active]:to-blue-500/10">
           <span className="flex items-center gap-1.5">
-            <span>AI Assistant</span>
+            <span>AI Assistants{embeddedChats.length > 0 && ` (${embeddedChats.length})`}</span>
             <span className="text-base">✨</span>
           </span>
         </TabsTrigger>
@@ -177,32 +180,36 @@ export function ProfileTabs({
       </TabsContent>
       
       <TabsContent value="assistant" className="pt-6">
-        {embeddedChatData ? (
-          <>
-            {/* Show chat info card */}
-            <EmbeddedChatInfo 
-              chatData={embeddedChatData} 
-              isOwner={isOwner}
-            />
-            
-            {/* Show embedded chat for non-owners */}
-            {!isOwner && (
-              <ProfileEmbeddedChat 
-                chatData={embeddedChatData} 
-                isOwner={false}
-              />
+        {embeddedChats.length > 0 ? (
+          <div className="space-y-6">
+            {/* Show general AI assistants description if available */}
+            {aiAssistantsDescription && (
+              <div className="p-6 bg-gradient-to-br from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-xl border border-purple-100 dark:border-purple-900/30">
+                <p className="text-foreground whitespace-pre-wrap">{aiAssistantsDescription}</p>
+              </div>
             )}
-          </>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {embeddedChats.map((chat) => (
+                <AssistantCard 
+                  key={chat.uuid}
+                  assistant={chat}
+                  isOwner={isOwner}
+                  username={username}
+                />
+              ))}
+            </div>
+          </div>
         ) : (
           <div className="text-center py-16 px-4">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-100 to-blue-100 dark:from-purple-900/20 dark:to-blue-900/20 mb-6">
               <Bot className="h-10 w-10 text-purple-600 dark:text-purple-400" />
             </div>
-            <p className="text-xl font-medium mb-3">No AI Assistant Yet</p>
+            <p className="text-xl font-medium mb-3">No AI Assistants Yet</p>
             <p className="text-muted-foreground max-w-md mx-auto">
               {isOwner 
-                ? "✨ Ready to add your AI assistant? Head to the Embedded Chat section to bring your profile to life!"
-                : "This profile doesn't have an AI assistant yet. Check back soon!"}
+                ? "✨ Ready to add AI assistants? Head to your Hubs and enable Embedded Chat to bring your profile to life!"
+                : "This profile doesn't have any AI assistants yet. Check back soon!"}
             </p>
           </div>
         )}

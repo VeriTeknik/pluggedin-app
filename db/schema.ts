@@ -113,6 +113,7 @@ export const users = pgTable('users', {
   company: varchar('company', { length: 255 }),
   twitter_handle: varchar('twitter_handle', { length: 100 }),
   github_handle: varchar('github_handle', { length: 100 }),
+  ai_assistants_description: text('ai_assistants_description'),
 },
 (table) => ({
   usersUsernameIdx: index('users_username_idx').on(table.username),
@@ -1202,6 +1203,7 @@ export const embeddedChatsTable = pgTable(
       .unique(),
     name: varchar('name', { length: 255 }).notNull().default('AI Assistant'),
     slug: varchar('slug', { length: 100 }), // URL-friendly slug for /to/username/slug
+    description: text('description'), // Personal info/description for the assistant
     
     // MCP servers selection
     enabled_mcp_server_uuids: text('enabled_mcp_server_uuids').array().default(sql`'{}'::text[]`),
@@ -1271,6 +1273,7 @@ export const embeddedChatsTable = pgTable(
     embeddedChatsPublicIdx: index('idx_embedded_chats_public').on(table.is_public),
     embeddedChatsActiveIdx: index('idx_embedded_chats_active').on(table.is_active),
     embeddedChatsApiKeyIdx: index('idx_embedded_chats_api_key').on(table.api_key),
+    embeddedChatsSlugIdx: index('idx_embedded_chats_slug').on(table.slug),
   })
 );
 

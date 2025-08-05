@@ -3,6 +3,7 @@ export interface EmbeddedChat {
   project_uuid: string;
   name: string;
   slug?: string | null;
+  description?: string | null;
   enabled_mcp_server_uuids: string[];
   enable_rag: boolean;
   allowed_domains: string[];
@@ -54,6 +55,12 @@ export interface EmbeddedChat {
   api_key_last_used_at: Date | null;
   created_at: Date;
   updated_at: Date;
+  // Statistics
+  stats?: {
+    totalMessages: number;
+    totalConversations: number;
+    activeConversations: number;
+  };
 }
 
 export interface Project {

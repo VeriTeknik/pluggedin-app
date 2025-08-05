@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 interface EmbeddedChatInfoProps {
   chatData: {
     chatName: string;
+    description?: string | null;
     welcomeMessage?: string | null;
     requireApiKey: boolean;
     user: {
@@ -55,6 +56,12 @@ export function EmbeddedChatInfo({ chatData, isOwner }: EmbeddedChatInfoProps) {
         </div>
       </CardHeader>
       <CardContent className="relative space-y-4">
+        {chatData.description && (
+          <p className="text-muted-foreground">
+            {chatData.description}
+          </p>
+        )}
+        
         {chatData.welcomeMessage && (
           <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/20 dark:to-blue-950/20 rounded-xl">
             <p className="text-sm italic">

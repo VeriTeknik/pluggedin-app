@@ -177,6 +177,7 @@ export async function updateUserSocial(
     company?: string;
     twitter_handle?: string;
     github_handle?: string;
+    ai_assistants_description?: string;
   }
 ): Promise<{ success: boolean; user?: User; error?: string }> {
   try {

@@ -52,6 +52,8 @@ export default async function EmbeddedChatConfigPage({ params }: PageProps) {
     uuid: dbChat.uuid,
     project_uuid: dbChat.project_uuid,
     name: dbChat.name,
+    slug: dbChat.slug,
+    description: dbChat.description,
     enabled_mcp_server_uuids: dbChat.enabled_mcp_server_uuids || [],
     enable_rag: dbChat.enable_rag ?? false,
     allowed_domains: dbChat.allowed_domains || [],

@@ -6,14 +6,12 @@ import { and, eq } from 'drizzle-orm';
 interface PageProps {
   params: Promise<{
     username: string;
-    slug: string;
+    uuid: string;
   }>;
 }
 
-export default async function ChatPage({ params }: PageProps) {
-  const { username, slug } = await params;
-
-  console.log('Chat page - username:', username, 'slug:', slug);
+export default async function ChatByUuidPage({ params }: PageProps) {
+  const { username, uuid } = await params;
 
   // Find the user
   const user = await db.query.users.findFirst({
@@ -21,13 +19,10 @@ export default async function ChatPage({ params }: PageProps) {
   });
 
   if (!user) {
-    console.log('User not found:', username);
     notFound();
   }
 
-  console.log('User found:', user.id);
-
-  // Find the embedded chat by slug
+  // Find the embedded chat by UUID
   const result = await db
     .select({
       chat: embeddedChatsTable,
@@ -37,36 +32,13 @@ export default async function ChatPage({ params }: PageProps) {
     .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
     .where(and(
       eq(projectsTable.user_id, user.id),
-      eq(projectsTable.embedded_chat_enabled, true),
-      eq(embeddedChatsTable.slug, slug),
+      eq(embeddedChatsTable.uuid, uuid),
       eq(embeddedChatsTable.is_public, true),
       eq(embeddedChatsTable.is_active, true)
     ))
     .limit(1);
 
-  console.log('Query result:', result.length, 'chats found');
-
   if (result.length === 0) {
-    // Let's also check if the chat exists but with different conditions
-    const debugResult = await db
-      .select({
-        chat: embeddedChatsTable,
-        project: projectsTable,
-      })
-      .from(embeddedChatsTable)
-      .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
-      .where(and(
-        eq(projectsTable.user_id, user.id),
-        eq(embeddedChatsTable.slug, slug)
-      ))
-      .limit(1);
-    
-    if (debugResult.length > 0) {
-      console.log('Chat found but not public/active:', debugResult[0].chat);
-    } else {
-      console.log('No chat found with this slug at all');
-    }
-    
     notFound();
   }
 
@@ -103,6 +75,14 @@ export default async function ChatPage({ params }: PageProps) {
               View {user.name || user.username}'s Profile →
             </a>
           </div>
+
+          {!chat.slug && (
+            <div className="mt-6 p-4 bg-blue-100 dark:bg-blue-900/20 rounded-lg text-center">
+              <p className="text-sm">
+                💡 Tip: Add a custom URL slug to this assistant in the settings for a cleaner URL like /to/{username}/assistant-name
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>

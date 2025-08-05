@@ -48,6 +48,7 @@ import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
 import { ProfileSocialSection } from './profile-social-section';
+import { AIAssistantsSection } from './ai-assistants-section';
 type User = typeof users.$inferSelect;
 
 interface SettingsFormProps {
@@ -261,7 +262,7 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   };
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-6">
       {/* Profile Section */}
       <Card>
         <CardHeader>
@@ -351,6 +352,9 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
 
       {/* Social Profile Section - Pass user prop */}
       <ProfileSocialSection user={user} /> 
+
+      {/* AI Assistants Section */}
+      <AIAssistantsSection user={user} />
 
       {/* Connected Accounts */}
       <Card>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useProjects } from '@/hooks/use-projects';
 import { DashboardContent } from './components/dashboard-content';
 import { getDashboardMetrics, getRecentConversations, getActiveConversations } from '@/app/actions/embedded-chat-analytics';
+import { getEmbeddedChat } from '@/app/actions/embedded-chat';
 import { Loader2 } from 'lucide-react';
 
 export function DashboardClient() {
@@ -13,6 +14,7 @@ export function DashboardClient() {
   const [metrics, setMetrics] = useState<any>(null);
   const [recentConversations, setRecentConversations] = useState<any[]>([]);
   const [activeConversations, setActiveConversations] = useState<any[]>([]);
+  const [chatName, setChatName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -37,11 +39,16 @@ export function DashboardClient() {
   const loadDashboardData = async (chatUuid: string) => {
     try {
       setIsLoading(true);
-      const [metricsResult, recentResult, activeResult] = await Promise.all([
+      const [chatResult, metricsResult, recentResult, activeResult] = await Promise.all([
+        getEmbeddedChat(chatUuid),
         getDashboardMetrics(chatUuid),
         getRecentConversations(chatUuid),
         getActiveConversations(chatUuid),
       ]);
+
+      if (chatResult.success && chatResult.data) {
+        setChatName(chatResult.data.name);
+      }
 
       setMetrics(metricsResult.data || {
         activeConversations: 0,
@@ -102,7 +109,9 @@ export function DashboardClient() {
         <div className="text-sm text-muted-foreground mb-2">
           Hub: <span className="font-medium">{currentProject.name}</span>
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">Embedded Chat Dashboard</h1>
+        <h1 className="text-3xl font-bold tracking-tight">
+          {chatName || 'Embedded Chat'} Dashboard
+        </h1>
         <p className="text-muted-foreground mt-2">
           Monitor and manage your AI chat assistant
         </p>
