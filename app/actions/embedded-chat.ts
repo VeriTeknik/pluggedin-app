@@ -85,6 +85,8 @@ const UpdateEmbeddedChatSchema = z.object({
   }).optional(),
   is_public: z.boolean().optional(),
   is_active: z.boolean().optional(),
+  bot_avatar_url: z.string().nullable().optional(),
+  expose_capabilities: z.boolean().optional(),
 });
 
 const CreatePersonaSchema = z.object({

@@ -125,6 +125,7 @@ export async function GET(
     if (chat.expose_capabilities && chat.enabled_mcp_server_uuids && chat.enabled_mcp_server_uuids.length > 0) {
       // Get basic info about enabled MCP servers
       const { mcpServersTable } = await import('@/db/schema');
+      const { inArray } = await import('drizzle-orm');
       mcpServers = await db
         .select({
           name: mcpServersTable.name,
@@ -132,7 +133,7 @@ export async function GET(
           description: mcpServersTable.description,
         })
         .from(mcpServersTable)
-        .where(sql`${mcpServersTable.uuid} = ANY(${chat.enabled_mcp_server_uuids})`);
+        .where(inArray(mcpServersTable.uuid, chat.enabled_mcp_server_uuids));
     }
 
     // Return public configuration

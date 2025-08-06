@@ -2,6 +2,7 @@ import { eq, and } from 'drizzle-orm';
 import { mkdir, writeFile } from 'fs/promises';
 import { NextResponse } from 'next/server';
 import { join } from 'path';
+import sharp from 'sharp';
 
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable } from '@/db/schema';
@@ -39,6 +40,7 @@ export async function POST(
 
     const formData = await req.formData();
     const file = formData.get('avatar') as File;
+    const preCropped = formData.get('preCropped') === 'true';
     
     if (!file) {
       return new NextResponse('No file uploaded', { status: 400 });
@@ -49,20 +51,43 @@ export async function POST(
       return new NextResponse('File must be an image', { status: 400 });
     }
 
-    // Validate file size (1MB)
-    if (file.size > 1024 * 1024) {
-      return new NextResponse('File size must be less than 1MB', { status: 400 });
+    // Maximum allowed size is 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      return new NextResponse('File size must be less than 10MB', { status: 400 });
     }
 
-    // Create unique filename
-    const ext = file.name.split('.').pop();
-    const filename = `bot-${uuid}-${Date.now()}.${ext}`;
-    const path = join(process.cwd(), 'public', 'avatars', 'bots', filename);
-    
     // Convert File to Buffer
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
+    let processedImage: Buffer;
+    
+    if (preCropped) {
+      // Image is already cropped by the client, just optimize it
+      processedImage = await sharp(buffer)
+        .resize(256, 256, {
+          fit: 'cover',
+          position: 'center',
+          withoutEnlargement: true // Don't enlarge if already smaller
+        })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+    } else {
+      // Process and resize the image using sharp
+      // Resize to 256x256, convert to JPEG for consistency and smaller file size
+      processedImage = await sharp(buffer)
+        .resize(256, 256, {
+          fit: 'cover',
+          position: 'center'
+        })
+        .jpeg({ quality: 90 })
+        .toBuffer();
+    }
+
+    // Create unique filename with .jpg extension
+    const filename = `bot-${uuid}-${Date.now()}.jpg`;
+    const path = join(process.cwd(), 'public', 'avatars', 'bots', filename);
+    
     // Ensure bots avatars directory exists
     const botsAvatarsDir = join(process.cwd(), 'public', 'avatars', 'bots');
     try {
@@ -71,8 +96,8 @@ export async function POST(
       // Directory might already exist
     }
 
-    // Write file
-    await writeFile(path, buffer);
+    // Write processed file
+    await writeFile(path, processedImage);
 
     // Update embedded chat's bot avatar in database
     const imageUrl = `/avatars/bots/${filename}`;

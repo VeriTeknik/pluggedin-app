@@ -3,11 +3,17 @@
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
-import { Send, X, Loader2, Shield } from 'lucide-react';
+import { Send, X, Loader2, Shield, Database, FileSearch, Bot, Sparkles, Terminal, Globe, Server, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { getOrCreateVisitorId, formatVisitorName } from '@/lib/visitor-utils';
 
 // Helper to ensure absolute URLs for API calls
@@ -55,6 +61,46 @@ interface NativeEmbeddedChatProps {
   placeholder?: string;
 }
 
+// Helper function to get icon for MCP server based on name/type
+function getServerIcon(server: { name: string; type: string }) {
+  const name = server.name.toLowerCase();
+  
+  if (name.includes('postgres') || name.includes('mysql') || name.includes('mongo') || name.includes('sql')) {
+    return Database;
+  }
+  if (name.includes('api') || name.includes('http') || name.includes('web')) {
+    return Globe;
+  }
+  if (name.includes('terminal') || name.includes('shell') || name.includes('bash')) {
+    return Terminal;
+  }
+  if (name.includes('code') || name.includes('github') || name.includes('git')) {
+    return Code;
+  }
+  // Default to Server icon
+  return Server;
+}
+
+// Helper function to get color scheme for server badge
+function getServerColorScheme(server: { name: string; type: string }) {
+  const name = server.name.toLowerCase();
+  
+  if (name.includes('postgres') || name.includes('mysql') || name.includes('mongo') || name.includes('sql')) {
+    return 'from-blue-500/10 to-purple-500/10 dark:from-blue-500/20 dark:to-purple-500/20 border-blue-500/20 dark:border-blue-400/30 hover:from-blue-500/20 hover:to-purple-500/20 dark:hover:from-blue-500/30 dark:hover:to-purple-500/30';
+  }
+  if (name.includes('api') || name.includes('http') || name.includes('web')) {
+    return 'from-cyan-500/10 to-blue-500/10 dark:from-cyan-500/20 dark:to-blue-500/20 border-cyan-500/20 dark:border-cyan-400/30 hover:from-cyan-500/20 hover:to-blue-500/20 dark:hover:from-cyan-500/30 dark:hover:to-blue-500/30';
+  }
+  if (name.includes('terminal') || name.includes('shell') || name.includes('bash')) {
+    return 'from-gray-500/10 to-slate-500/10 dark:from-gray-500/20 dark:to-slate-500/20 border-gray-500/20 dark:border-gray-400/30 hover:from-gray-500/20 hover:to-slate-500/20 dark:hover:from-gray-500/30 dark:hover:to-slate-500/30';
+  }
+  if (name.includes('code') || name.includes('github') || name.includes('git')) {
+    return 'from-orange-500/10 to-amber-500/10 dark:from-orange-500/20 dark:to-amber-500/20 border-orange-500/20 dark:border-orange-400/30 hover:from-orange-500/20 hover:to-amber-500/20 dark:hover:from-orange-500/30 dark:hover:to-amber-500/30';
+  }
+  // Default color scheme
+  return 'from-indigo-500/10 to-purple-500/10 dark:from-indigo-500/20 dark:to-purple-500/20 border-indigo-500/20 dark:border-indigo-400/30 hover:from-indigo-500/20 hover:to-purple-500/20 dark:hover:from-indigo-500/30 dark:hover:to-purple-500/30';
+}
+
 export function NativeEmbeddedChat({
   chatUuid,
   className,
@@ -86,6 +132,7 @@ export function NativeEmbeddedChat({
         const response = await fetch(getApiUrl(`/api/public/chat/${chatUuid}/config`));
         if (response.ok) {
           const data = await response.json();
+          console.log('Chat config loaded:', data.chat);
           setChatConfig(data.chat);
         }
       } catch (error) {
@@ -372,21 +419,37 @@ export function NativeEmbeddedChat({
     <>
       <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 bg-gradient-to-r from-purple-600 to-blue-600 text-white">
         <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z"
-              />
-            </svg>
-          </div>
+          {chatConfig?.bot_avatar_url ? (
+            <img 
+              src={chatConfig.bot_avatar_url} 
+              alt={chatConfig.name || 'AI Assistant'} 
+              className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
+              onError={(e) => {
+                // Fallback to default icon on error
+                const target = e.target as HTMLImageElement;
+                target.style.display = 'none';
+                target.parentElement?.insertAdjacentHTML('afterend', 
+                  '<div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z"/></svg></div>'
+                );
+              }}
+            />
+          ) : (
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z"
+                />
+              </svg>
+            </div>
+          )}
           <div>
             <h3 className="font-semibold">{chatConfig?.name || 'AI Assistant'}</h3>
             <p className="text-xs opacity-90">Online</p>
@@ -406,25 +469,94 @@ export function NativeEmbeddedChat({
       </div>
 
       <ScrollArea className="flex-1 p-4 bg-white dark:bg-gray-800">
-        {/* Show MCP capabilities if enabled */}
-        {chatConfig?.expose_capabilities && chatConfig?.mcp_servers && chatConfig.mcp_servers.length > 0 && messages.length === 1 && (
-          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-            <div className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-2">Available Capabilities:</div>
-            <div className="space-y-1">
-              {chatConfig.mcp_servers.map((server, idx) => (
-                <div key={idx} className="flex items-start gap-2 text-xs text-blue-800 dark:text-blue-200">
-                  <span className="font-medium">{server.name}:</span>
-                  <span className="opacity-90">{server.description || server.type}</span>
-                </div>
-              ))}
-              {chatConfig.enable_rag && (
-                <div className="flex items-start gap-2 text-xs text-blue-800 dark:text-blue-200">
-                  <span className="font-medium">Document Search:</span>
-                  <span className="opacity-90">Can search through uploaded documents</span>
-                </div>
-              )}
+        {/* Show MCP capabilities as Discord-style badges */}
+        {chatConfig?.expose_capabilities && messages.length <= 1 && (
+          <TooltipProvider>
+            <div className="mb-4 animate-in fade-in slide-in-from-top-2 duration-500">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-3.5 w-3.5 text-purple-500 dark:text-purple-400 animate-pulse" />
+                <span className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                  AI Capabilities
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {/* MCP Server badges */}
+                {chatConfig?.mcp_servers && chatConfig.mcp_servers.length > 0 && chatConfig.mcp_servers.map((server, idx) => {
+                  const Icon = getServerIcon(server);
+                  const colorScheme = getServerColorScheme(server);
+                  
+                  return (
+                    <Tooltip key={idx}>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r border rounded-full transition-all cursor-default animate-in fade-in-0 zoom-in-95",
+                            colorScheme
+                          )}
+                          style={{ animationDelay: `${idx * 100}ms`, animationFillMode: 'both' }}
+                        >
+                          <Icon className="h-3 w-3 text-current opacity-70" />
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            {server.name}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="text-xs">
+                          {server.description || `${server.type} connection available`}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
+                
+                {/* RAG badge */}
+                {chatConfig?.enable_rag && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div 
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20 border border-green-500/20 dark:border-green-400/30 rounded-full hover:from-green-500/20 hover:to-emerald-500/20 dark:hover:from-green-500/30 dark:hover:to-emerald-500/30 transition-all cursor-default animate-in fade-in-0 zoom-in-95"
+                        style={{ animationDelay: `${(chatConfig?.mcp_servers?.length || 0) * 100}ms`, animationFillMode: 'both' }}
+                      >
+                        <FileSearch className="h-3 w-3 text-green-500 dark:text-green-400" />
+                        <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                          Document Search
+                        </span>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-xs">
+                        Can search and retrieve information from uploaded documents
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                
+                {/* Base AI badge - always shown */}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div 
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20 border border-purple-500/20 dark:border-purple-400/30 rounded-full hover:from-purple-500/20 hover:to-pink-500/20 dark:hover:from-purple-500/30 dark:hover:to-pink-500/30 transition-all cursor-default animate-in fade-in-0 zoom-in-95"
+                      style={{ 
+                        animationDelay: `${((chatConfig?.mcp_servers?.length || 0) + (chatConfig?.enable_rag ? 1 : 0)) * 100}ms`, 
+                        animationFillMode: 'both' 
+                      }}
+                    >
+                      <Bot className="h-3 w-3 text-purple-500 dark:text-purple-400" />
+                      <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                        AI Assistant
+                      </span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-xs">
+                      Powered by advanced language models for natural conversations
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
             </div>
-          </div>
+          </TooltipProvider>
         )}
         
         <div className="space-y-4">
