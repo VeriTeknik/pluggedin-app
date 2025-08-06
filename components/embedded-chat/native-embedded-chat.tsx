@@ -29,6 +29,24 @@ interface Message {
   userAvatar?: string;
 }
 
+interface ChatConfig {
+  uuid: string;
+  name: string;
+  welcome_message: string | null;
+  suggested_questions: string[];
+  theme_config: any;
+  position: string;
+  offline_config: any;
+  bot_avatar_url: string | null;
+  expose_capabilities: boolean;
+  enable_rag: boolean;
+  mcp_servers?: Array<{
+    name: string;
+    type: string;
+    description: string | null;
+  }>;
+}
+
 interface NativeEmbeddedChatProps {
   chatUuid: string;
   className?: string;
@@ -52,14 +70,33 @@ export function NativeEmbeddedChat({
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [visitorId, setVisitorId] = useState<string>('');
+  const [chatConfig, setChatConfig] = useState<ChatConfig | null>(null);
+  const [configLoading, setConfigLoading] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize visitor ID
+  // Initialize visitor ID and fetch chat config
   useEffect(() => {
     const id = getOrCreateVisitorId();
     setVisitorId(id);
-  }, []);
+    
+    // Fetch chat configuration
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch(getApiUrl(`/api/public/chat/${chatUuid}/config`));
+        if (response.ok) {
+          const data = await response.json();
+          setChatConfig(data.chat);
+        }
+      } catch (error) {
+        console.error('Failed to fetch chat config:', error);
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+    
+    fetchConfig();
+  }, [chatUuid]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -69,14 +106,15 @@ export function NativeEmbeddedChat({
   // Add welcome message when chat opens
   useEffect(() => {
     if (isOpen && messages.length === 0) {
+      const actualWelcomeMessage = chatConfig?.welcome_message || welcomeMessage;
       setMessages([{
         id: 'welcome',
         role: 'assistant',
-        content: welcomeMessage,
+        content: actualWelcomeMessage,
         timestamp: new Date(),
       }]);
     }
-  }, [isOpen, welcomeMessage]);
+  }, [isOpen, welcomeMessage, chatConfig]);
 
   // Heartbeat mechanism
   useEffect(() => {
@@ -184,6 +222,7 @@ export function NativeEmbeddedChat({
           if (line.startsWith('data: ')) {
             try {
               const data = JSON.parse(line.slice(6));
+              console.log('Received data:', data);
               
               if (data.conversation_id && !conversationId) {
                 setConversationId(data.conversation_id);
@@ -196,6 +235,33 @@ export function NativeEmbeddedChat({
                     ? { ...msg, content: assistantMessage.content }
                     : msg
                 ));
+              } else if (data.type === 'tool_start') {
+                // Optionally show tool usage in the UI
+                console.log('Tool started:', data.tool);
+              } else if (data.type === 'tool_end') {
+                // Optionally show tool completion
+                console.log('Tool ended:', data.tool);
+              } else if (data.type === 'final') {
+                // Handle final message if no streaming tokens were received
+                if (!assistantMessage.content && data.messages && data.messages.length > 0) {
+                  const lastMessage = data.messages[data.messages.length - 1];
+                  if (lastMessage.role === 'ai' || lastMessage.role === 'assistant') {
+                    assistantMessage.content = lastMessage.content;
+                    setMessages(prev => prev.map(msg => 
+                      msg.id === assistantMessage.id 
+                        ? { ...msg, content: assistantMessage.content }
+                        : msg
+                    ));
+                  }
+                }
+              } else if (data.type === 'done') {
+                // Stream completed
+                console.log('Stream completed');
+              } else if (data.type === 'conversation') {
+                // Handle conversation ID from stream
+                if (data.conversation_id && !conversationId) {
+                  setConversationId(data.conversation_id);
+                }
               } else if (data.type === 'error') {
                 console.error('Chat error:', data.content);
                 assistantMessage.content = data.content;
@@ -210,6 +276,17 @@ export function NativeEmbeddedChat({
             }
           }
         }
+      }
+      
+      // If no content was received, show a fallback message
+      if (!assistantMessage.content) {
+        console.warn('No response content received');
+        assistantMessage.content = 'I apologize, but I didn\'t receive a proper response. Please try again.';
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessage.id 
+            ? { ...msg, content: assistantMessage.content }
+            : msg
+        ));
       }
     } catch (error) {
       console.error('Failed to send message:', error);
@@ -227,6 +304,23 @@ export function NativeEmbeddedChat({
 
   const renderAvatar = (message: Message) => {
     if (message.role === 'assistant') {
+      if (chatConfig?.bot_avatar_url) {
+        return (
+          <img 
+            src={chatConfig.bot_avatar_url} 
+            alt={chatConfig.name || 'AI Assistant'} 
+            className="w-8 h-8 rounded-full object-cover"
+            onError={(e) => {
+              // Fallback to default avatar on error
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.parentElement?.insertAdjacentHTML('afterend', 
+                '<div class="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-sm font-medium">AI</div>'
+              );
+            }}
+          />
+        );
+      }
       return (
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-sm font-medium">
           AI
@@ -294,7 +388,7 @@ export function NativeEmbeddedChat({
             </svg>
           </div>
           <div>
-            <h3 className="font-semibold">AI Assistant</h3>
+            <h3 className="font-semibold">{chatConfig?.name || 'AI Assistant'}</h3>
             <p className="text-xs opacity-90">Online</p>
           </div>
           {isAuthenticated && (
@@ -312,6 +406,27 @@ export function NativeEmbeddedChat({
       </div>
 
       <ScrollArea className="flex-1 p-4 bg-white dark:bg-gray-800">
+        {/* Show MCP capabilities if enabled */}
+        {chatConfig?.expose_capabilities && chatConfig?.mcp_servers && chatConfig.mcp_servers.length > 0 && messages.length === 1 && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="text-xs font-medium text-blue-900 dark:text-blue-100 mb-2">Available Capabilities:</div>
+            <div className="space-y-1">
+              {chatConfig.mcp_servers.map((server, idx) => (
+                <div key={idx} className="flex items-start gap-2 text-xs text-blue-800 dark:text-blue-200">
+                  <span className="font-medium">{server.name}:</span>
+                  <span className="opacity-90">{server.description || server.type}</span>
+                </div>
+              ))}
+              {chatConfig.enable_rag && (
+                <div className="flex items-start gap-2 text-xs text-blue-800 dark:text-blue-200">
+                  <span className="font-medium">Document Search:</span>
+                  <span className="opacity-90">Can search through uploaded documents</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
         <div className="space-y-4">
           {messages.map((message) => (
             <div
@@ -352,6 +467,25 @@ export function NativeEmbeddedChat({
       </ScrollArea>
 
       <div className="p-4 border-t dark:border-gray-700">
+        {/* Show suggested questions if available and conversation just started */}
+        {chatConfig?.suggested_questions && chatConfig.suggested_questions.length > 0 && messages.length <= 1 && !inputValue && (
+          <div className="mb-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">Suggested questions:</div>
+            <div className="flex flex-wrap gap-2">
+              {chatConfig.suggested_questions.map((question, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setInputValue(question)}
+                  className="px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors text-gray-700 dark:text-gray-300"
+                  disabled={isLoading}
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        
         <div className="flex space-x-2">
           <Textarea
             value={inputValue}

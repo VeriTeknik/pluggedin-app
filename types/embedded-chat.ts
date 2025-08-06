@@ -53,6 +53,8 @@ export interface EmbeddedChat {
   api_key_created_at: Date | null;
   require_api_key: boolean;
   api_key_last_used_at: Date | null;
+  bot_avatar_url: string | null;
+  expose_capabilities: boolean;
   created_at: Date;
   updated_at: Date;
   // Statistics

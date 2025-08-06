@@ -71,6 +71,10 @@ export async function GET(
         offline_config: embeddedChatsTable.offline_config,
         allowed_domains: embeddedChatsTable.allowed_domains,
         is_active: embeddedChatsTable.is_active,
+        bot_avatar_url: embeddedChatsTable.bot_avatar_url,
+        expose_capabilities: embeddedChatsTable.expose_capabilities,
+        enabled_mcp_server_uuids: embeddedChatsTable.enabled_mcp_server_uuids,
+        enable_rag: embeddedChatsTable.enable_rag,
       })
       .from(embeddedChatsTable)
       .where(and(
@@ -116,6 +120,21 @@ export async function GET(
       ))
       .orderBy(chatPersonasTable.display_order);
 
+    // Get MCP server info if capabilities should be exposed
+    let mcpServers = [];
+    if (chat.expose_capabilities && chat.enabled_mcp_server_uuids && chat.enabled_mcp_server_uuids.length > 0) {
+      // Get basic info about enabled MCP servers
+      const { mcpServersTable } = await import('@/db/schema');
+      mcpServers = await db
+        .select({
+          name: mcpServersTable.name,
+          type: mcpServersTable.type,
+          description: mcpServersTable.description,
+        })
+        .from(mcpServersTable)
+        .where(sql`${mcpServersTable.uuid} = ANY(${chat.enabled_mcp_server_uuids})`);
+    }
+
     // Return public configuration
     const response = NextResponse.json({
       chat: {
@@ -126,6 +145,10 @@ export async function GET(
         theme_config: chat.theme_config,
         position: chat.position,
         offline_config: chat.offline_config,
+        bot_avatar_url: chat.bot_avatar_url,
+        expose_capabilities: chat.expose_capabilities,
+        enable_rag: chat.enable_rag,
+        mcp_servers: chat.expose_capabilities ? mcpServers : undefined,
       },
       personas,
     });

@@ -79,6 +79,8 @@ export default async function EmbeddedChatConfigPage({ params }: PageProps) {
     api_key_created_at: dbChat.api_key_created_at,
     require_api_key: dbChat.require_api_key ?? false,
     api_key_last_used_at: dbChat.api_key_last_used_at,
+    bot_avatar_url: dbChat.bot_avatar_url,
+    expose_capabilities: dbChat.expose_capabilities ?? false,
     created_at: dbChat.created_at,
     updated_at: dbChat.updated_at,
   };

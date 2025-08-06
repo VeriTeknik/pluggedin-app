@@ -1254,6 +1254,12 @@ export const embeddedChatsTable = pgTable(
     is_public: boolean('is_public').default(false).notNull(),
     is_active: boolean('is_active').default(true).notNull(),
     
+    // Bot appearance
+    bot_avatar_url: text('bot_avatar_url'),
+    
+    // Capability exposure
+    expose_capabilities: boolean('expose_capabilities').default(false),
+    
     // API Key Authentication
     api_key: varchar('api_key', { length: 66 }).unique(),
     api_key_created_at: timestamp('api_key_created_at', { withTimezone: true }),

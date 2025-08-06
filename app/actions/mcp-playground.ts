@@ -8,10 +8,10 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { McpServerType, profilesTable } from '@/db/schema';
+import { McpServerType, profilesTable, embeddedChatsTable, projectsTable } from '@/db/schema';
 
 import { logAuditEvent } from './audit-logger'; // Correct path alias
 import { ensureLogDirectories } from './log-retention'; // Correct path alias
@@ -1210,4 +1210,470 @@ export async function clearServerLogs(profileUuid: string) {
       error: error instanceof Error ? error.message : 'Unknown error'
     };
   }
+}
+
+// ============================================
+// Embedded Chat Functions - Reusing MCP Playground Infrastructure
+// ============================================
+
+// Store embedded chat sessions separately to avoid conflicts
+const embeddedChatSessions: Map<string, McpPlaygroundSession> = new Map();
+
+// Helper: Verify ownership chain for security
+async function verifyEmbeddedChatOwnership(
+  chatUuid: string,
+  profileUuid: string
+): Promise<{ valid: boolean; reason?: string }> {
+  const result = await db
+    .select({
+      chat: embeddedChatsTable,
+      profile: profilesTable,
+      project: projectsTable,
+    })
+    .from(embeddedChatsTable)
+    .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
+    .innerJoin(profilesTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+    .where(and(
+      eq(embeddedChatsTable.uuid, chatUuid),
+      eq(profilesTable.uuid, profileUuid)
+    ))
+    .limit(1);
+
+  if (result.length === 0) {
+    return { valid: false, reason: 'Chat not found or profile mismatch' };
+  }
+
+  return { valid: true };
+}
+
+// Helper: Get MCP servers with ownership verification
+async function getMcpServersWithOwnershipCheck(
+  profileUuid: string,
+  chatUuid: string
+): Promise<any[]> {
+  // First verify the chat belongs to this profile's project
+  const ownership = await verifyEmbeddedChatOwnership(chatUuid, profileUuid);
+  if (!ownership.valid) {
+    throw new Error(`Security violation: ${ownership.reason}`);
+  }
+  
+  // Get servers normally - they're already filtered by profile
+  return getMcpServers(profileUuid);
+}
+
+// Helper: Create completely isolated embedded chat session
+async function createIsolatedEmbeddedChatSession(
+  chatUuid: string,
+  profileUuid: string,
+  enabledServers: any[],
+  llmConfig: any
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    // Clear any existing logs for this chat
+    serverLogsByProfile.set(`embedded_${chatUuid}`, []);
+    
+    // Ensure log directories exist
+    await ensureLogDirectories();
+    
+    // Read workspace and local bin paths from env or use defaults
+    const mcpWorkspacePath = process.env.FIREJAIL_MCP_WORKSPACE ?? '/home/pluggedin/mcp-workspace';
+    
+    // Format servers for conversion with CRITICAL sandboxing for embedded chat
+    const mcpServersConfig: Record<string, any> = {};
+    
+    enabledServers.forEach(server => {
+      const isFilesystemServer = server.command === 'npx' && 
+        server.args?.includes('@modelcontextprotocol/server-filesystem');
+      
+      if (isFilesystemServer && server.type === 'STDIO') {
+        // Special handling for filesystem server
+        mcpServersConfig[server.name] = {
+          command: server.command,
+          args: [...(server.args?.slice(0, -1) ?? []), '.'],
+          env: server.env,
+          url: server.url,
+          type: server.type,
+          uuid: server.uuid,
+          config: server.config,
+          transport: 'stdio',
+          cwd: mcpWorkspacePath,
+          // CRITICAL: Always apply sandboxing for embedded chat
+          applySandboxing: true,
+          // Add isolation context for tenant separation
+          isolationContext: `embedded_${chatUuid}_${Date.now()}`,
+        };
+      } else {
+        // All other servers
+        mcpServersConfig[server.name] = {
+          command: server.command,
+          args: server.args,
+          env: server.env,
+          url: server.url,
+          type: server.type,
+          uuid: server.uuid,
+          config: server.config,
+        };
+        
+        // Add transport field based on server type
+        if (server.type === McpServerType.STDIO) {
+          mcpServersConfig[server.name].transport = 'stdio';
+          // CRITICAL: Always apply sandboxing for STDIO servers in embedded chat
+          mcpServersConfig[server.name].applySandboxing = true;
+          mcpServersConfig[server.name].isolationContext = `embedded_${chatUuid}_${Date.now()}`;
+        } else if (server.type === McpServerType.SSE) {
+          mcpServersConfig[server.name].transport = 'sse';
+        } else if (server.type === McpServerType.STREAMABLE_HTTP) {
+          mcpServersConfig[server.name].transport = 'streamable_http';
+          const serverWithOptions = server as any;
+          if (serverWithOptions.streamableHTTPOptions) {
+            mcpServersConfig[server.name].streamableHTTPOptions = serverWithOptions.streamableHTTPOptions;
+          }
+        }
+      }
+    });
+    
+    // Initialize LLM with streaming
+    const llm = initChatModel({
+      provider: llmConfig.provider,
+      model: llmConfig.model,
+      temperature: llmConfig.temperature ?? 0.7,
+      maxTokens: llmConfig.maxTokens ?? 1000,
+      streaming: true,
+    });
+    
+    // Create a logging function specific to this embedded chat
+    const logFunction = async (level: LogLevel, message: string) => {
+      await addServerLogForProfile(`embedded_${chatUuid}`, level, message);
+    };
+    
+    // Convert MCP servers to tools using progressive initialization
+    const logger = await createEnhancedMcpLogger(
+      logFunction,
+      llmConfig.logLevel || 'info'
+    );
+    
+    const { tools, cleanup: mcpCleanup, failedServers } = await progressivelyInitializeMcpServers(
+      mcpServersConfig,
+      `embedded_${chatUuid}`, // Use chat-specific identifier
+      {
+        logger,
+        perServerTimeout: 20000, // 20 seconds per server
+        totalTimeout: 60000, // 60 seconds total
+        llmProvider: llmConfig.provider
+      }
+    );
+    
+    // Log any failed servers
+    if (failedServers.length > 0) {
+      await addServerLogForProfile(
+        `embedded_${chatUuid}`,
+        'warn',
+        `[EMBEDDED] Some MCP servers failed to initialize: ${failedServers.join(', ')}. Continuing with available servers.`
+      );
+    }
+    
+    // Enhanced cleanup that handles MCP servers
+    const enhancedCleanup = async () => {
+      try {
+        await mcpCleanup();
+        // Clear logs for this embedded chat
+        serverLogsByProfile.delete(`embedded_${chatUuid}`);
+      } catch (error) {
+        console.error('[EMBEDDED] Cleanup error:', error);
+      }
+    };
+    
+    // Create the agent with tools
+    const agent = createReactAgent({
+      llm,
+      tools,
+      stateModifier: (state: any) => {
+        const systemMessage = `You are an AI assistant specialized in helping users interact with their development environment through MCP (Model Context Protocol) servers and knowledge bases.
+
+INFORMATION SOURCES:
+• Knowledge Context: Documentation, schemas, and background information from RAG
+• MCP Tools: Real-time data access and system interactions
+
+DECISION FRAMEWORK:
+1. Use knowledge context to understand structure, relationships, and background
+2. Use MCP tools for current data, live queries, and actions
+3. Combine both sources when helpful - context for understanding, tools for current information
+4. Always prioritize accuracy and currency of information
+
+EXAMPLES:
+• "How many users?" → Check knowledge for user table structure, use MCP tool to get current count
+• "Database schema?" → Use knowledge context if available, otherwise query via MCP tools
+• "Update settings" → Use MCP tools for the action, knowledge for validation
+
+Be transparent about which sources you use and why. When you have both context and tools available, use them together for the most complete and accurate response.`;
+        
+        return [
+          { role: 'system', content: systemMessage },
+          ...state.messages
+        ];
+      },
+    });
+    
+    // Store session with the chat UUID (isolated from playground)
+    const sessionData: McpPlaygroundSession = {
+      agent,
+      cleanup: enhancedCleanup,
+      lastActive: new Date(),
+      messages: [],
+    };
+    
+    embeddedChatSessions.set(chatUuid, sessionData);
+    
+    console.log(`[EMBEDDED] Session stored for chat ${chatUuid}`);
+    console.log(`[EMBEDDED] Active sessions after storing:`, Array.from(embeddedChatSessions.keys()));
+    
+    await addServerLogForProfile(
+      `embedded_${chatUuid}`,
+      'info',
+      `[EMBEDDED] Isolated session initialized with ${tools.length} tools from ${enabledServers.length} servers`
+    );
+    
+    return { success: true };
+    
+  } catch (error) {
+    console.error('[EMBEDDED] Failed to create isolated session:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to create session'
+    };
+  }
+}
+
+// Get or create an embedded chat session with complete isolation
+export async function getOrCreateEmbeddedChatSession(
+  chatUuid: string,
+  profileUuid: string,
+  enabledServerUuids: string[],
+  modelConfig: any
+) {
+  try {
+    // 1. Verify tenant boundaries FIRST
+    const chatOwnership = await verifyEmbeddedChatOwnership(chatUuid, profileUuid);
+    if (!chatOwnership.valid) {
+      console.error(`[SECURITY] Unauthorized embedded chat access attempt: ${chatOwnership.reason}`);
+      return {
+        success: false,
+        error: `Unauthorized: ${chatOwnership.reason}`
+      };
+    }
+    
+    // 2. Check if session already exists (never reuse playground sessions)
+    if (embeddedChatSessions.has(chatUuid)) {
+      return { 
+        success: true, 
+        message: 'Embedded chat session already active' 
+      };
+    }
+    
+    // 3. Create completely new isolated session
+    console.log(`[EMBEDDED] Creating isolated session for chat ${chatUuid}`);
+    
+    // Get servers with ownership verification
+    const allServers = await getMcpServersWithOwnershipCheck(profileUuid, chatUuid);
+    
+    // Filter to only enabled servers
+    const enabledServers = enabledServerUuids.length > 0
+      ? allServers.filter(server => enabledServerUuids.includes(server.uuid))
+      : allServers;
+    
+    // Create isolated session directly (don't reuse playground logic)
+    const result = await createIsolatedEmbeddedChatSession(
+      chatUuid,
+      profileUuid,
+      enabledServers,
+      modelConfig
+    );
+    
+    if (!result.success) {
+      return result;
+    }
+    
+    console.log(`[EMBEDDED] Session created successfully for chat ${chatUuid}`);
+    return { success: true };
+    
+  } catch (error) {
+    console.error('[EMBEDDED] Error creating embedded chat session:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+// Execute a query in embedded chat context
+export async function executeEmbeddedChatQuery(
+  chatUuid: string,
+  conversationId: string,
+  query: string,
+  enableRag: boolean = false
+) {
+  console.log('[EMBEDDED] Executing query for chat:', chatUuid);
+  console.log('[EMBEDDED] Active sessions:', Array.from(embeddedChatSessions.keys()));
+  
+  let session = embeddedChatSessions.get(chatUuid);
+  if (!session) {
+    console.log('[EMBEDDED] No session found for chat:', chatUuid);
+    console.log('[EMBEDDED] Attempting to recreate session for query execution');
+    
+    // Get the chat configuration to recreate the session
+    const chatData = await db.query.embeddedChatsTable.findFirst({
+      where: eq(embeddedChatsTable.uuid, chatUuid),
+      with: {
+        project: {
+          columns: { active_profile_uuid: true }
+        }
+      }
+    });
+    
+    if (!chatData || !chatData.project?.active_profile_uuid) {
+      return {
+        success: false,
+        error: 'Chat configuration not found.'
+      };
+    }
+    
+    // Recreate the session
+    const result = await getOrCreateEmbeddedChatSession(
+      chatUuid,
+      chatData.project.active_profile_uuid,
+      chatData.enabled_mcp_server_uuids || [],
+      chatData.model_config
+    );
+    
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to create session for query.'
+      };
+    }
+    
+    // Try to get the session again
+    session = embeddedChatSessions.get(chatUuid);
+    if (!session) {
+      console.log('[EMBEDDED] Failed to recreate session');
+      return {
+        success: false,
+        error: 'Failed to recreate embedded chat session.'
+      };
+    }
+  }
+  
+  console.log('[EMBEDDED] Session found/recreated, processing query:', query);
+
+  try {
+    // Update last active timestamp
+    session.lastActive = new Date();
+
+    let finalQuery = query;
+    
+    // Handle RAG if enabled
+    if (enableRag) {
+      // Get profile UUID from the session (we might need to store this)
+      const profileData = await db.query.embeddedChatsTable.findFirst({
+        where: eq(embeddedChatsTable.uuid, chatUuid),
+        columns: { project_uuid: true }
+      });
+      
+      if (profileData?.project_uuid) {
+        const ragResult = await queryRag(query, profileData.project_uuid);
+        
+        if (ragResult.success && ragResult.context) {
+          const MAX_CONTEXT_CHARS = 2000;
+          let limitedContext = ragResult.context;
+          if (limitedContext.length > MAX_CONTEXT_CHARS) {
+            limitedContext = limitedContext.slice(0, MAX_CONTEXT_CHARS) + '\n...[truncated]';
+          }
+          
+          finalQuery = `Context from knowledge base:
+${limitedContext}
+
+User question: ${query}`;
+        }
+      }
+    }
+
+    // Track streaming state
+    let currentAiMessage = '';
+    const streamingResponses: any[] = [];
+    
+    // Use conversationId as thread_id for proper conversation isolation
+    const threadId = conversationId;
+    
+    // Execute query with streaming
+    const agentFinalState = await session.agent.invoke(
+      { messages: [new HumanMessage(finalQuery)] },
+      {
+        configurable: { thread_id: threadId },
+        callbacks: [
+          {
+            handleLLMNewToken: async (token) => {
+              currentAiMessage += token;
+              streamingResponses.push({
+                type: 'token',
+                content: token
+              });
+            },
+            handleToolStart: async (tool) => {
+              streamingResponses.push({
+                type: 'tool_start',
+                tool: tool.name
+              });
+            },
+            handleToolEnd: async (tool) => {
+              streamingResponses.push({
+                type: 'tool_end',
+                tool: tool.name
+              });
+            }
+          }
+        ]
+      }
+    );
+
+    // Process messages similar to executePlaygroundQuery
+    const result = agentFinalState.messages[agentFinalState.messages.length - 1];
+    const processedMessages = agentFinalState.messages.map((msg: any) => ({
+      role: msg._getType(),
+      content: safeProcessContent(msg.content),
+      timestamp: new Date()
+    }));
+
+    return {
+      success: true,
+      result,
+      messages: processedMessages,
+      streamingResponses, // Include streaming data for the API to process
+    };
+  } catch (error) {
+    console.error('Error executing embedded chat query:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+// End an embedded chat session
+export async function endEmbeddedChatSession(chatUuid: string) {
+  const session = embeddedChatSessions.get(chatUuid);
+  if (session) {
+    try {
+      await session.cleanup();
+      embeddedChatSessions.delete(chatUuid);
+      return { success: true };
+    } catch (error) {
+      console.error('Error ending embedded chat session:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  return { success: true };
 }

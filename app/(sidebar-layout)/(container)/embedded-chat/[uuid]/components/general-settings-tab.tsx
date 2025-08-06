@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 import { Server } from 'lucide-react';
+import { AvatarUpload } from '@/components/ui/avatar-upload';
 
 import { updateEmbeddedChatConfig, getMCPServersForEmbeddedChat } from '@/app/actions/embedded-chat';
 import { Badge } from '@/components/ui/badge';
@@ -58,6 +59,8 @@ const generalSettingsSchema = z.object({
   is_active: z.boolean(),
   allowed_domains: z.array(z.string()),
   enabled_mcp_server_uuids: z.array(z.string()),
+  bot_avatar_url: z.string().nullable().optional(),
+  expose_capabilities: z.boolean(),
 });
 
 type GeneralSettingsValues = z.infer<typeof generalSettingsSchema>;
@@ -88,6 +91,8 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
       is_active: chat.is_active,
       allowed_domains: chat.allowed_domains || [],
       enabled_mcp_server_uuids: chat.enabled_mcp_server_uuids || [],
+      bot_avatar_url: chat.bot_avatar_url || null,
+      expose_capabilities: chat.expose_capabilities ?? false,
     },
   });
 
@@ -124,6 +129,8 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
         description: values.description?.trim() || null, // Explicitly include description, trim and convert empty to null
         suggested_questions: values.suggested_questions?.filter(q => q && q.trim()) || [],
         allowed_domains: values.allowed_domains?.filter(d => d && d.trim()) || [],
+        bot_avatar_url: values.bot_avatar_url?.trim() || null,
+        expose_capabilities: values.expose_capabilities ?? false,
       };
       
       const result = await updateEmbeddedChatConfig(chatUuid, cleanedValues);
@@ -158,6 +165,20 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label>{t('embeddedChat.general.botAvatar', 'Bot Avatar')}</Label>
+              <FormDescription>
+                {t('embeddedChat.general.botAvatarDescription', 'Avatar image displayed for the bot in chat')}
+              </FormDescription>
+              <AvatarUpload
+                currentAvatarUrl={form.watch('bot_avatar_url')}
+                onAvatarChange={(url) => form.setValue('bot_avatar_url', url)}
+                uploadEndpoint={`/api/embedded-chat/${chatUuid}/avatar`}
+                name={chat.name}
+                size="md"
+              />
+            </div>
+
             <FormField
               control={form.control}
               name="name"
@@ -536,6 +557,29 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
                 {t('embeddedChat.general.addDomain', 'Add Domain')}
               </Button>
             </div>
+
+            <FormField
+              control={form.control}
+              name="expose_capabilities"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      {t('embeddedChat.general.exposeCapabilities', 'Show Capabilities')}
+                    </FormLabel>
+                    <FormDescription>
+                      {t('embeddedChat.general.exposeCapabilitiesDescription', 'Display enabled MCP servers and RAG capabilities to users')}
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
 
             <Button type="submit" disabled={isLoading}>
               {isLoading ? t('common.saving') : t('common.saveChanges')}
