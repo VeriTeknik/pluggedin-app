@@ -1,7 +1,6 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ImagePlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { useState } from 'react';
@@ -9,7 +8,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AvatarUpload } from '@/components/ui/avatar-upload';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,7 +36,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
 import { users } from '@/db/schema';
 import { useLanguage } from '@/hooks/use-language';
@@ -76,10 +74,10 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const { toast } = useToast();
   const { currentLanguage, setLanguage } = useLanguage();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isRemovingAccount, setIsRemovingAccount] = useState<string | null>(null);
+  const [userAvatar, setUserAvatar] = useState(user.image || '');
 
   const profileForm = useForm<z.infer<typeof profileSchema>>({ // Explicitly type useForm
     resolver: zodResolver(profileSchema),
@@ -159,43 +157,9 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
     }
   };
 
-  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    try {
-      setIsUploading(true);
-      const formData = new FormData();
-      formData.append('avatar', file);
-
-      const response = await fetch('/api/settings/avatar', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error || t('settings.profile.error'));
-      }
-
-
-      toast({
-        title: t('common.success'),
-        description: t('settings.profile.success'),
-      });
-
-      router.refresh();
-    } catch (error) {
-      toast({
-        title: t('common.error'),
-        description: error instanceof Error ? error.message : t('settings.profile.error'),
-        variant: 'destructive',
-      });
-    } finally {
-      setIsUploading(false);
-    }
+  const handleAvatarChange = (url: string) => {
+    setUserAvatar(url);
+    router.refresh();
   };
 
   const handleDeleteAccount = async () => {
@@ -274,30 +238,13 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         <CardContent>
           <Form {...profileForm}>
             <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
-              <div className="flex items-center gap-4">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={user.image || ''} />
-                  <AvatarFallback>{user.name?.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <Label htmlFor="avatar" className="cursor-pointer">
-                    <div 
-                      className="inline-flex items-center justify-center gap-2 rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
-                    >
-                      <ImagePlus className="h-4 w-4" />
-                      {t('settings.profile.avatar')}
-                    </div>
-                  </Label>
-                  <Input
-                    id="avatar"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleAvatarUpload}
-                    disabled={isUploading}
-                  />
-                </div>
-              </div>
+              <AvatarUpload
+                currentAvatarUrl={userAvatar}
+                onAvatarChange={handleAvatarChange}
+                uploadEndpoint="/api/settings/avatar"
+                name={user.name || 'User'}
+                size="lg"
+              />
               <FormField
                 control={profileForm.control}
                 name="name"

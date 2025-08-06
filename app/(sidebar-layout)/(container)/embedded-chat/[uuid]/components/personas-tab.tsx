@@ -11,6 +11,7 @@ import {
   deleteChatPersona,
 } from '@/app/actions/embedded-chat';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AvatarUpload } from '@/components/ui/avatar-upload';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -466,18 +467,23 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
               />
             </div>
 
-            {/* Avatar URL */}
-            <div>
-              <Label htmlFor="avatar_url">
-                {t('embeddedChat.personas.avatarUrl', 'Avatar URL')}
-              </Label>
-              <Input
-                id="avatar_url"
-                type="url"
-                value={formData.avatar_url}
-                onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                placeholder="https://example.com/avatar.png"
+            {/* Avatar */}
+            <div className="space-y-2">
+              <Label>{t('embeddedChat.personas.avatar', 'Avatar')}</Label>
+              <AvatarUpload
+                currentAvatarUrl={formData.avatar_url}
+                onAvatarChange={(url) => setFormData({ ...formData, avatar_url: url })}
+                uploadEndpoint={editingPersona 
+                  ? `/api/embedded-chat/${chatUuid}/persona/${editingPersona.id}/avatar`
+                  : undefined}
+                name={formData.name || 'Persona'}
+                size="md"
               />
+              {!editingPersona && (
+                <p className="text-xs text-muted-foreground">
+                  {t('embeddedChat.personas.avatarNote', 'You can upload an avatar after creating the persona')}
+                </p>
+              )}
             </div>
 
             {/* Contact Information */}
