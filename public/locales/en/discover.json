@@ -28,6 +28,17 @@
     "successDescription": "Server installed successfully",
     "errorDescription": "Failed to install server"
   },
+  "discovery": {
+    "createYourOwn": "Create Your AI Assistant",
+    "createDescription": "Build your own AI assistant with MCP-enabled custom knowledge, accessible via Plugged.in MCP with all AI models",
+    "customKnowledge": "Custom Knowledge",
+    "mcpEnabled": "MCP-Enabled Knowledge",
+    "allModels": "All AI Models",
+    "pluggedinMcp": "Plugged.in MCP",
+    "easySetup": "Easy Setup",
+    "shareWithWorld": "Share Globally",
+    "getStarted": "Get Started"
+  },
   "search": {
     "placeholder": "Search...",
     "noResults": "No results found",

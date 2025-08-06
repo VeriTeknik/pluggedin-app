@@ -18,7 +18,9 @@ import {
   Target,
   Building2,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Plus,
+  Bot
 } from 'lucide-react';
 import useSWR from 'swr';
 
@@ -449,6 +451,49 @@ export function DiscoverAssistants() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Create Your Own Assistant Card */}
+            <Card className="flex flex-col border-2 border-dashed border-primary/20 hover:border-primary/40 transition-all hover:shadow-lg bg-gradient-to-br from-primary/5 to-primary/10">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-center">
+                  <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Plus className="h-6 w-6 text-primary" />
+                  </div>
+                </div>
+                <CardTitle className="text-center text-lg mt-3">
+                  {t('discovery.createYourOwn', 'Create Your AI Assistant')}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex-grow flex flex-col justify-center">
+                <p className="text-sm text-muted-foreground text-center mb-4">
+                  {t('discovery.createDescription', 'Build your own AI assistant with MCP-enabled custom knowledge, accessible via Plugged.in MCP with all AI models')}
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center text-xs">
+                  <Badge variant="secondary">
+                    <Bot className="h-3 w-3 mr-1" />
+                    {t('discovery.mcpEnabled', 'MCP-Enabled Knowledge')}
+                  </Badge>
+                  <Badge variant="secondary">
+                    <Sparkles className="h-3 w-3 mr-1" />
+                    {t('discovery.allModels', 'All AI Models')}
+                  </Badge>
+                  <Badge variant="secondary">
+                    <Globe className="h-3 w-3 mr-1" />
+                    {t('discovery.pluggedinMcp', 'Plugged.in MCP')}
+                  </Badge>
+                </div>
+              </CardContent>
+              <CardFooter className="pt-3">
+                <Button 
+                  className="w-full" 
+                  onClick={() => router.push('/embedded-chat')}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('discovery.getStarted', 'Get Started')}
+                </Button>
+              </CardFooter>
+            </Card>
+            
+            {/* Existing Assistant Cards */}
             {assistantsData?.assistants?.map((assistant: any) => (
               <Card key={assistant.uuid} className="flex flex-col hover:shadow-lg transition-shadow">
                 <CardHeader className="pb-3">
