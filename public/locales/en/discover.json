@@ -5,7 +5,8 @@
     "people": "People",
     "servers": "MCP Servers ({{count}})",
     "collections": "Collections ({{count}})",
-    "chats": "Embedded Chats ({{count}})"
+    "chats": "AI Assistants",
+    "experts": "Experts"
   },
   "following": {
     "title": "Following",
@@ -44,5 +45,16 @@
         "installing": "Installing..."
       }
     }
+  },
+  "experts": {
+    "title": "Browse Expert Profiles",
+    "description": "Discover AI assistant creators and their specialized bots",
+    "browseButton": "Browse All Experts"
+  },
+  "cta": {
+    "title": "Join Our Community",
+    "description": "Create your own AI assistants, share them with the world, and connect with other creators",
+    "signUp": "Sign Up Free",
+    "logIn": "Log In"
   }
 }

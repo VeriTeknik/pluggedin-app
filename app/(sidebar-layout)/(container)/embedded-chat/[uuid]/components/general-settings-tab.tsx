@@ -161,7 +161,7 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
           <CardHeader>
             <CardTitle>{t('embeddedChat.general.title', 'General Settings')}</CardTitle>
             <CardDescription>
-              {t('embeddedChat.general.description', 'Configure basic settings for your embedded chat')}
+              {t('embeddedChat.general.description', 'Configure basic settings for your AI assistant')}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

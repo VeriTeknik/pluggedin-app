@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable, users } from '@/db/schema';
-import { and, eq, ilike, or, sql, inArray, isNotNull } from 'drizzle-orm';
+import { and, eq, ilike, or, desc, sql, isNotNull } from 'drizzle-orm';
 import { z } from 'zod';
 
 const QuerySchema = z.object({
@@ -18,7 +18,7 @@ const QuerySchema = z.object({
   sort: z.enum(['relevance', 'response_time', 'recent', 'popular']).default('relevance'),
 });
 
-async function handler(req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     // Parse query parameters
     const searchParams = req.nextUrl.searchParams;
@@ -39,179 +39,135 @@ async function handler(req: NextRequest) {
     // Validate query parameters
     const validatedQuery = QuerySchema.parse(queryData);
     
-    // Normalize expertise to array
-    const expertiseArray = Array.isArray(validatedQuery.expertise) 
-      ? validatedQuery.expertise 
-      : validatedQuery.expertise 
-        ? [validatedQuery.expertise]
-        : [];
+    // Calculate offset for pagination
+    const offset = (validatedQuery.page - 1) * validatedQuery.limit;
 
     // Build WHERE conditions
-    const conditions = [
+    const whereConditions = [
       eq(embeddedChatsTable.is_public, true),
       eq(embeddedChatsTable.is_active, true),
     ];
 
     // Category filter
     if (validatedQuery.category && validatedQuery.category !== 'all') {
-      conditions.push(eq(embeddedChatsTable.category, validatedQuery.category));
+      whereConditions.push(eq(embeddedChatsTable.category, validatedQuery.category));
     }
 
     // Location filter (partial match)
     if (validatedQuery.location) {
-      conditions.push(
-        ilike(embeddedChatsTable.location, `%${validatedQuery.location}%`)
-      );
+      whereConditions.push(ilike(embeddedChatsTable.location, `%${validatedQuery.location}%`));
     }
 
     // Language filter
     if (validatedQuery.language && validatedQuery.language !== 'all') {
-      conditions.push(eq(embeddedChatsTable.language, validatedQuery.language));
-    }
-
-    // Industry filter
-    if (validatedQuery.industry) {
-      conditions.push(
-        ilike(embeddedChatsTable.industry, `%${validatedQuery.industry}%`)
-      );
+      whereConditions.push(eq(embeddedChatsTable.language, validatedQuery.language));
     }
 
     // Response time filter
     if (validatedQuery.responseTime && validatedQuery.responseTime !== 'all') {
-      conditions.push(eq(embeddedChatsTable.response_time, validatedQuery.responseTime));
+      whereConditions.push(eq(embeddedChatsTable.response_time, validatedQuery.responseTime));
     }
 
     // Pricing model filter
     if (validatedQuery.pricingModel && validatedQuery.pricingModel !== 'all') {
-      conditions.push(eq(embeddedChatsTable.pricing_model, validatedQuery.pricingModel));
+      whereConditions.push(eq(embeddedChatsTable.pricing_model, validatedQuery.pricingModel));
     }
 
-    // Search filter (across multiple fields)
+    // Industry filter
+    if (validatedQuery.industry) {
+      whereConditions.push(eq(embeddedChatsTable.industry, validatedQuery.industry));
+    }
+
+    // Search filter
     if (validatedQuery.search) {
-      const searchTerm = `%${validatedQuery.search}%`;
-      conditions.push(
+      whereConditions.push(
         or(
-          ilike(embeddedChatsTable.name, searchTerm),
-          ilike(embeddedChatsTable.description, searchTerm),
-          ilike(embeddedChatsTable.profession, searchTerm),
-          ilike(embeddedChatsTable.capabilities_summary, searchTerm),
-          sql`${embeddedChatsTable.keywords}::text ILIKE ${searchTerm}`,
-          sql`${embeddedChatsTable.expertise}::text ILIKE ${searchTerm}`,
-          sql`${embeddedChatsTable.semantic_tags}::text ILIKE ${searchTerm}`
+          ilike(embeddedChatsTable.name, `%${validatedQuery.search}%`),
+          ilike(embeddedChatsTable.description, `%${validatedQuery.search}%`),
+          ilike(embeddedChatsTable.profession, `%${validatedQuery.search}%`),
+          ilike(embeddedChatsTable.capabilities_summary, `%${validatedQuery.search}%`)
         )
       );
     }
 
-    // Expertise filter (check if any expertise matches)
-    if (expertiseArray.length > 0) {
-      const expertiseConditions = expertiseArray.map(exp => 
-        sql`${exp} = ANY(${embeddedChatsTable.expertise})`
-      );
-      conditions.push(or(...expertiseConditions));
-    }
-
-    // Calculate offset for pagination
-    const offset = (validatedQuery.page - 1) * validatedQuery.limit;
-
-    // Build ORDER BY clause based on sort parameter
-    let orderByClause;
+    // Build ORDER BY based on sort parameter - simplified to avoid Drizzle errors
+    let orderBy: any[] = [];
     switch (validatedQuery.sort) {
       case 'response_time':
-        orderByClause = [
-          sql`CASE 
-            WHEN ${embeddedChatsTable.response_time} = 'instant' THEN 1
-            WHEN ${embeddedChatsTable.response_time} = '1-5min' THEN 2
-            WHEN ${embeddedChatsTable.response_time} = '5-15min' THEN 3
-            WHEN ${embeddedChatsTable.response_time} = '15-30min' THEN 4
-            WHEN ${embeddedChatsTable.response_time} = '30-60min' THEN 5
-            WHEN ${embeddedChatsTable.response_time} = '1-2hours' THEN 6
-            WHEN ${embeddedChatsTable.response_time} = '2-4hours' THEN 7
-            WHEN ${embeddedChatsTable.response_time} = '4-8hours' THEN 8
-            WHEN ${embeddedChatsTable.response_time} = '24hours' THEN 9
-            ELSE 10
-          END`,
-        ];
+        // Order by response time field directly
+        orderBy = [embeddedChatsTable.response_time];
         break;
       case 'recent':
-        orderByClause = [sql`${embeddedChatsTable.created_at} DESC`];
+        orderBy = [desc(embeddedChatsTable.created_at)];
         break;
       case 'popular':
-        orderByClause = [sql`${embeddedChatsTable.message_count} DESC NULLS LAST`];
+        // Order by message count descending, handle nulls
+        orderBy = [desc(embeddedChatsTable.message_count)];
         break;
       case 'relevance':
       default:
-        // For relevance, prioritize matches in name/profession, then other fields
-        if (validatedQuery.search) {
-          orderByClause = [
-            sql`CASE 
-              WHEN ${embeddedChatsTable.name} ILIKE ${`%${validatedQuery.search}%`} THEN 1
-              WHEN ${embeddedChatsTable.profession} ILIKE ${`%${validatedQuery.search}%`} THEN 2
-              ELSE 3
-            END`,
-            sql`${embeddedChatsTable.message_count} DESC NULLS LAST`
-          ];
-        } else {
-          orderByClause = [sql`${embeddedChatsTable.message_count} DESC NULLS LAST`];
-        }
+        // Default to recent for now to avoid complex SQL
+        orderBy = [desc(embeddedChatsTable.created_at)];
         break;
     }
 
-    // Query for assistants with pagination
-    const [assistants, totalCountResult] = await Promise.all([
-      db
-        .select({
-          uuid: embeddedChatsTable.uuid,
-          name: embeddedChatsTable.name,
-          slug: embeddedChatsTable.slug,
-          description: embeddedChatsTable.description,
-          location: embeddedChatsTable.location,
-          profession: embeddedChatsTable.profession,
-          expertise: embeddedChatsTable.expertise,
-          category: embeddedChatsTable.category,
-          subcategory: embeddedChatsTable.subcategory,
-          language: embeddedChatsTable.language,
-          timezone: embeddedChatsTable.timezone,
-          industry: embeddedChatsTable.industry,
-          keywords: embeddedChatsTable.keywords,
-          company_name: embeddedChatsTable.company_name,
-          company_size: embeddedChatsTable.company_size,
-          target_audience: embeddedChatsTable.target_audience,
-          response_time: embeddedChatsTable.response_time,
-          pricing_model: embeddedChatsTable.pricing_model,
-          capabilities_summary: embeddedChatsTable.capabilities_summary,
-          interaction_style: embeddedChatsTable.interaction_style,
-          bot_avatar_url: embeddedChatsTable.bot_avatar_url,
-          message_count: embeddedChatsTable.message_count,
-          created_at: embeddedChatsTable.created_at,
-          // Get project and user info
-          project_uuid: projectsTable.uuid,
-          project_name: projectsTable.name,
-          user_id: users.id,
-          username: users.username,
-          user_avatar_url: users.avatar_url,
-        })
-        .from(embeddedChatsTable)
-        .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
-        .innerJoin(users, eq(projectsTable.user_id, users.id))
-        .where(and(...conditions))
-        .orderBy(...orderByClause)
-        .limit(validatedQuery.limit)
-        .offset(offset),
-      
-      db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(embeddedChatsTable)
-        .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
-        .innerJoin(users, eq(projectsTable.user_id, users.id))
-        .where(and(...conditions))
-    ]);
+    // Main query for assistants - select all fields to avoid Drizzle issues
+    const rawResults = await db
+      .select()
+      .from(embeddedChatsTable)
+      .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
+      .innerJoin(users, eq(projectsTable.user_id, users.id))
+      .where(and(...whereConditions))
+      .orderBy(...orderBy)
+      .limit(validatedQuery.limit)
+      .offset(offset);
+    
+    // Map the raw results to the expected format
+    const assistantsResult = rawResults.map(row => ({
+      uuid: row.embedded_chats.uuid,
+      name: row.embedded_chats.name,
+      slug: row.embedded_chats.slug,
+      description: row.embedded_chats.description,
+      location: row.embedded_chats.location,
+      profession: row.embedded_chats.profession,
+      expertise: row.embedded_chats.expertise,
+      category: row.embedded_chats.category,
+      subcategory: row.embedded_chats.subcategory,
+      language: row.embedded_chats.language,
+      timezone: row.embedded_chats.timezone,
+      industry: row.embedded_chats.industry,
+      keywords: row.embedded_chats.keywords,
+      company_name: row.embedded_chats.company_name,
+      company_size: row.embedded_chats.company_size,
+      target_audience: row.embedded_chats.target_audience,
+      response_time: row.embedded_chats.response_time,
+      pricing_model: row.embedded_chats.pricing_model,
+      capabilities_summary: row.embedded_chats.capabilities_summary,
+      interaction_style: row.embedded_chats.interaction_style,
+      bot_avatar_url: row.embedded_chats.bot_avatar_url,
+      message_count: row.embedded_chats.message_count,
+      created_at: row.embedded_chats.created_at,
+      project_uuid: row.projects.uuid,
+      project_name: row.projects.name,
+      user_id: row.users.id,
+      username: row.users.username,
+      user_avatar_url: row.users.avatar_url,
+    }));
 
-    const totalCount = totalCountResult[0]?.count || 0;
+    // Count query for pagination
+    const countResult = await db
+      .select({ total: sql<number>`count(*)::int` })
+      .from(embeddedChatsTable)
+      .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
+      .innerJoin(users, eq(projectsTable.user_id, users.id))
+      .where(and(...whereConditions));
+
+    const totalCount = countResult[0]?.total || 0;
     const totalPages = Math.ceil(totalCount / validatedQuery.limit);
 
     // Format response
     const response = {
-      assistants: assistants.map(assistant => ({
+      assistants: assistantsResult.map((assistant) => ({
         uuid: assistant.uuid,
         name: assistant.name,
         slug: assistant.slug,
@@ -257,7 +213,7 @@ async function handler(req: NextRequest) {
         category: validatedQuery.category,
         location: validatedQuery.location,
         language: validatedQuery.language,
-        expertise: expertiseArray,
+        expertise: Array.isArray(validatedQuery.expertise) ? validatedQuery.expertise : [],
         industry: validatedQuery.industry,
         responseTime: validatedQuery.responseTime,
         pricingModel: validatedQuery.pricingModel,
@@ -283,5 +239,3 @@ async function handler(req: NextRequest) {
     );
   }
 }
-
-export const GET = handler;

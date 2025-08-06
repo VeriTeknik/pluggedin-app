@@ -19,7 +19,7 @@ export function DashboardClient() {
 
   useEffect(() => {
     if (!projectsLoading && currentProject) {
-      // If no embedded chat, redirect to setup
+      // If no AI assistant, redirect to setup
       if (!currentProject.embedded_chat_uuid) {
         router.push('/embedded-chat');
         return;
@@ -87,9 +87,9 @@ export function DashboardClient() {
     return (
       <div className="container mx-auto py-6">
         <div className="mb-6">
-          <h1 className="text-3xl font-bold tracking-tight">Embedded Chat Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">AI Assistant Dashboard</h1>
           <p className="text-muted-foreground mt-2">
-            Monitor and manage your AI chat assistant
+            Monitor and manage your AI assistant
           </p>
         </div>
         <div className="flex items-center justify-center min-h-[400px]">
@@ -110,7 +110,7 @@ export function DashboardClient() {
           Hub: <span className="font-medium">{currentProject.name}</span>
         </div>
         <h1 className="text-3xl font-bold tracking-tight">
-          {chatName || 'Embedded Chat'} Dashboard
+          {chatName || 'AI Assistant'} Dashboard
         </h1>
         <p className="text-muted-foreground mt-2">
           Monitor and manage your AI chat assistant

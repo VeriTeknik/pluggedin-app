@@ -48,15 +48,15 @@
     "title": "Library"
   },
   "embeddedChat": {
-    "title": "Embedded Chat",
+    "title": "AI Assistant",
     "defaultWelcome": "Hello! How can I help you today?",
     "setup": {
-      "title": "Enable Embedded Chat",
+      "title": "Enable AI Assistant",
       "subtitle": "Add an AI-powered chat assistant to your website",
       "ready": "Ready to get started?",
-      "readyDescription": "Enable embedded chat for your hub and start engaging with your website visitors",
-      "enableButton": "Enable Embedded Chat",
-      "note": "You can configure and customize your embedded chat after enabling it."
+      "readyDescription": "Enable AI assistant for your hub and start engaging with your website visitors",
+      "enableButton": "Enable AI Assistant",
+      "note": "You can configure and customize your AI assistant after enabling it."
     },
     "features": {
       "ai": {
@@ -88,20 +88,20 @@
     "dangerZone": {
       "title": "Danger Zone",
       "description": "Irreversible and destructive actions",
-      "deleteTitle": "Delete Embedded Chat",
+      "deleteTitle": "Delete AI Assistant",
       "warning": "This action cannot be undone!",
-      "deleteDescription": "Permanently delete this embedded chat and all associated data including:",
+      "deleteDescription": "Permanently delete this AI assistant and all associated data including:",
       "deleteItem1": "All chat conversations and messages",
       "deleteItem2": "All visitor contact information",
       "deleteItem3": "All chat personas and configurations",
       "deleteItem4": "All analytics and usage data",
       "deleteItem5": "All API keys and integrations",
       "gdprNote": "This deletion is GDPR compliant and will remove all personal data associated with this chat.",
-      "deleteButton": "Delete Embedded Chat",
-      "confirmTitle": "Delete Embedded Chat?",
+      "deleteButton": "Delete AI Assistant",
+      "confirmTitle": "Delete AI Assistant?",
       "confirmDescription": "Are you sure you want to delete \"{{chatName}}\"? This will permanently delete all conversations, messages, and associated data. This action cannot be undone.",
       "confirmButton": "Delete Permanently",
-      "deleteSuccess": "Embedded chat has been permanently deleted"
+      "deleteSuccess": "AI assistant has been permanently deleted"
     }
   },
   "aiSocial": {

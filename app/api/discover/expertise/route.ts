@@ -26,17 +26,17 @@ async function handler(req: NextRequest) {
       SELECT 
         expertise_item,
         COUNT(*) as count,
-        array_agg(DISTINCT ${embeddedChatsTable.category}) as categories
+        array_agg(DISTINCT category) as categories
       FROM (
         SELECT 
-          unnest(${embeddedChatsTable.expertise}) as expertise_item,
-          ${embeddedChatsTable.category}
-        FROM ${embeddedChatsTable}
+          unnest(expertise) as expertise_item,
+          category
+        FROM embedded_chats
         WHERE 
-          ${embeddedChatsTable.is_public} = true 
-          AND ${embeddedChatsTable.is_active} = true
-          AND ${embeddedChatsTable.expertise} IS NOT NULL
-          ${category && category !== 'all' ? sql`AND ${embeddedChatsTable.category} = ${category}` : sql``}
+          is_public = true 
+          AND is_active = true
+          AND expertise IS NOT NULL
+          ${category && category !== 'all' ? sql`AND category = ${category}` : sql``}
       ) as expertise_list
       GROUP BY expertise_item
       ORDER BY count DESC
@@ -56,14 +56,14 @@ async function handler(req: NextRequest) {
           COUNT(*) as count
         FROM (
           SELECT 
-            unnest(${embeddedChatsTable.keywords}) as keyword
-          FROM ${embeddedChatsTable}
+            unnest(keywords) as keyword
+          FROM embedded_chats
           WHERE 
-            ${embeddedChatsTable.is_public} = true 
-            AND ${embeddedChatsTable.is_active} = true
-            AND ${embeddedChatsTable.keywords} IS NOT NULL
+            is_public = true 
+            AND is_active = true
+            AND keywords IS NOT NULL
             AND EXISTS (
-              SELECT 1 FROM unnest(${embeddedChatsTable.expertise}) as exp
+              SELECT 1 FROM unnest(expertise) as exp
               WHERE exp = ANY(ARRAY[${topExpertise}])
             )
         ) as keywords_list
@@ -98,22 +98,27 @@ async function handler(req: NextRequest) {
       return acc;
     }, {});
 
-    // Get statistics
-    const statsQuery = await db
-      .select({
-        totalAssistants: sql<number>`count(distinct ${embeddedChatsTable.uuid})::int`,
-        totalExpertiseAreas: sql<number>`count(distinct unnest(${embeddedChatsTable.expertise}))::int`,
-      })
-      .from(embeddedChatsTable)
-      .where(
-        and(
-          eq(embeddedChatsTable.is_public, true),
-          eq(embeddedChatsTable.is_active, true),
-          isNotNull(embeddedChatsTable.expertise)
-        )
-      );
+    // Get statistics - fix the SQL to avoid set-returning function in aggregate
+    const statsQuery = sql`
+      WITH expertise_data AS (
+        SELECT 
+          uuid,
+          unnest(expertise) as expertise_item
+        FROM embedded_chats
+        WHERE 
+          is_public = true 
+          AND is_active = true
+          AND expertise IS NOT NULL
+      )
+      SELECT 
+        COUNT(DISTINCT uuid) as "totalAssistants",
+        COUNT(DISTINCT expertise_item) as "totalExpertiseAreas"
+      FROM expertise_data
+    `;
+    
+    const statsResult = await db.execute(statsQuery);
 
-    const stats = statsQuery[0] || { totalAssistants: 0, totalExpertiseAreas: 0 };
+    const stats = statsResult.rows[0] || { totalAssistants: 0, totalExpertiseAreas: 0 };
 
     const response = {
       expertise: formattedExpertise,

@@ -483,7 +483,7 @@ export function ProfileTabsWithDiscovery({
                             variant="default"
                             size="sm"
                             onClick={() => {
-                              const chatUrl = chat.slug ? `/chat/${chat.slug}` : `/chat/${chat.uuid}`;
+                              const chatUrl = chat.slug ? `/to/${username}/${chat.slug}` : `/to/${username}/chat/${chat.uuid}`;
                               window.open(chatUrl, '_blank');
                             }}
                           >

@@ -47,13 +47,13 @@ export function EmbeddedChatSection() {
     setIsLoading(true);
     try {
       if (enabled && !embeddedChatUuid) {
-        // Create embedded chat
+        // Create AI assistant
         const result = await createEmbeddedChat({
           projectUuid: currentProject.uuid,
           name: 'AI Assistant',
         });
         if (!result.success) {
-          throw new Error(result.error || 'Failed to create embedded chat');
+          throw new Error(result.error || 'Failed to create AI assistant');
         }
         // Update local state with the new chat UUID
         setEmbeddedChatUuid(result.data?.uuid || null);
@@ -62,7 +62,7 @@ export function EmbeddedChatSection() {
         // Just toggle the enabled state
         const result = await toggleEmbeddedChat(enabled);
         if (!result.success) {
-          throw new Error(result.error || 'Failed to toggle embedded chat');
+          throw new Error(result.error || 'Failed to toggle AI assistant');
         }
         // Update local state
         setEmbeddedChatEnabled(enabled);
@@ -73,13 +73,13 @@ export function EmbeddedChatSection() {
       toast({
         title: t('common.success'),
         description: enabled 
-          ? t('settings.embeddedChat.enabledSuccess', 'Embedded chat enabled successfully')
-          : t('settings.embeddedChat.disabledSuccess', 'Embedded chat disabled successfully'),
+          ? t('settings.embeddedChat.enabledSuccess', 'AI assistant enabled successfully')
+          : t('settings.embeddedChat.disabledSuccess', 'AI assistant disabled successfully'),
       });
     } catch (error) {
       toast({
         title: t('common.error'),
-        description: error instanceof Error ? error.message : 'Failed to update embedded chat',
+        description: error instanceof Error ? error.message : 'Failed to update AI assistant',
         variant: 'destructive',
       });
     } finally {
@@ -98,7 +98,7 @@ export function EmbeddedChatSection() {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BotIcon className="h-5 w-5" />
-          {t('settings.embeddedChat.title', 'Embedded Chat')}
+          {t('settings.embeddedChat.title', 'AI Assistant')}
         </CardTitle>
         <CardDescription>
           {t('settings.embeddedChat.description', 'Enable AI-powered chat for your hub that can be embedded on external websites')}
@@ -108,7 +108,7 @@ export function EmbeddedChatSection() {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <p className="font-medium">
-              {t('settings.embeddedChat.enable', 'Enable Embedded Chat')}
+              {t('settings.embeddedChat.enable', 'Enable AI Assistant')}
             </p>
             <p className="text-sm text-muted-foreground">
               {t('settings.embeddedChat.enableDescription', 'Allow external websites to embed your hub\'s AI assistant')}

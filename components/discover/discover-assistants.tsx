@@ -570,11 +570,11 @@ export function DiscoverAssistants() {
                     className="w-full" 
                     variant="outline"
                     onClick={() => {
-                      // Navigate to chat or profile page
-                      if (assistant.slug) {
-                        router.push(`/chat/${assistant.slug}`);
-                      } else {
-                        router.push(`/chat/${assistant.uuid}`);
+                      // Navigate to user's assistant page
+                      if (assistant.owner.username && assistant.slug) {
+                        router.push(`/to/${assistant.owner.username}/${assistant.slug}`);
+                      } else if (assistant.owner.username) {
+                        router.push(`/to/${assistant.owner.username}/chat/${assistant.uuid}`);
                       }
                     }}
                   >

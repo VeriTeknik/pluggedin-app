@@ -263,10 +263,10 @@ export default function SidebarLayout({
                   </SidebarMenuItem>
                   
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('embeddedChat.title', 'Embedded Chat')} className="group-data-[collapsible=icon]:justify-center">
+                    <SidebarMenuButton asChild tooltip={t('embeddedChat.title', 'AI Assistant')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/embedded-chat'>
                         <MessageSquare className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('embeddedChat.title', 'Embedded Chat')}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">{t('embeddedChat.title', 'AI Assistant')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

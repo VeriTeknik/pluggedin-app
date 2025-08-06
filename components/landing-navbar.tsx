@@ -15,6 +15,7 @@ import { useKeyPress } from '@/hooks/useKeyPress';
 
 // Navigation links
 const navLinks = [
+  { href: '/discover', labelKey: 'navigation.discover' },
   { href: '#why-pluggedin', labelKey: 'navigation.whyPluggedin' },
   { href: '#features', labelKey: 'navigation.features' },
   { href: '#ai-models', labelKey: 'navigation.aiModels' },
