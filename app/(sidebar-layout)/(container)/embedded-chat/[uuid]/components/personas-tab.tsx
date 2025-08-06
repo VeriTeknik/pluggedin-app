@@ -1,6 +1,6 @@
 'use client';
 
-import { User, Mail, Phone, Calendar, Trash2, Edit, Plus, Star, GripVertical, Check } from 'lucide-react';
+import { User, Mail, Phone, Calendar, Trash2, Edit, Plus, Star, GripVertical, Check, Settings2, MessageSquare, Briefcase } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -33,8 +33,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { EmbeddedChat } from '@/types/embedded-chat';
+import { PersonaIntegrations } from './persona-integrations';
+import { PersonaIntegrations as PersonaIntegrationsType, PersonaCapability } from '@/lib/integrations/types';
 
 interface Persona {
   id: number;
@@ -46,6 +49,9 @@ interface Persona {
   contact_email?: string | null;
   contact_phone?: string | null;
   contact_calendar_link?: string | null;
+  integrations?: PersonaIntegrationsType;
+  capabilities?: PersonaCapability[];
+  tools_config?: any;
   is_active: boolean;
   is_default: boolean;
   display_order: number;
@@ -75,7 +81,8 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
     avatar_url: '',
     contact_email: '',
     contact_phone: '',
-    contact_calendar_link: '',
+    integrations: {} as PersonaIntegrationsType,
+    capabilities: [] as PersonaCapability[],
     is_active: true,
     is_default: false,
   });
@@ -120,7 +127,8 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
         avatar_url: persona.avatar_url || '',
         contact_email: persona.contact_email || '',
         contact_phone: persona.contact_phone || '',
-        contact_calendar_link: persona.contact_calendar_link || '',
+        integrations: persona.integrations || {},
+        capabilities: persona.capabilities || [],
         is_active: persona.is_active,
         is_default: persona.is_default,
       });
@@ -133,7 +141,8 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
         avatar_url: '',
         contact_email: '',
         contact_phone: '',
-        contact_calendar_link: '',
+        integrations: {},
+        capabilities: [],
         is_active: true,
         is_default: personas.length === 0, // First persona is default
       });
@@ -160,7 +169,8 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
         avatar_url: formData.avatar_url.trim() || undefined,
         contact_email: formData.contact_email.trim() || undefined,
         contact_phone: formData.contact_phone.trim() || undefined,
-        contact_calendar_link: formData.contact_calendar_link.trim() || undefined,
+        integrations: formData.integrations,
+        capabilities: formData.capabilities,
         is_active: formData.is_active,
         is_default: formData.is_default,
         display_order: editingPersona?.display_order ?? personas.length,
@@ -350,7 +360,7 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
                         {persona.instructions}
                       </p>
                       
-                      {/* Contact Info */}
+                      {/* Integration Status */}
                       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
                         {persona.contact_email && (
                           <div className="flex items-center gap-1">
@@ -364,11 +374,28 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
                             {persona.contact_phone}
                           </div>
                         )}
-                        {persona.contact_calendar_link && (
+                        {persona.integrations?.calendar?.enabled && (
                           <div className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
-                            Calendar
+                            {persona.integrations.calendar.provider?.replace('_', ' ')}
                           </div>
+                        )}
+                        {persona.integrations?.communication?.slack?.enabled && (
+                          <div className="flex items-center gap-1">
+                            <MessageSquare className="h-3 w-3" />
+                            Slack
+                          </div>
+                        )}
+                        {persona.integrations?.crm?.enabled && (
+                          <div className="flex items-center gap-1">
+                            <Briefcase className="h-3 w-3" />
+                            {persona.integrations.crm.provider}
+                          </div>
+                        )}
+                        {persona.capabilities?.filter(c => c.enabled).length > 0 && (
+                          <Badge variant="outline" className="ml-2">
+                            {persona.capabilities.filter(c => c.enabled).length} capabilities
+                          </Badge>
                         )}
                       </div>
                     </div>
@@ -426,138 +453,155 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            {/* Basic Info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="name">
-                  {t('embeddedChat.personas.name', 'Name')} *
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Support Agent"
-                />
-              </div>
-              <div>
-                <Label htmlFor="role">
-                  {t('embeddedChat.personas.role', 'Role')}
-                </Label>
-                <Input
-                  id="role"
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                  placeholder="Customer Support"
-                />
-              </div>
-            </div>
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic">
+                {t('embeddedChat.personas.basicInfo', 'Basic Info')}
+              </TabsTrigger>
+              <TabsTrigger value="integrations">
+                <Settings2 className="h-4 w-4 mr-2" />
+                {t('embeddedChat.personas.integrations', 'Integrations')}
+              </TabsTrigger>
+            </TabsList>
 
-            {/* Instructions */}
-            <div>
-              <Label htmlFor="instructions">
-                {t('embeddedChat.personas.instructions', 'Instructions')} *
-              </Label>
-              <Textarea
-                id="instructions"
-                value={formData.instructions}
-                onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                placeholder="You are a helpful customer support agent..."
-                rows={4}
-              />
-            </div>
-
-            {/* Avatar */}
-            <div className="space-y-2">
-              <Label>{t('embeddedChat.personas.avatar', 'Avatar')}</Label>
-              <AvatarUpload
-                currentAvatarUrl={formData.avatar_url}
-                onAvatarChange={(url) => setFormData({ ...formData, avatar_url: url })}
-                uploadEndpoint={editingPersona 
-                  ? `/api/embedded-chat/${chatUuid}/persona/${editingPersona.id}/avatar`
-                  : undefined}
-                name={formData.name || 'Persona'}
-                size="md"
-              />
-              {!editingPersona && (
-                <p className="text-xs text-muted-foreground">
-                  {t('embeddedChat.personas.avatarNote', 'You can upload an avatar after creating the persona')}
-                </p>
-              )}
-            </div>
-
-            {/* Contact Information */}
-            <div className="space-y-2">
-              <Label>{t('embeddedChat.personas.contactInfo', 'Contact Information')}</Label>
+            <TabsContent value="basic" className="space-y-4 mt-4">
+              {/* Basic Info */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="contact_email" className="text-sm">
-                    {t('embeddedChat.personas.email', 'Email')}
+                  <Label htmlFor="name">
+                    {t('embeddedChat.personas.name', 'Name')} *
                   </Label>
                   <Input
-                    id="contact_email"
-                    type="email"
-                    value={formData.contact_email}
-                    onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
-                    placeholder="support@example.com"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Support Agent"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="contact_phone" className="text-sm">
-                    {t('embeddedChat.personas.phone', 'Phone')}
+                  <Label htmlFor="role">
+                    {t('embeddedChat.personas.role', 'Role')}
                   </Label>
                   <Input
-                    id="contact_phone"
-                    type="tel"
-                    value={formData.contact_phone}
-                    onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
-                    placeholder="+1 234 567 8900"
+                    id="role"
+                    value={formData.role}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    placeholder="Customer Support"
                   />
                 </div>
               </div>
+
+              {/* Instructions */}
               <div>
-                <Label htmlFor="contact_calendar_link" className="text-sm">
-                  {t('embeddedChat.personas.calendarLink', 'Calendar Link')}
+                <Label htmlFor="instructions">
+                  {t('embeddedChat.personas.instructions', 'Instructions')} *
                 </Label>
-                <Input
-                  id="contact_calendar_link"
-                  type="url"
-                  value={formData.contact_calendar_link}
-                  onChange={(e) => setFormData({ ...formData, contact_calendar_link: e.target.value })}
-                  placeholder="https://calendly.com/..."
-                />
-              </div>
-            </div>
-
-            {/* Settings */}
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>{t('embeddedChat.personas.active', 'Active')}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t('embeddedChat.personas.activeDescription', 'Enable this persona for use')}
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                <Textarea
+                  id="instructions"
+                  value={formData.instructions}
+                  onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                  placeholder="You are a helpful customer support agent..."
+                  rows={4}
                 />
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>{t('embeddedChat.personas.default', 'Default')}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {t('embeddedChat.personas.defaultDescription', 'Use this persona by default')}
-                  </p>
-                </div>
-                <Switch
-                  checked={formData.is_default}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_default: checked })}
+              {/* Avatar */}
+              <div className="space-y-2">
+                <Label>{t('embeddedChat.personas.avatar', 'Avatar')}</Label>
+                <AvatarUpload
+                  currentAvatarUrl={formData.avatar_url}
+                  onAvatarChange={(url) => setFormData({ ...formData, avatar_url: url })}
+                  uploadEndpoint={editingPersona 
+                    ? `/api/embedded-chat/${chatUuid}/persona/${editingPersona.id}/avatar`
+                    : undefined}
+                  name={formData.name || 'Persona'}
+                  size="md"
                 />
+                {!editingPersona && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('embeddedChat.personas.avatarNote', 'You can upload an avatar after creating the persona')}
+                  </p>
+                )}
               </div>
-            </div>
-          </div>
+
+              {/* Contact Information */}
+              <div className="space-y-2">
+                <Label>{t('embeddedChat.personas.contactInfo', 'Contact Information')}</Label>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="contact_email" className="text-sm">
+                      {t('embeddedChat.personas.email', 'Email')}
+                    </Label>
+                    <Input
+                      id="contact_email"
+                      type="email"
+                      value={formData.contact_email}
+                      onChange={(e) => setFormData({ ...formData, contact_email: e.target.value })}
+                      placeholder="support@example.com"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="contact_phone" className="text-sm">
+                      {t('embeddedChat.personas.phone', 'Phone')}
+                    </Label>
+                    <Input
+                      id="contact_phone"
+                      type="tel"
+                      value={formData.contact_phone}
+                      onChange={(e) => setFormData({ ...formData, contact_phone: e.target.value })}
+                      placeholder="+1 234 567 8900"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Settings */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>{t('embeddedChat.personas.active', 'Active')}</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {t('embeddedChat.personas.activeDescription', 'Enable this persona for use')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="space-y-0.5">
+                    <Label>{t('embeddedChat.personas.default', 'Default')}</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {t('embeddedChat.personas.defaultDescription', 'Use this persona by default')}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={formData.is_default}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_default: checked })}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="integrations" className="mt-4">
+              <PersonaIntegrations
+                personaId={editingPersona?.id}
+                integrations={formData.integrations}
+                capabilities={formData.capabilities}
+                onUpdate={(integrations, capabilities) => 
+                  setFormData({ ...formData, integrations, capabilities })
+                }
+                disabled={!editingPersona}
+              />
+              {!editingPersona && (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  {t('embeddedChat.personas.saveToConfigureIntegrations', 'Save the persona first to configure integrations')}
+                </p>
+              )}
+            </TabsContent>
+          </Tabs>
 
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>

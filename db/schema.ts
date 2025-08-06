@@ -1610,9 +1610,17 @@ export const chatPersonasTable = pgTable(
     role: varchar('role', { length: 100 }),
     instructions: text('instructions').notNull(),
     avatar_url: text('avatar_url'),
+    
+    // Legacy contact fields (kept for backward compatibility)
     contact_email: text('contact_email'),
     contact_phone: text('contact_phone'),
     contact_calendar_link: text('contact_calendar_link'),
+    
+    // New integration fields
+    integrations: jsonb('integrations').default(sql`'{}'::jsonb`), // Integration configurations
+    capabilities: jsonb('capabilities').default(sql`'[]'::jsonb`), // List of enabled capabilities
+    tools_config: jsonb('tools_config').default(sql`'{}'::jsonb`), // Tool-specific configurations
+    
     is_active: boolean('is_active').default(true),
     is_default: boolean('is_default').default(false),
     display_order: integer('display_order').default(0),

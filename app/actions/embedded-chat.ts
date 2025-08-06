@@ -97,6 +97,9 @@ const CreatePersonaSchema = z.object({
   contact_email: z.string().email().optional(),
   contact_phone: z.string().optional(),
   contact_calendar_link: z.string().url().optional(),
+  integrations: z.any().optional(), // JSONB field
+  capabilities: z.any().optional(), // JSONB field
+  tools_config: z.any().optional(), // JSONB field
   is_active: z.boolean().default(true),
   is_default: z.boolean().default(false),
   display_order: z.number().int().default(0),

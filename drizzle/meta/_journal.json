@@ -393,6 +393,13 @@
       "when": 1754439322413,
       "tag": "0055_nebulous_iron_monger",
       "breakpoints": true
+    },
+    {
+      "idx": 56,
+      "version": "7",
+      "when": 1754442033177,
+      "tag": "0056_polite_scalphunter",
+      "breakpoints": true
     }
   ]
 }
