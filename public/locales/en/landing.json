@@ -1,12 +1,11 @@
 {
   "navigation": {
     "enterApp": "Enter App",
-    "discover": "Discover",
+    "community": "Community",
     "whyPluggedin": "Why plugged.in",
     "features": "Features",
     "aiModels": "AI Models",
     "pricing": "Pricing",
-    "community": "Community",
     "collections": "Collections",
     "playground": "Playground",
     "documentation": "Documentation",

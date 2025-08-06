@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { 
   MessageSquare, 
   MapPin, 
@@ -555,13 +556,19 @@ export function DiscoverAssistants() {
 
                   {/* Owner Info */}
                   <div className="flex items-center gap-2 pt-2 border-t">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage src={assistant.owner.avatarUrl} />
-                      <AvatarFallback>{assistant.owner.username?.[0]?.toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-muted-foreground">
-                      by @{assistant.owner.username}
-                    </span>
+                    <Link 
+                      href={`/to/${assistant.owner.username}`}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={assistant.owner.avatarUrl || assistant.owner.image} />
+                        <AvatarFallback>{assistant.owner.username?.[0]?.toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        by @{assistant.owner.username}
+                      </span>
+                    </Link>
                   </div>
                 </CardContent>
                 

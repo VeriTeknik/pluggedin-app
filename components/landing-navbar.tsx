@@ -15,12 +15,11 @@ import { useKeyPress } from '@/hooks/useKeyPress';
 
 // Navigation links
 const navLinks = [
-  { href: '/discover', labelKey: 'navigation.discover' },
+  { href: '/to', labelKey: 'navigation.community' },
   { href: '#why-pluggedin', labelKey: 'navigation.whyPluggedin' },
   { href: '#features', labelKey: 'navigation.features' },
   { href: '#ai-models', labelKey: 'navigation.aiModels' },
   { href: '#pricing', labelKey: 'navigation.pricing' },
-  { href: '#community', labelKey: 'navigation.community' },
   { href: '/docs', labelKey: 'navigation.documentation' },
 ];
 

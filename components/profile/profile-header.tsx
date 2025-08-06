@@ -2,6 +2,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 // Import User type (assuming it's defined or imported from schema)
 import { users } from '@/db/schema'; 
+import Link from 'next/link';
+import { ArrowLeft, Users } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 import { FollowButton } from './follow-button';
 import { ProfileStats } from './profile-stats';
@@ -30,10 +33,20 @@ export function ProfileHeader({
   const displayName = user.name || user.username || 'Anonymous'; // Use user fields
 
   return (
-    <div className="bg-card rounded-lg shadow-md p-6">
-      <div className="flex flex-col md:flex-row md:items-start gap-6">
-        {/* Avatar */}
-        <Avatar className="h-24 w-24 border-2 border-border">
+    <div className="space-y-4">
+      {/* Back to Community Link */}
+      <Link href="/to">
+        <Button variant="ghost" size="sm" className="gap-2">
+          <ArrowLeft className="h-4 w-4" />
+          <Users className="h-4 w-4" />
+          Back to Community
+        </Button>
+      </Link>
+      
+      <div className="bg-card rounded-lg shadow-md p-6">
+        <div className="flex flex-col md:flex-row md:items-start gap-6">
+          {/* Avatar */}
+          <Avatar className="h-24 w-24 border-2 border-border">
           {hasAvatar ? (
             <AvatarImage src={avatarSrc} alt={displayName} />
           ) : (
@@ -79,6 +92,7 @@ export function ProfileHeader({
           />
         </div>
       </div>
+    </div>
     </div>
   );
 }

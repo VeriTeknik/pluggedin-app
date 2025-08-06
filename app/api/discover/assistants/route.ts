@@ -152,6 +152,7 @@ export async function GET(req: NextRequest) {
       user_id: row.users.id,
       username: row.users.username,
       user_avatar_url: row.users.avatar_url,
+      user_image: row.users.image,
     }));
 
     // Count query for pagination
@@ -197,7 +198,8 @@ export async function GET(req: NextRequest) {
         owner: {
           userId: assistant.user_id,
           username: assistant.username,
-          avatarUrl: assistant.user_avatar_url,
+          avatarUrl: assistant.user_avatar_url || assistant.user_image,
+          image: assistant.user_image,
           projectName: assistant.project_name,
         },
         createdAt: assistant.created_at,

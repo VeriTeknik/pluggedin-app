@@ -224,21 +224,21 @@ export default function SidebarLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   
+                  {/* Community/Discover at the top */}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('community.description', 'Discover AI assistants and creators')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/to'>
+                        <Users className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('community.title', 'Community')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  
                   <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip={t('search.explorePlugins')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/search'>
                         <Blocks className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden">{t('search.explorePlugins')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  
-                  {/* Update Discover Link to AI Social */}
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('aiSocial.description')} className="group-data-[collapsible=icon]:justify-center">
-                      <Link href='/discover'>
-                        <Users className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('aiSocial.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

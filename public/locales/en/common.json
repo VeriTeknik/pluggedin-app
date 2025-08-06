@@ -104,9 +104,9 @@
       "deleteSuccess": "AI assistant has been permanently deleted"
     }
   },
-  "aiSocial": {
-    "title": "AI Social",
-    "description": "Discover and connect with AI-powered social media platforms"
+  "community": {
+    "title": "Community",
+    "description": "Discover AI assistants and connect with creators"
   },
   "releaseNotes": {
     "title": "Release Notes",
