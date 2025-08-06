@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { signIn } from 'next-auth/react';
 import { 
   Calendar, 
   MessageSquare, 
@@ -64,6 +65,35 @@ export function PersonaIntegrations({
     capabilities?.length > 0 ? capabilities : DEFAULT_CAPABILITIES
   );
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<any>({});
+
+  useEffect(() => {
+    if (personaId) {
+      checkConnectionStatus();
+    }
+  }, [personaId]);
+
+  const checkConnectionStatus = async () => {
+    if (!personaId) return;
+    
+    try {
+      const chatUuid = window.location.pathname.split('/')[2];
+      const response = await fetch(`/api/embedded-chat/${chatUuid}/persona/${personaId}/integration`);
+      if (response.ok) {
+        const data = await response.json();
+        setConnectionStatus(data.status || {});
+      }
+    } catch (error) {
+      console.error('Failed to check connection status:', error);
+    }
+  };
+
+  const connectGoogleCalendar = async () => {
+    // This will redirect to Google OAuth with calendar scope
+    await signIn('google', { 
+      callbackUrl: window.location.href,
+    });
+  };
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -101,18 +131,52 @@ export function PersonaIntegrations({
   };
 
   const testIntegration = async (integrationType: string) => {
+    if (!personaId) {
+      toast({
+        title: t('common.error'),
+        description: t('embeddedChat.integrations.saveFirst', 'Please save the persona first'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
     toast({
       title: t('embeddedChat.integrations.testing', 'Testing Integration'),
       description: t('embeddedChat.integrations.testingDesc', 'Checking connection...'),
     });
     
-    // TODO: Implement actual test via API
-    setTimeout(() => {
-      toast({
-        title: t('common.success'),
-        description: t('embeddedChat.integrations.testSuccess', 'Integration test successful'),
+    try {
+      const chatUuid = window.location.pathname.split('/')[2]; // Extract from URL
+      const response = await fetch(`/api/embedded-chat/${chatUuid}/persona/${personaId}/integration`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'test',
+          integration: integrationType,
+        }),
       });
-    }, 1500);
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: t('common.success'),
+          description: result.data?.message || t('embeddedChat.integrations.testSuccess', 'Integration test successful'),
+        });
+      } else {
+        toast({
+          title: t('common.error'),
+          description: result.error || t('embeddedChat.integrations.testFailed', 'Integration test failed'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: t('embeddedChat.integrations.testError', 'Failed to test integration'),
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -181,29 +245,63 @@ export function PersonaIntegrations({
 
                   {localIntegrations.calendar?.provider === 'google_calendar' && (
                     <>
-                      <div>
-                        <Label>{t('embeddedChat.integrations.apiKey', 'API Key')}</Label>
-                        <Input
-                          type="password"
-                          value={localIntegrations.calendar?.config?.apiKey || ''}
-                          onChange={(e) => 
-                            updateIntegration('calendar.config.apiKey', e.target.value)
-                          }
-                          placeholder="AIza..."
-                          disabled={disabled}
-                        />
-                      </div>
-                      <div>
-                        <Label>{t('embeddedChat.integrations.calendarId', 'Calendar ID')}</Label>
-                        <Input
-                          value={localIntegrations.calendar?.config?.calendarId || ''}
-                          onChange={(e) => 
-                            updateIntegration('calendar.config.calendarId', e.target.value)
-                          }
-                          placeholder="primary or calendar@example.com"
-                          disabled={disabled}
-                        />
-                      </div>
+                      {connectionStatus.googleCalendar?.connected ? (
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                            <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <span className="text-sm text-green-700 dark:text-green-300">
+                              {t('embeddedChat.integrations.googleConnected', 'Google Calendar connected')}
+                            </span>
+                          </div>
+                          
+                          <div>
+                            <Label>{t('embeddedChat.integrations.calendarId', 'Calendar ID')}</Label>
+                            <Input
+                              value={localIntegrations.calendar?.config?.calendarId || ''}
+                              onChange={(e) => 
+                                updateIntegration('calendar.config.calendarId', e.target.value)
+                              }
+                              placeholder="primary or calendar@example.com"
+                              disabled={disabled}
+                            />
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {t('embeddedChat.integrations.calendarIdHint', 'Leave empty to use primary calendar')}
+                            </p>
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={connectGoogleCalendar}
+                          >
+                            <Link2 className="h-4 w-4 mr-2" />
+                            {t('embeddedChat.integrations.reconnect', 'Reconnect Google Account')}
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="space-y-4">
+                          <div className="p-4 border-2 border-dashed rounded-lg">
+                            <p className="text-sm text-muted-foreground mb-3">
+                              {t('embeddedChat.integrations.googleNotConnected', 'Connect your Google account to enable calendar integration')}
+                            </p>
+                            <Button
+                              onClick={connectGoogleCalendar}
+                              disabled={disabled}
+                            >
+                              <Globe className="h-4 w-4 mr-2" />
+                              {t('embeddedChat.integrations.connectGoogle', 'Connect Google Account')}
+                            </Button>
+                          </div>
+                          
+                          <div className="text-xs text-muted-foreground">
+                            <p>{t('embeddedChat.integrations.googlePermissions', 'This will request permission to:')}</p>
+                            <ul className="list-disc list-inside mt-1">
+                              <li>{t('embeddedChat.integrations.permissionCalendar', 'View and manage your calendars')}</li>
+                              <li>{t('embeddedChat.integrations.permissionEvents', 'Create and modify events')}</li>
+                            </ul>
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
 
@@ -222,15 +320,18 @@ export function PersonaIntegrations({
                     </div>
                   )}
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => testIntegration('calendar')}
-                    disabled={disabled}
-                  >
-                    <TestTube className="h-4 w-4 mr-2" />
-                    {t('embeddedChat.integrations.test', 'Test Connection')}
-                  </Button>
+                  {((localIntegrations.calendar?.provider === 'google_calendar' && connectionStatus.googleCalendar?.connected) ||
+                    localIntegrations.calendar?.provider !== 'google_calendar') && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => testIntegration('calendar')}
+                      disabled={disabled}
+                    >
+                      <TestTube className="h-4 w-4 mr-2" />
+                      {t('embeddedChat.integrations.test', 'Test Connection')}
+                    </Button>
+                  )}
                 </>
               )}
             </CardContent>

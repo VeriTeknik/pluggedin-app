@@ -87,6 +87,29 @@ const UpdateEmbeddedChatSchema = z.object({
   is_active: z.boolean().optional(),
   bot_avatar_url: z.string().nullable().optional(),
   expose_capabilities: z.boolean().optional(),
+  // Discovery fields
+  location: z.string().max(255).optional(),
+  profession: z.string().max(255).optional(),
+  expertise: z.array(z.string()).optional(),
+  category: z.string().max(100).optional(),
+  subcategory: z.string().max(100).optional(),
+  language: z.string().max(10).optional(),
+  timezone: z.string().max(50).optional(),
+  // Enhanced discovery metadata
+  industry: z.string().max(100).optional(),
+  keywords: z.array(z.string()).optional(),
+  company_name: z.string().max(255).optional(),
+  company_size: z.string().max(50).optional(),
+  target_audience: z.array(z.string()).optional(),
+  service_hours: z.record(z.any()).optional(),
+  response_time: z.string().max(50).optional(),
+  pricing_model: z.string().max(50).optional(),
+  // AI-optimized fields
+  semantic_tags: z.array(z.string()).optional(),
+  use_cases: z.array(z.string()).optional(),
+  capabilities_summary: z.string().optional(),
+  personality_traits: z.array(z.string()).optional(),
+  interaction_style: z.string().max(100).optional(),
 });
 
 const CreatePersonaSchema = z.object({

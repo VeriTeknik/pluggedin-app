@@ -3,7 +3,7 @@ import { Metadata } from 'next';
 import { getUserByUsername, getUserFollowerCount, getUserFollowingCount, isFollowingUser } from '@/app/actions/social';
 import { getAllUserPublicEmbeddedChats } from '@/app/actions/public-embedded-chat';
 import { ProfileHeader } from '@/components/profile/profile-header';
-import { ProfileTabs } from '@/components/profile/profile-tabs';
+import { ProfileTabsWithDiscovery } from '@/components/profile/profile-tabs-with-discovery';
 import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
@@ -40,7 +40,7 @@ function UserProfileDisplay({
       />
 
       <div className="mt-8">
-        <ProfileTabs
+        <ProfileTabsWithDiscovery
           isOwner={isOwner}
           username={username}
           embeddedChats={embeddedChats}

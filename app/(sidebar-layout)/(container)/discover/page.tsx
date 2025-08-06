@@ -9,7 +9,7 @@ import CardGrid from '@/app/(sidebar-layout)/(container)/search/components/CardG
 import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
 import { getMcpServers } from '@/app/actions/mcp-servers';
 import { getFollowing, searchUsers } from '@/app/actions/social';
-import { EmbeddedChats } from '@/components/profile/embedded-chats';
+import { DiscoverAssistants } from '@/components/discover/discover-assistants';
 import { SharedCollections } from '@/components/profile/shared-collections';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -23,7 +23,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 import { PaginatedSearchResult } from '@/types/search';
-import { EmbeddedChat, SharedCollection } from '@/types/social';
+import { SharedCollection } from '@/types/social';
 
 
 type User = typeof users.$inferSelect;
@@ -46,8 +46,6 @@ export default function DiscoverPage() {
   const [isLoadingPeople, setIsLoadingPeople] = useState(true); // Renamed isLoading
   const [followingUsers, setFollowingUsers] = useState<User[]>([]); // State for followed users
   const [suggestedUsers, setSuggestedUsers] = useState<User[]>([]); // State for suggested users
-  // Removed sharedServers state
-  const [embeddedChats] = useState<EmbeddedChat[]>([]);
   const [serverOffset, setServerOffset] = useState(
     parseInt(searchParams.get('serverOffset') || '0')
   ); // Added state for server pagination
@@ -210,7 +208,7 @@ export default function DiscoverPage() {
                   {t('tabs.collections', { count: collectionsData?.length ?? 0 })}
                 </TabsTrigger>
                 <TabsTrigger value="chats" className="flex-shrink-0">
-                  {t('tabs.chats', { count: embeddedChats.length })}
+                  {t('tabs.chats')}
                 </TabsTrigger>
               </TabsList>
 
@@ -340,15 +338,7 @@ export default function DiscoverPage() {
               </TabsContent>
 
               <TabsContent value="chats" className="space-y-6 md:space-y-8">
-                {embeddedChats.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4">
-                    <EmbeddedChats chats={embeddedChats} />
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-sm md:text-base">
-                    {t('chats.empty')}
-                  </p>
-                )}
+                <DiscoverAssistants />
               </TabsContent>
             </PageContainer>
           </Tabs>

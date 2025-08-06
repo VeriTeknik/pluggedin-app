@@ -12,6 +12,7 @@ import { EmbedCodeTab } from './embed-code-tab';
 import { GeneralSettingsTab } from './general-settings-tab';
 import { ModelConfigTab } from './model-config-tab';
 import { PersonasTab } from './personas-tab';
+import { DiscoveryProfileTab } from './discovery-profile-tab';
 import { DangerZoneTab } from './danger-zone-tab';
 
 interface ChatConfigurationTabsProps {
@@ -25,9 +26,12 @@ export function ChatConfigurationTabs({ chat, chatUuid }: ChatConfigurationTabsP
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="grid w-full grid-cols-7">
+      <TabsList className="grid w-full grid-cols-8">
         <TabsTrigger value="general">
           {t('embeddedChat.tabs.general', 'General')}
+        </TabsTrigger>
+        <TabsTrigger value="discovery">
+          {t('embeddedChat.tabs.discovery', 'Discovery')}
         </TabsTrigger>
         <TabsTrigger value="model">
           {t('embeddedChat.tabs.model', 'Model')}
@@ -51,6 +55,10 @@ export function ChatConfigurationTabs({ chat, chatUuid }: ChatConfigurationTabsP
 
       <TabsContent value="general" className="space-y-4">
         <GeneralSettingsTab chat={chat} chatUuid={chatUuid} />
+      </TabsContent>
+
+      <TabsContent value="discovery" className="space-y-4">
+        <DiscoveryProfileTab chat={chat} chatUuid={chatUuid} />
       </TabsContent>
 
       <TabsContent value="model" className="space-y-4">

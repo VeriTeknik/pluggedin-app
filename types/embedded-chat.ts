@@ -55,6 +55,27 @@ export interface EmbeddedChat {
   api_key_last_used_at: Date | null;
   bot_avatar_url: string | null;
   expose_capabilities: boolean;
+  // Discovery fields
+  location?: string | null;
+  profession?: string | null;
+  expertise?: string[];
+  category?: string | null;
+  subcategory?: string | null;
+  language?: string;
+  timezone?: string | null;
+  industry?: string | null;
+  keywords?: string[];
+  company_name?: string | null;
+  company_size?: string | null;
+  target_audience?: string[];
+  service_hours?: Record<string, any>;
+  response_time?: string | null;
+  pricing_model?: string | null;
+  semantic_tags?: string[];
+  use_cases?: string[];
+  capabilities_summary?: string | null;
+  personality_traits?: string[];
+  interaction_style?: string | null;
   created_at: Date;
   updated_at: Date;
   // Statistics

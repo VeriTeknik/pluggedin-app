@@ -1260,6 +1260,32 @@ export const embeddedChatsTable = pgTable(
     // Capability exposure
     expose_capabilities: boolean('expose_capabilities').default(false),
     
+    // Discovery fields
+    location: varchar('location', { length: 255 }), // City, Country format
+    profession: varchar('profession', { length: 255 }), // Professional title/role
+    expertise: text('expertise').array().default(sql`'{}'::text[]`), // Array of expertise areas
+    category: varchar('category', { length: 100 }), // Primary category
+    subcategory: varchar('subcategory', { length: 100 }), // Subcategory
+    language: varchar('language', { length: 10 }).default('en'), // Primary language code
+    timezone: varchar('timezone', { length: 50 }), // Timezone identifier
+    
+    // Enhanced discovery metadata
+    industry: varchar('industry', { length: 100 }), // Industry vertical
+    keywords: text('keywords').array().default(sql`'{}'::text[]`), // SEO/discovery keywords
+    company_name: varchar('company_name', { length: 255 }), // Associated company
+    company_size: varchar('company_size', { length: 50 }), // Company size range
+    target_audience: text('target_audience').array().default(sql`'{}'::text[]`), // Target audience
+    service_hours: jsonb('service_hours').default(sql`'{}'::jsonb`), // Business hours config
+    response_time: varchar('response_time', { length: 50 }), // Expected response time
+    pricing_model: varchar('pricing_model', { length: 50 }), // Pricing model
+    
+    // AI-optimized fields
+    semantic_tags: text('semantic_tags').array().default(sql`'{}'::text[]`), // Semantic search tags
+    use_cases: text('use_cases').array().default(sql`'{}'::text[]`), // Specific use cases
+    capabilities_summary: text('capabilities_summary'), // Natural language capabilities
+    personality_traits: text('personality_traits').array().default(sql`'{}'::text[]`), // Personality
+    interaction_style: varchar('interaction_style', { length: 100 }), // Communication style
+    
     // API Key Authentication
     api_key: varchar('api_key', { length: 66 }).unique(),
     api_key_created_at: timestamp('api_key_created_at', { withTimezone: true }),
@@ -1280,6 +1306,10 @@ export const embeddedChatsTable = pgTable(
     embeddedChatsActiveIdx: index('idx_embedded_chats_active').on(table.is_active),
     embeddedChatsApiKeyIdx: index('idx_embedded_chats_api_key').on(table.api_key),
     embeddedChatsSlugIdx: index('idx_embedded_chats_slug').on(table.slug),
+    embeddedChatsLocationIdx: index('idx_embedded_chats_location').on(table.location),
+    embeddedChatsCategoryIdx: index('idx_embedded_chats_category').on(table.category),
+    embeddedChatsLanguageIdx: index('idx_embedded_chats_language').on(table.language),
+    embeddedChatsIndustryIdx: index('idx_embedded_chats_industry').on(table.industry),
   })
 );
 
