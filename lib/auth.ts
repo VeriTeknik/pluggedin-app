@@ -320,6 +320,36 @@ export function getAuthSession() {
   return getServerSession(authOptions);
 }
 
+// Utility function to get user info from authentication context
+export async function getUserInfoFromAuth() {
+  const session = await getAuthSession();
+  
+  if (!session?.user) {
+    return null;
+  }
+
+  return {
+    id: session.user.id,
+    name: session.user.name,
+    email: session.user.email,
+    username: session.user.username,
+    image: session.user.image,
+    emailVerified: session.user.emailVerified,
+  };
+}
+
+// Utility function to get user email from authentication context
+export async function getUserEmailFromAuth() {
+  const userInfo = await getUserInfoFromAuth();
+  return userInfo?.email || null;
+}
+
+// Utility function to get user name from authentication context
+export async function getUserNameFromAuth() {
+  const userInfo = await getUserInfoFromAuth();
+  return userInfo?.name || userInfo?.username || null;
+}
+
 // Extend the next-auth types to include user id
 declare module 'next-auth' {
   interface Session {

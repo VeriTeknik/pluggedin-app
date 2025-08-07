@@ -1,6 +1,6 @@
 'use server';
 
-import { McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
+import { and, eq } from 'drizzle-orm';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
@@ -8,7 +8,7 @@ import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatXAI } from '@langchain/xai';
-import { and,eq } from 'drizzle-orm';
+import { McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
 
 import { db } from '@/db';
 import { embeddedChatsTable, McpServerType, profilesTable, projectsTable, tokenUsageTable, chatPersonasTable } from '@/db/schema';
@@ -992,7 +992,7 @@ Please answer the user's question using both the provided context and your avail
         configurable: { thread_id: threadId },
         // Add metadata for LangSmith tracing if enabled
         metadata: {
-          user_id: session.profileUuid,
+          user_id: profileUuid,
           session_type: 'playground',
           has_rag: finalQuery !== query,
           model: session.llmConfig.model,
@@ -1413,7 +1413,7 @@ async function createIsolatedEmbeddedChatSession(
     const mcpServersConfig: Record<string, any> = {};
     
     enabledServers.forEach(server => {
-      const isFilesystemServer = server.command === 'npx' && 
+      const isFilesystemServer = server.command === 'npx' &&
         server.args?.includes('@modelcontextprotocol/server-filesystem');
       
       if (isFilesystemServer && server.type === 'STDIO') {
@@ -1502,7 +1502,7 @@ async function createIsolatedEmbeddedChatSession(
       mappedProvider = 'openai';
     }
     
-    const { tools, cleanup: mcpCleanup, failedServers } = await progressivelyInitializeMcpServers(
+    const { tools: mcpTools, cleanup: mcpCleanup, failedServers } = await progressivelyInitializeMcpServers(
       mcpServersConfig,
       `embedded_${chatUuid}`, // Use chat-specific identifier
       {
@@ -1522,7 +1522,51 @@ async function createIsolatedEmbeddedChatSession(
       );
     }
     
-    // Enhanced cleanup that handles MCP servers
+    // Create persona capability tools if we have an active persona
+    let personaTools: any[] = [];
+    if (activePersona) {
+      try {
+        // Import the tools dynamically
+        const { createPersonaTools } = await import('@/lib/integrations/tools');
+        const { IntegrationManager } = await import('@/lib/integrations/base-service');
+        
+        // Create integration manager for the persona
+        const integrationManager = new IntegrationManager(activePersona.integrations as any || {}, activePersona.capabilities as any || []);
+        
+        // Set up the tool context
+        const toolContext = {
+          integrationManager,
+          personaId: activePersona.id,
+          conversationId: chatUuid,
+        };
+        
+        // Create tools based on enabled capabilities
+        personaTools = createPersonaTools(toolContext);
+        
+        console.log(`[EMBEDDED] Created ${personaTools.length} persona capability tools`);
+        
+        // Log the created tools
+        if (personaTools.length > 0) {
+          await addServerLogForProfile(
+            `embedded_${chatUuid}`,
+            'info',
+            `[EMBEDDED] Persona tools created: ${personaTools.map(tool => tool.name).join(', ')}`
+          );
+        }
+      } catch (error) {
+        console.error('[EMBEDDED] Failed to create persona tools:', error);
+        await addServerLogForProfile(
+          `embedded_${chatUuid}`,
+          'error',
+          `[EMBEDDED] Failed to create persona tools: ${error instanceof Error ? error.message : 'Unknown error'}`
+        );
+      }
+    }
+    
+    // Combine MCP tools and persona tools
+    const allTools = [...mcpTools, ...personaTools];
+    
+    // Enhanced cleanup that handles MCP servers and integration manager
     const enhancedCleanup = async () => {
       try {
         await mcpCleanup();
@@ -1536,10 +1580,20 @@ async function createIsolatedEmbeddedChatSession(
     // Create the agent with tools
     const agent = createReactAgent({
       llm,
-      tools,
+      tools: allTools,
       stateModifier: (state: any) => {
         // Build persona-specific system message
         let systemMessage = `You are an AI assistant specialized in helping users interact with their development environment through MCP (Model Context Protocol) servers and knowledge bases.`;
+        
+        // Add authentication check and user info request
+        systemMessage += `
+
+IMPORTANT: Before performing any actions that require user identification (like sending emails, creating calendar events, or creating CRM leads), you must first ask the user for their email address and name if they haven't provided it yet. This is required for proper authentication and personalization of services.
+
+If the user is not authenticated or hasn't provided their information, respond with:
+"I'd be happy to help you with that! To provide you with personalized services, could you please share your email address and name? This will allow me to properly authenticate and personalize the experience for you."
+
+Only proceed with capability tools once you have the user's email and name.`;
         
         // Add persona context if available
         if (activePersona) {
@@ -1600,14 +1654,17 @@ ${activeIntegrations.map(service => `• ${service}`).join('\n')}`;
 INFORMATION SOURCES:
 • Knowledge Context: Documentation, schemas, and background information from RAG
 • MCP Tools: Real-time data access and system interactions
+• Persona Capabilities: Specialized tools for communication, scheduling, and business operations
 
 DECISION FRAMEWORK:
-1. Use knowledge context to understand structure, relationships, and background
-2. Use MCP tools for current data, live queries, and actions
-3. Combine both sources when helpful - context for understanding, tools for current information
-4. Always prioritize accuracy and currency of information
+1. Always check if user is authenticated/has provided email and name before using persona capabilities
+2. Use knowledge context to understand structure, relationships, and background
+3. Use MCP tools for current data, live queries, and actions
+4. Use persona capability tools for specialized tasks like sending emails, scheduling meetings, or managing business operations (only after authentication)
+5. Combine all sources when helpful - context for understanding, tools for current information, capabilities for specialized actions
+6. Always prioritize accuracy and currency of information
 
-Be transparent about which sources you use and why. When you have both context and tools available, use them together for the most complete and accurate response.`;
+Be transparent about which sources you use and why. When you have all sources available, use them together for the most complete and accurate response.`;
         
         return [
           { role: 'system', content: systemMessage },
@@ -1640,7 +1697,7 @@ Be transparent about which sources you use and why. When you have both context a
     await addServerLogForProfile(
       `embedded_${chatUuid}`,
       'info',
-      `[EMBEDDED] Isolated session initialized with ${tools.length} tools from ${enabledServers.length} servers`
+      `[EMBEDDED] Isolated session initialized with ${allTools.length} tools (${mcpTools.length} MCP tools, ${personaTools.length} persona tools) from ${enabledServers.length} servers`
     );
     
     return { success: true };
@@ -1728,6 +1785,7 @@ export async function executeEmbeddedChatQuery(
   let session = embeddedChatSessions.get(chatUuid);
   let debugMode = false;
   let modelConfig: any = null;
+  let isAuthenticated = false;
   
   if (!session) {
     console.log('[EMBEDDED] No session found for chat:', chatUuid);
@@ -1788,7 +1846,7 @@ export async function executeEmbeddedChatQuery(
       columns: { debug_mode: true, model_config: true }
     });
     debugMode = chatData?.debug_mode || false;
-    modelConfig = chatData?.model_config || session.config;
+    modelConfig = chatData?.model_config || session.llmConfig;
   }
   
   console.log('[EMBEDDED] Session found/recreated, processing query:', query);
@@ -1796,6 +1854,17 @@ export async function executeEmbeddedChatQuery(
   console.log('[EMBEDDED] Model config:', modelConfig);
 
   try {
+    // Check authentication status
+    try {
+      const { getUserInfoFromAuth } = await import('@/lib/auth');
+      const userInfo = await getUserInfoFromAuth();
+      isAuthenticated = !!userInfo && !!userInfo.email;
+      console.log('[EMBEDDED] Authentication status:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+    } catch (error) {
+      console.log('[EMBEDDED] Authentication check failed:', error);
+      isAuthenticated = false;
+    }
+    
     // Update last active timestamp
     session.lastActive = new Date();
 

@@ -48,8 +48,6 @@ export interface EmailIntegration extends BaseIntegration {
       };
     };
     sendgridApiKey?: string;
-    fromEmail: string;
-    fromName: string;
     templates?: Record<string, string>;
   };
 }

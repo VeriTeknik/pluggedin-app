@@ -25,12 +25,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { 
+import {
   CalendarProvider,
   CRMProvider,
   DEFAULT_CAPABILITIES,
   PersonaCapability,
-  PersonaIntegrations} from '@/lib/integrations/types';
+  type PersonaIntegrations} from '@/lib/integrations/types';
 
 interface PersonaIntegrationsProps {
   personaId?: number;
@@ -445,28 +445,8 @@ export function PersonaIntegrations({
 
                   {localIntegrations.communication?.email?.enabled && (
                     <>
-                      <div>
-                        <Label>{t('embeddedChat.integrations.fromEmail', 'From Email')}</Label>
-                        <Input
-                          type="email"
-                          value={localIntegrations.communication?.email?.config?.fromEmail || ''}
-                          onChange={(e) => 
-                            updateIntegration('communication.email.config.fromEmail', e.target.value)
-                          }
-                          placeholder="noreply@example.com"
-                          disabled={disabled}
-                        />
-                      </div>
-                      <div>
-                        <Label>{t('embeddedChat.integrations.fromName', 'From Name')}</Label>
-                        <Input
-                          value={localIntegrations.communication?.email?.config?.fromName || ''}
-                          onChange={(e) => 
-                            updateIntegration('communication.email.config.fromName', e.target.value)
-                          }
-                          placeholder="Support Team"
-                          disabled={disabled}
-                        />
+                      <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                        <p>{t('embeddedChat.integrations.emailFromInfo', 'Emails will be sent from Plugged.in system email. The authenticated user and persona information will be included in the email content.')}</p>
                       </div>
                       <Button
                         variant="outline"
@@ -568,11 +548,12 @@ export function PersonaIntegrations({
                 {localCapabilities.map((capability) => {
                   const hasRequirements = capability.requiredIntegrations && 
                     capability.requiredIntegrations.length > 0;
-                  const requirementsMet = !hasRequirements || 
+                  const requirementsMet = !hasRequirements ||
                     capability.requiredIntegrations!.every(req => {
                       const parts = req.split('.');
                       if (parts.length === 1) {
-                        return localIntegrations[req as keyof PersonaIntegrations]?.enabled;
+                        const integration = localIntegrations[req as keyof PersonaIntegrations];
+                        return integration && 'enabled' in integration ? integration.enabled : false;
                       }
                       // Handle nested requirements like 'communication.slack'
                       const [category, provider] = parts;
