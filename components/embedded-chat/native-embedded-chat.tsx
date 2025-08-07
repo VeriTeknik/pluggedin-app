@@ -47,6 +47,13 @@ interface ChatConfig {
   bot_avatar_url: string | null;
   expose_capabilities: boolean;
   enable_rag: boolean;
+  default_persona?: {
+    id: number;
+    name: string;
+    avatar_url: string | null;
+    role: string | null;
+    instructions: string;
+  } | null;
   mcp_servers?: Array<{
     name: string;
     type: string;
@@ -111,7 +118,7 @@ export function NativeEmbeddedChat({
 }: NativeEmbeddedChatProps) {
   const { isAuthenticated, session } = useAuth();
   const { user } = useUser();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(position === 'relative'); // Auto-open for relative position
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -133,8 +140,8 @@ export function NativeEmbeddedChat({
         const response = await fetch(getApiUrl(`/api/public/chat/${chatUuid}/config`));
         if (response.ok) {
           const data = await response.json();
-          console.log('Chat config loaded:', data.chat);
-          setChatConfig(data.chat);
+          console.log('Chat config loaded:', data);
+          setChatConfig(data);
         }
       } catch (error) {
         console.error('Failed to fetch chat config:', error);
@@ -352,11 +359,14 @@ export function NativeEmbeddedChat({
 
   const renderAvatar = (message: Message) => {
     if (message.role === 'assistant') {
-      if (chatConfig?.bot_avatar_url) {
+      const avatarUrl = chatConfig?.default_persona?.avatar_url || chatConfig?.bot_avatar_url;
+      const avatarName = chatConfig?.default_persona?.name || chatConfig?.name || 'AI Assistant';
+      
+      if (avatarUrl) {
         return (
           <img 
-            src={chatConfig.bot_avatar_url} 
-            alt={chatConfig.name || 'AI Assistant'} 
+            src={avatarUrl} 
+            alt={avatarName} 
             className="w-8 h-8 rounded-full object-cover"
             onError={(e) => {
               // Fallback to default avatar on error
@@ -371,7 +381,7 @@ export function NativeEmbeddedChat({
       }
       return (
         <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center text-white text-sm font-medium">
-          AI
+          {avatarName.substring(0, 2).toUpperCase()}
         </div>
       );
     }

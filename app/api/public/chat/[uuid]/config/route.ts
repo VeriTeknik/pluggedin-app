@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { embeddedChatsTable } from '@/db/schema';
+import { embeddedChatsTable, chatPersonasTable } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 
 export async function GET(
@@ -55,6 +55,23 @@ export async function GET(
       );
     }
 
+    // Fetch the default persona for this chat
+    const defaultPersona = await db
+      .select({
+        id: chatPersonasTable.id,
+        name: chatPersonasTable.name,
+        avatar_url: chatPersonasTable.avatar_url,
+        role: chatPersonasTable.role,
+        instructions: chatPersonasTable.instructions,
+      })
+      .from(chatPersonasTable)
+      .where(and(
+        eq(chatPersonasTable.embedded_chat_uuid, chat.uuid),
+        eq(chatPersonasTable.is_default, true),
+        eq(chatPersonasTable.is_active, true)
+      ))
+      .limit(1);
+
     // Extract appearance settings from theme_config or provide defaults
     const themeConfig = (chat.theme_config as any) || {};
     
@@ -91,7 +108,8 @@ export async function GET(
       },
       welcome_message: chat.welcome_message,
       suggested_questions: chat.suggested_questions || [],
-      bot_avatar_url: chat.bot_avatar_url,
+      bot_avatar_url: chat.bot_avatar_url, // Keep the chat's avatar
+      default_persona: defaultPersona[0] || null, // Persona info separately
       // Legacy support
       theme_config: chat.theme_config,
     };
