@@ -55,6 +55,7 @@ export interface EmbeddedChat {
   api_key_last_used_at: Date | null;
   bot_avatar_url: string | null;
   expose_capabilities: boolean;
+  debug_mode: boolean;
   // Discovery fields
   location?: string | null;
   profession?: string | null;

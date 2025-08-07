@@ -61,6 +61,7 @@ const generalSettingsSchema = z.object({
   enabled_mcp_server_uuids: z.array(z.string()),
   bot_avatar_url: z.string().nullable().optional(),
   expose_capabilities: z.boolean(),
+  debug_mode: z.boolean(),
 });
 
 type GeneralSettingsValues = z.infer<typeof generalSettingsSchema>;
@@ -93,6 +94,7 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
       enabled_mcp_server_uuids: chat.enabled_mcp_server_uuids || [],
       bot_avatar_url: chat.bot_avatar_url || null,
       expose_capabilities: chat.expose_capabilities ?? false,
+      debug_mode: chat.debug_mode ?? false,
     },
   });
 
@@ -131,6 +133,7 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
         allowed_domains: values.allowed_domains?.filter(d => d && d.trim()) || [],
         bot_avatar_url: values.bot_avatar_url?.trim() || null,
         expose_capabilities: values.expose_capabilities ?? false,
+        debug_mode: values.debug_mode ?? false,
       };
       
       const result = await updateEmbeddedChatConfig(chatUuid, cleanedValues);
@@ -569,6 +572,29 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
                     </FormLabel>
                     <FormDescription>
                       {t('embeddedChat.general.exposeCapabilitiesDescription', 'Display enabled MCP servers and RAG capabilities to users')}
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="debug_mode"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between rounded-lg border p-4">
+                  <div className="space-y-0.5">
+                    <FormLabel className="text-base">
+                      {t('embeddedChat.general.debugMode', 'Debug Mode')}
+                    </FormLabel>
+                    <FormDescription>
+                      {t('embeddedChat.general.debugModeDescription', 'Show model information and token usage in chat responses')}
                     </FormDescription>
                   </div>
                   <FormControl>

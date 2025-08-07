@@ -1,0 +1,1 @@
+ALTER TABLE "embedded_chats" ADD COLUMN "debug_mode" boolean DEFAULT false;

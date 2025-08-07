@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import type { PlaygroundSettings } from '@/app/actions/playground-settings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { supportsTemperature } from '@/lib/mcp/llm-utils';
 import {
   Card,
   CardContent,
@@ -440,12 +441,9 @@ export function PlaygroundConfig({
                       {llmConfig.provider === 'anthropic' ? (
                         <>
                           {[
-                            { value: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', desc: 'Balanced reasoning', badge: 'New' },
-                            { value: 'claude-4-sonnet-20250514', name: 'Claude 4 Sonnet', desc: 'Superior intelligence', badge: 'Latest' },
-                            { value: 'claude-4-opus-20250514', name: 'Claude 4 Opus', desc: 'Most powerful', badge: 'Pro' },
-                            { value: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet', desc: 'Fast & capable' },
-                            { value: 'claude-3-opus-20240229', name: 'Claude 3 Opus', desc: 'Creative tasks' },
-                            { value: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', desc: 'Quick responses' }
+                            { value: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', desc: '💚 Fast & cheap ($0.25/M input)', badge: 'Budget' },
+                            { value: 'claude-sonnet-4-20250514', name: 'Claude 4 Sonnet', desc: '⚡ Balanced ($3.00/M input)', badge: 'Popular' },
+                            { value: 'claude-opus-4-20250514', name: 'Claude 4 Opus', desc: '💎 Most capable ($15.00/M input)', badge: 'Pro' }
                           ].map((model) => (
                             <div
                               key={model.value}
@@ -471,12 +469,9 @@ export function PlaygroundConfig({
                       ) : llmConfig.provider === 'openai' ? (
                         <>
                           {[
-                            { value: 'gpt-4.1-2025-04-14', name: 'GPT-4.1', desc: 'Latest flagship', badge: 'New' },
-                            { value: 'gpt-4.1-mini-2025-04-14', name: 'GPT-4.1 Mini', desc: 'Cost efficient', badge: 'New' },
-                            { value: 'gpt-4o-2024-05-13', name: 'GPT-4o', desc: 'Multimodal' },
-                            { value: 'gpt-4o-mini-2024-07-18', name: 'GPT-4o Mini', desc: 'Fast & affordable' },
-                            { value: 'gpt-4-turbo-2024-04-09', name: 'GPT-4 Turbo', desc: 'High performance' },
-                            { value: 'gpt-3.5-turbo-0125', name: 'GPT-3.5 Turbo', desc: 'Quick tasks' }
+                            { value: 'gpt-4o-mini', name: 'GPT-4o Mini', desc: '💚 Ultra cheap ($0.40/M input)', badge: 'Budget' },
+                            { value: 'gpt-4.1-nano', name: 'GPT-4.1 Nano', desc: '⚡ Very cheap ($0.10/M input)', badge: 'Economy' },
+                            { value: 'gpt-4o', name: 'GPT-4o', desc: '💎 Advanced ($2.00/M input)', badge: 'Pro' }
                           ].map((model) => (
                             <div
                               key={model.value}
@@ -502,7 +497,9 @@ export function PlaygroundConfig({
                       ) : llmConfig.provider === 'xai' ? (
                         <>
                           {[
-                            { value: 'grok-3-mini', name: 'Grok 3 Mini', desc: 'Fast & efficient', badge: 'New' }
+                            { value: 'grok-3-mini', name: 'Grok 3 Mini', desc: '💚 Fast & cheap ($0.30/M input)', badge: 'Budget' },
+                            { value: 'grok-4', name: 'Grok 4', desc: '⚡ Balanced ($3.00/M input)', badge: 'Popular' },
+                            { value: 'grok-4-vision', name: 'Grok 4 Vision', desc: '💎 Multimodal ($5.00/M input)', badge: 'Pro' }
                           ].map((model) => (
                             <div
                               key={model.value}
@@ -528,9 +525,9 @@ export function PlaygroundConfig({
                       ) : (
                         <>
                           {[
-                            { value: 'models/gemini-2.5-pro-preview-06-05', name: 'Gemini 2.5 Pro', desc: 'Most intelligent', badge: 'New' },
-                            { value: 'models/gemini-2.5-flash-preview-05-20', name: 'Gemini 2.5 Flash', desc: 'Best performance', badge: 'New' },
-                            { value: 'models/gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Fast & capable' }
+                            { value: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: '💚 Ultra fast ($0.10/M input)', badge: 'Budget' },
+                            { value: 'gemini-2.5-flash-preview', name: 'Gemini 2.5 Flash', desc: '⚡ Latest ($0.15/M input)', badge: 'Popular' },
+                            { value: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', desc: '💎 Most capable ($1.25/M input)', badge: 'Pro' }
                           ].map((model) => (
                             <div
                               key={model.value}
@@ -600,13 +597,21 @@ export function PlaygroundConfig({
                         </div>
                       </Label>
                       <div className="flex items-center gap-2">
-                        <span className='text-sm font-mono bg-muted px-2 py-1 rounded'>
-                          {llmConfig.temperature}
-                        </span>
-                        <div className="text-xs text-muted-foreground">
-                          {llmConfig.temperature <= 0.3 ? 'Precise' :
-                           llmConfig.temperature <= 0.7 ? 'Balanced' : 'Creative'}
-                        </div>
+                        {supportsTemperature(llmConfig.provider, llmConfig.model) ? (
+                          <>
+                            <span className='text-sm font-mono bg-muted px-2 py-1 rounded'>
+                              {llmConfig.temperature}
+                            </span>
+                            <div className="text-xs text-muted-foreground">
+                              {llmConfig.temperature <= 0.3 ? 'Precise' :
+                               llmConfig.temperature <= 0.7 ? 'Balanced' : 'Creative'}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            Not supported by {llmConfig.model}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <Input
@@ -616,6 +621,7 @@ export function PlaygroundConfig({
                       max='1'
                       step='0.1'
                       value={llmConfig.temperature}
+                      disabled={!supportsTemperature(llmConfig.provider, llmConfig.model)}
                       onChange={(e) =>
                         switchModel({
                           ...llmConfig,

@@ -47,6 +47,7 @@ interface ChatConfig {
   bot_avatar_url: string | null;
   expose_capabilities: boolean;
   enable_rag: boolean;
+  debug_mode: boolean;
   default_persona?: {
     id: number;
     name: string;
@@ -227,6 +228,8 @@ export function NativeEmbeddedChat({
     setMessages(prev => [...prev, userMessage]);
     setInputValue('');
     setIsLoading(true);
+    
+    let debugInfo: any = null;
 
     try {
       const response = await fetch(getApiUrl(`/api/public/chat/${chatUuid}/stream`), {
@@ -296,6 +299,10 @@ export function NativeEmbeddedChat({
               } else if (data.type === 'tool_end') {
                 // Optionally show tool completion
                 console.log('Tool ended:', data.tool);
+              } else if (data.type === 'debug') {
+                // Store debug information
+                console.log('Debug info:', data);
+                debugInfo = data.metadata;
               } else if (data.type === 'final') {
                 // Handle final message if no streaming tokens were received
                 if (!assistantMessage.content && data.messages && data.messages.length > 0) {
@@ -337,6 +344,34 @@ export function NativeEmbeddedChat({
       if (!assistantMessage.content) {
         console.warn('No response content received');
         assistantMessage.content = 'I apologize, but I didn\'t receive a proper response. Please try again.';
+        setMessages(prev => prev.map(msg => 
+          msg.id === assistantMessage.id 
+            ? { ...msg, content: assistantMessage.content }
+            : msg
+        ));
+      }
+      
+      // Add debug info to the message if debug mode is enabled
+      if (chatConfig?.debug_mode && debugInfo) {
+        let debugText = `\n\n---\n📊 Debug: ${debugInfo.provider} ${debugInfo.model}`;
+        
+        // Show temperature if the model supports it
+        if (debugInfo.temperature !== undefined) {
+          debugText += ` | Temp: ${debugInfo.temperature}`;
+        }
+        
+        // Show token usage if available
+        if (debugInfo.tokens_used) {
+          debugText += ` | Tokens Used: ${debugInfo.tokens_used}`;
+          if (debugInfo.prompt_tokens && debugInfo.completion_tokens) {
+            debugText += ` (Prompt: ${debugInfo.prompt_tokens}, Completion: ${debugInfo.completion_tokens})`;
+          }
+        } else if (debugInfo.max_tokens) {
+          // Fallback to max tokens if consumed tokens not available
+          debugText += ` | Max Tokens: ${debugInfo.max_tokens}`;
+        }
+        
+        assistantMessage.content += debugText;
         setMessages(prev => prev.map(msg => 
           msg.id === assistantMessage.id 
             ? { ...msg, content: assistantMessage.content }

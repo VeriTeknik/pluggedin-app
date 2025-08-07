@@ -87,6 +87,7 @@ const UpdateEmbeddedChatSchema = z.object({
   is_active: z.boolean().optional(),
   bot_avatar_url: z.string().nullable().optional(),
   expose_capabilities: z.boolean().optional(),
+  debug_mode: z.boolean().optional(),
   // Discovery fields
   location: z.string().max(255).optional(),
   profession: z.string().max(255).optional(),

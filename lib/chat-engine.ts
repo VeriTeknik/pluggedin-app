@@ -271,6 +271,13 @@ export class ChatEngine {
                   content: `Tool ${data.tool} completed`,
                   metadata: { name: data.tool }
                 };
+              } else if (data.type === 'debug') {
+                // Forward debug information
+                yield { 
+                  type: 'debug', 
+                  content: data.content,
+                  metadata: data.metadata
+                };
               } else if (data.type === 'final') {
                 // Final message with complete response
                 if (data.messages && data.messages.length > 0) {

@@ -25,19 +25,30 @@ export function initChatModel(config: {
   const { provider, model, temperature = 0, maxTokens, streaming = true } = config;
 
   if (provider === 'openai') {
-    return new ChatOpenAI({
+    // gpt-4.1-nano doesn't support temperature parameter
+    const modelConfig: any = {
       modelName: model,
-      temperature,
       maxTokens,
       streaming,
-    });
+      // Enable stream usage for token counting in streaming mode
+      streamUsage: true,
+    };
+    
+    // Only add temperature if not gpt-4.1-nano
+    if (model !== 'gpt-4.1-nano') {
+      modelConfig.temperature = temperature;
+    }
+    
+    return new ChatOpenAI(modelConfig);
   } else if (provider === 'anthropic') {
     return new ChatAnthropic({
       modelName: model,
       temperature,
       maxTokens,
       streaming,
-    });
+      // Enable stream usage for token counting in streaming mode
+      streamUsage: true,
+    } as any);
   } else if (provider === 'google') {
     return new ChatGoogleGenerativeAI({
       model: model,
@@ -51,7 +62,9 @@ export function initChatModel(config: {
       temperature,
       maxTokens,
       streaming,
-    });
+      // Enable stream usage for token counting in streaming mode
+      streamUsage: true,
+    } as any);
   } else {
     throw new Error(`Unsupported provider: ${provider}`);
   }
@@ -116,11 +129,11 @@ export function getDefaultModel(provider: 'openai' | 'anthropic' | 'google' | 'x
     case 'openai':
       return 'gpt-4o-mini';
     case 'anthropic':
-      return 'claude-3-5-sonnet-20241022';
+      return 'claude-3-5-haiku-20241022';
     case 'google':
-      return 'gemini-1.5-flash';
+      return 'gemini-2.0-flash';
     case 'xai':
-      return 'grok-beta';
+      return 'grok-3-mini';
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
@@ -133,30 +146,27 @@ export function getAvailableModels(provider: 'openai' | 'anthropic' | 'google' |
   switch (provider) {
     case 'openai':
       return [
-        'gpt-4o',
         'gpt-4o-mini',
-        'gpt-3.5-turbo',
-        'gpt-4-turbo'
+        'gpt-4.1-nano',
+        'gpt-4o'
       ];
     case 'anthropic':
       return [
-        'claude-3-5-sonnet-20241022',
-        'claude-3-haiku-20240307',
-        'claude-3-opus-20240229'
+        'claude-3-5-haiku-20241022',
+        'claude-sonnet-4-20250514',
+        'claude-opus-4-20250514'
       ];
     case 'google':
       return [
-        'gemini-1.5-flash',
-        'gemini-1.5-pro',
-        'gemini-1.0-pro',
-        'gemini-2.5-flash-preview-05-20',
-        'gemini-2.5-pro-preview-06-05'
+        'gemini-2.0-flash',
+        'gemini-2.5-flash-preview',
+        'gemini-2.5-pro'
       ];
     case 'xai':
       return [
-        'grok-beta',
-        'grok-vision-beta',
-        'grok-3-mini'
+        'grok-3-mini',
+        'grok-4',
+        'grok-4-vision'
       ];
     default:
       return [];
@@ -184,6 +194,19 @@ export function supportsStreaming(provider: 'openai' | 'anthropic' | 'google' | 
 }
 
 /**
+ * Check if model supports temperature parameter
+ */
+export function supportsTemperature(provider: 'openai' | 'anthropic' | 'google' | 'xai', model: string): boolean {
+  // gpt-4.1-nano doesn't support temperature parameter
+  if (provider === 'openai' && model === 'gpt-4.1-nano') {
+    return false;
+  }
+  
+  // All other models support temperature
+  return true;
+}
+
+/**
  * Get model context window size
  */
 export function getModelContextWindow(provider: 'openai' | 'anthropic' | 'google' | 'xai', model: string): number {
@@ -207,9 +230,9 @@ export function getModelContextWindow(provider: 'openai' | 'anthropic' | 'google
     'gemini-2.5-pro-preview-06-05': 2000000,
     
     // X AI models
-    'grok-beta': 131072,
-    'grok-vision-beta': 131072,
-    'grok-3-mini': 131072
+    'grok-3-mini': 131072,
+    'grok-4': 131072,
+    'grok-4-vision': 131072
   };
 
   return contextWindows[model] || 8192; // Default fallback

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { embeddedChatsTable, chatPersonasTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { embeddedChatsTable, chatPersonasTable, mcpServersTable, profilesTable } from '@/db/schema';
+import { eq, and, inArray } from 'drizzle-orm';
 
 export async function GET(
   request: NextRequest,
@@ -43,6 +43,11 @@ export async function GET(
         welcome_message: embeddedChatsTable.welcome_message,
         suggested_questions: embeddedChatsTable.suggested_questions,
         bot_avatar_url: embeddedChatsTable.bot_avatar_url,
+        expose_capabilities: embeddedChatsTable.expose_capabilities,
+        enable_rag: embeddedChatsTable.enable_rag,
+        debug_mode: embeddedChatsTable.debug_mode,
+        enabled_mcp_server_uuids: embeddedChatsTable.enabled_mcp_server_uuids,
+        project_uuid: embeddedChatsTable.project_uuid,
       })
       .from(embeddedChatsTable)
       .where(and(...whereConditions))
@@ -71,6 +76,36 @@ export async function GET(
         eq(chatPersonasTable.is_active, true)
       ))
       .limit(1);
+
+    // Fetch enabled MCP servers if any
+    let mcpServers = [];
+    if (chat.enabled_mcp_server_uuids && chat.enabled_mcp_server_uuids.length > 0) {
+      // Get all profiles for this project
+      const profiles = await db
+        .select({ uuid: profilesTable.uuid })
+        .from(profilesTable)
+        .where(eq(profilesTable.project_uuid, chat.project_uuid));
+      
+      const profileUuids = profiles.map(p => p.uuid);
+      
+      if (profileUuids.length > 0) {
+        // Fetch MCP servers that are enabled and belong to this project's profiles
+        const servers = await db
+          .select({
+            uuid: mcpServersTable.uuid,
+            name: mcpServersTable.name,
+            type: mcpServersTable.type,
+            description: mcpServersTable.description,
+          })
+          .from(mcpServersTable)
+          .where(and(
+            inArray(mcpServersTable.uuid, chat.enabled_mcp_server_uuids),
+            inArray(mcpServersTable.profile_uuid, profileUuids)
+          ));
+        
+        mcpServers = servers;
+      }
+    }
 
     // Extract appearance settings from theme_config or provide defaults
     const themeConfig = (chat.theme_config as any) || {};
@@ -110,6 +145,14 @@ export async function GET(
       suggested_questions: chat.suggested_questions || [],
       bot_avatar_url: chat.bot_avatar_url, // Keep the chat's avatar
       default_persona: defaultPersona[0] || null, // Persona info separately
+      expose_capabilities: chat.expose_capabilities || false,
+      enable_rag: chat.enable_rag || false,
+      debug_mode: chat.debug_mode || false,
+      mcp_servers: mcpServers.map(server => ({
+        name: server.name,
+        type: server.type,
+        description: server.description,
+      })),
       // Legacy support
       theme_config: chat.theme_config,
     };

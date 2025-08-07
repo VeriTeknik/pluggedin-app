@@ -102,11 +102,12 @@
     "models": {
       "anthropic": {
         "claude-3-7-sonnet": "Dengeli akıl yürütme",
-        "claude-4-sonnet": "Üstün zeka",
-        "claude-4-opus": "En güçlü",
+        "claude-sonnet-4-20250514": "Üstün zeka",
+        "claude-opus-4-20250514": "En güçlü",
         "claude-3-5-sonnet": "Hızlı ve yetenekli",
         "claude-3-opus": "Yaratıcı görevler",
-        "claude-3-haiku": "Hızlı yanıtlar"
+        "claude-3-haiku": "Hızlı yanıtlar",
+        "claude-3-5-haiku-20241022": "Hızlı yanıtlar"
       },
       "openai": {
         "gpt-4-1": "En son amiral gemisi",

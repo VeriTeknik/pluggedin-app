@@ -11,7 +11,10 @@ import { ChatXAI } from '@langchain/xai';
 import { and,eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { embeddedChatsTable, McpServerType, profilesTable, projectsTable } from '@/db/schema';
+import { embeddedChatsTable, McpServerType, profilesTable, projectsTable, tokenUsageTable } from '@/db/schema';
+import { calculateTokenCost } from '@/lib/token-pricing';
+import { wrapLLMWithTokenTracking, getSessionTokenUsage } from '@/lib/mcp/token-tracker';
+import { createEstimatedUsage } from '@/lib/mcp/token-estimator';
 
 import { logAuditEvent } from './audit-logger'; // Correct path alias
 import { ensureLogDirectories } from './log-retention'; // Correct path alias
@@ -663,14 +666,17 @@ export async function getOrCreatePlaygroundSession(
 
     });
 
-    // Initialize LLM with streaming
-    const llm = initChatModel({
+    // Initialize LLM with streaming and wrap with token tracking
+    const baseLlm = initChatModel({
       provider: llmConfig.provider,
       model: llmConfig.model,
       temperature: llmConfig.temperature,
       maxTokens: llmConfig.maxTokens,
       streaming: llmConfig.streaming !== false, // Default to true
     });
+    
+    // Wrap with token tracking
+    const llm = wrapLLMWithTokenTracking(baseLlm, `playground_${profileUuid}`);
 
     // Create our enhanced logger using the factory function
     const logger = await createEnhancedMcpLogger(
@@ -958,9 +964,10 @@ Please answer the user's question using both the provided context and your avail
       }
     }
 
-    // Track streaming state for partial message updates
+    // Track streaming state for partial message updates and token usage
     let currentAiMessage = '';
     let isFirstToken = true;
+    let streamingTokenUsage: any = null;
 
     // Check the agent's message history size before invoking
     const MAX_AGENT_MESSAGES = 50; // Limit for LangChain agent's internal message history
@@ -983,8 +990,30 @@ Please answer the user's question using both the provided context and your avail
       { messages: [new HumanMessage(finalQuery)] },
       {
         configurable: { thread_id: threadId },
+        // Add metadata for LangSmith tracing if enabled
+        metadata: {
+          user_id: session.profileUuid,
+          session_type: 'playground',
+          has_rag: finalQuery !== query,
+          model: session.llmConfig.model,
+          provider: session.llmConfig.provider
+        },
+        tags: ['playground', session.llmConfig.provider, session.llmConfig.model],
         callbacks: [
           {
+            handleLLMEnd: async (output: any) => {
+              // Capture token usage from LLM end callback
+              if (output?.llmOutput?.tokenUsage) {
+                streamingTokenUsage = output.llmOutput.tokenUsage;
+                console.log('[PLAYGROUND] Token usage from LLM callback:', streamingTokenUsage);
+              } else if (output?.llmOutput?.usage) {
+                streamingTokenUsage = output.llmOutput.usage;
+                console.log('[PLAYGROUND] Token usage from LLM callback (usage):', streamingTokenUsage);
+              } else if (output?.generations?.[0]?.generationInfo?.usage) {
+                streamingTokenUsage = output.generations[0].generationInfo.usage;
+                console.log('[PLAYGROUND] Token usage from generation info:', streamingTokenUsage);
+              }
+            },
             handleLLMNewToken: async (token) => {
               // Add token to current message
               currentAiMessage += token;
@@ -1059,9 +1088,37 @@ Please answer the user's question using both the provided context and your avail
 
     // Process the result
     let result: string;
+    let tokenUsage: any = null;
     const lastMessage = agentFinalState.messages[agentFinalState.messages.length - 1];
     if (lastMessage instanceof AIMessage) {
       result = safeProcessContent(lastMessage.content);
+      
+      
+      // Try to get token usage from the AI message or callback
+      tokenUsage = streamingTokenUsage || // First try callback data
+                   (lastMessage as any).response_metadata?.usage || 
+                   (lastMessage as any).usage_metadata ||
+                   (lastMessage as any).additional_kwargs?.usage ||
+                   (lastMessage as any).usage ||
+                   null;
+      
+        
+        // Try to find token usage in any AI message
+        for (let i = agentFinalState.messages.length - 1; i >= 0; i--) {
+          const msg = agentFinalState.messages[i];
+          if (msg instanceof AIMessage) {
+            const msgUsage = (msg as any).response_metadata?.usage || 
+                            (msg as any).usage_metadata ||
+                            (msg as any).additional_kwargs?.usage ||
+                            (msg as any).usage ||
+                            null;
+            if (msgUsage) {
+              tokenUsage = msgUsage;
+              break;
+            }
+          }
+        }
+      }
     } else {
       result = safeProcessContent(lastMessage.content);
     }
@@ -1145,10 +1202,53 @@ Please answer the user's question using both the provided context and your avail
       session.messages = allMessages;
     }
 
+    // Track token usage in database if available
+    if (tokenUsage) {
+      try {
+        const promptTokens = tokenUsage.prompt_tokens || tokenUsage.promptTokens || 0;
+        const completionTokens = tokenUsage.completion_tokens || tokenUsage.completionTokens || 0;
+        const totalTokens = tokenUsage.total_tokens || tokenUsage.totalTokens || 
+                           (promptTokens + completionTokens) || 0;
+        
+        // Calculate costs
+        const costs = calculateTokenCost(
+          session.llmConfig.provider,
+          session.llmConfig.model,
+          promptTokens,
+          completionTokens
+        );
+        
+        // Store in database
+        await db.insert(tokenUsageTable).values({
+          profile_uuid: profileUuid,
+          provider: session.llmConfig.provider,
+          model: session.llmConfig.model,
+          prompt_tokens: promptTokens,
+          completion_tokens: completionTokens,
+          total_tokens: totalTokens,
+          prompt_cost: costs.promptCost,
+          completion_cost: costs.completionCost,
+          total_cost: costs.totalCost,
+          context_type: 'playground',
+          metadata: {
+            temperature: session.llmConfig.temperature,
+            max_tokens: session.llmConfig.maxTokens,
+            has_rag: finalQuery !== query, // Track if RAG was used
+            message_count: messages.length
+          }
+        });
+        
+      } catch (error) {
+        console.error('[PLAYGROUND] Failed to track token usage:', error);
+        // Don't fail the request if tracking fails
+      }
+    }
+
     return {
       success: true,
       result,
       messages,
+      tokenUsage, // Include token usage if available
       debug: {
         messageCount: agentFinalState.messages.length,
         messageTypes: agentFinalState.messages.map((m: any) => m.constructor.name),
@@ -1342,14 +1442,17 @@ async function createIsolatedEmbeddedChatSession(
       }
     });
     
-    // Initialize LLM with streaming
-    const llm = initChatModel({
+    // Initialize LLM with streaming and wrap with token tracking
+    const baseLlm = initChatModel({
       provider: llmConfig.provider,
       model: llmConfig.model,
       temperature: llmConfig.temperature ?? 0.7,
       maxTokens: llmConfig.maxTokens ?? 1000,
       streaming: true,
     });
+    
+    // Wrap with token tracking for embedded chat
+    const llm = wrapLLMWithTokenTracking(baseLlm, `embedded_${chatUuid}`);
     
     // Create a logging function specific to this embedded chat
     const logFunction = async (level: 'error' | 'warn' | 'info' | 'debug', message: string) => {
@@ -1550,6 +1653,9 @@ export async function executeEmbeddedChatQuery(
   console.log('[EMBEDDED] Active sessions:', Array.from(embeddedChatSessions.keys()));
   
   let session = embeddedChatSessions.get(chatUuid);
+  let debugMode = false;
+  let modelConfig: any = null;
+  
   if (!session) {
     console.log('[EMBEDDED] No session found for chat:', chatUuid);
     console.log('[EMBEDDED] Attempting to recreate session for query execution');
@@ -1563,6 +1669,10 @@ export async function executeEmbeddedChatQuery(
         }
       }
     });
+    
+    // Store debug mode and model config from chat data
+    debugMode = chatData?.debug_mode || false;
+    modelConfig = chatData?.model_config;
     
     if (!chatData || !chatData.project?.active_profile_uuid) {
       return {
@@ -1597,7 +1707,20 @@ export async function executeEmbeddedChatQuery(
     }
   }
   
+  // Always fetch debug mode and model config to ensure we have the latest settings
+  // This is needed because the session might have been created before debug mode was enabled
+  if (session) {
+    const chatData = await db.query.embeddedChatsTable.findFirst({
+      where: eq(embeddedChatsTable.uuid, chatUuid),
+      columns: { debug_mode: true, model_config: true }
+    });
+    debugMode = chatData?.debug_mode || false;
+    modelConfig = chatData?.model_config || session.config;
+  }
+  
   console.log('[EMBEDDED] Session found/recreated, processing query:', query);
+  console.log('[EMBEDDED] Debug mode:', debugMode);
+  console.log('[EMBEDDED] Model config:', modelConfig);
 
   try {
     // Update last active timestamp
@@ -1631,9 +1754,10 @@ User question: ${query}`;
       }
     }
 
-    // Track streaming state
+    // Track streaming state and token usage
     let currentAiMessage = '';
     const streamingResponses: any[] = [];
+    let streamingTokenUsage: any = null;
     
     // Use conversationId as thread_id for proper conversation isolation
     const threadId = conversationId;
@@ -1643,8 +1767,30 @@ User question: ${query}`;
       { messages: [new HumanMessage(finalQuery)] },
       {
         configurable: { thread_id: threadId },
+        streamMode: 'values', // Add streamMode for better streaming support
+        // Add metadata for LangSmith tracing if enabled
+        metadata: {
+          chat_uuid: chatUuid,
+          conversation_id: conversationId,
+          session_type: 'embedded_chat',
+          has_rag: enableRag,
+          model: modelConfig?.model,
+          provider: modelConfig?.provider,
+          debug_mode: debugMode
+        },
+        tags: ['embedded_chat', modelConfig?.provider || 'unknown', modelConfig?.model || 'unknown'],
         callbacks: [
           {
+            handleLLMEnd: async (output: any) => {
+              // Capture token usage from LLM end callback
+              if (output?.llmOutput?.tokenUsage) {
+                streamingTokenUsage = output.llmOutput.tokenUsage;
+              } else if (output?.llmOutput?.usage) {
+                streamingTokenUsage = output.llmOutput.usage;
+              } else if (output?.generations?.[0]?.generationInfo?.usage) {
+                streamingTokenUsage = output.generations[0].generationInfo.usage;
+              }
+            },
             handleLLMNewToken: async (token) => {
               currentAiMessage += token;
               streamingResponses.push({
@@ -1671,17 +1817,133 @@ User question: ${query}`;
 
     // Process messages similar to executePlaygroundQuery
     const result = agentFinalState.messages[agentFinalState.messages.length - 1];
+    
+    
+    // Try to get token usage from our tracker first
+    const trackedUsage = getSessionTokenUsage(`embedded_${chatUuid}`);
+    
+    // Try to get token usage from callback or the last AI message
+    let tokenUsage: any = trackedUsage || streamingTokenUsage; // First try tracked usage, then callback data
+    
+    if (!tokenUsage) {
+      for (let i = agentFinalState.messages.length - 1; i >= 0; i--) {
+        const msg = agentFinalState.messages[i];
+        if (msg instanceof AIMessage) {
+          tokenUsage = (msg as any).response_metadata?.usage || 
+                       (msg as any).response_metadata?.tokenUsage ||
+                       (msg as any).usage_metadata ||
+                       (msg as any).additional_kwargs?.usage ||
+                       null;
+          if (tokenUsage) {
+            break;
+          }
+        }
+      }
+    }
+    
+    // Convert tracked usage format if needed
+    if (tokenUsage && tokenUsage.promptTokens !== undefined) {
+      tokenUsage = {
+        prompt_tokens: tokenUsage.promptTokens,
+        completion_tokens: tokenUsage.completionTokens,
+        total_tokens: tokenUsage.totalTokens
+      };
+    }
+    
+    // If still no token usage, create an estimate based on the messages
+    if (!tokenUsage && modelConfig) {
+      // Get the response content
+      const responseContent = currentAiMessage || 
+        (result instanceof AIMessage ? safeProcessContent(result.content) : '');
+      
+      if (query && responseContent) {
+        tokenUsage = createEstimatedUsage(query, responseContent, modelConfig.provider);
+      }
+    }
+    
     const processedMessages = agentFinalState.messages.map((msg: any) => ({
       role: msg._getType(),
       content: safeProcessContent(msg.content),
       timestamp: new Date()
     }));
 
+    // Add debug info to streaming responses if debug mode is enabled
+    if (debugMode && modelConfig) {
+      const debugMetadata: any = {
+        provider: modelConfig.provider,
+        model: modelConfig.model,
+        temperature: modelConfig.temperature
+      };
+      
+      // Include token usage if available
+      if (tokenUsage) {
+        debugMetadata.tokens_used = tokenUsage.total_tokens || 
+                                    tokenUsage.totalTokens || 
+                                    (tokenUsage.prompt_tokens + tokenUsage.completion_tokens) ||
+                                    (tokenUsage.promptTokens + tokenUsage.completionTokens) ||
+                                    null;
+        debugMetadata.prompt_tokens = tokenUsage.prompt_tokens || tokenUsage.promptTokens || null;
+        debugMetadata.completion_tokens = tokenUsage.completion_tokens || tokenUsage.completionTokens || null;
+      }
+      
+      const isEstimated = tokenUsage?.estimated || false;
+      const debugChunk = {
+        type: 'debug',
+        content: `Model: ${modelConfig.provider || 'unknown'} - ${modelConfig.model || 'unknown'}${tokenUsage ? ` | Tokens: ${debugMetadata.tokens_used || 'N/A'}${isEstimated ? ' (est)' : ''}` : ''}`,
+        metadata: debugMetadata
+      };
+      streamingResponses.push(debugChunk);
+    }
+
+    // Track token usage in database if available
+    if (tokenUsage && modelConfig) {
+      try {
+        const promptTokens = tokenUsage.prompt_tokens || tokenUsage.promptTokens || 0;
+        const completionTokens = tokenUsage.completion_tokens || tokenUsage.completionTokens || 0;
+        const totalTokens = tokenUsage.total_tokens || tokenUsage.totalTokens || 
+                           (promptTokens + completionTokens) || 0;
+        
+        // Calculate costs
+        const costs = calculateTokenCost(
+          modelConfig.provider,
+          modelConfig.model,
+          promptTokens,
+          completionTokens
+        );
+        
+        // Store in database
+        await db.insert(tokenUsageTable).values({
+          embedded_chat_uuid: chatUuid,
+          conversation_uuid: conversationId,
+          provider: modelConfig.provider,
+          model: modelConfig.model,
+          prompt_tokens: promptTokens,
+          completion_tokens: completionTokens,
+          total_tokens: totalTokens,
+          prompt_cost: costs.promptCost,
+          completion_cost: costs.completionCost,
+          total_cost: costs.totalCost,
+          context_type: 'embedded_chat',
+          metadata: {
+            temperature: modelConfig.temperature,
+            max_tokens: modelConfig.max_tokens,
+            has_rag: enableRag,
+            debug_mode: debugMode
+          }
+        });
+        
+      } catch (error) {
+        console.error('[EMBEDDED] Failed to track token usage:', error);
+        // Don't fail the request if tracking fails
+      }
+    }
+
     return {
       success: true,
       result,
       messages: processedMessages,
       streamingResponses, // Include streaming data for the API to process
+      tokenUsage // Include token usage if available
     };
   } catch (error) {
     console.error('Error executing embedded chat query:', error);

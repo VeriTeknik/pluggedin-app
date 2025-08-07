@@ -101,11 +101,12 @@
     "models": {
       "anthropic": {
         "claude-3-7-sonnet": "Balanced reasoning",
-        "claude-4-sonnet": "Superior intelligence",
-        "claude-4-opus": "Most powerful",
+        "claude-sonnet-4-20250514": "Superior intelligence",
+        "claude-opus-4-20250514": "Most powerful",
         "claude-3-5-sonnet": "Fast & capable",
         "claude-3-opus": "Creative tasks",
-        "claude-3-haiku": "Quick responses"
+        "claude-3-haiku": "Quick responses",
+        "claude-3-5-haiku-20241022": "Quick responses"
       },
       "openai": {
         "gpt-4-1": "Latest flagship",

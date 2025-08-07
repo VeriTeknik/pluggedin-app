@@ -407,6 +407,27 @@
       "when": 1754444623773,
       "tag": "0057_fantastic_hellcat",
       "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1754571219502,
+      "tag": "0058_solid_omega_flight",
+      "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1754571542751,
+      "tag": "0059_orange_shiva",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1754575560383,
+      "tag": "0060_black_scrambler",
+      "breakpoints": true
     }
   ]
 }

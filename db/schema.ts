@@ -1221,7 +1221,7 @@ export const embeddedChatsTable = pgTable(
     // Model configuration
     model_config: jsonb('model_config').default(sql`'{
       "provider": "openai",
-      "model": "gpt-4",
+      "model": "gpt-4o-mini",
       "temperature": 0.7,
       "max_tokens": 1000,
       "top_p": 1.0,
@@ -1259,6 +1259,7 @@ export const embeddedChatsTable = pgTable(
     
     // Capability exposure
     expose_capabilities: boolean('expose_capabilities').default(false),
+    debug_mode: boolean('debug_mode').default(false), // Show model info in responses
     
     // Discovery fields
     location: varchar('location', { length: 255 }), // City, Country format
@@ -1824,6 +1825,50 @@ export const chatBillingTable = pgTable(
   })
 );
 
+// ===== Token Usage Table =====
+export const tokenUsageTable = pgTable(
+  'token_usage',
+  {
+    id: serial('id').primaryKey(),
+    profile_uuid: uuid('profile_uuid').references(() => profilesTable.uuid),
+    embedded_chat_uuid: uuid('embedded_chat_uuid').references(() => embeddedChatsTable.uuid),
+    conversation_uuid: uuid('conversation_uuid').references(() => chatConversationsTable.uuid),
+    message_id: integer('message_id').references(() => chatMessagesTable.id),
+    
+    // Model information
+    provider: varchar('provider', { length: 50 }).notNull(),
+    model: varchar('model', { length: 100 }).notNull(),
+    
+    // Token counts
+    prompt_tokens: integer('prompt_tokens').notNull().default(0),
+    completion_tokens: integer('completion_tokens').notNull().default(0),
+    total_tokens: integer('total_tokens').notNull().default(0),
+    
+    // Cost tracking (in cents)
+    prompt_cost: integer('prompt_cost').default(0), // in cents
+    completion_cost: integer('completion_cost').default(0), // in cents
+    total_cost: integer('total_cost').default(0), // in cents
+    
+    // Context type
+    context_type: varchar('context_type', { length: 20 })
+      .$type<'playground' | 'embedded_chat' | 'api'>()
+      .notNull()
+      .default('playground'),
+    
+    // Metadata
+    metadata: jsonb('metadata'), // Store additional info like temperature, tools used, etc.
+    
+    // Timestamps
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tokenUsageProfileIdx: index('idx_token_usage_profile').on(table.profile_uuid, table.created_at),
+    tokenUsageChatIdx: index('idx_token_usage_chat').on(table.embedded_chat_uuid, table.created_at),
+    tokenUsageConversationIdx: index('idx_token_usage_conversation').on(table.conversation_uuid),
+    tokenUsageProviderIdx: index('idx_token_usage_provider').on(table.provider, table.model, table.created_at),
+  })
+);
+
 // ===== Chat Data Requests Table =====
 export const chatDataRequestsTable = pgTable(
   'chat_data_requests',
@@ -1935,6 +1980,25 @@ export const chatBillingRelations = relations(chatBillingTable, ({ one }) => ({
   user: one(users, {
     fields: [chatBillingTable.user_id],
     references: [users.id],
+  }),
+}));
+
+export const tokenUsageRelations = relations(tokenUsageTable, ({ one }) => ({
+  profile: one(profilesTable, {
+    fields: [tokenUsageTable.profile_uuid],
+    references: [profilesTable.uuid],
+  }),
+  embeddedChat: one(embeddedChatsTable, {
+    fields: [tokenUsageTable.embedded_chat_uuid],
+    references: [embeddedChatsTable.uuid],
+  }),
+  conversation: one(chatConversationsTable, {
+    fields: [tokenUsageTable.conversation_uuid],
+    references: [chatConversationsTable.uuid],
+  }),
+  message: one(chatMessagesTable, {
+    fields: [tokenUsageTable.message_id],
+    references: [chatMessagesTable.id],
   }),
 }));
 

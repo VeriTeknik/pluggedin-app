@@ -81,6 +81,7 @@ export default async function EmbeddedChatConfigPage({ params }: PageProps) {
     api_key_last_used_at: dbChat.api_key_last_used_at,
     bot_avatar_url: dbChat.bot_avatar_url,
     expose_capabilities: dbChat.expose_capabilities ?? false,
+    debug_mode: dbChat.debug_mode ?? false,
     // Discovery fields
     location: dbChat.location,
     profession: dbChat.profession,

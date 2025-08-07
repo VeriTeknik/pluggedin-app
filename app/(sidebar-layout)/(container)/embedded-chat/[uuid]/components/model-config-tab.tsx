@@ -16,6 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { supportsTemperature } from '@/lib/mcp/llm-utils';
 import { EmbeddedChat } from '@/types/embedded-chat';
 
 interface ModelConfigTabProps {
@@ -33,7 +34,7 @@ export function ModelConfigTab({ chat, chatUuid }: ModelConfigTabProps) {
   // Initialize model config with defaults if not set
   const [modelConfig, setModelConfig] = useState({
     provider: chat.model_config?.provider || 'openai',
-    model: chat.model_config?.model || 'gpt-4',
+    model: chat.model_config?.model || 'gpt-4o-mini',
     temperature: chat.model_config?.temperature ?? 0.7,
     max_tokens: chat.model_config?.max_tokens ?? 1000,
     top_p: chat.model_config?.top_p ?? 1.0,
@@ -42,12 +43,12 @@ export function ModelConfigTab({ chat, chatUuid }: ModelConfigTabProps) {
   });
 
   const handleProviderChange = (provider: string) => {
-    // Set default model for provider
+    // Set default model for provider (cheapest option)
     const defaultModels: Record<string, string> = {
-      anthropic: 'claude-3-5-sonnet-20240620',
-      openai: 'gpt-4',
-      google: 'models/gemini-2.0-flash',
-      xai: 'grok-1',
+      anthropic: 'claude-3-5-haiku-20241022',
+      openai: 'gpt-4o-mini',
+      google: 'gemini-2.0-flash',
+      xai: 'grok-3-mini',
     };
     
     setModelConfig({
@@ -235,9 +236,9 @@ export function ModelConfigTab({ chat, chatUuid }: ModelConfigTabProps) {
             {modelConfig.provider === 'anthropic' && (
               <>
                 {[
-                  { value: 'claude-3-5-sonnet-20240620', name: 'Claude 3.5 Sonnet', desc: 'Fast & capable' },
-                  { value: 'claude-3-opus-20240229', name: 'Claude 3 Opus', desc: 'Most powerful' },
-                  { value: 'claude-3-haiku-20240307', name: 'Claude 3 Haiku', desc: 'Quick responses' }
+                  { value: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', desc: '💚 Fast & cheap ($0.25/M input)' },
+                  { value: 'claude-sonnet-4-20250514', name: 'Claude 4 Sonnet', desc: '⚡ Balanced ($3.00/M input)' },
+                  { value: 'claude-opus-4-20250514', name: 'Claude 4 Opus', desc: '💎 Most capable ($15.00/M input)' }
                 ].map((model) => (
                   <div
                     key={model.value}
@@ -262,9 +263,9 @@ export function ModelConfigTab({ chat, chatUuid }: ModelConfigTabProps) {
             {modelConfig.provider === 'openai' && (
               <>
                 {[
-                  { value: 'gpt-4-turbo-preview', name: 'GPT-4 Turbo', desc: 'Most capable' },
-                  { value: 'gpt-4', name: 'GPT-4', desc: 'High intelligence' },
-                  { value: 'gpt-3.5-turbo', name: 'GPT-3.5 Turbo', desc: 'Fast & affordable' }
+                  { value: 'gpt-4o-mini', name: 'GPT-4o Mini', desc: '💚 Ultra cheap ($0.40/M input)' },
+                  { value: 'gpt-4.1-nano', name: 'GPT-4.1 Nano', desc: '⚡ Very cheap ($0.10/M input)' },
+                  { value: 'gpt-4o', name: 'GPT-4o', desc: '💎 Advanced ($2.00/M input)' }
                 ].map((model) => (
                   <div
                     key={model.value}
@@ -289,8 +290,9 @@ export function ModelConfigTab({ chat, chatUuid }: ModelConfigTabProps) {
             {modelConfig.provider === 'google' && (
               <>
                 {[
-                  { value: 'models/gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: 'Fast & capable' },
-                  { value: 'models/gemini-pro', name: 'Gemini Pro', desc: 'Balanced performance' }
+                  { value: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', desc: '💚 Ultra fast ($0.10/M input)' },
+                  { value: 'gemini-2.5-flash-preview', name: 'Gemini 2.5 Flash', desc: '⚡ Latest ($0.15/M input)' },
+                  { value: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', desc: '💎 Most capable ($1.25/M input)' }
                 ].map((model) => (
                   <div
                     key={model.value}
@@ -313,13 +315,30 @@ export function ModelConfigTab({ chat, chatUuid }: ModelConfigTabProps) {
             )}
             
             {modelConfig.provider === 'xai' && (
-              <div className="col-span-2">
-                <Alert>
-                  <AlertDescription>
-                    {t('embeddedChat.model.xaiNote', 'xAI integration is coming soon. Please select another provider.')}
-                  </AlertDescription>
-                </Alert>
-              </div>
+              <>
+                {[
+                  { value: 'grok-3-mini', name: 'Grok 3 Mini', desc: '💚 Fast & cheap ($0.30/M input)' },
+                  { value: 'grok-4', name: 'Grok 4', desc: '⚡ Balanced ($3.00/M input)' },
+                  { value: 'grok-4-vision', name: 'Grok 4 Vision', desc: '💎 Multimodal ($5.00/M input)' }
+                ].map((model) => (
+                  <div
+                    key={model.value}
+                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                      modelConfig.model === model.value
+                        ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                        : 'border-muted hover:border-primary/50 hover:bg-muted/50'
+                    }`}
+                    onClick={() => setModelConfig({ ...modelConfig, model: model.value })}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="font-medium">{model.name}</div>
+                        <div className="text-xs text-muted-foreground">{model.desc}</div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         </CardContent>
@@ -337,6 +356,7 @@ export function ModelConfigTab({ chat, chatUuid }: ModelConfigTabProps) {
                   variant="outline"
                   size="sm"
                   className="h-7 px-2 text-xs"
+                  disabled={!supportsTemperature(modelConfig.provider, modelConfig.model)}
                   onClick={() => handlePreset(preset as 'Precise' | 'Balanced' | 'Creative')}
                 >
                   {preset}
@@ -356,13 +376,21 @@ export function ModelConfigTab({ chat, chatUuid }: ModelConfigTabProps) {
                 {t('embeddedChat.model.temperature', 'Temperature')}
               </Label>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
-                  {modelConfig.temperature}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {modelConfig.temperature <= 0.3 ? 'Precise' :
-                   modelConfig.temperature <= 0.7 ? 'Balanced' : 'Creative'}
-                </span>
+                {supportsTemperature(modelConfig.provider, modelConfig.model) ? (
+                  <>
+                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded">
+                      {modelConfig.temperature}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {modelConfig.temperature <= 0.3 ? 'Precise' :
+                       modelConfig.temperature <= 0.7 ? 'Balanced' : 'Creative'}
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-xs text-muted-foreground">
+                    Not supported by {modelConfig.model}
+                  </span>
+                )}
               </div>
             </div>
             <Input
@@ -371,6 +399,7 @@ export function ModelConfigTab({ chat, chatUuid }: ModelConfigTabProps) {
               max="1"
               step="0.1"
               value={modelConfig.temperature}
+              disabled={!supportsTemperature(modelConfig.provider, modelConfig.model)}
               onChange={(e) => setModelConfig({
                 ...modelConfig,
                 temperature: parseFloat(e.target.value),
