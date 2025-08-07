@@ -10,7 +10,7 @@ import { CalendarIntegration,IntegrationAction, PersonaIntegrations } from '@/li
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { uuid: string; personaId: string } }
+  { params }: { params: Promise<{ uuid: string; personaId: string }> }
 ) {
   try {
     const session = await getAuthSession();
@@ -18,7 +18,7 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { uuid: chatUuid, personaId } = params;
+    const { uuid: chatUuid, personaId } = await params;
     
     // Verify ownership through project
     const chatWithProject = await db
@@ -54,8 +54,12 @@ export async function POST(
 
     const body = await req.json();
     const { action, type } = body;
+    
+    console.log('[INTEGRATION] Request body:', JSON.stringify(body, null, 2));
+    console.log('[INTEGRATION] Persona integrations:', JSON.stringify(persona.integrations, null, 2));
 
     if (!action || !type) {
+      console.log('[INTEGRATION] Missing action or type - action:', action, 'type:', type);
       return NextResponse.json({ error: 'Missing action or type' }, { status: 400 });
     }
 
@@ -65,7 +69,14 @@ export async function POST(
     // Handle different integration types
     switch (type) {
       case 'calendar': {
+        console.log('[INTEGRATION] Calendar integration check:', {
+          hasCalendar: !!integrations.calendar,
+          enabled: integrations.calendar?.enabled,
+          provider: integrations.calendar?.provider
+        });
+        
         if (!integrations.calendar?.enabled) {
+          console.log('[INTEGRATION] Calendar integration not enabled');
           return NextResponse.json({ error: 'Calendar integration not enabled' }, { status: 400 });
         }
 
@@ -199,7 +210,7 @@ export async function POST(
 // GET endpoint to check integration status
 export async function GET(
   req: NextRequest,
-  { params }: { params: { uuid: string; personaId: string } }
+  { params }: { params: Promise<{ uuid: string; personaId: string }> }
 ) {
   try {
     const session = await getAuthSession();
@@ -207,7 +218,7 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { uuid: chatUuid, personaId } = params;
+    const { uuid: chatUuid, personaId } = await params;
     
     // Get persona
     const persona = await db.query.chatPersonasTable.findFirst({
