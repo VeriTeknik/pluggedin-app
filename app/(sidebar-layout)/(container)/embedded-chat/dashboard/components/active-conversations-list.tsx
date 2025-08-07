@@ -1,20 +1,20 @@
 'use client';
 
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { formatDistanceToNow } from 'date-fns';
 import { 
-  MessageSquare, 
-  User, 
-  Globe, 
   Clock,
   Eye,
-  UserPlus,
-  Shield
-} from 'lucide-react';
+  Globe, 
+  MessageSquare, 
+  Shield,
+  User, 
+  UserPlus} from 'lucide-react';
 import Link from 'next/link';
-import { formatDistanceToNow } from 'date-fns';
+import { useState } from 'react';
+
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { formatVisitorName, getVisitorInitials, isAuthenticatedVisitor } from '@/lib/visitor-utils';
 
 interface Conversation {

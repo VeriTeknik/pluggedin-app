@@ -1,10 +1,9 @@
 import { 
+  BaseIntegration,
   IntegrationAction, 
   IntegrationResult, 
-  BaseIntegration,
-  PersonaIntegrations,
-  PersonaCapability
-} from './types';
+  PersonaCapability,
+  PersonaIntegrations} from './types';
 
 export abstract class BaseIntegrationService {
   protected integration: BaseIntegration;

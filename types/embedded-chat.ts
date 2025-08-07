@@ -14,7 +14,7 @@ export interface EmbeddedChat {
   theme_config: Record<string, any>;
   theme_color?: string;
   placeholder_text?: string;
-  position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+  position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'bottom-center';
   install_count: number;
   message_count?: number;
   last_active_at: Date | null;
@@ -76,6 +76,33 @@ export interface EmbeddedChat {
   capabilities_summary?: string | null;
   personality_traits?: string[];
   interaction_style?: string | null;
+  // Appearance configuration
+  theme?: {
+    primaryColor: string;
+    secondaryColor: string;
+    backgroundColor: string;
+    textColor: string;
+    borderRadius: number;
+    fontSize: number;
+    fontFamily: string;
+  };
+  dimensions?: {
+    width: number;
+    height: number;
+    minimizedSize: number;
+  };
+  behavior?: {
+    autoOpen: boolean;
+    showWelcome: boolean;
+    enableNotifications: boolean;
+    showTypingIndicator: boolean;
+    enableSounds: boolean;
+  };
+  branding?: {
+    showPoweredBy: boolean;
+    customLogo?: string;
+    customTitle?: string;
+  };
   created_at: Date;
   updated_at: Date;
   // Statistics

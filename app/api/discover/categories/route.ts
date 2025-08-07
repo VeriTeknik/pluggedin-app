@@ -1,7 +1,8 @@
+import { and, eq, isNotNull,sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+
 import { db } from '@/db';
 import { embeddedChatsTable } from '@/db/schema';
-import { and, eq, sql, isNotNull } from 'drizzle-orm';
 
 const CATEGORY_METADATA = {
   technology: {

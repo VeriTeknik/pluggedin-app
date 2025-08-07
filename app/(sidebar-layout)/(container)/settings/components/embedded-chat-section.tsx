@@ -2,10 +2,10 @@
 
 import { BotIcon, ExternalLink, Key, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { createEmbeddedChat, toggleEmbeddedChat, getCurrentProject } from '@/app/actions/embedded-chat';
+import { createEmbeddedChat, getCurrentProject,toggleEmbeddedChat } from '@/app/actions/embedded-chat';
 import { Button } from '@/components/ui/button';
 import {
   Card,

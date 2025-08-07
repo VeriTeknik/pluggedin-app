@@ -1,8 +1,9 @@
+import { and, eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable, users } from '@/db/schema';
-import { and, eq, sql } from 'drizzle-orm';
-import { z } from 'zod';
 
 const SemanticSearchSchema = z.object({
   query: z.string().min(1).max(500),

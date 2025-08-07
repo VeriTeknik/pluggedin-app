@@ -1,7 +1,8 @@
+import { and, eq, ilike,isNotNull, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+
 import { db } from '@/db';
 import { embeddedChatsTable } from '@/db/schema';
-import { and, eq, sql, isNotNull, ilike } from 'drizzle-orm';
 
 async function handler(req: NextRequest) {
   try {

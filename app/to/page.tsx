@@ -1,23 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { sql } from 'drizzle-orm';
-import { User2, Bot, MessageSquare, MapPin, Globe, Clock, Target, Sparkles, Users, Filter } from 'lucide-react';
+import { Bot, User2, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { LandingNavbar } from '@/components/landing-navbar';
+import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
 import { DiscoverAssistants } from '@/components/discover/discover-assistants';
-import { db } from '@/db';
+import { LandingNavbar } from '@/components/landing-navbar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/use-auth';
-import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
 
 // Client component that handles the main content
 function ToPageContent() {

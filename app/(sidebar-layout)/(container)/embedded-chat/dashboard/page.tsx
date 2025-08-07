@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
+
 import { getAuthSession } from '@/lib/auth';
+
 import { DashboardClient } from './dashboard-client';
 
 export default async function EmbeddedChatDashboard() {

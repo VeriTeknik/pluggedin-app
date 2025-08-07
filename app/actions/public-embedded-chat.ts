@@ -1,14 +1,14 @@
 'use server';
 
+import { and, eq, sql } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { 
+  chatConversationsTable,
+  chatUsageTable,
   embeddedChatsTable, 
   projectsTable,
-  users,
-  chatUsageTable,
-  chatConversationsTable
-} from '@/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+  users} from '@/db/schema';
 
 export async function getUserPublicEmbeddedChat(userId: string) {
   try {

@@ -1,7 +1,8 @@
+import { and, eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
+
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable, users } from '@/db/schema';
-import { and, eq } from 'drizzle-orm';
 
 interface PageProps {
   params: Promise<{

@@ -1,14 +1,14 @@
-import { sql, eq, and, desc, isNotNull } from 'drizzle-orm';
-import { User2, Bot, MessageSquare, MapPin, Globe, Clock, Briefcase, Target, Sparkles } from 'lucide-react';
+import { and, desc, eq, isNotNull,sql } from 'drizzle-orm';
+import { Bot, Clock, Globe, MapPin, MessageSquare, Sparkles,Target, User2 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
 import { LandingNavbar } from '@/components/landing-navbar';
-import { db } from '@/db';
-import { users, embeddedChatsTable, projectsTable } from '@/db/schema';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { db } from '@/db';
+import { embeddedChatsTable, projectsTable,users } from '@/db/schema';
 
 interface PublicUser {
   username: string;

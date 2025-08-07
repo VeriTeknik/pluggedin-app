@@ -1,9 +1,11 @@
+import { and,eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
+
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { EmbeddedChatWidget } from './components/embedded-chat-widget';
 import { EmbeddedChat, Project } from '@/types/embedded-chat';
+
+import { EmbeddedChatWidget } from './components/embedded-chat-widget';
 
 interface PageProps {
   params: Promise<{ uuid: string }>;

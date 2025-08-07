@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, Globe, User as UserIcon, X, Link, MapPin, Building, Twitter, Github } from 'lucide-react';
+import { Building, Check, Github,Globe, Link, MapPin, Twitter, User as UserIcon, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';

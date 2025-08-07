@@ -42,11 +42,11 @@ import { useLanguage } from '@/hooks/use-language';
 import { localeNames,locales } from '@/i18n/config'; // Import locales and names
 
 import { removeConnectedAccount } from '../actions';
+import { AIAssistantsSection } from './ai-assistants-section';
 import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
 import { ProfileSocialSection } from './profile-social-section';
-import { AIAssistantsSection } from './ai-assistants-section';
 type User = typeof users.$inferSelect;
 
 interface SettingsFormProps {

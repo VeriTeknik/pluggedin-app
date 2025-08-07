@@ -1,14 +1,14 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useState, useEffect } from 'react';
+import { Server } from 'lucide-react';
+import { useEffect,useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
-import { Server } from 'lucide-react';
-import { AvatarUpload } from '@/components/ui/avatar-upload';
 
-import { updateEmbeddedChatConfig, getMCPServersForEmbeddedChat } from '@/app/actions/embedded-chat';
+import { getMCPServersForEmbeddedChat,updateEmbeddedChatConfig } from '@/app/actions/embedded-chat';
+import { AvatarUpload } from '@/components/ui/avatar-upload';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {

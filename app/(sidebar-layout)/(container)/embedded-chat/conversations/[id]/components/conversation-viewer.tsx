@@ -1,27 +1,26 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { format } from 'date-fns';
 import { 
+  AlertCircle,
   ArrowLeft,
-  Download,
-  User,
   Bot,
+  Download,
   Globe,
-  Clock,
   Mail,
   MapPin,
-  Monitor,
   MessageSquare,
-  AlertCircle,
+  Monitor,
+  User,
   UserCircle
 } from 'lucide-react';
 import Link from 'next/link';
-import { format, formatDistanceToNow } from 'date-fns';
+
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 
 interface Message {

@@ -47,7 +47,7 @@ async function validateApiKeyAccess(chatUuid: string, apiKey: string | null) {
 // Schema for chat request
 const ChatRequestSchema = z.object({
   message: z.string().min(1).max(4000),
-  conversation_id: z.string().uuid().optional(),
+  conversation_id: z.string().uuid().nullish(),
   visitor_info: z.object({
     visitor_id: z.string(),
     name: z.string().optional(),
@@ -59,6 +59,15 @@ const ChatRequestSchema = z.object({
     avatar: z.string().optional(),
   }).optional(),
   persona_id: z.number().optional(),
+  custom_system_prompt: z.string().optional(),
+  attachments: z.array(z.object({
+    id: z.string(),
+    name: z.string(),
+    type: z.string(),
+    size: z.number(),
+    url: z.string().optional(),
+    data: z.string().optional(),
+  })).optional(),
 });
 
 export async function POST(
@@ -96,18 +105,28 @@ export async function POST(
     }
     
     // Get embedded chat config
+    // For internal requests (demo), allow non-public chats
+    const whereConditions = [
+      eq(embeddedChatsTable.uuid, uuid),
+      eq(embeddedChatsTable.is_active, true)
+    ];
+    
+    // Only require is_public for external requests
+    if (!isInternalRequest) {
+      whereConditions.push(eq(embeddedChatsTable.is_public, true));
+    }
+    
     const [chat] = await db
       .select()
       .from(embeddedChatsTable)
-      .where(and(
-        eq(embeddedChatsTable.uuid, uuid),
-        eq(embeddedChatsTable.is_public, true),
-        eq(embeddedChatsTable.is_active, true)
-      ))
+      .where(and(...whereConditions))
       .limit(1);
 
     if (!chat) {
-      return NextResponse.json({ error: 'Chat not found' }, { status: 404 });
+      const errorMsg = isInternalRequest
+        ? 'Chat not found or inactive'
+        : 'Chat not found, inactive, or not public';
+      return NextResponse.json({ error: errorMsg }, { status: 404 });
     }
 
     // Validate domain (skip for internal requests)
@@ -127,7 +146,16 @@ export async function POST(
 
     // Parse request body
     const body = await req.json();
-    const validatedData = ChatRequestSchema.parse(body);
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    
+    let validatedData;
+    try {
+      validatedData = ChatRequestSchema.parse(body);
+      console.log('Validation successful');
+    } catch (validationError) {
+      console.error('Validation error:', validationError);
+      throw validationError;
+    }
 
     // Get or create conversation
     let conversationId = validatedData.conversation_id;
@@ -185,9 +213,25 @@ export async function POST(
     }
 
     // Initialize chat engine
+    console.log('Chat found:', {
+      uuid: chat.uuid,
+      name: chat.name,
+      is_active: chat.is_active,
+      is_public: chat.is_public,
+      project_uuid: chat.project_uuid
+    });
     console.log('Chat model config:', chat.model_config);
-    const chatEngine = new ChatEngine(chat as any, chat.project_uuid);
-    await chatEngine.initialize();
+    
+    let chatEngine;
+    try {
+      chatEngine = new ChatEngine(chat as any, chat.project_uuid);
+      console.log('ChatEngine created, initializing...');
+      await chatEngine.initialize();
+      console.log('ChatEngine initialized successfully');
+    } catch (initError) {
+      console.error('ChatEngine initialization failed:', initError);
+      throw initError;
+    }
 
     // Create streaming response
     const encoder = new TextEncoder();

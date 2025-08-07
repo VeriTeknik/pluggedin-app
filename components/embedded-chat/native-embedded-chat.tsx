@@ -1,20 +1,21 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
-import { useAuth } from '@/hooks/use-auth';
-import { useUser } from '@/hooks/use-user';
-import { Send, X, Loader2, Shield, Database, FileSearch, Bot, Sparkles, Terminal, Globe, Server, Code } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Bot, Code,Database, FileSearch, Globe, Loader2, Send, Server, Shield, Sparkles, Terminal, X } from 'lucide-react';
+import { useEffect, useRef,useState } from 'react';
+
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { getOrCreateVisitorId, formatVisitorName } from '@/lib/visitor-utils';
+import { useAuth } from '@/hooks/use-auth';
+import { useUser } from '@/hooks/use-user';
+import { cn } from '@/lib/utils';
+import { formatVisitorName,getOrCreateVisitorId } from '@/lib/visitor-utils';
 
 // Helper to ensure absolute URLs for API calls
 function getApiUrl(path: string) {
@@ -249,7 +250,7 @@ export function NativeEmbeddedChat({
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let assistantMessage: Message = {
+      const assistantMessage: Message = {
         id: Date.now().toString() + '-assistant',
         role: 'assistant',
         content: '',

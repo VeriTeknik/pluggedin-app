@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation';
+
 import { getAuthSession } from '@/lib/auth';
 import { getCurrentProject } from '@/lib/projects';
 

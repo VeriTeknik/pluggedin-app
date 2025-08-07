@@ -1,47 +1,36 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { signIn } from 'next-auth/react';
 import { 
-  Calendar, 
-  MessageSquare, 
-  Mail, 
-  Users, 
   Briefcase,
-  Settings,
+  Calendar, 
   Check,
-  X,
   ChevronRight,
-  Plus,
-  Trash2,
-  Edit,
-  TestTube,
-  Shield,
   Globe,
-  Key,
-  Link2
-} from 'lucide-react';
+  Link2,
+  Mail, 
+  MessageSquare,
+  Shield,
+  TestTube} from 'lucide-react';
+import { signIn } from 'next-auth/react';
+import { useEffect,useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  PersonaIntegrations, 
-  PersonaCapability,
   CalendarProvider,
-  CommunicationProvider,
   CRMProvider,
-  DEFAULT_CAPABILITIES
-} from '@/lib/integrations/types';
+  DEFAULT_CAPABILITIES,
+  PersonaCapability,
+  PersonaIntegrations} from '@/lib/integrations/types';
 
 interface PersonaIntegrationsProps {
   personaId?: number;

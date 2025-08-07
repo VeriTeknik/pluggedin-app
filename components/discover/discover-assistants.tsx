@@ -1,41 +1,36 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 import { 
-  MessageSquare, 
-  MapPin, 
-  Globe, 
-  Clock, 
+  Bot,
   Briefcase,
-  DollarSign,
-  Filter,
-  Search,
-  X,
-  Sparkles,
-  Target,
-  Building2,
   ChevronDown,
   ChevronUp,
+  Clock,
+  Filter,
+  Globe, 
+  MapPin, 
+  MessageSquare, 
   Plus,
-  Bot
-} from 'lucide-react';
+  Search,
+  Sparkles,
+  X} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
 
 const CATEGORIES = [
   { value: 'all', label: 'All Categories' },

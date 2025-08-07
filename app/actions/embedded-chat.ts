@@ -1,24 +1,24 @@
 'use server';
 
+import { and, desc, eq, inArray,sql } from 'drizzle-orm';
+import { revalidatePath } from 'next/cache';
+import { z } from 'zod';
+
 import { db } from '@/db';
 import {
-  embeddedChatsTable,
+  chatAnalyticsTable,
+  chatContactsTable,
   chatConversationsTable,
   chatMessagesTable,
   chatPersonasTable,
-  chatContactsTable,
-  chatAnalyticsTable,
   chatUsageTable,
-  chatBillingTable,
-  projectsTable,
-  profilesTable,
+  embeddedChatsTable,
   mcpServersTable,
+  profilesTable,
+  projectsTable,
 } from '@/db/schema';
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
-import { getAuthSession } from '@/lib/auth';
-import { z } from 'zod';
-import { revalidatePath } from 'next/cache';
 import { generateEmbeddedChatApiKey as generateApiKey } from '@/lib/api-key';
+import { getAuthSession } from '@/lib/auth';
 
 // ===== Schema Validation =====
 
@@ -72,7 +72,7 @@ const UpdateEmbeddedChatSchema = z.object({
   welcome_message: z.string().optional(),
   suggested_questions: z.array(z.string()).optional(),
   theme_config: z.record(z.any()).optional(),
-  position: z.enum(['bottom-right', 'bottom-left', 'top-right', 'top-left']).optional(),
+  position: z.enum(['bottom-right', 'bottom-left', 'top-right', 'top-left', 'bottom-center']).optional(),
   model_config: ModelConfigSchema.optional(),
   human_oversight: HumanOversightSchema.optional(),
   context_window_size: z.number().min(1).max(50).optional(),
@@ -110,6 +110,33 @@ const UpdateEmbeddedChatSchema = z.object({
   capabilities_summary: z.string().optional(),
   personality_traits: z.array(z.string()).optional(),
   interaction_style: z.string().max(100).optional(),
+  // Appearance configuration (will be stored in theme_config JSONB field)
+  theme: z.object({
+    primaryColor: z.string(),
+    secondaryColor: z.string(),
+    backgroundColor: z.string(),
+    textColor: z.string(),
+    borderRadius: z.number(),
+    fontSize: z.number(),
+    fontFamily: z.string(),
+  }).optional(),
+  dimensions: z.object({
+    width: z.number(),
+    height: z.number(),
+    minimizedSize: z.number(),
+  }).optional(),
+  behavior: z.object({
+    autoOpen: z.boolean(),
+    showWelcome: z.boolean(),
+    enableNotifications: z.boolean(),
+    showTypingIndicator: z.boolean(),
+    enableSounds: z.boolean(),
+  }).optional(),
+  branding: z.object({
+    showPoweredBy: z.boolean(),
+    customLogo: z.string().optional(),
+    customTitle: z.string().optional(),
+  }).optional(),
 });
 
 const CreatePersonaSchema = z.object({
@@ -370,7 +397,7 @@ export async function getEmbeddedChatConfig(chatUuid: string) {
 }
 
 export async function updateEmbeddedChatConfig(
-  chatUuid: string, 
+  chatUuid: string,
   updates: z.infer<typeof UpdateEmbeddedChatSchema>
 ) {
   try {
@@ -383,12 +410,40 @@ export async function updateEmbeddedChatConfig(
     
     const validatedUpdates = UpdateEmbeddedChatSchema.parse(updates);
     
+    // Handle appearance settings by merging them into theme_config
+    const { theme, dimensions, behavior, branding, ...otherUpdates } = validatedUpdates;
+    
+    const updatedData: any = {
+      ...otherUpdates,
+      updated_at: new Date(),
+    };
+    
+    // If appearance settings are provided, merge them into theme_config
+    if (theme || dimensions || behavior || branding) {
+      // Get current theme_config
+      const [currentChat] = await db
+        .select({ theme_config: embeddedChatsTable.theme_config })
+        .from(embeddedChatsTable)
+        .where(eq(embeddedChatsTable.uuid, chatUuid))
+        .limit(1);
+      
+      const currentThemeConfig = (currentChat?.theme_config as any) || {};
+      
+      // Merge appearance settings into theme_config
+      const newThemeConfig = {
+        ...currentThemeConfig,
+        ...(theme && { theme }),
+        ...(dimensions && { dimensions }),
+        ...(behavior && { behavior }),
+        ...(branding && { branding }),
+      };
+      
+      updatedData.theme_config = newThemeConfig;
+    }
+    
     const [updatedChat] = await db
       .update(embeddedChatsTable)
-      .set({
-        ...validatedUpdates,
-        updated_at: new Date(),
-      })
+      .set(updatedData)
       .where(eq(embeddedChatsTable.uuid, chatUuid))
       .returning();
     
@@ -397,9 +452,9 @@ export async function updateEmbeddedChatConfig(
     return { success: true, data: updatedChat };
   } catch (error) {
     console.error('Error updating embedded chat config:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to update embedded chat config' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update embedded chat config'
     };
   }
 }

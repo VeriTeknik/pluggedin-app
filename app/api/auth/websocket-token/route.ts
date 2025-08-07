@@ -1,8 +1,9 @@
+import { sign } from 'jsonwebtoken';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
-import { sign } from 'jsonwebtoken';
+
 import { createApiError } from '@/lib/api-errors';
+import { authOptions } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {

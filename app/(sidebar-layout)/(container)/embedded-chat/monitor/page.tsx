@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
+
 import { getAuthSession } from '@/lib/auth';
 import { getCurrentProject } from '@/lib/projects';
+
 import { MonitorContent } from './components/monitor-content';
 
 export default async function EmbeddedChatMonitorPage() {

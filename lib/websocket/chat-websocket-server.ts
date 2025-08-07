@@ -3,13 +3,14 @@
  * Implements multi-tenant isolation and EU compliance
  */
 
-import { WebSocketServer, WebSocket } from 'ws';
+import { randomUUID } from 'crypto';
+import { and,eq } from 'drizzle-orm';
 import { IncomingMessage } from 'http';
 import { verify } from 'jsonwebtoken';
+import { WebSocket,WebSocketServer } from 'ws';
+
 import { db } from '@/db';
-import { users, projectsTable, embeddedChatsTable, chatConversationsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { randomUUID } from 'crypto';
+import { chatConversationsTable,embeddedChatsTable, projectsTable, users } from '@/db/schema';
 
 interface AuthenticatedWebSocket extends WebSocket {
   userId: string;

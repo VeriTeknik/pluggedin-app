@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation';
+
+import { getRecentConversations } from '@/app/actions/embedded-chat-analytics';
 import { getAuthSession } from '@/lib/auth';
 import { getCurrentProject } from '@/lib/projects';
-import { getRecentConversations } from '@/app/actions/embedded-chat-analytics';
+
 import { ConversationHistoryContent } from './components/conversation-history-content';
 
 export default async function ConversationHistoryPage() {

@@ -1,10 +1,11 @@
 // Removed Profile import
+import { ArrowLeft, Users } from 'lucide-react';
+import Link from 'next/link';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 // Import User type (assuming it's defined or imported from schema)
 import { users } from '@/db/schema'; 
-import Link from 'next/link';
-import { ArrowLeft, Users } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 import { FollowButton } from './follow-button';
 import { ProfileStats } from './profile-stats';

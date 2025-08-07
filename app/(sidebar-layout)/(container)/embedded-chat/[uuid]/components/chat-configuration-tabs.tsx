@@ -8,12 +8,12 @@ import { EmbeddedChat } from '@/types/embedded-chat';
 
 import { ApiKeysTab } from './api-keys-tab';
 import { AppearanceTab } from './appearance-tab';
+import { DangerZoneTab } from './danger-zone-tab';
+import { DiscoveryProfileTab } from './discovery-profile-tab';
 import { EmbedCodeTab } from './embed-code-tab';
 import { GeneralSettingsTab } from './general-settings-tab';
 import { ModelConfigTab } from './model-config-tab';
 import { PersonasTab } from './personas-tab';
-import { DiscoveryProfileTab } from './discovery-profile-tab';
-import { DangerZoneTab } from './danger-zone-tab';
 
 interface ChatConfigurationTabsProps {
   chat: EmbeddedChat;

@@ -1,10 +1,11 @@
 'use client';
 
-import { Bot, MessageSquare, Sparkles, Lock, Globe } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { Bot, Globe,Lock, MessageSquare, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 interface AssistantCardProps {
   assistant: {

@@ -1,8 +1,9 @@
+import { and, desc, eq, ilike,or, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+import { z } from 'zod';
+
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable, users } from '@/db/schema';
-import { and, eq, ilike, or, desc, sql, isNotNull } from 'drizzle-orm';
-import { z } from 'zod';
 
 const QuerySchema = z.object({
   category: z.string().optional(),

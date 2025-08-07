@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useProjects } from '@/hooks/use-projects';
-import { ChatConfigurationTabs } from './components/chat-configuration-tabs';
-import { EmbeddedChat } from '@/types/embedded-chat';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+import { useProjects } from '@/hooks/use-projects';
+import { EmbeddedChat } from '@/types/embedded-chat';
+
+import { ChatConfigurationTabs } from './components/chat-configuration-tabs';
 
 interface ConfigurationClientProps {
   chat: EmbeddedChat;

@@ -1,15 +1,15 @@
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+
 import { db } from '@/db';
 import { 
   chatConversationsTable, 
+  chatMessagesTable, 
   embeddedChatsTable, 
-  projectsTable,
-  chatMessagesTable 
-} from '@/db/schema';
-import { eq, and, desc, gte, sql } from 'drizzle-orm';
+  projectsTable} from '@/db/schema';
 import { createApiError } from '@/lib/api-errors';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
   try {

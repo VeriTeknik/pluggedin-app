@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { useProjects } from '@/hooks/use-projects';
-import { EmbeddedChatSetup } from './components/embedded-chat-setup';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+
+import { useProjects } from '@/hooks/use-projects';
+
+import { EmbeddedChatSetup } from './components/embedded-chat-setup';
 
 interface EmbeddedChatClientProps {
   userHasProjects: boolean;

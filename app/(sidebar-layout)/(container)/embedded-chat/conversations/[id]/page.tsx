@@ -1,7 +1,9 @@
-import { redirect, notFound } from 'next/navigation';
+import { notFound,redirect } from 'next/navigation';
+
+import { getConversationById } from '@/app/actions/embedded-chat-analytics';
 import { getAuthSession } from '@/lib/auth';
 import { getCurrentProject } from '@/lib/projects';
-import { getConversationById } from '@/app/actions/embedded-chat-analytics';
+
 import { ConversationViewer } from './components/conversation-viewer';
 
 interface PageProps {

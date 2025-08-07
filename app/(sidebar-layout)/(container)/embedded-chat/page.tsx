@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
+
 import { getAuthSession } from '@/lib/auth';
 import { getUserProjects } from '@/lib/projects';
+
 import { EmbeddedChatClient } from './embedded-chat-client';
 
 export default async function EmbeddedChatPage() {

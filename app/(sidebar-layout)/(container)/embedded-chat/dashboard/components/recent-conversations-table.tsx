@@ -1,7 +1,19 @@
 'use client';
 
-import { Button } from '@/components/ui/button';
+import { formatDistanceToNow } from 'date-fns';
+import { 
+  Clock,
+  Download,
+  Eye, 
+  MessageSquare,
+  Shield,
+  Star,
+  User
+} from 'lucide-react';
+import Link from 'next/link';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -10,17 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { 
-  Eye, 
-  Download,
-  Star,
-  Clock,
-  MessageSquare,
-  Shield,
-  User
-} from 'lucide-react';
-import Link from 'next/link';
-import { format, formatDistanceToNow } from 'date-fns';
 import { formatVisitorName, isAuthenticatedVisitor } from '@/lib/visitor-utils';
 
 interface Conversation {

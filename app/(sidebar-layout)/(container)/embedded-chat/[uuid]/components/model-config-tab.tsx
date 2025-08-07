@@ -3,9 +3,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { updateEmbeddedChatConfig, testEmbeddedChatConfig } from '@/app/actions/embedded-chat';
+import { testEmbeddedChatConfig,updateEmbeddedChatConfig } from '@/app/actions/embedded-chat';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Card,

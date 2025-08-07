@@ -1,5 +1,5 @@
 import { BaseIntegrationService } from '../base-service';
-import { SlackIntegration, IntegrationAction, IntegrationResult } from '../types';
+import { IntegrationAction, IntegrationResult,SlackIntegration } from '../types';
 
 interface SlackMessage {
   text: string;

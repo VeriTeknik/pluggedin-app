@@ -1,4 +1,4 @@
-import { PersonaIntegrations, PersonaCapability } from './types';
+import { PersonaCapability,PersonaIntegrations } from './types';
 
 export interface PersonaPromptConfig {
   personaName: string;

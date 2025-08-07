@@ -1,6 +1,5 @@
 'use server';
 
-// Import progressivelyInitializeMcpServers and other necessary modules
 import { McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
@@ -8,10 +7,11 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
-import { eq, and } from 'drizzle-orm';
+import { ChatXAI } from '@langchain/xai';
+import { and,eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { McpServerType, profilesTable, embeddedChatsTable, projectsTable } from '@/db/schema';
+import { embeddedChatsTable, McpServerType, profilesTable, projectsTable } from '@/db/schema';
 
 import { logAuditEvent } from './audit-logger'; // Correct path alias
 import { ensureLogDirectories } from './log-retention'; // Correct path alias
@@ -37,7 +37,7 @@ interface McpPlaygroundSession {
   cleanup: McpServerCleanupFn;
   lastActive: Date;
   llmConfig: {
-    provider: 'openai' | 'anthropic' | 'google';
+    provider: 'openai' | 'anthropic' | 'google' | 'xai';
     model: string;
     temperature?: number;
     maxTokens?: number;
@@ -175,7 +175,7 @@ export async function addServerLogForProfile(profileUuid: string, level: string,
 
 // Initialize chat model based on provider
 function initChatModel(config: {
-  provider: 'openai' | 'anthropic' | 'google';
+  provider: 'openai' | 'anthropic' | 'google' | 'xai';
   model: string;
   temperature?: number;
   maxTokens?: number;
@@ -204,6 +204,13 @@ function initChatModel(config: {
       maxOutputTokens: maxTokens,
       streaming,
     }) as any;
+  } else if (provider === 'xai') {
+    return new ChatXAI({
+      model: model,
+      temperature,
+      maxTokens,
+      streaming,
+    });
   } else {
     throw new Error(`Unsupported provider: ${provider}`);
   }
@@ -462,7 +469,7 @@ export async function restorePlaygroundSession(profileUuid: string) {
 export async function updatePlaygroundSessionModel(
   profileUuid: string,
   llmConfig: {
-    provider: 'openai' | 'anthropic' | 'google';
+    provider: 'openai' | 'anthropic' | 'google' | 'xai';
     model: string;
     temperature?: number;
     maxTokens?: number;
@@ -563,7 +570,7 @@ export async function getOrCreatePlaygroundSession(
   profileUuid: string,
   selectedServerUuids: string[],
   llmConfig: {
-    provider: 'openai' | 'anthropic' | 'google';
+    provider: 'openai' | 'anthropic' | 'google' | 'xai';
     model: string;
     temperature?: number;
     maxTokens?: number;
@@ -697,7 +704,10 @@ export async function getOrCreatePlaygroundSession(
       } else if (llmConfig.provider === 'openai') {
         mappedProvider = 'openai';
       } else if (llmConfig.provider === 'google') {
-        // Update to use openai format which is more compatible with Gemini
+        // Use proper Google provider for Gemini compatibility
+        mappedProvider = 'google_genai';
+      } else if (llmConfig.provider === 'xai') {
+        // Map XAI to openai format for compatibility
         mappedProvider = 'openai';
       }
       
@@ -1342,15 +1352,31 @@ async function createIsolatedEmbeddedChatSession(
     });
     
     // Create a logging function specific to this embedded chat
-    const logFunction = async (level: LogLevel, message: string) => {
+    const logFunction = async (level: 'error' | 'warn' | 'info' | 'debug', message: string) => {
       await addServerLogForProfile(`embedded_${chatUuid}`, level, message);
     };
     
     // Convert MCP servers to tools using progressive initialization
     const logger = await createEnhancedMcpLogger(
-      logFunction,
-      llmConfig.logLevel || 'info'
+      `embedded_${chatUuid}`,
+      llmConfig.logLevel || 'info',
+      mcpServersConfig
     );
+    
+    // Map the provider to what langchain-mcp-tools expects
+    let mappedProvider: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none' = 'none';
+    
+    if (llmConfig.provider === 'anthropic') {
+      mappedProvider = 'anthropic';
+    } else if (llmConfig.provider === 'openai') {
+      mappedProvider = 'openai';
+    } else if (llmConfig.provider === 'google') {
+      // Use proper Google provider for Gemini compatibility
+      mappedProvider = 'google_genai';
+    } else if (llmConfig.provider === 'xai') {
+      // Map XAI to openai format for compatibility
+      mappedProvider = 'openai';
+    }
     
     const { tools, cleanup: mcpCleanup, failedServers } = await progressivelyInitializeMcpServers(
       mcpServersConfig,
@@ -1359,7 +1385,7 @@ async function createIsolatedEmbeddedChatSession(
         logger,
         perServerTimeout: 20000, // 20 seconds per server
         totalTimeout: 60000, // 60 seconds total
-        llmProvider: llmConfig.provider
+        llmProvider: mappedProvider
       }
     );
     
@@ -1419,6 +1445,14 @@ Be transparent about which sources you use and why. When you have both context a
       agent,
       cleanup: enhancedCleanup,
       lastActive: new Date(),
+      llmConfig: {
+        provider: llmConfig.provider,
+        model: llmConfig.model,
+        temperature: llmConfig.temperature,
+        maxTokens: llmConfig.maxTokens,
+        logLevel: llmConfig.logLevel,
+        streaming: llmConfig.streaming
+      },
       messages: [],
     };
     
@@ -1548,7 +1582,7 @@ export async function executeEmbeddedChatQuery(
     if (!result.success) {
       return {
         success: false,
-        error: result.error || 'Failed to create session for query.'
+        error: 'error' in result ? result.error : 'Failed to create session for query.'
       };
     }
     

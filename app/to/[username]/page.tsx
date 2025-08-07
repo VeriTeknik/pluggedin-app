@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 
-import { getUserByUsername, getUserFollowerCount, getUserFollowingCount, isFollowingUser } from '@/app/actions/social';
 import { getAllUserPublicEmbeddedChats } from '@/app/actions/public-embedded-chat';
+import { getUserByUsername, getUserFollowerCount, getUserFollowingCount, isFollowingUser } from '@/app/actions/social';
 import { ProfileHeader } from '@/components/profile/profile-header';
 import { ProfileTabsWithDiscovery } from '@/components/profile/profile-tabs-with-discovery';
 import { users } from '@/db/schema';

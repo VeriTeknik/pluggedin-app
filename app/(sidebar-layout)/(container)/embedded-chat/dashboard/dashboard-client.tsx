@@ -1,12 +1,14 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useProjects } from '@/hooks/use-projects';
-import { DashboardContent } from './components/dashboard-content';
-import { getDashboardMetrics, getRecentConversations, getActiveConversations } from '@/app/actions/embedded-chat-analytics';
-import { getEmbeddedChat } from '@/app/actions/embedded-chat';
 import { Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+
+import { getEmbeddedChat } from '@/app/actions/embedded-chat';
+import { getActiveConversations,getDashboardMetrics, getRecentConversations } from '@/app/actions/embedded-chat-analytics';
+import { useProjects } from '@/hooks/use-projects';
+
+import { DashboardContent } from './components/dashboard-content';
 
 export function DashboardClient() {
   const router = useRouter();

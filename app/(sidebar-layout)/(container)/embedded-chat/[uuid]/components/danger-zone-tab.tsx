@@ -1,16 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useTranslation } from 'react-i18next';
 import { AlertTriangle, Trash2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { deleteEmbeddedChat } from '@/app/actions/embedded-chat';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { toast } from '@/components/ui/use-toast';
 import { EmbeddedChat } from '@/types/embedded-chat';
-import { deleteEmbeddedChat } from '@/app/actions/embedded-chat';
 
 interface DangerZoneTabProps {
   chat: EmbeddedChat;

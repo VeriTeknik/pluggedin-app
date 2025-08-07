@@ -1,40 +1,33 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { useChatWebSocket } from '@/hooks/use-chat-websocket';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { 
-  Users, 
-  MessageSquare, 
-  Eye, 
-  UserCheck, 
-  UserX,
-  Send,
-  AlertCircle,
-  Clock,
-  Globe,
-  Shield,
-  Activity,
-  Ban,
-  CheckCircle,
-  XCircle,
-  RefreshCw,
-  Settings
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
+import { 
+  Activity,
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Eye, 
+  Globe,
+  MessageSquare,
+  Send,
+  Shield,
+  UserCheck, 
+  UserX} from 'lucide-react';
+import { useSession } from 'next-auth/react';
+import {useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription,CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { useChatWebSocket } from '@/hooks/use-chat-websocket';
+import { cn } from '@/lib/utils';
 
 interface Conversation {
   uuid: string;

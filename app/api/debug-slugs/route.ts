@@ -1,7 +1,8 @@
+import {eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
+
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable, users } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);

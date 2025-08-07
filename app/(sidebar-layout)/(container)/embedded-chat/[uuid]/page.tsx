@@ -1,5 +1,5 @@
-import { eq, and } from 'drizzle-orm';
-import { notFound, redirect } from 'next/navigation';
+import { and,eq } from 'drizzle-orm';
+import { redirect } from 'next/navigation';
 
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable } from '@/db/schema';

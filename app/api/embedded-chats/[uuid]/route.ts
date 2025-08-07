@@ -1,9 +1,10 @@
+import { and,eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthSession } from '@/lib/auth';
+import { z } from 'zod';
+
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { z } from 'zod';
+import { getAuthSession } from '@/lib/auth';
 
 // Schema for updating embedded chat
 const UpdateEmbeddedChatSchema = z.object({

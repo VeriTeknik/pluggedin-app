@@ -1,12 +1,12 @@
+import { and, desc,eq } from 'drizzle-orm';
+
 import { db } from '@/db';
 import {
-  embeddedChatsTable,
   chatConversationsTable,
   chatMessagesTable,
   chatPersonasTable,
   projectsTable,
 } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
 
 // Types
 export interface ChatChunk {

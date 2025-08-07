@@ -1,34 +1,29 @@
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
 import { 
-  Bot, 
-  MapPin, 
-  Globe, 
-  Clock, 
-  Briefcase,
-  DollarSign,
-  Filter,
-  Search,
-  X,
-  MessageSquare,
+  Bot,
   Building2,
+  Clock,
+  Filter,
+  Globe, 
+  MapPin, 
+  MessageSquare,
+  Search,
+  Sparkles,
   Target,
-  Sparkles
-} from 'lucide-react';
+  X} from 'lucide-react';
+import {useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
-import { AssistantCard } from '@/components/profile/assistant-card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 
 const CATEGORIES = [
   { value: 'all', label: 'All Categories' },

@@ -1,13 +1,13 @@
+import { and,eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthSession } from '@/lib/auth';
+import { z } from 'zod';
+
 import { db } from '@/db';
 import { 
+  chatPersonasTable, 
   embeddedChatsTable, 
-  projectsTable, 
-  chatPersonasTable 
-} from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { z } from 'zod';
+  projectsTable} from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 
 // Schema for updating persona
 const UpdatePersonaSchema = z.object({

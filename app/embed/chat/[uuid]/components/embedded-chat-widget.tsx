@@ -1,13 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { Send, X, MessageSquare } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { MessageSquare, Send, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
-import { getOrCreateVisitorId, formatVisitorName, getUserInfoFromParent } from '@/lib/visitor-utils';
+import { getOrCreateVisitorId, getUserInfoFromParent } from '@/lib/visitor-utils';
 import type { EmbeddedChat, Project } from '@/types/embedded-chat';
 
 interface Message {
@@ -179,7 +176,7 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
       // Handle streaming response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let assistantMessage: Message = {
+      const assistantMessage: Message = {
         id: Date.now().toString(),
         role: 'assistant',
         content: '',
@@ -250,7 +247,7 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
   };
 
   // Handle close button
-  const handleClose = async () => {
+  const handleClose = useCallback(async () => {
     // End the conversation if it exists
     if (conversationId) {
       try {
@@ -271,23 +268,63 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
     if (window.parent !== window) {
       window.parent.postMessage({ type: 'chat:close' }, '*');
     }
-  };
+  }, [conversationId, chat.uuid]);
 
-  // Parse theme colors
-  const themeColors = chat.theme_color ? {
-    primary: chat.theme_color,
+  // Parse theme from theme_config with fallbacks
+  const themeConfig = chat.theme_config && typeof chat.theme_config === 'object' ? chat.theme_config : {};
+  const themeColors = {
+    primary: themeConfig.primaryColor || chat.theme_color || '#3b82f6',
     primaryForeground: '#ffffff',
-  } : {
-    primary: '#000000',
-    primaryForeground: '#ffffff',
+    secondary: themeConfig.secondaryColor || '#e5e7eb',
+    background: themeConfig.backgroundColor || '#ffffff',
+    text: themeConfig.textColor || '#111827',
+    borderRadius: themeConfig.borderRadius || 12,
+    fontFamily: themeConfig.fontFamily || 'system-ui, sans-serif',
+    fontSize: themeConfig.fontSize || 14,
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div
+      className="flex flex-col h-screen"
+      style={{
+        backgroundColor: themeColors.background,
+        fontFamily: themeColors.fontFamily,
+        fontSize: `${themeColors.fontSize}px`,
+        color: themeColors.text
+      }}
+    >
+      <style jsx global>{`
+        * {
+          box-sizing: border-box;
+        }
+        
+        /* Override any external styles */
+        .embedded-chat-container * {
+          font-family: ${themeColors.fontFamily} !important;
+        }
+        
+        /* Remove language switcher and any overlay elements */
+        [id*="google_translate"],
+        [class*="skiptranslate"],
+        [class*="goog-te-"],
+        .goog-te-combo,
+        .goog-te-banner-frame,
+        .goog-te-menu-frame,
+        .language-switcher {
+          display: none !important;
+          visibility: hidden !important;
+          opacity: 0 !important;
+          pointer-events: none !important;
+        }
+      `}</style>
       {/* Header */}
-      <div 
-        className="flex items-center justify-between p-4 border-b"
-        style={{ backgroundColor: themeColors.primary, color: themeColors.primaryForeground }}
+      <div
+        className="flex items-center justify-between p-4"
+        style={{
+          backgroundColor: themeColors.primary,
+          color: themeColors.primaryForeground,
+          borderBottom: `1px solid ${themeColors.secondary}`
+        }}
       >
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
@@ -306,40 +343,68 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
             </p>
           </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-inherit hover:bg-white/10"
+        <button
+          className="text-inherit hover:bg-white/10 p-2 rounded"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'inherit',
+            cursor: 'pointer',
+            borderRadius: `${themeColors.borderRadius}px`
+          }}
           onClick={handleClose}
+          title="Close chat"
+          aria-label="Close chat"
         >
           <X className="h-4 w-4" />
-        </Button>
+        </button>
       </div>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <div
+        className="flex-1 p-4 overflow-y-auto"
+        ref={scrollAreaRef}
+        style={{
+          backgroundColor: themeColors.background,
+          color: themeColors.text
+        }}
+      >
         {messages.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8">
+          <div className="text-center py-8" style={{ color: `${themeColors.text}80` }}>
             <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
             <p className="text-sm mb-4">{chat.welcome_message || 'Start a conversation'}</p>
             
             {/* Suggested Questions */}
             {chat.suggested_questions && chat.suggested_questions.length > 0 && (
               <div className="space-y-2 px-4">
-                <p className="text-xs text-muted-foreground mb-2">Try asking:</p>
+                <p className="text-xs mb-2" style={{ color: `${themeColors.text}60` }}>Try asking:</p>
                 {chat.suggested_questions.slice(0, 3).map((question, index) => (
-                  <Button
+                  <button
                     key={index}
-                    variant="outline"
-                    size="sm"
-                    className="w-full text-xs justify-start"
+                    className="w-full text-xs text-left p-2 rounded border"
+                    style={{
+                      border: `1px solid ${themeColors.secondary}`,
+                      backgroundColor: 'transparent',
+                      color: themeColors.text,
+                      borderRadius: `${themeColors.borderRadius}px`,
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = themeColors.primary;
+                      e.currentTarget.style.color = themeColors.primary;
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = themeColors.secondary;
+                      e.currentTarget.style.color = themeColors.text;
+                    }}
                     onClick={() => {
                       setInput(question);
                       inputRef.current?.focus();
                     }}
                   >
                     {question}
-                  </Button>
+                  </button>
                 ))}
               </div>
             )}
@@ -349,84 +414,140 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
             {messages.map((message) => (
               <div
                 key={message.id}
-                className={cn(
-                  'flex gap-3',
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                )}
+                className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {message.role === 'assistant' && (
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarFallback>AI</AvatarFallback>
-                  </Avatar>
+                  <div
+                    className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full"
+                    style={{ backgroundColor: themeColors.secondary, color: themeColors.text }}
+                  >
+                    AI
+                  </div>
                 )}
                 <div
-                  className={cn(
-                    'max-w-[80%] rounded-lg px-4 py-2',
-                    message.role === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  )}
-                  style={message.role === 'user' ? {
-                    backgroundColor: themeColors.primary,
-                    color: themeColors.primaryForeground,
-                  } : undefined}
+                  className="max-w-[80%] px-4 py-2"
+                  style={{
+                    backgroundColor: message.role === 'user' ? themeColors.primary : themeColors.secondary,
+                    color: message.role === 'user' ? themeColors.primaryForeground : themeColors.text,
+                    borderRadius: `${themeColors.borderRadius}px`,
+                    borderBottomLeftRadius: message.role === 'assistant' ? '4px' : `${themeColors.borderRadius}px`,
+                    borderBottomRightRadius: message.role === 'user' ? '4px' : `${themeColors.borderRadius}px`,
+                  }}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                   <p className="text-xs opacity-70 mt-1">
-                    {new Date(message.timestamp).toLocaleTimeString([], { 
-                      hour: '2-digit', 
-                      minute: '2-digit' 
+                    {new Date(message.timestamp).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit'
                     })}
                   </p>
                 </div>
                 {message.role === 'user' && (
-                  <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
+                  <div
+                    className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full"
+                    style={{ backgroundColor: themeColors.primary, color: themeColors.primaryForeground }}
+                  >
+                    U
+                  </div>
                 )}
               </div>
             ))}
             {isLoading && (
               <div className="flex gap-3">
-                <Avatar className="h-8 w-8 shrink-0">
-                  <AvatarFallback>AI</AvatarFallback>
-                </Avatar>
-                <div className="bg-muted rounded-lg px-4 py-2">
+                <div
+                  className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full"
+                  style={{ backgroundColor: themeColors.secondary, color: themeColors.text }}
+                >
+                  AI
+                </div>
+                <div
+                  className="px-4 py-2"
+                  style={{
+                    backgroundColor: themeColors.secondary,
+                    borderRadius: `${themeColors.borderRadius}px`,
+                    borderBottomLeftRadius: '4px'
+                  }}
+                >
                   <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce [animation-delay:0.4s]" />
+                    <div
+                      className="w-2 h-2 rounded-full animate-bounce"
+                      style={{ backgroundColor: `${themeColors.text}50` }}
+                    />
+                    <div
+                      className="w-2 h-2 rounded-full animate-bounce"
+                      style={{
+                        backgroundColor: `${themeColors.text}50`,
+                        animationDelay: '0.2s'
+                      }}
+                    />
+                    <div
+                      className="w-2 h-2 rounded-full animate-bounce"
+                      style={{
+                        backgroundColor: `${themeColors.text}50`,
+                        animationDelay: '0.4s'
+                      }}
+                    />
                   </div>
                 </div>
               </div>
             )}
           </div>
         )}
-      </ScrollArea>
+      </div>
 
-      {/* Input - Extra right padding to accommodate language switcher */}
-      <form onSubmit={handleSubmit} className="p-4 pr-16 border-t">
+      {/* Input - No extra padding needed since we're removing language switcher */}
+      <form
+        onSubmit={handleSubmit}
+        className="p-4"
+        style={{ borderTop: `1px solid ${themeColors.secondary}` }}
+      >
         <div className="flex gap-2">
-          <Input
+          <input
             ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={chat.placeholder_text || "Type your message..."}
             disabled={isLoading}
-            className="flex-1"
+            className="flex-1 px-3 py-2 border rounded outline-none"
+            style={{
+              border: `1px solid ${themeColors.secondary}`,
+              borderRadius: `${themeColors.borderRadius}px`,
+              backgroundColor: themeColors.background,
+              color: themeColors.text,
+              fontFamily: themeColors.fontFamily,
+              fontSize: `${themeColors.fontSize}px`
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = themeColors.primary;
+              e.currentTarget.style.boxShadow = `0 0 0 3px ${themeColors.primary}20`;
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = themeColors.secondary;
+              e.currentTarget.style.boxShadow = 'none';
+            }}
             autoFocus
           />
-          <Button
+          <button
             type="submit"
-            size="icon"
             disabled={!input.trim() || isLoading}
+            className="p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               backgroundColor: themeColors.primary,
               color: themeColors.primaryForeground,
+              borderRadius: `${themeColors.borderRadius}px`,
+              border: 'none',
+              cursor: !input.trim() || isLoading ? 'not-allowed' : 'pointer',
+              width: '44px',
+              height: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
             }}
+            title="Send message"
+            aria-label="Send message"
           >
             <Send className="h-4 w-4" />
-          </Button>
+          </button>
         </div>
       </form>
     </div>

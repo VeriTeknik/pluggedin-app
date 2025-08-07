@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm';
-import { headers } from 'next/headers';
+
 import { db } from '@/db';
 import { projectsTable } from '@/db/schema';
 

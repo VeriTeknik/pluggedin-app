@@ -1,14 +1,14 @@
 'use client';
 
-import { User, Mail, Phone, Calendar, Trash2, Edit, Plus, Star, GripVertical, Check, Settings2, MessageSquare, Briefcase } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Briefcase,Calendar, Edit, GripVertical, Mail, MessageSquare, Phone, Plus, Settings2, Star, Trash2, User } from 'lucide-react';
+import { useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
-  getEmbeddedChatConfig,
   createChatPersona,
-  updateChatPersona,
   deleteChatPersona,
+  getEmbeddedChatConfig,
+  updateChatPersona,
 } from '@/app/actions/embedded-chat';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { AvatarUpload } from '@/components/ui/avatar-upload';
@@ -32,12 +32,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { PersonaCapability,PersonaIntegrations as PersonaIntegrationsType } from '@/lib/integrations/types';
 import { EmbeddedChat } from '@/types/embedded-chat';
+
 import { PersonaIntegrations } from './persona-integrations';
-import { PersonaIntegrations as PersonaIntegrationsType, PersonaCapability } from '@/lib/integrations/types';
 
 interface Persona {
   id: number;

@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Loader2,Sparkles } from 'lucide-react';
+import { useEffect,useState } from 'react';
+
 import { cn } from '@/lib/utils';
-import { Sparkles, Loader2 } from 'lucide-react';
 
 interface ProfileEmbeddedChatProps {
   chatData: {

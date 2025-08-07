@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { getAuthSession } from '@/lib/auth';
-import { db } from '@/db';
-import { chatPersonasTable, embeddedChatsTable, accounts, projectsTable } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { db } from '@/db';
+import { accounts, chatPersonasTable, embeddedChatsTable, projectsTable } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 import { GoogleCalendarService } from '@/lib/integrations/calendar/google-calendar';
 import { SlackService } from '@/lib/integrations/communication/slack';
-import { IntegrationManager } from '@/lib/integrations/base-service';
-import { PersonaIntegrations, IntegrationAction, CalendarIntegration } from '@/lib/integrations/types';
+import { CalendarIntegration,IntegrationAction, PersonaIntegrations } from '@/lib/integrations/types';
 
 export async function POST(
   req: NextRequest,

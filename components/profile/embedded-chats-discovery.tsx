@@ -1,32 +1,26 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
 import { 
-  MessageSquare, 
-  MapPin, 
-  Globe, 
-  Clock, 
   Briefcase,
-  DollarSign,
+  Clock,
   Filter,
+  Globe, 
+  MapPin, 
+  MessageSquare, 
   Search,
-  ChevronDown,
-  X,
-  Sparkles,
-  Users
-} from 'lucide-react';
+  X} from 'lucide-react';
 import Link from 'next/link';
+import { useMemo,useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
 import { EmbeddedChat } from '@/types/social';
 
 interface ExtendedEmbeddedChat extends EmbeddedChat {

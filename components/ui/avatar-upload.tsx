@@ -5,10 +5,10 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImageCropperDialog } from '@/components/ui/image-cropper-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { ImageCropperDialog } from '@/components/ui/image-cropper-dialog';
 
 interface AvatarUploadProps {
   currentAvatarUrl?: string | null;

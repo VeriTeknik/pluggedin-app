@@ -1,15 +1,16 @@
+import { and, asc,eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+
 import { db } from '@/db';
 import { 
-  chatMessagesTable,
   chatConversationsTable,
+  chatMessagesTable,
   embeddedChatsTable,
   projectsTable
 } from '@/db/schema';
-import { eq, and, asc } from 'drizzle-orm';
 import { createApiError } from '@/lib/api-errors';
+import { authOptions } from '@/lib/auth';
 
 export async function GET(
   req: NextRequest,

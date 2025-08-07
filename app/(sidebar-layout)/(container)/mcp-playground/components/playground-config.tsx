@@ -323,12 +323,12 @@ export function PlaygroundConfig({
                     Auto-saved
                   </div>
                 </div>
-                <div className='grid grid-cols-3 gap-4'>
+                <div className='grid grid-cols-2 sm:grid-cols-4 gap-4'>
                   {/* Anthropic Card */}
-                  <div 
+                  <div
                     className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
-                      llmConfig.provider === 'anthropic' 
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                      llmConfig.provider === 'anthropic'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                         : 'border-muted hover:bg-muted/50'
                     }`}
                     onClick={() => setLlmConfig({ ...llmConfig, provider: 'anthropic' })}
@@ -348,10 +348,10 @@ export function PlaygroundConfig({
                   </div>
 
                   {/* OpenAI Card */}
-                  <div 
+                  <div
                     className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
-                      llmConfig.provider === 'openai' 
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                      llmConfig.provider === 'openai'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                         : 'border-muted hover:bg-muted/50'
                     }`}
                     onClick={() => setLlmConfig({ ...llmConfig, provider: 'openai' })}
@@ -370,11 +370,34 @@ export function PlaygroundConfig({
                     </div>
                   </div>
 
-                  {/* Google Card */}
-                  <div 
+                  {/* XAI Card */}
+                  <div
                     className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
-                      llmConfig.provider === 'google' 
-                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20' 
+                      llmConfig.provider === 'xai'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-muted hover:bg-muted/50'
+                    }`}
+                    onClick={() => setLlmConfig({ ...llmConfig, provider: 'xai' })}
+                  >
+                    {llmConfig.provider === 'xai' && (
+                      <div className="absolute top-2 right-2">
+                        <div className="h-3 w-3 rounded-full bg-primary"></div>
+                      </div>
+                    )}
+                    <div className='text-center space-y-2'>
+                      <div className='w-8 h-8 mx-auto bg-gradient-to-br from-gray-800 to-gray-600 rounded-lg flex items-center justify-center'>
+                        <span className='text-white font-bold text-sm'>X</span>
+                      </div>
+                      <div className='font-medium text-sm truncate'>XAI</div>
+                      <div className='text-xs text-muted-foreground'>1 model</div>
+                    </div>
+                  </div>
+
+                  {/* Google Card */}
+                  <div
+                    className={`relative p-3 rounded-lg border-2 cursor-pointer transition-all hover:border-primary/50 ${
+                      llmConfig.provider === 'google'
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
                         : 'border-muted hover:bg-muted/50'
                     }`}
                     onClick={() => setLlmConfig({ ...llmConfig, provider: 'google' })}
@@ -401,10 +424,10 @@ export function PlaygroundConfig({
                   <div className='flex items-center justify-between'>
                     <div className='min-w-0 flex-1'>
                       <CardTitle className='text-base sm:text-lg truncate'>Selected Model</CardTitle>
-                      <CardDescription className='text-xs sm:text-sm truncate'>Currently using {llmConfig.provider === 'anthropic' ? 'Anthropic' : llmConfig.provider === 'openai' ? 'OpenAI' : 'Google'}</CardDescription>
+                      <CardDescription className='text-xs sm:text-sm truncate'>Currently using {llmConfig.provider === 'anthropic' ? 'Anthropic' : llmConfig.provider === 'openai' ? 'OpenAI' : llmConfig.provider === 'xai' ? 'XAI' : 'Google'}</CardDescription>
                     </div>
                     <Badge className='bg-primary text-primary-foreground px-2 sm:px-3 py-1 flex-shrink-0 text-xs'>
-                      {llmConfig.provider === 'anthropic' ? 'Anthropic' : llmConfig.provider === 'openai' ? 'OpenAI' : 'Google'}
+                      {llmConfig.provider === 'anthropic' ? 'Anthropic' : llmConfig.provider === 'openai' ? 'OpenAI' : llmConfig.provider === 'xai' ? 'XAI' : 'Google'}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -454,6 +477,32 @@ export function PlaygroundConfig({
                             { value: 'gpt-4o-mini-2024-07-18', name: 'GPT-4o Mini', desc: 'Fast & affordable' },
                             { value: 'gpt-4-turbo-2024-04-09', name: 'GPT-4 Turbo', desc: 'High performance' },
                             { value: 'gpt-3.5-turbo-0125', name: 'GPT-3.5 Turbo', desc: 'Quick tasks' }
+                          ].map((model) => (
+                            <div
+                              key={model.value}
+                              className={`p-3 sm:p-4 rounded-lg border cursor-pointer transition-all min-h-[60px] sm:min-h-auto ${
+                                llmConfig.model === model.value
+                                  ? 'border-primary bg-primary/10 ring-2 ring-primary/20'
+                                  : 'border-muted hover:border-primary/50 hover:bg-muted/50 active:bg-muted/70'
+                              }`}
+                              onClick={() => switchModel({ ...llmConfig, model: model.value })}
+                            >
+                              <div className='flex items-start justify-between gap-2'>
+                                <div className='min-w-0 flex-1'>
+                                  <div className='font-medium text-sm truncate'>{model.name}</div>
+                                  <div className='text-xs text-muted-foreground truncate'>{model.desc}</div>
+                                </div>
+                                {model.badge && (
+                                  <Badge variant="secondary" className='text-xs flex-shrink-0'>{model.badge}</Badge>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </>
+                      ) : llmConfig.provider === 'xai' ? (
+                        <>
+                          {[
+                            { value: 'grok-3-mini', name: 'Grok 3 Mini', desc: 'Fast & efficient', badge: 'New' }
                           ].map((model) => (
                             <div
                               key={model.value}

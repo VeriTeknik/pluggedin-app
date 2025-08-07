@@ -1,9 +1,12 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { RotateCw,ZoomIn } from 'lucide-react';
+import { useCallback,useState } from 'react';
 import Cropper from 'react-easy-crop';
-import { Point, Area } from 'react-easy-crop';
-import { Slider } from '@/components/ui/slider';
+import { Area,Point } from 'react-easy-crop';
+import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -12,9 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { useTranslation } from 'react-i18next';
-import { ZoomIn, RotateCw } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
 
 interface ImageCropperDialogProps {
   open: boolean;

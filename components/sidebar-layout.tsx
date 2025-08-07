@@ -5,7 +5,6 @@
 import {
   Bell,
   Blocks,
-  BotIcon,
   Code2,
   Eye,
   FileText,

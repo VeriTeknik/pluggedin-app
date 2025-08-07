@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { endEmbeddedChatSession } from '@/app/actions/mcp-playground';
 
 export async function POST(req: NextRequest) {

@@ -1,9 +1,28 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { format } from 'date-fns';
+import { 
+  ArrowLeft,
+  Calendar as CalendarIcon,
+  Download,
+  Filter,
+  Search, 
+  X} from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useCallback,useState } from 'react';
+
+import { searchConversations } from '@/app/actions/embedded-chat-analytics';
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -11,27 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-  Search, 
-  Filter,
-  Download,
-  Calendar as CalendarIcon,
-  X,
-  ArrowLeft
-} from 'lucide-react';
-import Link from 'next/link';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+
 import { RecentConversationsTable } from '../../dashboard/components/recent-conversations-table';
-import { searchConversations } from '@/app/actions/embedded-chat-analytics';
-import { useRouter } from 'next/navigation';
 
 interface Conversation {
   uuid: string;

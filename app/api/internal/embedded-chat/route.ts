@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { 
-  getOrCreateEmbeddedChatSession,
+  endEmbeddedChatSession,
   executeEmbeddedChatQuery,
-  endEmbeddedChatSession
-} from '@/app/actions/mcp-playground';
+  getOrCreateEmbeddedChatSession} from '@/app/actions/mcp-playground';
 
 // Internal API that can be called from other API routes
 // This bridges the gap between API routes and server actions

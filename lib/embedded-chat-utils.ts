@@ -1,6 +1,7 @@
+import { and,eq } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 
 export async function getUserEmbeddedChatUuid(userId: string): Promise<string | null> {
   try {

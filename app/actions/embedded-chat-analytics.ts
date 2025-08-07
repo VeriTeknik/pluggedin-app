@@ -1,13 +1,13 @@
 'use server';
 
+import { and, count,desc, eq, gte, lte, sql } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { 
-  chatConversationsTable, 
-  chatMessagesTable,
   chatAnalyticsTable,
-  embeddedChatsTable 
+  chatConversationsTable, 
+  chatMessagesTable 
 } from '@/db/schema';
-import { eq, and, desc, gte, lte, sql, count } from 'drizzle-orm';
 import { getAuthSession } from '@/lib/auth';
 
 // Dashboard Metrics
@@ -298,7 +298,7 @@ export async function searchConversations(
       return { success: false, error: 'Unauthorized' };
     }
 
-    let baseQuery = db
+    const baseQuery = db
       .select({
         uuid: chatConversationsTable.uuid,
         visitor_id: chatConversationsTable.visitor_id,

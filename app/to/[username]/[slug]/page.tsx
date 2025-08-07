@@ -1,8 +1,9 @@
+import { and, eq } from 'drizzle-orm';
 import { notFound } from 'next/navigation';
+
+import { NativeEmbeddedChat } from '@/components/embedded-chat/native-embedded-chat';
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable, users } from '@/db/schema';
-import { and, eq } from 'drizzle-orm';
-import { NativeEmbeddedChat } from '@/components/embedded-chat/native-embedded-chat';
 
 interface PageProps {
   params: Promise<{

@@ -101,7 +101,7 @@ export default function McpPlaygroundPage() {
   const handleModelSwitch = async (provider: string, model: string) => {
     const newConfig = {
       ...llmConfig,
-      provider: provider as 'openai' | 'anthropic' | 'google',
+      provider: provider as 'openai' | 'anthropic' | 'google' | 'xai',
       model: model,
     };
     await switchModel(newConfig);

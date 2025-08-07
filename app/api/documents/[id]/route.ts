@@ -1,5 +1,5 @@
 import { and, desc, eq, isNull, or } from 'drizzle-orm';
-import { readFile, writeFile } from 'fs/promises';
+import { readFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join, resolve } from 'path';
 import { z } from 'zod';

@@ -14,7 +14,7 @@ import {
 
 interface ChatHeaderProps {
   currentModel: {
-    provider: 'openai' | 'anthropic' | 'google';
+    provider: 'openai' | 'anthropic' | 'google' | 'xai';
     model: string;
     temperature?: number;
     maxTokens?: number;
@@ -48,6 +48,14 @@ const PROVIDER_INFO = {
       { id: 'gpt-4-turbo', name: 'GPT-4 Turbo' },
     ]
   },
+  xai: {
+    name: 'XAI',
+    icon: <div className="w-6 h-6 rounded-full bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center text-white text-xs font-bold">X</div>,
+    color: 'from-gray-700 to-gray-900',
+    models: [
+      { id: 'grok-3-mini', name: 'Grok 3 Mini' },
+    ]
+  },
   google: {
     name: 'Google',
     icon: <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">G</div>,
@@ -62,6 +70,7 @@ const PROVIDER_INFO = {
 const QUICK_MODELS = [
   { provider: 'anthropic', model: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet' },
   { provider: 'openai', model: 'gpt-4o', name: 'GPT-4o' },
+  { provider: 'xai', model: 'grok-3-mini', name: 'Grok 3 Mini' },
   { provider: 'google', model: 'models/gemini-1.5-pro-002', name: 'Gemini 1.5 Pro' },
 ] as const;
 

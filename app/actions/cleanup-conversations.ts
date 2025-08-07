@@ -1,8 +1,9 @@
 'use server';
 
+import { and, eq, lt, sql } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { chatConversationsTable } from '@/db/schema';
-import { eq, and, lt, sql } from 'drizzle-orm';
 
 /**
  * Clean up stale active conversations that haven't had a heartbeat in over 30 minutes

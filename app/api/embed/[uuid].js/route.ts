@@ -1,7 +1,8 @@
+import { and, eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
+
 import { db } from '@/db';
 import { embeddedChatsTable } from '@/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
 
 const EMBED_SCRIPT_TEMPLATE = `
 (function() {

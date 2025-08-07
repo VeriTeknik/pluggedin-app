@@ -1,28 +1,29 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
-  MessageSquare, 
-  Users, 
-  Clock, 
-  TrendingUp,
   AlertCircle,
-  Star,
+  BarChart3,
+  Clock, 
+  History,
+  MessageSquare, 
+  Monitor,
   RefreshCw,
   Settings,
-  BarChart3,
-  History,
-  Monitor
-} from 'lucide-react';
+  Star,
+  TrendingUp,
+  Users} from 'lucide-react';
 import Link from 'next/link';
-import { MetricCard } from './metric-card';
-import { ActiveConversationsList } from './active-conversations-list';
-import { RecentConversationsTable } from './recent-conversations-table';
-import { ConversationChart } from './conversation-chart';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect,useState } from 'react';
+
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+import { ActiveConversationsList } from './active-conversations-list';
+import { ConversationChart } from './conversation-chart';
+import { MetricCard } from './metric-card';
+import { RecentConversationsTable } from './recent-conversations-table';
 
 interface DashboardMetrics {
   activeConversations: number;

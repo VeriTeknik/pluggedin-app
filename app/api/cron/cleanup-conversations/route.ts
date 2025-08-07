@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { cleanupStaleConversations } from '@/app/actions/cleanup-conversations';
 
 export async function GET(req: NextRequest) {

@@ -1,17 +1,15 @@
 'use client'; // Mark as Client Component
 
+import { Bot } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
-import { Bot } from 'lucide-react';
-import { ProfileEmbeddedChat } from '@/components/profile/profile-embedded-chat';
-import { EmbeddedChatInfo } from '@/components/profile/embedded-chat-info';
-import { AssistantCard } from '@/components/profile/assistant-card';
 
 import CardGrid from '@/app/(sidebar-layout)/(container)/search/components/CardGrid';
 import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
 import { getMcpServers } from '@/app/actions/mcp-servers';
 import { getFormattedSharedServersForUser } from '@/app/actions/shared-content';
+import { AssistantCard } from '@/components/profile/assistant-card';
 import { SharedCollections } from '@/components/profile/shared-collections';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
