@@ -8,6 +8,7 @@ import { EmbeddedChat } from '@/types/embedded-chat';
 
 import { ApiKeysTab } from './api-keys-tab';
 import { AppearanceTab } from './appearance-tab';
+import { CapabilitiesTab } from './capabilities-tab';
 import { DangerZoneTab } from './danger-zone-tab';
 import { DiscoveryProfileTab } from './discovery-profile-tab';
 import { EmbedCodeTab } from './embed-code-tab';
@@ -26,7 +27,7 @@ export function ChatConfigurationTabs({ chat, chatUuid }: ChatConfigurationTabsP
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="grid w-full grid-cols-8">
+      <TabsList className="grid w-full grid-cols-9">
         <TabsTrigger value="general">
           {t('embeddedChat.tabs.general', 'General')}
         </TabsTrigger>
@@ -38,6 +39,9 @@ export function ChatConfigurationTabs({ chat, chatUuid }: ChatConfigurationTabsP
         </TabsTrigger>
         <TabsTrigger value="personas">
           {t('embeddedChat.tabs.personas', 'Personas')}
+        </TabsTrigger>
+        <TabsTrigger value="capabilities">
+          {t('embeddedChat.tabs.capabilities', 'Capabilities')}
         </TabsTrigger>
         <TabsTrigger value="appearance">
           {t('embeddedChat.tabs.appearance', 'Appearance')}
@@ -67,6 +71,10 @@ export function ChatConfigurationTabs({ chat, chatUuid }: ChatConfigurationTabsP
 
       <TabsContent value="personas" className="space-y-4">
         <PersonasTab chat={chat} chatUuid={chatUuid} />
+      </TabsContent>
+
+      <TabsContent value="capabilities" className="space-y-4">
+        <CapabilitiesTab chat={chat} chatUuid={chatUuid} />
       </TabsContent>
 
       <TabsContent value="appearance" className="space-y-4">

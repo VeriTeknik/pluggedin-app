@@ -1,6 +1,6 @@
 'use client';
 
-import { Bot, Code,Database, FileSearch, Globe, Loader2, Send, Server, Shield, Sparkles, Terminal, X } from 'lucide-react';
+import { Bot, Briefcase, Calendar, Code, Database, FileSearch, Globe, Loader2, Mail, MessageSquare, Send, Server, Shield, Sparkles, Terminal, X } from 'lucide-react';
 import { useEffect, useRef,useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -62,12 +62,20 @@ interface ChatConfig {
   }>;
 }
 
+interface ChatCapability {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+}
+
 interface NativeEmbeddedChatProps {
   chatUuid: string;
   className?: string;
   position?: 'fixed' | 'relative';
   welcomeMessage?: string;
   placeholder?: string;
+  capabilities?: ChatCapability[];
 }
 
 // Helper function to get icon for MCP server based on name/type
@@ -116,6 +124,7 @@ export function NativeEmbeddedChat({
   position = 'fixed',
   welcomeMessage = 'Hi! How can I help you today?',
   placeholder = 'Type your message...',
+  capabilities = [],
 }: NativeEmbeddedChatProps) {
   const { isAuthenticated, session } = useAuth();
   const { user } = useUser();
@@ -600,6 +609,70 @@ export function NativeEmbeddedChat({
                     </p>
                   </TooltipContent>
                 </Tooltip>
+                
+                {/* Capability badges from personas */}
+                {capabilities && capabilities.length > 0 && capabilities.map((capability, idx) => {
+                  const getCategoryIcon = (category: string) => {
+                    switch (category) {
+                      case 'calendar':
+                        return Calendar;
+                      case 'communication':
+                        return Mail;
+                      case 'crm':
+                        return Briefcase;
+                      case 'support':
+                        return Shield;
+                      default:
+                        return MessageSquare;
+                    }
+                  };
+                  
+                  const getCategoryColor = (category: string) => {
+                    switch (category) {
+                      case 'calendar':
+                        return 'from-purple-500/10 to-indigo-500/10 dark:from-purple-500/20 dark:to-indigo-500/20 border-purple-500/20 dark:border-purple-400/30 hover:from-purple-500/20 hover:to-indigo-500/20 dark:hover:from-purple-500/30 dark:hover:to-indigo-500/30';
+                      case 'communication':
+                        return 'from-green-500/10 to-emerald-500/10 dark:from-green-500/20 dark:to-emerald-500/20 border-green-500/20 dark:border-green-400/30 hover:from-green-500/20 hover:to-emerald-500/20 dark:hover:from-green-500/30 dark:hover:to-emerald-500/30';
+                      case 'crm':
+                        return 'from-blue-500/10 to-cyan-500/10 dark:from-blue-500/20 dark:to-cyan-500/20 border-blue-500/20 dark:border-blue-400/30 hover:from-blue-500/20 hover:to-cyan-500/20 dark:hover:from-blue-500/30 dark:hover:to-cyan-500/30';
+                      case 'support':
+                        return 'from-amber-500/10 to-orange-500/10 dark:from-amber-500/20 dark:to-orange-500/20 border-amber-500/20 dark:border-amber-400/30 hover:from-amber-500/20 hover:to-orange-500/20 dark:hover:from-amber-500/30 dark:hover:to-orange-500/30';
+                      default:
+                        return 'from-gray-500/10 to-slate-500/10 dark:from-gray-500/20 dark:to-slate-500/20 border-gray-500/20 dark:border-gray-400/30 hover:from-gray-500/20 hover:to-slate-500/20 dark:hover:from-gray-500/30 dark:hover:to-slate-500/30';
+                    }
+                  };
+                  
+                  const Icon = getCategoryIcon(capability.category);
+                  const colorScheme = getCategoryColor(capability.category);
+                  const displayName = capability.name.replace('Book ', '').replace('Send ', '').replace('Create ', '');
+                  
+                  return (
+                    <Tooltip key={capability.id}>
+                      <TooltipTrigger asChild>
+                        <div 
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r border rounded-full transition-all cursor-default animate-in fade-in-0 zoom-in-95",
+                            colorScheme
+                          )}
+                          style={{ 
+                            animationDelay: `${((chatConfig?.mcp_servers?.length || 0) + (chatConfig?.enable_rag ? 1 : 0) + 1 + idx) * 100}ms`, 
+                            animationFillMode: 'both' 
+                          }}
+                        >
+                          <Icon className="h-3 w-3 text-current opacity-70" />
+                          <span className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                            {displayName}
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="text-xs">
+                          {capability.description}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  );
+                })}
               </div>
             </div>
           </TooltipProvider>

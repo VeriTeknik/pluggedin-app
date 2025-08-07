@@ -3,7 +3,8 @@ import { notFound } from 'next/navigation';
 
 import { NativeEmbeddedChat } from '@/components/embedded-chat/native-embedded-chat';
 import { db } from '@/db';
-import { embeddedChatsTable, projectsTable, users } from '@/db/schema';
+import { chatPersonasTable, embeddedChatsTable, projectsTable, users } from '@/db/schema';
+import { DEFAULT_CAPABILITIES } from '@/lib/integrations/types';
 
 interface PageProps {
   params: Promise<{
@@ -82,34 +83,76 @@ export default async function ChatPage({ params }: PageProps) {
     is_active: chat.is_active,
   });
 
+  // Get active personas and their capabilities
+  const personas = await db.query.chatPersonasTable.findMany({
+    where: and(
+      eq(chatPersonasTable.embedded_chat_uuid, chat.uuid),
+      eq(chatPersonasTable.is_active, true)
+    ),
+  });
+
+  // Collect all enabled capabilities from all active personas
+  const enabledCapabilities = new Set<string>();
+  const capabilityDetails: Array<{
+    id: string;
+    name: string;
+    description: string;
+    category: string;
+  }> = [];
+
+  personas.forEach(persona => {
+    const capabilities = persona.capabilities as any[] || [];
+    capabilities.forEach(cap => {
+      if (cap.enabled) {
+        enabledCapabilities.add(cap.id);
+      }
+    });
+  });
+
+  // Get details for enabled capabilities
+  DEFAULT_CAPABILITIES.forEach(cap => {
+    if (enabledCapabilities.has(cap.id)) {
+      capabilityDetails.push({
+        id: cap.id,
+        name: cap.name,
+        description: cap.description,
+        category: cap.category,
+      });
+    }
+  });
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-        <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gray-900">
+      <div className="container mx-auto px-4 py-6">
         <div className="max-w-4xl mx-auto">
-          <div className="mb-8 text-center">
-            <h1 className="text-3xl font-bold mb-2">{chat.name}</h1>
+          {/* Header */}
+          <div className="mb-6 text-center">
+            <h1 className="text-3xl font-bold text-white mb-2">{chat.name}</h1>
             {chat.description && (
-              <p className="text-lg text-muted-foreground mb-2">{chat.description}</p>
+              <p className="text-lg text-gray-400 mb-2">{chat.description}</p>
             )}
-            <p className="text-muted-foreground">
+            <p className="text-gray-500">
               Chat with {user.name || user.username}'s AI Assistant
             </p>
           </div>
 
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden h-[600px]">
+          {/* Chat Interface - Full Width */}
+          <div className="bg-gray-800 rounded-2xl shadow-xl overflow-hidden" style={{ height: 'calc(100vh - 280px)' }}>
             <NativeEmbeddedChat
               chatUuid={chat.uuid}
               position="relative"
               className="h-full"
               welcomeMessage={chat.welcome_message || `Hi! Welcome to ${user.name || user.username}'s chat assistant. How can I help you today?`}
               placeholder="Type your message..."
+              capabilities={capabilityDetails}
             />
           </div>
-
-          <div className="mt-8 text-center">
+          
+          {/* Profile Link */}
+          <div className="mt-4 text-center">
             <a
               href={`/to/${username}`}
-              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+              className="text-sm text-gray-500 hover:text-gray-300 transition-colors"
             >
               View {user.name || user.username}'s Profile →
             </a>
