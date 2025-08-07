@@ -55,6 +55,65 @@ export async function POST(
     const body = await req.json();
     const { action, type } = body;
 
+    // Check if this is a test request first
+    if (type === 'test') {
+      const { integration: integrationName } = body;
+      const integrations = (persona.integrations as PersonaIntegrations) || {};
+      
+      switch (integrationName) {
+        case 'calendar': {
+          if (!integrations.calendar?.enabled) {
+            return NextResponse.json({ error: 'Calendar integration not configured' }, { status: 400 });
+          }
+
+          if (integrations.calendar.provider === 'google_calendar') {
+            const googleAccount = await db.query.accounts.findFirst({
+              where: and(
+                eq(accounts.userId, session.user.id),
+                eq(accounts.provider, 'google')
+              ),
+            });
+
+            if (!googleAccount || !googleAccount.access_token) {
+              return NextResponse.json({
+                success: false,
+                error: 'Google account not connected with calendar permissions',
+              });
+            }
+
+            const calendarIntegration: CalendarIntegration = {
+              ...integrations.calendar,
+              config: {
+                ...integrations.calendar.config,
+                accessToken: googleAccount.access_token,
+              }
+            };
+
+            const calendarService = new GoogleCalendarService(calendarIntegration);
+            const result = await calendarService.test();
+            return NextResponse.json(result);
+          }
+          break;
+        }
+
+        case 'slack': {
+          if (!integrations.communication?.slack?.enabled) {
+            return NextResponse.json({ error: 'Slack integration not configured' }, { status: 400 });
+          }
+
+          const slackService = new SlackService(integrations.communication.slack);
+          const result = await slackService.test();
+          return NextResponse.json(result);
+        }
+
+        default:
+          return NextResponse.json({ error: 'Unknown integration to test' }, { status: 400 });
+      }
+      
+      return NextResponse.json({ error: 'Test not implemented for this integration' }, { status: 501 });
+    }
+
+    // For non-test requests, require action and type
     if (!action || !type) {
       return NextResponse.json({ error: 'Missing action or type' }, { status: 400 });
     }
@@ -127,59 +186,6 @@ export async function POST(
 
         const result = await slackService.execute(integrationAction);
         return NextResponse.json(result);
-      }
-
-      case 'test': {
-        // Test connection endpoint
-        const { integration: integrationName } = body;
-        
-        switch (integrationName) {
-          case 'calendar': {
-            if (!integrations.calendar?.enabled) {
-              return NextResponse.json({ error: 'Calendar integration not configured' }, { status: 400 });
-            }
-
-            if (integrations.calendar.provider === 'google_calendar') {
-              const googleAccount = await db.query.accounts.findFirst({
-                where: and(
-                  eq(accounts.userId, session.user.id),
-                  eq(accounts.provider, 'google')
-                ),
-              });
-
-              if (!googleAccount || !googleAccount.access_token) {
-                return NextResponse.json({
-                  success: false,
-                  error: 'Google account not connected with calendar permissions',
-                });
-              }
-
-              const calendarIntegration: CalendarIntegration = {
-                ...integrations.calendar,
-                config: {
-                  ...integrations.calendar.config,
-                  accessToken: googleAccount.access_token,
-                }
-              };
-
-              const calendarService = new GoogleCalendarService(calendarIntegration);
-              const result = await calendarService.test();
-              return NextResponse.json(result);
-            }
-            break;
-          }
-
-          case 'slack': {
-            if (!integrations.communication?.slack?.enabled) {
-              return NextResponse.json({ error: 'Slack integration not configured' }, { status: 400 });
-            }
-
-            const slackService = new SlackService(integrations.communication.slack);
-            const result = await slackService.test();
-            return NextResponse.json(result);
-          }
-        }
-        break;
       }
 
       default:

@@ -11,7 +11,7 @@ import { ChatXAI } from '@langchain/xai';
 import { and,eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { embeddedChatsTable, McpServerType, profilesTable, projectsTable, tokenUsageTable } from '@/db/schema';
+import { embeddedChatsTable, McpServerType, profilesTable, projectsTable, tokenUsageTable, chatPersonasTable } from '@/db/schema';
 import { calculateTokenCost } from '@/lib/token-pricing';
 import { wrapLLMWithTokenTracking, getSessionTokenUsage } from '@/lib/mcp/token-tracker';
 import { createEstimatedUsage } from '@/lib/mcp/token-estimator';
@@ -1102,8 +1102,8 @@ Please answer the user's question using both the provided context and your avail
                    (lastMessage as any).usage ||
                    null;
       
-        
-        // Try to find token usage in any AI message
+      // If still no token usage, try to find it in any AI message
+      if (!tokenUsage) {
         for (let i = agentFinalState.messages.length - 1; i >= 0; i--) {
           const msg = agentFinalState.messages[i];
           if (msg instanceof AIMessage) {
@@ -1379,6 +1379,27 @@ async function createIsolatedEmbeddedChatSession(
   llmConfig: any
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Get persona data for this chat
+    const personas = await db.query.chatPersonasTable.findMany({
+      where: and(
+        eq(chatPersonasTable.embedded_chat_uuid, chatUuid),
+        eq(chatPersonasTable.is_active, true)
+      ),
+    });
+    
+    // Find default persona or use first active one
+    const activePersona = personas.find(p => p.is_default) || personas[0];
+    
+    // Log persona information for debugging
+    if (activePersona) {
+      console.log(`[EMBEDDED] Using persona: ${activePersona.name}`);
+      const capabilities = activePersona.capabilities as any[] || [];
+      const enabledCapabilities = capabilities.filter(cap => cap.enabled);
+      console.log(`[EMBEDDED] Enabled capabilities: ${enabledCapabilities.map(c => c.name).join(', ')}`);
+    } else {
+      console.log('[EMBEDDED] No active persona found for chat');
+    }
+    
     // Clear any existing logs for this chat
     serverLogsByProfile.set(`embedded_${chatUuid}`, []);
     
@@ -1517,7 +1538,64 @@ async function createIsolatedEmbeddedChatSession(
       llm,
       tools,
       stateModifier: (state: any) => {
-        const systemMessage = `You are an AI assistant specialized in helping users interact with their development environment through MCP (Model Context Protocol) servers and knowledge bases.
+        // Build persona-specific system message
+        let systemMessage = `You are an AI assistant specialized in helping users interact with their development environment through MCP (Model Context Protocol) servers and knowledge bases.`;
+        
+        // Add persona context if available
+        if (activePersona) {
+          systemMessage = `You are ${activePersona.name}${activePersona.role ? `, ${activePersona.role}` : ''}.
+
+${activePersona.instructions}`;
+          
+          // Add capabilities if they exist
+          const capabilities = activePersona.capabilities as any[] || [];
+          const enabledCapabilities = capabilities.filter(cap => cap.enabled);
+          
+          if (enabledCapabilities.length > 0) {
+            systemMessage += `
+
+AVAILABLE CAPABILITIES:
+You have the following capabilities enabled to assist users:
+`;
+            
+            // Group capabilities by category
+            const capsByCategory: Record<string, any[]> = {};
+            enabledCapabilities.forEach(cap => {
+              if (!capsByCategory[cap.category]) {
+                capsByCategory[cap.category] = [];
+              }
+              capsByCategory[cap.category].push(cap);
+            });
+            
+            // Add capabilities by category
+            Object.entries(capsByCategory).forEach(([category, caps]) => {
+              systemMessage += `\n${category.toUpperCase()}:`;
+              caps.forEach(cap => {
+                systemMessage += `\n• ${cap.name}: ${cap.description}`;
+              });
+            });
+            
+            // Add integration status if available
+            const integrations = activePersona.integrations as any || {};
+            const activeIntegrations: string[] = [];
+            
+            if (integrations.calendar?.google?.enabled) activeIntegrations.push('Google Calendar');
+            if (integrations.communication?.email?.enabled) activeIntegrations.push('Email');
+            if (integrations.communication?.slack?.enabled) activeIntegrations.push('Slack');
+            if (integrations.crm?.enabled) activeIntegrations.push('CRM');
+            
+            if (activeIntegrations.length > 0) {
+              systemMessage += `\n\nINTEGRATED SERVICES:
+The following services are connected and available for use:
+${activeIntegrations.map(service => `• ${service}`).join('\n')}`;
+            }
+            
+            systemMessage += `\n\nWhen users ask about what you can do, mention these capabilities. When they request actions that match these capabilities, acknowledge that you can help with those tasks and guide them accordingly.`;
+          }
+        }
+        
+        // Add standard MCP context
+        systemMessage += `
 
 INFORMATION SOURCES:
 • Knowledge Context: Documentation, schemas, and background information from RAG
@@ -1528,11 +1606,6 @@ DECISION FRAMEWORK:
 2. Use MCP tools for current data, live queries, and actions
 3. Combine both sources when helpful - context for understanding, tools for current information
 4. Always prioritize accuracy and currency of information
-
-EXAMPLES:
-• "How many users?" → Check knowledge for user table structure, use MCP tool to get current count
-• "Database schema?" → Use knowledge context if available, otherwise query via MCP tools
-• "Update settings" → Use MCP tools for the action, knowledge for validation
 
 Be transparent about which sources you use and why. When you have both context and tools available, use them together for the most complete and accurate response.`;
         
