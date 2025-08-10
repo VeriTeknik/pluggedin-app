@@ -83,6 +83,10 @@
       "embed": "埋め込み",
       "dangerZone": "危険ゾーン"
     },
+    "general": {
+      "personaVoiceBlueprint": "ペルソナ＆ボイス設計図",
+      "personaVoiceBlueprintDescription": "AIの個性、コミュニケーションスタイル、行動ガイドラインを定義します（最大3500文字）"
+    },
     "dangerZone": {
       "title": "危険ゾーン",
       "description": "取り返しのつかない破壊的な操作",

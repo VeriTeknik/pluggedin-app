@@ -20,10 +20,25 @@ interface GoogleCalendarEvent {
     displayName?: string;
     responseStatus?: string;
   }>;
+  conferenceData?: {
+    createRequest?: {
+      requestId: string;
+      conferenceSolutionKey?: {
+        type: string;
+      };
+    };
+  };
+}
+
+interface CalendarListEntry {
+  id: string;
+  summary: string;
+  primary?: boolean;
 }
 
 export class GoogleCalendarService extends BaseIntegrationService {
   private calendarIntegration: CalendarIntegration;
+  private pluggedInCalendarId: string = '';
 
   constructor(integration: CalendarIntegration) {
     super(integration);
@@ -37,6 +52,11 @@ export class GoogleCalendarService extends BaseIntegrationService {
           success: false,
           error: 'Rate limit exceeded',
         };
+      }
+
+      // Ensure we have a Plugged.in calendar
+      if (action.type !== 'check_availability') {
+        await this.ensurePluggedInCalendar();
       }
 
       let result: IntegrationResult;
@@ -87,18 +107,25 @@ export class GoogleCalendarService extends BaseIntegrationService {
 
   async test(): Promise<IntegrationResult> {
     try {
-      // Test by fetching calendar list
-      const response = await this.makeApiCall('/users/me/calendarList');
+      // Test by fetching calendar list and ensuring Plugged.in calendar exists
+      const calendarList = await this.getCalendarList();
+      const pluggedInCalendar = calendarList.find(cal => cal.summary === 'Plugged.in');
       
-      if (response.ok) {
+      if (pluggedInCalendar) {
+        this.pluggedInCalendarId = pluggedInCalendar.id;
         return {
           success: true,
-          data: { message: 'Google Calendar connection successful' },
+          data: {
+            message: 'Google Calendar connection successful',
+            calendarId: pluggedInCalendar.id
+          },
         };
       } else {
         return {
-          success: false,
-          error: 'Failed to connect to Google Calendar',
+          success: true,
+          data: {
+            message: 'Google Calendar connection successful, Plugged.in calendar will be created on first use'
+          },
         };
       }
     } catch (error) {
@@ -106,9 +133,57 @@ export class GoogleCalendarService extends BaseIntegrationService {
     }
   }
 
+  private async ensurePluggedInCalendar(): Promise<string> {
+    if (this.pluggedInCalendarId) {
+      return this.pluggedInCalendarId;
+    }
+
+    try {
+      const calendarList = await this.getCalendarList();
+      const pluggedInCalendar = calendarList.find(cal => cal.summary === 'Plugged.in');
+
+      if (pluggedInCalendar) {
+        this.pluggedInCalendarId = pluggedInCalendar.id;
+        return this.pluggedInCalendarId;
+      }
+
+      // Create Plugged.in calendar
+      const response = await this.makeApiCall('/calendars', 'POST', {
+        summary: 'Plugged.in',
+        description: 'Dedicated calendar for Plugged.in meetings',
+        timeZone: 'UTC'
+      });
+
+      if (response.ok) {
+        const calendar = await response.json();
+        this.pluggedInCalendarId = calendar.id;
+        return this.pluggedInCalendarId;
+      } else {
+        throw new Error('Failed to create Plugged.in calendar');
+      }
+    } catch (error) {
+      console.error('Error ensuring Plugged.in calendar:', error);
+      throw new Error(`Failed to ensure Plugged.in calendar exists: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  private async getCalendarList(): Promise<CalendarListEntry[]> {
+    const response = await this.makeApiCall('/users/me/calendarList');
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.items || [];
+    } else {
+      throw new Error('Failed to fetch calendar list');
+    }
+  }
+
   private async scheduleMeeting(payload: any): Promise<IntegrationResult> {
     try {
-      const { title, description, startTime, endTime, attendees, location } = payload;
+      const { title, description, startTime, endTime, attendees, location, includeGoogleMeet = false } = payload;
+
+      // Ensure we have a Plugged.in calendar
+      const calendarId = await this.ensurePluggedInCalendar();
 
       const event: GoogleCalendarEvent = {
         summary: title,
@@ -125,9 +200,20 @@ export class GoogleCalendarService extends BaseIntegrationService {
         attendees: attendees?.map((email: string) => ({ email })),
       };
 
-      const calendarId = this.calendarIntegration.config.calendarId || 'primary';
+      // Add Google Meet integration if requested
+      if (includeGoogleMeet) {
+        event.conferenceData = {
+          createRequest: {
+            requestId: `pluggedin-${Date.now()}`,
+            conferenceSolutionKey: {
+              type: 'hangoutsMeet'
+            }
+          }
+        };
+      }
+
       const response = await this.makeApiCall(
-        `/calendars/${calendarId}/events`,
+        `/calendars/${calendarId}/events?conferenceDataVersion=1`,
         'POST',
         event
       );
@@ -139,7 +225,8 @@ export class GoogleCalendarService extends BaseIntegrationService {
           data: {
             eventId: data.id,
             htmlLink: data.htmlLink,
-            message: `Meeting scheduled successfully`,
+            meetLink: data.conferenceData?.entryPoints?.[0]?.uri,
+            message: `Meeting scheduled successfully in Plugged.in calendar${includeGoogleMeet ? ' with Google Meet' : ''}`,
           },
         };
       } else {
@@ -158,30 +245,40 @@ export class GoogleCalendarService extends BaseIntegrationService {
     try {
       const { startTime, endTime, duration = 30 } = payload;
       
-      const calendarId = this.calendarIntegration.config.calendarId || 'primary';
       const timeMin = new Date(startTime).toISOString();
       const timeMax = new Date(endTime).toISOString();
 
-      // Get busy times
+      // Get all user calendars for availability check
+      const calendarList = await this.getCalendarList();
+      const calendarItems = calendarList.map(cal => ({ id: cal.id }));
+
+      // Get busy times across all calendars using FreeBusy API
       const response = await this.makeApiCall(
         `/freeBusy`,
         'POST',
         {
           timeMin,
           timeMax,
-          items: [{ id: calendarId }],
+          items: calendarItems,
         }
       );
 
       if (response.ok) {
         const data = await response.json();
-        const busyTimes = data.calendars[calendarId]?.busy || [];
+        
+        // Aggregate busy times from all calendars
+        const allBusyTimes: Array<{ start: string; end: string }> = [];
+        
+        for (const calendarId in data.calendars) {
+          const calendarBusy = data.calendars[calendarId]?.busy || [];
+          allBusyTimes.push(...calendarBusy);
+        }
         
         // Calculate available slots
         const availableSlots = this.calculateAvailableSlots(
           new Date(startTime),
           new Date(endTime),
-          busyTimes,
+          allBusyTimes,
           duration
         );
 
@@ -189,7 +286,8 @@ export class GoogleCalendarService extends BaseIntegrationService {
           success: true,
           data: {
             availableSlots,
-            busyTimes,
+            busyTimes: allBusyTimes,
+            calendarCount: calendarItems.length,
           },
         };
       } else {
@@ -207,7 +305,9 @@ export class GoogleCalendarService extends BaseIntegrationService {
     try {
       const { eventId, sendNotifications = true } = payload;
       
-      const calendarId = this.calendarIntegration.config.calendarId || 'primary';
+      // Ensure we have a Plugged.in calendar
+      const calendarId = await this.ensurePluggedInCalendar();
+      
       const response = await this.makeApiCall(
         `/calendars/${calendarId}/events/${eventId}?sendNotifications=${sendNotifications}`,
         'DELETE'
@@ -216,7 +316,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
       if (response.ok || response.status === 204) {
         return {
           success: true,
-          data: { message: 'Meeting cancelled successfully' },
+          data: { message: 'Meeting cancelled successfully from Plugged.in calendar' },
         };
       } else {
         return {
@@ -233,7 +333,8 @@ export class GoogleCalendarService extends BaseIntegrationService {
     try {
       const { eventId, updates } = payload;
       
-      const calendarId = this.calendarIntegration.config.calendarId || 'primary';
+      // Ensure we have a Plugged.in calendar
+      const calendarId = await this.ensurePluggedInCalendar();
       
       // First get the existing event
       const getResponse = await this.makeApiCall(
@@ -266,7 +367,8 @@ export class GoogleCalendarService extends BaseIntegrationService {
           data: {
             eventId: data.id,
             htmlLink: data.htmlLink,
-            message: 'Meeting updated successfully',
+            meetLink: data.conferenceData?.entryPoints?.[0]?.uri,
+            message: 'Meeting updated successfully in Plugged.in calendar',
           },
         };
       } else {

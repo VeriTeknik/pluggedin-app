@@ -263,8 +263,8 @@ export async function POST(
             encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`)
           );
           
-          // Clean up chat engine resources
-          await chatEngine.cleanup();
+          // Don't cleanup here - keep session alive for conversation memory
+          // await chatEngine.cleanup();
           
           controller.close();
         } catch (error) {
@@ -277,8 +277,8 @@ export async function POST(
             })}\n\n`)
           );
           
-          // Clean up chat engine resources on error
-          await chatEngine.cleanup();
+          // Don't cleanup here - keep session alive for conversation memory
+          // await chatEngine.cleanup();
           
           controller.close();
         }

@@ -83,6 +83,10 @@
       "embed": "Insluiten",
       "dangerZone": "Gevarenzone"
     },
+    "general": {
+      "personaVoiceBlueprint": "Persona & Stem Blauwdruk",
+      "personaVoiceBlueprintDescription": "Definieer de persoonlijkheid, communicatiestijl en gedragsrichtlijnen van de AI (maximaal 3500 tekens)"
+    },
     "dangerZone": {
       "title": "Gevarenzone",
       "description": "Onomkeerbare en destructieve acties",

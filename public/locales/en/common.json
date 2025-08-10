@@ -85,6 +85,10 @@
       "embed": "Embed",
       "dangerZone": "Danger Zone"
     },
+    "general": {
+      "personaVoiceBlueprint": "Persona & Voice Blueprint",
+      "personaVoiceBlueprintDescription": "Define the AI's personality, communication style, and behavioral guidelines (max 3500 characters)"
+    },
     "dangerZone": {
       "title": "Danger Zone",
       "description": "Irreversible and destructive actions",

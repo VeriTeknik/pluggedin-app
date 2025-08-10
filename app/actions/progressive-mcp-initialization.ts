@@ -2,6 +2,7 @@
 
 // Import necessary types from the library - Remove Stdio/SseServerParameters
 import { convertMcpToLangchainTools, McpServerCleanupFn, McpServersConfig } from '@h1deya/langchain-mcp-tools';
+import { createNotification } from './notifications';
 
 import { addServerLogForProfile } from './mcp-playground'; // Relative import
 
@@ -20,6 +21,100 @@ export interface ProgressiveInitResult {
   cleanup: McpServerCleanupFn;
   initStatus: ServerInitStatus[];
   failedServers: string[];
+}
+
+/**
+ * Wraps an MCP tool to add notification on tool call
+ */
+function wrapMcpToolWithNotification(tool: any, profileUuid: string): any {
+  const originalFunc = tool.func || tool._call || tool.call;
+  const wrappedFunc = async (...args: any[]) => {
+    const startTime = Date.now();
+    let result: any;
+    let success = false;
+    let error: string | undefined;
+    
+    try {
+      // Call the original tool function
+      result = await originalFunc.apply(tool, args);
+      success = true;
+      
+      // Try to send notification (don't fail if notification fails)
+      try {
+        // Extract tool input from args if available
+        const input = args[0] || {};
+        const inputSummary = typeof input === 'object' 
+          ? Object.keys(input).slice(0, 3).join(', ') 
+          : String(input).substring(0, 50);
+        
+        await createNotification({
+          profileUuid,
+          type: 'INFO',
+          title: `MCP Tool: ${tool.name}`,
+          message: `Tool executed successfully in ${Date.now() - startTime}ms`,
+          severity: 'SUCCESS',
+          metadata: {
+            source: {
+              type: 'mcp_tool',
+              tool: tool.name,
+              description: tool.description
+            },
+            task: {
+              success: true,
+              duration: Date.now() - startTime,
+              inputSummary
+            }
+          },
+          expiresInDays: 7
+        });
+      } catch (notifError) {
+        console.error('Failed to send MCP tool notification:', notifError);
+      }
+      
+      return result;
+    } catch (err) {
+      error = err instanceof Error ? err.message : String(err);
+      
+      // Try to send error notification
+      try {
+        await createNotification({
+          profileUuid,
+          type: 'WARNING',
+          title: `MCP Tool Failed: ${tool.name}`,
+          message: `Tool execution failed: ${error}`,
+          severity: 'WARNING',
+          metadata: {
+            source: {
+              type: 'mcp_tool',
+              tool: tool.name,
+              description: tool.description
+            },
+            task: {
+              success: false,
+              duration: Date.now() - startTime,
+              error
+            }
+          },
+          expiresInDays: 7
+        });
+      } catch (notifError) {
+        console.error('Failed to send MCP tool error notification:', notifError);
+      }
+      
+      throw err;
+    }
+  };
+  
+  // IMPORTANT: mutate the existing tool instance to preserve prototype/identity
+  if (typeof tool.func === 'function') {
+    tool.func = wrappedFunc;
+  } else if (typeof tool._call === 'function') {
+    tool._call = wrappedFunc;
+  } else if (typeof tool.call === 'function') {
+    tool.call = wrappedFunc;
+  }
+
+  return tool;
 }
 
 /**
@@ -282,7 +377,12 @@ export async function progressivelyInitializeMcpServers(
 
             statusEntry.status = 'success';
             statusEntry.endTime = Date.now();
-            allTools.push(...result.tools);
+            
+            // Wrap each tool with notification support
+            const wrappedTools = result.tools.map(tool => 
+              wrapMcpToolWithNotification(tool, profileUuid)
+            );
+            allTools.push(...wrappedTools);
             cleanupFunctions.push(result.cleanup);
             await addServerLogForProfile(
               profileUuid,

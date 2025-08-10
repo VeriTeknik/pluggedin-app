@@ -8,6 +8,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   serial,
   text,
   timestamp,
@@ -1822,6 +1823,77 @@ export const chatBillingTable = pgTable(
   },
   (table) => ({
     billingUserPeriodIdx: index('idx_billing_user_period').on(table.user_id, table.billing_period_start),
+  })
+);
+
+// ===== Conversation Memories Table =====
+export const conversationMemoriesTable = pgTable(
+  'conversation_memories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    conversation_id: uuid('conversation_id')
+      .notNull()
+      .references(() => chatConversationsTable.uuid, { onDelete: 'cascade' }),
+    owner_id: uuid('owner_id').notNull(), // Can reference user or project
+    kind: text('kind')
+      .notNull()
+      .$type<'profile' | 'preference' | 'fact' | 'decision' | 'outcome' | 'id' | 'snippet'>(),
+    key: text('key'), // Optional canonical key (e.g., 'user_email')
+    value_jsonb: jsonb('value_jsonb').notNull(), // Normalized content
+    language_code: text('language_code'), // ISO 639-1 if known
+    salience: real('salience').notNull().default(0),
+    novelty_hash: text('novelty_hash'), // SHA256(value_jsonb::text)
+    pii: boolean('pii').notNull().default(false),
+    consent: text('consent')
+      .default('implicit')
+      .$type<'implicit' | 'explicit' | 'denied'>(),
+    source: varchar('source', { length: 64 })
+      .notNull()
+      .$type<'user' | 'assistant_tool' | 'system'>(),
+    source_ref: text('source_ref'), // message_id or tool_run_id
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    last_used_at: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
+    ttl_days: integer('ttl_days').default(365),
+  },
+  (table) => ({
+    memConversationIdx: index('idx_mem_conversation').on(table.conversation_id),
+    memOwnerIdx: index('idx_mem_owner').on(table.owner_id),
+    memNoveltyHashIdx: index('idx_mem_novelty_hash').on(table.novelty_hash),
+    memKindIdx: index('idx_mem_kind').on(table.kind),
+    memKeyIdx: index('idx_mem_key').on(table.key),
+  })
+);
+
+// ===== User Memories Table =====
+export const userMemoriesTable = pgTable(
+  'user_memories',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    owner_id: uuid('owner_id').notNull(), // User or org UUID
+    kind: text('kind')
+      .notNull()
+      .$type<'profile' | 'preference' | 'fact' | 'id' | 'snippet'>(),
+    key: text('key'), // Unique per owner for overwrite semantics
+    value_jsonb: jsonb('value_jsonb').notNull(),
+    language_code: text('language_code'),
+    salience: real('salience').notNull().default(0),
+    novelty_hash: text('novelty_hash'),
+    pii: boolean('pii').notNull().default(false),
+    consent: text('consent')
+      .default('implicit')
+      .$type<'implicit' | 'explicit' | 'denied'>(),
+    source: varchar('source', { length: 64 })
+      .notNull()
+      .$type<'user' | 'assistant_tool' | 'system'>(),
+    source_ref: text('source_ref'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    last_used_at: timestamp('last_used_at', { withTimezone: true }).notNull().defaultNow(),
+    ttl_days: integer('ttl_days').default(730),
+  },
+  (table) => ({
+    userMemOwnerIdx: index('idx_user_mem_owner').on(table.owner_id),
+    userMemKeyIdx: index('idx_user_mem_key').on(table.key),
+    uniqueOwnerKey: unique('unique_owner_key').on(table.owner_id, table.key),
   })
 );
 

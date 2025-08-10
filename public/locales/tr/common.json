@@ -83,6 +83,10 @@
       "embed": "Gömme",
       "dangerZone": "Tehlike Bölgesi"
     },
+    "general": {
+      "personaVoiceBlueprint": "Kişilik ve Ses Planı",
+      "personaVoiceBlueprintDescription": "Yapay zekanın kişiliğini, iletişim tarzını ve davranış kurallarını tanımlayın (maksimum 3500 karakter)"
+    },
     "dangerZone": {
       "title": "Tehlike Bölgesi",
       "description": "Geri alınamaz ve yıkıcı işlemler",

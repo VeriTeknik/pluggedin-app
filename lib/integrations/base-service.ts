@@ -19,7 +19,9 @@ export abstract class BaseIntegrationService {
   abstract test(): Promise<IntegrationResult>;
 
   isEnabled(): boolean {
-    return this.integration.enabled && this.integration.status === 'active';
+    // If status is not set, default to checking if enabled is true
+    // Status is optional and might not be set for all integrations
+    return this.integration.enabled && (this.integration.status === 'active' || this.integration.status === undefined);
   }
 
   async handleError(error: any): Promise<IntegrationResult> {
@@ -53,65 +55,145 @@ export abstract class BaseIntegrationService {
 }
 
 export class IntegrationManager {
-  private integrations: Map<string, BaseIntegrationService> = new Map();
+  private integrations: Map<string, BaseIntegrationService>;
   private capabilities: PersonaCapability[] = [];
+  private initialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
 
   constructor(
     private personaIntegrations: PersonaIntegrations,
     capabilities: PersonaCapability[] = []
   ) {
+    // Ensure the Map is created properly
+    this.integrations = new Map<string, BaseIntegrationService>();
     this.capabilities = capabilities;
-    this.initializeIntegrations();
+    
+    console.log('IntegrationManager constructor - integrations Map created:', this.integrations instanceof Map);
+    console.log('IntegrationManager constructor - personaIntegrations:', JSON.stringify(personaIntegrations, null, 2));
+    
+    // Initialize asynchronously
+    this.initPromise = this.initializeIntegrations().then(() => {
+      this.initialized = true;
+      console.log('IntegrationManager initialization complete, services:', Array.from(this.integrations.keys()));
+    }).catch(error => {
+      console.error('Failed to initialize integrations:', error);
+      this.initialized = true; // Mark as initialized even on error to prevent hanging
+    });
   }
 
-  private initializeIntegrations(): void {
-    // Initialize calendar integration
-    if (this.personaIntegrations.calendar?.enabled) {
-      // Will be implemented with specific calendar service
-      console.log('Calendar integration initialized');
+  private async ensureInitialized(): Promise<void> {
+    if (!this.initialized && this.initPromise) {
+      await this.initPromise;
     }
+  }
 
-    // Initialize communication integrations
-    if (this.personaIntegrations.communication?.slack?.enabled) {
-      // Will be implemented with Slack service
-      console.log('Slack integration initialized');
-    }
+  private async initializeIntegrations(): Promise<void> {
+    try {
+      // Initialize calendar integration
+      if (this.personaIntegrations.calendar?.enabled) {
+        // Dynamic import to avoid circular dependency
+        const { GoogleCalendarService } = await import('./calendar/google-calendar');
+        const calendarIntegration = this.personaIntegrations.calendar;
+        const calendarService = new GoogleCalendarService(calendarIntegration);
+        this.registerService('calendar', calendarService);
+        console.log('Calendar integration initialized and registered');
+        console.log('Calendar service registered:', this.integrations.has('calendar'));
+      }
 
-    if (this.personaIntegrations.communication?.email?.enabled) {
-      // Will be implemented with email service
-      console.log('Email integration initialized');
-    }
+      // Initialize communication integrations
+      if (this.personaIntegrations.communication?.slack?.enabled) {
+        // Dynamic import to avoid circular dependency
+        const { SlackService } = await import('./communication/slack');
+        const slackIntegration = this.personaIntegrations.communication.slack;
+        const slackService = new SlackService(slackIntegration);
+        this.registerService('slack', slackService);
+        console.log('Slack integration initialized and registered');
+        console.log('Slack service registered:', this.integrations.has('slack'));
+      }
 
-    // Initialize CRM integration
-    if (this.personaIntegrations.crm?.enabled) {
-      // Will be implemented with CRM service
-      console.log('CRM integration initialized');
+      if (this.personaIntegrations.communication?.email?.enabled) {
+        // Dynamic import to avoid circular dependency
+        const { EmailService } = await import('./communication/email');
+        const emailIntegration = this.personaIntegrations.communication.email;
+        const emailService = new EmailService(emailIntegration);
+        this.registerService('email', emailService);
+        console.log('Email integration initialized and registered');
+        console.log('Email service registered:', this.integrations.has('email'));
+      }
+
+      // Initialize CRM integration
+      if (this.personaIntegrations.crm?.enabled) {
+        // Will be implemented with CRM service
+        console.log('CRM integration initialized');
+      }
+      
+      console.log('Total services registered:', this.integrations.size);
+      console.log('Registered services:', Array.from(this.integrations.keys()));
+    } catch (error) {
+      console.error('Error initializing integrations:', error);
+      throw error;
     }
   }
 
   async executeAction(action: IntegrationAction): Promise<IntegrationResult> {
-    // Find the appropriate integration based on action type
-    const capability = this.capabilities.find(cap => cap.id === action.type);
+    console.log('ExecuteAction called with:', action.type);
     
-    if (!capability || !capability.enabled) {
-      return {
-        success: false,
-        error: `Capability ${action.type} is not enabled`,
-      };
+    // Ensure integrations are initialized
+    await this.ensureInitialized();
+    
+    console.log('Available services after init:', Array.from(this.integrations.keys()));
+    console.log('integrations Map size:', this.integrations.size);
+    
+    // Try to get service directly based on action type
+    let service: BaseIntegrationService | undefined;
+    
+    // Map action types to service keys
+    const actionToServiceMap: Record<string, string> = {
+      'send_slack': 'slack',
+      'send_email': 'email',
+      'schedule_meeting': 'calendar',
+      'check_availability': 'calendar',
+      'cancel_meeting': 'calendar',
+      'update_meeting': 'calendar',
+      'create_lead': 'crm',
+      'create_ticket': 'support'
+    };
+    
+    const serviceKey = actionToServiceMap[action.type];
+    console.log('Service key for action:', serviceKey);
+    
+    if (serviceKey) {
+      service = this.integrations.get(serviceKey);
+      console.log('Service found:', !!service);
     }
+    
+    // If no direct service found, try capability-based lookup
+    if (!service) {
+      const capability = this.capabilities.find(cap => cap.id === action.type);
+      
+      if (!capability || !capability.enabled) {
+        return {
+          success: false,
+          error: `Capability ${action.type} is not enabled or configured`,
+        };
+      }
 
-    // Get the appropriate service
-    const service = this.getServiceForCapability(capability);
+      // Get the appropriate service
+      service = this.getServiceForCapability(capability) || undefined;
+    }
     
     if (!service) {
       return {
         success: false,
-        error: `No service available for capability ${action.type}`,
+        error: `No service available for action ${action.type}`,
       };
     }
 
     // Check if service is enabled
-    if (!service.isEnabled()) {
+    const isServiceEnabled = service.isEnabled();
+    console.log('Service enabled check:', isServiceEnabled);
+    
+    if (!isServiceEnabled) {
       return {
         success: false,
         error: `Service is not enabled for ${action.type}`,
@@ -119,7 +201,10 @@ export class IntegrationManager {
     }
 
     // Execute the action
-    return await service.execute(action);
+    console.log('Executing action with service:', service.constructor.name);
+    const result = await service.execute(action);
+    console.log('Service execution result:', result);
+    return result;
   }
 
   private getServiceForCapability(capability: PersonaCapability): BaseIntegrationService | null {
@@ -145,6 +230,7 @@ export class IntegrationManager {
   }
 
   async testAllIntegrations(): Promise<Record<string, IntegrationResult>> {
+    await this.ensureInitialized();
     const results: Record<string, IntegrationResult> = {};
     
     for (const [key, service] of this.integrations) {

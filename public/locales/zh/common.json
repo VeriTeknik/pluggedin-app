@@ -83,6 +83,10 @@
       "embed": "嵌入",
       "dangerZone": "危险区域"
     },
+    "general": {
+      "personaVoiceBlueprint": "人格与语音蓝图",
+      "personaVoiceBlueprintDescription": "定义 AI 的个性、沟通风格和行为准则（最多 3500 个字符）"
+    },
     "dangerZone": {
       "title": "危险区域",
       "description": "不可逆和破坏性操作",

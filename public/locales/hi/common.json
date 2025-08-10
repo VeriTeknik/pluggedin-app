@@ -83,6 +83,10 @@
       "embed": "एम्बेड",
       "dangerZone": "खतरा क्षेत्र"
     },
+    "general": {
+      "personaVoiceBlueprint": "व्यक्तित्व और आवाज़ ब्लूप्रिंट",
+      "personaVoiceBlueprintDescription": "AI की व्यक्तित्व, संचार शैली और व्यवहार दिशानिर्देशों को परिभाषित करें (अधिकतम 3500 वर्ण)"
+    },
     "dangerZone": {
       "title": "खतरा क्षेत्र",
       "description": "अपरिवर्तनीय और विनाशकारी कार्य",

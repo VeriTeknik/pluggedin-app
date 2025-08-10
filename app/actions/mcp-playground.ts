@@ -1,6 +1,8 @@
 'use server';
 
-import { and, eq } from 'drizzle-orm';
+/* eslint-disable simple-import-sort/imports */
+
+import { McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
 import { ChatAnthropic } from '@langchain/anthropic';
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
@@ -8,20 +10,20 @@ import { MemorySaver } from '@langchain/langgraph';
 import { createReactAgent } from '@langchain/langgraph/prebuilt';
 import { ChatOpenAI } from '@langchain/openai';
 import { ChatXAI } from '@langchain/xai';
-import { McpServerCleanupFn } from '@h1deya/langchain-mcp-tools';
+import { and, eq, desc } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { embeddedChatsTable, McpServerType, profilesTable, projectsTable, tokenUsageTable, chatPersonasTable } from '@/db/schema';
-import { calculateTokenCost } from '@/lib/token-pricing';
-import { wrapLLMWithTokenTracking, getSessionTokenUsage } from '@/lib/mcp/token-tracker';
+import { McpServerType, chatPersonasTable, chatMessagesTable, embeddedChatsTable, profilesTable, projectsTable, tokenUsageTable } from '@/db/schema';
 import { createEstimatedUsage } from '@/lib/mcp/token-estimator';
+import { getSessionTokenUsage, wrapLLMWithTokenTracking } from '@/lib/mcp/token-tracker';
+import { calculateTokenCost } from '@/lib/token-pricing';
 
-import { logAuditEvent } from './audit-logger'; // Correct path alias
-import { ensureLogDirectories } from './log-retention'; // Correct path alias
-import { createEnhancedMcpLogger } from './mcp-server-logger'; // Correct path alias
-import { getMcpServers } from './mcp-servers'; // Correct path alias
-import { getPlaygroundSettings } from './playground-settings'; // Add this import
-import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization'; // Import the new function
+import { logAuditEvent } from './audit-logger';
+import { ensureLogDirectories } from './log-retention';
+import { createEnhancedMcpLogger } from './mcp-server-logger';
+import { getMcpServers } from './mcp-servers';
+import { getPlaygroundSettings } from './playground-settings';
+import { progressivelyInitializeMcpServers } from './progressive-mcp-initialization';
 
 // Cache for Anthropic models with last fetch time
 interface ModelCache {
@@ -739,8 +741,10 @@ export async function getOrCreatePlaygroundSession(
       // --- End Progressive Initialization ---
 
       // Create agent with streaming callbacks using the tools that initialized successfully
+      // Bind tools to the LLM to ensure proper function-calling for some providers
+      const llmWithTools = (llm as any).bindTools ? (llm as any).bindTools(tools) : llm;
       const agent = createReactAgent({
-        llm,
+        llm: llmWithTools,
         tools, // Use the tools returned by progressive initialization
         checkpointSaver: new MemorySaver(),
         stateModifier: (state: any) => {
@@ -1376,9 +1380,50 @@ async function createIsolatedEmbeddedChatSession(
   chatUuid: string,
   profileUuid: string,
   enabledServers: any[],
-  llmConfig: any
+  llmConfig: any,
+  isAuthenticated: boolean = false
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Get complete embedded chat configuration
+    const embeddedChatData = await db.query.embeddedChatsTable.findFirst({
+      where: eq(embeddedChatsTable.uuid, chatUuid),
+      columns: {
+        // Core configuration
+        name: true,
+        description: true,
+        custom_instructions: true,
+        contact_routing: true,
+        welcome_message: true,
+        suggested_questions: true,
+        
+        // Discovery fields
+        location: true,
+        profession: true,
+        expertise: true,
+        category: true,
+        subcategory: true,
+        language: true,
+        timezone: true,
+        
+        // Enhanced discovery
+        industry: true,
+        keywords: true,
+        company_name: true,
+        company_size: true,
+        target_audience: true,
+        service_hours: true,
+        response_time: true,
+        pricing_model: true,
+        
+        // AI-optimized fields
+        semantic_tags: true,
+        use_cases: true,
+        capabilities_summary: true,
+        personality_traits: true,
+        interaction_style: true,
+      }
+    });
+    
     // Get persona data for this chat
     const personas = await db.query.chatPersonasTable.findMany({
       where: and(
@@ -1476,7 +1521,7 @@ async function createIsolatedEmbeddedChatSession(
     const llm = wrapLLMWithTokenTracking(baseLlm, `embedded_${chatUuid}`);
     
     // Create a logging function specific to this embedded chat
-    const logFunction = async (level: 'error' | 'warn' | 'info' | 'debug', message: string) => {
+    const _logFunction = async (level: 'error' | 'warn' | 'info' | 'debug', message: string) => {
       await addServerLogForProfile(`embedded_${chatUuid}`, level, message);
     };
     
@@ -1513,6 +1558,21 @@ async function createIsolatedEmbeddedChatSession(
       }
     );
     
+    // Log detailed information about MCP server initialization
+    console.log(`[EMBEDDED] MCP server initialization complete:`, {
+      totalServers: Object.keys(mcpServersConfig).length,
+      successfulTools: mcpTools.length,
+      failedServers: failedServers.length,
+      failedServerNames: failedServers,
+      toolNames: mcpTools.map(t => t.name),
+      serverConfigs: Object.keys(mcpServersConfig).map(name => ({
+        name,
+        type: mcpServersConfig[name].type,
+        hasCommand: !!mcpServersConfig[name].command,
+        hasArgs: !!mcpServersConfig[name].args
+      }))
+    });
+    
     // Log any failed servers
     if (failedServers.length > 0) {
       await addServerLogForProfile(
@@ -1530,14 +1590,39 @@ async function createIsolatedEmbeddedChatSession(
         const { createPersonaTools } = await import('@/lib/integrations/tools');
         const { IntegrationManager } = await import('@/lib/integrations/base-service');
         
-        // Create integration manager for the persona
-        const integrationManager = new IntegrationManager(activePersona.integrations as any || {}, activePersona.capabilities as any || []);
+        // Merge persona integrations with embedded chat contact routing
+        const mergedIntegrations = {
+          ...(activePersona.integrations as any || {}),
+          communication: {
+            ...(activePersona.integrations as any || {})?.communication,
+            slack: {
+              ...(activePersona.integrations as any || {})?.communication?.slack,
+              config: {
+                ...(activePersona.integrations as any || {})?.communication?.slack?.config,
+                // Override with embedded chat's default channel if specified
+                channel: (embeddedChatData?.contact_routing as any)?.slack_channel || 
+                        (activePersona.integrations as any || {})?.communication?.slack?.config?.channel
+              }
+            }
+          }
+        };
         
-        // Set up the tool context
+        // Create integration manager with merged configuration
+        const integrationManager = new IntegrationManager(mergedIntegrations, activePersona.capabilities as any || []);
+        
+        // Set up the tool context with integrations access
+        // Add integrations config without overwriting the internal integrations Map
+        (integrationManager as any).integrationsConfig = mergedIntegrations;
+        // Also expose embedded chat UUID for identity fallback in tools
+        (integrationManager as any).embeddedChatUuid = chatUuid;
+        
         const toolContext = {
-          integrationManager,
+          integrationManager: integrationManager as any,
           personaId: activePersona.id,
-          conversationId: chatUuid,
+          // Conversation ID is not known at session creation time; tools will
+          // resolve latest conversation using embeddedChatUuid when needed
+          conversationId: undefined,
+          profileUuid, // Add profile UUID for notifications
         };
         
         // Create tools based on enabled capabilities
@@ -1564,7 +1649,28 @@ async function createIsolatedEmbeddedChatSession(
     }
     
     // Combine MCP tools and persona tools
-    const allTools = [...mcpTools, ...personaTools];
+    const toolMap = new Map<string, any>();
+    
+    // Add MCP tools first (they take priority)
+    console.log(`[EMBEDDED] MCP tools (${mcpTools.length}): ${mcpTools.map(t => t.name).join(', ')}`);
+    mcpTools.forEach(tool => {
+      toolMap.set(tool.name, tool);
+    });
+    
+    // Add persona tools only if they don't conflict
+    console.log(`[EMBEDDED] Persona tools (${personaTools.length}): ${personaTools.map(t => t.name).join(', ')}`);
+    personaTools.forEach(tool => {
+      if (!toolMap.has(tool.name)) {
+        toolMap.set(tool.name, tool);
+      } else {
+        console.log(`[EMBEDDED] Skipping duplicate persona tool: ${tool.name}`);
+      }
+    });
+    
+    const allTools = Array.from(toolMap.values());
+    
+    // Log final tool list
+    console.log(`[EMBEDDED] Final tool list (${allTools.length} tools): ${allTools.map(t => t.name).join(', ')}`);
     
     // Enhanced cleanup that handles MCP servers and integration manager
     const enhancedCleanup = async () => {
@@ -1577,36 +1683,109 @@ async function createIsolatedEmbeddedChatSession(
       }
     };
     
+    // Bind tools to the LLM for proper function calling
+    const llmWithTools = llm.bindTools ? llm.bindTools(allTools) : llm;
+    
     // Create the agent with tools
     const agent = createReactAgent({
-      llm,
+      llm: llmWithTools,
       tools: allTools,
+      checkpointSaver: new MemorySaver(), // Enable conversation memory
       stateModifier: (state: any) => {
-        // Build persona-specific system message
-        let systemMessage = `You are an AI assistant specialized in helping users interact with their development environment through MCP (Model Context Protocol) servers and knowledge bases.`;
+        // Start with authentication requirements (HIGHEST PRIORITY)
+        let systemMessage = '';
         
-        // Add authentication check and user info request
-        systemMessage += `
-
-IMPORTANT: Before performing any actions that require user identification (like sending emails, creating calendar events, or creating CRM leads), you must first ask the user for their email address and name if they haven't provided it yet. This is required for proper authentication and personalization of services.
-
-If the user is not authenticated or hasn't provided their information, respond with:
-"I'd be happy to help you with that! To provide you with personalized services, could you please share your email address and name? This will allow me to properly authenticate and personalize the experience for you."
-
-Only proceed with capability tools once you have the user's email and name.`;
+        if (!isAuthenticated) {
+          systemMessage = `You are interacting with a visitor. You may execute tools. When sending external communications (Slack/email), include any available identity (from session or conversation). If not available, proceed using defaults.`;
+        }
         
-        // Add persona context if available
-        if (activePersona) {
-          systemMessage = `You are ${activePersona.name}${activePersona.role ? `, ${activePersona.role}` : ''}.
+        // Then add custom instructions if available
+        if (embeddedChatData?.custom_instructions) {
+          systemMessage += embeddedChatData.custom_instructions + '\n\n';
+        }
+        
+        // Add core identity
+        systemMessage += `YOUR IDENTITY:\n`;
+        systemMessage += `- Name: ${embeddedChatData?.name || activePersona?.name || 'AI Assistant'}\n`;
+        if (activePersona?.role) systemMessage += `- Role: ${activePersona.role}\n`;
+        if (embeddedChatData?.description) systemMessage += `- Description: ${embeddedChatData.description}\n`;
+        
+        // Add persona instructions if available
+        if (activePersona?.instructions) {
+          systemMessage += `\n${activePersona.instructions}\n`;
+        }
+        
+        // Add contact information
+        systemMessage += `\nCONTACT INFORMATION:\n`;
+        if (activePersona?.contact_email) systemMessage += `- Email: ${activePersona.contact_email}\n`;
+        if (activePersona?.contact_phone) systemMessage += `- Phone: ${activePersona.contact_phone}\n`;
+        if (activePersona?.contact_calendar_link) systemMessage += `- Calendar Link: ${activePersona.contact_calendar_link}\n`;
+        if (embeddedChatData?.response_time) systemMessage += `- Response Time: ${embeddedChatData.response_time}\n`;
+        if (embeddedChatData?.service_hours) systemMessage += `- Service Hours: ${JSON.stringify(embeddedChatData.service_hours)}\n`;
+        
+        // Add discovery information
+        systemMessage += `\nDISCOVERY INFORMATION:\n`;
+        if (embeddedChatData?.location) systemMessage += `- Location: ${embeddedChatData.location}\n`;
+        if (embeddedChatData?.profession) systemMessage += `- Profession: ${embeddedChatData.profession}\n`;
+        if (embeddedChatData?.expertise?.length) systemMessage += `- Expertise: ${embeddedChatData.expertise.join(', ')}\n`;
+        if (embeddedChatData?.category) systemMessage += `- Category: ${embeddedChatData.category}\n`;
+        if (embeddedChatData?.subcategory) systemMessage += `- Subcategory: ${embeddedChatData.subcategory}\n`;
+        if (embeddedChatData?.language) systemMessage += `- Primary Language: ${embeddedChatData.language}\n`;
+        if (embeddedChatData?.timezone) systemMessage += `- Timezone: ${embeddedChatData.timezone}\n`;
+        
+        // Add professional context
+        if (embeddedChatData?.industry || embeddedChatData?.company_name) {
+          systemMessage += `\nPROFESSIONAL CONTEXT:\n`;
+          if (embeddedChatData?.industry) systemMessage += `- Industry: ${embeddedChatData.industry}\n`;
+          if (embeddedChatData?.company_name) systemMessage += `- Company: ${embeddedChatData.company_name}\n`;
+          if (embeddedChatData?.company_size) systemMessage += `- Company Size: ${embeddedChatData.company_size}\n`;
+          if (embeddedChatData?.target_audience?.length) systemMessage += `- Target Audience: ${embeddedChatData.target_audience.join(', ')}\n`;
+          if (embeddedChatData?.keywords?.length) systemMessage += `- Keywords: ${embeddedChatData.keywords.join(', ')}\n`;
+          if (embeddedChatData?.pricing_model) systemMessage += `- Pricing Model: ${embeddedChatData.pricing_model}\n`;
+        }
+        
+        // Add AI optimization fields
+        systemMessage += `\nAI OPTIMIZATION:\n`;
+        if (embeddedChatData?.semantic_tags?.length) systemMessage += `- Semantic Tags: ${embeddedChatData.semantic_tags.join(', ')}\n`;
+        if (embeddedChatData?.use_cases?.length) systemMessage += `- Use Cases: ${embeddedChatData.use_cases.join(', ')}\n`;
+        if (embeddedChatData?.capabilities_summary) systemMessage += `- Capabilities Summary: ${embeddedChatData.capabilities_summary}\n`;
+        if (embeddedChatData?.personality_traits?.length) systemMessage += `- Personality Traits: ${embeddedChatData.personality_traits.join(', ')}\n`;
+        if (embeddedChatData?.interaction_style) systemMessage += `- Interaction Style: ${embeddedChatData.interaction_style}\n`;
+        
+        // Add conversation context
+        if (embeddedChatData?.welcome_message || embeddedChatData?.suggested_questions?.length) {
+          systemMessage += `\nCONVERSATION CONTEXT:\n`;
+          if (embeddedChatData?.welcome_message) systemMessage += `- Welcome Message: ${embeddedChatData.welcome_message}\n`;
+          if (embeddedChatData?.suggested_questions?.length) systemMessage += `- Suggested Questions: ${embeddedChatData.suggested_questions.join(', ')}\n`;
+        }
+        
+        // Add default settings
+        systemMessage += `\nDEFAULT SETTINGS:\n`;
+        if (embeddedChatData && (embeddedChatData.contact_routing as any)?.slack_channel) {
+          systemMessage += `- Default Slack Channel: ${(embeddedChatData.contact_routing as any).slack_channel}\n`;
+        }
+        if (embeddedChatData?.contact_routing) {
+          systemMessage += `- Contact Routing: ${JSON.stringify(embeddedChatData.contact_routing as any)}\n`;
+        }
+        
+        // Add authentication-dependent instructions
+        // Light-touch guidance only; tools implement identity fallback from conversation/user DB
+        if (!isAuthenticated) {
+          systemMessage += `
 
-${activePersona.instructions}`;
+If the user is not authenticated, you may still execute tools. When sending external communications (e.g., Slack), include available identity from context. If identity is not present, proceed using defaults.`;
+        } else {
+          systemMessage += `
+
+AUTHENTICATION: The user is authenticated.`;
+        }
+        
+        // Add capabilities if they exist
+        const capabilities = activePersona?.capabilities as any[] || [];
+        const enabledCapabilities = capabilities.filter(cap => cap.enabled);
           
-          // Add capabilities if they exist
-          const capabilities = activePersona.capabilities as any[] || [];
-          const enabledCapabilities = capabilities.filter(cap => cap.enabled);
-          
-          if (enabledCapabilities.length > 0) {
-            systemMessage += `
+        if (enabledCapabilities.length > 0) {
+          systemMessage += `
 
 AVAILABLE CAPABILITIES:
 You have the following capabilities enabled to assist users:
@@ -1645,26 +1824,13 @@ ${activeIntegrations.map(service => `• ${service}`).join('\n')}`;
             }
             
             systemMessage += `\n\nWhen users ask about what you can do, mention these capabilities. When they request actions that match these capabilities, acknowledge that you can help with those tasks and guide them accordingly.`;
-          }
         }
         
         // Add standard MCP context
         systemMessage += `
 
-INFORMATION SOURCES:
-• Knowledge Context: Documentation, schemas, and background information from RAG
-• MCP Tools: Real-time data access and system interactions
-• Persona Capabilities: Specialized tools for communication, scheduling, and business operations
-
-DECISION FRAMEWORK:
-1. Always check if user is authenticated/has provided email and name before using persona capabilities
-2. Use knowledge context to understand structure, relationships, and background
-3. Use MCP tools for current data, live queries, and actions
-4. Use persona capability tools for specialized tasks like sending emails, scheduling meetings, or managing business operations (only after authentication)
-5. Combine all sources when helpful - context for understanding, tools for current information, capabilities for specialized actions
-6. Always prioritize accuracy and currency of information
-
-Be transparent about which sources you use and why. When you have all sources available, use them together for the most complete and accurate response.`;
+TOOLS AND SOURCES:
+• Use MCP tools directly when needed (function calling). Do not ask the user for configuration values that already exist in persona or server config (e.g., default Slack channel).`;
         
         return [
           { role: 'system', content: systemMessage },
@@ -1737,7 +1903,19 @@ export async function getOrCreateEmbeddedChatSession(
       };
     }
     
-    // 3. Create completely new isolated session
+    // 3. Check authentication status (treat presence of user id as authenticated)
+    let isAuthenticated = false;
+    try {
+      const { getUserInfoFromAuth } = await import('@/lib/auth');
+      const userInfo = await getUserInfoFromAuth();
+      isAuthenticated = !!userInfo && !!userInfo.id; // accept authenticated even if email is missing
+      console.log('[EMBEDDED] Authentication status:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
+    } catch (error) {
+      console.log('[EMBEDDED] Authentication check failed:', error);
+      isAuthenticated = false;
+    }
+    
+    // 4. Create completely new isolated session
     console.log(`[EMBEDDED] Creating isolated session for chat ${chatUuid}`);
     
     // Get servers with ownership verification
@@ -1753,7 +1931,8 @@ export async function getOrCreateEmbeddedChatSession(
       chatUuid,
       profileUuid,
       enabledServers,
-      modelConfig
+      modelConfig,
+      isAuthenticated
     );
     
     if (!result.success) {
@@ -1789,15 +1968,21 @@ export async function executeEmbeddedChatQuery(
   
   if (!session) {
     console.log('[EMBEDDED] No session found for chat:', chatUuid);
-    console.log('[EMBEDDED] Attempting to recreate session for query execution');
+    console.log('[EMBEDDED] Sessions are cleared between API calls in serverless environment');
+    console.log('[EMBEDDED] Recreating session for query execution');
     
-    // Get the chat configuration to recreate the session
+    // Get the complete chat configuration to recreate the session
     const chatData = await db.query.embeddedChatsTable.findFirst({
       where: eq(embeddedChatsTable.uuid, chatUuid),
       with: {
         project: {
           columns: { active_profile_uuid: true }
         }
+      },
+      columns: {
+        enabled_mcp_server_uuids: true,
+        model_config: true,
+        debug_mode: true
       }
     });
     
@@ -1812,7 +1997,7 @@ export async function executeEmbeddedChatQuery(
       };
     }
     
-    // Recreate the session
+    // Recreate the session (this is expected in serverless environments)
     const result = await getOrCreateEmbeddedChatSession(
       chatUuid,
       chatData.project.active_profile_uuid,
@@ -1827,15 +2012,18 @@ export async function executeEmbeddedChatQuery(
       };
     }
     
-    // Try to get the session again
+    // Get the newly created session
     session = embeddedChatSessions.get(chatUuid);
     if (!session) {
-      console.log('[EMBEDDED] Failed to recreate session');
+      console.log('[EMBEDDED] ERROR: Session was just created but not found in Map');
+      console.log('[EMBEDDED] This indicates a critical issue with session storage');
       return {
         success: false,
-        error: 'Failed to recreate embedded chat session.'
+        error: 'Session state management error. Please try again.'
       };
     }
+    
+    console.log('[EMBEDDED] Session successfully recreated with agent and tools');
   }
   
   // Always fetch debug mode and model config to ensure we have the latest settings
@@ -1854,11 +2042,11 @@ export async function executeEmbeddedChatQuery(
   console.log('[EMBEDDED] Model config:', modelConfig);
 
   try {
-    // Check authentication status
+    // Check authentication status (treat presence of user id as authenticated)
     try {
       const { getUserInfoFromAuth } = await import('@/lib/auth');
       const userInfo = await getUserInfoFromAuth();
-      isAuthenticated = !!userInfo && !!userInfo.email;
+      isAuthenticated = !!userInfo && !!userInfo.id; // accept authenticated even if email is missing
       console.log('[EMBEDDED] Authentication status:', isAuthenticated ? 'Authenticated' : 'Not authenticated');
     } catch (error) {
       console.log('[EMBEDDED] Authentication check failed:', error);
@@ -1870,7 +2058,54 @@ export async function executeEmbeddedChatQuery(
 
     let finalQuery = query;
     
+    // Get user ID and language for memory system
+    let userId: string | null = null;
+    let userLanguage: string | undefined = undefined;
+    try {
+      const { getUserInfoFromAuth } = await import('@/lib/auth');
+      const userInfo = await getUserInfoFromAuth();
+      if (userInfo?.id) {
+        userId = userInfo.id.toString();
+        userLanguage = (userInfo as any).language || 'en';
+      }
+    } catch (error) {
+      console.log('[EMBEDDED] Could not get user info for memory system:', error);
+    }
+    
+    // Handle Memory Context Injection (if user is authenticated)
+    let memoryContext = '';
+    if (userId) {
+      try {
+        const { MemoryStore } = await import('@/lib/chat-memory/memory-store');
+        const { MemoryContextBuilder } = await import('@/lib/chat-memory/context-builder');
+        
+        const memoryStore = new MemoryStore();
+        const contextBuilder = new MemoryContextBuilder({
+          maxTokens: 300,
+          format: 'structured',
+          includeMetadata: false,
+          groupByType: true
+        });
+        
+        // Get relevant memories
+        const memories = await memoryStore.getRelevantMemories(
+          userId,
+          conversationId,
+          query,
+          10
+        );
+        
+        if (memories.length > 0) {
+          memoryContext = contextBuilder.buildCompactContext(memories, userLanguage);
+          console.log(`[EMBEDDED] Injected ${memories.length} memories into context`);
+        }
+      } catch (error) {
+        console.error('[EMBEDDED] Failed to inject memory context:', error);
+      }
+    }
+    
     // Handle RAG if enabled
+    let ragContext = '';
     if (enableRag) {
       // Get profile UUID from the session (we might need to store this)
       const profileData = await db.query.embeddedChatsTable.findFirst({
@@ -1888,12 +2123,34 @@ export async function executeEmbeddedChatQuery(
             limitedContext = limitedContext.slice(0, MAX_CONTEXT_CHARS) + '\n...[truncated]';
           }
           
-          finalQuery = `Context from knowledge base:
-${limitedContext}
-
-User question: ${query}`;
+          ragContext = `Context from knowledge base:
+${limitedContext}`;
         }
       }
+    }
+    
+    // Combine all contexts (memory + rag + last answer if relevant)
+    let combinedContext = '';
+    if (memoryContext) combinedContext += memoryContext + '\n\n';
+    if (ragContext) combinedContext += ragContext + '\n\n';
+
+    // If user likely refers to a prior result (e.g., "send the result"), append last AI answer
+    if (/send( the)? result/i.test(query)) {
+      try {
+        const lastAi = await db
+          .select({ content: chatMessagesTable.content })
+          .from(chatMessagesTable)
+          .where(and(eq(chatMessagesTable.conversation_uuid, conversationId), eq(chatMessagesTable.role, 'assistant')))
+          .orderBy(desc(chatMessagesTable.created_at))
+          .limit(1);
+        if (lastAi?.[0]?.content) {
+          combinedContext += `Previous answer to reference:\n${lastAi[0].content}\n\n`;
+        }
+      } catch {}
+    }
+
+    if (combinedContext) {
+      finalQuery = `${combinedContext}User question: ${query}`;
     }
 
     // Track streaming state and token usage
@@ -2037,6 +2294,38 @@ User question: ${query}`;
       streamingResponses.push(debugChunk);
     }
 
+    // Extract and store memories if user is authenticated
+    if (userId) {
+      try {
+        const { MemoryStore } = await import('@/lib/chat-memory/memory-store');
+        const memoryStore = new MemoryStore();
+        
+        // Get the last few messages for context
+        const messages = [
+          { role: 'user', content: query },
+          { role: 'assistant', content: currentAiMessage || 
+            (result instanceof AIMessage ? safeProcessContent(result.content) : '') }
+        ];
+        
+        // Process and store memories asynchronously (don't block the response)
+        memoryStore.processConversation(
+          conversationId,
+          userId,
+          messages,
+          userLanguage as string | undefined
+        ).then(memoryResult => {
+          if (memoryResult.conversationMemories > 0 || memoryResult.userMemories > 0) {
+            console.log(`[EMBEDDED] Stored ${memoryResult.conversationMemories} conversation memories, ${memoryResult.userMemories} user memories`);
+          }
+        }).catch(error => {
+          console.error('[EMBEDDED] Failed to process conversation memories:', error);
+        });
+        
+      } catch (error) {
+        console.error('[EMBEDDED] Failed to initialize memory extraction:', error);
+      }
+    }
+    
     // Track token usage in database if available
     if (tokenUsage && modelConfig) {
       try {
@@ -2070,7 +2359,8 @@ User question: ${query}`;
             temperature: modelConfig.temperature,
             max_tokens: modelConfig.max_tokens,
             has_rag: enableRag,
-            debug_mode: debugMode
+            debug_mode: debugMode,
+            has_memory: !!memoryContext
           }
         });
         

@@ -52,7 +52,7 @@ const generalSettingsSchema = z.object({
     .optional(),
   description: z.string().max(500).optional(),
   welcome_message: z.string().max(1000).optional(),
-  custom_instructions: z.string().max(2000).optional(),
+  custom_instructions: z.string().max(3500).optional(),
   suggested_questions: z.array(z.string().max(200)).max(5),
   enable_rag: z.boolean(),
   is_public: z.boolean(),
@@ -271,16 +271,17 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
               name="custom_instructions"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>{t('embeddedChat.general.customInstructions', 'Custom Instructions')}</FormLabel>
+                  <FormLabel>{t('embeddedChat.general.personaVoiceBlueprint', 'Persona & Voice Blueprint')}</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       placeholder="You are a helpful assistant..."
-                      rows={4}
+                      rows={6}
+                      maxLength={3500}
                     />
                   </FormControl>
                   <FormDescription>
-                    {t('embeddedChat.general.customInstructionsDescription', 'System prompt to customize the AI behavior')}
+                    {t('embeddedChat.general.personaVoiceBlueprintDescription', 'Define the AI\'s personality, communication style, and behavioral guidelines (max 3500 characters)')}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

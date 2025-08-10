@@ -32,6 +32,10 @@ export class SlackService extends BaseIntegrationService {
   }
 
   async execute(action: IntegrationAction): Promise<IntegrationResult> {
+    console.log('SlackService.execute called with action type:', action.type);
+    console.log('SlackService is enabled:', this.isEnabled());
+    console.log('SlackService webhook URL:', this.slackIntegration.config?.webhookUrl ? 'Present' : 'Missing');
+    
     try {
       if (!await this.checkRateLimit()) {
         return {
@@ -45,6 +49,7 @@ export class SlackService extends BaseIntegrationService {
       switch (action.type) {
         case 'send_slack':
         case 'notify_team':
+          console.log('Calling sendMessage with payload:', action.payload);
           result = await this.sendMessage(action.payload);
           break;
         case 'send_direct_message':
@@ -143,15 +148,38 @@ export class SlackService extends BaseIntegrationService {
   }
 
   private async sendMessage(payload: any): Promise<IntegrationResult> {
+    console.log('sendMessage called with payload:', payload);
+    
     try {
       const config = this.slackIntegration.config;
-      const { text, channel, attachments, blocks, thread_ts } = payload;
+      console.log('Config available:', !!config, 'Has webhook:', !!config?.webhookUrl, 'Has bot token:', !!config?.botToken);
+      
+      const { text, channel, attachments, blocks, thread_ts, senderInfo } = payload;
+      console.log('Extracted from payload - text:', text, 'channel:', channel);
+
+      // Build message with optional identity using Block Kit context block
+      let finalBlocks: any[] | undefined = blocks ? [...blocks] : undefined;
+      if (senderInfo?.name || senderInfo?.email) {
+        const label = senderInfo.email
+          ? `${senderInfo.name || 'User'} <${senderInfo.email}>`
+          : senderInfo.name;
+        const contextBlock = {
+          type: 'context',
+          elements: [
+            senderInfo.avatar
+              ? { type: 'image', image_url: senderInfo.avatar, alt_text: 'avatar' }
+              : undefined,
+            { type: 'mrkdwn', text: `Sent by ${label}` },
+          ].filter(Boolean),
+        } as any;
+        finalBlocks = finalBlocks ? [contextBlock, ...finalBlocks] : [contextBlock, { type: 'section', text: { type: 'mrkdwn', text } }];
+      }
 
       const message: SlackMessage = {
         text,
         channel: channel || config.channel,
         attachments,
-        blocks,
+        blocks: finalBlocks,
         thread_ts,
       };
 

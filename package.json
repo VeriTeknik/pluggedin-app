@@ -120,7 +120,8 @@
     "uuid": "^11.1.0",
     "vitest": "^3.2.4",
     "ws": "^8.18.3",
-    "zod": "^3.25.75"
+    "zod": "^3.25.75",
+    "zod-to-json-schema": "^3.24.6"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
