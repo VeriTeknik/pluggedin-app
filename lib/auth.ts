@@ -184,7 +184,9 @@ export const authOptions: NextAuthOptions = {
       }
 
       // For OAuth logins, check email
-      if (!user.email) return false;
+      if (!user.email) {
+        return false;
+      }
 
       try {
         // Check if user exists with this email
@@ -302,6 +304,28 @@ export const authOptions: NextAuthOptions = {
             console.error('Error fetching username in JWT callback (fallback):', error);
             token.username = null; // Fallback to null on error
           }
+       }
+
+       // Invalidate token if referenced user no longer exists
+       if (token.id) {
+         try {
+           const exists = await db.query.users.findFirst({
+             where: eq(users.id, token.id as string),
+             columns: { id: true },
+           });
+           if (!exists) {
+             // Remove id and related fields so session callback treats this as unauthenticated
+             delete (token as any).id;
+             token.name = null;
+             token.email = null;
+             token.picture = null;
+             token.username = null;
+             token.emailVerified = null;
+           }
+         } catch (error) {
+           // If the check fails, do not break auth flow; keep token as is
+           console.error('JWT user existence check failed:', error);
+         }
        }
 
        return token;

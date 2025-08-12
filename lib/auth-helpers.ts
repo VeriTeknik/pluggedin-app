@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { Session } from 'next-auth';
 
 import { db } from '@/db';
-import { projectsTable } from '@/db/schema';
+import { projectsTable, users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 type AuthenticatedFunction<T> = (session: Session & { user: { id: string } }) => Promise<T>;
@@ -19,6 +19,16 @@ export async function withAuth<T>(fn: AuthenticatedFunction<T>): Promise<T> {
   
   if (!session?.user?.id) {
     throw new Error('Unauthorized - you must be logged in to perform this action');
+  }
+
+  // Extra hardening: ensure the user referenced by the session still exists in DB
+  const existingUser = await db.query.users.findFirst({
+    where: (u, { eq }) => eq(u.id, session.user.id),
+    columns: { id: true },
+  });
+
+  if (!existingUser) {
+    throw new Error('Unauthorized - account no longer exists. Please sign in again.');
   }
 
   return fn(session as Session & { user: { id: string } });
