@@ -57,13 +57,14 @@ export class MemoryErrorLogger {
 
     try {
       // Store in database
+      // Store in database (skip user_id FK if it doesn't exist by using null for non-auth visitors)
       await db.insert(memoryErrorsTable).values({
         operation: errorLog.operation,
         error_type: errorLog.error_type,
         error_message: errorLog.error_message,
         stack_trace: errorLog.stack_trace,
         conversation_id: errorLog.conversation_id,
-        user_id: errorLog.user_id,
+        user_id: errorLog.user_id && errorLog.user_id.includes('visitor_') ? null : errorLog.user_id,
         metadata: errorLog.metadata,
         created_at: errorLog.created_at,
         resolved: false

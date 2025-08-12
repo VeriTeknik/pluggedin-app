@@ -23,7 +23,7 @@ export async function GET(
     const conversation = await db.query.chatConversationsTable.findFirst({
       where: and(
         eq(chatConversationsTable.uuid, conversationId),
-        eq(chatConversationsTable.uuid, uuid)
+        eq(chatConversationsTable.embedded_chat_uuid, uuid)
       )
     });
 
@@ -69,7 +69,7 @@ export async function POST(
     const conversation = await db.query.chatConversationsTable.findFirst({
       where: and(
         eq(chatConversationsTable.uuid, conversationId),
-        eq(chatConversationsTable.uuid, uuid)
+        eq(chatConversationsTable.embedded_chat_uuid, uuid)
       )
     });
 
@@ -120,7 +120,7 @@ export async function PUT(
     const conversation = await db.query.chatConversationsTable.findFirst({
       where: and(
         eq(chatConversationsTable.uuid, conversationId),
-        eq(chatConversationsTable.uuid, uuid)
+        eq(chatConversationsTable.embedded_chat_uuid, uuid)
       )
     });
 

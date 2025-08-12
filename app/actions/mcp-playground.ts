@@ -13,7 +13,7 @@ import { ChatXAI } from '@langchain/xai';
 import { and, eq, desc } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { McpServerType, chatPersonasTable, chatMessagesTable, embeddedChatsTable, profilesTable, projectsTable, tokenUsageTable } from '@/db/schema';
+import { McpServerType, chatPersonasTable, chatMessagesTable, embeddedChatsTable, profilesTable, projectsTable, tokenUsageTable, accounts, chatConversationsTable } from '@/db/schema';
 import { createEstimatedUsage } from '@/lib/mcp/token-estimator';
 import { getSessionTokenUsage, wrapLLMWithTokenTracking } from '@/lib/mcp/token-tracker';
 import { calculateTokenCost } from '@/lib/token-pricing';
@@ -1606,6 +1606,38 @@ async function createIsolatedEmbeddedChatSession(
             }
           }
         };
+
+        // Inject Google Calendar access token from project owner account if available
+        try {
+          if ((mergedIntegrations as any)?.calendar?.enabled && (mergedIntegrations as any).calendar.provider === 'google_calendar') {
+            // Find project owner for this chat
+            const chatRow = await db.query.embeddedChatsTable.findFirst({
+              where: eq(embeddedChatsTable.uuid, chatUuid),
+              columns: { project_uuid: true }
+            });
+            if (chatRow?.project_uuid) {
+              const projectRow = await db.query.projectsTable.findFirst({
+                where: eq(projectsTable.uuid, chatRow.project_uuid),
+                columns: { user_id: true }
+              });
+              if (projectRow?.user_id) {
+                const googleAccount = await db.query.accounts.findFirst({
+                  where: and(eq(accounts.userId, projectRow.user_id), eq(accounts.provider, 'google')),
+                  columns: { access_token: true, refresh_token: true }
+                } as any);
+                if (googleAccount?.access_token) {
+                  (mergedIntegrations as any).calendar.config = {
+                    ...((mergedIntegrations as any).calendar.config || {}),
+                    accessToken: googleAccount.access_token,
+                    refreshToken: googleAccount.refresh_token || undefined,
+                  };
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.log('[EMBEDDED] Failed to inject calendar tokens:', e);
+        }
         
         // Create integration manager with merged configuration
         const integrationManager = new IntegrationManager(mergedIntegrations, activePersona.capabilities as any || []);
@@ -1831,7 +1863,19 @@ ${activeIntegrations.map(service => `• ${service}`).join('\n')}`;
 
 TOOLS AND SOURCES:
 • Use MCP tools directly when needed (function calling). Do not ask the user for configuration values that already exist in persona or server config (e.g., default Slack channel).`;
-        
+
+        // Contact Playbook to drive consistent next steps
+        systemMessage += `
+
+CONTACT PLAYBOOK:
+• If the visitor mentions meeting/scheduling:
+  1) Clarify timezone, duration, attendees, and a time window.
+  2) Call check_availability to propose 2–3 concrete slots.
+  3) On confirmation, call book_calendar_meeting (include Google Meet if requested).
+• If a meeting isn’t appropriate, offer to send an email and then call send_email with a clear subject and summary.
+• Always confirm details before executing a tool, then summarize the outcome (slot, attendees, links) and offer follow‑up.
+• Never ask for defaults that exist in persona/chat config.`;
+
         return [
           { role: 'system', content: systemMessage },
           ...state.messages
@@ -2058,7 +2102,7 @@ export async function executeEmbeddedChatQuery(
 
     let finalQuery = query;
     
-    // Get user ID and language for memory system
+    // Get user ID and language for memory system (fallback to visitor_id when not authenticated)
     let userId: string | null = null;
     let userLanguage: string | undefined = undefined;
     try {
@@ -2070,6 +2114,21 @@ export async function executeEmbeddedChatQuery(
       }
     } catch (error) {
       console.log('[EMBEDDED] Could not get user info for memory system:', error);
+    }
+    // Fallback to conversation visitor_id if no authenticated user
+    if (!userId) {
+      try {
+        const conv = await db.query.chatConversationsTable.findFirst({
+          where: eq(chatConversationsTable.uuid, conversationId),
+          columns: { visitor_id: true }
+        });
+        if (conv?.visitor_id) {
+          userId = conv.visitor_id;
+          userLanguage = 'en';
+        }
+      } catch (e) {
+        console.log('[EMBEDDED] Could not resolve visitor_id for memory system:', e);
+      }
     }
     
     // Handle Memory Context Injection (if user is authenticated)

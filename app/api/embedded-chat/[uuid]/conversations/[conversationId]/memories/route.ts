@@ -7,20 +7,21 @@ import {
 } from '@/db/schema';
 import { eq, and, or, ilike, desc, sql } from 'drizzle-orm';
 import { MemoryStore } from '@/lib/chat-memory/memory-store';
+import { normalizeUserId } from '@/lib/chat-memory/id-utils';
 
-interface RouteParams {
-  params: {
+interface RouteParamsPromise {
+  params: Promise<{
     uuid: string;
     conversationId: string;
-  };
+  }>;
 }
 
 // GET /api/embedded-chat/[uuid]/conversations/[conversationId]/memories
 // Get all memories for a conversation
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(request: NextRequest, { params }: RouteParamsPromise) {
   try {
     const { searchParams } = new URL(request.url);
-    const { uuid, conversationId } = params;
+    const { uuid, conversationId } = await params;
     
     // Check if conversation exists and get user info
     const [conversation] = await db
@@ -42,6 +43,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         return NextResponse.json({ error: 'User ID not found' }, { status: 400 });
       }
     }
+    
+    // Normalize user ID for database operations
+    const normalizedUserId = normalizeUserId(userId);
     const type = searchParams.get('type'); // 'conversation' or 'user' or 'all'
     const search = searchParams.get('search');
     const factType = searchParams.get('factType');
@@ -60,7 +64,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       // Build where conditions for conversation memories
       let whereConditions = and(
         eq(conversationMemoriesTable.conversation_id, conversationId),
-        eq(conversationMemoriesTable.owner_id, userId)
+        eq(conversationMemoriesTable.owner_id, normalizedUserId)
       );
 
       if (search) {
@@ -120,7 +124,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     if (type === 'user' || type === 'all') {
       // Build where conditions for user memories
-      let whereConditions: any = eq(userMemoriesTable.owner_id, userId);
+      let whereConditions: any = eq(userMemoriesTable.owner_id, normalizedUserId);
 
       if (search) {
         whereConditions = and(
@@ -194,10 +198,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 // POST /api/embedded-chat/[uuid]/conversations/[conversationId]/memories
 // Create a new memory
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(request: NextRequest, { params }: RouteParamsPromise) {
   try {
     const { content, factType, importance = 5, confidence = 0.8, source = 'user' } = await request.json();
-    const { uuid, conversationId } = params;
+    const { uuid, conversationId } = await params;
     
     // Check if conversation exists and get user info
     const [conversation] = await db
@@ -280,10 +284,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
 // PUT /api/embedded-chat/[uuid]/conversations/[conversationId]/memories
 // Update an existing memory
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(request: NextRequest, { params }: RouteParamsPromise) {
   try {
     const { id, content, factType, importance, confidence } = await request.json();
-    const { uuid, conversationId } = params;
+    const { uuid, conversationId } = await params;
     
     if (!id) {
       return NextResponse.json(
@@ -389,11 +393,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
 // DELETE /api/embedded-chat/[uuid]/conversations/[conversationId]/memories
 // Delete a memory
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(request: NextRequest, { params }: RouteParamsPromise) {
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    const { uuid, conversationId } = params;
+    const { uuid, conversationId } = await params;
     
     if (!id) {
       return NextResponse.json(

@@ -4,7 +4,7 @@ import { z } from 'zod';
 
 import { createNotification } from '@/app/actions/notifications';
 import { db } from '@/db';
-import { chatConversationsTable, users } from '@/db/schema';
+import { chatConversationsTable, conversationTasksTable, users } from '@/db/schema';
 import { getUserInfoFromAuth } from '@/lib/auth';
 
 import { IntegrationManager } from './base-service';
@@ -100,8 +100,13 @@ export function createPersonaTools(context: ToolContext): DynamicStructuredTool[
           createdTools.add('support');
         }
         break;
+      default:
+        break;
     }
   }
+
+  // Always include a generic conversation task tool for follow-ups
+  tools.push(createConversationTaskTool(context));
 
   return tools;
 }
@@ -224,6 +229,44 @@ function createSlackMessageTool(context: ToolContext): DynamicStructuredTool {
         };
       }
     },
+  });
+}
+
+// Conversation Task Tool
+function createConversationTaskTool(context: ToolContext): DynamicStructuredTool {
+  return new DynamicStructuredTool({
+    name: 'create_conversation_task',
+    description: 'Create a follow-up task tied to the current conversation (for tracking next steps).',
+    schema: z.object({
+      title: z.string().describe('Short task title'),
+      description: z.string().optional().describe('Details of the task'),
+      priority: z.enum(['low','medium','high','urgent']).optional().describe('Priority'),
+      dueDate: z.string().optional().describe('Due date/time in ISO format')
+    }),
+    func: async ({ title, description, priority, dueDate }: { title: string; description?: string; priority?: 'low'|'medium'|'high'|'urgent'; dueDate?: string }) => {
+      try {
+        const conversationId = context.conversationId;
+        const embeddedChatUuid = (context.integrationManager as any).embeddedChatUuid as string | undefined;
+        if (!conversationId || !embeddedChatUuid) {
+          return { success: false, error: 'No conversation context available' };
+        }
+        // Direct DB insert to avoid session dependency
+        await db.insert(conversationTasksTable).values({
+          conversation_id: conversationId,
+          title: title.trim(),
+          description: description || '',
+          priority: (priority as any) || 'medium',
+          due_date: dueDate ? new Date(dueDate) : null,
+          status: 'todo',
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+        await sendToolNotification(context.profileUuid, 'Tasks', 'Create Task', true, `Task created: ${title}`, { priority: priority || 'medium' });
+        return { success: true, message: 'Task created' };
+      } catch (e) {
+        return { success: false, error: e instanceof Error ? e.message : 'Unknown error' };
+      }
+    }
   });
 }
 

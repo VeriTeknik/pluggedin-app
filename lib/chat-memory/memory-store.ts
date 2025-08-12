@@ -5,6 +5,7 @@ import { eq, and, desc, sql, inArray, or } from 'drizzle-orm';
 import { StructuredMemoryExtractor, ExtractedMemory, MemoryExtractionResult } from './structured-extractor';
 import { detectArtifacts } from './artifact-detector';
 import { memoryGate } from './memory-gate';
+import { normalizeUserId, formatUserIdForDisplay } from './id-utils';
 import {
   logMemoryDebug,
   logMemoryInfo,
@@ -50,6 +51,11 @@ export class MemoryStore {
     
     this.extractor = new StructuredMemoryExtractor(this.config.openAiApiKey);
   }
+
+  private isUuid(value: string | null | undefined): boolean {
+    if (!value) return false;
+    return /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$/.test(value);
+  }
   
   /**
    * Process and store memories from a conversation
@@ -64,10 +70,52 @@ export class MemoryStore {
     userMemories: number;
     extracted: MemoryExtractionResult;
   }> {
+    // Normalize user ID for database operations
+    const normalizedUserId = normalizeUserId(userId);
+    const displayUserId = formatUserIdForDisplay(userId);
+    
     return await withMemoryErrorLogging('storage', 'MemoryStore.processConversation', async () => {
       // Step 1: Quick artifact detection on the latest message
       const latestMessage = messages[messages.length - 1];
       const artifactResult = detectArtifacts(latestMessage.content);
+      
+      // Step 1a: Quick identity capture (e.g., "my name is ...") to ensure name is remembered
+      try {
+        const nameMatch = /\bmy\s+name\s+is\s+([^.!?\n]{1,60})/i.exec(latestMessage.content);
+        if (nameMatch && nameMatch[1]) {
+          const extractedName = nameMatch[1].trim();
+          const content = `User name is ${extractedName}`;
+          // Store at user level for all users (authenticated and visitors)
+          const existing = await db.query.userMemoriesTable.findFirst({
+            where: and(
+              eq(userMemoriesTable.owner_id, normalizedUserId as any),
+              eq(userMemoriesTable.novelty_hash, this.generateHash(content))
+            )
+          });
+          if (!existing) {
+            await db.insert(userMemoriesTable).values({
+              owner_id: normalizedUserId as any,
+              kind: 'profile',
+              value_jsonb: {
+                content,
+                factType: 'profile',
+                importance: 9,
+                confidence: 0.95,
+                temporality: 'persistent',
+                subject: 'identity',
+                entities: [{ type: 'person', name: extractedName }],
+                relatedTopics: ['name']
+              },
+              salience: 9,
+              novelty_hash: this.generateHash(content),
+              source: 'user',
+              language_code: language || 'en'
+            });
+          }
+        }
+      } catch (e) {
+        // Ignore errors for quick name capture
+      }
       
       // Step 2: Check if conversation is worth processing with the gate
       const gateDecision = await withMemoryErrorLogging('gate', 'MemoryStore.processConversation', async () => {
@@ -78,8 +126,7 @@ export class MemoryStore {
             assistantMessage: messages.find(m => m.role === 'assistant')?.content || ''
           },
           {
-            mode: 'llm',
-            anthropicApiKey: this.config.openAiApiKey
+            mode: 'embedding'
           }
         );
       }, { conversationId, userId });
@@ -90,7 +137,7 @@ export class MemoryStore {
         await logMemoryDebug('MemoryStore.processConversation', 'Conversation gated - not worth processing', {
           gateDecision,
           conversationId,
-          userId
+          userId: displayUserId
         }, conversationId, userId);
         
         return {
@@ -101,7 +148,7 @@ export class MemoryStore {
       }
       
       // Step 3: Get existing memories to check for duplicates
-      const existingMemories = await this.getRecentMemories(userId, conversationId, 50);
+      const existingMemories = await this.getRecentMemories(normalizedUserId, conversationId, 50);
       
       // Step 4: Extract structured memories
       const extracted = await withMemoryErrorLogging('extraction', 'MemoryStore.processConversation', async () => {
@@ -142,7 +189,7 @@ export class MemoryStore {
       const conversationMemories = await withMemoryErrorLogging('storage', 'MemoryStore.processConversation', async () => {
         return await this.storeConversationMemories(
           conversationId,
-          userId,
+          normalizedUserId,
           memoriesWithSalience,
           extracted
         );
@@ -151,14 +198,14 @@ export class MemoryStore {
       // Step 7: Promote important memories to user level
       const userMemories = await withMemoryErrorLogging('storage', 'MemoryStore.processConversation', async () => {
         return await this.promoteToUserMemories(
-          userId,
+          normalizedUserId,
           memoriesWithSalience.filter(m => m.importance >= 7)
         );
       }, { conversationId, userId });
       
       await logMemoryInfo('MemoryStore.processConversation', 'Successfully processed conversation memories', {
         conversationId,
-        userId,
+        userId: displayUserId,
         extractedCount: extracted.memories.length,
         conversationMemories: conversationMemories.length,
         userMemories: userMemories.length
@@ -318,6 +365,9 @@ export class MemoryStore {
     currentMessage: string,
     maxMemories: number = 15
   ): Promise<StoredMemory[]> {
+    // Normalize user ID for database operations
+    const normalizedUserId = normalizeUserId(userId);
+    
     return await withMemoryErrorLogging('injection', 'MemoryStore.getRelevantMemories', async (): Promise<StoredMemory[]> => {
       // Get recent conversation memories
       const conversationMemories = await db.query.conversationMemoriesTable.findMany({
@@ -328,7 +378,7 @@ export class MemoryStore {
       
       // Get important user memories
       const userMemories = await db.query.userMemoriesTable.findMany({
-        where: eq(userMemoriesTable.owner_id, userId),
+        where: eq(userMemoriesTable.owner_id, normalizedUserId as any),
         orderBy: [desc(userMemoriesTable.salience)],
         limit: Math.floor(maxMemories * 0.4) // 40% from user level
       });

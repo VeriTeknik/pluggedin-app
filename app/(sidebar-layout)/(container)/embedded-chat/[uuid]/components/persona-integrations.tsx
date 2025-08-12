@@ -287,10 +287,17 @@ export function PersonaIntegrations({
                   checked={localIntegrations.calendar?.enabled || false}
                   onCheckedChange={(checked) => {
                     updateIntegration('calendar.enabled', checked);
-                    // Set default provider when enabling
                     if (checked && !localIntegrations.calendar?.provider) {
                       updateIntegration('calendar.provider', 'google_calendar');
                     }
+                    // Auto-enable calendar capabilities
+                    const caps = localCapabilities.map(c =>
+                      ['schedule_meeting', 'check_availability'].includes(c.id)
+                        ? { ...c, enabled: checked || c.enabled }
+                        : c
+                    );
+                    setLocalCapabilities(caps);
+                    onUpdate(localIntegrations, caps);
                   }}
                   disabled={disabled}
                 />
@@ -490,9 +497,15 @@ export function PersonaIntegrations({
                     <Label>{t('embeddedChat.integrations.enableSlack', 'Enable Slack')}</Label>
                     <Switch
                       checked={localIntegrations.communication?.slack?.enabled || false}
-                      onCheckedChange={(checked) => 
-                        updateIntegration('communication.slack.enabled', checked)
-                      }
+                      onCheckedChange={(checked) => {
+                        updateIntegration('communication.slack.enabled', checked);
+                        // Auto-enable Slack capability
+                        const caps = localCapabilities.map(c =>
+                          c.id === 'send_slack' ? { ...c, enabled: checked || c.enabled } : c
+                        );
+                        setLocalCapabilities(caps);
+                        onUpdate(localIntegrations, caps);
+                      }}
                       disabled={disabled}
                     />
                   </div>
@@ -563,9 +576,15 @@ export function PersonaIntegrations({
                     <Label>{t('embeddedChat.integrations.enableEmail', 'Enable Email')}</Label>
                     <Switch
                       checked={localIntegrations.communication?.email?.enabled || false}
-                      onCheckedChange={(checked) => 
-                        updateIntegration('communication.email.enabled', checked)
-                      }
+                      onCheckedChange={(checked) => {
+                        updateIntegration('communication.email.enabled', checked);
+                        // Auto-enable Email capability
+                        const caps = localCapabilities.map(c =>
+                          c.id === 'send_email' ? { ...c, enabled: checked || c.enabled } : c
+                        );
+                        setLocalCapabilities(caps);
+                        onUpdate(localIntegrations, caps);
+                      }}
                       disabled={disabled}
                     />
                   </div>

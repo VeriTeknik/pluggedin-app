@@ -267,11 +267,11 @@ export async function memoryGate(
   }
   
   // Route to appropriate gate implementation
-  if (fullConfig.mode === 'llm') {
+  // If LLM key is missing, gracefully fall back to embedding gate
+  if (fullConfig.mode === 'llm' && fullConfig.anthropicApiKey) {
     return llmGate(context, fullConfig);
-  } else {
-    return embeddingGate(context, fullConfig);
   }
+  return embeddingGate(context, fullConfig);
 }
 
 /**
