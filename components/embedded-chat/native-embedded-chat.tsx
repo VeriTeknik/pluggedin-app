@@ -1,7 +1,7 @@
 'use client';
 
-import { Bot, Briefcase, Calendar, Code, Database, FileSearch, Globe, Loader2, Mail, MessageSquare, Send, Server, Shield, Sparkles, Terminal, X } from 'lucide-react';
-import { useEffect, useRef,useState } from 'react';
+import { BarChart3, Bot, Brain, Briefcase, Calendar, CheckSquare, Code, Database, FileSearch, Globe, Loader2, Mail, MessageSquare, Send, Server, Shield, Sparkles, Terminal, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,6 +16,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { cn } from '@/lib/utils';
 import { formatVisitorName,getOrCreateVisitorId } from '@/lib/visitor-utils';
+import { MemoryList, TaskManager, MemoryDashboard } from '@/components/memory';
 
 // Helper to ensure absolute URLs for API calls
 function getApiUrl(path: string) {
@@ -136,6 +137,11 @@ export function NativeEmbeddedChat({
   const [visitorId, setVisitorId] = useState<string>('');
   const [chatConfig, setChatConfig] = useState<ChatConfig | null>(null);
   const [configLoading, setConfigLoading] = useState(true);
+  const [showMemories, setShowMemories] = useState(false);
+  const [showTasks, setShowTasks] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
+  const [memories, setMemories] = useState<any[]>([]);
+  const [memoriesLoading, setMemoriesLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -204,6 +210,30 @@ export function NativeEmbeddedChat({
       }
     };
   }, [conversationId, isOpen, chatUuid]);
+
+  // Fetch memories when conversationId changes or when showMemories is toggled
+  useEffect(() => {
+    const fetchMemories = async () => {
+      if (!conversationId || !showMemories) return;
+      
+      setMemoriesLoading(true);
+      try {
+        const response = await fetch(getApiUrl(`/api/embedded-chat/${chatUuid}/conversations/${conversationId}/memories`));
+        if (response.ok) {
+          const data = await response.json();
+          setMemories(data.memories || []);
+        } else {
+          console.error('Failed to fetch memories:', response.status);
+        }
+      } catch (error) {
+        console.error('Error fetching memories:', error);
+      } finally {
+        setMemoriesLoading(false);
+      }
+    };
+
+    fetchMemories();
+  }, [conversationId, showMemories, chatUuid]);
 
   // End conversation when closing
   const handleClose = async () => {
@@ -401,6 +431,50 @@ export function NativeEmbeddedChat({
     }
   };
 
+  // Memory handlers
+  const handleMemoryDelete = async (memoryId: string) => {
+    if (!conversationId) return;
+    
+    try {
+      const response = await fetch(getApiUrl(`/api/embedded-chat/${chatUuid}/conversations/${conversationId}/memories/${memoryId}`), {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        // Remove the memory from the local state
+        setMemories(prev => prev.filter(memory => memory.id !== memoryId));
+      } else {
+        console.error('Failed to delete memory:', response.status);
+      }
+    } catch (error) {
+      console.error('Error deleting memory:', error);
+    }
+  };
+
+  const handleMemoryEdit = async (memoryId: string, updatedMemory: any) => {
+    if (!conversationId) return;
+    
+    try {
+      const response = await fetch(getApiUrl(`/api/embedded-chat/${chatUuid}/conversations/${conversationId}/memories/${memoryId}`), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedMemory),
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Update the memory in the local state
+        setMemories(prev => prev.map(memory =>
+          memory.id === memoryId ? data.memory : memory
+        ));
+      } else {
+        console.error('Failed to update memory:', response.status);
+      }
+    } catch (error) {
+      console.error('Error updating memory:', error);
+    }
+  };
+
   const renderAvatar = (message: Message) => {
     if (message.role === 'assistant') {
       const avatarUrl = chatConfig?.default_persona?.avatar_url || chatConfig?.bot_avatar_url;
@@ -452,6 +526,7 @@ export function NativeEmbeddedChat({
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-4 right-4 w-14 h-14 bg-gradient-to-br from-purple-600 to-blue-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center"
+        title="Open chat"
       >
         <svg
           className="w-6 h-6"
@@ -475,15 +550,15 @@ export function NativeEmbeddedChat({
       <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 bg-gradient-to-r from-purple-600 to-blue-600 text-white">
         <div className="flex items-center space-x-2">
           {chatConfig?.bot_avatar_url ? (
-            <img 
-              src={chatConfig.bot_avatar_url} 
-              alt={chatConfig.name || 'AI Assistant'} 
+            <img
+              src={chatConfig.bot_avatar_url}
+              alt={chatConfig.name || 'AI Assistant'}
               className="w-8 h-8 rounded-full object-cover border-2 border-white/30"
               onError={(e) => {
                 // Fallback to default icon on error
                 const target = e.target as HTMLImageElement;
                 target.style.display = 'none';
-                target.parentElement?.insertAdjacentHTML('afterend', 
+                target.parentElement?.insertAdjacentHTML('afterend',
                   '<div class="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-4l-4 4z"/></svg></div>'
                 );
               }}
@@ -513,14 +588,72 @@ export function NativeEmbeddedChat({
             <Shield className="w-4 h-4 ml-2" title="Authenticated user" />
           )}
         </div>
-        {position === 'fixed' && (
-          <button
-            onClick={handleClose}
-            className="text-white/80 hover:text-white transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
+        <div className="flex items-center space-x-2">
+          {conversationId && (
+            <>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowMemories(!showMemories)}
+                      className="text-white/80 hover:text-white hover:bg-white/10"
+                    >
+                      <Brain className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>View conversation memories</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowTasks(!showTasks)}
+                      className="text-white/80 hover:text-white hover:bg-white/10"
+                    >
+                      <CheckSquare className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Manage tasks</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowDashboard(!showDashboard)}
+                      className="text-white/80 hover:text-white hover:bg-white/10"
+                    >
+                      <BarChart3 className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Memory dashboard</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </>
+          )}
+          {position === 'fixed' && (
+            <button
+              onClick={handleClose}
+              className="text-white/80 hover:text-white transition-colors"
+              aria-label="Close chat"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+        </div>
       </div>
 
       <ScrollArea className="flex-1 p-4 bg-white dark:bg-gray-800">
@@ -716,6 +849,91 @@ export function NativeEmbeddedChat({
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
+
+      {/* Memory Panel */}
+      {showMemories && conversationId && (
+        <div className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Brain className="w-4 h-4" />
+              Conversation Memories
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowMemories(false)}
+              className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+          <div className="max-h-60 overflow-y-auto">
+            <MemoryList
+              memories={memories}
+              className="bg-white dark:bg-gray-800 rounded-lg"
+              isLoading={memoriesLoading}
+              emptyMessage="No memories found for this conversation."
+              onMemoryDelete={handleMemoryDelete}
+              onMemoryEdit={handleMemoryEdit}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Task Panel */}
+      {showTasks && conversationId && (
+        <div className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <CheckSquare className="w-4 h-4" />
+              Task Manager
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowTasks(false)}
+              className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+          <div className="max-h-96 overflow-y-auto">
+            <TaskManager
+              chatUuid={chatUuid}
+              conversationId={conversationId}
+              memories={memories}
+              className="bg-white dark:bg-gray-800 rounded-lg"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Memory Dashboard */}
+      {showDashboard && conversationId && (
+        <div className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <BarChart3 className="w-4 h-4" />
+              Memory Dashboard
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowDashboard(false)}
+              className="h-6 w-6 p-0 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+            >
+              <X className="w-3 h-3" />
+            </Button>
+          </div>
+          <div className="max-h-96 overflow-y-auto">
+            <MemoryDashboard
+              chatUuid={chatUuid}
+              conversationId={conversationId}
+              className="bg-white dark:bg-gray-800 rounded-lg"
+            />
+          </div>
+        </div>
+      )}
 
       <div className="p-4 border-t dark:border-gray-700">
         {/* Show suggested questions if available and conversation just started */}

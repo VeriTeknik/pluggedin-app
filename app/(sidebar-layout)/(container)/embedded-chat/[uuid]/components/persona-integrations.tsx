@@ -5,13 +5,11 @@ import {
   Calendar, 
   Check,
   ChevronRight,
-  Globe,
   Link2,
   Mail, 
   MessageSquare,
   Shield,
   TestTube} from 'lucide-react';
-import { signIn } from 'next-auth/react';
 import { useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -60,7 +58,43 @@ export function PersonaIntegrations({
     if (personaId) {
       checkConnectionStatus();
     }
-  }, [personaId]);
+    
+    // Check for success message from OAuth callback
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('calendar_connected') === 'true') {
+      toast({
+        title: t('common.success'),
+        description: t('embeddedChat.integrations.calendarConnected', 'Google Calendar connected successfully'),
+      });
+      // Remove the query parameter from URL
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+
+    // Listen for popup OAuth completion (postMessage)
+    const handleMessage = (event: MessageEvent) => {
+      // Only accept messages from same origin
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as any;
+      if (data && data.source === 'pluggedin' && data.type === 'google-calendar-oauth-complete') {
+        if (data.success) {
+          toast({
+            title: t('common.success'),
+            description: t('embeddedChat.integrations.calendarConnected', 'Google Calendar connected successfully'),
+          });
+          checkConnectionStatus();
+        } else {
+          toast({
+            title: t('common.error'),
+            description: t('embeddedChat.integrations.disconnectFailed', 'Failed to connect Google Calendar'),
+            variant: 'destructive',
+          });
+        }
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [personaId, toast, t]);
 
   const checkConnectionStatus = async () => {
     if (!personaId) return;
@@ -78,10 +112,58 @@ export function PersonaIntegrations({
   };
 
   const connectGoogleCalendar = async () => {
-    // This will redirect to Google OAuth with calendar scope
-    await signIn('google', { 
-      callbackUrl: window.location.href,
+    // Extract chat UUID and persona ID from current URL
+    const pathParts = window.location.pathname.split('/');
+    const chatUuid = pathParts[2]; // embedded-chat/[uuid]
+    
+    // Build the authorization URL with parameters
+    const params = new URLSearchParams({
+      redirect: window.location.pathname,
+      personaId: personaId?.toString() || '',
+      chatUuid: chatUuid || '',
+      popup: '1',
     });
+    const authUrl = `/api/auth/google-calendar/authorize?${params.toString()}`;
+
+    // Open popup; if blocked, fall back to redirect
+    const popup = window.open(
+      authUrl,
+      'google_calendar_oauth',
+      'width=520,height=640,menubar=no,toolbar=no,location=no,status=no'
+    );
+    if (!popup || popup.closed) {
+      // Fallback to full redirect
+      window.location.href = authUrl;
+    }
+  };
+
+  const disconnectGoogleCalendar = async () => {
+    try {
+      const response = await fetch('/api/auth/google-calendar/disconnect', {
+        method: 'POST',
+      });
+      
+      if (response.ok) {
+        toast({
+          title: t('common.success'),
+          description: t('embeddedChat.integrations.googleDisconnected', 'Google account disconnected. You can now reconnect with calendar permissions.'),
+        });
+        // Refresh the connection status
+        checkConnectionStatus();
+      } else {
+        toast({
+          title: t('common.error'),
+          description: t('embeddedChat.integrations.disconnectFailed', 'Failed to disconnect Google account'),
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: t('common.error'),
+        description: t('embeddedChat.integrations.disconnectError', 'Error disconnecting Google account'),
+        variant: 'destructive',
+      });
+    }
   };
 
   const toggleSection = (section: string) => {
@@ -203,9 +285,13 @@ export function PersonaIntegrations({
                 <Label>{t('embeddedChat.integrations.enable', 'Enable Calendar')}</Label>
                 <Switch
                   checked={localIntegrations.calendar?.enabled || false}
-                  onCheckedChange={(checked) => 
-                    updateIntegration('calendar.enabled', checked)
-                  }
+                  onCheckedChange={(checked) => {
+                    updateIntegration('calendar.enabled', checked);
+                    // Set default provider when enabling
+                    if (checked && !localIntegrations.calendar?.provider) {
+                      updateIntegration('calendar.provider', 'google_calendar');
+                    }
+                  }}
                   disabled={disabled}
                 />
               </div>
@@ -231,10 +317,13 @@ export function PersonaIntegrations({
                       </SelectContent>
                     </Select>
                   </div>
+                </>
+              )}
 
-                  {localIntegrations.calendar?.provider === 'google_calendar' && (
+              {/* Show Google Calendar connection status regardless of enabled state */}
+              {(localIntegrations.calendar?.provider || 'google_calendar') === 'google_calendar' && (
                     <>
-                      {connectionStatus.googleCalendar?.connected ? (
+                      {connectionStatus.googleCalendar?.connected && connectionStatus.googleCalendar?.hasRequiredScopes ? (
                         <div className="space-y-4">
                           <div className="flex items-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                             <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
@@ -264,37 +353,76 @@ export function PersonaIntegrations({
                             onClick={connectGoogleCalendar}
                           >
                             <Link2 className="h-4 w-4 mr-2" />
-                            {t('embeddedChat.integrations.reconnect', 'Reconnect Google Account')}
+                            {t('embeddedChat.integrations.reconnectCalendar', 'Reconnect Google Calendar')}
                           </Button>
+                        </div>
+                      ) : connectionStatus.googleCalendar?.connected && !connectionStatus.googleCalendar?.hasRequiredScopes ? (
+                        <div className="space-y-4">
+                          <div className="p-4 border-2 border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                            <p className="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+                              {t('embeddedChat.integrations.insufficientPermissions', 'Google account is connected but lacks calendar permissions. Please disconnect and reconnect to grant the required permissions.')}
+                            </p>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={disconnectGoogleCalendar}
+                                disabled={disabled}
+                              >
+                                {t('embeddedChat.integrations.disconnect', 'Disconnect Google')}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={connectGoogleCalendar}
+                                disabled={disabled}
+                              >
+                                <Calendar className="h-4 w-4 mr-2" />
+                                {t('embeddedChat.integrations.grantPermissions', 'Grant Calendar Permissions')}
+                              </Button>
+                            </div>
+                          </div>
+                          
+                          {connectionStatus.googleCalendar?.missingScopes && connectionStatus.googleCalendar.missingScopes.length > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              <p>{t('embeddedChat.integrations.missingScopes', 'Missing permissions:')}</p>
+                              <ul className="list-disc list-inside mt-1">
+                                {connectionStatus.googleCalendar.missingScopes.map((scope: string) => (
+                                  <li key={scope}>{scope.replace('.', ' ').replace('calendar ', 'Calendar: ')}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <div className="space-y-4">
                           <div className="p-4 border-2 border-dashed rounded-lg">
                             <p className="text-sm text-muted-foreground mb-3">
-                              {t('embeddedChat.integrations.googleNotConnected', 'Connect your Google account to enable calendar integration')}
+                              {t('embeddedChat.integrations.googleCalendarNotConnected', 'Grant calendar permissions to enable meeting scheduling')}
                             </p>
                             <Button
                               onClick={connectGoogleCalendar}
                               disabled={disabled}
                             >
-                              <Globe className="h-4 w-4 mr-2" />
-                              {t('embeddedChat.integrations.connectGoogle', 'Connect Google Account')}
+                              <Calendar className="h-4 w-4 mr-2" />
+                              {t('embeddedChat.integrations.connectGoogleCalendar', 'Connect Google Calendar')}
                             </Button>
                           </div>
                           
                           <div className="text-xs text-muted-foreground">
-                            <p>{t('embeddedChat.integrations.googlePermissions', 'This will request permission to:')}</p>
+                            <p>{t('embeddedChat.integrations.calendarPermissions', 'This will request permission to:')}</p>
                             <ul className="list-disc list-inside mt-1">
-                              <li>{t('embeddedChat.integrations.permissionCalendar', 'View and manage your calendars')}</li>
-                              <li>{t('embeddedChat.integrations.permissionEvents', 'Create and modify events')}</li>
+                              <li>{t('embeddedChat.integrations.permissionAppCreated', 'Create a dedicated calendar for this app')}</li>
+                              <li>{t('embeddedChat.integrations.permissionCalendarList', 'View your calendar list')}</li>
+                              <li>{t('embeddedChat.integrations.permissionFreeBusy', 'Check free/busy availability')}</li>
                             </ul>
                           </div>
                         </div>
                       )}
                     </>
-                  )}
+              )}
 
-                  {localIntegrations.calendar?.provider === 'calendly' && (
+              {localIntegrations.calendar?.enabled && localIntegrations.calendar?.provider === 'calendly' && (
                     <div>
                       <Label>{t('embeddedChat.integrations.webhookUrl', 'Webhook URL')}</Label>
                       <Input
@@ -307,10 +435,11 @@ export function PersonaIntegrations({
                         disabled={disabled}
                       />
                     </div>
-                  )}
+              )}
 
-                  {((localIntegrations.calendar?.provider === 'google_calendar' && connectionStatus.googleCalendar?.connected) ||
-                    localIntegrations.calendar?.provider !== 'google_calendar') && (
+              {localIntegrations.calendar?.enabled && 
+                ((localIntegrations.calendar?.provider === 'google_calendar' && connectionStatus.googleCalendar?.connected) ||
+                  localIntegrations.calendar?.provider !== 'google_calendar') && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -320,8 +449,6 @@ export function PersonaIntegrations({
                       <TestTube className="h-4 w-4 mr-2" />
                       {t('embeddedChat.integrations.test', 'Test Connection')}
                     </Button>
-                  )}
-                </>
               )}
             </CardContent>
           </Card>

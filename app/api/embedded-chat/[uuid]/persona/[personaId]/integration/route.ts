@@ -69,7 +69,12 @@ export async function POST(
             return NextResponse.json({ error: 'Calendar integration not configured' }, { status: 400 });
           }
 
-          if (integrations.calendar.provider === 'google_calendar') {
+          // Default to google_calendar if no provider is set
+          const provider = integrations.calendar.provider || 'google_calendar';
+          console.log('[INTEGRATION] Calendar provider:', provider);
+          console.log('[INTEGRATION] Calendar config:', integrations.calendar);
+
+          if (provider === 'google_calendar') {
             const googleAccount = await db.query.accounts.findFirst({
               where: and(
                 eq(accounts.userId, session.user.id),
@@ -77,10 +82,34 @@ export async function POST(
               ),
             });
 
+            console.log('[INTEGRATION] Google account found:', {
+              hasAccount: !!googleAccount,
+              hasAccessToken: !!googleAccount?.access_token,
+              scopes: googleAccount?.scope
+            });
+
             if (!googleAccount || !googleAccount.access_token) {
               return NextResponse.json({
                 success: false,
-                error: 'Google account not connected with calendar permissions',
+                error: 'Google Calendar not connected. Please click "Connect Google Calendar" to grant calendar permissions.',
+              });
+            }
+            
+            // Check if we have the required calendar scopes for testing
+            const requiredScopes = ['calendar.app.created', 'calendarlist.readonly', 'calendar.freebusy'];
+            const currentScopes = googleAccount.scope || '';
+            const hasRequiredScopes = requiredScopes.every(scope => currentScopes.includes(scope));
+            
+            if (!hasRequiredScopes) {
+              const missingScopes = requiredScopes.filter(scope => !currentScopes.includes(scope));
+              return NextResponse.json({
+                success: false,
+                error: 'Google account is connected but lacks calendar permissions. Please disconnect and reconnect to grant calendar access.',
+                details: {
+                  currentScopes: currentScopes.split(' '),
+                  missingScopes,
+                  message: 'Use the "Disconnect Google" button and then "Connect Google Calendar" to grant the required permissions.'
+                }
               });
             }
 
@@ -96,7 +125,12 @@ export async function POST(
             const result = await calendarService.test();
             return NextResponse.json(result);
           }
-          break;
+          
+          // Handle other calendar providers (should not reach here with default)
+          return NextResponse.json({ 
+            success: false, 
+            error: `Test connection not implemented for ${provider} provider. Only Google Calendar testing is currently supported.`
+          });
         }
 
         case 'slack': {
@@ -212,8 +246,15 @@ export async function POST(
 
           // Check for required least-privilege scopes
           const requiredScopes = ['calendar.app.created', 'calendarlist.readonly', 'calendar.freebusy'];
+          const currentScopes = googleAccount.scope || '';
+          
+          console.log('[INTEGRATION] Checking scopes for calendar action:', {
+            currentScopes,
+            requiredScopes
+          });
+          
           const missingScopes = requiredScopes.filter(scope =>
-            !googleAccount.scope?.includes(scope)
+            !currentScopes.includes(scope)
           );
 
           if (missingScopes.length > 0) {
@@ -224,6 +265,7 @@ export async function POST(
                 details: {
                   missingScopes,
                   requiredScopes,
+                  currentScopes,
                   message: 'The dedicated calendar approach requires these specific scopes for security and privacy.'
                 }
               },
@@ -322,8 +364,11 @@ export async function GET(
     const integrations = (persona.integrations as PersonaIntegrations) || {};
     const status: any = {};
 
-    // Check Google Calendar status
-    if (integrations.calendar?.enabled && integrations.calendar.provider === 'google_calendar') {
+    // Check Google Calendar status regardless of whether the calendar integration is enabled.
+    // Connection lives at the user Google account level, so the UI should reflect it even if
+    // the persona's calendar toggle is off.
+    const calendarProvider = integrations.calendar?.provider || 'google_calendar';
+    if (calendarProvider === 'google_calendar') {
       const googleAccount = await db.query.accounts.findFirst({
         where: and(
           eq(accounts.userId, session.user.id),
@@ -331,18 +376,27 @@ export async function GET(
         ),
       });
 
-      // Check for the new least-privilege scopes required for dedicated calendar approach
+      // Required least-privilege scopes for the dedicated calendar approach
       const requiredScopes = ['calendar.app.created', 'calendarlist.readonly', 'calendar.freebusy'];
       const hasRequiredScopes = requiredScopes.every(scope =>
         googleAccount?.scope?.includes(scope)
       );
-      
+
+      console.log('[INTEGRATION STATUS] Google Calendar check:', {
+        hasAccount: !!googleAccount,
+        hasAccessToken: !!googleAccount?.access_token,
+        currentScopes: googleAccount?.scope,
+        hasRequiredScopes,
+        requiredScopes,
+      });
+
       status.googleCalendar = {
         connected: !!googleAccount?.access_token,
         hasRequiredScopes,
-        missingScopes: hasRequiredScopes ? [] : requiredScopes.filter(scope =>
-          !googleAccount?.scope?.includes(scope)
-        ),
+        missingScopes: hasRequiredScopes
+          ? []
+          : requiredScopes.filter(scope => !googleAccount?.scope?.includes(scope)),
+        currentScopes: googleAccount?.scope,
         // Legacy check for backward compatibility
         hasLegacyCalendarScope: googleAccount?.scope?.includes('calendar') || false,
       };

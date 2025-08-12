@@ -1897,6 +1897,32 @@ export const userMemoriesTable = pgTable(
   })
 );
 
+// ===== Memory Errors Table =====
+export const memoryErrorsTable = pgTable(
+  'memory_errors',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    operation: varchar('operation', { length: 50 }).notNull(),
+    error_type: varchar('error_type', { length: 50 }).notNull(),
+    error_message: text('error_message').notNull(),
+    stack_trace: text('stack_trace'),
+    conversation_id: uuid('conversation_id').references(() => chatConversationsTable.uuid),
+    user_id: text('user_id').references(() => users.id),
+    metadata: jsonb('metadata').default(sql`'{}'::jsonb`),
+    resolved: boolean('resolved').default(false),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    resolved_at: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (table) => ({
+    memoryErrorsOperationIdx: index('idx_memory_errors_operation').on(table.operation),
+    memoryErrorsTypeIdx: index('idx_memory_errors_type').on(table.error_type),
+    memoryErrorsConversationIdx: index('idx_memory_errors_conversation').on(table.conversation_id),
+    memoryErrorsUserIdx: index('idx_memory_errors_user').on(table.user_id),
+    memoryErrorsResolvedIdx: index('idx_memory_errors_resolved').on(table.resolved),
+    memoryErrorsCreatedIdx: index('idx_memory_errors_created').on(table.created_at),
+  })
+);
+
 // ===== Token Usage Table =====
 export const tokenUsageTable = pgTable(
   'token_usage',
@@ -2071,6 +2097,49 @@ export const tokenUsageRelations = relations(tokenUsageTable, ({ one }) => ({
   message: one(chatMessagesTable, {
     fields: [tokenUsageTable.message_id],
     references: [chatMessagesTable.id],
+  }),
+}));
+
+// ===== Conversation Tasks Table =====
+export const conversationTasksTable = pgTable(
+  'conversation_tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    conversation_id: uuid('conversation_id')
+      .notNull()
+      .references(() => chatConversationsTable.uuid, { onDelete: 'cascade' }),
+    title: text('title').notNull(),
+    description: text('description').default(''),
+    priority: varchar('priority', { length: 20 })
+      .notNull()
+      .default('medium')
+      .$type<'low' | 'medium' | 'high' | 'urgent'>(),
+    due_date: timestamp('due_date', { withTimezone: true }),
+    memory_id: uuid('memory_id').references(() => conversationMemoriesTable.id),
+    status: varchar('status', { length: 20 })
+      .notNull()
+      .default('todo')
+      .$type<'todo' | 'in_progress' | 'completed'>(),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    tasksConversationIdx: index('idx_conversation_tasks_conversation').on(table.conversation_id),
+    tasksStatusIdx: index('idx_conversation_tasks_status').on(table.status),
+    tasksPriorityIdx: index('idx_conversation_tasks_priority').on(table.priority),
+    tasksDueDateIdx: index('idx_conversation_tasks_due_date').on(table.due_date),
+    tasksMemoryIdx: index('idx_conversation_tasks_memory').on(table.memory_id),
+  })
+);
+
+export const conversationTasksRelations = relations(conversationTasksTable, ({ one }) => ({
+  conversation: one(chatConversationsTable, {
+    fields: [conversationTasksTable.conversation_id],
+    references: [chatConversationsTable.uuid],
+  }),
+  memory: one(conversationMemoriesTable, {
+    fields: [conversationTasksTable.memory_id],
+    references: [conversationMemoriesTable.id],
   }),
 }));
 

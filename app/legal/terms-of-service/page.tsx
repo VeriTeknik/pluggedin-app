@@ -11,12 +11,13 @@ export default function TermsOfServicePage() {
   const responsibilityItems = t('legal.pages.terms.content.responsibilities.items', { returnObjects: true }) as string[];
   const accountItems = t('legal.pages.terms.content.account.items', { returnObjects: true }) as string[];
   const mcpItems = t('legal.pages.terms.content.mcp.items', { returnObjects: true }) as string[];
+  const embeddedChatItems = t('legal.pages.terms.content.embeddedChat.items', { returnObjects: true }) as string[];
   
   return (
     <LegalDoc 
       title={t('legal.pages.terms.title')}
       description={t('legal.pages.terms.description')}
-      lastUpdated="26 March 2024"
+      lastUpdated="February 11, 2025"
     >
       <h2>{t('legal.pages.terms.content.intro')}</h2>
       <p>{t('legal.pages.terms.content.intro')}</p>
@@ -47,6 +48,15 @@ export default function TermsOfServicePage() {
           <li key={index}>{item}</li>
         ))}
       </ul>
+
+      <h2>{t('legal.pages.terms.content.embeddedChat.title')}</h2>
+      <p>{t('legal.pages.terms.content.embeddedChat.description')}</p>
+      <ul>
+        {embeddedChatItems.map((item, index) => (
+          <li key={index}>{item}</li>
+        ))}
+      </ul>
+      <p><em>{t('legal.pages.terms.content.embeddedChat.note')}</em></p>
 
       <h2>{t('legal.pages.terms.content.intellectual.title')}</h2>
       <p>{t('legal.pages.terms.content.intellectual.description')}</p>

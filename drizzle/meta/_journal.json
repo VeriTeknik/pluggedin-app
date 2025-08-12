@@ -435,6 +435,20 @@
       "when": 1754620595750,
       "tag": "0061_cooing_carnage",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1754948491294,
+      "tag": "0062_noisy_bishop",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1755036092211,
+      "tag": "0063_silky_liz_osborn",
+      "breakpoints": true
     }
   ]
 }

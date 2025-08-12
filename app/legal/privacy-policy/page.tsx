@@ -12,7 +12,7 @@ export default function PrivacyPolicyPage() {
     <LegalDoc 
       title={t('legal.pages.privacy.title')}
       description={t('legal.pages.privacy.description')}
-      lastUpdated="January 29, 2025"
+      lastUpdated="February 11, 2025"
     >
       <h2>{t('legal.pages.privacy.sections.introduction.title')}</h2>
       <p>{t('legal.pages.privacy.sections.introduction.content')}</p>
@@ -53,6 +53,15 @@ export default function PrivacyPolicyPage() {
         <li>{t('legal.pages.privacy.sections.dataCollection.usage.logs')}</li>
       </ul>
 
+      <h3>{t('legal.pages.privacy.sections.dataCollection.integration.title')}</h3>
+      <ul>
+        <li>{t('legal.pages.privacy.sections.dataCollection.integration.calendar')}</li>
+        <li>{t('legal.pages.privacy.sections.dataCollection.integration.calendarEvents')}</li>
+        <li>{t('legal.pages.privacy.sections.dataCollection.integration.calendarList')}</li>
+        <li>{t('legal.pages.privacy.sections.dataCollection.integration.embeddedChat')}</li>
+        <li>{t('legal.pages.privacy.sections.dataCollection.integration.integrationConfigs')}</li>
+      </ul>
+
       <h3>{t('legal.pages.privacy.sections.dataCollection.technical.title')}</h3>
       <ul>
         <li>{t('legal.pages.privacy.sections.dataCollection.technical.analytics')}</li>
@@ -77,6 +86,8 @@ export default function PrivacyPolicyPage() {
         <li>{t('legal.pages.privacy.sections.dataUse.security')}</li>
         <li>{t('legal.pages.privacy.sections.dataUse.improvement')}</li>
         <li>{t('legal.pages.privacy.sections.dataUse.legal')}</li>
+        <li>{t('legal.pages.privacy.sections.dataUse.integrations')}</li>
+        <li>{t('legal.pages.privacy.sections.dataUse.personas')}</li>
       </ul>
 
       <h2>{t('legal.pages.privacy.sections.rights.title')}</h2>
@@ -105,6 +116,16 @@ export default function PrivacyPolicyPage() {
       <p>{t('legal.pages.privacy.sections.thirdParty.intro')}</p>
       <ul>
         <li><strong>{t('legal.pages.privacy.sections.thirdParty.auth.title')}</strong> {t('legal.pages.privacy.sections.thirdParty.auth.desc')}</li>
+        <li>
+          <strong>{t('legal.pages.privacy.sections.thirdParty.googleCalendar.title')}</strong> 
+          <p>{t('legal.pages.privacy.sections.thirdParty.googleCalendar.desc')}</p>
+          <ul style={{ marginLeft: '20px', marginTop: '8px' }}>
+            <li>{t('legal.pages.privacy.sections.thirdParty.googleCalendar.scopes.appCreated')}</li>
+            <li>{t('legal.pages.privacy.sections.thirdParty.googleCalendar.scopes.calendarList')}</li>
+            <li>{t('legal.pages.privacy.sections.thirdParty.googleCalendar.scopes.freeBusy')}</li>
+          </ul>
+          <p style={{ marginTop: '8px' }}><em>{t('legal.pages.privacy.sections.thirdParty.googleCalendar.note')}</em></p>
+        </li>
         <li><strong>{t('legal.pages.privacy.sections.thirdParty.analytics.title')}</strong> {t('legal.pages.privacy.sections.thirdParty.analytics.desc')}</li>
         <li><strong>{t('legal.pages.privacy.sections.thirdParty.email.title')}</strong> {t('legal.pages.privacy.sections.thirdParty.email.desc')}</li>
       </ul>

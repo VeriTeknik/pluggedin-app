@@ -55,6 +55,14 @@
               "documents": "Documents uploaded to the library",
               "logs": "Activity logs and audit trails"
             },
+            "integration": {
+              "title": "Integration Data (When Enabled)",
+              "calendar": "Calendar availability and free/busy information",
+              "calendarEvents": "Events in calendars created by our application",
+              "calendarList": "List of your Google calendars (read-only)",
+              "embeddedChat": "Embedded chat configurations and AI persona settings",
+              "integrationConfigs": "Integration preferences and settings for AI assistants"
+            },
             "technical": {
               "title": "Technical Data",
               "analytics": "Analytics data (if Google Analytics is enabled)",
@@ -89,7 +97,9 @@
             "communication": "To communicate with you about your account and service updates",
             "security": "To ensure the security and integrity of our platform",
             "improvement": "To improve and develop new features",
-            "legal": "To comply with legal obligations"
+            "legal": "To comply with legal obligations",
+            "integrations": "To provide calendar integration features for embedded chat AI assistants",
+            "personas": "To enable AI personas to manage schedules and check availability (only when you explicitly enable these features)"
           },
           "rights": {
             "title": "6. Your Rights",
@@ -150,6 +160,16 @@
             "auth": {
               "title": "Authentication Providers:",
               "desc": "GitHub, Google, Twitter for OAuth authentication"
+            },
+            "googleCalendar": {
+              "title": "Google Calendar API:",
+              "desc": "When you enable calendar integration for embedded chat, we access Google Calendar with limited, verified scopes:",
+              "scopes": {
+                "appCreated": "• calendar.app.created - Manage only calendars created by our application",
+                "calendarList": "• calendar.calendarlist.readonly - View your list of calendars (no event access)",
+                "freeBusy": "• calendar.freebusy - Check availability status without accessing event details"
+              },
+              "note": "These permissions are only used when you explicitly enable calendar features for AI personas"
             },
             "analytics": {
               "title": "Analytics:",
@@ -273,6 +293,21 @@
               "We do not guarantee the availability or functionality of any MCP server",
               "You use MCP servers at your own risk"
             ]
+          },
+          "embeddedChat": {
+            "title": "Embedded Chat and Integrations",
+            "description": "When using embedded chat features and integrations:",
+            "items": [
+              "You are responsible for the behavior and actions of AI personas you configure",
+              "Calendar integrations are optional and require your explicit consent",
+              "You must have appropriate permissions for any calendars you integrate",
+              "Integration data is accessed only with the minimum necessary permissions",
+              "You can revoke integration access at any time through your Google Account settings",
+              "We use Google-verified OAuth scopes for calendar access (calendar.app.created, calendar.calendarlist.readonly, calendar.freebusy)",
+              "AI personas operate within the constraints of the permissions you grant",
+              "You are responsible for ensuring your use of AI assistants complies with your organization's policies"
+            ],
+            "note": "Calendar and other integrations enhance AI persona capabilities but remain under your control and responsibility."
           },
           "intellectual": {
             "title": "Intellectual Property",
