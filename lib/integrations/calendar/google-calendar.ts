@@ -42,7 +42,10 @@ export class GoogleCalendarService extends BaseIntegrationService {
 
   constructor(integration: CalendarIntegration) {
     super(integration);
+    console.log('[GoogleCalendarService] Received integration:', JSON.stringify(integration, null, 2));
     this.calendarIntegration = integration;
+    console.log('[GoogleCalendarService] Config available:', !!integration?.config);
+    console.log('[GoogleCalendarService] Access token available:', !!integration?.config?.accessToken);
   }
 
   async execute(action: IntegrationAction): Promise<IntegrationResult> {
@@ -92,7 +95,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
     try {
       // Check if we have necessary credentials
       const config = this.calendarIntegration.config;
-      if (!config.accessToken && !config.apiKey) {
+      if (!config || (!config.accessToken && !config.apiKey)) {
         return false;
       }
 
@@ -180,10 +183,25 @@ export class GoogleCalendarService extends BaseIntegrationService {
 
   private async scheduleMeeting(payload: any): Promise<IntegrationResult> {
     try {
-      const { title, description, startTime, endTime, attendees, location, includeGoogleMeet = false } = payload;
+      const { title, description, startTime, endTime, attendees, location, includeGoogleMeet = false, organizerInfo } = payload;
+
+      console.log('[GoogleCalendarService] scheduleMeeting payload:', JSON.stringify(payload, null, 2));
+      console.log('[GoogleCalendarService] Attendees received:', attendees);
+      console.log('[GoogleCalendarService] Organizer info:', organizerInfo);
 
       // Ensure we have a Plugged.in calendar
       const calendarId = await this.ensurePluggedInCalendar();
+
+      // Filter and validate email addresses
+      const validAttendees = attendees?.filter((email: string) => {
+        // Basic email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        const isValid = emailRegex.test(email);
+        if (!isValid) {
+          console.log(`[GoogleCalendarService] Invalid email filtered out: ${email}`);
+        }
+        return isValid;
+      }) || [];
 
       const event: GoogleCalendarEvent = {
         summary: title,
@@ -197,7 +215,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
           dateTime: new Date(endTime).toISOString(),
           timeZone: payload.timeZone || 'UTC',
         },
-        attendees: attendees?.map((email: string) => ({ email })),
+        attendees: validAttendees.map((email: string) => ({ email })),
       };
 
       // Add Google Meet integration if requested
@@ -220,13 +238,21 @@ export class GoogleCalendarService extends BaseIntegrationService {
 
       if (response.ok) {
         const data = await response.json();
+        console.log('[GoogleCalendarService] Event created successfully:', {
+          eventId: data.id,
+          htmlLink: data.htmlLink,
+          calendarId: calendarId,
+          attendees: data.attendees
+        });
+        
         return {
           success: true,
           data: {
             eventId: data.id,
             htmlLink: data.htmlLink,
             meetLink: data.conferenceData?.entryPoints?.[0]?.uri,
-            message: `Meeting scheduled successfully in Plugged.in calendar${includeGoogleMeet ? ' with Google Meet' : ''}`,
+            calendarId: calendarId,
+            message: `Meeting scheduled successfully in Plugged.in calendar${includeGoogleMeet ? ' with Google Meet' : ''}. View in Google Calendar: ${data.htmlLink}`,
           },
         };
       } else {
@@ -389,6 +415,11 @@ export class GoogleCalendarService extends BaseIntegrationService {
   ): Promise<Response> {
     const baseUrl = 'https://www.googleapis.com/calendar/v3';
     const config = this.calendarIntegration.config;
+    
+    // Check if config exists
+    if (!config) {
+      throw new Error('Calendar integration is not configured. Please connect your Google Calendar account first.');
+    }
     
     const headers: HeadersInit = {
       'Content-Type': 'application/json',

@@ -3,6 +3,7 @@ import { getServerSession } from 'next-auth';
 import { db } from '@/db';
 import { eq, and, desc } from 'drizzle-orm';
 import { chatConversationsTable, conversationTasksTable } from '@/db/schema';
+import { normalizeUserId, isVisitorId } from '@/lib/chat-memory/id-utils';
 
 // GET /api/embedded-chat/[uuid]/conversations/[conversationId]/tasks - Get all tasks for a conversation
 export async function GET(
@@ -11,10 +12,18 @@ export async function GET(
 ) {
   try {
     const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
     const session = await getServerSession();
     
-    if (!session?.user?.id) {
+    // Allow both authenticated users and visitor users
+    if (!session?.user?.id && !userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // For visitor users, normalize the ID
+    const effectiveUserId = session?.user?.id || (userId && isVisitorId(userId) ? normalizeUserId(userId) : null);
+    if (!effectiveUserId) {
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
 
     const { uuid, conversationId } = params;
@@ -51,10 +60,19 @@ export async function POST(
   { params }: { params: { uuid: string; conversationId: string } }
 ) {
   try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
     const session = await getServerSession();
     
-    if (!session?.user?.id) {
+    // Allow both authenticated users and visitor users
+    if (!session?.user?.id && !userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    
+    // For visitor users, normalize the ID
+    const effectiveUserId = session?.user?.id || (userId && isVisitorId(userId) ? normalizeUserId(userId) : null);
+    if (!effectiveUserId) {
+      return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
 
     const { uuid, conversationId } = params;

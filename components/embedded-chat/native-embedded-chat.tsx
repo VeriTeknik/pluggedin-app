@@ -218,10 +218,16 @@ export function NativeEmbeddedChat({
       
       setMemoriesLoading(true);
       try {
-        const response = await fetch(getApiUrl(`/api/embedded-chat/${chatUuid}/conversations/${conversationId}/memories`));
+        const response = await fetch(getApiUrl(`/api/embedded-chat/${chatUuid}/conversations/${conversationId}/memories?userId=${visitorId}&type=all`));
         if (response.ok) {
           const data = await response.json();
-          setMemories(data.memories || []);
+          // Convert date strings to Date objects
+          const memoriesWithDates = (data.memories || []).map((memory: any) => ({
+            ...memory,
+            createdAt: new Date(memory.createdAt),
+            lastAccessedAt: new Date(memory.lastAccessedAt)
+          }));
+          setMemories(memoriesWithDates);
         } else {
           console.error('Failed to fetch memories:', response.status);
         }
@@ -902,6 +908,7 @@ export function NativeEmbeddedChat({
               chatUuid={chatUuid}
               conversationId={conversationId}
               memories={memories}
+              visitorId={visitorId}
               className="bg-white dark:bg-gray-800 rounded-lg"
             />
           </div>

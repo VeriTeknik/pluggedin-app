@@ -94,6 +94,7 @@ export class IntegrationManager {
         // Dynamic import to avoid circular dependency
         const { GoogleCalendarService } = await import('./calendar/google-calendar');
         const calendarIntegration = this.personaIntegrations.calendar;
+        console.log('[INTEGRATION] Calendar integration being passed to service:', JSON.stringify(calendarIntegration, null, 2));
         const calendarService = new GoogleCalendarService(calendarIntegration);
         this.registerService('calendar', calendarService);
         console.log('Calendar integration initialized and registered');

@@ -36,10 +36,11 @@ interface TaskManagerProps {
   memories: any[];
   conversationId: string;
   chatUuid: string;
+  visitorId?: string;
   className?: string;
 }
 
-export function TaskManager({ memories, conversationId, chatUuid, className }: TaskManagerProps) {
+export function TaskManager({ memories, conversationId, chatUuid, visitorId, className }: TaskManagerProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -55,14 +56,17 @@ export function TaskManager({ memories, conversationId, chatUuid, className }: T
   // Fetch tasks when component mounts or conversation changes
   useEffect(() => {
     fetchTasks();
-  }, [conversationId, chatUuid]);
+  }, [conversationId, chatUuid, visitorId]);
 
   const fetchTasks = async () => {
     if (!conversationId) return;
     
     setIsLoading(true);
     try {
-      const response = await fetch(getApiUrl(`/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks`));
+      const url = visitorId 
+        ? `/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks?userId=${visitorId}`
+        : `/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks`;
+      const response = await fetch(getApiUrl(url));
       if (response.ok) {
         const data = await response.json();
         setTasks(data.tasks || []);
@@ -78,7 +82,10 @@ export function TaskManager({ memories, conversationId, chatUuid, className }: T
     if (!conversationId || !newTask.title.trim()) return;
     
     try {
-      const response = await fetch(getApiUrl(`/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks`), {
+      const url = visitorId 
+        ? `/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks?userId=${visitorId}`
+        : `/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks`;
+      const response = await fetch(getApiUrl(url), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTask),
@@ -105,7 +112,10 @@ export function TaskManager({ memories, conversationId, chatUuid, className }: T
     if (!conversationId) return;
     
     try {
-      const response = await fetch(getApiUrl(`/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks/${taskId}`), {
+      const url = visitorId 
+        ? `/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks/${taskId}?userId=${visitorId}`
+        : `/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks/${taskId}`;
+      const response = await fetch(getApiUrl(url), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updates),
@@ -124,7 +134,10 @@ export function TaskManager({ memories, conversationId, chatUuid, className }: T
     if (!conversationId) return;
     
     try {
-      const response = await fetch(getApiUrl(`/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks/${taskId}`), {
+      const url = visitorId 
+        ? `/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks/${taskId}?userId=${visitorId}`
+        : `/api/embedded-chat/${chatUuid}/conversations/${conversationId}/tasks/${taskId}`;
+      const response = await fetch(getApiUrl(url), {
         method: 'DELETE',
       });
       

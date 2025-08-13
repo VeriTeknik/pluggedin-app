@@ -1607,37 +1607,110 @@ async function createIsolatedEmbeddedChatSession(
           }
         };
 
-        // Inject Google Calendar access token from project owner account if available
+        // Inject calendar tokens based on provider
         try {
-          if ((mergedIntegrations as any)?.calendar?.enabled && (mergedIntegrations as any).calendar.provider === 'google_calendar') {
-            // Find project owner for this chat
-            const chatRow = await db.query.embeddedChatsTable.findFirst({
-              where: eq(embeddedChatsTable.uuid, chatUuid),
-              columns: { project_uuid: true }
-            });
-            if (chatRow?.project_uuid) {
-              const projectRow = await db.query.projectsTable.findFirst({
-                where: eq(projectsTable.uuid, chatRow.project_uuid),
-                columns: { user_id: true }
-              });
-              if (projectRow?.user_id) {
-                const googleAccount = await db.query.accounts.findFirst({
-                  where: and(eq(accounts.userId, projectRow.user_id), eq(accounts.provider, 'google')),
-                  columns: { access_token: true, refresh_token: true }
-                } as any);
-                if (googleAccount?.access_token) {
-                  (mergedIntegrations as any).calendar.config = {
-                    ...((mergedIntegrations as any).calendar.config || {}),
-                    accessToken: googleAccount.access_token,
-                    refreshToken: googleAccount.refresh_token || undefined,
-                  };
-                }
+          const calendarEnabled = (mergedIntegrations as any)?.calendar?.enabled;
+          
+          if (calendarEnabled) {
+            // Determine calendar provider - check for explicit provider or infer from config
+            let calendarProvider = (mergedIntegrations as any)?.calendar?.provider;
+            
+            // If no provider specified, try to infer from config structure
+            if (!calendarProvider) {
+              const calendarConfig = (mergedIntegrations as any)?.calendar?.config || {};
+              if (calendarConfig.calendlyUrl || calendarConfig.calendly_url) {
+                calendarProvider = 'calendly';
+              } else if (calendarConfig.calcomUrl || calendarConfig.calcom_url || calendarConfig.cal_com_url) {
+                calendarProvider = 'cal_com';
+              } else {
+                // Default to google_calendar if no specific config found
+                calendarProvider = 'google_calendar';
               }
+              console.log(`[EMBEDDED] No calendar provider specified, inferred: ${calendarProvider}`);
             }
+            
+            console.log(`[EMBEDDED] Calendar enabled with provider: ${calendarProvider}`);
+            
+            // Handle different providers
+            switch (calendarProvider) {
+              case 'google_calendar':
+                console.log('[EMBEDDED] Attempting to inject Google Calendar tokens');
+                // Find project owner for this chat
+                const chatRow = await db.query.embeddedChatsTable.findFirst({
+                  where: eq(embeddedChatsTable.uuid, chatUuid),
+                  columns: { project_uuid: true }
+                });
+                if (chatRow?.project_uuid) {
+                  const projectRow = await db.query.projectsTable.findFirst({
+                    where: eq(projectsTable.uuid, chatRow.project_uuid),
+                    columns: { user_id: true }
+                  });
+                  if (projectRow?.user_id) {
+                    const googleAccount = await db.query.accounts.findFirst({
+                      where: and(eq(accounts.userId, projectRow.user_id), eq(accounts.provider, 'google')),
+                      columns: { access_token: true, refresh_token: true }
+                    } as any);
+                    if (googleAccount?.access_token) {
+                      // Ensure the calendar object has the provider field and tokens
+                      (mergedIntegrations as any).calendar = {
+                        ...(mergedIntegrations as any).calendar,
+                        provider: 'google_calendar',
+                        config: {
+                          ...((mergedIntegrations as any).calendar.config || {}),
+                          accessToken: googleAccount.access_token,
+                          refreshToken: googleAccount.refresh_token || undefined,
+                        }
+                      };
+                      console.log('[EMBEDDED] Successfully injected Google Calendar tokens');
+                      console.log('[EMBEDDED] Calendar config after injection:', JSON.stringify((mergedIntegrations as any).calendar, null, 2));
+                    } else {
+                      console.log('[EMBEDDED] No Google access token found for user');
+                    }
+                  } else {
+                    console.log('[EMBEDDED] No project user_id found');
+                  }
+                } else {
+                  console.log('[EMBEDDED] No project found for chat');
+                }
+                break;
+                
+              case 'calendly':
+                // Calendly uses webhook URLs and doesn't need OAuth tokens
+                (mergedIntegrations as any).calendar = {
+                  ...(mergedIntegrations as any).calendar,
+                  provider: 'calendly',
+                  config: {
+                    ...((mergedIntegrations as any).calendar.config || {}),
+                    // Calendly specific config would be here
+                  }
+                };
+                console.log('[EMBEDDED] Calendly provider configured');
+                break;
+                
+              case 'cal_com':
+                // Cal.com can use API keys or OAuth
+                (mergedIntegrations as any).calendar = {
+                  ...(mergedIntegrations as any).calendar,
+                  provider: 'cal_com',
+                  config: {
+                    ...((mergedIntegrations as any).calendar.config || {}),
+                    // Cal.com specific config would be here
+                  }
+                };
+                console.log('[EMBEDDED] Cal.com provider configured');
+                break;
+                
+              default:
+                console.log(`[EMBEDDED] Unknown calendar provider: ${calendarProvider}`);
+            }
+          } else {
+            console.log('[EMBEDDED] Calendar integration not enabled');
           }
         } catch (e) {
           console.log('[EMBEDDED] Failed to inject calendar tokens:', e);
         }
+        
+        console.log('[EMBEDDED] Final mergedIntegrations before IntegrationManager:', JSON.stringify(mergedIntegrations, null, 2));
         
         // Create integration manager with merged configuration
         const integrationManager = new IntegrationManager(mergedIntegrations, activePersona.capabilities as any || []);
