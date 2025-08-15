@@ -5,7 +5,7 @@ import { executeEmbeddedChatQuery } from '@/app/actions/mcp-playground';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { chatUuid, conversationId, query, enableRag } = body;
+    const { chatUuid, conversationId, query, enableRag, clientContext } = body;
     
     if (!chatUuid || !conversationId || !query) {
       return NextResponse.json(
@@ -18,7 +18,8 @@ export async function POST(req: NextRequest) {
       chatUuid,
       conversationId,
       query,
-      enableRag
+      enableRag,
+      clientContext
     );
     
     console.log('[EMBEDDED QUERY] Result:', {

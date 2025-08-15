@@ -1,11 +1,20 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { createNotification } from '@/app/actions/notifications';
-import { db } from '@/db';
-import { chatConversationsTable, conversationTasksTable, users } from '@/db/schema';
 import { getUserInfoFromAuth } from '@/lib/auth';
+import { WorkflowBrain } from '@/lib/workflows/workflow-brain';
+import { InformationOrchestrator } from '@/lib/workflows/info-orchestrator';
+import { db } from '@/db';
+import {
+  chatConversationsTable,
+  conversationTasksTable,
+  conversationMemoriesTable,
+  conversationWorkflowsTable,
+  workflowTasksTable,
+  users
+} from '@/db/schema';
 
 import { IntegrationManager } from './base-service';
 
@@ -14,10 +23,22 @@ export interface ToolContext {
   integrationManager: IntegrationManager & {
     integrationsConfig?: any; // Allow access to integrations config
     embeddedChatUuid?: string;
+    clientContext?: {
+      timezone: string;
+      current_datetime: string;
+      locale?: string;
+    };
   };
   personaId: number;
   conversationId?: string; // May be missing for embedded chat; we resolve latest conversation if not provided
   profileUuid?: string; // Add profile UUID for notifications
+  clientContext?: {
+    timezone: string;
+    current_datetime: string;
+    locale?: string;
+  };
+  userId?: string;
+  userEmail?: string;
 }
 
 // Helper function to send tool call notifications
@@ -105,6 +126,9 @@ export function createPersonaTools(context: ToolContext): DynamicStructuredTool[
     }
   }
 
+  // Add workflow intelligence tool for complex multi-step processes
+  tools.push(createWorkflowTriggerTool(context));
+
   // Always include a generic conversation task tool for follow-ups
   tools.push(createConversationTaskTool(context));
 
@@ -121,7 +145,7 @@ function createSlackMessageTool(context: ToolContext): DynamicStructuredTool {
       message: z.string().describe('The message content to send'),
       thread_ts: z.string().optional().describe('Thread timestamp to reply to (optional)'),
     }),
-    func: async ({ channel, message, thread_ts }) => {
+    func: async ({ channel, message, thread_ts }: { channel?: string; message: string; thread_ts?: string }) => {
       try {
         let userInfo = await getUserInfoFromAuth();
         // If no session, try conversation -> authenticated user fallback
@@ -274,19 +298,283 @@ function createConversationTaskTool(context: ToolContext): DynamicStructuredTool
 function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool {
   return new DynamicStructuredTool({
     name: 'book_calendar_meeting',
-    description: 'Book a meeting or check calendar availability',
+    description: 'Book a meeting or check availability. For relative times like "next week 2 PM", calculate the specific date and pass it as proposedDateTime with needsConfirmation=true. Never guess email addresses - leave attendees empty for names like "Cem".',
     schema: z.object({
       action: z.enum(['book', 'check_availability']).describe('Whether to book a meeting or check availability'),
-      title: z.string().describe('Meeting title'),
-      startTime: z.string().describe('Start time in ISO format (e.g., 2024-01-01T10:00:00)'),
-      endTime: z.string().describe('End time in ISO format (e.g., 2024-01-01T11:00:00)'),
-      attendees: z.array(z.string()).optional().describe('List of attendee emails'),
+      title: z.string().describe('Meeting title - OK to fill from request'),
+      proposedDateTime: z.string().optional().describe('Your interpretation of the date/time in ISO format (e.g., next week 2PM → specific date)'),
+      startTime: z.string().optional().describe('Confirmed ISO timestamp - only if user already confirmed'),
+      endTime: z.string().optional().describe('Confirmed ISO timestamp - only if user already confirmed'),
+      attendees: z.array(z.string()).optional().describe('Email addresses ONLY - LEAVE EMPTY for names. Never guess emails.'),
       description: z.string().optional().describe('Meeting description'),
       location: z.string().optional().describe('Meeting location or virtual meeting link'),
       includeGoogleMeet: z.boolean().optional().describe('Include Google Meet link for virtual meetings (only for booking)'),
+      needsConfirmation: z.boolean().optional().describe('Set true when proposing a date/time interpretation'),
+      duration: z.number().optional().default(60).describe('Meeting duration in minutes (default: 60)'),
     }),
-    func: async ({ action, title, startTime, endTime, attendees, description, location, includeGoogleMeet }) => {
+    func: async ({ action, title, proposedDateTime, startTime, endTime, attendees, description, location, includeGoogleMeet, needsConfirmation, duration = 60 }: { 
+      action: 'book' | 'check_availability'; 
+      title: string; 
+      proposedDateTime?: string; 
+      startTime?: string; 
+      endTime?: string; 
+      attendees?: string[]; 
+      description?: string; 
+      location?: string; 
+      includeGoogleMeet?: boolean; 
+      needsConfirmation?: boolean; 
+      duration?: number 
+    }) => {
       try {
+        // Normalize proposedDateTime into concrete start/end when provided
+        if (action === 'book' && proposedDateTime && (!startTime || !endTime)) {
+          const proposed = new Date(proposedDateTime);
+          
+          // Handle relative date expressions like "next week 2 PM"
+          // Check if the proposedDateTime is a relative expression that needs proper calculation
+          const isRelativeDate = isNaN(proposed.getTime()) ||
+                                proposedDateTime.toLowerCase().includes('next week') ||
+                                proposedDateTime.toLowerCase().includes('tomorrow') ||
+                                proposedDateTime.toLowerCase().includes('today');
+          
+          if (isRelativeDate) {
+            // Calculate the correct date for relative expressions
+            const now = new Date();
+            let calculatedDate: Date;
+            
+            if (proposedDateTime.toLowerCase().includes('next week')) {
+              // For "next week", calculate Monday of the following week
+              const currentDayOfWeek = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
+              // Calculate days until next Monday
+              let daysUntilNextMonday;
+              if (currentDayOfWeek === 0) {
+                // If today is Sunday, next Monday is in 1 day
+                daysUntilNextMonday = 1;
+              } else {
+                // Otherwise, next Monday is in (8 - currentDayOfWeek) days
+                daysUntilNextMonday = 8 - currentDayOfWeek;
+              }
+              calculatedDate = new Date(now.getTime() + (daysUntilNextMonday * 24 * 60 * 60 * 1000));
+              
+              // Parse the time from the proposedDateTime if provided (e.g., "2 PM")
+              const timeMatch = proposedDateTime.match(/(\d{1,2})\s*(AM|PM)/i);
+              if (timeMatch) {
+                let hours = parseInt(timeMatch[1]);
+                const period = timeMatch[2].toUpperCase();
+                
+                if (period === 'PM' && hours !== 12) {
+                  hours += 12;
+                } else if (period === 'AM' && hours === 12) {
+                  hours = 0;
+                }
+                
+                calculatedDate.setHours(hours, 0, 0, 0);
+              }
+            } else if (proposedDateTime.toLowerCase().includes('tomorrow')) {
+              // For "tomorrow", add 1 day
+              calculatedDate = new Date(now.getTime() + (24 * 60 * 60 * 1000));
+              
+              // Parse the time if provided
+              const timeMatch = proposedDateTime.match(/(\d{1,2})\s*(AM|PM|am|pm)/i);
+              if (timeMatch) {
+                let hours = parseInt(timeMatch[1]);
+                const period = timeMatch[2].toUpperCase();
+                
+                if (period === 'PM' && hours !== 12) {
+                  hours += 12;
+                } else if (period === 'AM' && hours === 12) {
+                  hours = 0;
+                }
+                
+                calculatedDate.setHours(hours, 0, 0, 0);
+              }
+            } else {
+              // For other relative expressions, use the proposed date as-is if valid
+              calculatedDate = proposed;
+            }
+            
+            // Use the calculated date if it's valid
+            if (!isNaN(calculatedDate.getTime())) {
+              startTime = startTime || calculatedDate.toISOString();
+              endTime = endTime || new Date(calculatedDate.getTime() + duration * 60000).toISOString();
+            } else {
+              // Fallback to original logic
+              startTime = startTime || proposed.toISOString();
+              endTime = endTime || new Date(proposed.getTime() + duration * 60000).toISOString();
+            }
+          } else {
+            // For absolute dates, use the original logic
+            startTime = startTime || proposed.toISOString();
+            endTime = endTime || new Date(proposed.getTime() + duration * 60000).toISOString();
+          }
+        }
+        
+        // ALWAYS use workflow for booking unless we have EVERYTHING
+        const shouldUseWorkflow = (action === 'book' && (
+          !attendees || attendees.length === 0 || 
+          !startTime || !endTime ||
+          // Also trigger workflow if time seems ambiguous (e.g., "next week", "tomorrow")
+          (startTime && !startTime.includes('T')) ||
+          // Or if we only have a name but not an email
+          (attendees && attendees.some(a => !a.includes('@')))
+        ));
+        
+        const needsUserInfo = action === 'book' && 
+          !context.integrationManager.embeddedChatUuid && 
+          (!context.userId || !context.userEmail);
+
+        console.log('[CalendarTool] Workflow detection:', {
+          action,
+          hasAttendees: !!attendees && attendees.length > 0,
+          hasStartTime: !!startTime,
+          hasEndTime: !!endTime,
+          shouldUseWorkflow,
+          needsUserInfo
+        });
+        
+        // For booking actions, ALWAYS use workflow if info is missing
+        if (shouldUseWorkflow || needsUserInfo) {
+          console.log('[CalendarTool] Triggering workflow system - missing required information');
+          
+          // Use the workflow system for complex scheduling
+          const workflowBrain = new WorkflowBrain();
+          const intent = `Schedule a meeting titled "${title}"`;
+          const template = await workflowBrain.detectWorkflowNeed(intent);
+          
+          if (template) {
+            // Get conversation context
+            let conversationId = context.conversationId;
+            if (!conversationId && (context.integrationManager as any).embeddedChatUuid) {
+              const latestConvo = await db.query.chatConversationsTable.findFirst({
+                where: eq(chatConversationsTable.embedded_chat_uuid, (context.integrationManager as any).embeddedChatUuid),
+                orderBy: (conversations, { desc }) => [desc(conversations.created_at)]
+              });
+              conversationId = latestConvo?.uuid;
+            }
+            
+            if (conversationId) {
+              // Create workflow
+              const memories = await db.select()
+                .from(conversationMemoriesTable)
+                .where(eq(conversationMemoriesTable.conversation_id, conversationId))
+                .limit(20);
+              
+              const capabilities = context.integrationManager.getAvailableCapabilities().map(c => c.id);
+              
+              const workflowContext = {
+                conversationId,
+                userId: await getUserIdFromConversation(conversationId),
+                existingData: { 
+                  title, 
+                  description, 
+                  location, 
+                  includeGoogleMeet,
+                  attendees: attendees || [],
+                  startTime: startTime || proposedDateTime,
+                  endTime: endTime || (proposedDateTime ? new Date(new Date(proposedDateTime).getTime() + 60 * 60000).toISOString() : undefined),
+                  proposedDateTime,
+                  needsConfirmation
+                },
+                memories,
+                capabilities,
+                timezone: context.clientContext?.timezone || context.integrationManager.clientContext?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: context.clientContext?.locale?.split('-')[0] || 'en'
+              };
+              
+              const workflow = await workflowBrain.generateWorkflow(template, workflowContext);
+              
+              console.log('[CalendarTool] Workflow created:', {
+                workflowId: workflow.id,
+                conversationId,
+                status: workflow.status,
+                stepsCount: workflow.steps?.length
+              });
+              
+              // Format a user-friendly response
+              let formattedResponse = '';
+              
+              if (proposedDateTime && needsConfirmation) {
+                const proposed = new Date(proposedDateTime);
+                const formattedDate = proposed.toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  month: 'long', 
+                  day: 'numeric',
+                  year: 'numeric'
+                });
+                const formattedTime = proposed.toLocaleTimeString('en-US', { 
+                  hour: 'numeric', 
+                  minute: '2-digit',
+                  hour12: true 
+                });
+                
+                formattedResponse = `📅 **Proposed Meeting Time**\n`;
+                formattedResponse += `• Date: ${formattedDate}\n`;
+                formattedResponse += `• Time: ${formattedTime}\n`;
+                formattedResponse += `• Duration: ${duration || 60} minutes\n`;
+                
+                if (title && title !== 'Meeting' && title !== 'Meeting Discussion') {
+                  formattedResponse += `• Title: ${title}\n`;
+                }
+                
+                let needsInfo = false;
+                let infoRequests = `\nℹ️ To complete the booking, I need:\n`;
+                
+                if (!attendees || attendees.length === 0) {
+                  infoRequests += `• Email addresses of attendees\n`;
+                  needsInfo = true;
+                }
+                
+                if (!title || title === 'Meeting' || title === 'Meeting Discussion') {
+                  infoRequests += `• Meeting title/subject\n`;
+                  needsInfo = true;
+                }
+                
+                if (needsInfo) {
+                  formattedResponse += infoRequests;
+                  formattedResponse += `\nPlease provide the missing details to continue.`;
+                } else {
+                  // All info present, proceed
+                  formattedResponse += `\nAll details look good. Proceeding to check availability...`;
+                  return {
+                    success: true,
+                    workflowCreated: true,
+                    workflowId: workflow.id,
+                    message: formattedResponse,
+                    stopProcessing: false  // Allow continuation
+                  };
+                }
+              } else {
+                // No proposed time, need more info
+                formattedResponse = `📅 I'll help you schedule a meeting.\n\n`;
+                formattedResponse += `Please provide:\n`;
+                
+                if (!startTime && !proposedDateTime) {
+                  formattedResponse += `• Specific date and time\n`;
+                }
+                
+                if (!attendees || attendees.length === 0) {
+                  formattedResponse += `• Email addresses of attendees\n`;
+                }
+                
+                if (!title || title === 'Meeting' || title === 'Meeting Discussion') {
+                  formattedResponse += `• Meeting title/subject\n`;
+                }
+              }
+              
+              return {
+                success: true,
+                workflowCreated: true,
+                workflowId: workflow.id,
+                message: formattedResponse,
+                stopProcessing: true // Signal to AI not to call tool again
+              };
+            }
+          }
+        }
+        
+        // Otherwise proceed with direct booking/checking
+        console.log('[CalendarTool] Proceeding with direct calendar action');
+        
         let userInfo = await getUserInfoFromAuth();
         if (!userInfo && context.conversationId) {
           try {
@@ -396,7 +684,7 @@ function createEmailSendingTool(context: ToolContext): DynamicStructuredTool {
       message: z.string().describe('Email body content'),
       personaName: z.string().optional().describe('Name of the persona sending the email'),
     }),
-    func: async ({ to, subject, message, personaName }) => {
+    func: async ({ to, subject, message, personaName }: { to: string; subject: string; message: string; personaName?: string }) => {
       try {
         let userInfo = await getUserInfoFromAuth();
         if (!userInfo && context.conversationId) {
@@ -496,7 +784,16 @@ function createCRMLeadTool(context: ToolContext): DynamicStructuredTool {
       source: z.string().optional().describe('Lead source'),
       notes: z.string().optional().describe('Additional notes about the lead'),
     }),
-    func: async ({ firstName, lastName, email, phone, company, title, source, notes }) => {
+    func: async ({ firstName, lastName, email, phone, company, title, source, notes }: { 
+      firstName: string; 
+      lastName: string; 
+      email: string; 
+      phone?: string; 
+      company?: string; 
+      title?: string; 
+      source?: string; 
+      notes?: string 
+    }) => {
       try {
         let userInfo = await getUserInfoFromAuth();
         if (!userInfo && context.conversationId) {
@@ -601,7 +898,13 @@ function createSupportTicketTool(context: ToolContext): DynamicStructuredTool {
       category: z.string().optional().describe('Ticket category'),
       assignee: z.string().optional().describe('Ticket assignee email'),
     }),
-    func: async ({ title, description, priority, category, assignee }) => {
+    func: async ({ title, description, priority, category, assignee }: { 
+      title: string; 
+      description: string; 
+      priority?: 'low' | 'medium' | 'high' | 'urgent'; 
+      category?: string; 
+      assignee?: string 
+    }) => {
       try {
         const userInfo = await getUserInfoFromAuth();
         
@@ -661,4 +964,282 @@ function createSupportTicketTool(context: ToolContext): DynamicStructuredTool {
       }
     },
   });
+}
+// Workflow Trigger Tool - Intelligently manages multi-step processes
+function createWorkflowTriggerTool(context: ToolContext): DynamicStructuredTool {
+  return new DynamicStructuredTool({
+    name: 'manage_workflow',
+    description: 'Intelligently manages complex multi-step workflows like scheduling meetings, creating support tickets, etc. This tool detects when a workflow is needed and orchestrates the entire process.',
+    schema: z.object({
+      intent: z.string().describe('The user\'s intent or request (e.g., "schedule a meeting with the team")'),
+      existingData: z.record(z.any()).optional().describe('Any data already collected from the conversation'),
+      action: z.enum(['detect', 'create', 'continue', 'status']).describe('Action to take: detect if workflow needed, create new workflow, continue existing, or get status'),
+      workflowId: z.string().optional().describe('ID of existing workflow to continue or check status'),
+    }),
+    func: async ({ intent, existingData = {}, action, workflowId }: { 
+      intent: string; 
+      existingData?: Record<string, any>; 
+      action: 'detect' | 'create' | 'continue' | 'status'; 
+      workflowId?: string 
+    }) => {
+      try {
+        const workflowBrain = new WorkflowBrain();
+        const infoOrchestrator = new InformationOrchestrator();
+        
+        // Get conversation context
+        let conversationId = context.conversationId;
+        if (!conversationId && (context.integrationManager as any).embeddedChatUuid) {
+          const latestConvo = await db.query.chatConversationsTable.findFirst({
+            where: eq(chatConversationsTable.embedded_chat_uuid, (context.integrationManager as any).embeddedChatUuid),
+            orderBy: (conversations, { desc }) => [desc(conversations.created_at)]
+          });
+          conversationId = latestConvo?.uuid;
+        }
+        
+        if (!conversationId) {
+          return { success: false, error: 'No conversation context available' };
+        }
+        
+        switch (action) {
+          case 'detect': {
+            // Detect if a workflow is needed
+            const template = await workflowBrain.detectWorkflowNeed(intent);
+            
+            if (template) {
+              // Get existing memories and data
+              const memories = await db.select()
+                .from(conversationMemoriesTable)
+                .where(eq(conversationMemoriesTable.conversation_id, conversationId))
+                .orderBy(desc(conversationMemoriesTable.created_at))
+                .limit(20);
+              
+              // Get user capabilities
+              const capabilities = context.integrationManager.getAvailableCapabilities().map(c => c.id);
+              
+              // Create workflow context
+              const workflowContext = {
+                conversationId,
+                userId: await getUserIdFromConversation(conversationId),
+                existingData,
+                memories,
+                capabilities,
+                timezone: context.clientContext?.timezone || context.integrationManager.clientContext?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+                language: context.clientContext?.locale?.split('-')[0] || 'en'
+              };
+              
+              // Generate optimized workflow
+              const workflow = await workflowBrain.generateWorkflow(template, workflowContext);
+              
+              // Get first task to execute
+              const nextTask = await workflowBrain.getNextTask(workflow.id);
+              
+              if (nextTask) {
+                // Identify what information is needed
+                const missingInfo = await infoOrchestrator.identifyMissingInfo(workflow, nextTask.id);
+                
+                if (missingInfo.length > 0) {
+                  // Generate prompts for missing information
+                  const prompts = await Promise.all(
+                    missingInfo.map(info => infoOrchestrator.generatePrompt(info, { 
+                      purpose: template.name,
+                      action: intent 
+                    }))
+                  );
+                  
+                  return {
+                    success: true,
+                    workflowId: workflow.id,
+                    templateName: template.name,
+                    status: 'gathering_information',
+                    nextStep: nextTask.title,
+                    requiredInfo: missingInfo.map(info => info.field),
+                    prompts: prompts.map(p => p.message),
+                    message: `I'll help you ${template.name.toLowerCase()}. ${prompts[0]?.message || 'Let me gather some information first.'}`
+                  };
+                } else {
+                  // All information available, proceed with execution
+                  return {
+                    success: true,
+                    workflowId: workflow.id,
+                    templateName: template.name,
+                    status: 'ready',
+                    nextStep: nextTask.title,
+                    message: `Great! I have all the information needed. Starting ${template.name.toLowerCase()}...`
+                  };
+                }
+              }
+              
+              return {
+                success: true,
+                workflowId: workflow.id,
+                templateName: template.name,
+                status: 'created',
+                message: `Workflow created for ${template.name.toLowerCase()}`
+              };
+            } else {
+              return {
+                success: true,
+                workflowNeeded: false,
+                message: 'No complex workflow detected for this request'
+              };
+            }
+          }
+          
+          case 'create': {
+            // Explicitly create a workflow
+            const template = await workflowBrain.detectWorkflowNeed(intent);
+            
+            if (!template) {
+              return { success: false, error: 'Could not determine appropriate workflow for this request' };
+            }
+            
+            const memories = await db.select()
+              .from(conversationMemoriesTable)
+              .where(eq(conversationMemoriesTable.conversation_id, conversationId))
+              .limit(20);
+            
+            const capabilities = context.integrationManager.getAvailableCapabilities().map(c => c.id);
+            
+            const workflowContext = {
+              conversationId,
+              userId: await getUserIdFromConversation(conversationId),
+              existingData,
+              memories,
+              capabilities,
+              timezone: context.clientContext?.timezone || context.integrationManager.clientContext?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+              language: context.clientContext?.locale?.split('-')[0] || 'en'
+            };
+            
+            const workflow = await workflowBrain.generateWorkflow(template, workflowContext);
+            
+            await sendToolNotification(
+              context.profileUuid,
+              'Workflow',
+              'Create Workflow',
+              true,
+              `Workflow created: ${template.name}`,
+              { workflowId: workflow.id, template: template.name }
+            );
+            
+            return {
+              success: true,
+              workflowId: workflow.id,
+              templateName: template.name,
+              status: 'created',
+              stepsCount: workflow.steps.length,
+              message: `Created ${template.name} workflow with ${workflow.steps.length} steps`
+            };
+          }
+          
+          case 'continue': {
+            // Continue an existing workflow
+            if (!workflowId) {
+              return { success: false, error: 'Workflow ID required to continue' };
+            }
+            
+            const nextTask = await workflowBrain.getNextTask(workflowId);
+            
+            if (!nextTask) {
+              return {
+                success: true,
+                workflowId,
+                status: 'completed',
+                message: 'All workflow tasks have been completed'
+              };
+            }
+            
+            // Check for missing information
+            const workflow = { id: workflowId, conversationId };
+            const missingInfo = await infoOrchestrator.identifyMissingInfo(workflow, nextTask.id);
+            
+            if (missingInfo.length > 0) {
+              const prompts = await Promise.all(
+                missingInfo.map(info => infoOrchestrator.generatePrompt(info))
+              );
+              
+              return {
+                success: true,
+                workflowId,
+                status: 'gathering_information',
+                currentTask: nextTask.title,
+                requiredInfo: missingInfo.map(info => info.field),
+                prompts: prompts.map(p => p.message),
+                message: prompts[0]?.message || 'Please provide the required information'
+              };
+            }
+            
+            // Mark task as started
+            await db.update(workflowTasksTable)
+              .set({ 
+                status: 'active',
+                started_at: new Date()
+              })
+              .where(eq(workflowTasksTable.id, nextTask.id));
+            
+            return {
+              success: true,
+              workflowId,
+              status: 'executing',
+              currentTask: nextTask.title,
+              taskType: nextTask.task_type,
+              message: `Executing: ${nextTask.title}`
+            };
+          }
+          
+          case 'status': {
+            // Get workflow status
+            if (!workflowId) {
+              return { success: false, error: 'Workflow ID required for status check' };
+            }
+            
+            const workflow = await db.query.conversationWorkflowsTable.findFirst({
+              where: eq(conversationWorkflowsTable.id, workflowId),
+              with: {
+                tasks: true,
+                template: true
+              }
+            });
+            
+            if (!workflow) {
+              return { success: false, error: 'Workflow not found' };
+            }
+            
+            const completedTasks = workflow.tasks.filter(t => t.status === 'completed').length;
+            const totalTasks = workflow.tasks.length;
+            const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+            
+            return {
+              success: true,
+              workflowId,
+              templateName: (workflow.template as any)?.name,
+              status: workflow.status,
+              progress: Math.round(progress),
+              completedTasks,
+              totalTasks,
+              currentTask: workflow.tasks.find(t => t.status === 'active')?.title,
+              message: `Workflow is ${workflow.status}: ${completedTasks}/${totalTasks} tasks completed (${Math.round(progress)}%)`
+            };
+          }
+          
+          default:
+            return { success: false, error: `Unknown action: ${action}` };
+        }
+      } catch (error) {
+        console.error('Workflow management error:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Workflow management failed',
+        };
+      }
+    },
+  });
+}
+
+// Helper function to get user ID from conversation
+async function getUserIdFromConversation(conversationId: string): Promise<string | undefined> {
+  const conversation = await db.query.chatConversationsTable.findFirst({
+    where: eq(chatConversationsTable.uuid, conversationId),
+    columns: { authenticated_user_id: true }
+  });
+  return conversation?.authenticated_user_id || undefined;
 }

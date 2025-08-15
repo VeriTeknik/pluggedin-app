@@ -140,6 +140,29 @@ const UpdateEmbeddedChatSchema = z.object({
   }).optional(),
 });
 
+// Default integrations structure for new personas
+const DEFAULT_INTEGRATIONS = {
+  calendar: {
+    enabled: false,
+    provider: 'google_calendar',
+    config: {}
+  },
+  communication: {
+    email: { 
+      enabled: false, 
+      config: {} 
+    },
+    slack: { 
+      enabled: false, 
+      config: {} 
+    }
+  },
+  crm: { 
+    enabled: false, 
+    config: {} 
+  }
+};
+
 const CreatePersonaSchema = z.object({
   name: z.string().min(1).max(100),
   role: z.string().max(100).optional(),
@@ -148,7 +171,7 @@ const CreatePersonaSchema = z.object({
   contact_email: z.string().email().optional(),
   contact_phone: z.string().optional(),
   contact_calendar_link: z.string().url().optional(),
-  integrations: z.any().optional(), // JSONB field
+  integrations: z.any().optional().default(DEFAULT_INTEGRATIONS), // JSONB field with default structure
   capabilities: z.any().optional(), // JSONB field
   tools_config: z.any().optional(), // JSONB field
   is_active: z.boolean().default(true),
@@ -473,6 +496,37 @@ export async function createChatPersona(
     await validateEmbeddedChatAccess(chatUuid, session.user.id);
     
     const validatedPersona = CreatePersonaSchema.parse(persona);
+    
+    // Ensure integrations has the proper structure by merging with defaults
+    if (!validatedPersona.integrations || Object.keys(validatedPersona.integrations).length === 0) {
+      validatedPersona.integrations = DEFAULT_INTEGRATIONS;
+    } else {
+      // Deep merge with defaults to ensure all properties exist
+      validatedPersona.integrations = {
+        ...DEFAULT_INTEGRATIONS,
+        ...validatedPersona.integrations,
+        calendar: {
+          ...DEFAULT_INTEGRATIONS.calendar,
+          ...(validatedPersona.integrations.calendar || {})
+        },
+        communication: {
+          ...DEFAULT_INTEGRATIONS.communication,
+          ...(validatedPersona.integrations.communication || {}),
+          email: {
+            ...DEFAULT_INTEGRATIONS.communication.email,
+            ...(validatedPersona.integrations.communication?.email || {})
+          },
+          slack: {
+            ...DEFAULT_INTEGRATIONS.communication.slack,
+            ...(validatedPersona.integrations.communication?.slack || {})
+          }
+        },
+        crm: {
+          ...DEFAULT_INTEGRATIONS.crm,
+          ...(validatedPersona.integrations.crm || {})
+        }
+      };
+    }
     
     // If this is set as default, unset other defaults
     if (validatedPersona.is_default) {

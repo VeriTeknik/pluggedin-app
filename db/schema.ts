@@ -4,7 +4,9 @@ import {
   boolean,
   index,
   integer,
+  interval,
   jsonb,
+  numeric,
   pgEnum,
   pgTable,
   primaryKey,
@@ -2120,6 +2122,9 @@ export const conversationTasksTable = pgTable(
       .notNull()
       .default('todo')
       .$type<'todo' | 'in_progress' | 'completed'>(),
+    workflow_task_id: uuid('workflow_task_id'),
+    is_workflow_generated: boolean('is_workflow_generated').default(false),
+    workflow_metadata: jsonb('workflow_metadata').default({}),
     created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
   },
@@ -2141,11 +2146,249 @@ export const conversationTasksRelations = relations(conversationTasksTable, ({ o
     fields: [conversationTasksTable.memory_id],
     references: [conversationMemoriesTable.id],
   }),
+  workflowTask: one(workflowTasksTable, {
+    fields: [conversationTasksTable.workflow_task_id],
+    references: [workflowTasksTable.id],
+  }),
 }));
 
 export const chatDataRequestsRelations = relations(chatDataRequestsTable, ({ one }) => ({
   conversation: one(chatConversationsTable, {
     fields: [chatDataRequestsTable.conversation_uuid],
     references: [chatConversationsTable.uuid],
+  }),
+}));
+
+// ===== Workflow Templates Table =====
+export const workflowTemplatesTable = pgTable(
+  'workflow_templates',
+  {
+    id: varchar('id', { length: 100 }).primaryKey(),
+    name: varchar('name', { length: 255 }).notNull(),
+    category: varchar('category', { length: 50 }).notNull(),
+    description: text('description'),
+    base_structure: jsonb('base_structure').notNull(),
+    required_capabilities: text('required_capabilities').array(),
+    success_rate: numeric('success_rate', { precision: 5, scale: 2 }).default('0'),
+    average_completion_time: interval('average_completion_time'),
+    optimization_history: jsonb('optimization_history').default(sql`'[]'::jsonb`),
+    version: integer('version').default(1),
+    is_active: boolean('is_active').default(true),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    templatesCategoryIdx: index('idx_workflow_templates_category').on(table.category),
+  })
+);
+
+// ===== Conversation Workflows Table =====
+export const conversationWorkflowsTable = pgTable(
+  'conversation_workflows',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    conversation_id: uuid('conversation_id')
+      .notNull()
+      .references(() => chatConversationsTable.uuid, { onDelete: 'cascade' }),
+    template_id: varchar('template_id', { length: 100 }).references(() => workflowTemplatesTable.id),
+    status: varchar('status', { length: 20 })
+      .notNull()
+      .default('planning')
+      .$type<'planning' | 'active' | 'completed' | 'failed' | 'cancelled'>(),
+    context: jsonb('context').default({}),
+    learned_optimizations: jsonb('learned_optimizations').default({}),
+    started_at: timestamp('started_at', { withTimezone: true }),
+    completed_at: timestamp('completed_at', { withTimezone: true }),
+    failure_reason: text('failure_reason'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    workflowsConversationIdx: index('idx_conversation_workflows_conversation').on(table.conversation_id),
+    workflowsStatusIdx: index('idx_conversation_workflows_status').on(table.status),
+    workflowsTemplateIdx: index('idx_conversation_workflows_template').on(table.template_id),
+  })
+);
+
+// ===== Workflow Tasks Table =====
+export const workflowTasksTable = pgTable(
+  'workflow_tasks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workflow_id: uuid('workflow_id')
+      .notNull()
+      .references(() => conversationWorkflowsTable.id, { onDelete: 'cascade' }),
+    parent_task_id: uuid('parent_task_id').references(() => workflowTasksTable.id, { onDelete: 'cascade' }),
+    task_type: varchar('task_type', { length: 20 })
+      .notNull()
+      .$type<'gather' | 'validate' | 'execute' | 'confirm' | 'decision' | 'notify'>(),
+    title: text('title').notNull(),
+    description: text('description'),
+    status: varchar('status', { length: 20 })
+      .notNull()
+      .default('pending')
+      .$type<'pending' | 'active' | 'completed' | 'failed' | 'skipped' | 'blocked'>(),
+    prerequisites: jsonb('prerequisites').default([]),
+    data_collected: jsonb('data_collected').default({}),
+    validation_rules: jsonb('validation_rules').default({}),
+    retry_count: integer('retry_count').default(0),
+    max_retries: integer('max_retries').default(3),
+    retry_strategy: jsonb('retry_strategy').default({ type: 'exponential_backoff', initial_delay: 1000 }),
+    estimated_duration: interval('estimated_duration'),
+    actual_duration: interval('actual_duration'),
+    scheduled_for: timestamp('scheduled_for', { withTimezone: true }),
+    started_at: timestamp('started_at', { withTimezone: true }),
+    completed_at: timestamp('completed_at', { withTimezone: true }),
+    failed_at: timestamp('failed_at', { withTimezone: true }),
+    failure_reason: text('failure_reason'),
+    metadata: jsonb('metadata').default({}),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    workflowTasksWorkflowIdx: index('idx_workflow_tasks_workflow').on(table.workflow_id),
+    workflowTasksParentIdx: index('idx_workflow_tasks_parent').on(table.parent_task_id),
+    workflowTasksStatusIdx: index('idx_workflow_tasks_status').on(table.status),
+    workflowTasksScheduledIdx: index('idx_workflow_tasks_scheduled').on(table.scheduled_for),
+  })
+);
+
+// ===== Workflow Dependencies Table =====
+export const workflowDependenciesTable = pgTable(
+  'workflow_dependencies',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    task_id: uuid('task_id')
+      .notNull()
+      .references(() => workflowTasksTable.id, { onDelete: 'cascade' }),
+    depends_on_task_id: uuid('depends_on_task_id')
+      .notNull()
+      .references(() => workflowTasksTable.id, { onDelete: 'cascade' }),
+    dependency_type: varchar('dependency_type', { length: 20 })
+      .notNull()
+      .$type<'blocks' | 'informs' | 'optional' | 'conditional'>(),
+    // condition: jsonb('condition').default({}), // Removed - doesn't exist in DB
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    dependenciesTaskIdx: index('idx_workflow_dependencies_task').on(table.task_id),
+    dependenciesDependsOnIdx: index('idx_workflow_dependencies_depends_on').on(table.depends_on_task_id),
+    uniqueTaskDependency: unique('unique_task_dependency').on(table.task_id, table.depends_on_task_id),
+  })
+);
+
+// ===== Workflow Executions Table =====
+export const workflowExecutionsTable = pgTable(
+  'workflow_executions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    workflow_id: uuid('workflow_id')
+      .notNull()
+      .references(() => conversationWorkflowsTable.id, { onDelete: 'cascade' }),
+    task_id: uuid('task_id').references(() => workflowTasksTable.id, { onDelete: 'cascade' }),
+    action: varchar('action', { length: 50 }).notNull(),
+    actor: varchar('actor', { length: 50 }),
+    input_data: jsonb('input_data').default({}),
+    output_data: jsonb('output_data').default({}),
+    error_details: jsonb('error_details').default({}),
+    duration_ms: integer('duration_ms'),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    executionsWorkflowIdx: index('idx_workflow_executions_workflow').on(table.workflow_id),
+    executionsTaskIdx: index('idx_workflow_executions_task').on(table.task_id),
+    executionsCreatedIdx: index('idx_workflow_executions_created').on(table.created_at),
+  })
+);
+
+// ===== Workflow Learning Table =====
+export const workflowLearningTable = pgTable(
+  'workflow_learning',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    template_id: uuid('template_id').references(() => workflowTemplatesTable.id, { onDelete: 'cascade' }),
+    pattern_type: varchar('pattern_type', { length: 50 }).notNull(),
+    pattern_data: jsonb('pattern_data').notNull(),
+    confidence_score: numeric('confidence_score', { precision: 5, scale: 2 }).default('0'),
+    occurrence_count: integer('occurrence_count').default(1),
+    last_observed: timestamp('last_observed', { withTimezone: true }).notNull().defaultNow(),
+    applied_count: integer('applied_count').default(0),
+    success_count: integer('success_count').default(0),
+    created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    learningTemplateIdx: index('idx_workflow_learning_template').on(table.template_id),
+    learningPatternTypeIdx: index('idx_workflow_learning_pattern_type').on(table.pattern_type),
+    learningConfidenceIdx: index('idx_workflow_learning_confidence').on(table.confidence_score),
+  })
+);
+
+// ===== Workflow Relations =====
+export const workflowTemplatesRelations = relations(workflowTemplatesTable, ({ many }) => ({
+  workflows: many(conversationWorkflowsTable),
+  learningPatterns: many(workflowLearningTable),
+}));
+
+export const conversationWorkflowsRelations = relations(conversationWorkflowsTable, ({ one, many }) => ({
+  conversation: one(chatConversationsTable, {
+    fields: [conversationWorkflowsTable.conversation_id],
+    references: [chatConversationsTable.uuid],
+  }),
+  template: one(workflowTemplatesTable, {
+    fields: [conversationWorkflowsTable.template_id],
+    references: [workflowTemplatesTable.id],
+  }),
+  tasks: many(workflowTasksTable),
+  executions: many(workflowExecutionsTable),
+}));
+
+export const workflowTasksRelations = relations(workflowTasksTable, ({ one, many }) => ({
+  workflow: one(conversationWorkflowsTable, {
+    fields: [workflowTasksTable.workflow_id],
+    references: [conversationWorkflowsTable.id],
+  }),
+  parentTask: one(workflowTasksTable, {
+    fields: [workflowTasksTable.parent_task_id],
+    references: [workflowTasksTable.id],
+  }),
+  childTasks: many(workflowTasksTable),
+  dependencies: many(workflowDependenciesTable, { relationName: 'task_dependencies' }),
+  dependents: many(workflowDependenciesTable, { relationName: 'dependent_tasks' }),
+  executions: many(workflowExecutionsTable),
+  conversationTask: one(conversationTasksTable, {
+    fields: [workflowTasksTable.id],
+    references: [conversationTasksTable.workflow_task_id],
+  }),
+}));
+
+export const workflowDependenciesRelations = relations(workflowDependenciesTable, ({ one }) => ({
+  task: one(workflowTasksTable, {
+    fields: [workflowDependenciesTable.task_id],
+    references: [workflowTasksTable.id],
+    relationName: 'task_dependencies',
+  }),
+  dependsOn: one(workflowTasksTable, {
+    fields: [workflowDependenciesTable.depends_on_task_id],
+    references: [workflowTasksTable.id],
+    relationName: 'dependent_tasks',
+  }),
+}));
+
+export const workflowExecutionsRelations = relations(workflowExecutionsTable, ({ one }) => ({
+  workflow: one(conversationWorkflowsTable, {
+    fields: [workflowExecutionsTable.workflow_id],
+    references: [conversationWorkflowsTable.id],
+  }),
+  task: one(workflowTasksTable, {
+    fields: [workflowExecutionsTable.task_id],
+    references: [workflowTasksTable.id],
+  }),
+}));
+
+export const workflowLearningRelations = relations(workflowLearningTable, ({ one }) => ({
+  template: one(workflowTemplatesTable, {
+    fields: [workflowLearningTable.template_id],
+    references: [workflowTemplatesTable.id],
   }),
 }));

@@ -211,6 +211,33 @@ export function PersonaIntegrations({
       return;
     }
 
+    // Get the current local integration configuration
+    let integrationConfig = null;
+    switch (integrationType) {
+      case 'slack':
+        integrationConfig = localIntegrations.communication?.slack;
+        break;
+      case 'email':
+        integrationConfig = localIntegrations.communication?.email;
+        break;
+      case 'calendar':
+        integrationConfig = localIntegrations.calendar;
+        break;
+      case 'crm':
+        integrationConfig = localIntegrations.crm;
+        break;
+    }
+
+    // Check if the integration is configured locally
+    if (!integrationConfig?.enabled) {
+      toast({
+        title: t('common.error'),
+        description: t('embeddedChat.integrations.notConfigured', `${integrationType} integration is not enabled`),
+        variant: 'destructive',
+      });
+      return;
+    }
+
     toast({
       title: t('embeddedChat.integrations.testing', 'Testing Integration'),
       description: t('embeddedChat.integrations.testingDesc', 'Checking connection...'),
@@ -224,6 +251,8 @@ export function PersonaIntegrations({
         body: JSON.stringify({
           type: 'test',
           integration: integrationType,
+          // Include the current local configuration for testing
+          localConfig: integrationConfig,
         }),
       });
 

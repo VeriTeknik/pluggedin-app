@@ -177,7 +177,21 @@ export class GoogleCalendarService extends BaseIntegrationService {
       const data = await response.json();
       return data.items || [];
     } else {
-      throw new Error('Failed to fetch calendar list');
+      const errorText = await response.text();
+      console.error('[GoogleCalendarService] Calendar list API error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorText
+      });
+      
+      // Check for common errors
+      if (response.status === 401) {
+        throw new Error('Google Calendar authentication failed. Please reconnect your calendar.');
+      } else if (response.status === 403) {
+        throw new Error('Missing calendar permissions. Please reconnect with proper scopes.');
+      } else {
+        throw new Error(`Failed to fetch calendar list: ${response.status} ${errorText}`);
+      }
     }
   }
 
@@ -416,6 +430,14 @@ export class GoogleCalendarService extends BaseIntegrationService {
     const baseUrl = 'https://www.googleapis.com/calendar/v3';
     const config = this.calendarIntegration.config;
     
+    console.log('[GoogleCalendarService] makeApiCall:', {
+      endpoint,
+      method,
+      hasConfig: !!config,
+      hasAccessToken: !!config?.accessToken,
+      hasApiKey: !!config?.apiKey
+    });
+    
     // Check if config exists
     if (!config) {
       throw new Error('Calendar integration is not configured. Please connect your Google Calendar account first.');
@@ -428,6 +450,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
     // Use access token if available, otherwise use API key
     if (config.accessToken) {
       headers['Authorization'] = `Bearer ${config.accessToken}`;
+      console.log('[GoogleCalendarService] Using access token for authentication');
     }
 
     const url = new URL(`${baseUrl}${endpoint}`);

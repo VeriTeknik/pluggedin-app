@@ -8,6 +8,7 @@ import { GoogleCalendarService } from '@/lib/integrations/calendar/google-calend
 import { SlackService } from '@/lib/integrations/communication/slack';
 import { EmailService } from '@/lib/integrations/communication/email';
 import { CalendarIntegration,IntegrationAction, PersonaIntegrations } from '@/lib/integrations/types';
+import { getValidGoogleAccessToken } from '@/lib/auth/google-token-refresh';
 
 export async function POST(
   req: NextRequest,
@@ -60,19 +61,35 @@ export async function POST(
 
     // Check if this is a test request first
     if (type === 'test') {
-      const { integration: integrationName } = body;
-      const integrations = (persona.integrations as PersonaIntegrations) || {};
+      const { integration: integrationName, localConfig } = body;
+      
+      // Use local configuration if provided (for testing unsaved changes)
+      // Otherwise fall back to saved integrations
+      const integrations = localConfig 
+        ? { ...(persona.integrations as PersonaIntegrations || {}), [integrationName]: localConfig }
+        : (persona.integrations as PersonaIntegrations) || {};
+      
+      // For nested integrations like slack/email under communication
+      if (integrationName === 'slack' || integrationName === 'email') {
+        if (localConfig) {
+          integrations.communication = {
+            ...(integrations.communication || {}),
+            [integrationName]: localConfig
+          };
+        }
+      }
       
       switch (integrationName) {
         case 'calendar': {
-          if (!integrations.calendar?.enabled) {
+          const calendarConfig = localConfig || integrations.calendar;
+          if (!calendarConfig?.enabled) {
             return NextResponse.json({ error: 'Calendar integration not configured' }, { status: 400 });
           }
 
           // Default to google_calendar if no provider is set
-          const provider = integrations.calendar.provider || 'google_calendar';
+          const provider = calendarConfig.provider || 'google_calendar';
           console.log('[INTEGRATION] Calendar provider:', provider);
-          console.log('[INTEGRATION] Calendar config:', integrations.calendar);
+          console.log('[INTEGRATION] Calendar config:', calendarConfig);
 
           if (provider === 'google_calendar') {
             const googleAccount = await db.query.accounts.findFirst({
@@ -113,11 +130,21 @@ export async function POST(
               });
             }
 
+            // Get a valid access token (refresh if needed)
+            const validAccessToken = await getValidGoogleAccessToken(session.user.id);
+            
+            if (!validAccessToken) {
+              return NextResponse.json({
+                success: false,
+                error: 'Failed to get valid access token. Please reconnect Google Calendar.',
+              });
+            }
+            
             const calendarIntegration: CalendarIntegration = {
-              ...integrations.calendar,
+              ...calendarConfig,
               config: {
-                ...integrations.calendar.config,
-                accessToken: googleAccount.access_token,
+                ...(calendarConfig.config || {}),
+                accessToken: validAccessToken,
               }
             };
 
@@ -134,21 +161,23 @@ export async function POST(
         }
 
         case 'slack': {
-          if (!integrations.communication?.slack?.enabled) {
+          const slackConfig = localConfig || integrations.communication?.slack;
+          if (!slackConfig?.enabled) {
             return NextResponse.json({ error: 'Slack integration not configured' }, { status: 400 });
           }
 
-          const slackService = new SlackService(integrations.communication.slack);
+          const slackService = new SlackService(slackConfig);
           const result = await slackService.test();
           return NextResponse.json(result);
         }
 
         case 'email': {
-          if (!integrations.communication?.email?.enabled) {
+          const emailConfig = localConfig || integrations.communication?.email;
+          if (!emailConfig?.enabled) {
             return NextResponse.json({ error: 'Email integration not configured' }, { status: 400 });
           }
 
-          const emailService = new EmailService(integrations.communication.email);
+          const emailService = new EmailService(emailConfig);
           const result = await emailService.test();
           return NextResponse.json(result);
         }

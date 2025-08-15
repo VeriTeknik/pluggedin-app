@@ -16,7 +16,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { cn } from '@/lib/utils';
 import { formatVisitorName,getOrCreateVisitorId } from '@/lib/visitor-utils';
-import { MemoryList, TaskManager, MemoryDashboard } from '@/components/memory';
+import { MemoryList, MemoryDashboard } from '@/components/memory';
+import { SimpleTodoList } from '@/components/workflow/simple-todo-list';
 
 // Helper to ensure absolute URLs for API calls
 function getApiUrl(path: string) {
@@ -211,6 +212,7 @@ export function NativeEmbeddedChat({
     };
   }, [conversationId, isOpen, chatUuid]);
 
+
   // Fetch memories when conversationId changes or when showMemories is toggled
   useEffect(() => {
     const fetchMemories = async () => {
@@ -288,6 +290,12 @@ export function NativeEmbeddedChat({
             name: user?.name || user?.username || formatVisitorName(visitorId),
             email: user?.email || undefined,
           },
+          // Include client context for accurate date/time handling
+          client_context: {
+            timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            current_datetime: new Date().toISOString(),
+            locale: navigator.language || 'en-US',
+          },
           // Include authenticated user info for native component
           authenticated_user: isAuthenticated ? {
             id: session?.user?.id || '',
@@ -342,8 +350,20 @@ export function NativeEmbeddedChat({
                 // Optionally show tool usage in the UI
                 console.log('Tool started:', data.tool);
               } else if (data.type === 'tool_end') {
-                // Optionally show tool completion
-                console.log('Tool ended:', data.tool);
+                // Check if workflow was created
+                console.log('[Stream] Tool ended:', data.tool, data.result);
+                
+                // More comprehensive workflow detection
+                const hasWorkflow = data.result?.workflowCreated || 
+                                   data.result?.workflowId || 
+                                   data.result?.workflow ||
+                                   (typeof data.result === 'string' && data.result.includes('workflow'));
+                
+                if (hasWorkflow) {
+                  console.log('[Stream] Workflow detected, checking for active workflows...');
+                  // Give more time for workflow to be saved to database
+                  // The SimpleTodoList will automatically fetch and display tasks
+                }
               } else if (data.type === 'debug') {
                 // Store debug information
                 console.log('Debug info:', data);
@@ -434,6 +454,7 @@ export function NativeEmbeddedChat({
       }]);
     } finally {
       setIsLoading(false);
+      // The SimpleTodoList will automatically fetch and display tasks
     }
   };
 
@@ -886,13 +907,13 @@ export function NativeEmbeddedChat({
         </div>
       )}
 
-      {/* Task Panel */}
+      {/* Task/Workflow Panel */}
       {showTasks && conversationId && (
         <div className="border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-900 p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
               <CheckSquare className="w-4 h-4" />
-              Task Manager
+              Tasks
             </h3>
             <Button
               variant="ghost"
@@ -904,10 +925,9 @@ export function NativeEmbeddedChat({
             </Button>
           </div>
           <div className="max-h-96 overflow-y-auto">
-            <TaskManager
+            <SimpleTodoList
               chatUuid={chatUuid}
               conversationId={conversationId}
-              memories={memories}
               visitorId={visitorId}
               className="bg-white dark:bg-gray-800 rounded-lg"
             />

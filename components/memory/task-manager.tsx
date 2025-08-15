@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Calendar, CheckCircle, Circle, Clock, Plus, Trash2, Edit, Brain } from 'lucide-react';
+import { Calendar, CheckCircle, Circle, Clock, Plus, Trash2, Edit, Brain, Workflow, Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Helper to ensure absolute URLs for API calls
@@ -25,9 +25,12 @@ interface Task {
   title: string;
   description: string;
   status: 'todo' | 'in_progress' | 'completed';
-  priority: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   dueDate?: string;
   memoryId?: string;
+  workflowTaskId?: string;
+  isWorkflowGenerated?: boolean;
+  workflowMetadata?: any;
   createdAt: string;
   updatedAt: string;
 }
@@ -183,6 +186,7 @@ export function TaskManager({ memories, conversationId, chatUuid, visitorId, cla
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
+      case 'urgent': return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
       case 'high': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
       case 'medium': return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
       case 'low': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
@@ -242,10 +246,21 @@ export function TaskManager({ memories, conversationId, chatUuid, visitorId, cla
             </CardHeader>
             <CardContent className="space-y-2">
               {getTasksByStatus(status).map(task => (
-                <Card key={task.id} className="p-3 cursor-pointer hover:shadow-md transition-shadow">
+                <Card 
+                  key={task.id} 
+                  className={cn(
+                    "p-3 cursor-pointer hover:shadow-md transition-shadow",
+                    task.isWorkflowGenerated && "border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-900/10"
+                  )}
+                >
                   <div className="space-y-2">
                     <div className="flex items-start justify-between">
-                      <h4 className="font-medium text-sm">{task.title}</h4>
+                      <div className="flex items-start gap-2">
+                        {task.isWorkflowGenerated && (
+                          <Workflow className="w-4 h-4 text-purple-500 mt-0.5" title="AI Workflow Task" />
+                        )}
+                        <h4 className="font-medium text-sm">{task.title}</h4>
+                      </div>
                       <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
@@ -288,6 +303,16 @@ export function TaskManager({ memories, conversationId, chatUuid, visitorId, cla
                     {task.memoryId && (
                       <div className="text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 p-2 rounded">
                         <strong>Related Memory:</strong> {getMemoryContent(task.memoryId)}
+                      </div>
+                    )}
+                    
+                    {task.workflowMetadata && (
+                      <div className="text-xs text-purple-600 dark:text-purple-400 bg-gradient-to-r from-purple-50 to-indigo-50 dark:from-purple-900/20 dark:to-indigo-900/20 p-2 rounded flex items-center gap-2">
+                        <Bot className="w-3 h-3" />
+                        <span>
+                          <strong>Workflow:</strong> {task.workflowMetadata.template || 'AI Generated'}
+                          {task.workflowMetadata.step && ` • Step ${task.workflowMetadata.step}`}
+                        </span>
                       </div>
                     )}
                   </div>
@@ -340,6 +365,7 @@ export function TaskManager({ memories, conversationId, chatUuid, visitorId, cla
                     <SelectItem value="low">Low</SelectItem>
                     <SelectItem value="medium">Medium</SelectItem>
                     <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="urgent">Urgent</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

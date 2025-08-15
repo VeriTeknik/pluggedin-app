@@ -139,7 +139,12 @@ export class ChatEngine {
   async *processMessage(
     message: string,
     conversationId: string,
-    waitForInstruction: boolean = false
+    waitForInstruction: boolean = false,
+    clientContext?: {
+      timezone: string;
+      current_datetime: string;
+      locale?: string;
+    }
   ): AsyncGenerator<ChatChunk> {
     try {
       // Check if conversation is in human-controlled mode
@@ -182,7 +187,7 @@ export class ChatEngine {
       });
       
       // Always use the internal API for processing
-      yield* this.processWithInternalAPI(message, conversationId);
+      yield* this.processWithInternalAPI(message, conversationId, clientContext);
       
       // Update conversation heartbeat
       await db
@@ -210,7 +215,12 @@ export class ChatEngine {
 
   private async *processWithInternalAPI(
     message: string,
-    conversationId: string
+    conversationId: string,
+    clientContext?: {
+      timezone: string;
+      current_datetime: string;
+      locale?: string;
+    }
   ): AsyncGenerator<ChatChunk> {
     try {
       // Ensure session is initialized
@@ -225,7 +235,8 @@ export class ChatEngine {
           chatUuid: this.chatConfig.uuid,
           conversationId,
           query: message,
-          enableRag: this.chatConfig.enable_rag
+          enableRag: this.chatConfig.enable_rag,
+          clientContext
         })
       });
       

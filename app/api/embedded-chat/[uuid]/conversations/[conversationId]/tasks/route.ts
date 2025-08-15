@@ -8,7 +8,7 @@ import { normalizeUserId, isVisitorId } from '@/lib/chat-memory/id-utils';
 // GET /api/embedded-chat/[uuid]/conversations/[conversationId]/tasks - Get all tasks for a conversation
 export async function GET(
   request: NextRequest,
-  { params }: { params: { uuid: string; conversationId: string } }
+  { params: paramsPromise }: { params: Promise<{ uuid: string; conversationId: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
@@ -26,6 +26,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
 
+    const params = await paramsPromise;
     const { uuid, conversationId } = params;
     
     // Verify the conversation belongs to the user
@@ -57,7 +58,7 @@ export async function GET(
 // POST /api/embedded-chat/[uuid]/conversations/[conversationId]/tasks - Create a new task
 export async function POST(
   request: NextRequest,
-  { params }: { params: { uuid: string; conversationId: string } }
+  { params: paramsPromise }: { params: Promise<{ uuid: string; conversationId: string }> }
 ) {
   try {
     const { searchParams } = new URL(request.url);
@@ -75,6 +76,7 @@ export async function POST(
       return NextResponse.json({ error: 'Invalid user ID' }, { status: 400 });
     }
 
+    const params = await paramsPromise;
     const { uuid, conversationId } = params;
     const body = await request.json();
     const { title, description, priority, dueDate, memoryId } = body;

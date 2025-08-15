@@ -53,6 +53,11 @@ const ChatRequestSchema = z.object({
     name: z.string().optional(),
     email: z.string().email().optional(),
   }),
+  client_context: z.object({
+    timezone: z.string(),
+    current_datetime: z.string(),
+    locale: z.string().optional(),
+  }).optional(),
   authenticated_user: z.object({
     id: z.string(),
     name: z.string(),
@@ -248,9 +253,12 @@ export async function POST(
 
           // Process message
           console.log('Processing message:', validatedData.message);
+          console.log('Client context:', validatedData.client_context);
           for await (const chunk of chatEngine.processMessage(
             validatedData.message,
-            conversationId
+            conversationId,
+            false,
+            validatedData.client_context
           )) {
             console.log('Chat chunk:', chunk);
             controller.enqueue(

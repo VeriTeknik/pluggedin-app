@@ -27,7 +27,10 @@ const auditLogTypeEnum = z.enum([
 ]);
 
 const auditLogOptionsSchema = z.object({
-  profileUuid: z.string().uuid().optional(),
+  profileUuid: z.string().optional().refine(
+    (val) => !val || val.startsWith('embedded_') || z.string().uuid().safeParse(val).success,
+    { message: 'Must be a valid UUID or embedded chat identifier' }
+  ),
   type: auditLogTypeEnum,
   action: z.string().min(1),
   requestPath: z.string().optional(),

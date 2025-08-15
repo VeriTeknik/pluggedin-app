@@ -50,6 +50,7 @@ interface McpPlaygroundSession {
     streaming?: boolean;
   };
   messages: Array<{role: string, content: string, timestamp?: Date, model?: string}>;
+  setClientContext?: (context: any) => void; // Optional setter for client context
 }
 
 // Map to store active sessions by profile UUID
@@ -1532,31 +1533,44 @@ async function createIsolatedEmbeddedChatSession(
       mcpServersConfig
     );
     
-    // Map the provider to what langchain-mcp-tools expects
-    let mappedProvider: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none' = 'none';
+    // Only initialize MCP servers if there are any enabled
+    let mcpTools: any[] = [];
+    let mcpCleanup: () => Promise<void> = async () => {};
+    let failedServers: string[] = [];
     
-    if (llmConfig.provider === 'anthropic') {
-      mappedProvider = 'anthropic';
-    } else if (llmConfig.provider === 'openai') {
-      mappedProvider = 'openai';
-    } else if (llmConfig.provider === 'google') {
-      // Use proper Google provider for Gemini compatibility
-      mappedProvider = 'google_genai';
-    } else if (llmConfig.provider === 'xai') {
-      // Map XAI to openai format for compatibility
-      mappedProvider = 'openai';
-    }
-    
-    const { tools: mcpTools, cleanup: mcpCleanup, failedServers } = await progressivelyInitializeMcpServers(
-      mcpServersConfig,
-      `embedded_${chatUuid}`, // Use chat-specific identifier
-      {
-        logger,
-        perServerTimeout: 20000, // 20 seconds per server
-        totalTimeout: 60000, // 60 seconds total
-        llmProvider: mappedProvider
+    if (Object.keys(mcpServersConfig).length > 0) {
+      // Map the provider to what langchain-mcp-tools expects
+      let mappedProvider: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none' = 'none';
+      
+      if (llmConfig.provider === 'anthropic') {
+        mappedProvider = 'anthropic';
+      } else if (llmConfig.provider === 'openai') {
+        mappedProvider = 'openai';
+      } else if (llmConfig.provider === 'google') {
+        // Use proper Google provider for Gemini compatibility
+        mappedProvider = 'google_genai';
+      } else if (llmConfig.provider === 'xai') {
+        // Map XAI to openai format for compatibility
+        mappedProvider = 'openai';
       }
-    );
+      
+      const result = await progressivelyInitializeMcpServers(
+        mcpServersConfig,
+        `embedded_${chatUuid}`, // Use chat-specific identifier
+        {
+          logger,
+          perServerTimeout: 20000, // 20 seconds per server
+          totalTimeout: 60000, // 60 seconds total
+          llmProvider: mappedProvider
+        }
+      );
+      
+      mcpTools = result.tools;
+      mcpCleanup = result.cleanup;
+      failedServers = result.failedServers;
+    } else {
+      console.log('[EMBEDDED] No MCP servers enabled, skipping initialization');
+    }
     
     // Log detailed information about MCP server initialization
     console.log(`[EMBEDDED] MCP server initialization complete:`, {
@@ -1584,6 +1598,8 @@ async function createIsolatedEmbeddedChatSession(
     
     // Create persona capability tools if we have an active persona
     let personaTools: any[] = [];
+    let integrationManager: any = undefined; // Declare here so it's accessible in closures
+    
     if (activePersona) {
       try {
         // Import the tools dynamically
@@ -1646,25 +1662,31 @@ async function createIsolatedEmbeddedChatSession(
                     columns: { user_id: true }
                   });
                   if (projectRow?.user_id) {
-                    const googleAccount = await db.query.accounts.findFirst({
-                      where: and(eq(accounts.userId, projectRow.user_id), eq(accounts.provider, 'google')),
-                      columns: { access_token: true, refresh_token: true }
-                    } as any);
-                    if (googleAccount?.access_token) {
+                    // Import token refresh function dynamically to avoid circular deps
+                    const { getValidGoogleAccessToken } = await import('@/lib/auth/google-token-refresh');
+                    const validAccessToken = await getValidGoogleAccessToken(projectRow.user_id);
+                    
+                    if (validAccessToken) {
+                      // Get refresh token for completeness
+                      const googleAccount = await db.query.accounts.findFirst({
+                        where: and(eq(accounts.userId, projectRow.user_id), eq(accounts.provider, 'google')),
+                        columns: { refresh_token: true }
+                      } as any);
+                      
                       // Ensure the calendar object has the provider field and tokens
                       (mergedIntegrations as any).calendar = {
                         ...(mergedIntegrations as any).calendar,
                         provider: 'google_calendar',
                         config: {
                           ...((mergedIntegrations as any).calendar.config || {}),
-                          accessToken: googleAccount.access_token,
-                          refreshToken: googleAccount.refresh_token || undefined,
+                          accessToken: validAccessToken,
+                          refreshToken: googleAccount?.refresh_token || undefined,
                         }
                       };
-                      console.log('[EMBEDDED] Successfully injected Google Calendar tokens');
+                      console.log('[EMBEDDED] Successfully injected Google Calendar tokens (refreshed if needed)');
                       console.log('[EMBEDDED] Calendar config after injection:', JSON.stringify((mergedIntegrations as any).calendar, null, 2));
                     } else {
-                      console.log('[EMBEDDED] No Google access token found for user');
+                      console.log('[EMBEDDED] Failed to get valid Google access token');
                     }
                   } else {
                     console.log('[EMBEDDED] No project user_id found');
@@ -1713,13 +1735,15 @@ async function createIsolatedEmbeddedChatSession(
         console.log('[EMBEDDED] Final mergedIntegrations before IntegrationManager:', JSON.stringify(mergedIntegrations, null, 2));
         
         // Create integration manager with merged configuration
-        const integrationManager = new IntegrationManager(mergedIntegrations, activePersona.capabilities as any || []);
+        integrationManager = new IntegrationManager(mergedIntegrations, activePersona.capabilities as any || []);
         
         // Set up the tool context with integrations access
         // Add integrations config without overwriting the internal integrations Map
         (integrationManager as any).integrationsConfig = mergedIntegrations;
         // Also expose embedded chat UUID for identity fallback in tools
         (integrationManager as any).embeddedChatUuid = chatUuid;
+        // Store client context for timezone-aware operations (only available during message processing)
+        (integrationManager as any).clientContext = undefined; // Will be set during message processing
         
         const toolContext = {
           integrationManager: integrationManager as any,
@@ -1728,6 +1752,7 @@ async function createIsolatedEmbeddedChatSession(
           // resolve latest conversation using embeddedChatUuid when needed
           conversationId: undefined,
           profileUuid, // Add profile UUID for notifications
+          clientContext: undefined, // Will be provided during message processing
         };
         
         // Create tools based on enabled capabilities
@@ -1791,23 +1816,58 @@ async function createIsolatedEmbeddedChatSession(
     // Bind tools to the LLM for proper function calling
     const llmWithTools = llm.bindTools ? llm.bindTools(allTools) : llm;
     
+    // Capture clientContext for use in closures
+    let capturedClientContext: any = undefined;
+    
     // Create the agent with tools
     const agent = createReactAgent({
       llm: llmWithTools,
       tools: allTools,
       checkpointSaver: new MemorySaver(), // Enable conversation memory
       stateModifier: (state: any) => {
-        // Start with authentication requirements (HIGHEST PRIORITY)
-        let systemMessage = '';
+        // Start with response style guidelines (HIGHEST PRIORITY)
+        let systemMessage = `CRITICAL RULES - FOLLOW EXACTLY:
+1. MAX 2 SENTENCES per response
+2. NEVER auto-fill missing data  
+3. For scheduling: NEVER guess emails or convert "next week" to dates
+4. Call tools with ONLY what user explicitly provides
+5. Let workflows handle missing information
+6. NEVER show raw JSON, tool calls, or technical parameters to users
+7. When tools return formatted messages, present them naturally
+8. Keep responses conversational - no JSON dumps
+9. When a tool returns workflowCreated=true, STOP - don't call the tool again
+10. One workflow per request - if workflow exists, don't create another
+
+`;
         
         if (!isAuthenticated) {
-          systemMessage = `You are interacting with a visitor. You may execute tools. When sending external communications (Slack/email), include any available identity (from session or conversation). If not available, proceed using defaults.`;
+          systemMessage += `You are interacting with a visitor. You may execute tools. When sending external communications (Slack/email), include any available identity (from session or conversation). If not available, proceed using defaults.\n`;
+        }
+        
+        // Add current date/time context from client (CRITICAL FOR SCHEDULING)
+        if (capturedClientContext) {
+          const clientDatetime = new Date(capturedClientContext.current_datetime);
+          const formatter = new Intl.DateTimeFormat(capturedClientContext.locale || 'en-US', {
+            dateStyle: 'full',
+            timeStyle: 'short',
+            timeZone: capturedClientContext.timezone
+          });
+          
+          systemMessage += `\n\nCURRENT DATE AND TIME:\n`;
+          systemMessage += `- Current Time: ${formatter.format(clientDatetime)}\n`;
+          systemMessage += `- ISO Format: ${clientDatetime.toISOString()}\n`;
+          systemMessage += `- User Timezone: ${capturedClientContext.timezone}\n`;
+          systemMessage += `- User Locale: ${capturedClientContext.locale || 'en-US'}\n`;
+          systemMessage += `When scheduling meetings or discussing dates/times, always use the user's timezone (${capturedClientContext.timezone}) as reference.\n\n`;
         }
         
         // Then add custom instructions if available
         if (embeddedChatData?.custom_instructions) {
           systemMessage += embeddedChatData.custom_instructions + '\n\n';
         }
+        
+        // Reinforce brevity
+        systemMessage += `REMINDER: Maximum 1-2 sentences. Be direct. No fluff.\n\n`;
         
         // Add core identity
         systemMessage += `YOUR IDENTITY:\n`;
@@ -1940,14 +2000,26 @@ TOOLS AND SOURCES:
         // Contact Playbook to drive consistent next steps
         systemMessage += `
 
-CONTACT PLAYBOOK:
-• If the visitor mentions meeting/scheduling:
-  1) Clarify timezone, duration, attendees, and a time window.
-  2) Call check_availability to propose 2–3 concrete slots.
-  3) On confirmation, call book_calendar_meeting (include Google Meet if requested).
-• If a meeting isn’t appropriate, offer to send an email and then call send_email with a clear subject and summary.
-• Always confirm details before executing a tool, then summarize the outcome (slot, attendees, links) and offer follow‑up.
-• Never ask for defaults that exist in persona/chat config.`;
+SCHEDULING WORKFLOW - SMART DATE HANDLING:
+When user says "schedule meeting next week 2 PM":
+1. Calculate the date: "next week" = same weekday in the following week
+2. Interpret time in user's timezone (${capturedClientContext?.timezone || 'UTC'})
+3. Call: book_calendar_meeting with:
+   - action: "book"
+   - title: from request
+   - proposedDateTime: calculated ISO timestamp
+   - needsConfirmation: true
+4. Ask user: "I'll schedule for [specific date/time]. Who should attend?"
+5. The workflow will handle gathering attendees and checking availability
+
+DO interpret relative dates:
+- "next week 2 PM" → Calculate specific date
+- "tomorrow 3 PM" → Calculate specific date
+- "Friday at 10 AM" → Find next Friday
+
+DON'T guess personal info:
+- Names → emails (need actual addresses)
+- "Cem" ≠ "cem.karaca@gmail.com"`;
 
         return [
           { role: 'system', content: systemMessage },
@@ -1970,6 +2042,13 @@ CONTACT PLAYBOOK:
         streaming: llmConfig.streaming
       },
       messages: [],
+      // Add a setter to update client context during message processing
+      setClientContext: (context: any) => {
+        capturedClientContext = context;
+        if (integrationManager) {
+          (integrationManager as any).clientContext = context;
+        }
+      }
     };
     
     embeddedChatSessions.set(chatUuid, sessionData);
@@ -2041,7 +2120,7 @@ export async function getOrCreateEmbeddedChatSession(
     // Filter to only enabled servers
     const enabledServers = enabledServerUuids.length > 0
       ? allServers.filter(server => enabledServerUuids.includes(server.uuid))
-      : allServers;
+      : []; // If no servers are explicitly enabled, don't enable any
     
     // Create isolated session directly (don't reuse playground logic)
     const result = await createIsolatedEmbeddedChatSession(
@@ -2073,7 +2152,12 @@ export async function executeEmbeddedChatQuery(
   chatUuid: string,
   conversationId: string,
   query: string,
-  enableRag: boolean = false
+  enableRag: boolean = false,
+  clientContext?: {
+    timezone: string;
+    current_datetime: string;
+    locale?: string;
+  }
 ) {
   console.log('[EMBEDDED] Executing query for chat:', chatUuid);
   console.log('[EMBEDDED] Active sessions:', Array.from(embeddedChatSessions.keys()));
@@ -2157,6 +2241,12 @@ export async function executeEmbeddedChatQuery(
   console.log('[EMBEDDED] Session found/recreated, processing query:', query);
   console.log('[EMBEDDED] Debug mode:', debugMode);
   console.log('[EMBEDDED] Model config:', modelConfig);
+  
+  // Update the session's client context if available
+  if (session.setClientContext && clientContext) {
+    console.log('[EMBEDDED] Updating session with client context:', clientContext);
+    session.setClientContext(clientContext);
+  }
 
   try {
     // Check authentication status (treat presence of user id as authenticated)
@@ -2335,11 +2425,26 @@ ${limitedContext}`;
                 tool: tool.name
               });
             },
-            handleToolEnd: async (tool) => {
+            handleToolEnd: async (output, runId) => {
+              console.log('[TOOL_END] Tool output:', output);
+              
+              // Extract tool result if available
+              let toolResult = null;
+              if (output && typeof output === 'object') {
+                // The output might be in different formats depending on the tool
+                toolResult = output.output || output.result || output;
+              }
+              
               streamingResponses.push({
                 type: 'tool_end',
-                tool: tool.name
+                tool: output?.name || 'unknown',
+                result: toolResult
               });
+              
+              // Check if this is a workflow creation
+              if (toolResult?.workflowCreated || toolResult?.workflowId) {
+                console.log('[WORKFLOW] Created workflow:', toolResult.workflowId);
+              }
             }
           }
         ]
