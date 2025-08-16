@@ -409,15 +409,10 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
           }
         }
         
-        // ALWAYS use workflow for booking unless we have EVERYTHING
-        const shouldUseWorkflow = (action === 'book' && (
-          !attendees || attendees.length === 0 || 
-          !startTime || !endTime ||
-          // Also trigger workflow if time seems ambiguous (e.g., "next week", "tomorrow")
-          (startTime && !startTime.includes('T')) ||
-          // Or if we only have a name but not an email
-          (attendees && attendees.some(a => !a.includes('@')))
-        ));
+        // ALWAYS use workflow for booking actions to ensure proper validation and availability checks
+        // Workflows provide: 1) Availability checking to prevent double bookings
+        // 2) Data validation, 3) Proper error handling, 4) Transaction safety
+        const shouldUseWorkflow = (action === 'book');
         
         const needsUserInfo = action === 'book' && 
           !context.integrationManager.embeddedChatUuid && 
@@ -488,6 +483,24 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
                 conversationId,
                 status: workflow.status,
                 stepsCount: workflow.steps?.length
+              });
+              
+              // Import and use the workflow executor to auto-progress
+              const { WorkflowExecutor } = await import('@/lib/workflows/workflow-executor');
+              const executor = new WorkflowExecutor({
+                workflowId: workflow.id,
+                conversationId,
+                integrationManager: context.integrationManager,
+                debug: true
+              });
+              
+              // Execute the workflow asynchronously
+              executor.execute().then(result => {
+                if (result.success) {
+                  console.log('[CalendarTool] Workflow executed successfully');
+                } else {
+                  console.error('[CalendarTool] Workflow execution failed:', result.error);
+                }
               });
               
               // Format a user-friendly response
@@ -561,11 +574,20 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
                 }
               }
               
+              // Add workflow status to response
+              const workflowStatusMessage = `\n\n📊 **Workflow Status**: Processing\n` +
+                `The system is now automatically:\n` +
+                `1. Checking calendar availability\n` +
+                `2. Preventing double bookings\n` +
+                `3. Booking the meeting if slot is available\n\n` +
+                `You'll be notified once the workflow completes.`;
+              
               return {
                 success: true,
                 workflowCreated: true,
                 workflowId: workflow.id,
-                message: formattedResponse,
+                workflowStatus: 'processing',
+                message: formattedResponse + workflowStatusMessage,
                 stopProcessing: true // Signal to AI not to call tool again
               };
             }
@@ -1120,6 +1142,44 @@ function createWorkflowTriggerTool(context: ToolContext): DynamicStructuredTool 
               `Workflow created: ${template.name}`,
               { workflowId: workflow.id, template: template.name }
             );
+            
+            // Auto-execute the workflow if it's a booking workflow and we have all data
+            if (template.category === 'scheduling' && existingData.startTime && existingData.endTime) {
+              try {
+                const { WorkflowExecutor } = await import('@/lib/workflows/workflow-executor');
+                
+                console.log('[WorkflowTrigger] Auto-executing workflow with integration manager:', {
+                  hasIntegrationManager: !!context.integrationManager,
+                  capabilities: context.integrationManager?.getAvailableCapabilities?.()
+                });
+                
+                const executor = new WorkflowExecutor({
+                  workflowId: workflow.id,
+                  conversationId,
+                  integrationManager: context.integrationManager,
+                  debug: true
+                });
+                
+                const executionResult = await executor.execute();
+                
+                console.log('[WorkflowTrigger] Execution result:', executionResult);
+                
+                if (executionResult.success) {
+                  return {
+                    success: true,
+                    workflowId: workflow.id,
+                    templateName: template.name,
+                    status: 'completed',
+                    stepsCount: workflow.steps.length,
+                    message: `${template.name} workflow executed successfully. Meeting has been booked.`,
+                    autoExecuted: true
+                  };
+                }
+              } catch (execError) {
+                console.error('[WorkflowTrigger] Auto-execution failed:', execError);
+                // Continue with normal flow if auto-execution fails
+              }
+            }
             
             return {
               success: true,

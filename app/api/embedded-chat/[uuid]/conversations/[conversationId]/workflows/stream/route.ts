@@ -5,9 +5,9 @@ import { conversationWorkflowsTable } from '@/db/schema';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { uuid: string; conversationId: string } }
+  { params }: { params: Promise<{ uuid: string; conversationId: string }> }
 ) {
-  const { uuid, conversationId } = params;
+  const { uuid, conversationId } = await params;
   
   // Create a readable stream for SSE
   const stream = new ReadableStream({

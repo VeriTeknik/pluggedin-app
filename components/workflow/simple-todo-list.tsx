@@ -6,6 +6,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { createNotification } from '@/app/actions/notifications';
+import { CompactTaskView } from '@/components/embedded-chat/compact-task-view';
 
 // Helper to ensure absolute URLs for API calls
 function getApiUrl(path: string) {
@@ -340,129 +341,37 @@ export function SimpleTodoList({
     );
   }
 
+  // Transform tasks to match CompactTaskView format
+  const compactTasks = sortedTasks.map(task => ({
+    id: task.id,
+    title: task.title,
+    description: task.description,
+    status: task.status === 'active' ? 'in_progress' as const : 
+            task.status === 'pending' ? 'pending' as const : 
+            'completed' as const,
+    metadata: {
+      model: task.workflow_name || 'Workflow',
+      duration: task.created_at ? new Date(task.created_at).toLocaleTimeString() : undefined
+    }
+  }));
+
+  // Get active workflow for highlighting
+  const activeWorkflow = workflows.find(w => w.status === 'active' || w.status === 'planning');
+
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-2">
-          <Workflow className="w-4 h-4" />
-          Workflow Tasks
-        </h3>
-        <div className="text-xs text-gray-500 dark:text-gray-400">
-          {sortedTasks.filter(t => t.status === 'completed').length} of {sortedTasks.length} completed
-        </div>
-      </div>
-      
-      {/* Task filter buttons */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setTaskFilter('all')}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
-            taskFilter === 'all'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-          }`}
-        >
-          All ({allTasks.length})
-        </button>
-        <button
-          onClick={() => setTaskFilter('active')}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
-            taskFilter === 'active'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-          }`}
-        >
-          Active ({allTasks.filter(t => t.status === 'active' || t.status === 'pending').length})
-        </button>
-        <button
-          onClick={() => setTaskFilter('completed')}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
-            taskFilter === 'completed'
-              ? 'bg-blue-500 text-white'
-              : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-          }`}
-        >
-          Completed ({allTasks.filter(t => t.status === 'completed').length})
-        </button>
-      </div>
-      
-      <ScrollArea className="max-h-48 pr-2">
-        <div className="space-y-2">
-          {sortedTasks.map((task) => (
-            <div
-              key={task.id}
-              className={cn(
-                "flex items-start gap-3 p-3 rounded-lg border transition-all duration-300",
-                task.status === 'active' && "bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800",
-                task.status === 'completed' && "opacity-60",
-                newTaskIds.has(task.id) && "animate-pulse bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800"
-              )}
-            >
-              <div className="mt-0.5">
-                <Checkbox
-                  id={task.id}
-                  checked={task.status === 'completed'}
-                  onCheckedChange={(checked) =>
-                    handleTaskToggle(task.id, task.workflow_id, checked as boolean)
-                  }
-                  disabled={isUpdating || notifying === task.id}
-                />
-              </div>
-              <div className="flex-1 space-y-1">
-                <label
-                  htmlFor={task.id}
-                  className={cn(
-                    "text-sm font-medium cursor-pointer",
-                    task.status === 'completed' && "line-through text-gray-500 dark:text-gray-400"
-                  )}
-                >
-                  {task.title}
-                </label>
-                {task.description && (
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {task.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-2">
-                  {newTaskIds.has(task.id) && (
-                    <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1 animate-pulse">
-                      <Plus className="h-3 w-3" />
-                      New
-                    </span>
-                  )}
-                  <span className={cn(
-                    "text-xs px-1.5 py-0.5 rounded",
-                    task.type === 'gather' && "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300",
-                    task.type === 'validate' && "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300",
-                    task.type === 'execute' && "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
-                    task.type === 'confirm' && "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
-                    task.type === 'decision' && "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300",
-                    task.type === 'notify' && "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-300"
-                  )}>
-                    {task.type}
-                  </span>
-                  {task.status === 'active' && (
-                    <span className="text-xs text-blue-600 dark:text-blue-400 flex items-center gap-1">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Active
-                    </span>
-                  )}
-                  {task.status === 'completed' && (
-                    <span className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
-                      {notifying === task.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <CheckCircle className="h-3 w-3" />
-                      )}
-                      {notifying === task.id ? 'Notifying...' : 'Completed'}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </ScrollArea>
+    <div className={cn("", className)}>
+      <CompactTaskView
+        tasks={compactTasks}
+        workflowName={activeWorkflow?.template_name || "Workflow Tasks"}
+        isActive={sortedTasks.some(t => t.status === 'active')}
+        onTaskComplete={async (taskId) => {
+          const task = sortedTasks.find(t => t.id === taskId);
+          if (task) {
+            await handleTaskToggle(taskId, task.workflow_id, true);
+          }
+        }}
+        className="w-full"
+      />
     </div>
   );
 }

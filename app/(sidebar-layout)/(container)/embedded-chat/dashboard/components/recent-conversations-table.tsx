@@ -14,6 +14,7 @@ import Link from 'next/link';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -42,13 +43,20 @@ interface RecentConversationsTableProps {
   conversations: Conversation[];
   chatUuid: string;
   showAll?: boolean;
+  selectedConversations?: Set<string>;
+  onSelectConversation?: (uuid: string, checked: boolean) => void;
+  onSelectAll?: (checked: boolean) => void;
 }
 
 export function RecentConversationsTable({ 
   conversations, 
   chatUuid,
-  showAll = false 
+  showAll = false,
+  selectedConversations,
+  onSelectConversation,
+  onSelectAll
 }: RecentConversationsTableProps) {
+  const showCheckboxes = selectedConversations !== undefined;
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'active':
@@ -112,6 +120,15 @@ export function RecentConversationsTable({
       <Table>
         <TableHeader>
           <TableRow>
+            {showCheckboxes && (
+              <TableHead className="w-12">
+                <Checkbox 
+                  checked={selectedConversations?.size === conversations.length && conversations.length > 0}
+                  onCheckedChange={(checked) => onSelectAll?.(checked as boolean)}
+                  aria-label="Select all conversations"
+                />
+              </TableHead>
+            )}
             <TableHead>Visitor</TableHead>
             <TableHead>Started</TableHead>
             <TableHead>Duration</TableHead>
@@ -123,7 +140,16 @@ export function RecentConversationsTable({
         </TableHeader>
         <TableBody>
           {displayConversations.map((conv) => (
-            <TableRow key={conv.uuid}>
+            <TableRow key={conv.uuid} className={selectedConversations?.has(conv.uuid) ? 'bg-muted/50' : ''}>
+              {showCheckboxes && (
+                <TableCell>
+                  <Checkbox 
+                    checked={selectedConversations?.has(conv.uuid) || false}
+                    onCheckedChange={(checked) => onSelectConversation?.(conv.uuid, checked as boolean)}
+                    aria-label={`Select conversation ${conv.uuid}`}
+                  />
+                </TableCell>
+              )}
               <TableCell className="font-medium">
                 <div className="flex items-center gap-2">
                   {isAuthenticatedVisitor(conv.visitor_id, conv.metadata) ? (

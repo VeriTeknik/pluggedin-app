@@ -11,6 +11,7 @@ import {
 import { isVisitorId,normalizeUserId } from '@/lib/chat-memory/id-utils';
 import { IntegrationManager } from '@/lib/integrations/base-service';
 import { PersonaIntegrations } from '@/lib/integrations/types';
+import { WorkflowExecutor } from '@/lib/workflows/workflow-executor';
 
 // POST /api/embedded-chat/[uuid]/conversations/[conversationId]/workflows/[workflowId]/execute
 export async function POST(
@@ -69,6 +70,52 @@ export async function POST(
     // Import notification tools
     const { createPersonaTools } = await import('@/lib/integrations/tools');
 
+    if (action === 'auto-execute') {
+      // Auto-execute the entire workflow using WorkflowExecutor
+      try {
+        // Get integration manager for the user
+        const integrationsConfig: PersonaIntegrations = {
+          calendar: {
+            google: {
+              enabled: true,
+              provider: 'google_calendar',
+              config: {} // Will be fetched from user's actual integrations
+            }
+          }
+        };
+        
+        const integrationManager = new IntegrationManager(integrationsConfig);
+        
+        const executor = new WorkflowExecutor({
+          workflowId,
+          conversationId,
+          integrationManager,
+          debug: true
+        });
+        
+        const result = await executor.execute();
+        
+        if (result.success) {
+          return NextResponse.json({
+            success: true,
+            message: 'Workflow executed successfully',
+            completed: true
+          });
+        } else {
+          return NextResponse.json({
+            success: false,
+            error: result.error || 'Workflow execution failed'
+          }, { status: 400 });
+        }
+      } catch (error) {
+        console.error('[WorkflowExecute] Auto-execution error:', error);
+        return NextResponse.json({
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to auto-execute workflow'
+        }, { status: 500 });
+      }
+    }
+    
     if (action === 'next') {
       // Get the next task to execute
       const nextTask = await workflowBrain.getNextTask(workflowId);

@@ -13,6 +13,7 @@ import { DangerZoneTab } from './danger-zone-tab';
 import { DiscoveryProfileTab } from './discovery-profile-tab';
 import { EmbedCodeTab } from './embed-code-tab';
 import { GeneralSettingsTab } from './general-settings-tab';
+import { MemoryTab } from './memory-tab';
 import { ModelConfigTab } from './model-config-tab';
 import { PersonasTab } from './personas-tab';
 
@@ -27,7 +28,7 @@ export function ChatConfigurationTabs({ chat, chatUuid }: ChatConfigurationTabsP
 
   return (
     <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-      <TabsList className="grid w-full grid-cols-9">
+      <TabsList className={`grid w-full ${chat.debug_mode ? 'grid-cols-10' : 'grid-cols-9'}`}>
         <TabsTrigger value="general">
           {t('embeddedChat.tabs.general', 'General')}
         </TabsTrigger>
@@ -52,6 +53,11 @@ export function ChatConfigurationTabs({ chat, chatUuid }: ChatConfigurationTabsP
         <TabsTrigger value="embed">
           {t('embeddedChat.tabs.embed', 'Embed')}
         </TabsTrigger>
+        {chat.debug_mode && (
+          <TabsTrigger value="memory">
+            {t('embeddedChat.tabs.memory', 'Memory')}
+          </TabsTrigger>
+        )}
         <TabsTrigger value="danger-zone" className="text-destructive">
           {t('embeddedChat.tabs.dangerZone', 'Danger Zone')}
         </TabsTrigger>
@@ -88,6 +94,12 @@ export function ChatConfigurationTabs({ chat, chatUuid }: ChatConfigurationTabsP
       <TabsContent value="embed" className="space-y-4">
         <EmbedCodeTab chat={chat} chatUuid={chatUuid} />
       </TabsContent>
+
+      {chat.debug_mode && (
+        <TabsContent value="memory" className="space-y-4">
+          <MemoryTab chat={chat} chatUuid={chatUuid} />
+        </TabsContent>
+      )}
 
       <TabsContent value="danger-zone" className="space-y-4">
         <DangerZoneTab chat={chat} chatUuid={chatUuid} />

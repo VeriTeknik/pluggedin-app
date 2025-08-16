@@ -7,12 +7,24 @@ import {
   Download,
   Filter,
   Search, 
+  Trash2,
   X} from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback,useState } from 'react';
 
 import { searchConversations } from '@/app/actions/embedded-chat-analytics';
+import { deleteConversations as deleteConversationsAction } from '@/app/actions/embedded-chat';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +42,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useToast } from '@/components/ui/use-toast';
 import { cn } from '@/lib/utils';
 
 import { RecentConversationsTable } from '../../dashboard/components/recent-conversations-table';
@@ -56,6 +69,7 @@ export function ConversationHistoryContent({
   initialConversations 
 }: ConversationHistoryContentProps) {
   const router = useRouter();
+  const { toast } = useToast();
   const [conversations, setConversations] = useState(initialConversations);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -65,6 +79,9 @@ export function ConversationHistoryContent({
   }>({ from: undefined, to: undefined });
   const [isSearching, setIsSearching] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedConversations, setSelectedConversations] = useState<Set<string>>(new Set());
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSearch = useCallback(async () => {
     setIsSearching(true);
@@ -99,6 +116,62 @@ export function ConversationHistoryContent({
     setConversations(initialConversations);
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedConversations(new Set(conversations.map(c => c.uuid)));
+    } else {
+      setSelectedConversations(new Set());
+    }
+  };
+
+  const handleSelectConversation = (uuid: string, checked: boolean) => {
+    const newSelected = new Set(selectedConversations);
+    if (checked) {
+      newSelected.add(uuid);
+    } else {
+      newSelected.delete(uuid);
+    }
+    setSelectedConversations(newSelected);
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedConversations.size === 0) return;
+    
+    setIsDeleting(true);
+    try {
+      const result = await deleteConversationsAction(Array.from(selectedConversations));
+      
+      if (result.success) {
+        toast({
+          title: 'Success',
+          description: `Deleted ${result.deletedCount} conversation${result.deletedCount !== 1 ? 's' : ''}`,
+        });
+        
+        // Remove deleted conversations from the list
+        setConversations(conversations.filter(c => !selectedConversations.has(c.uuid)));
+        setSelectedConversations(new Set());
+        
+        // Refresh the page to get updated data
+        router.refresh();
+      } else {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to delete conversations',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
   const exportConversations = () => {
     // Create CSV export
     const headers = ['Visitor', 'Email', 'Started', 'Ended', 'Status', 'Messages', 'Page URL'];
@@ -131,10 +204,28 @@ export function ConversationHistoryContent({
             Back to Dashboard
           </Button>
         </Link>
-        <Button variant="outline" size="sm" onClick={exportConversations}>
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex gap-2">
+          {selectedConversations.size > 0 && (
+            <>
+              <span className="flex items-center text-sm text-muted-foreground mr-2">
+                {selectedConversations.size} selected
+              </span>
+              <Button 
+                variant="destructive" 
+                size="sm" 
+                onClick={() => setShowDeleteDialog(true)}
+                disabled={isDeleting}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Selected
+              </Button>
+            </>
+          )}
+          <Button variant="outline" size="sm" onClick={exportConversations}>
+            <Download className="h-4 w-4 mr-2" />
+            Export CSV
+          </Button>
+        </div>
       </div>
 
       {/* Search and Filters */}
@@ -305,9 +396,42 @@ export function ConversationHistoryContent({
             conversations={conversations}
             chatUuid={chatUuid}
             showAll
+            selectedConversations={selectedConversations}
+            onSelectConversation={handleSelectConversation}
+            onSelectAll={handleSelectAll}
           />
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Conversations</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {selectedConversations.size} conversation{selectedConversations.size !== 1 ? 's' : ''}?
+              This will permanently delete:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>All messages in the conversation{selectedConversations.size !== 1 ? 's' : ''}</li>
+                <li>All associated memories and context</li>
+                <li>All workflows and tasks</li>
+                <li>All monitoring and analytics data</li>
+              </ul>
+              <span className="font-semibold text-destructive mt-2 block">This action cannot be undone.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteSelected}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

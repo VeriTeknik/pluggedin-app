@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { formatVisitorName,getOrCreateVisitorId } from '@/lib/visitor-utils';
 import { MemoryList, MemoryDashboard } from '@/components/memory';
 import { SimpleTodoList } from '@/components/workflow/simple-todo-list';
+import { WorkflowStatusCard } from '@/components/embedded-chat/workflow-status-card';
 
 // Helper to ensure absolute URLs for API calls
 function getApiUrl(path: string) {
@@ -36,6 +37,8 @@ interface Message {
   authenticated?: boolean;
   userName?: string;
   userAvatar?: string;
+  workflowId?: string;
+  workflowStatus?: any;
 }
 
 interface ChatConfig {
@@ -416,30 +419,12 @@ export function NativeEmbeddedChat({
         ));
       }
       
-      // Add debug info to the message if debug mode is enabled
+      // Only add minimal debug info if debug mode is enabled
       if (chatConfig?.debug_mode && debugInfo) {
-        let debugText = `\n\n---\n📊 Debug: ${debugInfo.provider} ${debugInfo.model}`;
-        
-        // Show temperature if the model supports it
-        if (debugInfo.temperature !== undefined) {
-          debugText += ` | Temp: ${debugInfo.temperature}`;
-        }
-        
-        // Show token usage if available
-        if (debugInfo.tokens_used) {
-          debugText += ` | Tokens Used: ${debugInfo.tokens_used}`;
-          if (debugInfo.prompt_tokens && debugInfo.completion_tokens) {
-            debugText += ` (Prompt: ${debugInfo.prompt_tokens}, Completion: ${debugInfo.completion_tokens})`;
-          }
-        } else if (debugInfo.max_tokens) {
-          // Fallback to max tokens if consumed tokens not available
-          debugText += ` | Max Tokens: ${debugInfo.max_tokens}`;
-        }
-        
-        assistantMessage.content += debugText;
+        // Store debug info in message metadata instead of content
         setMessages(prev => prev.map(msg => 
           msg.id === assistantMessage.id 
-            ? { ...msg, content: assistantMessage.content }
+            ? { ...msg, debugInfo }
             : msg
         ));
       }
@@ -862,7 +847,57 @@ export function NativeEmbeddedChat({
                     <span>{message.userName}</span>
                   </div>
                 )}
-                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <div className="text-sm whitespace-pre-wrap">
+                  {(() => {
+                    // Clean up message content - remove JSON debug data
+                    let cleanContent = message.content;
+                    
+                    // Remove JSON blocks more aggressively
+                    cleanContent = cleanContent.replace(/\{[^}]*"title"[^}]*\}/g, '');
+                    cleanContent = cleanContent.replace(/\{[^}]*"proposedDateTime"[^}]*\}/g, '');
+                    cleanContent = cleanContent.replace(/\{[^}]*"needsConfirmation"[^}]*\}/g, '');
+                    cleanContent = cleanContent.replace(/\{[^}]*"intent"[^}]*\}/g, '');
+                    cleanContent = cleanContent.replace(/\{[^}]*"action"[^}]*\}/g, '');
+                    cleanContent = cleanContent.replace(/\{[^}]*"existingData"[^}]*\}/g, '');
+                    
+                    // Remove standalone JSON fragments
+                    cleanContent = cleanContent.replace(/\{,\s*"[^"]+"\s*:\s*[^}]+\}/g, '');
+                    cleanContent = cleanContent.replace(/^\s*\{,/gm, '');
+                    cleanContent = cleanContent.replace(/\},?\s*$/gm, '');
+                    
+                    // Clean up formatting
+                    cleanContent = cleanContent.replace(/^\s*[,}\]]\s*/gm, '');
+                    cleanContent = cleanContent.replace(/\n\s*\n\s*\n/g, '\n\n');
+                    
+                    // Add icons for better UX
+                    if (message.role === 'assistant') {
+                      if (cleanContent.includes('schedule a meeting') || cleanContent.includes('proposed a meeting')) {
+                        cleanContent = cleanContent.replace(/I'll help you schedule a meeting/g, '📅 I\'ll help you schedule a meeting');
+                        cleanContent = cleanContent.replace(/I've proposed a meeting/g, '✅ I\'ve proposed a meeting');
+                        cleanContent = cleanContent.replace(/Could you please confirm/g, '❓ Could you please confirm');
+                      }
+                      
+                      cleanContent = cleanContent.replace(/Please provide:/g, '📝 Please provide:');
+                      cleanContent = cleanContent.replace(/Note:/g, '💡 Note:');
+                      cleanContent = cleanContent.replace(/Important:/g, '⚠️ Important:');
+                    }
+                    
+                    return cleanContent.trim();
+                  })()}
+                </div>
+                
+                {/* Show workflow status if this message created a workflow */}
+                {message.workflowStatus && (
+                  <div className="mt-3">
+                    <WorkflowStatusCard
+                      type="meeting"
+                      title={message.workflowStatus.title || 'Meeting'}
+                      details={message.workflowStatus.details}
+                      tasks={message.workflowStatus.tasks || []}
+                      className="max-w-md"
+                    />
+                  </div>
+                )}
               </div>
               {message.role === 'user' && renderAvatar(message)}
             </div>

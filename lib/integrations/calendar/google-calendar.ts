@@ -322,12 +322,68 @@ export class GoogleCalendarService extends BaseIntegrationService {
           duration
         );
 
+        // Check if the requested time slot has conflicts
+        const requestedStart = new Date(startTime);
+        const requestedEnd = new Date(endTime || new Date(requestedStart.getTime() + duration * 60000));
+        
+        const conflicts = allBusyTimes.filter(busy => {
+          const busyStart = new Date(busy.start);
+          const busyEnd = new Date(busy.end);
+          
+          // Check for overlap
+          return (requestedStart < busyEnd && requestedEnd > busyStart);
+        });
+
+        // Get event details for conflicts if possible
+        const conflictDetails = [];
+        if (conflicts.length > 0) {
+          // Try to get event summaries for the conflicts
+          for (const calendarId of calendarItems.map(c => c.id)) {
+            try {
+              const eventsResponse = await this.makeApiCall(
+                `/calendars/${calendarId}/events?` +
+                `timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true`,
+                'GET'
+              );
+              
+              if (eventsResponse.ok) {
+                const eventsData = await eventsResponse.json();
+                const events = eventsData.items || [];
+                
+                for (const event of events) {
+                  if (event.start && event.end) {
+                    const eventStart = new Date(event.start.dateTime || event.start.date);
+                    const eventEnd = new Date(event.end.dateTime || event.end.date);
+                    
+                    if (requestedStart < eventEnd && requestedEnd > eventStart) {
+                      conflictDetails.push({
+                        summary: event.summary || 'Busy',
+                        start: event.start.dateTime || event.start.date,
+                        end: event.end.dateTime || event.end.date,
+                        calendarId
+                      });
+                    }
+                  }
+                }
+              }
+            } catch (error) {
+              console.log('[GoogleCalendarService] Could not fetch event details for conflicts');
+            }
+          }
+        }
+
         return {
           success: true,
           data: {
             availableSlots,
             busyTimes: allBusyTimes,
             calendarCount: calendarItems.length,
+            hasConflicts: conflicts.length > 0,
+            conflicts: conflictDetails.length > 0 ? conflictDetails : conflicts.map(c => ({ 
+              summary: 'Busy', 
+              start: c.start, 
+              end: c.end 
+            }))
           },
         };
       } else {

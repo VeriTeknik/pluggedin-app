@@ -9,18 +9,29 @@ import {
   chatAnalyticsTable,
   chatContactsTable,
   chatConversationsTable,
+  chatDataRequestsTable,
   chatMessagesTable,
+  chatMonitoringSessionsTable,
   chatPersonasTable,
   chatUsageTable,
+  conversationMemoriesTable,
   embeddedChatsTable,
   mcpServersTable,
+  memoryErrorsTable,
   profilesTable,
   projectsTable,
+  tokenUsageTable,
+  userMemoriesTable,
 } from '@/db/schema';
 import { generateEmbeddedChatApiKey as generateApiKey } from '@/lib/api-key';
 import { getAuthSession } from '@/lib/auth';
+import { visitorIdToUuid } from '@/lib/chat-memory/id-utils';
 
 // ===== Schema Validation =====
+
+const DeleteConversationsSchema = z.object({
+  conversationUuids: z.array(z.string().uuid()).min(1),
+});
 
 const ModelConfigSchema = z.object({
   provider: z.enum(['openai', 'anthropic', 'google', 'xai']),
@@ -1192,6 +1203,127 @@ export async function deleteEmbeddedChat(chatUuid: string) {
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to delete embedded chat' 
+    };
+  }
+}
+
+// ===== Delete Conversations =====
+export async function deleteConversations(conversationUuids: string[]) {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Validate input
+    const parsed = DeleteConversationsSchema.safeParse({ conversationUuids });
+    if (!parsed.success) {
+      return { success: false, error: 'Invalid conversation IDs provided' };
+    }
+
+    // Get the embedded chat UUID and visitor IDs for the conversations to verify ownership
+    const conversations = await db
+      .select({
+        uuid: chatConversationsTable.uuid,
+        embedded_chat_uuid: chatConversationsTable.embedded_chat_uuid,
+        visitor_id: chatConversationsTable.visitor_id,
+      })
+      .from(chatConversationsTable)
+      .where(inArray(chatConversationsTable.uuid, parsed.data.conversationUuids));
+
+    if (conversations.length === 0) {
+      return { success: false, error: 'No conversations found' };
+    }
+
+    // Get unique embedded chat UUIDs
+    const embeddedChatUuids = [...new Set(conversations.map(c => c.embedded_chat_uuid))];
+
+    // Verify user owns all the embedded chats
+    const ownedChats = await db
+      .select({
+        embedded_chat_uuid: embeddedChatsTable.uuid,
+      })
+      .from(embeddedChatsTable)
+      .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
+      .where(and(
+        inArray(embeddedChatsTable.uuid, embeddedChatUuids),
+        eq(projectsTable.user_id, session.user.id)
+      ));
+
+    if (ownedChats.length !== embeddedChatUuids.length) {
+      return { success: false, error: 'Unauthorized to delete some conversations' };
+    }
+
+    // Get visitor IDs from conversations and convert to UUIDs for user memory deletion
+    const visitorIds = [...new Set(conversations.map(c => c.visitor_id).filter(Boolean))];
+    const visitorUuids = visitorIds.map(visitorIdToUuid);
+
+    // Use a transaction for atomic deletion
+    await db.transaction(async (tx) => {
+      // First delete related records that don't have cascade delete
+      
+      // Delete USER memories for all visitors (for testing purposes)
+      // Convert visitor IDs to UUIDs as that's how they're stored in user_memories
+      if (visitorUuids.length > 0) {
+        await tx
+          .delete(userMemoriesTable)
+          .where(inArray(userMemoriesTable.owner_id, visitorUuids));
+      }
+      
+      // Delete memory errors
+      await tx
+        .delete(memoryErrorsTable)
+        .where(inArray(memoryErrorsTable.conversation_id, parsed.data.conversationUuids));
+        
+      // Delete token_usage records
+      await tx
+        .delete(tokenUsageTable)
+        .where(inArray(tokenUsageTable.conversation_uuid, parsed.data.conversationUuids));
+      
+      // Delete monitoring sessions
+      await tx
+        .delete(chatMonitoringSessionsTable)
+        .where(inArray(chatMonitoringSessionsTable.conversation_uuid, parsed.data.conversationUuids));
+      
+      // Delete data requests
+      await tx
+        .delete(chatDataRequestsTable)
+        .where(inArray(chatDataRequestsTable.conversation_uuid, parsed.data.conversationUuids));
+
+      // Now delete conversations - cascade delete will handle:
+      // - chat_messages
+      // - conversation_memories (conversation-specific memories)
+      // - conversation_workflows (and their tasks/executions)
+      // - conversation_tasks
+      // - chat_contacts
+      await tx
+        .delete(chatConversationsTable)
+        .where(inArray(chatConversationsTable.uuid, parsed.data.conversationUuids));
+    });
+
+    // Revalidate the conversations page
+    revalidatePath('/embedded-chat/conversations');
+    revalidatePath('/embedded-chat/dashboard');
+
+    return { 
+      success: true, 
+      deletedCount: conversations.length 
+    };
+  } catch (error) {
+    console.error('Error deleting conversations:', error);
+    // Log detailed error for debugging
+    if (error instanceof Error) {
+      console.error('Detailed error:', {
+        message: error.message,
+        stack: error.stack,
+        cause: (error as any).cause,
+        detail: (error as any).detail,
+        constraint: (error as any).constraint,
+      });
+    }
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to delete conversations' 
     };
   }
 }
