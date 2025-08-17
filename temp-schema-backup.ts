@@ -1,1 +1,0 @@
-// Temporary backup of embedded chat schema
