@@ -5,7 +5,7 @@ import {
   workflowTasksTable,
   chatConversationsTable 
 } from '@/db/schema';
-import { IntegrationManager } from '@/lib/integrations/integration-manager';
+import { IntegrationManager } from '@/lib/integrations/base-service';
 
 interface WorkflowExecutorConfig {
   workflowId: string;
