@@ -1,6 +1,6 @@
 {
-  "id": "56bca1f6-192f-4126-8b56-e938a35b2ea1",
-  "prevId": "c0612829-bd18-48ae-87da-9767ac6f0d53",
+  "id": "89290998-a2b6-4634-98a3-c4f5fe2e7977",
+  "prevId": "a5090321-0a24-4b70-803f-622788f05d5e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2511,7 +2511,7 @@
         },
         "template_id": {
           "name": "template_id",
-          "type": "uuid",
+          "type": "varchar(100)",
           "primaryKey": false,
           "notNull": false
         },
@@ -7967,13 +7967,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "condition": {
-          "name": "condition",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -8405,10 +8398,10 @@
         },
         "prerequisites": {
           "name": "prerequisites",
-          "type": "jsonb[]",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false,
-          "default": "'{}'"
+          "default": "'[]'::jsonb"
         },
         "data_collected": {
           "name": "data_collected",
@@ -8611,20 +8604,19 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "varchar(100)",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "name": {
           "name": "name",
-          "type": "text",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": true
         },
         "category": {
           "name": "category",
-          "type": "text",
+          "type": "varchar(50)",
           "primaryKey": false,
           "notNull": true
         },
@@ -8661,10 +8653,10 @@
         },
         "optimization_history": {
           "name": "optimization_history",
-          "type": "jsonb[]",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false,
-          "default": "'{}'"
+          "default": "'[]'::jsonb"
         },
         "version": {
           "name": "version",

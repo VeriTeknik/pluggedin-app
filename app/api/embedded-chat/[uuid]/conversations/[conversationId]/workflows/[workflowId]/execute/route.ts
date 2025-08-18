@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth';
 
 import { db } from '@/db';
 import {
+  accounts,
   chatConversationsTable,
   conversationWorkflowsTable,
   users,
@@ -69,18 +70,64 @@ export async function POST(
     
     // Import notification tools
     const { createPersonaTools } = await import('@/lib/integrations/tools');
+    // Import Google token helper
+    const { getValidGoogleAccessToken } = await import('@/lib/auth/google-token-refresh');
 
     if (action === 'auto-execute') {
       // Auto-execute the entire workflow using WorkflowExecutor
       try {
-        // Get integration manager for the user
-        const integrationsConfig: PersonaIntegrations = {
-          calendar: {
-            google: {
-              enabled: true,
-              provider: 'google_calendar',
-              config: {} // Will be fetched from user's actual integrations
+        // Get the user's Google account info for calendar integration
+        let calendarConfig = {};
+        let userEmail = '';
+        
+        // First try to get the authenticated user's Google account
+        const conversation = await db.query.chatConversationsTable.findFirst({
+          where: eq(chatConversationsTable.uuid, conversationId)
+        });
+        
+        if (conversation?.authenticated_user_id) {
+          // Get user's Google account
+          const googleAccount = await db.query.accounts.findFirst({
+            where: and(
+              eq(accounts.userId, conversation.authenticated_user_id),
+              eq(accounts.provider, 'google')
+            )
+          });
+          
+          if (googleAccount) {
+            // Get user email from users table
+            const user = await db.query.users.findFirst({
+              where: eq(users.id, conversation.authenticated_user_id),
+              columns: { email: true }
+            });
+            userEmail = user?.email || '';
+            
+            // Get valid access token (refresh if needed)
+            const validAccessToken = await getValidGoogleAccessToken(conversation.authenticated_user_id);
+            
+            if (validAccessToken) {
+              calendarConfig = {
+                accessToken: validAccessToken,
+                refreshToken: googleAccount.refresh_token,
+                userEmail: userEmail // Include user email for ACL
+              };
             }
+          }
+        }
+        
+        // Get integration manager for the user
+        const hasCalendar = !!(calendarConfig as any).accessToken;
+        const integrationsConfig: PersonaIntegrations = {
+          calendar: hasCalendar ? {
+            enabled: true,
+            provider: 'google',
+            config: calendarConfig,
+            status: 'active' as const
+          } : {
+            enabled: false,
+            provider: 'google',
+            config: {},
+            status: 'inactive' as const
           }
         };
         

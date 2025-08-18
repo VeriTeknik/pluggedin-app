@@ -45,7 +45,7 @@ export class WorkflowExecutor {
         }
 
         if (this.config.debug) {
-          console.log(`[WorkflowExecutor] Processing task: ${task.title} (${task.type})`);
+          console.log(`[WorkflowExecutor] Processing task: ${task.title} (${task.task_type})`);
         }
 
         // Check if dependencies are met
@@ -100,13 +100,21 @@ export class WorkflowExecutor {
       // Mark task as active
       await this.updateTaskStatus(task.id, 'active');
 
-      switch (task.type) {
+      console.log(`[WorkflowExecutor] executeTask - task details:`, {
+        id: task.id,
+        title: task.title,
+        task_type: task.task_type,
+        status: task.status
+      });
+
+      switch (task.task_type) {
         case 'gather':
           // Data gathering tasks - check if data is already available
           return await this.executeGatherTask(task, workflow, conversation);
           
         case 'execute':
           // Action execution tasks
+          console.log('[WorkflowExecutor] Executing action task');
           return await this.executeActionTask(task, workflow, conversation);
           
         case 'validate':
@@ -118,6 +126,7 @@ export class WorkflowExecutor {
           return await this.executeConfirmTask(task, workflow, conversation);
           
         default:
+          console.log(`[WorkflowExecutor] Unknown task type: ${task.task_type}`);
           return { success: true }; // Unknown task types are considered successful
       }
     } catch (error) {
@@ -137,10 +146,16 @@ export class WorkflowExecutor {
     const workflowData = workflow.context?.existingData || workflow.context || {};
     
     for (const field of requiredData) {
-      if (!workflowData[field]) {
-        return { 
-          success: false, 
-          error: `Missing required data: ${field}` 
+      const value = workflowData[field];
+      const isMissing =
+        value === undefined ||
+        value === null ||
+        (typeof value === 'string' && value.trim().length === 0) ||
+        (Array.isArray(value) && value.length === 0);
+      if (isMissing) {
+        return {
+          success: false,
+          error: `Missing required data: ${field}`
         };
       }
     }
@@ -155,23 +170,30 @@ export class WorkflowExecutor {
     // Get data from workflow.context.existingData (where the actual meeting details are stored)
     const workflowData = workflow.context?.existingData || workflow.context || {};
     
-    console.log('[WorkflowExecutor] executeActionTask with data:', {
+    console.log('[WorkflowExecutor] executeActionTask called:', {
       taskId: task.id,
       taskTitle: task.title,
+      taskType: task.task_type,
       hasExistingData: !!workflow.context?.existingData,
-      dataKeys: Object.keys(workflowData)
+      dataKeys: Object.keys(workflowData),
+      fullWorkflowData: JSON.stringify(workflowData, null, 2)
     });
     
     // Handle specific action types
     if (task.id === 'check_availability' || task.title?.includes('availability')) {
+      console.log('[WorkflowExecutor] Calling checkCalendarAvailability');
       return await this.checkCalendarAvailability(workflowData);
     }
     
     if (task.id === 'book_meeting' || task.title?.includes('Book')) {
-      return await this.bookMeeting(workflowData);
+      console.log('[WorkflowExecutor] Calling bookMeeting with data:', JSON.stringify(workflowData, null, 2));
+      const result = await this.bookMeeting(workflowData);
+      console.log('[WorkflowExecutor] bookMeeting returned:', JSON.stringify(result, null, 2));
+      return result;
     }
     
     // Default success for other action types
+    console.log('[WorkflowExecutor] No specific handler for task, returning default success');
     return { success: true };
   }
 
@@ -223,15 +245,43 @@ export class WorkflowExecutor {
    * Book the meeting using the calendar integration
    */
   private async bookMeeting(data: any): Promise<{ success: boolean; error?: string; data?: any }> {
-    console.log('[WorkflowExecutor] bookMeeting called with data:', data);
+    console.log('[WorkflowExecutor] bookMeeting called with data:', JSON.stringify(data, null, 2));
     
     if (!this.config.integrationManager) {
       console.error('[WorkflowExecutor] No integration manager available');
       return { success: false, error: 'No integration manager available' };
     }
 
+    // Log integration manager state to debug
+    console.log('[WorkflowExecutor] Integration manager state:', {
+      hasIntegrationManager: !!this.config.integrationManager,
+      availableCapabilities: this.config.integrationManager.getAvailableCapabilities?.()?.map(c => c.id),
+      integrationsSize: (this.config.integrationManager as any).integrations?.size,
+      hasCalendarService: (this.config.integrationManager as any).integrations?.has('calendar'),
+      personaId: (this.config.integrationManager as any).personaId
+    });
+
     try {
-      console.log('[WorkflowExecutor] Executing schedule_meeting action');
+      // Hard guard: do not proceed without attendees
+      if (!Array.isArray(data.attendees) || data.attendees.length === 0) {
+        return { success: false, error: 'Cannot book meeting without attendees' };
+      }
+      console.log('[WorkflowExecutor] Executing schedule_meeting action with payload:', {
+        title: data.title || 'Meeting',
+        startTime: data.startTime,
+        endTime: data.endTime,
+        attendees: data.attendees || [],
+        description: data.description,
+        location: data.location,
+        includeGoogleMeet: data.includeGoogleMeet
+      });
+      
+      // Get organizer info from integration manager or workflow context
+      const organizerInfo = {
+        email: (this.config.integrationManager as any).userEmail || 
+               data.organizerEmail || 
+               'cem.karaca@gmail.com' // Your email as fallback
+      };
       
       const result = await this.config.integrationManager.executeAction({
         type: 'schedule_meeting',
@@ -242,11 +292,120 @@ export class WorkflowExecutor {
           attendees: data.attendees || [],
           description: data.description,
           location: data.location,
-          includeGoogleMeet: data.includeGoogleMeet
+          includeGoogleMeet: data.includeGoogleMeet,
+          organizerInfo: organizerInfo
         }
       });
 
-      console.log('[WorkflowExecutor] Booking result:', result);
+      console.log('[WorkflowExecutor] Booking result:', JSON.stringify(result, null, 2));
+      
+      // Send notifications if booking was successful
+      if (result.success && this.config.integrationManager) {
+        // Check for services directly instead of capabilities
+        const slackService = this.config.integrationManager.getService?.('slack');
+        const emailService = this.config.integrationManager.getService?.('email');
+        const hasSlack = !!slackService;
+        const hasEmail = !!emailService;
+        
+        console.log('[WorkflowExecutor] Notification services available:', {
+          hasSlack,
+          hasEmail,
+          slackService: slackService?.constructor?.name,
+          emailService: emailService?.constructor?.name
+        });
+        
+        const meetingDetails = {
+          title: data.title || 'Meeting',
+          startTime: new Date(data.startTime),
+          endTime: new Date(data.endTime),
+          duration: Math.round((new Date(data.endTime).getTime() - new Date(data.startTime).getTime()) / 60000),
+          attendees: data.attendees || [],
+          location: data.location,
+          calendarLink: result.data?.htmlLink,
+          meetLink: result.data?.meetLink
+        };
+        
+        // Send Slack notification
+        if (hasSlack) {
+          console.log('[WorkflowExecutor] Attempting to send Slack notification');
+          try {
+            const slackMessage = `📅 Meeting Scheduled!\n` +
+              `*Title:* ${meetingDetails.title}\n` +
+              `*Date/Time:* ${meetingDetails.startTime.toLocaleString()}\n` +
+              `*Duration:* ${meetingDetails.duration} minutes\n` +
+              `*Attendees:* ${meetingDetails.attendees.join(', ') || 'None specified'}\n` +
+              `*Organizer:* ${organizerInfo.email}\n` +
+              `${meetingDetails.location ? `*Location:* ${meetingDetails.location}\n` : ''}` +
+              `${meetingDetails.calendarLink ? `*Calendar Link:* ${meetingDetails.calendarLink}\n` : ''}` +
+              `${meetingDetails.meetLink ? `*Meeting Link:* ${meetingDetails.meetLink}` : ''}`;
+            
+            console.log('[WorkflowExecutor] Slack message prepared:', slackMessage);
+            
+            const slackResult = await this.config.integrationManager.executeAction({
+              type: 'send_slack',
+              payload: {
+                text: slackMessage
+              }
+            });
+            
+            console.log('[WorkflowExecutor] Slack notification result:', JSON.stringify(slackResult, null, 2));
+            
+            if (!slackResult.success) {
+              console.error('[WorkflowExecutor] Slack notification failed:', slackResult.error);
+            }
+          } catch (slackError) {
+            console.error('[WorkflowExecutor] Slack notification error:', slackError);
+          }
+        } else {
+          console.log('[WorkflowExecutor] Slack service not available, skipping Slack notification');
+        }
+        
+        // Send email invitations to attendees (since Google Calendar API can't with our limited scope)
+        if (hasEmail && meetingDetails.attendees.length > 0) {
+          console.log('[WorkflowExecutor] Preparing to send email invitations to:', meetingDetails.attendees);
+          for (const attendeeEmail of meetingDetails.attendees) {
+            try {
+              const emailBody = `
+                <h2>Meeting Invitation: ${meetingDetails.title}</h2>
+                <p>You have been invited to a meeting by <strong>${organizerInfo.email}</strong>.</p>
+                <ul>
+                  <li><strong>Date/Time:</strong> ${meetingDetails.startTime.toLocaleString()}</li>
+                  <li><strong>Duration:</strong> ${meetingDetails.duration} minutes</li>
+                  <li><strong>Organizer:</strong> ${organizerInfo.email}</li>
+                  ${meetingDetails.location ? `<li><strong>Location:</strong> ${meetingDetails.location}</li>` : ''}
+                  ${meetingDetails.meetLink ? `<li><strong>Meeting Link:</strong> <a href="${meetingDetails.meetLink}">${meetingDetails.meetLink}</a></li>` : ''}
+                </ul>
+                ${data.description ? `<p><strong>Description:</strong><br>${data.description}</p>` : ''}
+                <p><a href="${meetingDetails.calendarLink}">Add to Google Calendar</a></p>
+                <hr>
+                <p><small>This invitation was sent via Plugged.in</small></p>
+              `;
+              
+              console.log(`[WorkflowExecutor] Sending email to ${attendeeEmail}`);
+              
+              const emailResult = await this.config.integrationManager.executeAction({
+                type: 'send_email',
+                payload: {
+                  to: attendeeEmail,
+                  subject: `Meeting Invitation: ${meetingDetails.title}`,
+                  html: emailBody
+                }
+              });
+              
+              console.log(`[WorkflowExecutor] Email result for ${attendeeEmail}:`, JSON.stringify(emailResult, null, 2));
+              
+              if (!emailResult.success) {
+                console.error(`[WorkflowExecutor] Email failed for ${attendeeEmail}:`, emailResult.error);
+              }
+            } catch (emailError) {
+              console.error(`[WorkflowExecutor] Email error for ${attendeeEmail}:`, emailError);
+            }
+          }
+        } else {
+          console.log('[WorkflowExecutor] Email service not available or no attendees, skipping email notifications');
+        }
+      }
+      
       return result;
     } catch (error) {
       console.error('[WorkflowExecutor] Booking error:', error);

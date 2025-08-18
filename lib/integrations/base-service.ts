@@ -62,7 +62,8 @@ export class IntegrationManager {
 
   constructor(
     private personaIntegrations: PersonaIntegrations,
-    capabilities: PersonaCapability[] = []
+    capabilities: PersonaCapability[] = [],
+    private personaId?: number
   ) {
     // Ensure the Map is created properly
     this.integrations = new Map<string, BaseIntegrationService>();
@@ -90,15 +91,30 @@ export class IntegrationManager {
   private async initializeIntegrations(): Promise<void> {
     try {
       // Initialize calendar integration
+      console.log('[IntegrationManager] Checking calendar integration:', {
+        hasCalendar: !!this.personaIntegrations.calendar,
+        isEnabled: this.personaIntegrations.calendar?.enabled,
+        provider: this.personaIntegrations.calendar?.provider
+      });
+      
       if (this.personaIntegrations.calendar?.enabled) {
         // Dynamic import to avoid circular dependency
         const { GoogleCalendarService } = await import('./calendar/google-calendar');
         const calendarIntegration = this.personaIntegrations.calendar;
-        console.log('[INTEGRATION] Calendar integration being passed to service:', JSON.stringify(calendarIntegration, null, 2));
-        const calendarService = new GoogleCalendarService(calendarIntegration);
+        // Don't log sensitive tokens
+        console.log('[IntegrationManager] Calendar integration being passed to service:', {
+          enabled: calendarIntegration?.enabled,
+          provider: calendarIntegration?.provider,
+          hasConfig: !!calendarIntegration?.config,
+          hasAccessToken: !!calendarIntegration?.config?.accessToken,
+          hasRefreshToken: !!calendarIntegration?.config?.refreshToken
+        });
+        const calendarService = new GoogleCalendarService(calendarIntegration, this.personaId);
         this.registerService('calendar', calendarService);
-        console.log('Calendar integration initialized and registered');
-        console.log('Calendar service registered:', this.integrations.has('calendar'));
+        console.log('[IntegrationManager] Calendar integration initialized and registered');
+        console.log('[IntegrationManager] Calendar service registered:', this.integrations.has('calendar'));
+      } else {
+        console.log('[IntegrationManager] Calendar integration NOT enabled or missing');
       }
 
       // Initialize communication integrations
@@ -137,13 +153,23 @@ export class IntegrationManager {
   }
 
   async executeAction(action: IntegrationAction): Promise<IntegrationResult> {
-    console.log('ExecuteAction called with:', action.type);
+    console.log('[IntegrationManager] ExecuteAction called with:', action.type);
+    console.log('[IntegrationManager] Full action:', JSON.stringify(action, null, 2));
     
     // Ensure integrations are initialized
     await this.ensureInitialized();
     
-    console.log('Available services after init:', Array.from(this.integrations.keys()));
-    console.log('integrations Map size:', this.integrations.size);
+    console.log('[IntegrationManager] Available services after init:', Array.from(this.integrations.keys()));
+    console.log('[IntegrationManager] integrations Map size:', this.integrations.size);
+    console.log('[IntegrationManager] personaIntegrations:', JSON.stringify({
+      calendar: {
+        enabled: this.personaIntegrations?.calendar?.enabled,
+        provider: this.personaIntegrations?.calendar?.provider,
+        hasConfig: !!this.personaIntegrations?.calendar?.config,
+        hasAccessToken: !!this.personaIntegrations?.calendar?.config?.accessToken,
+        hasRefreshToken: !!this.personaIntegrations?.calendar?.config?.refreshToken
+      }
+    }, null, 2));
     
     // Try to get service directly based on action type
     let service: BaseIntegrationService | undefined;

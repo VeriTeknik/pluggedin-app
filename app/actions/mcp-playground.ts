@@ -1732,10 +1732,24 @@ async function createIsolatedEmbeddedChatSession(
           console.log('[EMBEDDED] Failed to inject calendar tokens:', e);
         }
         
-        console.log('[EMBEDDED] Final mergedIntegrations before IntegrationManager:', JSON.stringify(mergedIntegrations, null, 2));
+        // Don't log sensitive tokens
+        console.log('[EMBEDDED] Final mergedIntegrations before IntegrationManager:', {
+          calendar: {
+            enabled: mergedIntegrations?.calendar?.enabled,
+            provider: mergedIntegrations?.calendar?.provider,
+            hasConfig: !!mergedIntegrations?.calendar?.config
+          },
+          communication: {
+            email: mergedIntegrations?.communication?.email,
+            slack: {
+              enabled: mergedIntegrations?.communication?.slack?.enabled,
+              hasConfig: !!mergedIntegrations?.communication?.slack?.config
+            }
+          }
+        });
         
         // Create integration manager with merged configuration
-        integrationManager = new IntegrationManager(mergedIntegrations, activePersona.capabilities as any || []);
+        integrationManager = new IntegrationManager(mergedIntegrations, activePersona.capabilities as any || [], activePersona.id);
         
         // Set up the tool context with integrations access
         // Add integrations config without overwriting the internal integrations Map

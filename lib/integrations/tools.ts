@@ -485,23 +485,35 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
                 stepsCount: workflow.steps?.length
               });
               
-              // Import and use the workflow executor to auto-progress
-              const { WorkflowExecutor } = await import('@/lib/workflows/workflow-executor');
-              const executor = new WorkflowExecutor({
-                workflowId: workflow.id,
-                conversationId,
-                integrationManager: context.integrationManager,
-                debug: true
-              });
+              // Only auto-execute when all required info is present
+              const haveTimes = !!(workflowContext.existingData.startTime && workflowContext.existingData.endTime);
+              const haveAttendees = Array.isArray(workflowContext.existingData.attendees) && workflowContext.existingData.attendees.length > 0;
+              const canAutoExecute = haveTimes && haveAttendees && !needsConfirmation;
               
-              // Execute the workflow asynchronously
-              executor.execute().then(result => {
-                if (result.success) {
-                  console.log('[CalendarTool] Workflow executed successfully');
-                } else {
-                  console.error('[CalendarTool] Workflow execution failed:', result.error);
-                }
-              });
+              if (canAutoExecute) {
+                const { WorkflowExecutor } = await import('@/lib/workflows/workflow-executor');
+                const executor = new WorkflowExecutor({
+                  workflowId: workflow.id,
+                  conversationId,
+                  integrationManager: context.integrationManager,
+                  debug: true
+                });
+                
+                // Execute the workflow asynchronously
+                executor.execute().then(result => {
+                  if (result.success) {
+                    console.log('[CalendarTool] Workflow executed successfully');
+                  } else {
+                    console.error('[CalendarTool] Workflow execution failed:', result.error);
+                  }
+                });
+              } else {
+                console.log('[CalendarTool] Workflow created but waiting for required info before execution', {
+                  haveTimes,
+                  haveAttendees,
+                  needsConfirmation
+                });
+              }
               
               // Format a user-friendly response
               let formattedResponse = '';
@@ -1197,6 +1209,29 @@ function createWorkflowTriggerTool(context: ToolContext): DynamicStructuredTool 
               return { success: false, error: 'Workflow ID required to continue' };
             }
             
+            // If caller supplied new data, merge it into workflow context
+            if (existingData && Object.keys(existingData).length > 0) {
+              try {
+                const current = await db.query.conversationWorkflowsTable.findFirst({
+                  where: eq(conversationWorkflowsTable.id, workflowId),
+                  columns: { context: true }
+                });
+                const currentContext = (current?.context as any) || {};
+                const mergedContext = {
+                  ...currentContext,
+                  existingData: {
+                    ...(currentContext.existingData || {}),
+                    ...existingData
+                  }
+                };
+                await db.update(conversationWorkflowsTable)
+                  .set({ context: mergedContext, updated_at: new Date() })
+                  .where(eq(conversationWorkflowsTable.id, workflowId));
+              } catch (mergeErr) {
+                console.error('[WorkflowTrigger] Failed to merge existingData into workflow context:', mergeErr);
+              }
+            }
+            
             const nextTask = await workflowBrain.getNextTask(workflowId);
             
             if (!nextTask) {
@@ -1228,22 +1263,33 @@ function createWorkflowTriggerTool(context: ToolContext): DynamicStructuredTool 
               };
             }
             
-            // Mark task as started
-            await db.update(workflowTasksTable)
-              .set({ 
-                status: 'active',
-                started_at: new Date()
-              })
-              .where(eq(workflowTasksTable.id, nextTask.id));
-            
-            return {
-              success: true,
-              workflowId,
-              status: 'executing',
-              currentTask: nextTask.title,
-              taskType: nextTask.task_type,
-              message: `Executing: ${nextTask.title}`
-            };
+            // No missing info → auto-execute the workflow now
+            try {
+              const { WorkflowExecutor } = await import('@/lib/workflows/workflow-executor');
+              const executor = new WorkflowExecutor({
+                workflowId,
+                conversationId: conversationId!,
+                integrationManager: context.integrationManager,
+                debug: true
+              });
+              const execResult = await executor.execute();
+              return execResult.success
+                ? {
+                    success: true,
+                    workflowId,
+                    status: 'completed',
+                    message: 'All workflow tasks have been completed'
+                  }
+                : {
+                    success: false,
+                    error: execResult.error || 'Workflow execution failed'
+                  };
+            } catch (err) {
+              return {
+                success: false,
+                error: err instanceof Error ? err.message : 'Failed to execute workflow'
+              };
+            }
           }
           
           case 'status': {

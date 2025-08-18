@@ -275,13 +275,14 @@ This document tracks all cleanup tasks for the `embedded-chat-production` branch
 ### Metrics
 - **Started**: 2025-08-17
 - **Target Completion**: TBD
-- **Lines of Code Removed**: 0
-- **Files Deleted**: 0 / 9 pending
+- **Lines of Code Removed**: 692 lines (migrations)
+- **Files Deleted**: 19 (9 test files + 10 migration files)
 - **Components Consolidated**: 0
 - **Tests Added**: 0
-- **Security Issues Fixed**: 0
-- **Dependencies Removed**: 0 / 4 pending
+- **Security Issues Fixed**: 1 (broken import)
+- **Dependencies Removed**: 4 (completed)
 - **Unused Types Removed**: 0 / 7 pending
+- **Commits Made**: 4
 
 ---
 
