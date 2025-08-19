@@ -3,9 +3,12 @@ import { db } from '@/db';
 import { 
   conversationWorkflowsTable, 
   workflowTasksTable,
-  chatConversationsTable 
+  chatConversationsTable,
+  users
 } from '@/db/schema';
 import { IntegrationManager } from '@/lib/integrations/base-service';
+import { createNotification } from '@/app/actions/notifications';
+import { sendEmail } from '@/lib/email';
 
 interface WorkflowExecutorConfig {
   workflowId: string;
@@ -252,10 +255,12 @@ export class WorkflowExecutor {
       return { success: false, error: 'No integration manager available' };
     }
 
-    // Log integration manager state to debug
+    // Log integration manager state to debug (avoid nested optional calls that may break parser)
+    const capsFn = this.config.integrationManager.getAvailableCapabilities;
+    const capsList = typeof capsFn === 'function' ? capsFn.call(this.config.integrationManager) : undefined;
     console.log('[WorkflowExecutor] Integration manager state:', {
       hasIntegrationManager: !!this.config.integrationManager,
-      availableCapabilities: this.config.integrationManager.getAvailableCapabilities?.()?.map(c => c.id),
+      availableCapabilities: Array.isArray(capsList) ? capsList.map(c => c.id) : undefined,
       integrationsSize: (this.config.integrationManager as any).integrations?.size,
       hasCalendarService: (this.config.integrationManager as any).integrations?.has('calendar'),
       personaId: (this.config.integrationManager as any).personaId
@@ -329,15 +334,16 @@ export class WorkflowExecutor {
         if (hasSlack) {
           console.log('[WorkflowExecutor] Attempting to send Slack notification');
           try {
+            const locationLine = meetingDetails.location ? `*Location:* ${meetingDetails.location}\n` : '';
+            const calendarLine = meetingDetails.calendarLink ? `*Calendar Link:* ${meetingDetails.calendarLink}\n` : '';
+            const meetLine = meetingDetails.meetLink ? `*Meeting Link:* ${meetingDetails.meetLink}` : '';
             const slackMessage = `📅 Meeting Scheduled!\n` +
               `*Title:* ${meetingDetails.title}\n` +
               `*Date/Time:* ${meetingDetails.startTime.toLocaleString()}\n` +
               `*Duration:* ${meetingDetails.duration} minutes\n` +
               `*Attendees:* ${meetingDetails.attendees.join(', ') || 'None specified'}\n` +
               `*Organizer:* ${organizerInfo.email}\n` +
-              `${meetingDetails.location ? `*Location:* ${meetingDetails.location}\n` : ''}` +
-              `${meetingDetails.calendarLink ? `*Calendar Link:* ${meetingDetails.calendarLink}\n` : ''}` +
-              `${meetingDetails.meetLink ? `*Meeting Link:* ${meetingDetails.meetLink}` : ''}`;
+              locationLine + calendarLine + meetLine;
             
             console.log('[WorkflowExecutor] Slack message prepared:', slackMessage);
             
@@ -365,21 +371,24 @@ export class WorkflowExecutor {
           console.log('[WorkflowExecutor] Preparing to send email invitations to:', meetingDetails.attendees);
           for (const attendeeEmail of meetingDetails.attendees) {
             try {
-              const emailBody = `
-                <h2>Meeting Invitation: ${meetingDetails.title}</h2>
-                <p>You have been invited to a meeting by <strong>${organizerInfo.email}</strong>.</p>
-                <ul>
-                  <li><strong>Date/Time:</strong> ${meetingDetails.startTime.toLocaleString()}</li>
-                  <li><strong>Duration:</strong> ${meetingDetails.duration} minutes</li>
-                  <li><strong>Organizer:</strong> ${organizerInfo.email}</li>
-                  ${meetingDetails.location ? `<li><strong>Location:</strong> ${meetingDetails.location}</li>` : ''}
-                  ${meetingDetails.meetLink ? `<li><strong>Meeting Link:</strong> <a href="${meetingDetails.meetLink}">${meetingDetails.meetLink}</a></li>` : ''}
-                </ul>
-                ${data.description ? `<p><strong>Description:</strong><br>${data.description}</p>` : ''}
-                <p><a href="${meetingDetails.calendarLink}">Add to Google Calendar</a></p>
-                <hr>
-                <p><small>This invitation was sent via Plugged.in</small></p>
-              `;
+              const locationItemInv = meetingDetails.location ? '<li><strong>Location:</strong> ' + meetingDetails.location + '</li>' : '';
+              const meetItemInv = meetingDetails.meetLink ? '<li><strong>Meeting Link:</strong> <a href="' + meetingDetails.meetLink + '">' + meetingDetails.meetLink + '</a></li>' : '';
+              const descItemInv = data.description ? '<p><strong>Description:</strong><br>' + data.description + '</p>' : '';
+              const emailBody = [
+                '<h2>Meeting Invitation: ' + meetingDetails.title + '</h2>',
+                '<p>You have been invited to a meeting by <strong>' + organizerInfo.email + '</strong>.</p>',
+                '<ul>',
+                '<li><strong>Date/Time:</strong> ' + meetingDetails.startTime.toLocaleString() + '</li>',
+                '<li><strong>Duration:</strong> ' + meetingDetails.duration + ' minutes</li>',
+                '<li><strong>Organizer:</strong> ' + organizerInfo.email + '</li>',
+                locationItemInv,
+                meetItemInv,
+                '</ul>',
+                descItemInv,
+                '<p><a href="' + meetingDetails.calendarLink + '">Add to Google Calendar</a></p>',
+                '<hr>',
+                '<p><small>This invitation was sent via Plugged.in</small></p>'
+              ].join('');
               
               console.log(`[WorkflowExecutor] Sending email to ${attendeeEmail}`);
               
@@ -403,6 +412,84 @@ export class WorkflowExecutor {
           }
         } else {
           console.log('[WorkflowExecutor] Email service not available or no attendees, skipping email notifications');
+        }
+
+        // Create app notification for the owner and optionally send owner email
+        try {
+          // Fetch active profile and owner email via conversation → embedded_chat → project → user
+          const convo = await db.query.chatConversationsTable.findFirst({
+            where: eq(chatConversationsTable.uuid, this.config.conversationId),
+            with: {
+              embeddedChat: {
+                with: {
+                  project: true
+                }
+              }
+            }
+          });
+          const activeProfileUuid = (convo as any)?.embeddedChat?.project?.active_profile_uuid as string | undefined;
+          const ownerUserId = (convo as any)?.embeddedChat?.project?.user_id as string | undefined;
+
+          // Insert notification if we can resolve a profile
+          if (activeProfileUuid) {
+            const linkSuffix = meetingDetails.calendarLink ? ' Link: ' + meetingDetails.calendarLink : '';
+            const notifMessage = `Meeting booked: "${meetingDetails.title}" on ${meetingDetails.startTime.toLocaleString()} (${meetingDetails.duration} mins).` + linkSuffix;
+            await createNotification({
+              profileUuid: activeProfileUuid,
+              type: 'INFO',
+              title: 'Calendar - Book Meeting',
+              message: notifMessage,
+              severity: 'SUCCESS',
+              metadata: {
+                source: { type: 'workflow', actor: 'system' },
+                task: {
+                  action: 'book_meeting',
+                  success: true,
+                  attendees: meetingDetails.attendees,
+                  startTime: data.startTime,
+                  endTime: data.endTime
+                }
+              }
+            });
+          }
+
+          // Send owner email if email config present
+          if (ownerUserId) {
+            try {
+              const owner = await db.query.users.findFirst({
+                where: eq(users.id, ownerUserId),
+                columns: { email: true, name: true }
+              });
+              const ownerEmail = owner?.email;
+              if (ownerEmail) {
+                const locationItem = meetingDetails.location ? '<li><strong>Location:</strong> ' + meetingDetails.location + '</li>' : '';
+                const calendarItem = meetingDetails.calendarLink ? '<li><strong>Calendar Link:</strong> <a href="' + meetingDetails.calendarLink + '">' + meetingDetails.calendarLink + '</a></li>' : '';
+                const meetItem = meetingDetails.meetLink ? '<li><strong>Meeting Link:</strong> <a href="' + meetingDetails.meetLink + '">' + meetingDetails.meetLink + '</a></li>' : '';
+                const html = [
+                  '<h2>Meeting Scheduled</h2>',
+                  '<p>A meeting has been scheduled by your assistant.</p>',
+                  '<ul>',
+                  '<li><strong>Title:</strong> ' + meetingDetails.title + '</li>',
+                  '<li><strong>Date/Time:</strong> ' + meetingDetails.startTime.toLocaleString() + '</li>',
+                  '<li><strong>Duration:</strong> ' + meetingDetails.duration + ' minutes</li>',
+                  '<li><strong>Attendees:</strong> ' + (meetingDetails.attendees.join(', ') || 'None specified') + '</li>',
+                  locationItem,
+                  calendarItem,
+                  meetItem,
+                  '</ul>'
+                ].join('');
+                await sendEmail({
+                  to: ownerEmail,
+                  subject: `Meeting Scheduled: ${meetingDetails.title}`,
+                  html
+                });
+              }
+            } catch (ownerEmailErr) {
+              console.error('[WorkflowExecutor] Failed to send owner email:', ownerEmailErr);
+            }
+          }
+        } catch (error) {
+          console.error('[WorkflowExecutor] Failed to create notification:', error);
         }
       }
       

@@ -1,5 +1,5 @@
 import { DynamicStructuredTool } from '@langchain/core/tools';
-import { eq, desc } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { createNotification } from '@/app/actions/notifications';
@@ -12,7 +12,6 @@ import {
   conversationTasksTable,
   conversationMemoriesTable,
   conversationWorkflowsTable,
-  workflowTasksTable,
   users
 } from '@/db/schema';
 
@@ -448,7 +447,16 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
             }
             
             if (conversationId) {
-              // Create workflow
+              // Check for existing active workflow for this conversation
+              const existingWorkflow = await db.query.conversationWorkflowsTable.findFirst({
+                where: and(
+                  eq(conversationWorkflowsTable.conversation_id, conversationId),
+                  eq(conversationWorkflowsTable.template_id, 'meeting_scheduler'),
+                  eq(conversationWorkflowsTable.status, 'active')
+                )
+              });
+              
+              // Create workflow context
               const memories = await db.select()
                 .from(conversationMemoriesTable)
                 .where(eq(conversationMemoriesTable.conversation_id, conversationId))
@@ -456,27 +464,79 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
               
               const capabilities = context.integrationManager.getAvailableCapabilities().map(c => c.id);
               
-              const workflowContext = {
-                conversationId,
-                userId: await getUserIdFromConversation(conversationId),
-                existingData: { 
-                  title, 
-                  description, 
-                  location, 
-                  includeGoogleMeet,
-                  attendees: attendees || [],
-                  startTime: startTime || proposedDateTime,
-                  endTime: endTime || (proposedDateTime ? new Date(new Date(proposedDateTime).getTime() + 60 * 60000).toISOString() : undefined),
-                  proposedDateTime,
-                  needsConfirmation
-                },
-                memories,
-                capabilities,
-                timezone: context.clientContext?.timezone || context.integrationManager.clientContext?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
-                language: context.clientContext?.locale?.split('-')[0] || 'en'
-              };
+              // If we have an existing workflow, merge new data with existing data
+              let workflowContext: any;
+              let workflow: any;
               
-              const workflow = await workflowBrain.generateWorkflow(template, workflowContext);
+              if (existingWorkflow) {
+                console.log('[CalendarTool] Found existing workflow, updating with new data:', {
+                  workflowId: existingWorkflow.id,
+                  existingContext: existingWorkflow.context
+                });
+                
+                // Merge new data with existing workflow context
+                const existingContext = existingWorkflow.context as any || {};
+                const existingData = existingContext.existingData || {};
+                workflowContext = {
+                  conversationId,
+                  userId: await getUserIdFromConversation(conversationId),
+                  existingData: {
+                    ...existingData, // Keep existing data
+                    title: title || existingData.title,
+                    description: description || existingData.description,
+                    location: location || existingData.location,
+                    includeGoogleMeet: includeGoogleMeet !== undefined ? includeGoogleMeet : existingData.includeGoogleMeet,
+                    attendees: attendees && attendees.length > 0 ? attendees : existingData.attendees || [],
+                    startTime: startTime || existingData.startTime || proposedDateTime || existingData.proposedDateTime,
+                    endTime: endTime || existingData.endTime || (proposedDateTime ? new Date(new Date(proposedDateTime).getTime() + 60 * 60000).toISOString() : existingData.endTime),
+                    proposedDateTime: proposedDateTime || existingData.proposedDateTime,
+                    needsConfirmation: needsConfirmation !== undefined ? needsConfirmation : existingData.needsConfirmation
+                  },
+                  memories,
+                  capabilities,
+                  timezone: context.clientContext?.timezone || context.integrationManager.clientContext?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+                  language: context.clientContext?.locale?.split('-')[0] || 'en'
+                };
+                
+                // Update the existing workflow with new context
+                await db.update(conversationWorkflowsTable)
+                  .set({ 
+                    context: workflowContext,
+                    updated_at: new Date()
+                  })
+                  .where(eq(conversationWorkflowsTable.id, existingWorkflow.id));
+                
+                workflow = existingWorkflow;
+                workflow.context = workflowContext; // Update local copy
+                
+                console.log('[CalendarTool] Updated existing workflow with merged data:', {
+                  workflowId: workflow.id,
+                  mergedData: workflowContext.existingData
+                });
+              } else {
+                // No existing workflow, create new one
+                workflowContext = {
+                  conversationId,
+                  userId: await getUserIdFromConversation(conversationId),
+                  existingData: { 
+                    title, 
+                    description, 
+                    location, 
+                    includeGoogleMeet,
+                    attendees: attendees || [],
+                    startTime: startTime || proposedDateTime,
+                    endTime: endTime || (proposedDateTime ? new Date(new Date(proposedDateTime).getTime() + 60 * 60000).toISOString() : undefined),
+                    proposedDateTime,
+                    needsConfirmation
+                  },
+                  memories,
+                  capabilities,
+                  timezone: context.clientContext?.timezone || context.integrationManager.clientContext?.timezone || Intl.DateTimeFormat().resolvedOptions().timeZone,
+                  language: context.clientContext?.locale?.split('-')[0] || 'en'
+                };
+                
+                workflow = await workflowBrain.generateWorkflow(template, workflowContext);
+              }
               
               console.log('[CalendarTool] Workflow created:', {
                 workflowId: workflow.id,
@@ -488,9 +548,23 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
               // Only auto-execute when all required info is present
               const haveTimes = !!(workflowContext.existingData.startTime && workflowContext.existingData.endTime);
               const haveAttendees = Array.isArray(workflowContext.existingData.attendees) && workflowContext.existingData.attendees.length > 0;
-              const canAutoExecute = haveTimes && haveAttendees && !needsConfirmation;
+              const haveTitle = workflowContext.existingData.title && workflowContext.existingData.title !== 'Meeting' && workflowContext.existingData.title !== 'Meeting Discussion';
+              
+              // Auto-execute when we have times, attendees, and either a good title or we're updating an existing workflow
+              // For existing workflows with "Meeting" as title, auto-execute if we now have all the core data
+              const canAutoExecute = haveTimes && haveAttendees && (haveTitle || !!existingWorkflow);
+              
+              console.log('[CalendarTool] Checking if can auto-execute:', {
+                haveTimes,
+                haveAttendees,
+                haveTitle,
+                isExistingWorkflow: !!existingWorkflow,
+                canAutoExecute,
+                existingData: workflowContext.existingData
+              });
               
               if (canAutoExecute) {
+                console.log('[CalendarTool] All required info present, executing workflow now');
                 const { WorkflowExecutor } = await import('@/lib/workflows/workflow-executor');
                 const executor = new WorkflowExecutor({
                   workflowId: workflow.id,
@@ -499,27 +573,50 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
                   debug: true
                 });
                 
-                // Execute the workflow asynchronously
-                executor.execute().then(result => {
-                  if (result.success) {
-                    console.log('[CalendarTool] Workflow executed successfully');
-                  } else {
-                    console.error('[CalendarTool] Workflow execution failed:', result.error);
-                  }
-                });
+                // Execute the workflow synchronously and wait for result
+                const result = await executor.execute();
+                
+                if (result.success) {
+                  console.log('[CalendarTool] Workflow executed successfully');
+                  // Return success with the booking details
+                  return {
+                    success: true,
+                    workflowCreated: true,
+                    workflowId: workflow.id,
+                    workflowStatus: 'completed',
+                    message: `✅ Meeting successfully booked!\n\n📅 **Meeting Details:**\n• Title: ${workflowContext.existingData.title}\n• Date & Time: ${new Date(workflowContext.existingData.startTime).toLocaleString()}\n• Attendees: ${workflowContext.existingData.attendees.join(', ')}\n${workflowContext.existingData.includeGoogleMeet ? '• Google Meet link will be included in the invitation\n' : ''}\nCalendar invitations have been sent to all attendees.`,
+                    stopProcessing: false // Allow AI to continue if needed
+                  };
+                } else {
+                  console.error('[CalendarTool] Workflow execution failed:', result.error);
+                  return {
+                    success: false,
+                    error: result.error || 'Failed to execute booking workflow',
+                    workflowId: workflow.id,
+                    stopProcessing: true
+                  };
+                }
               } else {
-                console.log('[CalendarTool] Workflow created but waiting for required info before execution', {
+                console.log('[CalendarTool] Workflow waiting for required info before execution', {
                   haveTimes,
                   haveAttendees,
-                  needsConfirmation
+                  haveTitle,
+                  missingInfo: {
+                    needsTimes: !haveTimes,
+                    needsAttendees: !haveAttendees,
+                    needsTitle: !haveTitle && !existingWorkflow
+                  }
                 });
               }
               
               // Format a user-friendly response
               let formattedResponse = '';
               
-              if (proposedDateTime && needsConfirmation) {
-                const proposed = new Date(proposedDateTime);
+              // Use the data from workflowContext which has the merged data
+              const finalData = workflowContext.existingData;
+              
+              if ((finalData.proposedDateTime || finalData.startTime) && finalData.needsConfirmation) {
+                const proposed = new Date(finalData.proposedDateTime || finalData.startTime);
                 const formattedDate = proposed.toLocaleDateString('en-US', { 
                   weekday: 'long', 
                   month: 'long', 
@@ -535,21 +632,21 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
                 formattedResponse = `📅 **Proposed Meeting Time**\n`;
                 formattedResponse += `• Date: ${formattedDate}\n`;
                 formattedResponse += `• Time: ${formattedTime}\n`;
-                formattedResponse += `• Duration: ${duration || 60} minutes\n`;
+                formattedResponse += `• Duration: ${finalData.duration || duration || 60} minutes\n`;
                 
-                if (title && title !== 'Meeting' && title !== 'Meeting Discussion') {
-                  formattedResponse += `• Title: ${title}\n`;
+                if (finalData.title && finalData.title !== 'Meeting' && finalData.title !== 'Meeting Discussion') {
+                  formattedResponse += `• Title: ${finalData.title}\n`;
                 }
                 
                 let needsInfo = false;
                 let infoRequests = `\nℹ️ To complete the booking, I need:\n`;
                 
-                if (!attendees || attendees.length === 0) {
+                if (!finalData.attendees || finalData.attendees.length === 0) {
                   infoRequests += `• Email addresses of attendees\n`;
                   needsInfo = true;
                 }
                 
-                if (!title || title === 'Meeting' || title === 'Meeting Discussion') {
+                if (!finalData.title || finalData.title === 'Meeting' || finalData.title === 'Meeting Discussion') {
                   infoRequests += `• Meeting title/subject\n`;
                   needsInfo = true;
                 }
@@ -573,35 +670,48 @@ function createCalendarBookingTool(context: ToolContext): DynamicStructuredTool 
                 formattedResponse = `📅 I'll help you schedule a meeting.\n\n`;
                 formattedResponse += `Please provide:\n`;
                 
-                if (!startTime && !proposedDateTime) {
+                if (!finalData.startTime && !finalData.proposedDateTime) {
                   formattedResponse += `• Specific date and time\n`;
                 }
                 
-                if (!attendees || attendees.length === 0) {
+                if (!finalData.attendees || finalData.attendees.length === 0) {
                   formattedResponse += `• Email addresses of attendees\n`;
                 }
                 
-                if (!title || title === 'Meeting' || title === 'Meeting Discussion') {
+                if (!finalData.title || finalData.title === 'Meeting' || finalData.title === 'Meeting Discussion') {
                   formattedResponse += `• Meeting title/subject\n`;
                 }
               }
               
               // Add workflow status to response
-              const workflowStatusMessage = `\n\n📊 **Workflow Status**: Processing\n` +
-                `The system is now automatically:\n` +
-                `1. Checking calendar availability\n` +
-                `2. Preventing double bookings\n` +
-                `3. Booking the meeting if slot is available\n\n` +
-                `You'll be notified once the workflow completes.`;
+              const workflowStatusMessage = `\n\n📊 **Workflow Status**: ${existingWorkflow ? 'Updated' : 'Created'}\n`;
               
-              return {
-                success: true,
-                workflowCreated: true,
-                workflowId: workflow.id,
-                workflowStatus: 'processing',
-                message: formattedResponse + workflowStatusMessage,
-                stopProcessing: true // Signal to AI not to call tool again
-              };
+              // Determine if we should stop processing
+              // Only stop if we're genuinely waiting for more required info
+              const missingCriticalInfo = !haveTimes || !haveAttendees;
+              
+              if (missingCriticalInfo) {
+                return {
+                  success: true,
+                  workflowCreated: true,
+                  workflowId: workflow.id,
+                  workflowStatus: 'waiting_for_info',
+                  message: formattedResponse + workflowStatusMessage + 
+                    `\nℹ️ Workflow is waiting for the missing information before it can proceed with booking.`,
+                  stopProcessing: true // Only stop when we need more info from user
+                };
+              } else {
+                // We have all info but may need confirmation
+                return {
+                  success: true,
+                  workflowCreated: true,
+                  workflowId: workflow.id,
+                  workflowStatus: 'ready',
+                  message: formattedResponse + workflowStatusMessage + 
+                    `\n✅ All information collected. The workflow will now proceed to book the meeting.`,
+                  stopProcessing: false // Don't stop - let AI continue
+                };
+              }
             }
           }
         }

@@ -35,6 +35,8 @@ export class SlackService extends BaseIntegrationService {
     console.log('SlackService.execute called with action type:', action.type);
     console.log('SlackService is enabled:', this.isEnabled());
     console.log('SlackService webhook URL:', this.slackIntegration.config?.webhookUrl ? 'Present' : 'Missing');
+    console.log('[SlackService] Webhook URL length:', this.slackIntegration.config?.webhookUrl?.length);
+    console.log('[SlackService] Config channel:', this.slackIntegration.config?.channel);
     
     try {
       if (!await this.checkRateLimit()) {
@@ -102,6 +104,14 @@ export class SlackService extends BaseIntegrationService {
   async test(): Promise<IntegrationResult> {
     try {
       const config = this.slackIntegration.config;
+      
+      console.log('[SlackService.test] Starting test with config:', {
+        hasWebhookUrl: !!config.webhookUrl,
+        webhookUrlLength: config.webhookUrl?.length,
+        hasBotToken: !!config.botToken,
+        hasChannel: !!config.channel,
+        channel: config.channel
+      });
 
       if (config.botToken) {
         // Test with bot token by checking auth
@@ -118,31 +128,91 @@ export class SlackService extends BaseIntegrationService {
                 user: data.user,
               },
             };
+          } else {
+            return {
+              success: false,
+              error: `Slack API error: ${data.error || 'Unknown error'}`,
+            };
           }
+        } else {
+          return {
+            success: false,
+            error: `Slack API request failed: ${response.status} ${response.statusText}`,
+          };
         }
       } else if (config.webhookUrl) {
-        // Test webhook by sending a test message
+        // Validate webhook URL format
+        if (!config.webhookUrl.startsWith('https://hooks.slack.com/')) {
+          return {
+            success: false,
+            error: 'Invalid webhook URL format. Must start with https://hooks.slack.com/',
+          };
+        }
+        
+        console.log('[SlackService.test] Testing webhook URL (masked):', 
+          config.webhookUrl.substring(0, 40) + '...');
+        
+        // Test webhook by sending a test message with timestamp
+        const testMessage = {
+          text: `🔧 Connection test from Plugged.in\nTimestamp: ${new Date().toISOString()}\nChannel: ${config.channel || 'Not specified'}`,
+        };
+        
+        console.log('[SlackService.test] Sending test message:', testMessage);
+        
         const response = await fetch(config.webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: 'Connection test from Plugged.in',
-          }),
+          body: JSON.stringify(testMessage),
+        });
+        
+        // Read response body
+        const responseText = await response.text();
+        console.log('[SlackService.test] Response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText,
+          ok: response.ok
         });
 
-        if (response.ok) {
+        // Check both status and response body
+        if (response.ok && responseText.toLowerCase().trim() === 'ok') {
           return {
             success: true,
-            data: { message: 'Slack webhook connection successful' },
+            data: { 
+              message: `Slack webhook returned OK. Test message sent with timestamp: ${new Date().toISOString()}. Please check your Slack channel to confirm delivery.`,
+              channel: config.channel || 'Default channel',
+              warning: 'Note: Slack may return OK even for expired webhooks. If you don\'t see the test message, please generate a new webhook URL.'
+            },
+          };
+        } else if (response.status === 404 && responseText.includes('no_team')) {
+          return {
+            success: false,
+            error: 'Invalid webhook URL: Team not found. Please check your webhook URL.',
+          };
+        } else if (response.status === 404 && responseText.includes('no_service')) {
+          return {
+            success: false,
+            error: 'Invalid webhook URL: Service not found. The webhook may have been deleted.',
+          };
+        } else if (!response.ok) {
+          return {
+            success: false,
+            error: `Webhook test failed: HTTP ${response.status} - ${responseText}`,
+          };
+        } else {
+          return {
+            success: false,
+            error: `Unexpected response from Slack: ${responseText}`,
           };
         }
+      } else {
+        return {
+          success: false,
+          error: 'No Slack configuration found. Please provide either a webhook URL or bot token.',
+        };
       }
-
-      return {
-        success: false,
-        error: 'Failed to connect to Slack',
-      };
     } catch (error) {
+      console.error('[SlackService.test] Error during test:', error);
       return await this.handleError(error);
     }
   }
@@ -206,18 +276,54 @@ export class SlackService extends BaseIntegrationService {
           }
         }
       } else if (config.webhookUrl) {
+        if (channel && channel !== config.channel) {
+          console.warn('[SlackService] Channel override requested for webhook delivery. Incoming webhooks ignore the channel field unless configured in Slack. Using webhook default channel:', config.channel);
+        }
+        
+        // For webhooks, simplify the message to just text
+        // Webhooks don't always handle blocks well
+        const webhookMessage = {
+          text: message.text,
+          // Only include channel if it's set (though webhooks ignore it)
+          ...(message.channel && { channel: message.channel })
+        };
+        
+        console.log('[SlackService] Sending to webhook:', JSON.stringify(webhookMessage, null, 2));
+        
         const response = await fetch(config.webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(message),
+          body: JSON.stringify(webhookMessage),
         });
 
-        if (response.ok) {
+        const respText = await response.text().catch(() => '');
+        console.log('[SlackService.sendMessage] Webhook response:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: respText,
+          ok: response.ok
+        });
+        
+        if (response.ok && respText.trim().toLowerCase() === 'ok') {
           return {
             success: true,
-            data: { message: 'Message sent via webhook' },
+            data: { message: 'Message sent via webhook', response: respText },
+          };
+        } else if (response.status === 404 && respText.includes('no_team')) {
+          return {
+            success: false,
+            error: 'Invalid webhook URL: Team not found. Please update your webhook URL.',
+          };
+        } else if (response.status === 404 && respText.includes('no_service')) {
+          return {
+            success: false,
+            error: 'Invalid webhook URL: Service not found. The webhook may have been deleted.',
           };
         }
+        return {
+          success: false,
+          error: `Slack webhook error: HTTP ${response.status} ${response.statusText}${respText ? ' - ' + respText : ''}`,
+        };
       }
 
       return {

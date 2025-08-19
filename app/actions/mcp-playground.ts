@@ -2392,6 +2392,7 @@ ${limitedContext}`;
     // Track streaming state and token usage
     let currentAiMessage = '';
     const streamingResponses: any[] = [];
+    let currentToolName: string | undefined;
     let streamingTokenUsage: any = null;
     
     // Use conversationId as thread_id for proper conversation isolation
@@ -2434,9 +2435,12 @@ ${limitedContext}`;
               });
             },
             handleToolStart: async (tool) => {
+              // LangChain may pass different shapes; normalize
+              const name = (tool as any)?.name || (tool as any)?.tool || (tool as any)?.id || 'unknown';
+              currentToolName = name;
               streamingResponses.push({
                 type: 'tool_start',
-                tool: tool.name
+                tool: name
               });
             },
             handleToolEnd: async (output, runId) => {
@@ -2449,9 +2453,10 @@ ${limitedContext}`;
                 toolResult = output.output || output.result || output;
               }
               
+              const name = (output as any)?.name || currentToolName || 'unknown';
               streamingResponses.push({
                 type: 'tool_end',
-                tool: output?.name || 'unknown',
+                tool: name,
                 result: toolResult
               });
               
