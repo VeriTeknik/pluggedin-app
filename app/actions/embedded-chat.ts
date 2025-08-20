@@ -14,7 +14,6 @@ import {
   chatMonitoringSessionsTable,
   chatPersonasTable,
   chatUsageTable,
-  conversationMemoriesTable,
   embeddedChatsTable,
   mcpServersTable,
   memoryErrorsTable,

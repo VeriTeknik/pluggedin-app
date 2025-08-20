@@ -76,7 +76,7 @@ export function AgentChatInterface({
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
-        const response = await fetch(`/api/embedded-chat/${chatUuid}/conversations/${conversation.uuid}/messages`);
+        const response = await fetch(`/api/public/chat/${chatUuid}/messages?conversation_id=${conversation.uuid}`);
         if (response.ok) {
           const data = await response.json();
           setMessages(data.messages || []);
@@ -94,12 +94,16 @@ export function AgentChatInterface({
 
     setIsSending(true);
     try {
-      const response = await fetch(`/api/embedded-chat/${chatUuid}/conversations/${conversation.uuid}/messages`, {
+      // Note: Monitor agent intervention needs a dedicated API endpoint
+      // The public messages API doesn't support agent messages
+      // This feature is currently non-functional after API cleanup
+      const response = await fetch(`/api/public/chat/${chatUuid}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          conversation_id: conversation.uuid,
           content: content.trim(),
           role: 'human',
           created_by: 'human',

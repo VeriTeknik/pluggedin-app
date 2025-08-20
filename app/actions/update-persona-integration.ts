@@ -1,9 +1,10 @@
 'use server';
 
+import { and,eq } from 'drizzle-orm';
+import { getServerSession } from 'next-auth';
+
 import { db } from '@/db';
 import { chatPersonasTable, embeddedChatsTable, projectsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
-import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
 interface UpdatePersonaIntegrationParams {

@@ -3,12 +3,12 @@
 import { 
   Briefcase,
   Calendar, 
-  CheckCircle,
-  Mail, 
+  CheckCircle, 
   MessageSquare,
   Shield,
   Sparkles
 } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 

@@ -5,14 +5,14 @@
  * generates natural conversation prompts, validates collected data, and handles partial information.
  */
 
+import { desc,eq } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { 
-  workflowTasksTable,
-  conversationMemoriesTable,
   chatConversationsTable,
-  users
-} from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
+  conversationMemoriesTable,
+  users,
+  workflowTasksTable} from '@/db/schema';
 
 // Types
 export interface InfoRequirement {

@@ -110,6 +110,7 @@ export function generateOAuthState(): string {
   // Use Node.js crypto module for server-side generation
   if (typeof window === 'undefined') {
     // Server-side: use Node.js crypto
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const crypto = require('crypto');
     return crypto.randomBytes(32).toString('base64url');
   } else {
@@ -125,6 +126,7 @@ export function generateNonce(): string {
   // Use Node.js crypto module for server-side generation
   if (typeof window === 'undefined') {
     // Server-side: use Node.js crypto
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const crypto = require('crypto');
     return crypto.randomBytes(16).toString('base64');
   } else {

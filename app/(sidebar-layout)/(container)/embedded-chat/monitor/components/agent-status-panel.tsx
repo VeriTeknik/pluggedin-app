@@ -6,9 +6,8 @@ import {
   MessageSquare,
   User,
   UserCheck,
-  UserX,
-  Users
-} from 'lucide-react';
+  Users,
+  UserX} from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

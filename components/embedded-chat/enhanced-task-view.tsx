@@ -1,18 +1,19 @@
 'use client';
 
 import {
+  AlertCircle,
+  Calendar,
   CheckCircle2,
+  ChevronRight,
   Circle,
   Clock,
   ListTodo,
-  ChevronRight,
-  Calendar,
-  User,
-  AlertCircle,
   Sparkles,
+  User,
   X
 } from 'lucide-react';
 import { useState } from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface Task {

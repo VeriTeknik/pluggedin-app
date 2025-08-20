@@ -1,12 +1,12 @@
 'use client';
 
+import { Brain, Calendar, Clock, Copy,Edit, Hash, MoreVertical, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Brain, Calendar, Clock, Hash, Trash2, Edit, MoreVertical, Copy } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { StoredMemory } from '@/lib/chat-memory/memory-store';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,8 @@ import {
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { StoredMemory } from '@/lib/chat-memory/memory-store';
+import { cn } from '@/lib/utils';
 
 interface MemoryCardProps {
   memory: StoredMemory;

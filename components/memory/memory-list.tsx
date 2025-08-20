@@ -1,21 +1,22 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Brain, RefreshCw, Search, Filter, SortAsc, SortDesc } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { StoredMemory } from '@/lib/chat-memory/memory-store';
-import { MemoryCard } from './memory-card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { Brain, Filter, RefreshCw, Search, SortAsc, SortDesc } from 'lucide-react';
+import { useEffect,useState } from 'react';
+
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from '@/components/ui/dropdown-menu';
+  DropdownMenuSeparator,
+  DropdownMenuTrigger} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { StoredMemory } from '@/lib/chat-memory/memory-store';
+import { cn } from '@/lib/utils';
+
+import { MemoryCard } from './memory-card';
 
 interface MemoryListProps {
   memories: StoredMemory[];

@@ -1,15 +1,13 @@
 'use client';
 
 import { 
+  Brain,
+  Briefcase,
   Calendar,
   Mail, 
   MessageSquare,
-  Sparkles,
-  Database,
-  Brain,
-  Briefcase,
-  Shield
-} from 'lucide-react';
+  Shield,
+  Sparkles} from 'lucide-react';
 
 interface ChatCapability {
   id: string;

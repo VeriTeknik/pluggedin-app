@@ -3,17 +3,17 @@ import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { createNotification } from '@/app/actions/notifications';
-import { getUserInfoFromAuth } from '@/lib/auth';
-import { WorkflowBrain } from '@/lib/workflows/workflow-brain';
-import { InformationOrchestrator } from '@/lib/workflows/info-orchestrator';
 import { db } from '@/db';
 import {
   chatConversationsTable,
-  conversationTasksTable,
   conversationMemoriesTable,
+  conversationTasksTable,
   conversationWorkflowsTable,
   users
 } from '@/db/schema';
+import { getUserInfoFromAuth } from '@/lib/auth';
+import { InformationOrchestrator } from '@/lib/workflows/info-orchestrator';
+import { WorkflowBrain } from '@/lib/workflows/workflow-brain';
 
 import { IntegrationManager } from './base-service';
 

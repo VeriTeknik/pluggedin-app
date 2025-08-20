@@ -4,11 +4,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { accounts, chatPersonasTable, embeddedChatsTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
-import { GoogleCalendarService } from '@/lib/integrations/calendar/google-calendar';
-import { SlackService } from '@/lib/integrations/communication/slack';
-import { EmailService } from '@/lib/integrations/communication/email';
-import { CalendarIntegration,IntegrationAction, PersonaIntegrations } from '@/lib/integrations/types';
 import { getValidGoogleAccessToken } from '@/lib/auth/google-token-refresh';
+import { GoogleCalendarService } from '@/lib/integrations/calendar/google-calendar';
+import { EmailService } from '@/lib/integrations/communication/email';
+import { SlackService } from '@/lib/integrations/communication/slack';
+import { CalendarIntegration,IntegrationAction, PersonaIntegrations } from '@/lib/integrations/types';
 
 export async function POST(
   req: NextRequest,

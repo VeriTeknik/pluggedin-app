@@ -1,14 +1,15 @@
+import { and, desc, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+
 import { db } from '@/db';
-import { eq, and, desc, or, isNull } from 'drizzle-orm';
 import { 
   chatConversationsTable, 
   conversationWorkflowsTable,
   workflowTasksTable,
   workflowTemplatesTable
 } from '@/db/schema';
-import { normalizeUserId, isVisitorId } from '@/lib/chat-memory/id-utils';
+import { isVisitorId,normalizeUserId } from '@/lib/chat-memory/id-utils';
 
 // GET /api/embedded-chat/[uuid]/conversations/[conversationId]/workflows - Get all workflows for a conversation
 export async function GET(

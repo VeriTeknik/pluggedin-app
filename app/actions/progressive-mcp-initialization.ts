@@ -2,9 +2,9 @@
 
 // Import necessary types from the library - Remove Stdio/SseServerParameters
 import { convertMcpToLangchainTools, McpServerCleanupFn, McpServersConfig } from '@h1deya/langchain-mcp-tools';
-import { createNotification } from './notifications';
 
 import { addServerLogForProfile } from './mcp-playground'; // Relative import
+import { createNotification } from './notifications';
 
 // Interface for server initialization status
 export interface ServerInitStatus {

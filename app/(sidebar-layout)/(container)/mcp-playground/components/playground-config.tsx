@@ -7,7 +7,6 @@ import { useTranslation } from 'react-i18next';
 import type { PlaygroundSettings } from '@/app/actions/playground-settings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { supportsTemperature } from '@/lib/mcp/llm-utils';
 import {
   Card,
   CardContent,
@@ -32,6 +31,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { supportsTemperature } from '@/lib/mcp/llm-utils';
 import type { McpServer } from '@/types/mcp-server';
 
 type LogLevel = 'error' | 'warn' | 'info' | 'debug';

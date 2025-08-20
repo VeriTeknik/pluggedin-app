@@ -6,8 +6,6 @@ import {
   Copy,
   Download,
   Edit,
-  FileText,
-  Image,
   Loader2,
   MoreVertical,
   Paperclip,
@@ -16,10 +14,8 @@ import {
   Settings,
   Upload,
   User,
-  X,
 } from 'lucide-react';
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
@@ -58,19 +54,10 @@ interface Message {
   metadata?: {
     model?: string;
     tokens?: number;
-    attachments?: FileAttachment[];
   };
   status?: 'sending' | 'sent' | 'error';
 }
 
-interface FileAttachment {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  url?: string;
-  data?: string; // base64 for small files
-}
 
 interface ChatConfig {
   chatUuid: string;
@@ -122,7 +109,6 @@ export const EnhancedChatWidget = forwardRef<EnhancedChatWidgetRef, EnhancedChat
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
-  const [attachments, setAttachments] = useState<FileAttachment[]>([]);
   const [showSettings, setShowSettings] = useState(false);
   const [customPrompt, setCustomPrompt] = useState(config.customSystemPrompt || '');
   const [editingMessage, setEditingMessage] = useState<string | null>(null);
@@ -141,44 +127,10 @@ export const EnhancedChatWidget = forwardRef<EnhancedChatWidgetRef, EnhancedChat
     scrollToBottom();
   }, [messages]);
 
-  // File upload with drag & drop
-  const onDrop = useCallback((acceptedFiles: File[]) => {
-    const newAttachments: FileAttachment[] = acceptedFiles.map(file => ({
-      id: Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    }));
-
-    // Handle small files (< 1MB) by converting to base64
-    acceptedFiles.forEach((file, index) => {
-      if (file.size < 1024 * 1024) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          newAttachments[index].data = reader.result as string;
-          setAttachments(prev => [...prev, ...newAttachments]);
-        };
-        reader.readAsDataURL(file);
-      } else {
-        // For larger files, you'd typically upload to a server first
-        setAttachments(prev => [...prev, ...newAttachments]);
-      }
-    });
-  }, []);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: {
-      'text/*': ['.txt', '.md', '.json'],
-      'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
-      'application/pdf': ['.pdf'],
-    },
-    maxSize: 10 * 1024 * 1024, // 10MB
-  });
 
   // Send message function
   const sendMessage = useCallback(async (content: string, isRegeneration = false, originalMessageId?: string) => {
-    if (!content.trim() && attachments.length === 0) return;
+    if (!content.trim()) return;
 
     const messageId = Math.random().toString(36).substr(2, 9);
     const userMessage: Message = {
@@ -186,7 +138,7 @@ export const EnhancedChatWidget = forwardRef<EnhancedChatWidgetRef, EnhancedChat
       role: 'user',
       content: content.trim(),
       timestamp: new Date(),
-      metadata: attachments.length > 0 ? { attachments } : undefined,
+      metadata: undefined,
       status: 'sending'
     };
 
@@ -197,7 +149,6 @@ export const EnhancedChatWidget = forwardRef<EnhancedChatWidgetRef, EnhancedChat
     }
 
     setInputValue('');
-    setAttachments([]);
     setIsLoading(true);
     setIsTyping(true);
 
@@ -213,7 +164,6 @@ export const EnhancedChatWidget = forwardRef<EnhancedChatWidgetRef, EnhancedChat
         },
         authenticated_user: config.authenticatedUser,
         custom_system_prompt: customPrompt,
-        attachments: attachments.length > 0 ? attachments : undefined,
       };
 
       const response = await fetch(`/api/public/chat/${config.chatUuid}/stream`, {
@@ -336,7 +286,7 @@ export const EnhancedChatWidget = forwardRef<EnhancedChatWidgetRef, EnhancedChat
       setIsTyping(false);
       abortControllerRef.current = null;
     }
-  }, [config, conversationId, customPrompt, attachments, onMessage, toast]);
+  }, [config, conversationId, customPrompt, onMessage, toast]);
 
   // Expose methods via ref
   useImperativeHandle(ref, () => ({
@@ -535,25 +485,6 @@ export const EnhancedChatWidget = forwardRef<EnhancedChatWidgetRef, EnhancedChat
                 ) : (
                   <div className="whitespace-pre-wrap">{message.content}</div>
                 )}
-                
-                {/* Attachments */}
-                {message.metadata?.attachments && (
-                  <div className="space-y-2 mt-2">
-                    {message.metadata.attachments.map((attachment) => (
-                      <div key={attachment.id} className="flex items-center gap-2 text-sm">
-                        {attachment.type.startsWith('image/') ? (
-                          <Image className="h-4 w-4" />
-                        ) : (
-                          <FileText className="h-4 w-4" />
-                        )}
-                        <span>{attachment.name}</span>
-                        <Badge variant="secondary" className="text-xs">
-                          {(attachment.size / 1024).toFixed(1)}KB
-                        </Badge>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </>
             )}
           </div>
@@ -661,50 +592,16 @@ export const EnhancedChatWidget = forwardRef<EnhancedChatWidgetRef, EnhancedChat
         
         <Separator />
         
-        {/* File attachments preview */}
-        {attachments.length > 0 && (
-          <div className="p-3 border-t bg-muted/50">
-            <div className="flex flex-wrap gap-2">
-              {attachments.map((attachment) => (
-                <div key={attachment.id} className="flex items-center gap-2 bg-background rounded px-2 py-1 text-sm">
-                  {attachment.type.startsWith('image/') ? (
-                    <Image className="h-4 w-4" />
-                  ) : (
-                    <FileText className="h-4 w-4" />
-                  )}
-                  <span className="truncate max-w-[100px]">{attachment.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-4 w-4 p-0"
-                    onClick={() => setAttachments(prev => prev.filter(a => a.id !== attachment.id))}
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        
         {/* Input area */}
         <div className="p-3">
-          <div
-            {...getRootProps()}
-            className={cn(
-              "relative",
-              isDragActive && "ring-2 ring-primary ring-offset-2 rounded-md"
-            )}
-          >
-            {/* Hidden file input for dropzone */}
-            <input {...getInputProps()} ref={fileInputRef} />
+          <div className="relative">
             
             <form onSubmit={handleSubmit} className="flex gap-2">
               <div className="flex-1 relative">
                 <Input
                   value={inputValue}
                   onChange={(e) => handleInputChange(e.target.value)}
-                  placeholder={isDragActive ? "Drop files here..." : "Type your message..."}
+                  placeholder="Type your message..."
                   disabled={isLoading}
                   className="pr-10"
                 />
@@ -721,7 +618,7 @@ export const EnhancedChatWidget = forwardRef<EnhancedChatWidgetRef, EnhancedChat
               
               <Button
                 type="submit"
-                disabled={(!inputValue.trim() && attachments.length === 0) || isLoading}
+                disabled={!inputValue.trim() || isLoading}
                 size="sm"
               >
                 {isLoading ? (

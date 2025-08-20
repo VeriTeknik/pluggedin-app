@@ -2,18 +2,18 @@
 
 import {
   CheckCircle2,
-  Circle,
   ChevronDown,
   ChevronUp,
+  Circle,
   Clock,
-  AlertCircle,
+  ListTodo,
   Loader2,
   Sparkles,
-  ListTodo,
   Target,
   Zap
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useEffect,useState } from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface Task {

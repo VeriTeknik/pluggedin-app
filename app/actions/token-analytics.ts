@@ -1,8 +1,9 @@
 'use server';
 
+import { and, desc,eq, gte, lte, sql } from 'drizzle-orm';
+
 import { db } from '@/db';
-import { tokenUsageTable, profilesTable, embeddedChatsTable } from '@/db/schema';
-import { eq, and, gte, lte, sql, desc } from 'drizzle-orm';
+import { tokenUsageTable } from '@/db/schema';
 import { formatCost, getModelDisplayName } from '@/lib/token-pricing';
 
 /**

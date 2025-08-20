@@ -3,11 +3,11 @@
 import { 
   Briefcase,
   Calendar, 
-  Mail, 
   MessageSquare,
   Shield,
   Sparkles
 } from 'lucide-react';
+
 import { Badge } from '@/components/ui/badge';
 
 interface ChatCapability {

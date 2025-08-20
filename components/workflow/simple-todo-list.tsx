@@ -1,12 +1,11 @@
 'use client';
 
-import { CheckCircle, Loader2, Plus, Workflow } from 'lucide-react';
-import { useCallback, useEffect, useState, useRef } from 'react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { cn } from '@/lib/utils';
+import { Loader2, Workflow } from 'lucide-react';
+import { useCallback, useEffect, useRef,useState } from 'react';
+
 import { createNotification } from '@/app/actions/notifications';
 import { CompactTaskView } from '@/components/embedded-chat/compact-task-view';
+import { cn } from '@/lib/utils';
 
 // Helper to ensure absolute URLs for API calls
 function getApiUrl(path: string) {

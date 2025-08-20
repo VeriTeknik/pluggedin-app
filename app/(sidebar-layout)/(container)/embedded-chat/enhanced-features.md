@@ -34,14 +34,6 @@ Phase 2 has successfully implemented comprehensive UI/UX enhancements for the em
   - Responsive design
 - **Component**: `MessageRenderer` in `/components/chat/message-renderer.tsx`
 
-#### ✅ File Upload and Attachment Support
-- **Implementation**: Drag-and-drop file upload with preview
-- **Features**: 
-  - Support for text, images, PDFs (up to 10MB)
-  - Drag-and-drop interface
-  - File preview and management
-  - Secure file handling with validation
-- **API**: `/app/api/chat/upload/route.ts`
 
 ### 2. User Experience Features
 
@@ -59,7 +51,7 @@ Phase 2 has successfully implemented comprehensive UI/UX enhancements for the em
 - **Features**: 
   - Export conversations as structured JSON
   - Import previously exported conversations
-  - Metadata preservation (timestamps, roles, attachments)
+  - Metadata preservation (timestamps, roles)
   - Data integrity validation
 - **Format**: Standardized conversation format with metadata
 
@@ -107,7 +99,6 @@ Phase 2 has successfully implemented comprehensive UI/UX enhancements for the em
 2. **API Endpoints**
    ```
    /app/api/
-   ├── chat/upload/route.ts                          # File upload handling
    └── public/chat/[uuid]/
        ├── custom-prompt/route.ts                    # Custom prompt management
        ├── messages/route.ts                         # Message CRUD operations
@@ -116,7 +107,6 @@ Phase 2 has successfully implemented comprehensive UI/UX enhancements for the em
 
 3. **Database Enhancements**
    - Extended conversation metadata support
-   - File attachment tracking
    - Message editing history
    - Custom prompt persistence
 
@@ -138,19 +128,6 @@ const MarkdownComponents = {
 };
 ```
 
-#### File Upload System
-```typescript
-// Drag and drop with validation
-const { getRootProps, getInputProps, isDragActive } = useDropzone({
-  onDrop,
-  accept: {
-    'text/*': ['.txt', '.md', '.json'],
-    'image/*': ['.png', '.jpg', '.jpeg', '.gif', '.webp'],
-    'application/pdf': ['.pdf'],
-  },
-  maxSize: 10 * 1024 * 1024, // 10MB
-});
-```
 
 #### Message Management
 ```typescript
@@ -178,7 +155,6 @@ const regenerateResponse = async (messageId: string) => {
 ### User Interaction Improvements
 - **Intuitive Controls**: Clear action buttons with helpful tooltips
 - **Keyboard Shortcuts**: Support for common shortcuts (Enter to send, etc.)
-- **Drag & Drop**: Natural file upload experience
 - **Context Menus**: Right-click actions for message management
 
 ### Performance Optimizations
@@ -221,7 +197,6 @@ const config = {
   PluggedInChat.init({
     chatUuid: 'your-chat-uuid',
     features: {
-      fileUpload: true,
       markdown: true,
       exportChat: true,
       messageEditing: true
@@ -234,14 +209,12 @@ const config = {
 
 ### Functional Testing
 1. **Message Flow**: Test basic send/receive functionality
-2. **File Upload**: Verify drag-and-drop and file validation
 3. **Markdown Rendering**: Test various markdown syntax
 4. **Message Actions**: Test edit, regenerate, copy functions
 5. **Export/Import**: Verify conversation data integrity
 
 ### Performance Testing
 1. **Large Conversations**: Test with 100+ messages
-2. **File Attachments**: Test with multiple file types and sizes
 3. **Streaming Performance**: Verify smooth token streaming
 4. **Mobile Performance**: Test on various device sizes
 
@@ -255,22 +228,18 @@ const config = {
 
 ### Environment Setup
 1. **Dependencies**: Install new packages (`react-syntax-highlighter`, types)
-2. **File Storage**: Configure upload directory and permissions
 3. **Database**: Run any schema migrations if needed
-4. **CDN**: Consider CDN for file attachments
 
 ### Security Considerations
-1. **File Validation**: Strict file type and size validation
 2. **API Authentication**: Proper API key validation for external requests
 3. **Content Sanitization**: XSS prevention in user content
-4. **Rate Limiting**: Implement rate limiting for file uploads
 
 ## 📊 Monitoring and Analytics
 
 ### Key Metrics to Track
-1. **Feature Adoption**: Usage of new features (file upload, editing, etc.)
+1. **Feature Adoption**: Usage of new features (editing, etc.)
 2. **Performance**: Response times and streaming latency
-3. **Error Rates**: File upload failures, API errors
+3. **Error Rates**: API errors
 4. **User Engagement**: Conversation length and frequency
 
 ### Recommended Monitoring

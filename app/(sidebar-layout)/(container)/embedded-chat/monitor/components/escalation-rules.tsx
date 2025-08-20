@@ -3,7 +3,6 @@
 import { 
   AlertTriangle,
   Clock,
-  Mail,
   MessageSquare,
   Plus,
   Settings,

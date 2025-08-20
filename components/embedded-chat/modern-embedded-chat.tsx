@@ -1,8 +1,10 @@
 'use client';
 
 import { Bot, ChevronDown, Loader2, Paperclip, Send, Sparkles, X } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
 import { cn } from '@/lib/utils';
+
 import { CompactTaskView } from './compact-task-view';
 
 interface Message {

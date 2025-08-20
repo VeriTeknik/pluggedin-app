@@ -1,12 +1,13 @@
+import { and,eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+
 import { db } from '@/db';
-import { eq, and } from 'drizzle-orm';
 import { 
   chatConversationsTable, 
   conversationWorkflowsTable
 } from '@/db/schema';
-import { normalizeUserId, isVisitorId } from '@/lib/chat-memory/id-utils';
+import { isVisitorId,normalizeUserId } from '@/lib/chat-memory/id-utils';
 
 // POST /api/embedded-chat/[uuid]/conversations/[conversationId]/workflows/[workflowId]/cancel
 export async function POST(

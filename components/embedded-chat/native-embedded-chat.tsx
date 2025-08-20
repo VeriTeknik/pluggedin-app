@@ -3,6 +3,8 @@
 import { BarChart3, Bot, Brain, Briefcase, Calendar, CheckSquare, Code, Database, FileSearch, Globe, Loader2, Mail, MessageSquare, Send, Server, Shield, Sparkles, Terminal, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
+import { WorkflowStatusCard } from '@/components/embedded-chat/workflow-status-card';
+import { MemoryDashboard,MemoryList } from '@/components/memory';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,13 +14,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { SimpleTodoList } from '@/components/workflow/simple-todo-list';
 import { useAuth } from '@/hooks/use-auth';
 import { useUser } from '@/hooks/use-user';
 import { cn } from '@/lib/utils';
 import { formatVisitorName,getOrCreateVisitorId } from '@/lib/visitor-utils';
-import { MemoryList, MemoryDashboard } from '@/components/memory';
-import { SimpleTodoList } from '@/components/workflow/simple-todo-list';
-import { WorkflowStatusCard } from '@/components/embedded-chat/workflow-status-card';
 
 // Helper to ensure absolute URLs for API calls
 function getApiUrl(path: string) {

@@ -1,7 +1,7 @@
 import { ChatOpenAI } from '@langchain/openai';
+import * as crypto from 'crypto';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import * as crypto from 'crypto';
 
 // Memory extraction schema
 const MemorySchema = z.object({

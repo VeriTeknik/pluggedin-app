@@ -65,15 +65,20 @@ const ChatRequestSchema = z.object({
   }).optional(),
   persona_id: z.number().optional(),
   custom_system_prompt: z.string().optional(),
-  attachments: z.array(z.object({
-    id: z.string(),
-    name: z.string(),
-    type: z.string(),
-    size: z.number(),
-    url: z.string().optional(),
-    data: z.string().optional(),
-  })).optional(),
 });
+
+export async function OPTIONS(req: Request) {
+  const origin = req.headers.get('origin');
+  return new Response(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': origin || '*',
+      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+}
 
 export async function POST(
   req: NextRequest,
@@ -93,13 +98,13 @@ export async function POST(
     
     // Extract API key from request
     const apiKey = extractApiKey(req);
-    console.log('API key provided:', !!apiKey);
+    // API key validation check
     
     // Skip API key validation for internal requests
     if (!isInternalRequest) {
       // Validate API key access for external requests
       const hasApiKeyAccess = await validateApiKeyAccess(uuid, apiKey);
-      console.log('API key access granted:', hasApiKeyAccess);
+      // API key access granted
       
       if (!hasApiKeyAccess) {
         return NextResponse.json(
@@ -230,11 +235,11 @@ export async function POST(
     let chatEngine;
     try {
       chatEngine = new ChatEngine(chat as any, chat.project_uuid);
-      console.log('ChatEngine created, initializing...');
+      // Initialize ChatEngine
       await chatEngine.initialize();
-      console.log('ChatEngine initialized successfully');
+      // ChatEngine ready
     } catch (initError) {
-      console.error('ChatEngine initialization failed:', initError);
+      console.error('Chat initialization failed:', initError);
       throw initError;
     }
 
@@ -252,7 +257,7 @@ export async function POST(
           );
 
           // Process message
-          console.log('Processing message:', validatedData.message);
+          // Process user message
           console.log('Client context:', validatedData.client_context);
           for await (const chunk of chatEngine.processMessage(
             validatedData.message,

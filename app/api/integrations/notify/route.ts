@@ -1,8 +1,9 @@
+import { eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { IntegrationManager } from '@/lib/integrations/base-service';
+
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { IntegrationManager } from '@/lib/integrations/base-service';
 
 interface NotifyRequest {
   type: 'slack' | 'email';

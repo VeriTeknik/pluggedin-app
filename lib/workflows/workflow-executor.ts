@@ -1,14 +1,14 @@
-import { and, eq } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+
+import { createNotification } from '@/app/actions/notifications';
 import { db } from '@/db';
 import { 
-  conversationWorkflowsTable, 
-  workflowTasksTable,
   chatConversationsTable,
-  users
-} from '@/db/schema';
-import { IntegrationManager } from '@/lib/integrations/base-service';
-import { createNotification } from '@/app/actions/notifications';
+  conversationWorkflowsTable, 
+  users,
+  workflowTasksTable} from '@/db/schema';
 import { sendEmail } from '@/lib/email';
+import { IntegrationManager } from '@/lib/integrations/base-service';
 
 interface WorkflowExecutorConfig {
   workflowId: string;

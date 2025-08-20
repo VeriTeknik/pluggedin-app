@@ -1,15 +1,17 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { BarChart3, Brain, Clock, Filter, RefreshCw, Search, TrendingUp } from 'lucide-react';
+import { useEffect,useState } from 'react';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { MemoryCard } from './memory-card';
 import { StoredMemory } from '@/lib/chat-memory/memory-store';
+
+import { MemoryCard } from './memory-card';
 
 // Helper to ensure absolute URLs for API calls
 function getApiUrl(path: string) {

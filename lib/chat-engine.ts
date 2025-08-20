@@ -100,7 +100,7 @@ export class ChatEngine {
     if (this.sessionInitialized || !this.profileUuid) return;
     
     try {
-      console.log('Initializing embedded chat session via internal API');
+      // Initialize embedded chat session
       
       const response = await fetch(`${this.getBaseUrl()}/api/internal/embedded-chat/session`, {
         method: 'POST',
@@ -120,7 +120,7 @@ export class ChatEngine {
       }
       
       this.sessionInitialized = true;
-      console.log('Embedded chat session initialized successfully');
+      // Session initialized
     } catch (error) {
       console.error('Failed to initialize session:', error);
       throw error;
@@ -226,7 +226,7 @@ export class ChatEngine {
       // Ensure session is initialized
       await this.initializeSession();
       
-      console.log('Processing message via internal API');
+      // Process message via internal API
       
       const response = await fetch(`${this.getBaseUrl()}/api/internal/embedded-chat/query`, {
         method: 'POST',
@@ -420,24 +420,8 @@ export class ChatEngine {
       })
       .where(eq(chatConversationsTable.uuid, conversationId));
     
-    // TODO: Broadcast instruction via WebSocket when monitoring is enabled
-    // Commented out for now as WebSocket server is optional
-    /*
-    if (typeof window === 'undefined') {
-      try {
-        const { getWebSocketServer } = await import('@/lib/websocket/chat-websocket-server');
-        const wsServer = getWebSocketServer();
-        wsServer.broadcastMessage(conversationId, {
-          type: 'instruction',
-          conversationId,
-          instruction,
-          timestamp: new Date(),
-        });
-      } catch (error) {
-        console.error('Failed to broadcast instruction:', error);
-      }
-    }
-    */
+    // WebSocket broadcasting is disabled as the WebSocket server is optional
+    // To enable real-time monitoring, uncomment and implement WebSocket server
   }
 
   async transferToHuman(conversationId: string, userId: string) {
@@ -452,24 +436,8 @@ export class ChatEngine {
       })
       .where(eq(chatConversationsTable.uuid, conversationId));
     
-    // TODO: Broadcast takeover via WebSocket when monitoring is enabled
-    // Commented out for now as WebSocket server is optional
-    /*
-    if (typeof window === 'undefined') {
-      try {
-        const { getWebSocketServer } = await import('@/lib/websocket/chat-websocket-server');
-        const wsServer = getWebSocketServer();
-        wsServer.broadcastMessage(conversationId, {
-          type: 'takeover',
-          conversationId,
-          takenBy: userId,
-          timestamp: new Date(),
-        });
-      } catch (error) {
-        console.error('Failed to broadcast takeover:', error);
-      }
-    }
-    */
+    // WebSocket broadcasting is disabled as the WebSocket server is optional
+    // To enable real-time monitoring, uncomment and implement WebSocket server
   }
 
   private async trackAnalytics(conversationId: string, metrics: any) {
@@ -487,7 +455,7 @@ export class ChatEngine {
             chatUuid: this.chatConfig.uuid
           })
         });
-        console.log('Cleaned up embedded chat session');
+        // Session cleanup complete
       } catch (error) {
         console.error('Failed to cleanup session:', error);
       }

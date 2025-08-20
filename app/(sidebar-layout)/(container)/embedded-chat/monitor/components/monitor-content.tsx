@@ -104,46 +104,17 @@ export function MonitorContent({ chatUuid }: MonitorContentProps) {
   const handleTakeover = async (conversationId: string) => {
     setTakingOver(conversationId);
     try {
-      const response = await fetch(`/api/embedded-chat/${chatUuid}/takeover`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          conversationId,
-          action: 'takeover',
-          reason: 'Manual takeover from monitor',
-        }),
+      // TODO: Implement takeover functionality via server action
+      // The original API endpoint was removed during cleanup
+      // This feature needs to be reimplemented with proper server action
+      toast({
+        title: "Feature Unavailable",
+        description: "Agent takeover functionality is currently being reimplemented",
+        variant: "default",
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to take over conversation');
-      }
-
-      const result = await response.json();
       
-      // Update the conversation in our local state
-      setConversations(prevConversations =>
-        prevConversations.map(conv =>
-          conv.uuid === conversationId
-            ? { ...conv, status: 'human_controlled' as const }
-            : conv
-        )
-      );
-
-      // Open live chat interface instead of navigating
-      const conversation = conversations.find(conv => conv.uuid === conversationId);
-      if (conversation) {
-        setLiveChatConversation({
-          uuid: conversation.uuid,
-          visitor_id: conversation.visitor_id,
-          visitor_name: conversation.visitor_name,
-          visitor_email: conversation.visitor_email,
-          status: 'human_controlled',
-          started_at: conversation.started_at,
-          page_url: conversation.page_url,
-        });
-      }
+      // Original implementation removed - needs reimplementation
+      // Would handle takeover via server action and update local state
     } catch (error) {
       console.error('Failed to take over conversation:', error);
       // You might want to show a toast or error message here

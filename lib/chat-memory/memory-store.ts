@@ -1,17 +1,19 @@
 import * as crypto from 'crypto';
+import { and, desc, eq, inArray, or,sql } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { conversationMemoriesTable, userMemoriesTable } from '@/db/schema';
-import { eq, and, desc, sql, inArray, or } from 'drizzle-orm';
-import { StructuredMemoryExtractor, ExtractedMemory, MemoryExtractionResult } from './structured-extractor';
+
 import { detectArtifacts } from './artifact-detector';
-import { memoryGate } from './memory-gate';
-import { normalizeUserId, formatUserIdForDisplay } from './id-utils';
 import {
   logMemoryDebug,
   logMemoryInfo,
   logStorageError,
   withMemoryErrorLogging
 } from './error-logger';
+import { formatUserIdForDisplay,normalizeUserId } from './id-utils';
+import { memoryGate } from './memory-gate';
+import { ExtractedMemory, MemoryExtractionResult,StructuredMemoryExtractor } from './structured-extractor';
 
 export interface MemoryStoreConfig {
   maxConversationMemories?: number;

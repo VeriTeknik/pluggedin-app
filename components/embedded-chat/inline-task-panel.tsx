@@ -1,14 +1,14 @@
 'use client';
 
 import {
+  AlertCircle,
   CheckCircle2,
-  Circle,
-  ListChecks,
   ChevronDown,
+  Circle,
   Clock,
-  AlertCircle
-} from 'lucide-react';
+  ListChecks} from 'lucide-react';
 import { useState } from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface Task {

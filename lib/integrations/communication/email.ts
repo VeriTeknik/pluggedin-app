@@ -1,7 +1,9 @@
 import nodemailer from 'nodemailer';
-import { EmailIntegration, IntegrationAction, IntegrationResult } from '../types';
-import { BaseIntegrationService } from '../base-service';
+
 import { getUserInfoFromAuth } from '@/lib/auth';
+
+import { BaseIntegrationService } from '../base-service';
+import { EmailIntegration, IntegrationAction, IntegrationResult } from '../types';
 
 export class EmailService extends BaseIntegrationService {
   private transporter: nodemailer.Transporter | null = null;
