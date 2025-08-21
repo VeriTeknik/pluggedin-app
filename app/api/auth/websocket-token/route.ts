@@ -2,7 +2,7 @@ import { sign } from 'jsonwebtoken';
 import { NextRequest, NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 
-import { createApiError } from '@/lib/api-errors';
+import { createErrorResponse } from '@/lib/api-errors';
 import { authOptions } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
     
     if (!session?.user?.id) {
       return NextResponse.json(
-        createApiError('Unauthorized', 401),
+        createErrorResponse('Unauthorized', 401),
         { status: 401 }
       );
     }
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error generating WebSocket token:', error);
     return NextResponse.json(
-      createApiError('Failed to generate token'),
+      createErrorResponse('Failed to generate token'),
       { status: 500 }
     );
   }

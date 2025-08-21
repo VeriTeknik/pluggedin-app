@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/components/ui/use-toast';
 
 import { AgentChatInterface } from './agent-chat-interface';
 import { AgentStatusPanel } from './agent-status-panel';
@@ -51,6 +52,7 @@ export function MonitorContent({ chatUuid }: MonitorContentProps) {
   const [activeTab, setActiveTab] = useState('conversations');
   const [liveChatConversation, setLiveChatConversation] = useState<any>(null);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
+  const { toast } = useToast();
 
   // Load conversations
   useEffect(() => {

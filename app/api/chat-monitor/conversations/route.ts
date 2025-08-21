@@ -8,7 +8,7 @@ import {
   chatMessagesTable, 
   embeddedChatsTable, 
   projectsTable} from '@/db/schema';
-import { createApiError } from '@/lib/api-errors';
+import { createErrorResponse } from '@/lib/api-errors';
 import { authOptions } from '@/lib/auth';
 
 export async function GET(req: NextRequest) {
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     
     if (!session?.user?.id) {
       return NextResponse.json(
-        createApiError('Unauthorized', 401),
+        createErrorResponse('Unauthorized', 401),
         { status: 401 }
       );
     }
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error('Error fetching conversations:', error);
     return NextResponse.json(
-      createApiError('Failed to fetch conversations'),
+      createErrorResponse('Failed to fetch conversations'),
       { status: 500 }
     );
   }

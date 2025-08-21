@@ -393,7 +393,7 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
                             {persona.integrations.crm.provider}
                           </div>
                         )}
-                        {persona.capabilities?.filter(c => c.enabled).length > 0 && (
+                        {persona.capabilities && persona.capabilities.filter(c => c.enabled).length > 0 && (
                           <Badge variant="outline" className="ml-2">
                             {persona.capabilities.filter(c => c.enabled).length} capabilities
                           </Badge>

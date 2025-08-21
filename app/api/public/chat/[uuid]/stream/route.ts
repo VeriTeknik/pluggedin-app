@@ -9,6 +9,7 @@ import {
 import { eq, and, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import { ChatEngine } from '@/lib/chat-engine';
+import { createCorsOptionsResponse, isDomainAllowed, setCorsHeaders } from '@/lib/cors-utils';
 import { extractApiKey } from '@/lib/api-key';
 
 async function validateApiKeyAccess(chatUuid: string, apiKey: string | null) {
@@ -67,17 +68,19 @@ const ChatRequestSchema = z.object({
   custom_system_prompt: z.string().optional(),
 });
 
-export async function OPTIONS(req: Request) {
+export async function OPTIONS(req: Request, { params }: { params: Promise<{ uuid: string }> }) {
   const origin = req.headers.get('origin');
-  return new Response(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': origin || '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
+  const { uuid } = await params;
+  
+  // Get chat configuration to check allowed domains
+  const [chat] = await db
+    .select({ allowed_domains: embeddedChatsTable.allowed_domains })
+    .from(embeddedChatsTable)
+    .where(eq(embeddedChatsTable.uuid, uuid))
+    .limit(1);
+  
+  const allowedDomains = chat?.allowed_domains || null;
+  return createCorsOptionsResponse(origin, allowedDomains);
 }
 
 export async function POST(
@@ -140,18 +143,8 @@ export async function POST(
     }
 
     // Validate domain (skip for internal requests)
-    if (!isInternalRequest && chat.allowed_domains && chat.allowed_domains.length > 0 && origin) {
-      const originUrl = new URL(origin);
-      const isAllowed = chat.allowed_domains.some(domain => {
-        const regex = new RegExp(
-          '^' + domain.replace(/\*/g, '.*').replace(/\./g, '\\.') + '$'
-        );
-        return regex.test(originUrl.hostname);
-      });
-
-      if (!isAllowed) {
-        return NextResponse.json({ error: 'Domain not allowed' }, { status: 403 });
-      }
+    if (!isInternalRequest && !isDomainAllowed(origin, chat.allowed_domains)) {
+      return NextResponse.json({ error: 'Domain not allowed' }, { status: 403 });
     }
 
     // Parse request body
@@ -306,12 +299,8 @@ export async function POST(
       },
     });
 
-    // Add CORS headers
-    if (origin) {
-      response.headers.set('Access-Control-Allow-Origin', origin);
-      response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-      response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-    }
+    // Add CORS headers only for allowed domains
+    setCorsHeaders(response, origin, chat.allowed_domains);
 
     return response;
   } catch (error) {
@@ -327,19 +316,6 @@ export async function POST(
       { status: 500 }
     );
   }
-}
-
-export async function OPTIONS(req: NextRequest) {
-  const origin = req.headers.get('origin') || req.headers.get('referer');
-  const response = new NextResponse(null, { status: 200 });
-  
-  if (origin) {
-    response.headers.set('Access-Control-Allow-Origin', origin);
-    response.headers.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type');
-  }
-  
-  return response;
 }
 
 // Helper function to update daily analytics

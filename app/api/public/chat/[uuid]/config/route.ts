@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { embeddedChatsTable, chatPersonasTable, mcpServersTable, profilesTable } from '@/db/schema';
 import { eq, and, inArray } from 'drizzle-orm';
+import { createCorsOptionsResponse, isDomainAllowed, setCorsHeaders } from '@/lib/cors-utils';
 
 export async function GET(
   request: NextRequest,
@@ -48,6 +49,7 @@ export async function GET(
         debug_mode: embeddedChatsTable.debug_mode,
         enabled_mcp_server_uuids: embeddedChatsTable.enabled_mcp_server_uuids,
         project_uuid: embeddedChatsTable.project_uuid,
+        allowed_domains: embeddedChatsTable.allowed_domains,
       })
       .from(embeddedChatsTable)
       .where(and(...whereConditions))
@@ -157,7 +159,13 @@ export async function GET(
       theme_config: chat.theme_config,
     };
 
-    return NextResponse.json(config);
+    const origin = request.headers.get('origin');
+    const response = NextResponse.json(config);
+    
+    // Add CORS headers only for allowed domains
+    setCorsHeaders(response, origin, chat.allowed_domains);
+    
+    return response;
   } catch (error) {
     console.error('Error fetching chat config:', error);
     return NextResponse.json(
@@ -168,13 +176,20 @@ export async function GET(
 }
 
 // Enable CORS for this endpoint
-export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
-    },
-  });
+export async function OPTIONS(
+  request: NextRequest,
+  { params }: { params: Promise<{ uuid: string }> }
+) {
+  const origin = request.headers.get('origin');
+  const { uuid } = await params;
+  
+  // Get chat configuration to check allowed domains
+  const [chat] = await db
+    .select({ allowed_domains: embeddedChatsTable.allowed_domains })
+    .from(embeddedChatsTable)
+    .where(eq(embeddedChatsTable.uuid, uuid))
+    .limit(1);
+  
+  const allowedDomains = chat?.allowed_domains || null;
+  return createCorsOptionsResponse(origin, allowedDomains);
 }

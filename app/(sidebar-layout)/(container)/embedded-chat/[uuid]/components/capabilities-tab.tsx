@@ -119,7 +119,7 @@ export function CapabilitiesTab({ chat, chatUuid }: CapabilitiesTabProps) {
       const persona = personas.find(p => p.id === personaId);
       if (!persona) return;
 
-      const capabilities = persona.capabilities?.length > 0 
+      const capabilities = persona.capabilities && persona.capabilities.length > 0 
         ? [...persona.capabilities]
         : [...DEFAULT_CAPABILITIES];
       
@@ -291,7 +291,7 @@ export function CapabilitiesTab({ chat, chatUuid }: CapabilitiesTabProps) {
                   </Label>
                   <div className="space-y-2">
                     {displayPersonas.map(persona => {
-                      const capabilities = persona.capabilities?.length > 0 
+                      const capabilities = persona.capabilities && persona.capabilities.length > 0 
                         ? persona.capabilities 
                         : DEFAULT_CAPABILITIES;
                       const personaCapability = capabilities.find(c => c.id === capability.id);

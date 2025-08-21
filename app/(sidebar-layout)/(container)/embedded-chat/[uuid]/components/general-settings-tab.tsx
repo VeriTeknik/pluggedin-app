@@ -513,7 +513,10 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
             <div className="space-y-4">
               <Label>{t('embeddedChat.general.allowedDomains', 'Allowed Domains')}</Label>
               <FormDescription>
-                {t('embeddedChat.general.allowedDomainsDescription', 'Domains that can embed this chat (leave empty to allow all)')}
+                {t('embeddedChat.general.allowedDomainsDescription', 'Domains that can embed this chat (leave empty to allow all). Plugged.in domains are always allowed.')}
+                <div className="text-xs text-muted-foreground mt-1">
+                  {t('embeddedChat.general.allowedDomainsExample', 'Examples: example.com, *.mysite.com')}
+                </div>
               </FormDescription>
               {form.watch('allowed_domains').map((_, index) => (
                 <FormField
@@ -526,7 +529,7 @@ export function GeneralSettingsTab({ chat, chatUuid }: GeneralSettingsTabProps) 
                         <div className="flex gap-2">
                           <Input
                             {...field}
-                            placeholder="example.com"
+                            placeholder="example.com or *.example.com"
                             value={field.value || ''}
                           />
                           <Button
