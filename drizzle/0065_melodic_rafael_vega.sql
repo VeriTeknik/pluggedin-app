@@ -1,6 +1,9 @@
 -- Create workflow tables if they don't exist
 -- This migration ensures workflow tables exist before attempting to alter them
 
+-- Enable pgvector extension if not already enabled (needed for vector embeddings)
+CREATE EXTENSION IF NOT EXISTS vector;
+
 -- 1. Create workflow_templates table if not exists
 CREATE TABLE IF NOT EXISTS workflow_templates (
     id varchar(100) PRIMARY KEY,
