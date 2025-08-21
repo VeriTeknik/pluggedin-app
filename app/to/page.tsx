@@ -4,7 +4,7 @@ import { Bot, User2, Users } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { useEffect,useState } from 'react';
+import { Suspense, useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PaginationUi } from '@/app/(sidebar-layout)/(container)/search/components/PaginationUi';
@@ -267,5 +267,16 @@ function ToPageContent() {
 export const dynamic = 'force-dynamic';
 
 export default function ToDirectoryPage() {
-  return <ToPageContent />;
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    }>
+      <ToPageContent />
+    </Suspense>
+  );
 }
