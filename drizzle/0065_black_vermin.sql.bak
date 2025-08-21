@@ -1,0 +1,5 @@
+ALTER TABLE "workflow_tasks" DROP CONSTRAINT "workflow_tasks_parent_task_id_workflow_tasks_id_fk";
+--> statement-breakpoint
+ALTER TABLE "workflow_tasks" ALTER COLUMN "prerequisites" SET DATA TYPE jsonb;--> statement-breakpoint
+ALTER TABLE "workflow_tasks" ALTER COLUMN "prerequisites" SET DEFAULT '[]'::jsonb;--> statement-breakpoint
+ALTER TABLE "workflow_dependencies" DROP COLUMN "condition";

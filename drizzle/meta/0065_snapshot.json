@@ -1,6 +1,6 @@
 {
-  "id": "a5090321-0a24-4b70-803f-622788f05d5e",
-  "prevId": "56bca1f6-192f-4126-8b56-e938a35b2ea1",
+  "id": "79e1ac52-1a0a-4164-a21a-9723d3107eb4",
+  "prevId": "a5090321-0a24-4b70-803f-622788f05d5e",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -7967,13 +7967,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "condition": {
-          "name": "condition",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false,
-          "default": "'{}'::jsonb"
-        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -8405,10 +8398,10 @@
         },
         "prerequisites": {
           "name": "prerequisites",
-          "type": "jsonb[]",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false,
-          "default": "'{}'"
+          "default": "'[]'::jsonb"
         },
         "data_collected": {
           "name": "data_collected",
@@ -8578,19 +8571,6 @@
           "tableTo": "conversation_workflows",
           "columnsFrom": [
             "workflow_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "workflow_tasks_parent_task_id_workflow_tasks_id_fk": {
-          "name": "workflow_tasks_parent_task_id_workflow_tasks_id_fk",
-          "tableFrom": "workflow_tasks",
-          "tableTo": "workflow_tasks",
-          "columnsFrom": [
-            "parent_task_id"
           ],
           "columnsTo": [
             "id"
