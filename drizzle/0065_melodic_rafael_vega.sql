@@ -1,9 +1,6 @@
 -- Create workflow tables if they don't exist
 -- This migration ensures workflow tables exist before attempting to alter them
 
--- Enable pgvector extension if not already enabled (needed for vector embeddings)
-CREATE EXTENSION IF NOT EXISTS vector;
-
 -- 1. Create workflow_templates table if not exists
 CREATE TABLE IF NOT EXISTS workflow_templates (
     id varchar(100) PRIMARY KEY,
@@ -114,7 +111,7 @@ CREATE TABLE IF NOT EXISTS conversation_memories (
     links jsonb DEFAULT '[]',
     consent jsonb DEFAULT '{}',
     metadata jsonb DEFAULT '{}',
-    vector_embedding vector(1536),
+    -- vector_embedding vector(1536), -- Commented out: requires pgvector extension
     expiry_at timestamp with time zone,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
