@@ -81,14 +81,15 @@ export async function GET(req: NextRequest) {
 
     // Search filter
     if (validatedQuery.search) {
-      whereConditions.push(
-        or(
-          ilike(embeddedChatsTable.name, `%${validatedQuery.search}%`),
-          ilike(embeddedChatsTable.description, `%${validatedQuery.search}%`),
-          ilike(embeddedChatsTable.profession, `%${validatedQuery.search}%`),
-          ilike(embeddedChatsTable.capabilities_summary, `%${validatedQuery.search}%`)
-        )
+      const searchCondition = or(
+        ilike(embeddedChatsTable.name, `%${validatedQuery.search}%`),
+        ilike(embeddedChatsTable.description, `%${validatedQuery.search}%`),
+        ilike(embeddedChatsTable.profession, `%${validatedQuery.search}%`),
+        ilike(embeddedChatsTable.capabilities_summary, `%${validatedQuery.search}%`)
       );
+      if (searchCondition) {
+        whereConditions.push(searchCondition);
+      }
     }
 
     // Build ORDER BY based on sort parameter - simplified to avoid Drizzle errors
@@ -102,8 +103,8 @@ export async function GET(req: NextRequest) {
         orderBy = [desc(embeddedChatsTable.created_at)];
         break;
       case 'popular':
-        // Order by message count descending, handle nulls
-        orderBy = [desc(embeddedChatsTable.message_count)];
+        // Order by install count descending
+        orderBy = [desc(embeddedChatsTable.install_count)];
         break;
       case 'relevance':
       default:
@@ -146,7 +147,7 @@ export async function GET(req: NextRequest) {
       capabilities_summary: row.embedded_chats.capabilities_summary,
       interaction_style: row.embedded_chats.interaction_style,
       bot_avatar_url: row.embedded_chats.bot_avatar_url,
-      message_count: row.embedded_chats.message_count,
+      message_count: 0, // No message_count field in schema, using default
       created_at: row.embedded_chats.created_at,
       project_uuid: row.projects.uuid,
       project_name: row.projects.name,

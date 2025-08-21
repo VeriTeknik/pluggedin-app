@@ -204,7 +204,9 @@ export const trackServerInstallation = async (input: {
             }
           });
           
-          const installerName = installerProfile?.project?.user?.username || 'Someone';
+          const installerName = (!installerProfile?.project || Array.isArray(installerProfile.project)) 
+            ? 'Someone' 
+            : installerProfile.project?.user?.username || 'Someone';
           
           // Create notification for the server owner
           const { createNotification } = await import('@/app/actions/notifications');
@@ -273,7 +275,7 @@ export async function rateServer(
       }
     });
 
-    if (!profileData?.project?.user_id) {
+    if (!profileData?.project || Array.isArray(profileData.project) || !profileData.project.user_id) {
       return {
         success: false,
         error: 'Could not find user associated with this profile'

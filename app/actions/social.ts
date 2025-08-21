@@ -155,7 +155,10 @@ async function getUsernameForProfile(profileUuid: string): Promise<string | null
        where: eq(profilesTable.uuid, profileUuid),
        with: { project: { with: { user: { columns: { username: true } } } } }
    });
-   return profileData?.project?.user?.username || null;
+   if (!profileData?.project || Array.isArray(profileData.project)) {
+     return null;
+   }
+   return profileData.project?.user?.username || null;
 }
 
 
@@ -709,7 +712,6 @@ export async function getSharedMcpServer(sharedServerUuid: string): Promise<Shar
       with: {
         server: true, // Keep server relation
         profile: {
-          columns: { name: true, uuid: true }, // Select necessary profile fields
           with: {
             project: {
               with: {
@@ -729,9 +731,11 @@ export async function getSharedMcpServer(sharedServerUuid: string): Promise<Shar
     }
 
     // Determine the display name
-    const user = sharedServerData.profile?.project?.user;
     const profile = sharedServerData.profile;
-    const sharedByName = user?.username || user?.email || profile?.name || 'Unknown User';
+    const user = (!profile || Array.isArray(profile)) 
+      ? null 
+      : (Array.isArray(profile.project) ? null : profile.project?.user);
+    const sharedByName = user?.username || user?.email || (!Array.isArray(profile) ? profile?.name : null) || 'Unknown User';
 
     // Construct the final object without nested profile/project/user
     const result = {
@@ -783,7 +787,10 @@ async function userOwnsProfile(userId: string, profileUuid: string): Promise<boo
       }
     });
     
-    return profile?.project?.user_id === userId;
+    if (!profile?.project || Array.isArray(profile.project)) {
+      return false;
+    }
+    return profile.project.user_id === userId;
   } catch (error) {
     console.error('Error checking profile ownership:', error);
     return false;
@@ -1016,19 +1023,22 @@ export async function getSharedCollection(sharedCollectionUuid: string): Promise
     }
 
     // Convert null to undefined for name field
-    const modifiedCollection = {
-      ...collection,
-      profile: {
-        ...collection.profile,
-        project: {
-          ...collection.profile.project,
-          user: {
-            ...collection.profile.project.user,
-            name: collection.profile.project.user.name || undefined
+    const profile = collection.profile;
+    const modifiedCollection = (!profile || Array.isArray(profile) || !profile.project || Array.isArray(profile.project))
+      ? collection
+      : {
+          ...collection,
+          profile: {
+            ...profile,
+            project: {
+              ...profile.project,
+              user: {
+                ...profile.project.user,
+                name: profile.project.user.name || undefined
+              }
+            }
           }
-        }
-      }
-    };
+        };
 
     return modifiedCollection as SharedCollection;
   } catch (error) {

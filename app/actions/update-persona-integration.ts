@@ -165,7 +165,7 @@ export async function updateCalendarTokens(
     }
 
     const currentIntegrations = persona[0].integrations || {};
-    const calendarIntegration = currentIntegrations.calendar || {};
+    const calendarIntegration = (currentIntegrations as any).calendar || {};
     
     // Update the tokens
     const updatedCalendarIntegration = {

@@ -53,7 +53,10 @@ export function ProjectSwitcher() {
     try {
       setIsCreating(true);
       const project = await createProject(newProjectName);
-      setCurrentProject(project);
+      setCurrentProject({
+        ...project,
+        embedded_chat_enabled: project.embedded_chat_enabled ?? false
+      });
       setNewProjectName('');
       setShowNewProjectDialog(false);
       mutate();

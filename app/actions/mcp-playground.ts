@@ -2205,7 +2205,9 @@ export async function executeEmbeddedChatQuery(
     debugMode = chatData?.debug_mode || false;
     modelConfig = chatData?.model_config;
     
-    if (!chatData || !chatData.project?.active_profile_uuid) {
+    if (!chatData || !chatData.project || 
+        Array.isArray(chatData.project) || 
+        !chatData.project.active_profile_uuid) {
       return {
         success: false,
         error: 'Chat configuration not found.'

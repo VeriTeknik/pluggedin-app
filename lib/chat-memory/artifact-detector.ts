@@ -136,7 +136,7 @@ function detectDates(text: string): DetectedArtifact[] {
   
   // ISO-8601 dates
   const isoPattern = /\b\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d{3})?(?:Z|[+-]\d{2}:\d{2})?)?\b/g;
-  const isoMatches = text.match(isoPattern) || [];
+  const isoMatches: string[] = text.match(isoPattern) || [];
   isoMatches.forEach(date => {
     artifacts.push({
       type: 'date' as ArtifactType,
@@ -148,7 +148,7 @@ function detectDates(text: string): DetectedArtifact[] {
   
   // Common date formats (MM/DD/YYYY, DD/MM/YYYY, MM-DD-YYYY, etc.)
   const commonPattern = /\b(?:\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}|\d{2,4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2})\b/g;
-  const commonMatches = text.match(commonPattern) || [];
+  const commonMatches: string[] = text.match(commonPattern) || [];
   commonMatches.forEach(date => {
     if (!isoMatches.includes(date)) {
       artifacts.push({

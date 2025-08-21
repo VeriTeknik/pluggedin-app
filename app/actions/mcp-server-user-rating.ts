@@ -26,7 +26,7 @@ export async function getUserRating(
       }
     });
 
-    if (!profileData?.project?.user_id) {
+    if (!profileData?.project || Array.isArray(profileData.project) || !profileData.project.user_id) {
       return null;
     }
 

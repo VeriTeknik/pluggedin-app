@@ -2218,7 +2218,7 @@ export const workflowTasksTable = pgTable(
     workflow_id: uuid('workflow_id')
       .notNull()
       .references(() => conversationWorkflowsTable.id, { onDelete: 'cascade' }),
-    parent_task_id: uuid('parent_task_id').references(() => workflowTasksTable.id, { onDelete: 'cascade' }),
+    parent_task_id: uuid('parent_task_id'),
     task_type: varchar('task_type', { length: 20 })
       .notNull()
       .$type<'gather' | 'validate' | 'execute' | 'confirm' | 'decision' | 'notify'>(),

@@ -4,7 +4,7 @@ import { db } from './db';
 import { eq, and } from 'drizzle-orm';
 import { accounts, users } from './db/schema';
 import { GoogleCalendarService } from './lib/integrations/calendar/google-calendar';
-import { CalendarIntegration } from './lib/integrations/types';
+import { CalendarIntegration, CalendarProvider } from './lib/integrations/types';
 import { getValidGoogleAccessToken } from './lib/auth/google-token-refresh';
 
 async function testCalendarWithAttendees() {
@@ -51,11 +51,10 @@ async function testCalendarWithAttendees() {
     // Create calendar integration config
     const calendarIntegration: CalendarIntegration = {
       enabled: true,
-      provider: 'google',
+      provider: 'google_calendar' as CalendarProvider,
       config: {
         accessToken: validAccessToken,
-        refreshToken: googleAccount.refresh_token,
-        userEmail: userWithGoogle.email // Include user email for ACL
+        refreshToken: googleAccount.refresh_token || undefined
       },
       status: 'active'
     };
@@ -68,6 +67,7 @@ async function testCalendarWithAttendees() {
     // Test creating an event with attendees
     const testEvent = {
       type: 'schedule_meeting',
+      personaId: 0, // Test persona ID
       payload: {
         title: 'Test Meeting with Attendees',
         description: 'Testing if attendees are properly added to the calendar event',

@@ -128,8 +128,8 @@ export class InformationOrchestrator {
     if (task.length === 0) return [];
     
     const taskData = task[0];
-    const requiredFields = taskData.prerequisites || [];
-    const collectedData = taskData.data_collected || {};
+    const requiredFields = (taskData.prerequisites || []) as string[];
+    const collectedData = (taskData.data_collected || {}) as Record<string, any>;
     
     // Check each required field
     for (const field of requiredFields) {
@@ -174,7 +174,7 @@ export class InformationOrchestrator {
     context?: any
   ): Promise<ConversationPrompt> {
     const fieldType = requirement.field.toLowerCase();
-    const template = PROMPT_TEMPLATES[fieldType] || PROMPT_TEMPLATES['description'];
+    const template = PROMPT_TEMPLATES[fieldType as keyof typeof PROMPT_TEMPLATES] || PROMPT_TEMPLATES['description'];
     
     // Determine tone based on context
     const tone = this.determineTone(context);
@@ -338,7 +338,7 @@ export class InformationOrchestrator {
     field: string,
     conversationId: string,
     userId?: string
-  ): Promise<{ value: any; source: string; confidence: number }> {
+  ): Promise<{ value: any; source: 'user' | 'memory' | 'profile' | 'api' | 'inference'; confidence: number }> {
     // Check conversation memory first
     const memories = await db.select()
       .from(conversationMemoriesTable)
@@ -347,11 +347,11 @@ export class InformationOrchestrator {
       .limit(10);
     
     for (const memory of memories) {
-      const content = memory.content as any;
-      if (content[field]) {
+      const content = memory.value_jsonb as any;
+      if (content && content[field]) {
         return {
           value: content[field],
-          source: 'memory',
+          source: 'memory' as const,
           confidence: 0.9
         };
       }
@@ -374,10 +374,10 @@ export class InformationOrchestrator {
         };
         
         const userField = fieldMap[field];
-        if (userField && userData[userField]) {
+        if (userField && userData[userField as keyof typeof userData]) {
           return {
-            value: userData[userField],
-            source: 'profile',
+            value: userData[userField as keyof typeof userData],
+            source: 'profile' as const,
             confidence: 1.0
           };
         }
@@ -389,12 +389,12 @@ export class InformationOrchestrator {
     if (inferredValue) {
       return {
         value: inferredValue,
-        source: 'inference',
+        source: 'inference' as const,
         confidence: 0.5
       };
     }
     
-    return { value: null, source: 'none', confidence: 0 };
+    return { value: null, source: 'inference' as const, confidence: 0 };
   }
 
   /**

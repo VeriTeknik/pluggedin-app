@@ -170,7 +170,7 @@ export function TaskManager({ memories, conversationId, chatUuid, visitorId, cla
     setNewTask({
       title: task.title,
       description: task.description,
-      priority: task.priority,
+      priority: task.priority === 'urgent' ? 'high' : task.priority,
       dueDate: task.dueDate || '',
       memoryId: task.memoryId || ''
     });

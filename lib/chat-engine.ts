@@ -268,7 +268,7 @@ export class ChatEngine {
               
               if (data.type === 'token') {
                 fullResponse += data.content;
-                yield { type: 'content', content: data.content };
+                yield { type: 'text' as const, content: data.content };
               } else if (data.type === 'tool_start') {
                 hasToolCalls = true;
                 yield { 
@@ -283,10 +283,10 @@ export class ChatEngine {
                   metadata: { name: data.tool }
                 };
               } else if (data.type === 'debug') {
-                // Forward debug information
+                // Forward debug information as system message
                 yield { 
-                  type: 'debug', 
-                  content: data.content,
+                  type: 'system' as const, 
+                  content: `[Debug] ${data.content}`,
                   metadata: data.metadata
                 };
               } else if (data.type === 'final') {
@@ -296,7 +296,7 @@ export class ChatEngine {
                   if (lastMessage.role === 'ai' && !fullResponse) {
                     fullResponse = lastMessage.content;
                     // Yield the complete response if we haven't streamed it
-                    yield { type: 'content', content: fullResponse };
+                    yield { type: 'text' as const, content: fullResponse };
                   }
                 }
               }

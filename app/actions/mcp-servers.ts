@@ -207,7 +207,9 @@ export async function deleteMcpServerByUuid(
       }
     });
 
-    const userId = profileData?.project?.user_id || 'anonymous';
+    const userId = (!profileData?.project || Array.isArray(profileData.project)) 
+      ? 'anonymous' 
+      : profileData.project.user_id || 'anonymous';
 
     // TODO: Track uninstallation to new analytics service when available
 
@@ -771,7 +773,7 @@ export async function createShareableTemplate(server: McpServer): Promise<any> {
       }
     });
     
-    if (profile?.project?.user) {
+    if (profile?.project && !Array.isArray(profile.project) && profile.project.user) {
       template.sharedBy = profile.project.user.username || profile.project.user.name || server.profile_uuid;
     }
   } catch (error) {

@@ -76,7 +76,7 @@ export async function GET(
     // Get tasks for each workflow
     const workflowsWithTasks = await Promise.all(
       workflows.map(async ({ workflow, template }) => {
-        let tasks = [];
+        let tasks: any[] = [];
         try {
           tasks = await db
             .select()
@@ -183,7 +183,7 @@ export async function POST(
         name: template.name,
         category: template.category,
         baseStructure: template.base_structure,  // Fixed column name
-        requiredCapabilities: template.required_capabilities
+        requiredCapabilities: template.required_capabilities || undefined
       },
       workflowContext
     );

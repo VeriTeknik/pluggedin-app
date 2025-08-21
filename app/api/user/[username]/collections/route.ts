@@ -89,7 +89,13 @@ export async function GET(
 
     // Filter collections for the specific username
     const userCollections = collections.filter(
-      collection => collection.profile?.project?.user?.username === username
+      collection => {
+        const profile = collection.profile;
+        if (!profile || Array.isArray(profile)) return false;
+        const project = profile.project;
+        if (!project || Array.isArray(project)) return false;
+        return project.user?.username === username;
+      }
     );
     
     // Sort by created_at in descending order

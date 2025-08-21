@@ -47,27 +47,36 @@ export function wrapLLMWithTokenTracking(
   
   // Override stream method if it exists
   if (originalStream) {
-    llm.stream = async function*(
+    llm.stream = async function(
       messages: BaseMessage[],
       options?: any
-    ): AsyncGenerator<any> {
+    ) {
+      const originalStreamResult = await originalStream.call(llm, messages, options);
       let collectedUsage: TokenUsage | null = null;
       
-      for await (const chunk of originalStream(messages, options)) {
-        // Try to extract usage from chunks
-        if (chunk && typeof chunk === 'object') {
-          const usage = extractTokenUsage(chunk);
-          if (usage) {
-            collectedUsage = usage;
+      // Create a wrapper that tracks tokens while streaming
+      const wrappedStream = {
+        [Symbol.asyncIterator]: async function*() {
+          for await (const chunk of originalStreamResult) {
+            // Try to extract usage from chunks
+            if (chunk && typeof chunk === 'object') {
+              const usage = extractTokenUsage(chunk);
+              if (usage) {
+                collectedUsage = usage;
+              }
+            }
+            yield chunk;
+          }
+          
+          // Update usage after streaming completes
+          if (collectedUsage) {
+            updateSessionTokenUsage(sessionId, collectedUsage);
           }
         }
-        yield chunk;
-      }
+      };
       
-      // Update usage after streaming completes
-      if (collectedUsage) {
-        updateSessionTokenUsage(sessionId, collectedUsage);
-      }
+      // Return the wrapped stream with all necessary properties
+      return Object.assign(wrappedStream, originalStreamResult);
     };
   }
   

@@ -83,7 +83,9 @@ export async function GET(
       }
     });
 
-    if (!profile || profile.project.user_id !== session.user.id) {
+    if (!profile || !profile.project || 
+        Array.isArray(profile.project) || 
+        profile.project.user_id !== session.user.id) {
       return new NextResponse('Unauthorized access to profile', { status: 403 });
     }
 

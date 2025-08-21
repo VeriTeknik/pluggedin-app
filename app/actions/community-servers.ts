@@ -62,7 +62,8 @@ export async function createCommunityServer(data: z.infer<typeof createCommunity
       }
     });
 
-    if (!profile || profile.project.user_id !== session.user.id) {
+    if (!profile || !profile.project || 
+        (Array.isArray(profile.project) ? false : profile.project.user_id !== session.user.id)) {
       return { success: false, error: 'Invalid profile' };
     }
 

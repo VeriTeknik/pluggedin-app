@@ -599,7 +599,7 @@ export function DiscoverAssistants() {
                     <Link 
                       href={`/to/${assistant.owner.username}`}
                       className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-                      onClick={(e) => e.stopPropagation()}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
                     >
                       <Avatar className="h-6 w-6">
                         <AvatarImage src={assistant.owner.avatarUrl || assistant.owner.image} />

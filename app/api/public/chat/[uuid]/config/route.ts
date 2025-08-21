@@ -80,7 +80,7 @@ export async function GET(
       .limit(1);
 
     // Fetch enabled MCP servers if any
-    let mcpServers = [];
+    let mcpServers: any[] = [];
     if (chat.enabled_mcp_server_uuids && chat.enabled_mcp_server_uuids.length > 0) {
       // Get all profiles for this project
       const profiles = await db

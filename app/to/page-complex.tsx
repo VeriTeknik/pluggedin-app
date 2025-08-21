@@ -78,7 +78,7 @@ export default async function ToDirectoryPage() {
         response_time: embeddedChatsTable.response_time,
         capabilities_summary: embeddedChatsTable.capabilities_summary,
         bot_avatar_url: embeddedChatsTable.bot_avatar_url,
-        message_count: embeddedChatsTable.message_count,
+        message_count: sql<number>`0`, // No message_count field, using 0
         username: users.username,
         user_name: users.name,
         user_avatar: users.avatar_url,
@@ -92,7 +92,7 @@ export default async function ToDirectoryPage() {
           eq(embeddedChatsTable.is_active, true)
         )
       )
-      .orderBy(desc(sql`COALESCE(${embeddedChatsTable.message_count}, 0)`))
+      .orderBy(desc(embeddedChatsTable.install_count))
       .limit(6);
 
     // Get category statistics - ensure we handle null categories

@@ -554,17 +554,17 @@ export class WorkflowBrain {
         // Update existing pattern
         const current = existing[0];
         const newConfidence = this.updateConfidence(
-          current.confidence_score,
-          current.occurrence_count,
+          current.confidence_score || '0.5',
+          current.occurrence_count || 0,
           success
         );
         
         await db.update(workflowLearningTable)
           .set({
             confidence_score: newConfidence.toString(),
-            occurrence_count: current.occurrence_count + 1,
+            occurrence_count: (current.occurrence_count || 0) + 1,
             last_observed: new Date(),
-            success_count: success ? current.success_count + 1 : current.success_count,
+            success_count: success ? (current.success_count || 0) + 1 : (current.success_count || 0),
             updated_at: new Date()
           })
           .where(eq(workflowLearningTable.id, current.id));
@@ -766,7 +766,7 @@ export class WorkflowBrain {
         name: template.name,
         category: template.category,
         base_structure_type: typeof template.base_structure,
-        has_steps: template.base_structure?.steps ? 'yes' : 'no'
+        has_steps: (template.base_structure as any)?.steps ? 'yes' : 'no'
       });
       
       // Validate the template structure
@@ -958,7 +958,7 @@ export class WorkflowBrain {
       
       for (const task of taskArray) {
         // Check if all dependencies are completed
-        let deps = [];
+        let deps: any[] = [];
         try {
           deps = await db.select()
             .from(workflowDependenciesTable)

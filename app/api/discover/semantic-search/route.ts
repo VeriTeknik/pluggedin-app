@@ -153,7 +153,7 @@ async function handler(req: NextRequest) {
         semantic_tags: embeddedChatsTable.semantic_tags,
         interaction_style: embeddedChatsTable.interaction_style,
         bot_avatar_url: embeddedChatsTable.bot_avatar_url,
-        message_count: embeddedChatsTable.message_count,
+        message_count: sql<number>`0`, // No message_count field, using 0
         created_at: embeddedChatsTable.created_at,
         // Get project and user info
         project_name: projectsTable.name,

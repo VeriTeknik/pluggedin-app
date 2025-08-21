@@ -111,7 +111,7 @@ export default async function ProfilePage({ params }: PageProps) {
         followerCount={followerCount}
         followingCount={followingCount}
         isOwner={isOwner}
-        embeddedChats={embeddedChats}
+        embeddedChats={embeddedChats || []}
       />
     </div>
   );

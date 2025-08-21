@@ -55,14 +55,19 @@ function wrapMcpToolWithNotification(tool: any, profileUuid: string): any {
           severity: 'SUCCESS',
           metadata: {
             source: {
-              type: 'mcp_tool',
-              tool: tool.name,
-              description: tool.description
+              type: 'mcp' as const,
+              mcpServer: tool.name,
+              profileUuid
             },
-            task: {
+            mcpActivity: {
+              action: 'tool_call' as const,
+              itemName: tool.name,
               success: true,
-              duration: Date.now() - startTime,
-              inputSummary
+              executionTime: Date.now() - startTime
+            },
+            custom: {
+              inputSummary,
+              toolDescription: tool.description
             }
           },
           expiresInDays: 7
@@ -85,14 +90,19 @@ function wrapMcpToolWithNotification(tool: any, profileUuid: string): any {
           severity: 'WARNING',
           metadata: {
             source: {
-              type: 'mcp_tool',
-              tool: tool.name,
-              description: tool.description
+              type: 'mcp' as const,
+              mcpServer: tool.name,
+              profileUuid
             },
-            task: {
+            mcpActivity: {
+              action: 'tool_call' as const,
+              itemName: tool.name,
               success: false,
-              duration: Date.now() - startTime,
-              error
+              errorMessage: error,
+              executionTime: Date.now() - startTime
+            },
+            custom: {
+              toolDescription: tool.description
             }
           },
           expiresInDays: 7

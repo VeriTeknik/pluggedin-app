@@ -120,12 +120,12 @@ export async function POST(
         const integrationsConfig: PersonaIntegrations = {
           calendar: hasCalendar ? {
             enabled: true,
-            provider: 'google',
+            provider: 'google_calendar' as const,
             config: calendarConfig,
             status: 'active' as const
           } : {
             enabled: false,
-            provider: 'google',
+            provider: 'google_calendar' as const,
             config: {},
             status: 'inactive' as const
           }
@@ -340,7 +340,7 @@ export async function POST(
         .set({ 
           status: 'completed',
           completed_at: new Date(),
-          actual_data: data
+          data_collected: data
         })
         .where(eq(workflowTasksTable.id, taskId));
 
@@ -359,7 +359,7 @@ export async function POST(
         .set({ 
           status: 'failed',
           completed_at: new Date(),
-          error_message: error
+          failure_reason: error
         })
         .where(eq(workflowTasksTable.id, taskId));
 

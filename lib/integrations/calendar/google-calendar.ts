@@ -160,7 +160,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
 
       // Ensure we have a Plugged.in calendar
       if (action.type !== 'check_availability') {
-        await this.ensurePluggedInCalendar(this.calendarIntegration.config?.userEmail);
+        await this.ensurePluggedInCalendar();
       }
 
       let result: IntegrationResult;
@@ -251,7 +251,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
         console.log('[GoogleCalendarService] Using existing Plugged.in calendar:', this.pluggedInCalendarId);
         
         // Check and fix ACL for existing calendar if we have a user email
-        const effectiveUserEmail = userEmail || this.calendarIntegration.config?.userEmail;
+        const effectiveUserEmail = userEmail;
         if (effectiveUserEmail) {
           try {
             // Try to update ACL for existing calendar
@@ -300,7 +300,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
         
         // Share the calendar back to the user with full permissions to ensure visibility
         // Use the passed userEmail or fall back to config
-        const effectiveUserEmail = userEmail || this.calendarIntegration.config?.userEmail;
+        const effectiveUserEmail = userEmail;
         
         if (effectiveUserEmail) {
           try {
@@ -375,7 +375,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
       console.log('[GoogleCalendarService] Organizer info:', organizerInfo);
 
       // Ensure we have a Plugged.in calendar (pass userEmail for ACL setup)
-      const calendarId = await this.ensurePluggedInCalendar(organizerInfo?.email || this.calendarIntegration.config?.userEmail);
+      const calendarId = await this.ensurePluggedInCalendar(organizerInfo?.email);
 
       // Filter and validate email addresses
       const validAttendees = attendees?.filter((email: string) => {
@@ -401,8 +401,6 @@ export class GoogleCalendarService extends BaseIntegrationService {
       let organizerEmail = 'Organizer';
       if (organizerInfo?.email) {
         organizerEmail = organizerInfo.email;
-      } else if (this.calendarIntegration.config?.userEmail) {
-        organizerEmail = this.calendarIntegration.config.userEmail;
       }
       
       // Build enhanced description with organizer info
@@ -639,7 +637,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
       const { eventId, sendNotifications = true } = payload;
       
       // Ensure we have a Plugged.in calendar
-      const calendarId = await this.ensurePluggedInCalendar(this.calendarIntegration.config?.userEmail);
+      const calendarId = await this.ensurePluggedInCalendar();
       
       const response = await this.makeApiCall(
         `/calendars/${calendarId}/events/${eventId}?sendNotifications=${sendNotifications}`,
@@ -667,7 +665,7 @@ export class GoogleCalendarService extends BaseIntegrationService {
       const { eventId, updates } = payload;
       
       // Ensure we have a Plugged.in calendar
-      const calendarId = await this.ensurePluggedInCalendar(this.calendarIntegration.config?.userEmail);
+      const calendarId = await this.ensurePluggedInCalendar();
       
       // First get the existing event
       const getResponse = await this.makeApiCall(

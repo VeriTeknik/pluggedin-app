@@ -137,6 +137,9 @@ export default async function EmbeddedChatPage({ params, searchParams }: PagePro
     api_key_last_used_at: chat.api_key_last_used_at,
     created_at: chat.created_at,
     updated_at: chat.updated_at,
+    bot_avatar_url: chat.bot_avatar_url,
+    expose_capabilities: chat.expose_capabilities ?? false,
+    debug_mode: chat.debug_mode ?? false,
   };
 
   // Transform project to match Project interface
