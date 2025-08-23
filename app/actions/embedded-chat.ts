@@ -1,6 +1,6 @@
 'use server';
 
-import { and, desc, eq, inArray,sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, lt, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -1323,6 +1323,44 @@ export async function deleteConversations(conversationUuids: string[]) {
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to delete conversations' 
+    };
+  }
+}
+
+// Manual cleanup of stale conversations
+export async function manualCleanupStaleConversations() {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Calculate timestamp 30 minutes ago
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    
+    // Update stale conversations to ended status
+    const result = await db
+      .update(chatConversationsTable)
+      .set({
+        status: 'ended',
+        ended_at: new Date(),
+        updated_at: new Date(),
+      })
+      .where(and(
+        eq(chatConversationsTable.status, 'active'),
+        lt(chatConversationsTable.last_heartbeat, thirtyMinutesAgo)
+      ));
+    
+    return { 
+      success: true, 
+      message: `Cleaned up ${result.rowCount || 0} stale conversations`,
+      cleanedCount: result.rowCount || 0 
+    };
+  } catch (error) {
+    console.error('Error cleaning up stale conversations:', error);
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to cleanup conversations' 
     };
   }
 }

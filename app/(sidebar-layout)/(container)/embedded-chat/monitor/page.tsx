@@ -16,8 +16,9 @@ export default async function EmbeddedChatMonitorPage() {
     redirect('/');
   }
 
-  // If embedded chat is not set up, redirect to setup
-  if (!currentProject.embedded_chat_uuid || !currentProject.embedded_chat_enabled) {
+  // Only check if embedded_chat_uuid exists, not if it's enabled
+  // The monitor can still be accessed even if chat is not yet enabled
+  if (!currentProject.embedded_chat_uuid) {
     redirect('/embedded-chat');
   }
 

@@ -35,9 +35,11 @@ export async function GET(req: NextRequest) {
     })).toString('base64');
 
     // Build OAuth authorization URL
+    // Remove trailing slash from NEXTAUTH_URL to avoid double slash
+    const baseUrl = process.env.NEXTAUTH_URL!.replace(/\/$/, '');
     const params = new URLSearchParams({
       client_id: process.env.GOOGLE_CLIENT_ID!,
-      redirect_uri: `${process.env.NEXTAUTH_URL}/api/auth/google-calendar/callback`,
+      redirect_uri: `${baseUrl}/api/auth/google-calendar/callback`,
       response_type: 'code',
       scope: `openid email profile ${CALENDAR_SCOPES}`, // Include base scopes too
       access_type: 'offline',

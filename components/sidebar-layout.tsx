@@ -270,15 +270,6 @@ export default function SidebarLayout({
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('chatMonitor.title', 'Chat Monitor')} className="group-data-[collapsible=icon]:justify-center">
-                      <Link href='/chat-monitor'>
-                        <Eye className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('chatMonitor.title', 'Chat Monitor')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                  
                   {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/inspector-guide'>

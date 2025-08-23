@@ -49,6 +49,7 @@ metatool-web.code-workspace
 CLAUDE.md
 /memory-bank
 .cursorrules
+.claude
 
 # Logs
 logs

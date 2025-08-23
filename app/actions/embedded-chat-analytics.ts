@@ -107,6 +107,7 @@ export async function getRecentConversations(chatUuid: string, limit: number = 2
         ended_at: chatConversationsTable.ended_at,
         status: chatConversationsTable.status,
         page_url: chatConversationsTable.page_url,
+        last_heartbeat: chatConversationsTable.last_heartbeat,
         message_count: sql<number>`(
           SELECT COUNT(*) FROM ${chatMessagesTable} 
           WHERE ${chatMessagesTable.conversation_uuid} = ${chatConversationsTable.uuid}
@@ -121,7 +122,17 @@ export async function getRecentConversations(chatUuid: string, limit: number = 2
       .orderBy(desc(chatConversationsTable.started_at))
       .limit(limit);
 
-    return { success: true, data: conversations };
+    // Fix status for stale conversations on the fly
+    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+    const processedConversations = conversations.map(conv => {
+      // If conversation is marked as active but last heartbeat is over 30 minutes ago, mark it as ended
+      if (conv.status === 'active' && conv.last_heartbeat && conv.last_heartbeat < thirtyMinutesAgo) {
+        return { ...conv, status: 'ended' as const };
+      }
+      return conv;
+    });
+
+    return { success: true, data: processedConversations };
   } catch (error) {
     console.error('Error fetching recent conversations:', error);
     return { 
