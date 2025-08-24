@@ -1,5 +1,5 @@
 import { and,eq } from 'drizzle-orm';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 import { db } from '@/db';
 import { embeddedChatsTable, projectsTable } from '@/db/schema';
@@ -17,32 +17,67 @@ interface PageProps {
 }
 
 export default async function EmbeddedChatConfigPage({ params }: PageProps) {
-  const session = await getAuthSession();
+  // Check authentication first
+  let session;
+  try {
+    session = await getAuthSession();
+  } catch (error) {
+    console.error('Error getting session:', error);
+    redirect('/login');
+  }
   
-  if (!session?.user) {
+  if (!session?.user?.id) {
     redirect('/login');
   }
 
   // Await params as required in Next.js 15
   const { uuid } = await params;
 
-  // Get the embedded chat WITH ownership verification
-  const [chatWithProject] = await db
-    .select({
-      chat: embeddedChatsTable,
-      project: projectsTable,
-    })
-    .from(embeddedChatsTable)
-    .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
-    .where(and(
-      eq(embeddedChatsTable.uuid, uuid),
-      eq(projectsTable.user_id, session.user.id) // CRITICAL: Verify ownership
-    ))
-    .limit(1);
+  // Validate UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(uuid)) {
+    notFound();
+  }
+
+  let chatWithProject;
+  try {
+    // Get the embedded chat WITH ownership verification
+    [chatWithProject] = await db
+      .select({
+        chat: embeddedChatsTable,
+        project: projectsTable,
+      })
+      .from(embeddedChatsTable)
+      .innerJoin(projectsTable, eq(embeddedChatsTable.project_uuid, projectsTable.uuid))
+      .where(and(
+        eq(embeddedChatsTable.uuid, uuid),
+        eq(projectsTable.user_id, session.user.id) // CRITICAL: Verify ownership
+      ))
+      .limit(1);
+  } catch (error) {
+    console.error('Error fetching embedded chat:', error);
+    notFound();
+  }
 
   if (!chatWithProject) {
-    // User doesn't own this chat - redirect to their own embedded chat
-    redirect('/embedded-chat');
+    // Check if the chat exists at all
+    try {
+      const [chatExists] = await db
+        .select({ uuid: embeddedChatsTable.uuid })
+        .from(embeddedChatsTable)
+        .where(eq(embeddedChatsTable.uuid, uuid))
+        .limit(1);
+      
+      if (chatExists) {
+        // Chat exists but user doesn't have access
+        redirect('/embedded-chat');
+      } else {
+        // Chat doesn't exist
+        notFound();
+      }
+    } catch {
+      notFound();
+    }
   }
 
   const { chat: dbChat } = chatWithProject;

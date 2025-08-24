@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugged.in Widget Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #718096;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .test-section h2 {
+            color: #4a5568;
+            margin-top: 0;
+            margin-bottom: 15px;
+            font-size: 1.25rem;
+        }
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status.active {
+            background: #48bb78;
+            color: white;
+        }
+        .status.inactive {
+            background: #f56565;
+            color: white;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .info-item {
+            background: white;
+            padding: 10px;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+        .info-label {
+            font-size: 12px;
+            color: #718096;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .info-value {
+            font-size: 16px;
+            color: #2d3748;
+            font-weight: 600;
+            margin-top: 4px;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #5a67d8;
+        }
+        button:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+        }
+        .warning {
+            background: #fef5e7;
+            border: 1px solid #f9e79f;
+            color: #7d6608;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Plugged.in Chat Widget Test Page</h1>
+        <p class="subtitle">Test the embedded chat widget functionality</p>
+
+        <div class="test-section">
+            <h2>Widget Configuration</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">Chat ID</div>
+                    <div class="info-value">2ed11ec6-042f-4952-a0cd-480cc8ff41a3</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">API Key</div>
+                    <div class="info-value">ec_e2eec43c...</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Status</div>
+                    <div class="info-value">
+                        <span class="status active" id="widget-status">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Embed Code Used</h2>
+            <div class="code-block">
+&lt;script src="/api/widget?chatId=2ed11ec6-042f-4952-a0cd-480cc8ff41a3&key=ec_e2eec43cee997c9eb22363fa576d9fca6f179fa099064cc4a0fd617fe8a720"&gt;&lt;/script&gt;
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Widget Controls</h2>
+            <p>Use these buttons to control the widget programmatically:</p>
+            <button onclick="openChat()">Open Chat</button>
+            <button onclick="closeChat()">Close Chat</button>
+            <button onclick="destroyWidget()">Destroy Widget</button>
+            <button onclick="reloadWidget()">Reload Widget</button>
+        </div>
+
+        <div class="test-section">
+            <h2>Widget Events</h2>
+            <div id="events-log" style="max-height: 200px; overflow-y: auto; background: #f7fafc; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px;">
+                <div style="color: #718096;">Waiting for events...</div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>Instructions</h2>
+            <ol>
+                <li>The chat widget should appear in the bottom-right corner of the page</li>
+                <li>Click the chat button to open/close the chat interface</li>
+                <li>Test sending messages and interacting with the chat</li>
+                <li>Check that MCP servers are working correctly</li>
+                <li>Monitor the events log for widget communication</li>
+            </ol>
+            
+            <div class="warning">
+                <strong>Note:</strong> If the widget doesn't appear, check:
+                <ul style="margin: 5px 0;">
+                    <li>The chat UUID is correct and the chat is active</li>
+                    <li>The API key is valid (if required)</li>
+                    <li>The browser console for any errors</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Embed the widget -->
+    <script src="/api/widget?chatId=2ed11ec6-042f-4952-a0cd-480cc8ff41a3&key=ec_e2eec43cee997c9eb22363fa576d9fca6f179fa099064cc4a0fd617fe8a720"></script>
+
+    <script>
+        // Log events to the page
+        function logEvent(message, type = 'info') {
+            const log = document.getElementById('events-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const color = type === 'error' ? '#f56565' : type === 'success' ? '#48bb78' : '#4a5568';
+            const entry = document.createElement('div');
+            entry.style.color = color;
+            entry.innerHTML = `[${timestamp}] ${message}`;
+            log.appendChild(entry);
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Widget control functions
+        function openChat() {
+            if (window.PluggedinChat && window.PluggedinChat.open) {
+                window.PluggedinChat.open();
+                logEvent('Chat opened programmatically', 'success');
+            } else {
+                logEvent('Widget not initialized', 'error');
+            }
+        }
+
+        function closeChat() {
+            if (window.PluggedinChat && window.PluggedinChat.close) {
+                window.PluggedinChat.close();
+                logEvent('Chat closed programmatically', 'success');
+            } else {
+                logEvent('Widget not initialized', 'error');
+            }
+        }
+
+        function destroyWidget() {
+            if (window.PluggedinChat && window.PluggedinChat.destroy) {
+                window.PluggedinChat.destroy();
+                logEvent('Widget destroyed', 'success');
+                document.getElementById('widget-status').textContent = 'Destroyed';
+                document.getElementById('widget-status').className = 'status inactive';
+            } else {
+                logEvent('Widget not initialized', 'error');
+            }
+        }
+
+        function reloadWidget() {
+            // Remove existing widget if any
+            if (window.PluggedinChat && window.PluggedinChat.destroy) {
+                window.PluggedinChat.destroy();
+            }
+            
+            // Reload the widget
+            const script = document.createElement('script');
+            script.src = '/api/widget?chatId=2ed11ec6-042f-4952-a0cd-480cc8ff41a3&key=ec_e2eec43cee997c9eb22363fa576d9fca6f179fa099064cc4a0fd617fe8a720';
+            document.body.appendChild(script);
+            logEvent('Widget reloaded', 'success');
+        }
+
+        // Listen for widget events
+        window.addEventListener('pluggedin:chat:ready', function() {
+            logEvent('Widget initialized and ready', 'success');
+            document.getElementById('widget-status').textContent = 'Active';
+            document.getElementById('widget-status').className = 'status active';
+        });
+
+        window.addEventListener('pluggedin:chat:opened', function() {
+            logEvent('Chat opened', 'info');
+        });
+
+        window.addEventListener('pluggedin:chat:closed', function() {
+            logEvent('Chat closed', 'info');
+        });
+
+        // Check widget status on load
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                if (window.PluggedinChat) {
+                    logEvent('Widget object detected', 'success');
+                    if (window.PluggedinChat.initialized) {
+                        document.getElementById('widget-status').textContent = 'Active';
+                        document.getElementById('widget-status').className = 'status active';
+                    }
+                } else {
+                    logEvent('Widget failed to load', 'error');
+                    document.getElementById('widget-status').textContent = 'Failed';
+                    document.getElementById('widget-status').className = 'status inactive';
+                }
+            }, 2000);
+        });
+
+        // Log initial page load
+        logEvent('Test page loaded', 'info');
+    </script>
+</body>
+</html>

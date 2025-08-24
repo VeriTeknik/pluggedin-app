@@ -541,29 +541,84 @@ export function PersonaIntegrations({
 
                   {localIntegrations.communication?.slack?.enabled && (
                     <>
-                      <div>
-                        <Label>{t('embeddedChat.integrations.slackWebhook', 'Webhook URL')}</Label>
-                        <Input
-                          type="url"
-                          value={localIntegrations.communication?.slack?.config?.webhookUrl || ''}
-                          onChange={(e) => 
-                            updateIntegration('communication.slack.config.webhookUrl', e.target.value)
-                          }
-                          placeholder="https://hooks.slack.com/..."
-                          disabled={disabled}
-                        />
+                      <div className="space-y-4">
+                        <div className="text-sm text-muted-foreground">
+                          {t('embeddedChat.integrations.slackChoice', 'Choose one connection method:')}
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>{t('embeddedChat.integrations.slackWebhook', 'Option 1: Webhook URL (Simple)')}</Label>
+                          <Input
+                            type="url"
+                            value={localIntegrations.communication?.slack?.config?.webhookUrl || ''}
+                            onChange={(e) => {
+                              updateIntegration('communication.slack.config.webhookUrl', e.target.value);
+                              // Clear bot token if webhook is being set
+                              if (e.target.value && localIntegrations.communication?.slack?.config?.botToken) {
+                                updateIntegration('communication.slack.config.botToken', '');
+                              }
+                            }}
+                            placeholder="https://hooks.slack.com/..."
+                            disabled={disabled || !!localIntegrations.communication?.slack?.config?.botToken}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {t('embeddedChat.integrations.webhookHint', 'Posts to the channel configured in Slack')}
+                          </p>
+                        </div>
+                        
+                        <div className="relative">
+                          <div className="absolute inset-0 flex items-center">
+                            <span className="w-full border-t" />
+                          </div>
+                          <div className="relative flex justify-center text-xs uppercase">
+                            <span className="bg-background px-2 text-muted-foreground">OR</span>
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-2">
+                          <Label>{t('embeddedChat.integrations.botToken', 'Option 2: Bot Token (Advanced)')}</Label>
+                          <Input
+                            type="password"
+                            value={localIntegrations.communication?.slack?.config?.botToken || ''}
+                            onChange={(e) => {
+                              updateIntegration('communication.slack.config.botToken', e.target.value);
+                              // Clear webhook if bot token is being set
+                              if (e.target.value && localIntegrations.communication?.slack?.config?.webhookUrl) {
+                                updateIntegration('communication.slack.config.webhookUrl', '');
+                              }
+                            }}
+                            placeholder="xoxb-..."
+                            disabled={disabled || !!localIntegrations.communication?.slack?.config?.webhookUrl}
+                          />
+                          <p className="text-xs text-muted-foreground">
+                            {t('embeddedChat.integrations.botTokenHint', 'Can post to any channel, more features')}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <Label>{t('embeddedChat.integrations.defaultChannel', 'Default Channel')}</Label>
-                        <Input
-                          value={localIntegrations.communication?.slack?.config?.channel || ''}
-                          onChange={(e) => 
-                            updateIntegration('communication.slack.config.channel', e.target.value)
-                          }
-                          placeholder="#general"
-                          disabled={disabled}
-                        />
-                      </div>
+                      {/* Only show channel field for bot tokens, not webhooks */}
+                      {localIntegrations.communication?.slack?.config?.botToken ? (
+                        <div>
+                          <Label>{t('embeddedChat.integrations.defaultChannel', 'Default Channel')}</Label>
+                          <Input
+                            value={localIntegrations.communication?.slack?.config?.channel || ''}
+                            onChange={(e) => 
+                              updateIntegration('communication.slack.config.channel', e.target.value)
+                            }
+                            placeholder="#general"
+                            disabled={disabled}
+                          />
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {t('embeddedChat.integrations.channelHintBot', 'Bot tokens can post to any channel')}
+                          </p>
+                        </div>
+                      ) : localIntegrations.communication?.slack?.config?.webhookUrl ? (
+                        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md p-3">
+                          <p className="text-sm text-blue-800 dark:text-blue-200">
+                            <strong>ℹ️ Webhook Channel:</strong> Webhooks always post to the channel they were created for in Slack. 
+                            To change the channel, create a new webhook for your desired channel in your Slack workspace settings.
+                          </p>
+                        </div>
+                      ) : null}
                       <Button
                         variant="outline"
                         size="sm"

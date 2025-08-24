@@ -39,6 +39,7 @@ interface Message {
   userAvatar?: string;
   workflowId?: string;
   workflowStatus?: any;
+  debugInfo?: any;
 }
 
 interface ChatConfig {
@@ -367,10 +368,22 @@ export function NativeEmbeddedChat({
                   // Give more time for workflow to be saved to database
                   // The SimpleTodoList will automatically fetch and display tasks
                 }
-              } else if (data.type === 'debug') {
-                // Store debug information
-                console.log('Debug info:', data);
-                debugInfo = data.metadata;
+              } else if (data.type === 'debug' || data.type === 'system') {
+                // Store debug information (handle both 'debug' and 'system' types)
+                console.log('Debug/System info:', data);
+                if (data.metadata) {
+                  debugInfo = data.metadata;
+                } else if (data.content && data.content.includes('[Debug]')) {
+                  // Parse debug info from content if it's in the old format
+                  const debugMatch = data.content.match(/Model:\s*([\w-]+)\s*-\s*([\w.-]+).*Tokens:\s*(\d+)/);
+                  if (debugMatch) {
+                    debugInfo = {
+                      provider: debugMatch[1],
+                      model: debugMatch[2],
+                      tokens_used: parseInt(debugMatch[3])
+                    };
+                  }
+                }
               } else if (data.type === 'final') {
                 // Handle final message if no streaming tokens were received
                 if (!assistantMessage.content && data.messages && data.messages.length > 0) {
@@ -885,6 +898,17 @@ export function NativeEmbeddedChat({
                     return cleanContent.trim();
                   })()}
                 </div>
+                
+                {/* Show debug info if available and debug mode is enabled */}
+                {chatConfig?.debug_mode && message.debugInfo && (
+                  <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 rounded px-2 py-1">
+                    [Debug] Model: {message.debugInfo.provider} - {message.debugInfo.model} | 
+                    Tokens: {message.debugInfo.tokens_used || 0} 
+                    {message.debugInfo.prompt_tokens && message.debugInfo.completion_tokens && (
+                      <span> (prompt: {message.debugInfo.prompt_tokens}, completion: {message.debugInfo.completion_tokens})</span>
+                    )}
+                  </div>
+                )}
                 
                 {/* Show workflow status if this message created a workflow */}
                 {message.workflowStatus && (

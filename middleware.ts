@@ -8,12 +8,13 @@ export const config = {
   matcher: [
     /*
      * Match all paths except for:
-     * 1. /api routes
+     * 1. /api routes (except /api/mcp)
      * 2. /_next (Next.js internals)
      * 3. /_static (inside /public)
      * 4. all root files inside /public (e.g. /favicon.ico)
+     * 5. /embed routes (for iframe embedding)
      */
-    '/((?!api/auth/logout|_next/|_static/|_vercel|[\\w-]+\\.\\w+).*)',
+    '/((?!api/auth/logout|_next/|_static/|_vercel|embed/|[\\w-]+\\.\\w+).*)',
     // Also match MCP API routes for audit logging
     '/api/mcp/:path*',
   ],

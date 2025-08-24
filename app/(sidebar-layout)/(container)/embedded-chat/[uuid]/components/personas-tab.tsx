@@ -163,19 +163,29 @@ export function PersonasTab({ chat, chatUuid }: PersonasTabProps) {
 
     setIsSaving(true);
     try {
-      const personaData = {
+      const personaData: any = {
         name: formData.name.trim(),
-        role: formData.role.trim() || undefined,
         instructions: formData.instructions.trim(),
-        avatar_url: formData.avatar_url.trim() || undefined,
-        contact_email: formData.contact_email.trim() || undefined,
-        contact_phone: formData.contact_phone.trim() || undefined,
         integrations: formData.integrations,
         capabilities: formData.capabilities,
         is_active: formData.is_active,
         is_default: formData.is_default,
         display_order: editingPersona?.display_order ?? personas.length,
       };
+      
+      // Only add optional fields if they have values
+      if (formData.role.trim()) {
+        personaData.role = formData.role.trim();
+      }
+      if (formData.avatar_url.trim()) {
+        personaData.avatar_url = formData.avatar_url.trim();
+      }
+      if (formData.contact_email.trim()) {
+        personaData.contact_email = formData.contact_email.trim();
+      }
+      if (formData.contact_phone.trim()) {
+        personaData.contact_phone = formData.contact_phone.trim();
+      }
 
       let result;
       if (editingPersona) {

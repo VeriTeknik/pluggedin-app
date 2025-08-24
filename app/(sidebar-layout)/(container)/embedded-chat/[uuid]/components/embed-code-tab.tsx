@@ -31,13 +31,13 @@ export function EmbedCodeTab({ chat, chatUuid }: EmbedCodeTabProps) {
     ? `${window.location.protocol}//${window.location.host}`
     : 'https://plugged.in';
 
-  const simpleEmbedCode = `<script src="${baseUrl}/widget.js?chatId=${chatUuid}${chat.require_api_key && chat.api_key ? `&key=${chat.api_key}` : ''}"></script>`;
+  const simpleEmbedCode = `<script src="${baseUrl}/api/widget?chatId=${chatUuid}${chat.require_api_key && chat.api_key ? `&key=${chat.api_key}` : ''}"></script>`;
 
   const customEmbedCode = `<!-- Plugged.in Embedded Chat -->
 <script>
   (function() {
     var script = document.createElement('script');
-    script.src = '${baseUrl}/widget.js?chatId=${chatUuid}${chat.require_api_key && chat.api_key ? `&key=${chat.api_key}` : ''}';
+    script.src = '${baseUrl}/api/widget?chatId=${chatUuid}${chat.require_api_key && chat.api_key ? `&key=${chat.api_key}` : ''}';
     script.async = true;
     script.dataset.position = '${chat.position}';
     document.head.appendChild(script);
@@ -49,7 +49,7 @@ export function EmbedCodeTab({ chat, chatUuid }: EmbedCodeTabProps) {
 export function PluggedinChat() {
   useEffect(() => {
     const script = document.createElement('script');
-    script.src = '${baseUrl}/widget.js?chatId=${chatUuid}${chat.require_api_key && chat.api_key ? `&key=${chat.api_key}` : ''}';
+    script.src = '${baseUrl}/api/widget?chatId=${chatUuid}${chat.require_api_key && chat.api_key ? `&key=${chat.api_key}` : ''}';
     script.async = true;
     document.body.appendChild(script);
 

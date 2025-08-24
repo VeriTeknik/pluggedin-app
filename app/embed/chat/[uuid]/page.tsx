@@ -1,4 +1,5 @@
 import { and,eq } from 'drizzle-orm';
+import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 import { db } from '@/db';
@@ -12,10 +13,50 @@ interface PageProps {
   searchParams: Promise<{ key?: string }>;
 }
 
+function extractDomain(url: string): string {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.hostname;
+  } catch {
+    // If not a valid URL, try to extract domain directly
+    const match = url.match(/(?:https?:\/\/)?([^\/\s]+)/);
+    return match ? match[1] : '';
+  }
+}
+
+function isDomainAllowed(origin: string, allowedDomains: string[]): boolean {
+  if (!origin || allowedDomains.length === 0) {
+    // If no allowed domains are set, allow all
+    return true;
+  }
+
+  const originDomain = extractDomain(origin);
+  if (!originDomain) return false;
+
+  return allowedDomains.some(domain => {
+    // Clean the domain (remove protocol if present)
+    const cleanDomain = domain.replace(/^https?:\/\//, '').toLowerCase();
+    
+    // Support wildcard subdomains
+    if (cleanDomain.startsWith('*.')) {
+      const baseDomain = cleanDomain.slice(2);
+      return originDomain === baseDomain || originDomain.endsWith('.' + baseDomain);
+    }
+    
+    // Exact match
+    return originDomain === cleanDomain;
+  });
+}
+
 export default async function EmbeddedChatPage({ params, searchParams }: PageProps) {
   const { uuid: chatUuid } = await params;
   const { key } = await searchParams;
   const apiKey = key || '';
+  
+  // Get headers to check origin
+  const headersList = await headers();
+  const referer = headersList.get('referer') || '';
+  const origin = headersList.get('origin') || referer;
 
   // Fetch embedded chat configuration with project info
   const [chatConfig] = await db
@@ -53,8 +94,24 @@ export default async function EmbeddedChatPage({ params, searchParams }: PagePro
     }
   }
 
-  // Check domain whitelist if configured
-  // This would be checked on the client side as well for security
+  // Check domain whitelist
+  if (!isDomainAllowed(origin, chat.allowed_domains || [])) {
+    return (
+      <div className="flex h-screen items-center justify-center p-4">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold mb-2">Domain Not Authorized</h2>
+          <p className="text-muted-foreground">
+            This domain is not authorized to embed this chat widget.
+          </p>
+          {origin && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Current domain: {extractDomain(origin)}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Transform chat to match EmbeddedChat type with proper defaults
   const embeddedChat: EmbeddedChat = {

@@ -247,6 +247,7 @@ export async function GET(req: NextRequest) {
         status: 400,
         headers: {
           'Content-Type': 'application/javascript',
+          'Access-Control-Allow-Origin': '*',
         },
       });
     }
@@ -257,6 +258,7 @@ export async function GET(req: NextRequest) {
         uuid: embeddedChatsTable.uuid,
         require_api_key: embeddedChatsTable.require_api_key,
         api_key: embeddedChatsTable.api_key,
+        allowed_domains: embeddedChatsTable.allowed_domains,
       })
       .from(embeddedChatsTable)
       .where(and(
@@ -270,6 +272,7 @@ export async function GET(req: NextRequest) {
         status: 404,
         headers: {
           'Content-Type': 'application/javascript',
+          'Access-Control-Allow-Origin': '*',
         },
       });
     }
@@ -281,6 +284,7 @@ export async function GET(req: NextRequest) {
           status: 401,
           headers: {
             'Content-Type': 'application/javascript',
+            'Access-Control-Allow-Origin': '*',
           },
         });
       }
@@ -291,6 +295,61 @@ export async function GET(req: NextRequest) {
           status: 403,
           headers: {
             'Content-Type': 'application/javascript',
+            'Access-Control-Allow-Origin': '*',
+          },
+        });
+      }
+    }
+
+    // Get origin for domain validation
+    const origin = req.headers.get('origin') || req.headers.get('referer') || '';
+    
+    // Check domain whitelist if configured
+    if (chat.allowed_domains && chat.allowed_domains.length > 0) {
+      // Extract domain from origin/referer
+      let originDomain = '';
+      try {
+        if (origin) {
+          const url = new URL(origin);
+          originDomain = url.hostname;
+        }
+      } catch {
+        // Try to extract domain directly
+        const match = origin.match(/(?:https?:\/\/)?([^\/\s]+)/);
+        originDomain = match ? match[1] : '';
+      }
+      
+      const isAllowed = chat.allowed_domains.some(domain => {
+        const cleanDomain = domain.replace(/^https?:\/\//, '').toLowerCase();
+        
+        // Support wildcard subdomains
+        if (cleanDomain.startsWith('*.')) {
+          const baseDomain = cleanDomain.slice(2);
+          return originDomain === baseDomain || originDomain.endsWith('.' + baseDomain);
+        }
+        
+        // Exact match
+        return originDomain === cleanDomain;
+      });
+      
+      if (!isAllowed && originDomain) {
+        console.warn(`Domain not allowed: ${originDomain} for chat ${chatId}`);
+        // Return error script that prevents widget from loading
+        return new NextResponse(`
+          (function() {
+            console.error('[Plugged.in Chat] Domain not authorized: ${originDomain}');
+            console.error('[Plugged.in Chat] This domain is not in the allowed list for this chat widget.');
+            // Prevent widget from initializing
+            window.PluggedinChat = { 
+              error: 'Domain not authorized',
+              domain: '${originDomain}'
+            };
+          })();
+        `, {
+          status: 403,
+          headers: {
+            'Content-Type': 'application/javascript',
+            'Access-Control-Allow-Origin': '*',
           },
         });
       }
@@ -309,6 +368,8 @@ export async function GET(req: NextRequest) {
         'Content-Type': 'application/javascript',
         'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
         'Access-Control-Allow-Origin': '*', // Allow embedding on any domain
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
       },
     });
   } catch (error) {
@@ -317,6 +378,7 @@ export async function GET(req: NextRequest) {
       status: 500,
       headers: {
         'Content-Type': 'application/javascript',
+        'Access-Control-Allow-Origin': '*',
       },
     });
   }

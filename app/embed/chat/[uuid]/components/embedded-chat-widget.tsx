@@ -29,12 +29,70 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
     name?: string;
     email?: string;
   }>({});
+  const [isDomainAllowed, setIsDomainAllowed] = useState<boolean>(true);
+  const [parentOrigin, setParentOrigin] = useState<string>('');
+  const [chatConfig, setChatConfig] = useState<any>(null);
+  const [personaAvatar, setPersonaAvatar] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Fetch chat configuration including persona
+  useEffect(() => {
+    const fetchConfig = async () => {
+      try {
+        const response = await fetch(`/api/public/chat/${chat.uuid}/config`);
+        if (response.ok) {
+          const config = await response.json();
+          setChatConfig(config);
+          
+          // Set persona avatar if available, otherwise use bot avatar
+          if (config.default_persona?.avatar_url) {
+            setPersonaAvatar(config.default_persona.avatar_url);
+          } else if (config.bot_avatar_url) {
+            setPersonaAvatar(config.bot_avatar_url);
+          }
+        }
+      } catch (error) {
+        console.error('[Plugged.in Chat] Error fetching config:', error);
+      }
+    };
+    
+    fetchConfig();
+  }, [chat.uuid]);
+
   // Initialize visitor ID and restore conversation
   useEffect(() => {
+    // Check if we're in an iframe and validate domain
+    if (window.parent !== window && chat.allowed_domains && chat.allowed_domains.length > 0) {
+      try {
+        // Get parent origin
+        const ancestorOrigin = document.referrer ? new URL(document.referrer).hostname : '';
+        setParentOrigin(ancestorOrigin);
+        
+        // Check if domain is allowed
+        const isAllowed = chat.allowed_domains.some(domain => {
+          const cleanDomain = domain.replace(/^https?:\/\//, '').toLowerCase();
+          
+          // Support wildcard subdomains
+          if (cleanDomain.startsWith('*.')) {
+            const baseDomain = cleanDomain.slice(2);
+            return ancestorOrigin === baseDomain || ancestorOrigin.endsWith('.' + baseDomain);
+          }
+          
+          return ancestorOrigin === cleanDomain;
+        });
+        
+        if (!isAllowed && ancestorOrigin) {
+          setIsDomainAllowed(false);
+          console.error(`[Plugged.in Chat] Domain not authorized: ${ancestorOrigin}`);
+          return;
+        }
+      } catch (error) {
+        console.error('[Plugged.in Chat] Error checking domain:', error);
+      }
+    }
+    
     // Get or create visitor ID
     const id = getOrCreateVisitorId();
     setVisitorId(id);
@@ -53,7 +111,7 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
         email: userInfo.userEmail,
       });
     }
-  }, [chat.uuid]);
+  }, [chat.uuid, chat.allowed_domains]);
 
   // Send ready message to parent and handle parent messages
   useEffect(() => {
@@ -175,6 +233,10 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
 
       // Handle streaming response
       const reader = response.body?.getReader();
+      if (!reader) {
+        throw new Error('No response body');
+      }
+      
       const decoder = new TextDecoder();
       const assistantMessage: Message = {
         id: Date.now().toString(),
@@ -186,26 +248,37 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
       // Add empty assistant message that we'll update
       setMessages(prev => [...prev, assistantMessage]);
 
-      if (reader) {
-        try {
-          while (true) {
+      try {
+        let buffer = '';
+        
+        while (true) {
             const { done, value } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value);
-            const lines = chunk.split('\n');
+            // Decode chunk and add to buffer
+            buffer += decoder.decode(value, { stream: true });
+            
+            // Process complete lines from buffer
+            const lines = buffer.split('\n');
+            
+            // Keep the last incomplete line in the buffer
+            buffer = lines.pop() || '';
 
             for (const line of lines) {
-              if (line.startsWith('data: ')) {
+              if (line.trim() && line.startsWith('data: ')) {
                 try {
-                  const data = JSON.parse(line.slice(6));
+                  const jsonStr = line.slice(6).trim();
+                  if (!jsonStr) continue;
+                  
+                  const data = JSON.parse(jsonStr);
+                  console.log('Parsed SSE data:', data);
                   
                   if (data.type === 'conversation') {
                     // Store conversation ID
                     setConversationId(data.conversation_id);
                     sessionStorage.setItem(`chat-${chat.uuid}-conversation`, data.conversation_id);
-                  } else if (data.type === 'content') {
-                    // Update assistant message content
+                  } else if ((data.type === 'content' || data.type === 'text') && data.content) {
+                    // Update assistant message content (handle both 'content' and 'text' types)
                     assistantMessage.content += data.content;
                     setMessages(prev => 
                       prev.map(msg => 
@@ -214,18 +287,44 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
                           : msg
                       )
                     );
+                  } else if (data.type === 'system') {
+                    // System messages (debug info, etc)
+                    console.log('System message:', data.content);
+                  } else if (data.type === 'done') {
+                    console.log('Stream completed');
                   } else if (data.type === 'error') {
                     throw new Error(data.content || 'Stream error');
                   }
                 } catch (e) {
-                  console.error('Error parsing SSE data:', e);
+                  console.error('Error parsing SSE data:', e, 'Line:', line);
                 }
               }
             }
           }
-        } finally {
-          reader.releaseLock();
-        }
+          
+          // Process any remaining buffer content
+          if (buffer.trim() && buffer.startsWith('data: ')) {
+            try {
+              const jsonStr = buffer.slice(6).trim();
+              if (jsonStr) {
+                const data = JSON.parse(jsonStr);
+                if ((data.type === 'content' || data.type === 'text') && data.content) {
+                  assistantMessage.content += data.content;
+                  setMessages(prev => 
+                    prev.map(msg => 
+                      msg.id === assistantMessage.id 
+                        ? { ...msg, content: assistantMessage.content }
+                        : msg
+                    )
+                  );
+                }
+              }
+            } catch (e) {
+              console.error('Error parsing final buffer:', e);
+            }
+          }
+      } finally {
+        reader.releaseLock();
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -283,6 +382,25 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
     fontSize: themeConfig.fontSize || 14,
   };
 
+  // If domain is not allowed, show error message
+  if (!isDomainAllowed) {
+    return (
+      <div className="flex h-screen items-center justify-center p-4">
+        <div className="text-center">
+          <h2 className="text-lg font-semibold mb-2">Domain Not Authorized</h2>
+          <p className="text-muted-foreground">
+            This domain is not authorized to use this chat widget.
+          </p>
+          {parentOrigin && (
+            <p className="text-sm text-muted-foreground mt-2">
+              Current domain: {parentOrigin}
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex flex-col h-screen"
@@ -328,8 +446,8 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
       >
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            {project.avatar_url ? (
-              <AvatarImage src={project.avatar_url} alt={project.name} />
+            {personaAvatar || chat.bot_avatar_url ? (
+              <AvatarImage src={personaAvatar || chat.bot_avatar_url || ''} alt={chat.name} />
             ) : (
               <AvatarFallback>
                 <MessageSquare className="h-4 w-4" />
@@ -337,7 +455,7 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
             )}
           </Avatar>
           <div>
-            <h3 className="font-semibold text-sm">{chat.name}</h3>
+            <h3 className="font-semibold text-sm">{chatConfig?.default_persona?.name || chat.name}</h3>
             <p className="text-xs opacity-80">
               {chat.welcome_message || 'How can I help you today?'}
             </p>
@@ -417,12 +535,21 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
                 className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {message.role === 'assistant' && (
-                  <div
-                    className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full"
-                    style={{ backgroundColor: themeColors.secondary, color: themeColors.text }}
-                  >
-                    AI
-                  </div>
+                  personaAvatar || chat.bot_avatar_url ? (
+                    <img 
+                      src={personaAvatar || chat.bot_avatar_url || ''} 
+                      alt={chatConfig?.default_persona?.name || chat.name}
+                      className="h-8 w-8 shrink-0 rounded-full object-cover"
+                      style={{ border: `1px solid ${themeColors.secondary}` }}
+                    />
+                  ) : (
+                    <div
+                      className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full"
+                      style={{ backgroundColor: themeColors.secondary, color: themeColors.text }}
+                    >
+                      AI
+                    </div>
+                  )
                 )}
                 <div
                   className="max-w-[80%] px-4 py-2"
@@ -454,12 +581,21 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
             ))}
             {isLoading && (
               <div className="flex gap-3">
-                <div
-                  className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full"
-                  style={{ backgroundColor: themeColors.secondary, color: themeColors.text }}
-                >
-                  AI
-                </div>
+                {personaAvatar || chat.bot_avatar_url ? (
+                  <img 
+                    src={personaAvatar || chat.bot_avatar_url || ''} 
+                    alt={chatConfig?.default_persona?.name || chat.name}
+                    className="h-8 w-8 shrink-0 rounded-full object-cover"
+                    style={{ border: `1px solid ${themeColors.secondary}` }}
+                  />
+                ) : (
+                  <div
+                    className="h-8 w-8 shrink-0 flex items-center justify-center rounded-full"
+                    style={{ backgroundColor: themeColors.secondary, color: themeColors.text }}
+                  >
+                    AI
+                  </div>
+                )}
                 <div
                   className="px-4 py-2"
                   style={{

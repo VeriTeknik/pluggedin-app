@@ -100,13 +100,15 @@ export async function POST(
     // Create unique filename with .jpg extension
     const filename = `persona-${personaId}-${Date.now()}.jpg`;
     
-    // Always use the main public directory
-    const publicDir = '/home/pluggedin/pluggedin-app/public';
+    // Use BOT_AVATAR_PATH from environment for all chat avatars
+    const botAvatarPath = process.env.BOT_AVATAR_PATH || join(process.cwd(), 'public', 'avatars', 'bots');
     
-    const path = join(publicDir, 'avatars', 'personas', filename);
+    // Store persona avatars in a personas subdirectory
+    const personasDir = join(botAvatarPath, 'personas');
+    const path = join(personasDir, filename);
     
     // Ensure personas avatars directory exists
-    const personasAvatarsDir = join(publicDir, 'avatars', 'personas');
+    const personasAvatarsDir = personasDir;
     try {
       await mkdir(personasAvatarsDir, { recursive: true });
     } catch (_error) {
@@ -117,7 +119,8 @@ export async function POST(
     await writeFile(path, processedImage);
 
     // Update persona's avatar in database
-    const imageUrl = `/avatars/personas/${filename}`;
+    // Use API route for dynamic serving to avoid standalone build issues
+    const imageUrl = `/api/avatars/personas/${filename}`;
     await db
       .update(chatPersonasTable)
       .set({ 

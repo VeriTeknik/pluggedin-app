@@ -177,10 +177,19 @@ const CreatePersonaSchema = z.object({
   name: z.string().min(1).max(100),
   role: z.string().max(100).optional(),
   instructions: z.string().min(1),
-  avatar_url: z.string().url().optional(),
-  contact_email: z.string().email().optional(),
+  avatar_url: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.string().url().optional()
+  ),
+  contact_email: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.string().email().optional()
+  ),
   contact_phone: z.string().optional(),
-  contact_calendar_link: z.string().url().optional(),
+  contact_calendar_link: z.preprocess(
+    (val) => (val === '' || val === null ? undefined : val),
+    z.string().url().optional()
+  ),
   integrations: z.any().optional().default(DEFAULT_INTEGRATIONS), // JSONB field with default structure
   capabilities: z.any().optional(), // JSONB field
   tools_config: z.any().optional(), // JSONB field

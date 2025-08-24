@@ -160,14 +160,20 @@ export function getCSPHeader(nonce?: string): string {
 /**
  * Get security headers for HTML responses
  */
-export function getSecurityHeaders(nonce?: string): Record<string, string> {
-  return {
+export function getSecurityHeaders(nonce?: string, allowEmbedding = false): Record<string, string> {
+  const headers: Record<string, string> = {
     'Content-Security-Policy': getCSPHeader(nonce),
     'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
     'X-XSS-Protection': '1; mode=block',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
   };
+  
+  // Only add X-Frame-Options if not allowing embedding
+  if (!allowEmbedding) {
+    headers['X-Frame-Options'] = 'DENY';
+  }
+  
+  return headers;
 }
 
 /**
