@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquare, Send, X } from 'lucide-react';
+import { Mail, MessageSquare, Send, Slack, Calendar, FileText, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -14,12 +14,27 @@ interface Message {
   timestamp: Date;
 }
 
+interface Persona {
+  id: number;
+  name: string;
+  avatar_url: string | null;
+  role: string | null;
+}
+
+interface User {
+  username: string | null;
+  subscription_tier: string;
+  public_profile: boolean;
+}
+
 interface EmbeddedChatWidgetProps {
   chat: EmbeddedChat;
   project: Project;
+  persona: Persona | null;
+  user: User;
 }
 
-export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
+export function EmbeddedChatWidget({ chat, project, persona, user }: EmbeddedChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -31,35 +46,23 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
   }>({});
   const [isDomainAllowed, setIsDomainAllowed] = useState<boolean>(true);
   const [parentOrigin, setParentOrigin] = useState<string>('');
-  const [chatConfig, setChatConfig] = useState<any>(null);
-  const [personaAvatar, setPersonaAvatar] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Use bot avatar for header, persona avatar for messages
+  const botAvatarUrl = chat.bot_avatar_url;
+  const messageAvatarUrl = persona?.avatar_url || chat.bot_avatar_url;
+  const displayName = persona?.name || chat.name;
+  
+  // Determine available capabilities (you may need to pass these from the server)
+  const capabilities = [
+    { icon: Mail, label: 'Send Email', enabled: true },
+    { icon: Slack, label: 'Send Slack Message', enabled: true },
+    { icon: Calendar, label: 'Schedule Meeting', enabled: false },
+    { icon: FileText, label: 'Create Document', enabled: false },
+  ];
 
-  // Fetch chat configuration including persona
-  useEffect(() => {
-    const fetchConfig = async () => {
-      try {
-        const response = await fetch(`/api/public/chat/${chat.uuid}/config`);
-        if (response.ok) {
-          const config = await response.json();
-          setChatConfig(config);
-          
-          // Set persona avatar if available, otherwise use bot avatar
-          if (config.default_persona?.avatar_url) {
-            setPersonaAvatar(config.default_persona.avatar_url);
-          } else if (config.bot_avatar_url) {
-            setPersonaAvatar(config.bot_avatar_url);
-          }
-        }
-      } catch (error) {
-        console.error('[Plugged.in Chat] Error fetching config:', error);
-      }
-    };
-    
-    fetchConfig();
-  }, [chat.uuid]);
 
   // Initialize visitor ID and restore conversation
   useEffect(() => {
@@ -445,20 +448,49 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
         }}
       >
         <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8">
-            {personaAvatar || chat.bot_avatar_url ? (
-              <AvatarImage src={personaAvatar || chat.bot_avatar_url || ''} alt={chat.name} />
+          <Avatar className="h-10 w-10">
+            {botAvatarUrl ? (
+              <AvatarImage src={botAvatarUrl} alt={chat.name} />
             ) : (
               <AvatarFallback>
-                <MessageSquare className="h-4 w-4" />
+                <MessageSquare className="h-5 w-5" />
               </AvatarFallback>
             )}
           </Avatar>
-          <div>
-            <h3 className="font-semibold text-sm">{chatConfig?.default_persona?.name || chat.name}</h3>
-            <p className="text-xs opacity-80">
-              {chat.welcome_message || 'How can I help you today?'}
-            </p>
+          <div className="flex-1">
+            <h3 className="font-semibold text-sm">{displayName}</h3>
+            <div className="flex items-center gap-2 mt-1">
+              {capabilities.map((capability, index) => {
+                const Icon = capability.icon;
+                return (
+                  <div
+                    key={index}
+                    className="relative group"
+                    title={capability.label}
+                  >
+                    <div
+                      className={`p-1 rounded transition-all ${
+                        capability.enabled 
+                          ? 'opacity-100 hover:bg-white/20' 
+                          : 'opacity-40 cursor-not-allowed'
+                      }`}
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                    </div>
+                    <div
+                      className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-10"
+                      style={{
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        color: 'white',
+                      }}
+                    >
+                      {capability.label}
+                      {!capability.enabled && ' (Disabled)'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
         <button
@@ -535,10 +567,10 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
                 className={`flex gap-3 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 {message.role === 'assistant' && (
-                  personaAvatar || chat.bot_avatar_url ? (
+                  messageAvatarUrl ? (
                     <img 
-                      src={personaAvatar || chat.bot_avatar_url || ''} 
-                      alt={chatConfig?.default_persona?.name || chat.name}
+                      src={messageAvatarUrl} 
+                      alt={displayName}
                       className="h-8 w-8 shrink-0 rounded-full object-cover"
                       style={{ border: `1px solid ${themeColors.secondary}` }}
                     />
@@ -581,10 +613,10 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
             ))}
             {isLoading && (
               <div className="flex gap-3">
-                {personaAvatar || chat.bot_avatar_url ? (
+                {messageAvatarUrl ? (
                   <img 
-                    src={personaAvatar || chat.bot_avatar_url || ''} 
-                    alt={chatConfig?.default_persona?.name || chat.name}
+                    src={messageAvatarUrl} 
+                    alt={displayName}
                     className="h-8 w-8 shrink-0 rounded-full object-cover"
                     style={{ border: `1px solid ${themeColors.secondary}` }}
                   />
@@ -661,7 +693,6 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
               e.currentTarget.style.borderColor = themeColors.secondary;
               e.currentTarget.style.boxShadow = 'none';
             }}
-            autoFocus
           />
           <button
             type="submit"
@@ -686,6 +717,72 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
           </button>
         </div>
       </form>
+      
+      {/* Branding for free accounts */}
+      {user.subscription_tier === 'free' && (
+        <div 
+          className="flex items-center justify-between px-3 py-2 text-xs"
+          style={{ 
+            borderTop: `1px solid ${themeColors.secondary}`,
+            backgroundColor: `${themeColors.background}`,
+            color: `${themeColors.text}80`
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <a 
+              href="https://plugged.in"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+              style={{ color: 'inherit', textDecoration: 'none' }}
+            >
+              {/* Plugged.in Logo */}
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 32 32"
+                fill="currentColor"
+                style={{ opacity: 0.7 }}
+              >
+                <path d="M8 4C8 2.89543 8.89543 2 10 2H16C17.1046 2 18 2.89543 18 4V8H22C23.1046 8 24 8.89543 24 10V16C24 17.1046 23.1046 18 22 18H18V22C18 23.1046 17.1046 24 16 24H10C8.89543 24 8 23.1046 8 22V18H4C2.89543 18 2 17.1046 2 16V10C2 8.89543 2.89543 8 4 8H8V4Z" />
+                <circle cx="16" cy="16" r="4" fill={themeColors.background} />
+              </svg>
+              <span style={{ fontSize: '11px' }}>Powered by Plugged.in</span>
+            </a>
+            
+            {/* User's public profile link if enabled */}
+            {user.public_profile && user.username && (
+              <>
+                <span style={{ opacity: 0.4 }}>•</span>
+                <a
+                  href={`https://plugged.in/to/${user.username}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline"
+                  style={{ color: 'inherit', fontSize: '11px' }}
+                >
+                  @{user.username}
+                </a>
+              </>
+            )}
+          </div>
+          
+          {/* Claim yours link */}
+          <a
+            href="https://plugged.in/register"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:underline"
+            style={{ 
+              color: themeColors.primary, 
+              fontSize: '10px',
+              opacity: 0.8
+            }}
+          >
+            claim yours
+          </a>
+        </div>
+      )}
     </div>
   );
 }

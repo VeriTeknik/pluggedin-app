@@ -3,7 +3,7 @@ import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
 
 import { db } from '@/db';
-import { embeddedChatsTable, projectsTable } from '@/db/schema';
+import { chatPersonasTable, embeddedChatsTable, projectsTable, usersTable } from '@/db/schema';
 import { EmbeddedChat, Project } from '@/types/embedded-chat';
 
 import { EmbeddedChatWidget } from './components/embedded-chat-widget';
@@ -210,5 +210,43 @@ export default async function EmbeddedChatPage({ params, searchParams }: PagePro
     updated_at: project.created_at, // Use created_at as fallback since updated_at doesn't exist
   };
 
-  return <EmbeddedChatWidget chat={embeddedChat} project={projectData} />;
+  // Fetch the default persona for this chat
+  const [defaultPersona] = await db
+    .select({
+      id: chatPersonasTable.id,
+      name: chatPersonasTable.name,
+      avatar_url: chatPersonasTable.avatar_url,
+      role: chatPersonasTable.role,
+    })
+    .from(chatPersonasTable)
+    .where(and(
+      eq(chatPersonasTable.embedded_chat_uuid, chatUuid),
+      eq(chatPersonasTable.is_default, true),
+      eq(chatPersonasTable.is_active, true)
+    ))
+    .limit(1);
+
+  // Fetch user data for public profile link
+  const [userData] = await db
+    .select({
+      username: usersTable.username,
+      subscription_tier: usersTable.subscription_tier,
+      public_profile: usersTable.public_profile,
+    })
+    .from(usersTable)
+    .where(eq(usersTable.id, project.user_id))
+    .limit(1);
+
+  return (
+    <EmbeddedChatWidget 
+      chat={embeddedChat} 
+      project={projectData} 
+      persona={defaultPersona || null}
+      user={{
+        username: userData?.username || null,
+        subscription_tier: userData?.subscription_tier || 'free',
+        public_profile: userData?.public_profile || false,
+      }}
+    />
+  );
 }
