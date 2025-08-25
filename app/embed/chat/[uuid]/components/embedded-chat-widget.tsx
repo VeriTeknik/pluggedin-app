@@ -1,6 +1,6 @@
 'use client';
 
-import { MessageSquare, Send, X } from 'lucide-react';
+import { Send, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -25,6 +25,7 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [visitorId, setVisitorId] = useState<string>('');
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const [visitorInfo, setVisitorInfo] = useState<{
     name?: string;
     email?: string;
@@ -32,6 +33,11 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const heartbeatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Set mounted state to prevent hydration mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Initialize visitor ID and restore conversation
   useEffect(() => {
@@ -176,8 +182,9 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
       // Handle streaming response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
+      const assistantMessageId = Date.now().toString();
       const assistantMessage: Message = {
-        id: Date.now().toString(),
+        id: assistantMessageId,
         role: 'assistant',
         content: '',
         timestamp: new Date(),
@@ -199,21 +206,29 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
               if (line.startsWith('data: ')) {
                 try {
                   const data = JSON.parse(line.slice(6));
+                  console.log('Received data:', data);
                   
                   if (data.type === 'conversation') {
                     // Store conversation ID
                     setConversationId(data.conversation_id);
                     sessionStorage.setItem(`chat-${chat.uuid}-conversation`, data.conversation_id);
-                  } else if (data.type === 'content') {
-                    // Update assistant message content
-                    assistantMessage.content += data.content;
-                    setMessages(prev => 
-                      prev.map(msg => 
-                        msg.id === assistantMessage.id 
-                          ? { ...msg, content: assistantMessage.content }
+                  } else if (data.type === 'text' || data.type === 'content') {
+                    // Update assistant message content (handle both 'text' from ChatEngine and 'content' for backward compatibility)
+                    setMessages(prev => prev.map(msg => 
+                      msg.id === assistantMessageId 
+                        ? { ...msg, content: msg.content + data.content }
+                        : msg
+                    ));
+                  } else if (data.type === 'system') {
+                    // Handle debug/system messages - append to the last assistant message if debug mode is enabled
+                    if (chat.debug_mode) {
+                      const debugInfo = `\n\n💡 ${data.content}`;
+                      setMessages(prev => prev.map(msg => 
+                        msg.id === assistantMessageId 
+                          ? { ...msg, content: msg.content + debugInfo }
                           : msg
-                      )
-                    );
+                      ));
+                    }
                   } else if (data.type === 'error') {
                     throw new Error(data.content || 'Stream error');
                   }
@@ -328,13 +343,19 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
       >
         <div className="flex items-center gap-3">
           <Avatar className="h-8 w-8">
-            {project.avatar_url ? (
-              <AvatarImage src={project.avatar_url} alt={project.name} />
-            ) : (
-              <AvatarFallback>
-                <MessageSquare className="h-4 w-4" />
-              </AvatarFallback>
-            )}
+            {isMounted && project.avatar_url ? (
+              <AvatarImage 
+                src={project.avatar_url} 
+                alt={project.name}
+                onError={(e) => {
+                  // Hide the image on error to show fallback
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+            ) : null}
+            <AvatarFallback>
+              {isMounted ? (project.name?.charAt(0)?.toUpperCase() || 'P') : 'P'}
+            </AvatarFallback>
           </Avatar>
           <div>
             <h3 className="font-semibold text-sm">{chat.name}</h3>
@@ -371,7 +392,23 @@ export function EmbeddedChatWidget({ chat, project }: EmbeddedChatWidgetProps) {
       >
         {messages.length === 0 ? (
           <div className="text-center py-8" style={{ color: `${themeColors.text}80` }}>
-            <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+            <div className="h-12 w-12 mx-auto mb-4">
+              <Avatar className="h-12 w-12">
+                {isMounted && project.avatar_url ? (
+                  <AvatarImage 
+                    src={project.avatar_url} 
+                    alt={chat.name}
+                    onError={(e) => {
+                      // Hide the image on error to show fallback
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                ) : null}
+                <AvatarFallback style={{ backgroundColor: themeColors.secondary, color: themeColors.text }}>
+                  {isMounted ? (chat.name?.charAt(0)?.toUpperCase() || 'AI') : 'AI'}
+                </AvatarFallback>
+              </Avatar>
+            </div>
             <p className="text-sm mb-4">{chat.welcome_message || 'Start a conversation'}</p>
             
             {/* Suggested Questions */}
