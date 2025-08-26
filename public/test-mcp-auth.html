@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MCP Authentication Test Suite</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 2px solid #10b981;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 20px 0;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .test-section h2 {
+      color: #10b981;
+      margin-top: 0;
+    }
+    button {
+      background: #10b981;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #059669;
+    }
+    button:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+    input {
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      width: 300px;
+      margin: 5px;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 5px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .result.success {
+      background: #d1fae5;
+      border: 1px solid #10b981;
+    }
+    .result.error {
+      background: #fee2e2;
+      border: 1px solid #ef4444;
+    }
+    .result.info {
+      background: #dbeafe;
+      border: 1px solid #3b82f6;
+    }
+    .status {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 3px;
+      font-size: 12px;
+      margin-left: 10px;
+    }
+    .status.authenticated {
+      background: #10b981;
+      color: white;
+    }
+    .status.unauthenticated {
+      background: #ef4444;
+      color: white;
+    }
+    .config-section {
+      background: #f3f4f6;
+      padding: 15px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    .config-section label {
+      display: block;
+      margin: 5px 0;
+      font-weight: 500;
+    }
+    .tab-buttons {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .tab-button {
+      padding: 8px 16px;
+      background: #e5e7eb;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .tab-button.active {
+      background: #10b981;
+      color: white;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔐 MCP Authentication Test Suite</h1>
+  
+  <!-- Session Status -->
+  <div class="test-section">
+    <h2>Current Session Status</h2>
+    <p>
+      NextAuth Session: <span id="sessionStatus" class="status unauthenticated">Not Checked</span>
+      <button onclick="checkSession()">Check Session</button>
+    </p>
+    <div id="sessionInfo" class="result info" style="display:none;"></div>
+  </div>
+
+  <!-- Test Tabs -->
+  <div class="tab-buttons">
+    <button class="tab-button active" onclick="switchTab('noauth')">No Auth</button>
+    <button class="tab-button" onclick="switchTab('session')">Session Auth</button>
+    <button class="tab-button" onclick="switchTab('apikey')">API Key</button>
+    <button class="tab-button" onclick="switchTab('oauth')">OAuth</button>
+  </div>
+
+  <!-- No Auth Test -->
+  <div id="noauth" class="tab-content active">
+    <div class="test-section">
+      <h2>1️⃣ No Authentication (Public Tools)</h2>
+      <p>Test accessing public tools without any authentication.</p>
+      <button onclick="testNoAuth()">List Public Tools</button>
+      <button onclick="testSetupTool()">Call Setup Tool (Public)</button>
+      <div id="noAuthResult" class="result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Session Auth Test -->
+  <div id="session" class="tab-content">
+    <div class="test-section">
+      <h2>2️⃣ Session Authentication</h2>
+      <p>Uses your current NextAuth session cookies. You must be logged in to the app.</p>
+      <button onclick="testSessionAuth()">Test with Session</button>
+      <button onclick="window.open('/login', '_blank')">Login First</button>
+      <div id="sessionResult" class="result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- API Key Test -->
+  <div id="apikey" class="tab-content">
+    <div class="test-section">
+      <h2>3️⃣ API Key Authentication</h2>
+      <div class="config-section">
+        <label>API Key:</label>
+        <input type="text" id="apiKey" placeholder="Enter your API key (plg_...)" />
+        <button onclick="window.open('/api-keys', '_blank')">Get API Key</button>
+      </div>
+      <button onclick="testApiKeyAuth()">Test with API Key</button>
+      <button onclick="testToolCall()">Call Tool with API Key</button>
+      <div id="apiKeyResult" class="result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- OAuth Test -->
+  <div id="oauth" class="tab-content">
+    <div class="test-section">
+      <h2>4️⃣ OAuth Authentication</h2>
+      <div class="config-section">
+        <label>Provider:</label>
+        <select id="oauthProvider">
+          <option value="pluggedin">Plugged.in (Native MCP Auth)</option>
+          <option disabled>──────── External Services ────────</option>
+          <option value="github">GitHub (for GitHub access)</option>
+          <option value="google">Google (for Google access)</option>
+          <option value="linear">Linear (for Linear access)</option>
+        </select>
+        <p style="font-size: 12px; color: #666; margin-top: 5px;">
+          Use "Plugged.in" for MCP connector authentication. Other providers are for accessing those specific services.
+        </p>
+      </div>
+      <button onclick="testOAuthPopup()">Authorize with OAuth (Popup)</button>
+      <button onclick="testOAuthRedirect()">Authorize with OAuth (Redirect)</button>
+      <div id="oauthToken" style="display:none;"></div>
+      <button onclick="testWithOAuthToken()" style="display:none;" id="oauthTestButton">Test with OAuth Token</button>
+      <div id="oauthResult" class="result" style="display:none;"></div>
+    </div>
+  </div>
+
+  <script>
+    // Configuration
+    const MCP_ENDPOINT = '/api/mcp-streamable-http';
+    
+    // Tab switching
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+      
+      event.target.classList.add('active');
+      document.getElementById(tabName).classList.add('active');
+    }
+    
+    // Utility functions
+    function showResult(elementId, content, type = 'info') {
+      const element = document.getElementById(elementId);
+      element.textContent = typeof content === 'string' ? content : JSON.stringify(content, null, 2);
+      element.className = `result ${type}`;
+      element.style.display = 'block';
+    }
+    
+    async function makeRequest(method, params = {}, headers = {}) {
+      const response = await fetch(MCP_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...headers
+        },
+        credentials: 'include', // Include cookies for session auth
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          method: method,
+          params: params,
+          id: Date.now()
+        })
+      });
+      
+      const data = await response.json();
+      return { response, data };
+    }
+    
+    // Check session status
+    async function checkSession() {
+      try {
+        const response = await fetch('/api/auth/session', {
+          credentials: 'include'
+        });
+        const session = await response.json();
+        
+        const statusEl = document.getElementById('sessionStatus');
+        const infoEl = document.getElementById('sessionInfo');
+        
+        if (session && session.user) {
+          statusEl.textContent = 'Authenticated';
+          statusEl.className = 'status authenticated';
+          infoEl.style.display = 'block';
+          showResult('sessionInfo', {
+            user: session.user,
+            expires: session.expires
+          }, 'success');
+        } else {
+          statusEl.textContent = 'Not Authenticated';
+          statusEl.className = 'status unauthenticated';
+          infoEl.style.display = 'block';
+          showResult('sessionInfo', 'No active session. Please login first.', 'error');
+        }
+      } catch (error) {
+        showResult('sessionInfo', `Error checking session: ${error.message}`, 'error');
+      }
+    }
+    
+    // Test 1: No Authentication
+    async function testNoAuth() {
+      try {
+        const { response, data } = await makeRequest('tools/list');
+        
+        if (response.ok && data.result) {
+          showResult('noAuthResult', {
+            message: 'Successfully retrieved public tools without authentication!',
+            tools: data.result.tools || [],
+            authUsed: 'none'
+          }, 'success');
+        } else {
+          showResult('noAuthResult', data, 'error');
+        }
+      } catch (error) {
+        showResult('noAuthResult', `Error: ${error.message}`, 'error');
+      }
+    }
+    
+    async function testSetupTool() {
+      try {
+        const { response, data } = await makeRequest('tools/call', {
+          name: 'pluggedin_setup',
+          arguments: { topic: 'getting_started' }
+        });
+        
+        if (response.ok && data.result) {
+          showResult('noAuthResult', {
+            message: 'Successfully called public setup tool!',
+            result: data.result
+          }, 'success');
+        } else {
+          showResult('noAuthResult', data, 'error');
+        }
+      } catch (error) {
+        showResult('noAuthResult', `Error: ${error.message}`, 'error');
+      }
+    }
+    
+    // Test 2: Session Authentication
+    async function testSessionAuth() {
+      try {
+        // First check if we have a session
+        await checkSession();
+        
+        const { response, data } = await makeRequest('tools/list');
+        
+        if (response.ok && data.result) {
+          showResult('sessionResult', {
+            message: 'Successfully authenticated with session!',
+            tools: data.result.tools || [],
+            authUsed: 'session'
+          }, 'success');
+        } else if (data.error) {
+          showResult('sessionResult', {
+            message: 'Session authentication failed. Make sure you are logged in.',
+            error: data.error
+          }, 'error');
+        } else {
+          showResult('sessionResult', data, 'info');
+        }
+      } catch (error) {
+        showResult('sessionResult', `Error: ${error.message}`, 'error');
+      }
+    }
+    
+    // Test 3: API Key Authentication
+    async function testApiKeyAuth() {
+      const apiKey = document.getElementById('apiKey').value;
+      
+      if (!apiKey) {
+        showResult('apiKeyResult', 'Please enter an API key', 'error');
+        return;
+      }
+      
+      try {
+        const { response, data } = await makeRequest('tools/list', {}, {
+          'Authorization': `Bearer ${apiKey}`
+        });
+        
+        if (response.ok && data.result) {
+          showResult('apiKeyResult', {
+            message: 'Successfully authenticated with API key!',
+            tools: data.result.tools || [],
+            authUsed: 'api_key'
+          }, 'success');
+        } else {
+          showResult('apiKeyResult', data, 'error');
+        }
+      } catch (error) {
+        showResult('apiKeyResult', `Error: ${error.message}`, 'error');
+      }
+    }
+    
+    async function testToolCall() {
+      const apiKey = document.getElementById('apiKey').value;
+      
+      if (!apiKey) {
+        showResult('apiKeyResult', 'Please enter an API key', 'error');
+        return;
+      }
+      
+      try {
+        const { response, data } = await makeRequest('tools/call', {
+          name: 'pluggedin_discover_tools',
+          arguments: { force: false }
+        }, {
+          'Authorization': `Bearer ${apiKey}`
+        });
+        
+        if (response.ok && data.result) {
+          showResult('apiKeyResult', {
+            message: 'Successfully called tool with API key!',
+            result: data.result
+          }, 'success');
+        } else {
+          showResult('apiKeyResult', data, 'error');
+        }
+      } catch (error) {
+        showResult('apiKeyResult', `Error: ${error.message}`, 'error');
+      }
+    }
+    
+    // Test 4: OAuth Authentication
+    let oauthToken = null;
+    
+    async function testOAuthPopup() {
+      const provider = document.getElementById('oauthProvider').value;
+      
+      // Open OAuth popup
+      const popup = window.open(
+        `/api/mcp/oauth/authorize?provider=${provider}&popup=true`,
+        'oauth',
+        'width=600,height=700'
+      );
+      
+      // Listen for OAuth completion
+      window.addEventListener('message', async (event) => {
+        if (event.data.type === 'oauth-success') {
+          oauthToken = event.data.token;
+          document.getElementById('oauthToken').textContent = `Token: ${oauthToken.substring(0, 20)}...`;
+          document.getElementById('oauthToken').style.display = 'block';
+          document.getElementById('oauthTestButton').style.display = 'inline-block';
+          
+          showResult('oauthResult', {
+            message: 'OAuth authorization successful!',
+            provider: provider,
+            tokenReceived: true
+          }, 'success');
+        } else if (event.data.type === 'oauth-error') {
+          showResult('oauthResult', {
+            message: 'OAuth authorization failed',
+            error: event.data.error
+          }, 'error');
+        }
+      });
+    }
+    
+    async function testOAuthRedirect() {
+      const provider = document.getElementById('oauthProvider').value;
+      
+      try {
+        const response = await fetch(`/api/mcp/oauth/authorize?provider=${provider}`, {
+          credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (data.authUrl) {
+          showResult('oauthResult', {
+            message: 'OAuth URL generated. Redirecting...',
+            authUrl: data.authUrl
+          }, 'info');
+          
+          // Redirect to OAuth provider
+          setTimeout(() => {
+            window.location.href = data.authUrl;
+          }, 2000);
+        } else {
+          showResult('oauthResult', data, 'error');
+        }
+      } catch (error) {
+        showResult('oauthResult', `Error: ${error.message}`, 'error');
+      }
+    }
+    
+    async function testWithOAuthToken() {
+      if (!oauthToken) {
+        showResult('oauthResult', 'No OAuth token available', 'error');
+        return;
+      }
+      
+      try {
+        const { response, data } = await makeRequest('tools/list', {}, {
+          'X-OAuth-Token': oauthToken
+        });
+        
+        if (response.ok && data.result) {
+          showResult('oauthResult', {
+            message: 'Successfully authenticated with OAuth token!',
+            tools: data.result.tools || [],
+            authUsed: 'oauth'
+          }, 'success');
+        } else {
+          showResult('oauthResult', data, 'error');
+        }
+      } catch (error) {
+        showResult('oauthResult', `Error: ${error.message}`, 'error');
+      }
+    }
+    
+    // Check session on load
+    window.addEventListener('load', checkSession);
+  </script>
+</body>
+</html>

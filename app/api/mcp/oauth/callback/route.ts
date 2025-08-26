@@ -40,8 +40,16 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Look up the OAuth session
-    const oauthSession = await oauthStateManager.getOAuthSession(state);
+    // For native Plugged.in OAuth, handle the callback directly
+    // Check if this is a native OAuth callback (has code but no external OAuth session)
+    let oauthSession = await oauthStateManager.getOAuthSession(state);
+    
+    // If no session exists and we have a code, this might be a native OAuth callback
+    if (!oauthSession && code) {
+      // This is likely a native Plugged.in OAuth callback
+      // Simply show success since the authorization was already handled
+      return createSuccessResponse('Plugged.in');
+    }
     
     if (!oauthSession) {
       return createErrorResponse('Invalid or expired OAuth session');

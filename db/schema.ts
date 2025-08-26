@@ -1426,3 +1426,95 @@ export const registryOAuthSessionsRelations = relations(registryOAuthSessions, (
     references: [users.id],
   }),
 }));
+
+// OAuth Clients table for Dynamic Client Registration (DCR)
+export const oauthClientsTable = pgTable(
+  'oauth_clients',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    clientId: text('client_id').unique().notNull(),
+    clientSecretHash: text('client_secret_hash').notNull(),
+    name: text('name').notNull(),
+    redirectUris: text('redirect_uris').array().notNull(),
+    grantTypes: text('grant_types').array().default(['authorization_code']),
+    responseTypes: text('response_types').array().default(['code']),
+    scope: text('scope').default('mcp:read mcp:execute'),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    clientIdIdx: index('oauth_clients_client_id_idx').on(table.clientId),
+  })
+);
+
+// OAuth Authorization Codes table
+export const oauthAuthorizationCodesTable = pgTable(
+  'oauth_authorization_codes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    code: text('code').unique().notNull(),
+    clientId: text('client_id').notNull().references(() => oauthClientsTable.clientId, { onDelete: 'cascade' }),
+    profileUuid: uuid('profile_uuid').notNull().references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    redirectUri: text('redirect_uri').notNull(),
+    scope: text('scope').notNull(),
+    codeChallenge: text('code_challenge'),
+    codeChallengeMethod: text('code_challenge_method'),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => ({
+    codeIdx: index('oauth_authorization_codes_code_idx').on(table.code),
+    clientIdIdx: index('oauth_authorization_codes_client_id_idx').on(table.clientId),
+  })
+);
+
+// OAuth Tokens table
+export const oauthTokensTable = pgTable(
+  'oauth_tokens',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    accessTokenHash: text('access_token_hash').unique().notNull(),
+    refreshTokenHash: text('refresh_token_hash').unique(),
+    clientId: text('client_id').notNull().references(() => oauthClientsTable.clientId, { onDelete: 'cascade' }),
+    profileUuid: uuid('profile_uuid').notNull().references(() => profilesTable.uuid, { onDelete: 'cascade' }),
+    scope: text('scope').notNull(),
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+  },
+  (table) => ({
+    accessTokenHashIdx: index('oauth_tokens_access_token_hash_idx').on(table.accessTokenHash),
+    refreshTokenHashIdx: index('oauth_tokens_refresh_token_hash_idx').on(table.refreshTokenHash),
+    clientIdIdx: index('oauth_tokens_client_id_idx').on(table.clientId),
+    profileUuidIdx: index('oauth_tokens_profile_uuid_idx').on(table.profileUuid),
+  })
+);
+
+// Relations for OAuth tables
+export const oauthClientsRelations = relations(oauthClientsTable, ({ many }) => ({
+  authorizationCodes: many(oauthAuthorizationCodesTable),
+  tokens: many(oauthTokensTable),
+}));
+
+export const oauthAuthorizationCodesRelations = relations(oauthAuthorizationCodesTable, ({ one }) => ({
+  client: one(oauthClientsTable, {
+    fields: [oauthAuthorizationCodesTable.clientId],
+    references: [oauthClientsTable.clientId],
+  }),
+  profile: one(profilesTable, {
+    fields: [oauthAuthorizationCodesTable.profileUuid],
+    references: [profilesTable.uuid],
+  }),
+}));
+
+export const oauthTokensRelations = relations(oauthTokensTable, ({ one }) => ({
+  client: one(oauthClientsTable, {
+    fields: [oauthTokensTable.clientId],
+    references: [oauthClientsTable.clientId],
+  }),
+  profile: one(profilesTable, {
+    fields: [oauthTokensTable.profileUuid],
+    references: [profilesTable.uuid],
+  }),
+}));

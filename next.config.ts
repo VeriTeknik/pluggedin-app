@@ -9,7 +9,12 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['plugged.in', 'staging.plugged.in'],
   async rewrites() {
-    return [];
+    return [
+      {
+        source: '/mcp',
+        destination: '/api/mcp-streamable-http',
+      },
+    ];
   },
   async redirects() {
     return [
