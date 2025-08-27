@@ -7,6 +7,7 @@ import { AuthForm } from '@/components/auth/auth-form';
 
 type AuthLayoutProps = {
   type: 'login' | 'register' | 'forgot-password' | 'reset-password';
+  returnTo?: string | null;
 };
 
 type LinkConfigType = {
@@ -58,7 +59,7 @@ const LINK_CONFIGS: Record<AuthLayoutProps['type'], (t: any) => LinkConfigType> 
   }),
 };
 
-export function AuthLayout({ type }: AuthLayoutProps) {
+export function AuthLayout({ type, returnTo }: AuthLayoutProps) {
   const { t } = useTranslation();
   
   const linkConfig = LINK_CONFIGS[type]?.(t) || {
@@ -71,7 +72,7 @@ export function AuthLayout({ type }: AuthLayoutProps) {
 
   return (
     <div className="space-y-6">
-      <AuthForm type={type} />
+      <AuthForm type={type} returnTo={returnTo} />
       
       <div className="space-y-2 text-center">
         <p className="text-sm text-muted-foreground">

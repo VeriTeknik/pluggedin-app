@@ -28,7 +28,14 @@ export async function POST(request: NextRequest) {
           error: 'invalid_request',
           error_description: 'Invalid client registration request',
         },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          }
+        }
       );
     }
 
@@ -49,11 +56,18 @@ export async function POST(request: NextRequest) {
           error: 'server_error',
           error_description: result.error || 'Failed to register client',
         },
-        { status: 500 }
+        { 
+          status: 500,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          }
+        }
       );
     }
 
-    // Return DCR response
+    // Return DCR response with CORS headers
     return NextResponse.json({
       client_id: result.client!.clientId,
       client_secret: result.client!.clientSecret,
@@ -67,6 +81,12 @@ export async function POST(request: NextRequest) {
       authorization_endpoint: `${process.env.NEXTAUTH_URL}/api/oauth/authorize`,
       token_endpoint: `${process.env.NEXTAUTH_URL}/api/oauth/token`,
       revocation_endpoint: `${process.env.NEXTAUTH_URL}/api/oauth/revoke`,
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      }
     });
   } catch (error) {
     console.error('DCR error:', error);
@@ -75,9 +95,31 @@ export async function POST(request: NextRequest) {
         error: 'server_error',
         error_description: 'Internal server error during registration',
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      }
     );
   }
+}
+
+/**
+ * Handle OPTIONS requests for CORS preflight
+ */
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    }
+  });
 }
 
 /**
@@ -99,5 +141,11 @@ export async function GET(request: NextRequest) {
     token_endpoint_auth_methods_supported: ['client_secret_basic', 'client_secret_post'],
     scopes_supported: ['mcp:read', 'mcp:execute'],
     ui_locales_supported: ['en', 'tr', 'zh', 'hi', 'ja', 'nl'],
+  }, {
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    }
   });
 }

@@ -27,10 +27,21 @@ function OAuthAuthorizeContent() {
   const isPopup = searchParams.get('popup') === 'true';
 
   const handleAuthorization = async (approved: boolean) => {
+    console.log('[OAuth] Starting authorization:', { approved, clientId, redirectUri });
+    
+    // Prevent double submission
+    if (isAuthorizing) {
+      console.log('[OAuth] Already authorizing, skipping...');
+      return;
+    }
+    
     setIsAuthorizing(true);
     
     try {
-      const response = await fetch('/api/oauth/authorize', {
+      const apiUrl = '/api/oauth/authorize';
+      console.log('[OAuth] Posting to:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -47,9 +58,19 @@ function OAuthAuthorizeContent() {
         }),
       });
 
+      console.log('[OAuth] Response status:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[OAuth] Error response:', errorText);
+        throw new Error(`Authorization failed: ${response.status} ${errorText}`);
+      }
+
       const data = await response.json();
+      console.log('[OAuth] Authorization response:', data);
       
       if (data.redirectUrl) {
+        console.log('[OAuth] Redirecting to:', data.redirectUrl);
         if (isPopup) {
           // For popup mode, post message to opener
           window.opener?.postMessage({
@@ -63,7 +84,11 @@ function OAuthAuthorizeContent() {
           window.location.href = data.redirectUrl;
         }
       } else if (data.error) {
+        console.error('[OAuth] Authorization error:', data);
         alert(`Error: ${data.error_description || data.error}`);
+      } else {
+        console.error('[OAuth] Unexpected response:', data);
+        alert('Unexpected response from authorization server');
       }
     } catch (error) {
       console.error('Authorization error:', error);
@@ -141,16 +166,24 @@ function OAuthAuthorizeContent() {
 
         <CardFooter className="flex gap-3">
           <Button
+            type="button"
             variant="outline"
             className="flex-1"
-            onClick={() => handleAuthorization(false)}
+            onClick={(e) => {
+              e.preventDefault();
+              handleAuthorization(false);
+            }}
             disabled={isAuthorizing}
           >
             Deny
           </Button>
           <Button
+            type="button"
             className="flex-1"
-            onClick={() => handleAuthorization(true)}
+            onClick={(e) => {
+              e.preventDefault();
+              handleAuthorization(true);
+            }}
             disabled={isAuthorizing}
           >
             {isAuthorizing ? 'Authorizing...' : 'Authorize'}

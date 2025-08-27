@@ -4,10 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "next dev --port=12005",
-    "build": "next build",
+    "dev": "TZ=UTC next dev --port=12005",
+    "build": "TZ=UTC next build",
     "postbuild": "node scripts/copy-pdf-worker.js",
-    "start": "PORT=12005 node .next/standalone/server.js",
+    "start": "TZ=UTC PORT=12005 node .next/standalone/server.js",
     "lint": "next lint",
     "postinstall": "node scripts/copy-pdf-worker.js",
     "clean": "rm -rf .next node_modules/.cache",

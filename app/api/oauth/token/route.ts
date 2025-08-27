@@ -56,33 +56,56 @@ export async function POST(request: NextRequest) {
     body.client_id = clientId;
     body.client_secret = clientSecret;
 
+    // Log the request for debugging
+    console.log('Token request body:', body);
+    
     // Validate request
     const validationResult = tokenRequestSchema.safeParse(body);
     if (!validationResult.success) {
+      console.error('Token validation failed:', validationResult.error.errors);
       return NextResponse.json(
         {
           error: 'invalid_request',
-          error_description: 'Invalid token request',
+          error_description: 'Invalid token request: ' + validationResult.error.errors.map(e => e.message).join(', '),
         },
-        { status: 400 }
+        { 
+          status: 400,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          }
+        }
       );
     }
 
     const data = validationResult.data;
 
-    // Validate client
+    // For PKCE flows (with code_verifier), client_secret is optional
+    // Only validate client_secret if it's provided or if there's no code_verifier
+    const isPKCEFlow = data.grant_type === 'authorization_code' && data.code_verifier;
+    
+    // Validate client - for PKCE, don't require client_secret
     const clientValidation = await oauthProvider.validateClient(
       data.client_id,
-      data.client_secret
+      isPKCEFlow ? undefined : data.client_secret
     );
     
     if (!clientValidation.valid) {
+      console.error('Client validation failed:', clientValidation.error);
       return NextResponse.json(
         {
           error: 'invalid_client',
           error_description: clientValidation.error,
         },
-        { status: 401 }
+        { 
+          status: 401,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          }
+        }
       );
     }
 
@@ -97,16 +120,31 @@ export async function POST(request: NextRequest) {
       });
 
       if (!result.success) {
+        console.error('Token exchange failed:', result.error);
         return NextResponse.json(
           {
             error: 'invalid_grant',
             error_description: result.error,
           },
-          { status: 400 }
+          { 
+            status: 400,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            }
+          }
         );
       }
 
-      return NextResponse.json(result.tokens);
+      return NextResponse.json(result.tokens, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Cache-Control': 'no-store',
+        }
+      });
     }
 
     if (data.grant_type === 'refresh_token') {
@@ -121,11 +159,25 @@ export async function POST(request: NextRequest) {
             error: 'invalid_grant',
             error_description: result.error,
           },
-          { status: 400 }
+          { 
+            status: 400,
+            headers: {
+              'Access-Control-Allow-Origin': '*',
+              'Access-Control-Allow-Methods': 'POST, OPTIONS',
+              'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            }
+          }
         );
       }
 
-      return NextResponse.json(result.tokens);
+      return NextResponse.json(result.tokens, {
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Cache-Control': 'no-store',
+        }
+      });
     }
 
     // Should not reach here due to discriminated union
@@ -134,7 +186,14 @@ export async function POST(request: NextRequest) {
         error: 'unsupported_grant_type',
         error_description: 'Grant type not supported',
       },
-      { status: 400 }
+      { 
+        status: 400,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      }
     );
   } catch (error) {
     console.error('Token endpoint error:', error);
@@ -143,7 +202,14 @@ export async function POST(request: NextRequest) {
         error: 'server_error',
         error_description: 'Internal server error',
       },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'POST, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+        }
+      }
     );
   }
 }

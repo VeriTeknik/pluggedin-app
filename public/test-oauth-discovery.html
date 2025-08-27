@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OAuth Discovery Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .success {
+      color: green;
+    }
+    .error {
+      color: red;
+    }
+    pre {
+      background: #f4f4f4;
+      padding: 10px;
+      overflow: auto;
+      max-height: 400px;
+    }
+    .status {
+      margin: 10px 0;
+      padding: 10px;
+      border-left: 3px solid #007bff;
+      background: #f0f8ff;
+    }
+  </style>
+</head>
+<body>
+  <h1>OAuth Discovery Test</h1>
+
+  <div class="test-section">
+    <h2>1. Test Discovery Endpoints</h2>
+    <button onclick="testEndpoint('/.well-known/oauth-authorization-server')">Test OAuth Server Metadata</button>
+    <button onclick="testEndpoint('/.well-known/openid-configuration')">Test OpenID Configuration</button>
+    <button onclick="testEndpoint('/.well-known/oauth-protected-resource')">Test Protected Resource</button>
+    <button onclick="testEndpoint('/.well-known/oauth-protected-resource/mcp')">Test MCP Resource</button>
+    <div id="discovery-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>2. Test Client Registration</h2>
+    <button onclick="testClientRegistration()">Register Test Client</button>
+    <div id="registration-result"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>3. Full OAuth Flow Test</h2>
+    <button onclick="testFullOAuthFlow()">Start OAuth Flow</button>
+    <div id="flow-status"></div>
+    <div id="flow-result"></div>
+  </div>
+
+  <script>
+    const baseUrl = window.location.origin;
+    let registeredClient = null;
+
+    async function testEndpoint(path) {
+      const resultDiv = document.getElementById('discovery-result');
+      resultDiv.innerHTML = `<div class="status">Testing ${path}...</div>`;
+      
+      try {
+        console.log(`Fetching ${baseUrl}${path}`);
+        const response = await fetch(`${baseUrl}${path}`, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        resultDiv.innerHTML = `
+          <div class="success">✅ ${path} - Success</div>
+          <pre>${JSON.stringify(data, null, 2)}</pre>
+        `;
+      } catch (error) {
+        console.error('Error:', error);
+        resultDiv.innerHTML = `
+          <div class="error">❌ ${path} - Failed</div>
+          <pre>Error: ${error.message}</pre>
+        `;
+      }
+    }
+
+    async function testClientRegistration() {
+      const resultDiv = document.getElementById('registration-result');
+      resultDiv.innerHTML = '<div class="status">Registering client...</div>';
+      
+      const clientData = {
+        client_name: 'Test OAuth Client',
+        redirect_uris: ['http://localhost:8080/callback', 'http://localhost:12005/test-callback'],
+        grant_types: ['authorization_code'],
+        response_types: ['code'],
+        scope: 'mcp:read mcp:execute'
+      };
+      
+      try {
+        console.log('Registering client:', clientData);
+        const response = await fetch(`${baseUrl}/api/oauth/client/register`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(clientData)
+        });
+        
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`HTTP ${response.status}: ${error}`);
+        }
+        
+        registeredClient = await response.json();
+        resultDiv.innerHTML = `
+          <div class="success">✅ Client Registration - Success</div>
+          <pre>${JSON.stringify(registeredClient, null, 2)}</pre>
+          <div class="status">Client ID: ${registeredClient.client_id}</div>
+          <div class="status">Client Secret: ${registeredClient.client_secret}</div>
+        `;
+      } catch (error) {
+        console.error('Registration error:', error);
+        resultDiv.innerHTML = `
+          <div class="error">❌ Client Registration - Failed</div>
+          <pre>Error: ${error.message}</pre>
+        `;
+      }
+    }
+
+    async function testFullOAuthFlow() {
+      const statusDiv = document.getElementById('flow-status');
+      const resultDiv = document.getElementById('flow-result');
+      
+      statusDiv.innerHTML = '<div class="status">Starting OAuth flow...</div>';
+      resultDiv.innerHTML = '';
+      
+      try {
+        // Step 1: Get OAuth metadata
+        statusDiv.innerHTML += '<div class="status">Step 1: Fetching OAuth metadata...</div>';
+        const metadataResponse = await fetch(`${baseUrl}/.well-known/oauth-authorization-server`);
+        const metadata = await metadataResponse.json();
+        statusDiv.innerHTML += '<div class="success">✅ Metadata fetched</div>';
+        
+        // Step 2: Register client if not already registered
+        if (!registeredClient) {
+          statusDiv.innerHTML += '<div class="status">Step 2: Registering client...</div>';
+          const clientData = {
+            client_name: 'MCP Inspector Test',
+            redirect_uris: [`${baseUrl}/test-callback`],
+            grant_types: ['authorization_code'],
+            response_types: ['code'],
+            scope: 'mcp:read mcp:execute'
+          };
+          
+          const registerResponse = await fetch(metadata.registration_endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(clientData)
+          });
+          
+          registeredClient = await registerResponse.json();
+          statusDiv.innerHTML += '<div class="success">✅ Client registered</div>';
+        }
+        
+        // Step 3: Create authorization URL
+        statusDiv.innerHTML += '<div class="status">Step 3: Creating authorization URL...</div>';
+        const authParams = new URLSearchParams({
+          response_type: 'code',
+          client_id: registeredClient.client_id,
+          redirect_uri: registeredClient.redirect_uris[0],
+          scope: 'mcp:read mcp:execute',
+          state: Math.random().toString(36).substring(7)
+        });
+        
+        const authUrl = `${metadata.authorization_endpoint}?${authParams}`;
+        statusDiv.innerHTML += '<div class="success">✅ Authorization URL created</div>';
+        
+        resultDiv.innerHTML = `
+          <h3>OAuth Flow Ready</h3>
+          <div class="status">
+            <strong>Authorization URL:</strong><br>
+            <a href="${authUrl}" target="_blank">${authUrl}</a>
+          </div>
+          <div class="status">
+            <strong>Client Details:</strong><br>
+            Client ID: ${registeredClient.client_id}<br>
+            Client Secret: ${registeredClient.client_secret}
+          </div>
+          <div class="status">
+            <strong>Next Steps:</strong><br>
+            1. Click the authorization URL to authorize<br>
+            2. After authorization, exchange the code for tokens<br>
+            3. Use the access token to call MCP endpoints
+          </div>
+        `;
+        
+      } catch (error) {
+        console.error('OAuth flow error:', error);
+        resultDiv.innerHTML = `
+          <div class="error">❌ OAuth Flow - Failed</div>
+          <pre>Error: ${error.message}</pre>
+        `;
+      }
+    }
+  </script>
+</body>
+</html>

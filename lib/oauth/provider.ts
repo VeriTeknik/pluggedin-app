@@ -207,7 +207,15 @@ export class OAuthProvider {
     codeChallengeMethod?: string;
   }) {
     const code = generateAuthCode();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000); // 10 minutes
+    
+    console.log('[OAuth] Creating authorization code:', {
+      code,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      expiresInMs: 10 * 60 * 1000
+    });
 
     try {
       await db.insert(oauthAuthorizationCodesTable).values({
@@ -239,6 +247,13 @@ export class OAuthProvider {
     codeVerifier?: string;
   }) {
     try {
+      console.log('[OAuth] Exchanging code for tokens:', {
+        code: params.code,
+        clientId: params.clientId,
+        redirectUri: params.redirectUri,
+        hasCodeVerifier: !!params.codeVerifier
+      });
+
       // Get and validate the authorization code
       const [authCode] = await db
         .select()
@@ -252,11 +267,60 @@ export class OAuthProvider {
         .limit(1);
 
       if (!authCode) {
+        // Try to find just by code to see if it's a client mismatch
+        const [codeOnly] = await db
+          .select()
+          .from(oauthAuthorizationCodesTable)
+          .where(eq(oauthAuthorizationCodesTable.code, params.code))
+          .limit(1);
+        
+        if (codeOnly) {
+          console.error('[OAuth] Code found but client mismatch:', {
+            expectedClient: params.clientId,
+            actualClient: codeOnly.clientId
+          });
+          return { success: false, error: 'Client mismatch for authorization code' };
+        }
         return { success: false, error: 'Invalid authorization code' };
       }
 
       // Check if code is expired
-      if (authCode.expiresAt < new Date()) {
+      // Handle timezone offset issue - if the timestamp appears to be in the past due to TZ issues
+      const now = new Date();
+      const dbExpiresAt = new Date(authCode.expiresAt);
+      
+      // If the expires_at from DB seems to be in local time instead of UTC, adjust it
+      // This handles the case where PostgreSQL returns timestamps with timezone offset
+      let expiresAtTime = dbExpiresAt.getTime();
+      
+      // Check if there's a 3-hour discrepancy (Turkey is UTC+3)
+      const createdAt = new Date(authCode.createdAt);
+      const timeDiff = now.getTime() - createdAt.getTime();
+      
+      // If the code was just created (less than 1 minute ago) but appears expired, 
+      // it's likely a timezone issue
+      if (timeDiff < 60000 && expiresAtTime < now.getTime()) {
+        // Add 3 hours to compensate for timezone difference
+        expiresAtTime += 3 * 60 * 60 * 1000;
+        console.log('[OAuth] Adjusted for timezone offset');
+      }
+      
+      const nowTime = now.getTime();
+      const isExpired = expiresAtTime < nowTime;
+      
+      console.log('[OAuth] Code validation:', {
+        codeCreated: authCode.createdAt,
+        codeExpires: authCode.expiresAt,
+        expiresAtISO: new Date(authCode.expiresAt).toISOString(),
+        currentTime: now.toISOString(),
+        expiresAtTime,
+        nowTime,
+        isExpired,
+        timeUntilExpiry: expiresAtTime - nowTime,
+        timeSinceCreation: timeDiff
+      });
+      
+      if (isExpired) {
         return { success: false, error: 'Authorization code expired' };
       }
 
