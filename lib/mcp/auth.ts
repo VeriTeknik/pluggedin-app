@@ -25,8 +25,13 @@ export class MCPAuth {
 
   /**
    * Authenticate a request using session, API key, or OAuth token
+   * @param request - The incoming NextRequest
+   * @param expectedResource - Optional resource/audience URL for OAuth token validation (RFC 8707)
    */
-  async authenticateRequest(request: NextRequest): Promise<{
+  async authenticateRequest(
+    request: NextRequest,
+    expectedResource?: string
+  ): Promise<{
     success: boolean;
     profileUuid?: string;
     error?: NextResponse;
@@ -42,24 +47,37 @@ export class MCPAuth {
         };
       }
 
-      // Try API key authentication
+      // Try Bearer token authentication (could be API key or OAuth token)
       const authHeader = request.headers.get('authorization');
       
       if (authHeader && authHeader.startsWith('Bearer ')) {
-        const apiKey = authHeader.slice(7);
-        const apiKeyResult = await this.authenticateWithApiKey(apiKey);
-        if (apiKeyResult.success) {
-          return {
-            ...apiKeyResult,
-            authMethod: 'api_key'
-          };
+        const token = authHeader.slice(7);
+        
+        // Check if it's an OAuth token (starts with 'plg_access_')
+        if (token.startsWith('plg_access_')) {
+          const oauthResult = await this.authenticateWithOAuth(token, expectedResource);
+          if (oauthResult.success) {
+            return {
+              ...oauthResult,
+              authMethod: 'oauth'
+            };
+          }
+        } else {
+          // Try as API key
+          const apiKeyResult = await this.authenticateWithApiKey(token);
+          if (apiKeyResult.success) {
+            return {
+              ...apiKeyResult,
+              authMethod: 'api_key'
+            };
+          }
         }
       }
 
-      // Try OAuth token authentication
+      // Also check X-OAuth-Token header for backward compatibility
       const oauthToken = request.headers.get('x-oauth-token');
       if (oauthToken) {
-        const oauthResult = await this.authenticateWithOAuth(oauthToken);
+        const oauthResult = await this.authenticateWithOAuth(oauthToken, expectedResource);
         if (oauthResult.success) {
           return {
             ...oauthResult,
@@ -71,7 +89,7 @@ export class MCPAuth {
       // No authentication provided or all methods failed
       return {
         success: false,
-        error: this.createAuthError('Authentication required. Please provide a valid session, API key, or OAuth token.')
+        error: this.createAuthError('Authentication required. Please provide a valid session, API key, or OAuth token.', 'unauthorized')
       };
     } catch (error) {
       return {
@@ -95,7 +113,7 @@ export class MCPAuth {
       if (!session?.user?.id) {
         return {
           success: false,
-          error: this.createAuthError('No active session')
+          error: this.createAuthError('No active session', 'unauthorized')
         };
       }
 
@@ -112,7 +130,7 @@ export class MCPAuth {
       if (result.length === 0 || !result[0].profileUuid) {
         return {
           success: false,
-          error: this.createAuthError('No active profile found')
+          error: this.createAuthError('No active profile found', 'forbidden')
         };
       }
 
@@ -152,7 +170,7 @@ export class MCPAuth {
       if (result.length === 0) {
         return {
           success: false,
-          error: this.createAuthError('Invalid API key')
+          error: this.createAuthError('Invalid API key', 'forbidden')
         };
       }
 
@@ -161,7 +179,7 @@ export class MCPAuth {
       if (!profileUuid) {
         return {
           success: false,
-          error: this.createAuthError('Profile not found')
+          error: this.createAuthError('Profile not found', 'forbidden')
         };
       }
       
@@ -180,7 +198,7 @@ export class MCPAuth {
   /**
    * Authenticate using OAuth token
    */
-  private async authenticateWithOAuth(token: string): Promise<{
+  private async authenticateWithOAuth(token: string, expectedResource?: string): Promise<{
     success: boolean;
     profileUuid?: string;
     error?: NextResponse;
@@ -192,8 +210,26 @@ export class MCPAuth {
       if (!validation.valid) {
         return {
           success: false,
-          error: this.createAuthError(validation.error || 'Invalid OAuth token')
+          error: this.createAuthError(validation.error || 'Invalid OAuth token', 'forbidden')
         };
+      }
+      
+      // Validate resource/audience if specified (RFC 8707)
+      if (expectedResource && validation.resource) {
+        // Normalize URLs for comparison
+        const normalizedExpected = this.normalizeResourceUrl(expectedResource);
+        const normalizedActual = this.normalizeResourceUrl(validation.resource);
+        
+        if (normalizedExpected !== normalizedActual) {
+          console.error('OAuth token resource mismatch:', {
+            expected: normalizedExpected,
+            actual: normalizedActual
+          });
+          return {
+            success: false,
+            error: this.createAuthError('Token not authorized for this resource', 'forbidden')
+          };
+        }
       }
       
       return {
@@ -210,20 +246,69 @@ export class MCPAuth {
   }
 
   /**
-   * Create authentication error response
+   * Normalize resource URL for comparison (RFC 8707)
+   * Removes trailing slashes and normalizes protocols
    */
-  private createAuthError(message: string): NextResponse {
+  private normalizeResourceUrl(url: string): string {
+    try {
+      const parsed = new URL(url);
+      // Normalize protocol (http/https are considered equivalent for resource matching)
+      const protocol = parsed.protocol.replace(':', '');
+      const normalizedProtocol = protocol === 'http' ? 'https' : protocol;
+      
+      // Remove trailing slashes from pathname
+      const pathname = parsed.pathname.replace(/\/+$/, '') || '/';
+      
+      // Rebuild normalized URL
+      return `${normalizedProtocol}://${parsed.host}${pathname}${parsed.search}${parsed.hash}`;
+    } catch {
+      // If not a valid URL, return as-is for string comparison
+      return url.toLowerCase().replace(/\/+$/, '');
+    }
+  }
+
+  /**
+   * Create authentication error response with proper JSON-RPC error codes
+   * According to MCP spec:
+   * - 401: Authentication required (no credentials provided)
+   * - 403: Forbidden (invalid credentials or insufficient permissions)
+   * - 400: Bad request (malformed authentication)
+   */
+  private createAuthError(message: string, type: 'unauthorized' | 'forbidden' | 'bad_request' = 'forbidden'): NextResponse {
+    let status: number;
+    let code: number;
+    let errorMessage: string;
+    
+    switch (type) {
+      case 'unauthorized':
+        status = 401;
+        code = -32001; // Custom code for authentication required
+        errorMessage = 'Authentication required';
+        break;
+      case 'bad_request':
+        status = 400;
+        code = -32600; // Invalid Request per JSON-RPC spec
+        errorMessage = 'Invalid authentication request';
+        break;
+      case 'forbidden':
+      default:
+        status = 403;
+        code = -32000; // Server error - forbidden
+        errorMessage = 'Authentication failed';
+        break;
+    }
+    
     return NextResponse.json(
       {
         jsonrpc: '2.0',
         error: {
-          code: -32000,
-          message: 'Authentication failed',
+          code,
+          message: errorMessage,
           data: message
         },
         id: null
       },
-      { status: 401 }
+      { status }
     );
   }
 

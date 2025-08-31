@@ -1,12 +1,13 @@
 import crypto from 'crypto';
+import { and, eq } from 'drizzle-orm';
 import { customAlphabet } from 'nanoid';
+
 import { db } from '@/db';
 import {
-  oauthClientsTable,
   oauthAuthorizationCodesTable,
+  oauthClientsTable,
   oauthTokensTable,
 } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 
 const nanoid = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
@@ -90,7 +91,7 @@ export class OAuthProvider {
     const clientSecret = `secret_${nanoidLong()}`;
     
     try {
-      const [client] = await db
+      await db
         .insert(oauthClientsTable)
         .values({
           clientId,
@@ -100,8 +101,7 @@ export class OAuthProvider {
           grantTypes: params.grantTypes,
           responseTypes: params.responseTypes,
           scope: params.scope,
-        })
-        .returning();
+        });
 
       return {
         success: true,
@@ -203,6 +203,7 @@ export class OAuthProvider {
     profileUuid: string;
     redirectUri: string;
     scope: string;
+    resource?: string; // RFC 8707 - Resource Indicators
     codeChallenge?: string;
     codeChallengeMethod?: string;
   }) {
@@ -214,6 +215,7 @@ export class OAuthProvider {
       code,
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
+      resource: params.resource,
       expiresInMs: 10 * 60 * 1000
     });
 
@@ -224,6 +226,7 @@ export class OAuthProvider {
         profileUuid: params.profileUuid,
         redirectUri: params.redirectUri,
         scope: params.scope,
+        resource: params.resource,
         codeChallenge: params.codeChallenge,
         codeChallengeMethod: params.codeChallengeMethod,
         expiresAt,
@@ -284,40 +287,18 @@ export class OAuthProvider {
         return { success: false, error: 'Invalid authorization code' };
       }
 
-      // Check if code is expired
-      // Handle timezone offset issue - if the timestamp appears to be in the past due to TZ issues
+      // Check if code is expired (using UTC consistently)
       const now = new Date();
-      const dbExpiresAt = new Date(authCode.expiresAt);
-      
-      // If the expires_at from DB seems to be in local time instead of UTC, adjust it
-      // This handles the case where PostgreSQL returns timestamps with timezone offset
-      let expiresAtTime = dbExpiresAt.getTime();
-      
-      // Check if there's a 3-hour discrepancy (Turkey is UTC+3)
-      const createdAt = new Date(authCode.createdAt);
-      const timeDiff = now.getTime() - createdAt.getTime();
-      
-      // If the code was just created (less than 1 minute ago) but appears expired, 
-      // it's likely a timezone issue
-      if (timeDiff < 60000 && expiresAtTime < now.getTime()) {
-        // Add 3 hours to compensate for timezone difference
-        expiresAtTime += 3 * 60 * 60 * 1000;
-        console.log('[OAuth] Adjusted for timezone offset');
-      }
-      
-      const nowTime = now.getTime();
-      const isExpired = expiresAtTime < nowTime;
+      const codeExpiresAt = new Date(authCode.expiresAt);
+      const isExpired = codeExpiresAt.getTime() < now.getTime();
       
       console.log('[OAuth] Code validation:', {
         codeCreated: authCode.createdAt,
         codeExpires: authCode.expiresAt,
-        expiresAtISO: new Date(authCode.expiresAt).toISOString(),
+        expiresAtISO: codeExpiresAt.toISOString(),
         currentTime: now.toISOString(),
-        expiresAtTime,
-        nowTime,
         isExpired,
-        timeUntilExpiry: expiresAtTime - nowTime,
-        timeSinceCreation: timeDiff
+        timeUntilExpiry: codeExpiresAt.getTime() - now.getTime()
       });
       
       if (isExpired) {
@@ -368,6 +349,7 @@ export class OAuthProvider {
         clientId: authCode.clientId,
         profileUuid: authCode.profileUuid,
         scope: authCode.scope,
+        resource: authCode.resource, // Include resource from authorization code
         expiresAt,
       });
 
@@ -420,6 +402,7 @@ export class OAuthProvider {
         profileUuid: tokenRecord.profileUuid,
         clientId: tokenRecord.clientId,
         scope: tokenRecord.scope,
+        resource: tokenRecord.resource, // Include resource for audience validation
       };
     } catch (error) {
       console.error('Failed to validate access token:', error);
@@ -428,7 +411,7 @@ export class OAuthProvider {
   }
 
   /**
-   * Refresh access token
+   * Refresh access token with optional refresh token rotation
    */
   async refreshAccessToken(refreshToken: string, clientId: string) {
     try {
@@ -449,15 +432,34 @@ export class OAuthProvider {
         return { success: false, error: 'Invalid refresh token' };
       }
 
+      // Check if refresh token itself has an expiry (optional security measure)
+      // Refresh tokens should have a longer expiry (e.g., 30 days)
+      const refreshTokenAge = Date.now() - tokenRecord.createdAt.getTime();
+      const maxRefreshTokenAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+      
+      if (refreshTokenAge > maxRefreshTokenAge) {
+        // Revoke the expired refresh token
+        await db
+          .delete(oauthTokensTable)
+          .where(eq(oauthTokensTable.id, tokenRecord.id));
+        
+        return { success: false, error: 'Refresh token expired' };
+      }
+
       // Generate new access token
       const newAccessToken = generateToken('plg_access');
       const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-      // Update the token record
+      // Implement refresh token rotation for enhanced security
+      // Generate a new refresh token on each refresh (recommended by OAuth 2.0 Security BCP)
+      const newRefreshToken = generateToken('plg_refresh');
+      
+      // Update the token record with both new tokens
       await db
         .update(oauthTokensTable)
         .set({
           accessTokenHash: hashToken(newAccessToken),
+          refreshTokenHash: hashToken(newRefreshToken), // Rotate refresh token
           expiresAt,
           lastUsedAt: new Date(),
         })
@@ -467,7 +469,7 @@ export class OAuthProvider {
         success: true,
         tokens: {
           access_token: newAccessToken,
-          refresh_token: refreshToken, // Keep the same refresh token
+          refresh_token: newRefreshToken, // Return new refresh token
           token_type: 'Bearer',
           expires_in: 3600,
           scope: tokenRecord.scope,

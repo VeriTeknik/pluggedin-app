@@ -1457,6 +1457,7 @@ export const oauthAuthorizationCodesTable = pgTable(
     profileUuid: uuid('profile_uuid').notNull().references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     redirectUri: text('redirect_uri').notNull(),
     scope: text('scope').notNull(),
+    resource: text('resource'), // RFC 8707 - Resource Indicators for OAuth 2.0
     codeChallenge: text('code_challenge'),
     codeChallengeMethod: text('code_challenge_method'),
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
@@ -1479,6 +1480,7 @@ export const oauthTokensTable = pgTable(
     clientId: text('client_id').notNull().references(() => oauthClientsTable.clientId, { onDelete: 'cascade' }),
     profileUuid: uuid('profile_uuid').notNull().references(() => profilesTable.uuid, { onDelete: 'cascade' }),
     scope: text('scope').notNull(),
+    resource: text('resource'), // RFC 8707 - Resource Indicators for OAuth 2.0
     expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
     lastUsedAt: timestamp('last_used_at', { withTimezone: true }),

@@ -5,12 +5,33 @@ import { oauthProvider } from '@/lib/oauth/provider';
 import { db } from '@/db';
 import { projectsTable, profilesTable } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { RateLimiters } from '@/lib/rate-limiter';
+import { getCorsHeaders, getSecurityHeaders } from '@/lib/oauth/cors';
 
 /**
  * OAuth 2.0 Authorization endpoint for Plugged.in
  * This is where users authorize MCP clients to access their account
  */
 export async function GET(request: NextRequest) {
+  // Apply rate limiting for OAuth authorization requests
+  const rateLimitResult = await RateLimiters.registryOAuth(request);
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      {
+        error: 'rate_limit_exceeded',
+        error_description: 'Too many authorization requests. Please try again later.',
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          'X-RateLimit-Reset': new Date(rateLimitResult.reset).toISOString(),
+        }
+      }
+    );
+  }
+
   try {
     const searchParams = request.nextUrl.searchParams;
     const clientId = searchParams.get('client_id');
@@ -20,6 +41,7 @@ export async function GET(request: NextRequest) {
     const state = searchParams.get('state');
     const codeChallenge = searchParams.get('code_challenge');
     const codeChallengeMethod = searchParams.get('code_challenge_method');
+    const resource = searchParams.get('resource'); // RFC 8707 - Resource Indicators
 
     // Validate required parameters
     if (!clientId || !redirectUri || !responseType) {
@@ -30,6 +52,25 @@ export async function GET(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Validate resource parameter if provided (must be absolute URI)
+    if (resource) {
+      try {
+        const resourceUrl = new URL(resource);
+        // Ensure it's an absolute URI with scheme
+        if (!resourceUrl.protocol || !resourceUrl.host) {
+          throw new Error('Invalid resource URI');
+        }
+      } catch {
+        return NextResponse.json(
+          {
+            error: 'invalid_resource',
+            error_description: 'Resource parameter must be a valid absolute URI',
+          },
+          { status: 400 }
+        );
+      }
     }
 
     // Validate response type
@@ -111,6 +152,7 @@ export async function GET(request: NextRequest) {
     if (state) authPageUrl.searchParams.set('state', state);
     if (codeChallenge) authPageUrl.searchParams.set('code_challenge', codeChallenge);
     if (codeChallengeMethod) authPageUrl.searchParams.set('code_challenge_method', codeChallengeMethod);
+    if (resource) authPageUrl.searchParams.set('resource', resource);
 
     // Redirect to the authorization page
     return NextResponse.redirect(authPageUrl);
@@ -130,6 +172,25 @@ export async function GET(request: NextRequest) {
  * Handle authorization approval/denial
  */
 export async function POST(request: NextRequest) {
+  // Apply rate limiting for OAuth authorization approval
+  const rateLimitResult = await RateLimiters.registryOAuth(request);
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      {
+        error: 'rate_limit_exceeded',
+        error_description: 'Too many authorization requests. Please try again later.',
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          'X-RateLimit-Reset': new Date(rateLimitResult.reset).toISOString(),
+        }
+      }
+    );
+  }
+
   try {
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
@@ -140,7 +201,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { approved, clientId, redirectUri, scope, state, profileUuid, codeChallenge, codeChallengeMethod } = body;
+    const { approved, clientId, redirectUri, scope, state, profileUuid, codeChallenge, codeChallengeMethod, resource } = body;
 
     // Build redirect URL
     const redirectUrl = new URL(redirectUri);
@@ -151,7 +212,15 @@ export async function POST(request: NextRequest) {
       redirectUrl.searchParams.set('error_description', 'User denied authorization');
       if (state) redirectUrl.searchParams.set('state', state);
       
-      return NextResponse.json({ redirectUrl: redirectUrl.toString() });
+      return NextResponse.json(
+      { redirectUrl: redirectUrl.toString() },
+      {
+        headers: {
+          ...getCorsHeaders(request.headers.get('origin')),
+          ...getSecurityHeaders(),
+        }
+      }
+    );
     }
 
     // Create authorization code
@@ -160,6 +229,7 @@ export async function POST(request: NextRequest) {
       profileUuid,
       redirectUri,
       scope,
+      resource,
       codeChallenge,
       codeChallengeMethod,
     });
@@ -178,7 +248,15 @@ export async function POST(request: NextRequest) {
     redirectUrl.searchParams.set('code', codeResult.code!);
     if (state) redirectUrl.searchParams.set('state', state);
 
-    return NextResponse.json({ redirectUrl: redirectUrl.toString() });
+    return NextResponse.json(
+      { redirectUrl: redirectUrl.toString() },
+      {
+        headers: {
+          ...getCorsHeaders(request.headers.get('origin')),
+          ...getSecurityHeaders(),
+        }
+      }
+    );
   } catch (error) {
     console.error('Authorization approval error:', error);
     return NextResponse.json(

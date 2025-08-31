@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, Suspense } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Shield, Server, Database, AlertCircle } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useState, useEffect } from 'react';
+import { AlertCircle, Database, Server, Shield } from 'lucide-react';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 
 function OAuthAuthorizeContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [isAuthorizing, setIsAuthorizing] = useState(false);
   
   const clientId = searchParams.get('client_id') || '';
@@ -22,9 +22,23 @@ function OAuthAuthorizeContent() {
   const projectName = searchParams.get('project_name') || 'Default Project';
   const codeChallenge = searchParams.get('code_challenge');
   const codeChallengeMethod = searchParams.get('code_challenge_method');
+  const resource = searchParams.get('resource'); // RFC 8707 - Resource Indicators
 
   const scopes = scope.split(' ');
-  const isPopup = searchParams.get('popup') === 'true';
+  // Detect if we're in a popup or iframe (only check on client side)
+  const [isPopup, setIsPopup] = useState(false);
+  
+  useEffect(() => {
+    // Check if we're in a popup or iframe
+    const inPopup = searchParams.get('popup') === 'true' || window.opener !== null || window.parent !== window;
+    setIsPopup(inPopup);
+    
+    // Notify parent window that we're ready
+    if (inPopup) {
+      const target = window.opener || window.parent;
+      target?.postMessage({ type: 'oauth-ready' }, '*');
+    }
+  }, [searchParams]);
 
   const handleAuthorization = async (approved: boolean) => {
     console.log('[OAuth] Starting authorization:', { approved, clientId, redirectUri });
@@ -53,6 +67,7 @@ function OAuthAuthorizeContent() {
           scope,
           state,
           profileUuid,
+          resource,
           codeChallenge,
           codeChallengeMethod,
         }),
@@ -73,12 +88,15 @@ function OAuthAuthorizeContent() {
         console.log('[OAuth] Redirecting to:', data.redirectUrl);
         if (isPopup) {
           // For popup mode, post message to opener
-          window.opener?.postMessage({
-            type: 'oauth-success',
-            code: new URL(data.redirectUrl).searchParams.get('code'),
-            state: new URL(data.redirectUrl).searchParams.get('state'),
+          const target = window.opener || window.parent;
+          target?.postMessage({
+            type: 'oauth-redirect',
+            url: data.redirectUrl
           }, '*');
-          window.close();
+          // Only close if we're a popup, not an iframe
+          if (window.opener) {
+            window.close();
+          }
         } else {
           // Redirect to the callback URL
           window.location.href = data.redirectUrl;

@@ -18,6 +18,15 @@ const errorHandler = MCPErrorHandler.getInstance();
 // Tool registry instance
 const toolRegistry = ToolRegistry.getInstance();
 
+/**
+ * Helper function to create a JSON response with session ID header
+ */
+function createSessionResponse(data: any, sessionId: string, status?: number) {
+  const response = NextResponse.json(data, status ? { status } : undefined);
+  response.headers.set('Mcp-Session-Id', sessionId);
+  return response;
+}
+
 export interface StreamableHTTPOptions {
   requireApiAuth?: boolean;
   stateless?: boolean;
@@ -145,9 +154,12 @@ async function handlePostRequest(
   // Check authentication
   let authResult: any = null;
   
+  // Build the expected resource URL for OAuth audience validation (RFC 8707)
+  const expectedResource = request.url;
+  
   // For tools/list, authentication is optional but enhances functionality
   if (body.method === 'tools/list') {
-    authResult = await MCPAuth.getInstance().authenticateRequest(request);
+    authResult = await MCPAuth.getInstance().authenticateRequest(request, expectedResource);
     // If auth fails for tools/list, continue anyway (public tools only)
     if (!authResult.success) {
       console.log('No authentication provided for tools/list - returning public tools only');
@@ -156,7 +168,7 @@ async function handlePostRequest(
   } 
   // For other protected operations, authentication is required
   else if (requireApiAuth && isProtectedOperation(body)) {
-    authResult = await MCPAuth.getInstance().authenticateRequest(request);
+    authResult = await MCPAuth.getInstance().authenticateRequest(request, expectedResource);
     if (!authResult.success) {
       return authResult.error!;
     }
@@ -234,19 +246,41 @@ async function handleGetRequest(
   const { stateless } = options;
   const sessionId = request.headers.get('mcp-session-id');
   
-  // For Next.js, we'll return a simple response indicating SSE is not fully supported
-  // In a full implementation, you might use a different approach for SSE
-  return NextResponse.json(
-    {
-      jsonrpc: '2.0',
-      error: {
-        code: -32601,
-        message: 'SSE streams not fully supported in Next.js API routes. Use POST for JSON-RPC messages.'
-      },
-      id: null
+  // Create a simple SSE stream that stays open
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream({
+    async start(controller) {
+      // Send initial connection message
+      controller.enqueue(encoder.encode('event: open\ndata: {"type":"connected"}\n\n'));
+      
+      // Keep the connection alive with periodic pings
+      const interval = setInterval(() => {
+        try {
+          controller.enqueue(encoder.encode('event: ping\ndata: {"type":"ping"}\n\n'));
+        } catch (error) {
+          clearInterval(interval);
+        }
+      }, 30000); // Ping every 30 seconds
+      
+      // Clean up on close
+      request.signal.addEventListener('abort', () => {
+        clearInterval(interval);
+        controller.close();
+      });
     },
-    { status: 501 }
-  );
+  });
+
+  return new NextResponse(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache, no-transform',
+      'Connection': 'keep-alive',
+      'X-Accel-Buffering': 'no', // Disable Nginx buffering
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, mcp-session-id',
+    },
+  });
 }
 
 /**
@@ -325,18 +359,105 @@ async function handleStatelessRequest(body: any, server: any): Promise<NextRespo
     // The MCP SDK doesn't expose a direct way to invoke handlers, so we'll use the
     // server's internal handler mechanism
     
+    // Handle initialize method
+    if (body.method === 'initialize') {
+      return NextResponse.json({
+        jsonrpc: '2.0',
+        result: {
+          protocolVersion: '2025-06-18',
+          capabilities: {
+            tools: { listChanged: false },
+            resources: { listChanged: false, subscribe: false },
+            prompts: { listChanged: false },
+            logging: {}
+          },
+          serverInfo: {
+            name: 'pluggedin-mcp',
+            version: '1.0.0'
+          }
+        },
+        id: body.id
+      });
+    }
+    
+    // Handle notifications/initialized (client confirming initialization complete)
+    if (body.method === 'notifications/initialized') {
+      console.log('[MCP] Client initialized notification received');
+      return NextResponse.json({
+        jsonrpc: '2.0',
+        result: {},
+        id: body.id || null
+      });
+    }
+    
+    // Handle logging/setLevel
+    if (body.method === 'logging/setLevel') {
+      console.log('[MCP] Logging level set:', body.params);
+      return NextResponse.json({
+        jsonrpc: '2.0',
+        result: {},
+        id: body.id
+      });
+    }
+    
+    // Handle resources/list
+    if (body.method === 'resources/list') {
+      console.log('[MCP] Resources list requested');
+      return NextResponse.json({
+        jsonrpc: '2.0',
+        result: {
+          resources: []
+        },
+        id: body.id
+      });
+    }
+    
+    // Handle resources/templates/list
+    if (body.method === 'resources/templates/list') {
+      console.log('[MCP] Resource templates list requested');
+      return NextResponse.json({
+        jsonrpc: '2.0',
+        result: {
+          resourceTemplates: []
+        },
+        id: body.id
+      });
+    }
+    
+    // Handle prompts/list
+    if (body.method === 'prompts/list') {
+      console.log('[MCP] Prompts list requested');
+      return NextResponse.json({
+        jsonrpc: '2.0',
+        result: {
+          prompts: []
+        },
+        id: body.id
+      });
+    }
+    
+    // Handle ping method
+    if (body.method === 'ping') {
+      console.log('[MCP] Ping received');
+      return NextResponse.json({
+        jsonrpc: '2.0',
+        result: {},
+        id: body.id
+      });
+    }
+    
     if (body.method === 'tools/list') {
       // Get the handler from the server
       const handler = (server as any)._requestHandlers?.get('tools/list');
       if (handler) {
         const result = await handler({ method: 'tools/list', params: body.params || {} });
-        return NextResponse.json({
+        return createSessionResponse({
           jsonrpc: '2.0',
           result,
           id: body.id
-        });
+        }, sessionId);
       } else {
-        return NextResponse.json({
+        return createSessionResponse({
           jsonrpc: '2.0',
           error: {
             code: -32601,
@@ -344,7 +465,7 @@ async function handleStatelessRequest(body: any, server: any): Promise<NextRespo
             data: 'tools/list handler not available'
           },
           id: body.id
-        }, { status: 404 });
+        }, sessionId, 404);
       }
     }
     
@@ -356,13 +477,13 @@ async function handleStatelessRequest(body: any, server: any): Promise<NextRespo
           method: 'tools/call',
           params: body.params || {}
         });
-        return NextResponse.json({
+        return createSessionResponse({
           jsonrpc: '2.0',
           result,
           id: body.id
-        });
+        }, sessionId);
       } else {
-        return NextResponse.json({
+        return createSessionResponse({
           jsonrpc: '2.0',
           error: {
             code: -32601,
@@ -370,7 +491,7 @@ async function handleStatelessRequest(body: any, server: any): Promise<NextRespo
             data: 'tools/call handler not available'
           },
           id: body.id
-        }, { status: 404 });
+        }, sessionId, 404);
       }
     }
     
@@ -417,8 +538,101 @@ async function handleStatefulRequest(
     const session = await sessionManager.createOrGetSession(sessionId, server);
     console.log(`Streamable HTTP session ${session.id} accessed`);
     
-    // Set session ID in response header
-    response.headers.set('mcp-session-id', sessionId);
+    // Handle initialize method
+    if (body.method === 'initialize') {
+      const initResponse = NextResponse.json({
+        jsonrpc: '2.0',
+        result: {
+          protocolVersion: '2025-06-18',
+          capabilities: {
+            tools: { listChanged: false },
+            resources: { listChanged: false, subscribe: false },
+            prompts: { listChanged: false },
+            logging: {}
+          },
+          serverInfo: {
+            name: 'pluggedin-mcp',
+            version: '1.0.0'
+          }
+        },
+        id: body.id
+      });
+      
+      // Set session ID in response header
+      initResponse.headers.set('Mcp-Session-Id', sessionId);
+      
+      return initResponse;
+    }
+    
+    // Handle notifications/initialized (client confirming initialization complete)
+    if (body.method === 'notifications/initialized') {
+      // This is a notification, no response needed but MCP expects a result
+      console.log('[MCP] Client initialized notification received');
+      return createSessionResponse({
+        jsonrpc: '2.0',
+        result: {},
+        id: body.id || null
+      }, sessionId);
+    }
+    
+    // Handle logging/setLevel
+    if (body.method === 'logging/setLevel') {
+      console.log('[MCP] Logging level set:', body.params);
+      return createSessionResponse({
+        jsonrpc: '2.0',
+        result: {},
+        id: body.id
+      }, sessionId);
+    }
+    
+    // Handle resources/list
+    if (body.method === 'resources/list') {
+      console.log('[MCP] Resources list requested');
+      return createSessionResponse({
+        jsonrpc: '2.0',
+        result: {
+          resources: []
+        },
+        id: body.id
+      }, sessionId);
+    }
+    
+    // Handle resources/templates/list
+    if (body.method === 'resources/templates/list') {
+      console.log('[MCP] Resource templates list requested');
+      return createSessionResponse({
+        jsonrpc: '2.0',
+        result: {
+          resourceTemplates: []
+        },
+        id: body.id
+      }, sessionId);
+    }
+    
+    // Handle prompts/list
+    if (body.method === 'prompts/list') {
+      console.log('[MCP] Prompts list requested');
+      return createSessionResponse({
+        jsonrpc: '2.0',
+        result: {
+          prompts: []
+        },
+        id: body.id
+      }, sessionId);
+    }
+    
+    // Handle ping (health check)
+    if (body.method === 'ping') {
+      console.log('[MCP] Ping received');
+      return createSessionResponse({
+        jsonrpc: '2.0',
+        result: {},
+        id: body.id
+      }, sessionId);
+    }
+    
+    // Set session ID in response header for other methods
+    response.headers.set('Mcp-Session-Id', sessionId);
     
     // Process the request using the server's handlers directly
     if (body.method === 'tools/list') {
@@ -426,13 +640,13 @@ async function handleStatefulRequest(
       const handler = (server as any)._requestHandlers?.get('tools/list');
       if (handler) {
         const result = await handler({ method: 'tools/list', params: body.params || {} });
-        return NextResponse.json({
+        return createSessionResponse({
           jsonrpc: '2.0',
           result,
           id: body.id
-        });
+        }, sessionId);
       } else {
-        return NextResponse.json({
+        return createSessionResponse({
           jsonrpc: '2.0',
           error: {
             code: -32601,
@@ -440,7 +654,7 @@ async function handleStatefulRequest(
             data: 'tools/list handler not available'
           },
           id: body.id
-        }, { status: 404 });
+        }, sessionId, 404);
       }
     }
     
@@ -452,13 +666,13 @@ async function handleStatefulRequest(
           method: 'tools/call',
           params: body.params || {}
         });
-        return NextResponse.json({
+        return createSessionResponse({
           jsonrpc: '2.0',
           result,
           id: body.id
-        });
+        }, sessionId);
       } else {
-        return NextResponse.json({
+        return createSessionResponse({
           jsonrpc: '2.0',
           error: {
             code: -32601,
@@ -466,7 +680,7 @@ async function handleStatefulRequest(
             data: 'tools/call handler not available'
           },
           id: body.id
-        }, { status: 404 });
+        }, sessionId, 404);
       }
     }
     
@@ -517,7 +731,8 @@ async function handlePutRequest(
   
   // Check authentication for configuration updates
   if (requireApiAuth) {
-    const authResult = await MCPAuth.getInstance().authenticateRequest(request);
+    const expectedResource = request.url;
+    const authResult = await MCPAuth.getInstance().authenticateRequest(request, expectedResource);
     if (!authResult.success) {
       return authResult.error!;
     }
@@ -531,7 +746,7 @@ async function handlePutRequest(
     if (sessionId && body.config) {
       const success = sessionManager.updateSessionMetadata(sessionId, body.config);
       if (success) {
-        return NextResponse.json({
+        return createSessionResponse({
           success: true,
           message: 'Session configuration updated'
         });

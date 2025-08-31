@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { oauthProvider } from '@/lib/oauth/provider';
+import { RateLimiters } from '@/lib/rate-limiter';
+import { getCorsHeaders, getSecurityHeaders } from '@/lib/oauth/cors';
 
 // Token request schema
 const tokenRequestSchema = z.discriminatedUnion('grant_type', [
@@ -27,6 +29,25 @@ const tokenRequestSchema = z.discriminatedUnion('grant_type', [
  * Exchanges authorization codes for access tokens
  */
 export async function POST(request: NextRequest) {
+  // Apply rate limiting for token requests (stricter than authorization)
+  const rateLimitResult = await RateLimiters.sensitive(request);
+  if (!rateLimitResult.allowed) {
+    return NextResponse.json(
+      {
+        error: 'rate_limit_exceeded',
+        error_description: 'Too many token requests. Please try again later.',
+      },
+      { 
+        status: 429,
+        headers: {
+          'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+          'X-RateLimit-Remaining': rateLimitResult.remaining.toString(),
+          'X-RateLimit-Reset': new Date(rateLimitResult.reset).toISOString(),
+        }
+      }
+    );
+  }
+
   try {
     // Parse request based on content type
     let body: any;
@@ -71,9 +92,8 @@ export async function POST(request: NextRequest) {
         { 
           status: 400,
           headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            ...getCorsHeaders(request.headers.get('origin')),
+            ...getSecurityHeaders(),
           }
         }
       );
@@ -101,9 +121,8 @@ export async function POST(request: NextRequest) {
         { 
           status: 401,
           headers: {
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'POST, OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            ...getCorsHeaders(request.headers.get('origin')),
+            ...getSecurityHeaders(),
           }
         }
       );
