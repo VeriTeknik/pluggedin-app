@@ -20,6 +20,7 @@ import type { McpServer } from '@/types/mcp-server';
 
 import { discoverSingleServerTools } from './discover-mcp-tools';
 import { getServerRatingMetrics, trackServerInstallation } from './mcp-server-metrics';
+import { McpServerSlugService } from '@/lib/services/mcp-server-slug-service';
 
 type ServerWithUsername = {
   server: typeof mcpServersTable.$inferSelect;
@@ -373,6 +374,15 @@ export async function updateMcpServer(
       )
     );
 
+  // Regenerate slug if name was updated
+  if (data.name !== undefined) {
+    try {
+      await McpServerSlugService.generateAndSetSlug(uuid, data.name, profileUuid);
+    } catch (slugError) {
+      console.error(`Failed to update slug for server ${uuid}:`, slugError);
+    }
+  }
+
   // Trigger discovery after update
   try {
     // Don't await this, let it run in the background
@@ -499,6 +509,18 @@ export async function createMcpServer({
        throw new Error("Failed to retrieve new server details after insertion.");
     }
 
+    // Generate and set slug for the new server
+    try {
+      await McpServerSlugService.generateAndSetSlug(
+        newServer.uuid,
+        name, // Use the original server name
+        profileUuid
+      );
+    } catch (slugError) {
+      console.error(`Failed to generate slug for server ${newServer.uuid}:`, slugError);
+      // Continue without slug - server creation should still succeed
+    }
+
     // Track server installation
     try {
       if (source) {
@@ -612,6 +634,18 @@ export async function bulkImportMcpServers(
     const inserted = await db.insert(mcpServersTable).values(encryptedData).returning({ uuid: mcpServersTable.uuid });
     if (inserted[0]?.uuid) {
         createdServerUuids.push(inserted[0].uuid);
+
+        // Generate slug for the newly created server
+        try {
+          await McpServerSlugService.generateAndSetSlug(
+            inserted[0].uuid,
+            name,
+            profileUuid
+          );
+        } catch (slugError) {
+          console.error(`Failed to generate slug for bulk imported server ${inserted[0].uuid}:`, slugError);
+          // Continue without slug - server creation should still succeed
+        }
     }
   }
 

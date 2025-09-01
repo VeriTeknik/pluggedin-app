@@ -342,6 +342,7 @@ export const mcpServersTable = pgTable(
     external_id: text('external_id'),
     notes: text('notes'),
     config: jsonb('config'),
+    slug: text('slug'), // URL-friendly identifier for slug-based tool prefixing
   },
   (table) => ({ // Use object syntax for indexes
     mcpServersStatusIdx: index('mcp_servers_status_idx').on(table.status),
@@ -349,6 +350,8 @@ export const mcpServersTable = pgTable(
     mcpServersTypeIdx: index('mcp_servers_type_idx').on(table.type),
     // Composite index for profile + status queries
     mcpServersProfileStatusIdx: index('idx_mcp_servers_profile_status').on(table.profile_uuid, table.status),
+    // Unique index for slug
+    mcpServersSlugIdx: unique('idx_mcp_servers_slug').on(table.slug),
   })
 );
 

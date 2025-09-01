@@ -3,6 +3,7 @@ import { McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
 export interface McpServer {
   uuid: string;
   name: string;
+  slug: string | null; // Added slug field for tool prefixing
   created_at: Date;
   description: string | null;
   command: string | null;

@@ -279,6 +279,16 @@ export function ServerCard({
           <div className="col-span-2 text-xs text-muted-foreground mt-2">
             {t('mcpServers.form.created')}: {new Date(server.created_at).toLocaleDateString()}
           </div>
+
+          {/* Slug display */}
+          <div className="col-span-2 text-xs text-muted-foreground mt-2">
+            <div className="flex items-center justify-between">
+              <span>Tool Prefix:</span>
+              <span className="font-mono bg-muted px-1 py-0.5 rounded text-xs">
+                {server.slug ? `${server.slug}__` : 'Auto-generated'}
+              </span>
+            </div>
+          </div>
         </div>
       </CardContent>
       
