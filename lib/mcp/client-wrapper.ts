@@ -427,7 +427,7 @@ export function createFirejailConfig(
  * Does not establish the connection yet.
  * @param skipCommandTransformation - Skip package manager command transformation (useful for discovery)
  */
-async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandTransformation = false): Promise<{ client: Client; transport: Transport } | null> {
+export async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandTransformation = false): Promise<{ client: Client; transport: Transport } | null> {
   let transport: Transport | undefined;
   const clientName = 'PluggedinAppClient'; // Or get from config/package.json
   const clientVersion = '0.1.0'; // Or get from config/package.json
@@ -806,7 +806,7 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
 /**
  * Connects an MCP Client to its transport with retry logic.
  */
-async function connectMcpClient(
+export async function connectMcpClient(
   initialClient: Client,
   initialTransport: Transport,
   serverName: string,
@@ -1088,4 +1088,45 @@ export async function listPromptsFromServer(serverConfig: McpServer): Promise<Pr
 }
 
 
-// TODO: Add functions for callTool, readResource, getPrompt etc. as needed, reusing create/connect logic.
+/**
+ * Execute a tool on an MCP server using sandboxed client connection
+ */
+export async function callToolOnServer(
+  serverConfig: McpServer,
+  toolName: string,
+  args: Record<string, any>
+): Promise<any> {
+  let connectedClient: ConnectedMcpClient | undefined;
+  
+  try {
+    // Create client and transport with sandboxing
+    const clientData = await createMcpClientAndTransport(serverConfig);
+    if (!clientData) {
+      throw new Error(`Failed to create MCP client for server: ${serverConfig.name}`);
+    }
+    
+    // Connect the client
+    connectedClient = await connectMcpClient(
+      clientData.client,
+      clientData.transport,
+      serverConfig.name,
+      serverConfig,
+      2, // retries
+      1000 // delay
+    );
+    
+    // Execute the tool
+    const result = await connectedClient.client.request({
+      method: 'tools/call',
+      params: {
+        name: toolName,
+        arguments: args,
+      },
+    });
+    
+    return result;
+  } finally {
+    // Always cleanup the connection
+    await safeCleanup(connectedClient, serverConfig);
+  }
+}

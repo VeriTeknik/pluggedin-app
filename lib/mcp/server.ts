@@ -5,13 +5,14 @@ import {
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
 
-// Import static tools similar to pluggedin-mcp
+// Import static tools and tool aggregator
 import { staticTools } from './tools/static-tools';
+import { toolAggregator } from './tool-aggregator';
 
 /**
  * Create and configure an MCP server with the same tools as pluggedin-mcp
  */
-export async function createMCPServer(): Promise<Server> {
+export async function createMCPServer(profileUuid?: string): Promise<Server> {
   // Create the MCP server
   const server = new Server(
     {
@@ -26,10 +27,21 @@ export async function createMCPServer(): Promise<Server> {
     }
   );
 
+  // Store profile context for this server instance
+  (server as any)._profileUuid = profileUuid;
+
   // Set up tool listing capability
   server.setRequestHandler(ListToolsRequestSchema, async () => {
+    // Get profile from server context or use provided one
+    const contextProfileUuid = (server as any)._profileUuid || profileUuid;
+    
+    console.log('[ListToolsRequest] Getting tools for profile:', contextProfileUuid);
+    
     // Get all available tools (static tools + dynamic tools from database)
-    const allTools = await getAllTools();
+    const allTools = await getAllTools(contextProfileUuid);
+    
+    console.log('[ListToolsRequest] Returning', allTools.length, 'tools');
+    console.log('[ListToolsRequest] Tool names:', allTools.map(t => t.name).join(', '));
     
     return {
       tools: allTools,
@@ -39,16 +51,21 @@ export async function createMCPServer(): Promise<Server> {
   // Set up tool calling capability
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
+    const contextProfileUuid = (server as any)._profileUuid || profileUuid;
+    
+    console.log('[CallToolRequest] Tool:', name, 'Profile:', contextProfileUuid);
 
     try {
       // Handle static tools first
       const staticTool = staticTools.find(tool => tool.name === name);
       if (staticTool) {
+        console.log('[CallToolRequest] Found static tool:', name);
         return await handleStaticTool(name, args || {});
       }
 
       // Handle dynamic tools from database
-      return await handleDynamicTool(name, args || {});
+      console.log('[CallToolRequest] Handling as dynamic tool:', name);
+      return await handleDynamicTool(name, args || {}, contextProfileUuid);
     } catch (error) {
       console.error(`Error executing tool ${name}:`, error);
       return {
@@ -69,27 +86,11 @@ export async function createMCPServer(): Promise<Server> {
 /**
  * Get all available tools (static + dynamic)
  */
-async function getAllTools(): Promise<Tool[]> {
-  const tools: Tool[] = [];
-
-  // Add static tools
-  tools.push(...staticTools);
-
-  // Add dynamic tools from database using tool registry
-  // Skip dynamic tools for now since we don't have a profile context
-  // In a real implementation, this would come from the authenticated user
-  // Dynamic tools will be loaded when a specific profile makes a request
-  
-  // Uncomment this when we have proper profile context:
-  // try {
-  //   const { ToolRegistry } = await import('./tool-registry');
-  //   const toolRegistry = ToolRegistry.getInstance();
-  //   const dynamicTools = await toolRegistry.getToolsForProfile(profileUuid);
-  //   tools.push(...dynamicTools);
-  // } catch (error) {
-  //   console.error('Error fetching dynamic tools:', error);
-  // }
-
+async function getAllTools(profileUuid?: string): Promise<Tool[]> {
+  console.log('[getAllTools] Getting tools for profile:', profileUuid);
+  // Use tool aggregator to get all tools for the profile
+  const tools = await toolAggregator.getToolsForProfile(profileUuid);
+  console.log('[getAllTools] Got', tools.length, 'tools');
   return tools;
 }
 
@@ -122,6 +123,10 @@ async function handleStaticTool(name: string, args: any): Promise<any> {
       return await handleGetDocumentTool(args);
     case 'pluggedin_update_document':
       return await handleUpdateDocumentTool(args);
+    case 'get_tools':
+      return await handleGetToolsTool(args);
+    case 'tool_call':
+      return await handleToolCallTool(args);
     default:
       throw new Error(`Unknown static tool: ${name}`);
   }
@@ -130,20 +135,104 @@ async function handleStaticTool(name: string, args: any): Promise<any> {
 /**
  * Handle dynamic tool execution
  */
-async function handleDynamicTool(name: string, args: any): Promise<any> {
-  // Import the tool executor for handling dynamic tools
-  const { ToolExecutor } = await import('./tool-executor');
-  const toolExecutor = ToolExecutor.getInstance();
+async function handleDynamicTool(name: string, args: any, profileUuid?: string): Promise<any> {
+  console.log('[handleDynamicTool] Called with:', { name, profileUuid, hasArgs: !!args });
   
-  // Create a mock request object for authentication
-  const mockRequest = new Request('https://localhost', {
-    headers: {
-      'Authorization': `Bearer ${process.env.PLUGGEDIN_API_KEY || 'mock-key'}`
+  // Check if tool name has server prefix
+  const parsed = toolAggregator.parsePrefixedToolName(name);
+  console.log('[handleDynamicTool] Parsed tool name:', parsed);
+  
+  let serverUuid: string | undefined;
+  let originalToolName = name;
+  
+  if (parsed && profileUuid) {
+    // Find the server by alias
+    const server = await toolAggregator.findServerByAlias(parsed.serverAlias, profileUuid);
+    console.log('[handleDynamicTool] Found server:', server);
+    
+    if (!server) {
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error: Server '${parsed.serverAlias}' not found or not active`,
+          },
+        ],
+        isError: true,
+      };
     }
-  });
+    
+    // Use the original tool name (without prefix) for execution
+    originalToolName = parsed.toolName;
+    serverUuid = server.uuid;
+  }
   
-  // Use the tool executor to handle the dynamic tool
-  return await toolExecutor.executeToolCall(mockRequest, name, args);
+  // If we have a profile UUID and serverUuid (tool with prefix), execute it
+  if (profileUuid && serverUuid) {
+    try {
+      // Import necessary modules for direct execution
+      const { db } = await import('@/db');
+      const { mcpServersTable } = await import('@/db/schema');
+      const { eq } = await import('drizzle-orm');
+      
+      // Get the MCP server configuration
+      const servers = await db
+        .select()
+        .from(mcpServersTable)
+        .where(eq(mcpServersTable.uuid, serverUuid))
+        .limit(1);
+      
+      if (servers.length === 0) {
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Server configuration not found`,
+            },
+          ],
+          isError: true,
+        };
+      }
+      
+      const serverConfig = servers[0];
+      console.log('[handleDynamicTool] Executing tool on server:', serverConfig.name, 'type:', serverConfig.type);
+      
+      // Execute the tool directly via MCP proxy
+      const { MCPProxyService } = await import('./mcp-proxy-service');
+      const proxyService = MCPProxyService.getInstance();
+      
+      const result = await proxyService.executeTool(
+        serverConfig,
+        originalToolName,
+        args
+      );
+      
+      return result;
+    } catch (error) {
+      console.error('Error executing dynamic tool:', error);
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Error executing tool: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          },
+        ],
+        isError: true,
+      };
+    }
+  }
+  
+  // If we don't have a profileUuid (not authenticated via OAuth), we can't execute dynamic tools
+  console.log('[handleDynamicTool] No profile UUID or server UUID, cannot execute tool');
+  return {
+    content: [
+      {
+        type: 'text',
+        text: 'Tool execution requires authentication and proper server configuration',
+      },
+    ],
+    isError: true,
+  };
 }
 
 // Static tool handlers
@@ -751,6 +840,67 @@ async function handleUpdateDocumentTool(args: any) {
         {
           type: 'text',
           text: `Error updating document: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+async function handleGetToolsTool(args: any) {
+  try {
+    // Get all available tools
+    const allTools = await getAllTools();
+    
+    // Format tools for display
+    const toolInfo = allTools.map(tool => ({
+      name: tool.name,
+      description: tool.description || 'No description available'
+    }));
+    
+    return {
+      content: [
+        {
+          type: 'text',
+          text: JSON.stringify(toolInfo, null, 2),
+        },
+      ],
+    };
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error getting tools: ${error instanceof Error ? error.message : String(error)}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+async function handleToolCallTool(args: any) {
+  try {
+    const { tool_name, arguments: toolArgs = {} } = args;
+    
+    if (!tool_name) {
+      throw new Error('tool_name is required');
+    }
+    
+    // Check if it's a static tool
+    const staticTool = staticTools.find(tool => tool.name === tool_name);
+    if (staticTool) {
+      return await handleStaticTool(tool_name, toolArgs);
+    }
+    
+    // Otherwise try as dynamic tool
+    return await handleDynamicTool(tool_name, toolArgs);
+  } catch (error) {
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Error executing tool ${args.tool_name}: ${error instanceof Error ? error.message : String(error)}`,
         },
       ],
       isError: true,

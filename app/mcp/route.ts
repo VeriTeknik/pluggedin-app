@@ -1,28 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createMCPServer } from '@/lib/mcp/server';
 import { handleStreamableHTTPRequest } from '@/lib/mcp/streamable-http/server';
+import { MCPAuth } from '@/lib/mcp/auth';
 
 /**
  * Root-level /mcp endpoint for MCP Streamable HTTP
  * Handles authentication via OAuth bearer tokens or API keys
  */
 
-// Global server instance to maintain state across requests
-let globalServer: any = null;
+// Per-profile server instances to maintain profile context
+const profileServers: Map<string, any> = new Map();
+// Default server for unauthenticated requests
+let defaultServer: any = null;
 
 /**
- * Initialize the MCP server if not already created
+ * Get or create MCP server for a specific profile
  */
-async function getMCPServer() {
-  if (!globalServer) {
-    globalServer = await createMCPServer();
+async function getMCPServer(profileUuid?: string) {
+  if (!profileUuid) {
+    // Return default server for unauthenticated requests
+    if (!defaultServer) {
+      defaultServer = await createMCPServer();
+    }
+    return defaultServer;
   }
-  return globalServer;
+  
+  // Get or create profile-specific server
+  if (!profileServers.has(profileUuid)) {
+    const server = await createMCPServer(profileUuid);
+    profileServers.set(profileUuid, server);
+  }
+  
+  return profileServers.get(profileUuid);
 }
 
 export async function POST(request: NextRequest) {
   console.log('[MCP] POST request received');
-  const server = await getMCPServer();
+  
+  // Try to get profile UUID from authentication (don't fail if not authenticated)
+  const authResult = await MCPAuth.getInstance().authenticateRequest(request);
+  const profileUuid = authResult.success ? authResult.profileUuid : undefined;
+  
+  console.log('[MCP] Auth result:', authResult.success ? 'success' : 'failed', 'Profile UUID:', profileUuid);
+  
+  // Get server for this profile (or default if no profile)
+  const server = await getMCPServer(profileUuid);
+  
   return handleStreamableHTTPRequest(request, server, {
     requireApiAuth: true, // Require authentication
     stateless: false, // Support sessions
@@ -30,7 +53,11 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const server = await getMCPServer();
+  // Try to get profile UUID from authentication
+  const authResult = await MCPAuth.getInstance().authenticateRequest(request);
+  const profileUuid = authResult.success ? authResult.profileUuid : undefined;
+  
+  const server = await getMCPServer(profileUuid);
   return handleStreamableHTTPRequest(request, server, {
     requireApiAuth: true,
     stateless: false,
@@ -38,7 +65,11 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const server = await getMCPServer();
+  // Try to get profile UUID from authentication
+  const authResult = await MCPAuth.getInstance().authenticateRequest(request);
+  const profileUuid = authResult.success ? authResult.profileUuid : undefined;
+  
+  const server = await getMCPServer(profileUuid);
   return handleStreamableHTTPRequest(request, server, {
     requireApiAuth: true,
     stateless: false,

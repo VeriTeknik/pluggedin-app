@@ -178,9 +178,12 @@ async function handlePostRequest(
   const startTime = Date.now();
 
   // Apply tool filtering if configured
-  if (body.method === 'tools/list' && authResult?.profileUuid) {
+  // Always try to handle tools/list with the current auth context
+  if (body.method === 'tools/list') {
+    // For tools/list, always pass the profile UUID if available
+    console.log('[handleStreamableHTTPRequest] tools/list with profile:', authResult?.profileUuid);
     return await handleToolsList(body, server, {
-      profileUuid: authResult.profileUuid,
+      profileUuid: authResult?.profileUuid || undefined,
       allowedTools: options.allowedTools,
       blockedTools: options.blockedTools,
       allowedServers: options.allowedServers,
@@ -196,26 +199,46 @@ async function handlePostRequest(
       const { staticTools } = await import('../tools/static-tools');
       const isStaticTool = staticTools.some(tool => tool.name === toolName);
       
-      // If it's not a static tool, check permissions in the database
+      // If it's not a static tool, check if it has a server prefix
       if (!isStaticTool) {
-        const isAllowed = await toolRegistry.isToolAllowed(
-          authResult.profileUuid,
-          toolName,
-          {
-            allowedTools: options.allowedTools,
-            blockedTools: options.blockedTools,
-            allowedServers: options.allowedServers,
-            blockedServers: options.blockedServers
+        // Import tool aggregator to parse prefixed names
+        const { toolAggregator } = await import('../tool-aggregator');
+        const parsed = toolAggregator.parsePrefixedToolName(toolName);
+        
+        if (parsed) {
+          // It's a prefixed tool name - verify the server exists for this profile
+          const server = await toolAggregator.findServerByAlias(parsed.serverAlias, authResult.profileUuid);
+          if (!server) {
+            return errorHandler.createErrorResponse(
+              MCPErrorCode.TOOL_PERMISSION_DENIED,
+              `Tool server '${parsed.serverAlias}' not found or not active`,
+              body.id,
+              { toolName }
+            );
           }
-        );
-
-        if (!isAllowed.allowed) {
-          return errorHandler.createErrorResponse(
-            MCPErrorCode.TOOL_PERMISSION_DENIED,
-            isAllowed.reason || 'Tool access denied',
-            body.id,
-            { toolName }
+          // If server exists, the tool is allowed (we trust the tool aggregator's list)
+          console.log(`[tools/call] Allowing prefixed tool: ${toolName} from server: ${server.name}`);
+        } else {
+          // Non-prefixed, non-static tool - check with registry
+          const isAllowed = await toolRegistry.isToolAllowed(
+            authResult.profileUuid,
+            toolName,
+            {
+              allowedTools: options.allowedTools,
+              blockedTools: options.blockedTools,
+              allowedServers: options.allowedServers,
+              blockedServers: options.blockedServers
+            }
           );
+
+          if (!isAllowed.allowed) {
+            return errorHandler.createErrorResponse(
+              MCPErrorCode.TOOL_PERMISSION_DENIED,
+              isAllowed.reason || 'Tool access denied',
+              body.id,
+              { toolName }
+            );
+          }
         }
       }
     }
@@ -223,14 +246,14 @@ async function handlePostRequest(
   
   // Handle stateless mode
   if (stateless) {
-    const result = await handleStatelessRequest(body, server);
+    const result = await handleStatelessRequest(body, server, authResult?.profileUuid);
     const responseTime = Date.now() - startTime;
     healthMonitor.recordRequest(responseTime, false);
     return result;
   }
   
   // Handle stateful mode
-  const result = await handleStatefulRequest(body, server, sessionId, response);
+  const result = await handleStatefulRequest(body, server, sessionId, response, authResult?.profileUuid);
   const responseTime = Date.now() - startTime;
   healthMonitor.recordRequest(responseTime, false);
   return result;
@@ -353,7 +376,7 @@ function isProtectedOperation(body: any): boolean {
 /**
  * Handle stateless request (create new session for each request)
  */
-async function handleStatelessRequest(body: any, server: any): Promise<NextResponse> {
+async function handleStatelessRequest(body: any, server: any, profileUuid?: string): Promise<NextResponse> {
   try {
     // The server has request handlers that we set up, we need to call them directly
     // The MCP SDK doesn't expose a direct way to invoke handlers, so we'll use the
@@ -447,6 +470,15 @@ async function handleStatelessRequest(body: any, server: any): Promise<NextRespo
     }
     
     if (body.method === 'tools/list') {
+      console.log('[tools/list in stateful] Server profile UUID before:', (server as any)._profileUuid);
+      console.log('[tools/list in stateful] Session profile UUID:', profileUuid);
+      
+      // Update server's profile context if we have one from auth
+      if (profileUuid && server) {
+        (server as any)._profileUuid = profileUuid;
+        console.log('[tools/list in stateful] Updated server profile UUID to:', profileUuid);
+      }
+      
       // Get the handler from the server
       const handler = (server as any)._requestHandlers?.get('tools/list');
       if (handler) {
@@ -531,12 +563,21 @@ async function handleStatefulRequest(
   body: any, 
   server: any, 
   sessionId: string, 
-  response: NextResponse
+  response: NextResponse,
+  profileUuid?: string
 ): Promise<NextResponse> {
   try {
-    // Create or update session
-    const session = await sessionManager.createOrGetSession(sessionId, server);
-    console.log(`Streamable HTTP session ${session.id} accessed`);
+    // Create or update session with profile context
+    const session = await sessionManager.createOrGetSession(sessionId, server, {
+      metadata: { profileUuid }
+    });
+    
+    // If we have a profile UUID, update the server's profile context
+    if (profileUuid && server) {
+      (server as any)._profileUuid = profileUuid;
+    }
+    
+    console.log(`Streamable HTTP session ${session.id} accessed with profile: ${profileUuid || 'none'}`);
     
     // Handle initialize method
     if (body.method === 'initialize') {
@@ -636,6 +677,15 @@ async function handleStatefulRequest(
     
     // Process the request using the server's handlers directly
     if (body.method === 'tools/list') {
+      console.log('[tools/list in stateful] Server profile UUID before:', (server as any)._profileUuid);
+      console.log('[tools/list in stateful] Session profile UUID:', profileUuid);
+      
+      // Update server's profile context if we have one from auth
+      if (profileUuid && server) {
+        (server as any)._profileUuid = profileUuid;
+        console.log('[tools/list in stateful] Updated server profile UUID to:', profileUuid);
+      }
+      
       // Get the handler from the server
       const handler = (server as any)._requestHandlers?.get('tools/list');
       if (handler) {
@@ -864,7 +914,7 @@ async function handleToolsList(
   body: any,
   server: any,
   options: {
-    profileUuid: string;
+    profileUuid?: string;
     allowedTools?: string[];
     blockedTools?: string[];
     allowedServers?: string[];
@@ -873,26 +923,34 @@ async function handleToolsList(
 ): Promise<NextResponse> {
   try {
     const { profileUuid, allowedTools, blockedTools, allowedServers, blockedServers } = options;
+    
+    console.log('[handleToolsList] Getting tools for profile:', profileUuid);
 
-    // Get filtered tools
-    const result = await toolRegistry.getAllowedToolsForProfile(profileUuid, {
-      allowedTools,
-      blockedTools,
-      allowedServers,
-      blockedServers
+    // Use the tool aggregator to get tools with proper prefixes
+    const { toolAggregator } = await import('../tool-aggregator');
+    const tools = await toolAggregator.getToolsForProfile(profileUuid);
+    
+    console.log('[handleToolsList] Got', tools.length, 'tools from aggregator');
+
+    // Apply filtering if needed
+    const filteredTools = tools.filter(tool => {
+      // Check if tool is allowed based on filters
+      if (blockedTools?.includes(tool.name)) return false;
+      if (allowedTools && !allowedTools.includes(tool.name)) return false;
+      return true;
     });
 
     // Format response according to MCP tools/list format
     const toolsResponse = {
-      tools: result.tools.map(tool => ({
+      tools: filteredTools.map(tool => ({
         name: tool.name,
         description: tool.description,
         inputSchema: tool.inputSchema
       })),
       meta: {
-        total: result.total,
-        filtered: result.filtered,
-        blocked: result.blocked
+        total: filteredTools.length,
+        filtered: tools.length - filteredTools.length,
+        blocked: 0
       }
     };
 
