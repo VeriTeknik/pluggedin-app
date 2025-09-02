@@ -17,6 +17,11 @@ import {
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server';
+import { 
+  createMcpServerSchema, 
+  updateMcpServerSchema,
+  generateSlugSchema 
+} from '@/lib/validation/mcp-server-schemas';
 
 import { discoverSingleServerTools } from './discover-mcp-tools';
 import { getServerRatingMetrics, trackServerInstallation } from './mcp-server-metrics';
@@ -283,8 +288,22 @@ export async function updateMcpServer(
     };
   }
 ): Promise<void> { // Changed return type to void as it doesn't explicitly return the server
-  // Only validate if we're updating type-specific fields
-  let serverType: McpServerType | undefined = data.type;
+  try {
+    // Validate slug if it's being updated
+    if (data.name !== undefined) {
+      const slugValidation = generateSlugSchema.safeParse({
+        name: data.name,
+        profileUuid: profileUuid,
+        excludeUuid: uuid
+      });
+      
+      if (!slugValidation.success) {
+        throw new Error(`Invalid name for slug generation: ${slugValidation.error.errors[0]?.message}`);
+      }
+    }
+    
+    // Only validate if we're updating type-specific fields
+    let serverType: McpServerType | undefined = data.type;
   
   // If type is not being updated but we need to validate type-specific fields, get current server type
   if (!serverType && (data.url !== undefined || data.command !== undefined || data.streamableHTTPOptions !== undefined)) {
@@ -397,6 +416,10 @@ export async function updateMcpServer(
 
   // Revalidate path if needed
   // revalidatePath('/mcp-servers');
+  } catch (error) {
+    console.error('[updateMcpServer] Error:', error);
+    throw error instanceof Error ? error : new Error('Failed to update MCP server');
+  }
 }
 
 export async function createMcpServer({
@@ -435,8 +458,30 @@ export async function createMcpServer({
 }) { // Removed explicit return type to match actual returns
   try {
     const serverType = type || McpServerType.STDIO;
+    
+    // Prepare data for Zod validation
+    const validationData = {
+      name,
+      type: serverType,
+      ...(description !== undefined && { description }),
+      ...(command !== undefined && { command }),
+      ...(args !== undefined && { args }),
+      ...(env !== undefined && { env_vars: env }),
+      ...(url !== undefined && { server_url: url }),
+      ...(streamableHTTPOptions?.headers && { headers: streamableHTTPOptions.headers }),
+      ...(streamableHTTPOptions?.sessionId && { sessionId: streamableHTTPOptions.sessionId }),
+    };
+    
+    // Validate with Zod schema
+    const validationResult = createMcpServerSchema.safeParse(validationData);
+    if (!validationResult.success) {
+      return { 
+        success: false, 
+        error: validationResult.error.errors[0]?.message || 'Validation failed' 
+      };
+    }
 
-    // Validate inputs based on type
+    // Additional security validations (keeping existing ones)
     if (serverType === McpServerType.STDIO && !command) {
       return { success: false, error: 'Command is required for STDIO servers' };
     }
