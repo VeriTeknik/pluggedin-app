@@ -8,11 +8,20 @@ const TAG_LENGTH = 16;
  * LEGACY ONLY: Derives a key using SHA-256 with a predictable salt.
  * For backward compatibility DECRYPTION ONLY — do NOT use for ENCRYPTION of new data.
  * (Predictable salt: SHA256(profileUuid)) — insecure for new data!
+ * 
+ * @deprecated This function uses predictable salts and should only be used for legacy decryption
  */
 function deriveKeyLegacy(baseKey: string, profileUuid: string): Buffer {
+  // Runtime protection: Only allow in production or when explicitly enabled for legacy decryption
   if (process.env.NODE_ENV !== 'production' && !(deriveKeyLegacy as any)._allowLegacy) {
     throw new Error('deriveKeyLegacy must only be used for decrypting legacy data!');
   }
+  
+  // Log warning about legacy usage in development
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('[SECURITY] Using legacy key derivation with predictable salt - this should only be for decrypting existing data');
+  }
+  
   const salt = createHash('sha256').update(profileUuid).digest();
   return createHash('sha256').update(baseKey + salt.toString('hex')).digest();
 }
@@ -21,11 +30,20 @@ function deriveKeyLegacy(baseKey: string, profileUuid: string): Buffer {
  * LEGACY ONLY: Derives a key using scrypt with a predictable salt.
  * For backward compatibility DECRYPTION ONLY — do NOT use for ENCRYPTION of new data.
  * (Salt: first 16 bytes of SHA256(profileUuid)) — insecure for new data!
+ * 
+ * @deprecated This function uses predictable salts and should only be used for legacy decryption
  */
 function deriveKeyLegacyScrypt(baseKey: string, profileUuid: string): Buffer {
+  // Runtime protection: Only allow in production or when explicitly enabled for legacy decryption
   if (process.env.NODE_ENV !== 'production' && !(deriveKeyLegacyScrypt as any)._allowLegacy) {
     throw new Error('deriveKeyLegacyScrypt must only be used for decrypting legacy data!');
   }
+  
+  // Log warning about legacy usage in development
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn('[SECURITY] Using legacy scrypt derivation with predictable salt - this should only be for decrypting existing data');
+  }
+  
   const salt = createHash('sha256').update(profileUuid).digest().subarray(0, 16);
   return scryptSync(baseKey, salt, 32, { N: 16384, r: 8, p: 1 });
 }
@@ -139,7 +157,7 @@ export function decryptField(encrypted: string, profileUuid: string): any {
     const hasRandomSalt = combined.length >= (16 + IV_LENGTH + TAG_LENGTH);
     
     if (hasRandomSalt) {
-      // Try new format with random salt
+      // Try new format with random salt (SECURE)
       try {
         return decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKey, true);
       } catch (_newFormatError) {
@@ -147,23 +165,37 @@ export function decryptField(encrypted: string, profileUuid: string): any {
       }
     }
     
-    // Try legacy format with scrypt derivation
-    try {
-      (deriveKeyLegacyScrypt as any)._allowLegacy = true;
-      const result = decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacyScrypt, false);
-      delete (deriveKeyLegacyScrypt as any)._allowLegacy;
-      return result;
-    } catch (_legacyScryptError) {
-      // If legacy scrypt fails, try original legacy SHA256 method
-      console.warn('Legacy scrypt derivation failed, trying original legacy method for backward compatibility');
-      (deriveKeyLegacy as any)._allowLegacy = true;
-      const result = decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacy, false);
-      delete (deriveKeyLegacy as any)._allowLegacy;
-      return result;
-    }
+    // Fall back to legacy decryption (WITH EXPLICIT SECURITY WARNING)
+    return decryptLegacyData(encrypted, baseKey, profileUuid);
   } catch (error) {
     console.error('Decryption failed with all methods:', error);
     throw new Error('Failed to decrypt data');
+  }
+}
+
+/**
+ * SECURITY WARNING: This function handles legacy encrypted data with predictable salts.
+ * It should ONLY be used for decrypting existing data, never for new encryptions.
+ * 
+ * @param encrypted - The encrypted data to decrypt
+ * @param baseKey - The encryption key
+ * @param profileUuid - The profile UUID (used as predictable salt in legacy format)
+ * @returns The decrypted data
+ */
+function decryptLegacyData(encrypted: string, baseKey: string, profileUuid: string): any {
+  // Try legacy format with scrypt derivation
+  try {
+    (deriveKeyLegacyScrypt as any)._allowLegacy = true;
+    const result = decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacyScrypt, false);
+    delete (deriveKeyLegacyScrypt as any)._allowLegacy;
+    return result;
+  } catch (_legacyScryptError) {
+    // If legacy scrypt fails, try original legacy SHA256 method
+    console.warn('Legacy scrypt derivation failed, trying original legacy method for backward compatibility');
+    (deriveKeyLegacy as any)._allowLegacy = true;
+    const result = decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacy, false);
+    delete (deriveKeyLegacy as any)._allowLegacy;
+    return result;
   }
 }
 

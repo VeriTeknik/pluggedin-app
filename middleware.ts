@@ -3,6 +3,33 @@ import { getToken } from 'next-auth/jwt';
 import { RateLimiters } from '@/lib/rate-limiter';
 import { createErrorResponse } from '@/lib/api-errors';
 
+/**
+ * Security headers configuration
+ */
+const securityHeaders = {
+  // Content Security Policy - helps prevent XSS attacks
+  'Content-Security-Policy': process.env.NODE_ENV === 'production'
+    ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com;"
+    : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' ws: wss:;",
+  
+  // Prevent clickjacking attacks
+  'X-Frame-Options': 'DENY',
+  
+  // Prevent MIME type sniffing
+  'X-Content-Type-Options': 'nosniff',
+  
+  // Control information sent with external requests
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  
+  // Restrict browser features
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+  
+  // Force HTTPS in production
+  ...(process.env.NODE_ENV === 'production' && {
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+  }),
+};
+
 // Only run middleware on matching paths
 export const config = {
   matcher: [
@@ -127,12 +154,26 @@ export async function middleware(request: NextRequest) {
 
   // Allow access to public routes
   if (isPublicRoute) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    // Apply security headers to all responses
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      if (value) {
+        response.headers.set(key, value);
+      }
+    });
+    return response;
   }
 
   // Redirect authenticated users away from auth routes
   if (isAuthRoute && isAuthenticated) {
-    return NextResponse.redirect(new URL('/mcp-servers', request.url));
+    const response = NextResponse.redirect(new URL('/mcp-servers', request.url));
+    // Apply security headers to redirect responses
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      if (value) {
+        response.headers.set(key, value);
+      }
+    });
+    return response;
   }
 
   // Redirect unauthenticated users to login
@@ -140,8 +181,21 @@ export async function middleware(request: NextRequest) {
     // Store the current URL as the callback URL
     const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
     const response = NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));
+    // Apply security headers to redirect responses
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      if (value) {
+        response.headers.set(key, value);
+      }
+    });
     return response;
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  // Apply security headers to all other responses
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    if (value) {
+      response.headers.set(key, value);
+    }
+  });
+  return response;
 } 
