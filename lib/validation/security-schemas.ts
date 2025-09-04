@@ -3,8 +3,8 @@
  * Prevents injection attacks and validates all user inputs
  */
 
-import { z } from 'zod';
 import sanitizeHtmlLib from 'sanitize-html';
+import { z } from 'zod';
 
 // Constants for validation
 const MIN_PASSWORD_LENGTH = 8;
@@ -82,7 +82,7 @@ export const secureEmailSchema = z
     const parts = email.split('@');
     if (parts.length !== 2) return false;
     
-    const [localPart, domain] = parts;
+    const [_localPart, domain] = parts;
     
     // Check for valid domain
     if (!domain.includes('.')) return false;
@@ -410,7 +410,7 @@ export const secureRateLimitSchema = z.object({
 });
 
 // Export all schemas and utilities
-export default {
+const securitySchemas = {
   // Basic validators
   email: secureEmailSchema,
   password: securePasswordSchema,
@@ -443,3 +443,5 @@ export default {
   MAX_TEXT_INPUT_LENGTH,
   MAX_URL_LENGTH,
 };
+
+export default securitySchemas;

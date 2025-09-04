@@ -2,9 +2,11 @@
  * Authentication security utilities for tracking and preventing brute force attacks
  */
 
+import { eq } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { eq, and, gte } from 'drizzle-orm';
+
 import log from './logger';
 
 // Configuration constants
@@ -20,10 +22,8 @@ export async function isAccountLocked(email: string): Promise<boolean> {
     const user = await db.query.users.findFirst({
       where: eq(users.email, email),
       columns: {
-        // TODO: Add these columns to schema first
-        // account_locked_until: true,
-        // failed_login_attempts: true,
-        id: true,
+        account_locked_until: true,
+        failed_login_attempts: true,
       },
     });
 
@@ -31,16 +31,15 @@ export async function isAccountLocked(email: string): Promise<boolean> {
       return false;
     }
 
-    // TODO: Uncomment when columns are added to schema
     // Check if account is locked
-    // if (user.account_locked_until && user.account_locked_until > new Date()) {
-    //   log.security('ACCOUNT_LOCKED_CHECK', null, {
-    //     email,
-    //     locked_until: user.account_locked_until,
-    //     attempts: user.failed_login_attempts,
-    //   });
-    //   return true;
-    // }
+    if (user.account_locked_until && user.account_locked_until > new Date()) {
+      log.security('ACCOUNT_LOCKED_CHECK', null, {
+        email,
+        locked_until: user.account_locked_until,
+        attempts: user.failed_login_attempts,
+      });
+      return true;
+    }
 
     // If lock has expired, we'll clear it on next login attempt
     return false;
@@ -63,9 +62,8 @@ export async function recordFailedLoginAttempt(
       where: eq(users.email, email),
       columns: {
         id: true,
-        // TODO: Add these columns to schema first
-        // failed_login_attempts: true,
-        // account_locked_until: true,
+        failed_login_attempts: true,
+        account_locked_until: true,
       },
     });
 
@@ -79,12 +77,11 @@ export async function recordFailedLoginAttempt(
       return { locked: false, remainingAttempts: 0 };
     }
 
-    // TODO: Uncomment when columns are added
     // Check if lock has expired
-    // const lockExpired = user.account_locked_until && user.account_locked_until <= new Date();
+    const lockExpired = user.account_locked_until && user.account_locked_until <= new Date();
     
     // Calculate new attempt count
-    const newAttempts = 1; // lockExpired ? 1 : (user.failed_login_attempts || 0) + 1;
+    const newAttempts = lockExpired ? 1 : (user.failed_login_attempts || 0) + 1;
     
     // Determine if account should be locked
     const shouldLock = newAttempts >= MAX_LOGIN_ATTEMPTS;
@@ -94,10 +91,9 @@ export async function recordFailedLoginAttempt(
     await db
       .update(users)
       .set({
-        // TODO: Add these columns to schema first
-        // failed_login_attempts: newAttempts,
-        // account_locked_until: lockUntil,
-        // last_login_ip: ipAddress,
+        failed_login_attempts: newAttempts,
+        account_locked_until: lockUntil,
+        last_login_ip: ipAddress,
       })
       .where(eq(users.id, user.id));
 
@@ -145,11 +141,10 @@ export async function clearFailedLoginAttempts(
     await db
       .update(users)
       .set({
-        // TODO: Add these columns to schema first
-        // failed_login_attempts: 0,
-        // account_locked_until: null,
-        // last_login_at: new Date(),
-        // last_login_ip: ipAddress,
+        failed_login_attempts: 0,
+        account_locked_until: null,
+        last_login_at: new Date(),
+        last_login_ip: ipAddress,
       })
       .where(eq(users.id, userId));
 
@@ -233,8 +228,7 @@ export async function recordPasswordChange(
     await db
       .update(users)
       .set({
-        // TODO: Add this column to schema first
-        // password_changed_at: new Date(),
+        password_changed_at: new Date(),
       })
       .where(eq(users.id, userId));
 
@@ -326,10 +320,8 @@ export async function getLoginAttemptInfo(email: string): Promise<{
     const user = await db.query.users.findFirst({
       where: eq(users.email, email),
       columns: {
-        // TODO: Add these columns to schema first
-        // failed_login_attempts: true,
-        // account_locked_until: true,
-        id: true,
+        failed_login_attempts: true,
+        account_locked_until: true,
       },
     });
 
@@ -341,13 +333,11 @@ export async function getLoginAttemptInfo(email: string): Promise<{
       };
     }
 
-    // TODO: Uncomment when columns are added
-    // const isLocked = !!(user.account_locked_until && user.account_locked_until > new Date());
-    const isLocked = false;
+    const isLocked = !!(user.account_locked_until && user.account_locked_until > new Date());
 
     return {
-      attempts: 0, // user.failed_login_attempts || 0,
-      lockedUntil: null, // user.account_locked_until,
+      attempts: user.failed_login_attempts || 0,
+      lockedUntil: user.account_locked_until,
       isLocked,
     };
   } catch (error) {
