@@ -5,17 +5,27 @@ const IV_LENGTH = 16;
 const TAG_LENGTH = 16;
 
 /**
- * Legacy key derivation using SHA-256 (for backward compatibility)
+ * LEGACY ONLY: Derives a key using SHA-256 with a predictable salt.
+ * For backward compatibility DECRYPTION ONLY — do NOT use for ENCRYPTION of new data.
+ * (Predictable salt: SHA256(profileUuid)) — insecure for new data!
  */
 function deriveKeyLegacy(baseKey: string, profileUuid: string): Buffer {
+  if (process.env.NODE_ENV !== 'production' && !(deriveKeyLegacy as any)._allowLegacy) {
+    throw new Error('deriveKeyLegacy must only be used for decrypting legacy data!');
+  }
   const salt = createHash('sha256').update(profileUuid).digest();
   return createHash('sha256').update(baseKey + salt.toString('hex')).digest();
 }
 
 /**
- * Legacy scrypt derivation with predictable salt (for backward compatibility)
+ * LEGACY ONLY: Derives a key using scrypt with a predictable salt.
+ * For backward compatibility DECRYPTION ONLY — do NOT use for ENCRYPTION of new data.
+ * (Salt: first 16 bytes of SHA256(profileUuid)) — insecure for new data!
  */
 function deriveKeyLegacyScrypt(baseKey: string, profileUuid: string): Buffer {
+  if (process.env.NODE_ENV !== 'production' && !(deriveKeyLegacyScrypt as any)._allowLegacy) {
+    throw new Error('deriveKeyLegacyScrypt must only be used for decrypting legacy data!');
+  }
   const salt = createHash('sha256').update(profileUuid).digest().subarray(0, 16);
   return scryptSync(baseKey, salt, 32, { N: 16384, r: 8, p: 1 });
 }
@@ -30,9 +40,10 @@ function deriveKey(baseKey: string, salt: Buffer): Buffer {
 }
 
 /**
- * Encrypts a field value using AES-256-GCM with random salt
+ * Encrypts a field value using AES-256-GCM with RANDOM salt (secure)
+ * NEVER uses predictable salts - always generates cryptographically random salt
  */
-export function encryptField(data: any, profileUuid: string): string {
+export function encryptField(data: any, _profileUuid: string): string {
   const baseKey = process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
   if (!baseKey) {
     throw new Error('Encryption key not configured');
@@ -138,11 +149,17 @@ export function decryptField(encrypted: string, profileUuid: string): any {
     
     // Try legacy format with scrypt derivation
     try {
-      return decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacyScrypt, false);
+      (deriveKeyLegacyScrypt as any)._allowLegacy = true;
+      const result = decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacyScrypt, false);
+      delete (deriveKeyLegacyScrypt as any)._allowLegacy;
+      return result;
     } catch (_legacyScryptError) {
       // If legacy scrypt fails, try original legacy SHA256 method
       console.warn('Legacy scrypt derivation failed, trying original legacy method for backward compatibility');
-      return decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacy, false);
+      (deriveKeyLegacy as any)._allowLegacy = true;
+      const result = decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacy, false);
+      delete (deriveKeyLegacy as any)._allowLegacy;
+      return result;
     }
   } catch (error) {
     console.error('Decryption failed with all methods:', error);
