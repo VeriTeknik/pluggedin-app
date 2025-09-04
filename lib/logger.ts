@@ -74,18 +74,19 @@ const logger = pino({
   // Add timestamp
   timestamp: pino.stdTimeFunctions.isoTime,
   
-  // Pretty print in development
-  transport: process.env.NODE_ENV !== 'production'
-    ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          levelFirst: true,
-          translateTime: 'yyyy-mm-dd HH:MM:ss.l',
-          ignore: 'pid,hostname',
-        },
-      }
-    : undefined,
+  // Disable transport in Next.js to avoid worker thread issues
+  // pino-pretty causes worker.js module not found errors in Next.js
+  // transport: process.env.NODE_ENV !== 'production'
+  //   ? {
+  //       target: 'pino-pretty',
+  //       options: {
+  //         colorize: true,
+  //         levelFirst: true,
+  //         translateTime: 'yyyy-mm-dd HH:MM:ss.l',
+  //         ignore: 'pid,hostname',
+  //       },
+  //     }
+  //   : undefined,
   
   // Serializers for common objects
   serializers: {

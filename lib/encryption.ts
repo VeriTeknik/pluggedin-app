@@ -17,8 +17,8 @@ function deriveKeyLegacy(baseKey: string, profileUuid: string): Buffer {
     throw new Error('deriveKeyLegacy must only be used for decrypting legacy data!');
   }
   
-  // Log warning about legacy usage in development
-  if (process.env.NODE_ENV !== 'production') {
+  // Only log warning if explicitly requested via environment variable
+  if (process.env.LOG_LEGACY_ENCRYPTION === 'true') {
     console.warn('[SECURITY] Using legacy key derivation with predictable salt - this should only be for decrypting existing data');
   }
   
@@ -39,8 +39,8 @@ function deriveKeyLegacyScrypt(baseKey: string, profileUuid: string): Buffer {
     throw new Error('deriveKeyLegacyScrypt must only be used for decrypting legacy data!');
   }
   
-  // Log warning about legacy usage in development
-  if (process.env.NODE_ENV !== 'production') {
+  // Only log warning if explicitly requested via environment variable
+  if (process.env.LOG_LEGACY_ENCRYPTION === 'true') {
     console.warn('[SECURITY] Using legacy scrypt derivation with predictable salt - this should only be for decrypting existing data');
   }
   
