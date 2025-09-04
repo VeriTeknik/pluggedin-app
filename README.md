@@ -5,7 +5,7 @@
   <h3>The Crossroads for AI Data Exchanges</h3>
   <p>A unified management interface for all your MCP servers with RAG capabilities</p>
 
-  [![Version](https://img.shields.io/badge/version-2.7.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+  [![Version](https://img.shields.io/badge/version-2.9.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
   [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
   [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
   [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -31,6 +31,7 @@ This application enables seamless integration with any MCP client (Claude, Cline
 - **Bidirectional Notifications**: MCP proxy can now send, receive, mark as read, and delete notifications
 - **Smart Server Wizard**: Multi-step wizard with GitHub verification, environment detection, and registry submission
 - **Enhanced Security**: Comprehensive input validation with Zod schemas and XSS/SSRF protection
+- **Automatic Tool Name Prefixing**: Slug-based tool prefixing prevents name collisions in MCP clients like Claude Code
 
 ### 🚀 Core Capabilities
 - **Multi-Workspace Support**: Switch between different sets of MCP configurations to prevent context pollution
@@ -210,6 +211,9 @@ FIREJAIL_USER_HOME=/home/pluggedin
 FIREJAIL_LOCAL_BIN=/home/pluggedin/.local/bin
 FIREJAIL_APP_PATH=/home/pluggedin/pluggedin-app
 FIREJAIL_MCP_WORKSPACE=/home/pluggedin/mcp-workspace
+
+# Tool Prefixing (for MCP clients like Claude Code)
+PLUGGEDIN_UUID_TOOL_PREFIXING=true  # Enable automatic tool name prefixing to prevent collisions
 ```
 
 ### Feature Configuration
@@ -262,6 +266,28 @@ POST /api/documents/ai
     "visibility": "workspace"
   }
 }
+```
+
+#### Tool Prefixing (Automatic Collision Resolution)
+1. **Automatic Tool Name Prefixing**: Prevents name collisions in MCP clients like Claude Code
+2. **Human-Readable Prefixes**: Uses server slugs instead of confusing UUIDs (e.g., `filesystem-server__read_file`)
+3. **Backward Compatibility**: Existing integrations continue working without changes
+4. **Configurable**: Enable/disable via `PLUGGEDIN_UUID_TOOL_PREFIXING` environment variable
+5. **Database Integration**: Requires slug generation for existing servers
+
+**How it works:**
+- When enabled, tools from different servers get prefixed with their server slug
+- Example: `read_file` from "filesystem-server" becomes `filesystem-server__read_file`
+- MCP proxy automatically handles both prefixed and non-prefixed tool calls
+- Prevents the "tool names must be unique" error in Claude Code
+
+**Setup:**
+```bash
+# Enable tool prefixing
+PLUGGEDIN_UUID_TOOL_PREFIXING=true
+
+# Generate slugs for existing servers (one-time setup)
+pnpm tsx scripts/generate-slugs-for-existing-servers.ts
 ```
 
 #### Notifications
@@ -425,6 +451,18 @@ curl -X GET https://your-domain.com/api/documents/upload-status/UPLOAD_ID \
    pnpm db:migrate
    ```
 
+5. **Update MCP server slugs (for tool prefixing)**:
+   ```bash
+   # Generate slugs for existing MCP servers (required for automatic tool name collision resolution)
+   pnpm tsx scripts/generate-slugs-for-existing-servers.ts
+
+   # This script will:
+   # - Generate URL-friendly slugs from server names (e.g., "Sequential Thinking" → "sequential-thinking")
+   # - Handle duplicate names by adding suffixes (e.g., "filesystem-1", "filesystem-2")
+   # - Update all existing servers with their new slugs
+   # - Enable automatic tool prefixing to prevent name collisions in MCP clients like Claude Code
+   ```
+
 5. Build the application for production:
    ```bash
    NODE_ENV=production pnpm build
@@ -585,6 +623,18 @@ The plugged.in project is actively developing several exciting features:
 - **Collaboration & Sharing**: Multi-user sessions and embeddable chat widgets
 
 ## 📝 Recent Updates
+
+### Version 2.9.0 (Septembr 2025) - Database & Security Improvements
+
+#### 🗄️ Database Schema Enhancements
+- **Profile-Scoped Slug Uniqueness**: Fixed MCP server slug constraints to be profile-scoped instead of globally unique
+- **Improved Data Integrity**: Enhanced database constraints for better multi-tenant isolation
+- **Migration Updates**: Added migration `0052_fix_slug_profile_uniqueness.sql` for existing installations
+
+#### 🔒 Complementary Security Updates
+- **Enhanced Input Validation**: Improved validation for slug generation and MCP server management
+- **Database Security**: Strengthened constraints and validation rules
+- **Multi-Tenant Security**: Better isolation between user profiles and projects
 
 ### Latest Development
 

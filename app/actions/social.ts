@@ -41,7 +41,7 @@ export async function checkUsernameAvailability(username: string): Promise<Usern
     if (!validationResult.success) {
       return {
         available: false,
-        message: validationResult.error.errors[0].message
+        message: 'Invalid username format'
       };
     }
     // Check if username exists in the users table

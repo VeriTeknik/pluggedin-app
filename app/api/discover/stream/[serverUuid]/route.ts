@@ -6,6 +6,7 @@ import { mcpServersTable, profilesTable, promptsTable, resourcesTable, resourceT
 import { getAuthSession } from '@/lib/auth';
 import { decryptServerData } from '@/lib/encryption';
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper';
+import { getCorsHeaders } from '@/lib/security/cors';
 import { McpServer } from '@/types/mcp-server';
 
 interface StreamMessage {
@@ -493,14 +494,13 @@ export async function GET(
       }
     })();
 
+    const corsHeaders = getCorsHeaders(request);
     return new NextResponse(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET',
-        'Access-Control-Allow-Headers': 'Cache-Control',
+        ...corsHeaders,
       },
     });
 

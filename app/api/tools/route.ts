@@ -5,10 +5,11 @@ import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; //
 import { authenticateApiKey } from '@/app/api/auth'; // Moved up
 import { db } from '@/db';
 import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema';
+import { createSlugPrefixedToolName } from '@/lib/utils/slug-utils';
 
 
 // Infer Tool type from DB schema and define expected MCP Tool structure
-type DbTool = InferSelectModel<typeof toolsTable> & { serverName: string | null }; // Add serverName from join
+type DbTool = InferSelectModel<typeof toolsTable> & { serverName: string | null; serverSlug: string | null }; // Add serverName and serverSlug from join
 type McpTool = {
   name: string;
   description?: string;
@@ -17,6 +18,24 @@ type McpTool = {
   // Add other fields from MCP spec if needed, e.g., annotations
 };
 
+
+/**
+ * UUID-based Tool Prefixing for Plugged.in
+ *
+ * This API supports automatic UUID-based tool prefixing to resolve name collisions
+ * between MCP servers. When prefix_tools=true is specified, tools are returned
+ * with the format: {server_uuid}__{original_tool_name}
+ *
+ * This ensures that tools from different servers with identical names can be
+ * uniquely identified and called without conflicts.
+ *
+ * Example:
+ * - Original tool: "read_file" from server "550e8400-e29b-41d4-a716-446655440000"
+ * - Prefixed tool: "550e8400-e29b-41d4-a716-446655440000__read_file"
+ *
+ * The MCP proxy automatically handles both prefixed and non-prefixed tool calls
+ * for backward compatibility.
+ */
 
 /**
  * Simple sanitization for creating a server name prefix.
@@ -66,6 +85,12 @@ const DISCOVERY_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes
  *           enum: [ACTIVE, INACTIVE]
  *         required: false
  *         description: Filter tools by status (defaults to ACTIVE if not provided).
+ *       - in: query
+ *         name: prefix_tools
+ *         schema:
+ *           type: boolean
+ *         required: false
+ *         description: Enable UUID-based tool name prefixing to resolve name collisions (format - {server_uuid}__{tool_name}).
  *     responses:
  *       200:
  *         description: Successfully retrieved tools.
@@ -162,6 +187,7 @@ export async function GET(request: Request) {
     // --- Now, fetch the tools based on the original request parameters ---
     const { searchParams } = new URL(request.url);
     const statusParam = searchParams.get('status'); // e.g., 'ACTIVE' or 'INACTIVE'
+    const prefixTools = searchParams.get('prefix_tools') === 'true'; // Enable UUID prefixing
 
     // Base conditions for fetching tools: filter by the authenticated user's active profile AND ensure parent server is ACTIVE
     const fetchConditions = [
@@ -185,8 +211,9 @@ export async function GET(request: Request) {
         created_at: toolsTable.created_at,
         mcp_server_uuid: toolsTable.mcp_server_uuid,
         status: toolsTable.status,
-        // Select server name for prefix/metadata
+        // Select server name and slug for prefix/metadata
         serverName: mcpServersTable.name,
+        serverSlug: mcpServersTable.slug,
       })
       .from(toolsTable)
       .innerJoin(
@@ -196,12 +223,26 @@ export async function GET(request: Request) {
       .where(and(...fetchConditions));
 
     // Map results to the expected MCP format
-    const formattedTools: (McpTool & { _serverUuid: string })[] = currentToolsDb.map((tool: DbTool) => {
+    const formattedTools: (McpTool & { _serverUuid: string; _serverSlug?: string })[] = currentToolsDb.map((tool: DbTool) => {
+        let toolName = tool.name; // Start with original name
+
+        // Apply prefixing if requested (prefer slug over UUID for readability)
+        if (prefixTools) {
+            if (tool.serverSlug) {
+                // Use slug-based prefixing for better readability
+                toolName = createSlugPrefixedToolName(tool.serverSlug, tool.name);
+            } else {
+                // Fallback to UUID-based prefixing for backward compatibility
+                toolName = `${tool.mcp_server_uuid}__${tool.name}`;
+            }
+        }
+
         return {
-            name: tool.name, // Keep original name
+            name: toolName,
             description: tool.description ?? undefined,
             inputSchema: tool.toolSchema as any,
             _serverUuid: tool.mcp_server_uuid,
+            _serverSlug: tool.serverSlug ?? undefined,
             _serverName: tool.serverName ?? undefined
         };
     });

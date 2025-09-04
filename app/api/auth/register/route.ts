@@ -189,17 +189,10 @@ export async function POST(req: NextRequest) {
       console.warn(`Failed to send verification email to ${data.email}`);
     }
 
-    // For development purposes, we'll also return the token in the response
-    // In production, this would be removed
-    const isDev = process.env.NODE_ENV === 'development';
+    // Never expose verification tokens in the response
     return NextResponse.json(
       { 
-        message: 'User registered successfully! Please verify your email.',
-        // Include token in development mode only
-        ...(isDev && { 
-          verificationToken, 
-          verificationUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005'}/verify-email?token=${verificationToken}` 
-        })
+        message: 'User registered successfully! Please check your email for verification instructions.'
       },
       { status: 201 }
     );

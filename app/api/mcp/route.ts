@@ -4,6 +4,8 @@ import { getServerSession } from 'next-auth/next';
 import { authOptions } from '@/lib/auth';
 import { getSessionManager } from '@/lib/mcp/sessions/SessionManager';
 import { handleStreamableHTTPRequest } from '@/lib/mcp/streamable-http/handler';
+import { getCorsHeaders, handleCorsOptions } from '@/lib/security/cors';
+import { createSecureErrorResponse, ErrorCode } from '@/lib/security/error-handler';
 
 /**
  * MCP Streamable HTTP endpoint
@@ -45,11 +47,11 @@ export async function POST(req: NextRequest) {
       status: result.status || 200,
     });
 
-    // Add CORS headers
-    response.headers.set('Access-Control-Allow-Origin', '*');
-    response.headers.set('Access-Control-Allow-Methods', 'POST, GET, DELETE, OPTIONS');
-    response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Mcp-Session-Id');
-    response.headers.set('Access-Control-Expose-Headers', 'Mcp-Session-Id');
+    // Add secure CORS headers
+    const corsHeaders = getCorsHeaders(req);
+    Object.entries(corsHeaders).forEach(([key, value]) => {
+      response.headers.set(key, value as string);
+    });
 
     // Add session ID to response if provided
     if (result.sessionId) {
@@ -58,14 +60,7 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error('[MCP API] POST error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return createSecureErrorResponse(error, 500, ErrorCode.INTERNAL_ERROR, 'MCP API POST');
   }
 }
 
@@ -118,27 +113,18 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Return SSE response
+    // Return SSE response with secure CORS headers
+    const corsHeaders = getCorsHeaders(req);
     return new NextResponse(stream, {
       headers: {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
         'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Mcp-Session-Id',
-        'Access-Control-Expose-Headers': 'Mcp-Session-Id',
+        ...corsHeaders,
       },
     });
   } catch (error) {
-    console.error('[MCP API] GET error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return createSecureErrorResponse(error, 500, ErrorCode.INTERNAL_ERROR, 'MCP API GET');
   }
 }
 
@@ -168,39 +154,19 @@ export async function DELETE(req: NextRequest) {
     const sessionManager = getSessionManager();
     await sessionManager.deleteSession(sessionId);
 
+    const corsHeaders = getCorsHeaders(req);
     return NextResponse.json(
       { success: true },
       {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Mcp-Session-Id',
-          'Access-Control-Expose-Headers': 'Mcp-Session-Id',
-        },
+        headers: corsHeaders,
       }
     );
   } catch (error) {
-    console.error('[MCP API] DELETE error:', error);
-    return NextResponse.json(
-      { 
-        error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return createSecureErrorResponse(error, 500, ErrorCode.INTERNAL_ERROR, 'MCP API DELETE');
   }
 }
 
 // Handle OPTIONS requests (CORS preflight)
 export async function OPTIONS(req: NextRequest) {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, GET, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Mcp-Session-Id',
-      'Access-Control-Expose-Headers': 'Mcp-Session-Id',
-      'Access-Control-Max-Age': '86400',
-    },
-  });
+  return handleCorsOptions(req);
 }

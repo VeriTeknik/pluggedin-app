@@ -301,7 +301,7 @@ class RagService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`RAG API upload status error (${response.status}): ${errorText}`);
+        console.error('RAG API upload status error (%d): %s', response.status, errorText);
         
         // If upload not found, it might be completed already - check documents
         if (response.status === 404) {
