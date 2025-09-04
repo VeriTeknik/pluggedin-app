@@ -74,19 +74,93 @@ export class ConsoleCapture {
   }
 
   /**
-   * Format console arguments into a single string
+   * Format console arguments into a single string with sensitive data filtering
    */
   private formatMessage(args: any[]): string {
     return args.map(arg => {
       if (typeof arg === 'object') {
         try {
-          return JSON.stringify(arg, null, 2);
+          const sanitized = this.sanitizeObject(arg);
+          return JSON.stringify(sanitized, null, 2);
         } catch {
-          return String(arg);
+          return '[Object - could not stringify]';
         }
       }
-      return String(arg);
+      return this.sanitizeString(String(arg));
     }).join(' ');
+  }
+
+  /**
+   * Sanitize sensitive data from objects
+   */
+  private sanitizeObject(obj: any): any {
+    if (obj === null || obj === undefined) return obj;
+    
+    if (Array.isArray(obj)) {
+      return obj.map(item => this.sanitizeObject(item));
+    }
+    
+    if (typeof obj === 'object') {
+      const sanitized: any = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (this.isSensitiveKey(key)) {
+          sanitized[key] = '[REDACTED]';
+        } else if (typeof value === 'object') {
+          sanitized[key] = this.sanitizeObject(value);
+        } else {
+          sanitized[key] = this.sanitizeString(String(value));
+        }
+      }
+      return sanitized;
+    }
+    
+    return obj;
+  }
+
+  /**
+   * Sanitize sensitive data from strings
+   */
+  private sanitizeString(str: string): string {
+    // Pattern for API keys, tokens, passwords
+    const sensitivePatterns = [
+      /\b[A-Za-z0-9]{20,}\b/g, // Generic long alphanumeric strings (API keys)
+      /sk-[A-Za-z0-9]{48,}/g, // OpenAI API keys
+      /pk-[A-Za-z0-9]{48,}/g, // Anthropic API keys
+      /Bearer\s+[A-Za-z0-9\-_\.]+/gi, // Bearer tokens
+      /token[=:\s]+[A-Za-z0-9\-_\.]+/gi, // Token patterns
+      /api[_-]?key[=:\s]+[A-Za-z0-9\-_\.]+/gi, // API key patterns
+      /password[=:\s]+[^\s]+/gi, // Password patterns
+    ];
+
+    let sanitized = str;
+    for (const pattern of sensitivePatterns) {
+      sanitized = sanitized.replace(pattern, '[REDACTED]');
+    }
+    
+    return sanitized;
+  }
+
+  /**
+   * Check if a key name indicates sensitive data
+   */
+  private isSensitiveKey(key: string): boolean {
+    const sensitiveKeys = [
+      'password',
+      'token',
+      'apikey',
+      'api_key',
+      'secret',
+      'auth',
+      'authorization',
+      'bearer',
+      'credential',
+      'private_key',
+      'privatekey',
+      'oauth',
+    ];
+    
+    const lowerKey = key.toLowerCase();
+    return sensitiveKeys.some(sensitiveKey => lowerKey.includes(sensitiveKey));
   }
 
   /**

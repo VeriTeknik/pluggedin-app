@@ -1,4 +1,5 @@
 import { createServer } from 'net';
+import { randomInt } from 'crypto';
 
 /**
  * Port allocator for OAuth callback servers
@@ -75,8 +76,8 @@ export class PortAllocator {
     const attemptedPorts = new Set<number>();
     
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // Generate random port within range
-      const port = start + Math.floor(Math.random() * (end - start + 1));
+      // Generate cryptographically secure random port within range
+      const port = randomInt(start, end + 1);
       
       // Skip if already attempted or allocated
       if (attemptedPorts.has(port) || this.allocatedPorts.has(port)) {

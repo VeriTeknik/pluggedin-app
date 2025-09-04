@@ -177,7 +177,7 @@ export async function GET(
       const fileBuffer = await readFile(requestedPath);
       headers.set('Content-Length', fileSize.toString());
       
-      return new NextResponse(fileBuffer, {
+      return new NextResponse(fileBuffer as unknown as BodyInit, {
         status: 200,
         headers,
       });

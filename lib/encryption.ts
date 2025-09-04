@@ -1,15 +1,27 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes, scryptSync } from 'crypto';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const TAG_LENGTH = 16;
 
 /**
- * Derives an encryption key from the base key and profile UUID
+ * Legacy key derivation using SHA-256 (for backward compatibility)
  */
-function deriveKey(baseKey: string, profileUuid: string): Buffer {
+function deriveKeyLegacy(baseKey: string, profileUuid: string): Buffer {
   const salt = createHash('sha256').update(profileUuid).digest();
   return createHash('sha256').update(baseKey + salt.toString('hex')).digest();
+}
+
+/**
+ * Derives an encryption key from the base key and profile UUID using scrypt
+ */
+function deriveKey(baseKey: string, profileUuid: string): Buffer {
+  // Use profileUuid as salt (consistent for the same profile)
+  const salt = createHash('sha256').update(profileUuid).digest().subarray(0, 16);
+  
+  // Use scrypt for proper key derivation (CPU-intensive, resistant to brute force)
+  // N=16384, r=8, p=1 are recommended parameters for good security/performance balance
+  return scryptSync(baseKey, salt, 32, { N: 16384, r: 8, p: 1 });
 }
 
 /**
@@ -50,7 +62,7 @@ export function encryptField(data: any, profileUuid: string): string {
 }
 
 /**
- * Decrypts a field value using AES-256-GCM
+ * Decrypts a field value using AES-256-GCM with backward compatibility
  */
 export function decryptField(encrypted: string, profileUuid: string): any {
   const baseKey = process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
@@ -67,27 +79,45 @@ export function decryptField(encrypted: string, profileUuid: string): any {
     const tag = combined.subarray(IV_LENGTH, IV_LENGTH + TAG_LENGTH);
     const encryptedData = combined.subarray(IV_LENGTH + TAG_LENGTH);
     
-    // Derive key for this profile
-    const key = deriveKey(baseKey, profileUuid);
-    
-    // Create decipher
-    const decipher = createDecipheriv(ALGORITHM, key, iv);
-    decipher.setAuthTag(tag);
-    
-    // Decrypt data
-    const decrypted = Buffer.concat([
-      decipher.update(encryptedData),
-      decipher.final()
-    ]).toString('utf8');
-    
-    // Try to parse as JSON, otherwise return as string
+    // First try with new scrypt-based key derivation
     try {
-      return JSON.parse(decrypted);
-    } catch {
-      return decrypted;
+      const key = deriveKey(baseKey, profileUuid);
+      const decipher = createDecipheriv(ALGORITHM, key, iv);
+      decipher.setAuthTag(tag);
+      
+      const decrypted = Buffer.concat([
+        decipher.update(encryptedData),
+        decipher.final()
+      ]).toString('utf8');
+      
+      // Try to parse as JSON, otherwise return as string
+      try {
+        return JSON.parse(decrypted);
+      } catch {
+        return decrypted;
+      }
+    } catch (newKeyError) {
+      // If new key fails, try legacy key derivation for backward compatibility
+      console.warn('New key derivation failed, trying legacy method for backward compatibility');
+      
+      const legacyKey = deriveKeyLegacy(baseKey, profileUuid);
+      const decipher = createDecipheriv(ALGORITHM, legacyKey, iv);
+      decipher.setAuthTag(tag);
+      
+      const decrypted = Buffer.concat([
+        decipher.update(encryptedData),
+        decipher.final()
+      ]).toString('utf8');
+      
+      // Try to parse as JSON, otherwise return as string
+      try {
+        return JSON.parse(decrypted);
+      } catch {
+        return decrypted;
+      }
     }
   } catch (error) {
-    console.error('Decryption failed:', error);
+    console.error('Decryption failed with both new and legacy keys:', error);
     throw new Error('Failed to decrypt data');
   }
 }
