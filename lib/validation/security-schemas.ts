@@ -4,6 +4,7 @@
  */
 
 import { z } from 'zod';
+import sanitizeHtmlLib from 'sanitize-html';
 
 // Constants for validation
 const MIN_PASSWORD_LENGTH = 8;
@@ -28,9 +29,11 @@ const SQL_INJECTION_PATTERNS = [
  * XSS prevention - detect common XSS patterns
  */
 const XSS_PATTERNS = [
-  /<script[^>]*>.*?<\/script>/gi,
-  /<iframe[^>]*>.*?<\/iframe>/gi,
+  /<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi,  // Fixed: properly matches script tags
+  /<iframe\b[^>]*>[\s\S]*?<\/iframe\b[^>]*>/gi,  // Fixed: properly matches iframe tags
   /javascript:/gi,
+  /data:/gi,  // Added: data URIs can be dangerous
+  /vbscript:/gi,  // Added: vbscript URIs
   /on\w+\s*=/gi, // onclick=, onload=, etc.
   /<embed[^>]*>/gi,
   /<object[^>]*>/gi,
@@ -341,19 +344,59 @@ export const secureJsonSchema = z.string()
 
 /**
  * Sanitize HTML content (for rich text editors)
+ * Uses sanitize-html library for robust XSS prevention
  */
 export function sanitizeHtml(html: string): string {
-  // Remove all script tags and event handlers
-  let sanitized = html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-    .replace(/on\w+="[^"]*"/gi, '')
-    .replace(/on\w+='[^']*'/gi, '')
-    .replace(/javascript:/gi, '')
-    .replace(/<iframe[^>]*>.*?<\/iframe>/gi, '')
-    .replace(/<embed[^>]*>/gi, '')
-    .replace(/<object[^>]*>/gi, '');
-  
-  return sanitized;
+  // Use sanitize-html library for robust sanitization
+  return sanitizeHtmlLib(html, {
+    allowedTags: [
+      // Text formatting
+      'b', 'i', 'em', 'strong', 'u', 's', 'strike', 'del', 'ins', 'mark',
+      // Structural elements
+      'p', 'br', 'hr', 'div', 'span',
+      // Lists
+      'ul', 'ol', 'li',
+      // Links (with safe attributes)
+      'a',
+      // Headings
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      // Quotes and code
+      'blockquote', 'q', 'code', 'pre', 'kbd', 'samp',
+      // Tables
+      'table', 'thead', 'tbody', 'tfoot', 'tr', 'th', 'td',
+      // Other safe elements
+      'abbr', 'cite', 'dfn', 'sub', 'sup', 'time', 'var',
+    ],
+    allowedAttributes: {
+      a: ['href', 'name', 'target', 'rel'],
+      img: ['src', 'alt', 'width', 'height'],
+      blockquote: ['cite'],
+      q: ['cite'],
+      time: ['datetime'],
+      // Allow class for styling, but not id (to prevent DOM clobbering)
+      '*': ['class'],
+    },
+    // Only allow safe URL schemes
+    allowedSchemes: ['http', 'https', 'mailto'],
+    allowedSchemesByTag: {
+      a: ['http', 'https', 'mailto'],
+      img: ['http', 'https', 'data'], // data URLs for images only
+      blockquote: ['http', 'https'],
+      q: ['http', 'https'],
+    },
+    allowedSchemesAppliedToAttributes: ['href', 'src', 'cite'],
+    // Ensure links open in new tab with proper security
+    transformTags: {
+      'a': sanitizeHtmlLib.simpleTransform('a', { 
+        rel: 'noopener noreferrer nofollow',
+        target: '_blank' 
+      })
+    },
+    // Don't allow any styles (inline CSS can be dangerous)
+    allowedStyles: {},
+    // Discard entire tags if they're not allowed (vs keeping their contents)
+    disallowedTagsMode: 'discard',
+  });
 }
 
 /**
