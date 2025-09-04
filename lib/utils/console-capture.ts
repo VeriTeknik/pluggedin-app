@@ -11,6 +11,23 @@ export class ConsoleCapture {
     debug: typeof console.debug;
   };
 
+  // Sensitive key patterns for redaction
+  private static readonly SENSITIVE_KEYS = [
+    'password', 'token', 'apikey', 'api_key', 'secret', 'auth', 'authorization',
+    'bearer', 'credential', 'private_key', 'privatekey', 'oauth'
+  ];
+
+  // Sensitive value patterns for redaction
+  private static readonly SENSITIVE_PATTERNS: RegExp[] = [
+    /\b[A-Za-z0-9]{20,}\b/g,       // Generic long alphanumeric strings (API keys)
+    /sk-[A-Za-z0-9]{48,}/g,        // OpenAI API keys
+    /pk-[A-Za-z0-9]{48,}/g,        // Anthropic API keys
+    /Bearer\s+[A-Za-z0-9\-_\.]+/gi, // Bearer tokens
+    /token[=:\s]+[A-Za-z0-9\-_\.]+/gi, // Token patterns
+    /api[_-]?key[=:\s]+[A-Za-z0-9\-_\.]+/gi, // API key patterns
+    /password[=:\s]+[^\s]+/gi       // Password patterns
+  ];
+
   constructor() {
     this.originalConsole = {
       log: console.log,
@@ -74,93 +91,40 @@ export class ConsoleCapture {
   }
 
   /**
+   * Deep sanitizes objects (keys + string values) using JSON replacer
+   */
+  private sanitize(obj: any): string {
+    return JSON.stringify(obj, (key, value) => {
+      // Check for sensitive keys
+      if (ConsoleCapture.SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k))) {
+        return '[REDACTED]';
+      }
+      // Apply pattern matching for string values
+      if (typeof value === 'string') {
+        return ConsoleCapture.SENSITIVE_PATTERNS
+          .reduce((s, regex) => s.replace(regex, '[REDACTED]'), value);
+      }
+      return value;
+    }, 2);
+  }
+
+  /**
    * Format console arguments into a single string with sensitive data filtering
    */
   private formatMessage(args: any[]): string {
     return args.map(arg => {
       if (typeof arg === 'object') {
         try {
-          const sanitized = this.sanitizeObject(arg);
-          return JSON.stringify(sanitized, null, 2);
+          return this.sanitize(arg);
         } catch {
           return '[Object - could not stringify]';
         }
       }
-      return this.sanitizeString(String(arg));
+      // Non-object strings still need pattern redaction
+      const str = String(arg);
+      return ConsoleCapture.SENSITIVE_PATTERNS
+        .reduce((s, regex) => s.replace(regex, '[REDACTED]'), str);
     }).join(' ');
-  }
-
-  /**
-   * Sanitize sensitive data from objects
-   */
-  private sanitizeObject(obj: any): any {
-    if (obj === null || obj === undefined) return obj;
-    
-    if (Array.isArray(obj)) {
-      return obj.map(item => this.sanitizeObject(item));
-    }
-    
-    if (typeof obj === 'object') {
-      const sanitized: any = {};
-      for (const [key, value] of Object.entries(obj)) {
-        if (this.isSensitiveKey(key)) {
-          sanitized[key] = '[REDACTED]';
-        } else if (typeof value === 'object') {
-          sanitized[key] = this.sanitizeObject(value);
-        } else {
-          sanitized[key] = this.sanitizeString(String(value));
-        }
-      }
-      return sanitized;
-    }
-    
-    return obj;
-  }
-
-  /**
-   * Sanitize sensitive data from strings
-   */
-  private sanitizeString(str: string): string {
-    // Pattern for API keys, tokens, passwords
-    const sensitivePatterns = [
-      /\b[A-Za-z0-9]{20,}\b/g, // Generic long alphanumeric strings (API keys)
-      /sk-[A-Za-z0-9]{48,}/g, // OpenAI API keys
-      /pk-[A-Za-z0-9]{48,}/g, // Anthropic API keys
-      /Bearer\s+[A-Za-z0-9\-_\.]+/gi, // Bearer tokens
-      /token[=:\s]+[A-Za-z0-9\-_\.]+/gi, // Token patterns
-      /api[_-]?key[=:\s]+[A-Za-z0-9\-_\.]+/gi, // API key patterns
-      /password[=:\s]+[^\s]+/gi, // Password patterns
-    ];
-
-    let sanitized = str;
-    for (const pattern of sensitivePatterns) {
-      sanitized = sanitized.replace(pattern, '[REDACTED]');
-    }
-    
-    return sanitized;
-  }
-
-  /**
-   * Check if a key name indicates sensitive data
-   */
-  private isSensitiveKey(key: string): boolean {
-    const sensitiveKeys = [
-      'password',
-      'token',
-      'apikey',
-      'api_key',
-      'secret',
-      'auth',
-      'authorization',
-      'bearer',
-      'credential',
-      'private_key',
-      'privatekey',
-      'oauth',
-    ];
-    
-    const lowerKey = key.toLowerCase();
-    return sensitiveKeys.some(sensitiveKey => lowerKey.includes(sensitiveKey));
   }
 
   /**

@@ -2,7 +2,9 @@
 
 import { and, desc, eq, sum } from 'drizzle-orm';
 import { mkdir, unlink, writeFile } from 'fs/promises';
+import { realpathSync } from 'fs';
 import { join, resolve, normalize } from 'path';
+import * as path from 'path';
 
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
@@ -64,8 +66,20 @@ function sanitizePath(pathComponent: string): string {
 }
 
 /**
+ * Check if child path is contained within parent path
+ * Handles path separators and prevents directory traversal
+ */
+function isSubPath(parent: string, child: string): boolean {
+  const rel = child.slice(parent.length);
+  return (
+    child === parent ||
+    (child.startsWith(parent + path.sep) && !rel.includes('..'))
+  );
+}
+
+/**
  * Safely create a file path within the uploads directory
- * Validates that the final path is within the allowed directory
+ * Validates that the final path is within the allowed directory using real paths
  */
 function createSafeFilePath(userId: string, fileName: string): { userDir: string; filePath: string; relativePath: string } {
   const sanitizedUserId = sanitizePath(userId);
@@ -76,16 +90,26 @@ function createSafeFilePath(userId: string, fileName: string): { userDir: string
   const filePath = join(userDir, sanitizedFileName);
   const relativePath = `${sanitizedUserId}/${sanitizedFileName}`;
   
-  // Validate that paths are within the uploads directory (prevent directory traversal)
-  const resolvedUploadsDir = resolve(UPLOADS_BASE_DIR);
-  const resolvedUserDir = resolve(userDir);
-  const resolvedFilePath = resolve(filePath);
+  // Resolve real paths to handle symlinks and prevent bypasses
+  let resolvedUploadsDir: string;
+  let resolvedUserDir: string;
+  let resolvedFilePath: string;
   
-  if (!resolvedUserDir.startsWith(resolvedUploadsDir)) {
+  try {
+    resolvedUploadsDir = realpathSync(UPLOADS_BASE_DIR);
+    // For userDir and filePath, they may not exist yet, so we resolve the parent and join
+    resolvedUserDir = resolve(userDir);
+    resolvedFilePath = resolve(filePath);
+  } catch (err) {
+    throw new Error('Invalid path: unable to resolve real path');
+  }
+  
+  // Validate that paths are within the uploads directory (prevent directory traversal)
+  if (!isSubPath(resolvedUploadsDir, resolvedUserDir)) {
     throw new Error('Invalid user directory path');
   }
   
-  if (!resolvedFilePath.startsWith(resolvedUserDir)) {
+  if (!isSubPath(resolvedUserDir, resolvedFilePath)) {
     throw new Error('Invalid file path');
   }
   

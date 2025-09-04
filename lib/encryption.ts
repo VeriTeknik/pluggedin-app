@@ -13,19 +13,24 @@ function deriveKeyLegacy(baseKey: string, profileUuid: string): Buffer {
 }
 
 /**
- * Derives an encryption key from the base key and profile UUID using scrypt
+ * Legacy scrypt derivation with predictable salt (for backward compatibility)
  */
-function deriveKey(baseKey: string, profileUuid: string): Buffer {
-  // Use profileUuid as salt (consistent for the same profile)
+function deriveKeyLegacyScrypt(baseKey: string, profileUuid: string): Buffer {
   const salt = createHash('sha256').update(profileUuid).digest().subarray(0, 16);
-  
+  return scryptSync(baseKey, salt, 32, { N: 16384, r: 8, p: 1 });
+}
+
+/**
+ * Derives an encryption key using scrypt with a provided salt
+ */
+function deriveKey(baseKey: string, salt: Buffer): Buffer {
   // Use scrypt for proper key derivation (CPU-intensive, resistant to brute force)
   // N=16384, r=8, p=1 are recommended parameters for good security/performance balance
   return scryptSync(baseKey, salt, 32, { N: 16384, r: 8, p: 1 });
 }
 
 /**
- * Encrypts a field value using AES-256-GCM
+ * Encrypts a field value using AES-256-GCM with random salt
  */
 export function encryptField(data: any, profileUuid: string): string {
   const baseKey = process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
@@ -36,8 +41,11 @@ export function encryptField(data: any, profileUuid: string): string {
   // Convert data to string
   const plaintext = typeof data === 'string' ? data : JSON.stringify(data);
   
-  // Derive key for this profile
-  const key = deriveKey(baseKey, profileUuid);
+  // Generate random salt for this encryption (16 bytes)
+  const salt = randomBytes(16);
+  
+  // Derive key using the random salt
+  const key = deriveKey(baseKey, salt);
   
   // Generate random IV
   const iv = randomBytes(IV_LENGTH);
@@ -54,11 +62,56 @@ export function encryptField(data: any, profileUuid: string): string {
   // Get auth tag
   const tag = cipher.getAuthTag();
   
-  // Combine IV + tag + encrypted data
-  const combined = Buffer.concat([iv, tag, encrypted]);
+  // Combine salt + IV + tag + encrypted data
+  const combined = Buffer.concat([salt, iv, tag, encrypted]);
   
   // Return base64 encoded
   return combined.toString('base64');
+}
+
+/**
+ * Helper function for decryption with specific key derivation function
+ * Handles common decrypt/slice/parse logic
+ */
+function decryptWithDerivation(
+  encrypted: string,
+  baseKey: string,
+  profileUuid: string,
+  deriveFn: ((key: string, salt: Buffer) => Buffer) | ((key: string, profileUuid: string) => Buffer),
+  isNewFormat: boolean = false
+): any {
+  const combined = Buffer.from(encrypted, 'base64');
+  
+  let iv: Buffer, tag: Buffer, encryptedData: Buffer, key: Buffer;
+  
+  if (isNewFormat) {
+    // New format: salt(16) + IV(16) + tag(16) + data
+    const salt = combined.subarray(0, 16);
+    iv = combined.subarray(16, 16 + IV_LENGTH);
+    tag = combined.subarray(16 + IV_LENGTH, 16 + IV_LENGTH + TAG_LENGTH);
+    encryptedData = combined.subarray(16 + IV_LENGTH + TAG_LENGTH);
+    key = (deriveFn as (key: string, salt: Buffer) => Buffer)(baseKey, salt);
+  } else {
+    // Legacy format: IV(16) + tag(16) + data
+    iv = combined.subarray(0, IV_LENGTH);
+    tag = combined.subarray(IV_LENGTH, IV_LENGTH + TAG_LENGTH);
+    encryptedData = combined.subarray(IV_LENGTH + TAG_LENGTH);
+    key = (deriveFn as (key: string, profileUuid: string) => Buffer)(baseKey, profileUuid);
+  }
+  
+  const decipher = createDecipheriv(ALGORITHM, key, iv);
+  decipher.setAuthTag(tag);
+  
+  const text = Buffer.concat([
+    decipher.update(encryptedData),
+    decipher.final()
+  ]).toString('utf8');
+  
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 /**
@@ -71,53 +124,28 @@ export function decryptField(encrypted: string, profileUuid: string): any {
   }
 
   try {
-    // Decode from base64
     const combined = Buffer.from(encrypted, 'base64');
+    const hasRandomSalt = combined.length >= (16 + IV_LENGTH + TAG_LENGTH);
     
-    // Extract components
-    const iv = combined.subarray(0, IV_LENGTH);
-    const tag = combined.subarray(IV_LENGTH, IV_LENGTH + TAG_LENGTH);
-    const encryptedData = combined.subarray(IV_LENGTH + TAG_LENGTH);
-    
-    // First try with new scrypt-based key derivation
-    try {
-      const key = deriveKey(baseKey, profileUuid);
-      const decipher = createDecipheriv(ALGORITHM, key, iv);
-      decipher.setAuthTag(tag);
-      
-      const decrypted = Buffer.concat([
-        decipher.update(encryptedData),
-        decipher.final()
-      ]).toString('utf8');
-      
-      // Try to parse as JSON, otherwise return as string
+    if (hasRandomSalt) {
+      // Try new format with random salt
       try {
-        return JSON.parse(decrypted);
-      } catch {
-        return decrypted;
-      }
-    } catch (newKeyError) {
-      // If new key fails, try legacy key derivation for backward compatibility
-      console.warn('New key derivation failed, trying legacy method for backward compatibility');
-      
-      const legacyKey = deriveKeyLegacy(baseKey, profileUuid);
-      const decipher = createDecipheriv(ALGORITHM, legacyKey, iv);
-      decipher.setAuthTag(tag);
-      
-      const decrypted = Buffer.concat([
-        decipher.update(encryptedData),
-        decipher.final()
-      ]).toString('utf8');
-      
-      // Try to parse as JSON, otherwise return as string
-      try {
-        return JSON.parse(decrypted);
-      } catch {
-        return decrypted;
+        return decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKey, true);
+      } catch (_newFormatError) {
+        // If new format fails, fall through to legacy formats
       }
     }
+    
+    // Try legacy format with scrypt derivation
+    try {
+      return decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacyScrypt, false);
+    } catch (_legacyScryptError) {
+      // If legacy scrypt fails, try original legacy SHA256 method
+      console.warn('Legacy scrypt derivation failed, trying original legacy method for backward compatibility');
+      return decryptWithDerivation(encrypted, baseKey, profileUuid, deriveKeyLegacy, false);
+    }
   } catch (error) {
-    console.error('Decryption failed with both new and legacy keys:', error);
+    console.error('Decryption failed with all methods:', error);
     throw new Error('Failed to decrypt data');
   }
 }
