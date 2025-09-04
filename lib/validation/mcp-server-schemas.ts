@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import { McpServerStatus, McpServerType, McpServerSource } from '@/db/schema';
+
+import { McpServerSource, McpServerStatus, McpServerType } from '@/db/schema';
 
 /**
  * Slug validation schema
@@ -81,23 +82,10 @@ export const updateMcpServerSchema = z.object({
   headers: z.record(z.string()).optional(),
   sessionId: z.string().optional(),
   slug: slugSchema,
-}).refine(
-  (data) => {
-    // If type is STDIO, command is required
-    if (data.type === McpServerType.STDIO && data.command === undefined) {
-      return false;
-    }
-    // If type is SSE or STREAMABLE_HTTP, server_url is required
-    if ((data.type === McpServerType.SSE || data.type === McpServerType.STREAMABLE_HTTP) && 
-        data.server_url === undefined) {
-      return false;
-    }
-    return true;
-  },
-  {
-    message: 'Invalid configuration for server type',
-  }
-);
+});
+
+// Note: Type-dependent validation (e.g., command required for STDIO, server_url required for SSE/STREAMABLE_HTTP)
+// is now handled in the business logic layer to support PATCH operations properly.
 
 /**
  * Slug generation request schema

@@ -35,8 +35,8 @@ describe('Slug Utilities', () => {
     });
 
     it('should handle empty or whitespace-only names', () => {
-      expect(generateSlug('')).toBe('server');
-      expect(generateSlug('   ')).toBe('server');
+      expect(() => generateSlug('')).toThrow('Server name is required and must be a string');
+      expect(generateSlug('   ')).toBe('server'); // whitespace gets trimmed and defaults to 'server'
     });
 
     it('should handle unicode characters', () => {

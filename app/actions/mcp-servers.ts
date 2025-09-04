@@ -16,16 +16,14 @@ import {
 } from '@/db/schema';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
-import type { McpServer } from '@/types/mcp-server';
+import { McpServerSlugService } from '@/lib/services/mcp-server-slug-service';
 import { 
   createMcpServerSchema, 
-  updateMcpServerSchema,
-  generateSlugSchema 
-} from '@/lib/validation/mcp-server-schemas';
+  generateSlugSchema} from '@/lib/validation/mcp-server-schemas';
+import type { McpServer } from '@/types/mcp-server';
 
 import { discoverSingleServerTools } from './discover-mcp-tools';
 import { getServerRatingMetrics, trackServerInstallation } from './mcp-server-metrics';
-import { McpServerSlugService } from '@/lib/services/mcp-server-slug-service';
 
 type ServerWithUsername = {
   server: typeof mcpServersTable.$inferSelect;
@@ -298,7 +296,7 @@ export async function updateMcpServer(
       });
       
       if (!slugValidation.success) {
-        throw new Error(`Invalid name for slug generation: ${slugValidation.error.errors[0]?.message}`);
+        throw new Error('Invalid server name provided');
       }
     }
     
@@ -383,24 +381,30 @@ export async function updateMcpServer(
     return; // No fields to update
   }
 
-  await db
-    .update(mcpServersTable)
-    .set(updateData)
-    .where(
-      and(
-        eq(mcpServersTable.uuid, uuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
-      )
-    );
+  // Use transaction to ensure atomicity between server update and slug generation
+  await db.transaction(async (tx) => {
+    // Update the server data
+    await tx
+      .update(mcpServersTable)
+      .set(updateData)
+      .where(
+        and(
+          eq(mcpServersTable.uuid, uuid),
+          eq(mcpServersTable.profile_uuid, profileUuid)
+        )
+      );
 
-  // Regenerate slug if name was updated
-  if (data.name !== undefined) {
-    try {
-      await McpServerSlugService.generateAndSetSlug(uuid, data.name, profileUuid);
-    } catch (slugError) {
-      console.error(`Failed to update slug for server ${uuid}:`, slugError);
+    // Regenerate slug if name was updated (within same transaction)
+    if (data.name !== undefined) {
+      await McpServerSlugService.generateAndSetSlug(
+        uuid, 
+        data.name, 
+        profileUuid, 
+        uuid, // excludeUuid for updates
+        tx
+      );
     }
-  }
+  });
 
   // Trigger discovery after update
   try {
@@ -477,7 +481,7 @@ export async function createMcpServer({
     if (!validationResult.success) {
       return { 
         success: false, 
-        error: validationResult.error.errors[0]?.message || 'Validation failed' 
+        error: 'Invalid server configuration provided' 
       };
     }
 
@@ -545,26 +549,27 @@ export async function createMcpServer({
     // Encrypt sensitive fields
     const encryptedData = encryptServerData(serverData, profileUuid);
     
-    // Insert and get the newly created server record
-    const inserted = await db.insert(mcpServersTable).values(encryptedData).returning(); // Use returning() to get the inserted row
+    // Use transaction to ensure atomicity between server creation and slug generation
+    const newServer = await db.transaction(async (tx) => {
+      // Insert the server record
+      const inserted = await tx.insert(mcpServersTable).values(encryptedData).returning();
+      const server = inserted[0];
 
-    const newServer = inserted[0]; // Get the first (and only) inserted row
+      if (!server || !server.uuid) {
+         throw new Error("Failed to retrieve new server details after insertion.");
+      }
 
-    if (!newServer || !newServer.uuid) {
-       throw new Error("Failed to retrieve new server details after insertion.");
-    }
-
-    // Generate and set slug for the new server
-    try {
+      // Generate and set slug for the new server (within same transaction)
       await McpServerSlugService.generateAndSetSlug(
-        newServer.uuid,
+        server.uuid,
         name, // Use the original server name
-        profileUuid
+        profileUuid,
+        undefined, // no excludeUuid for new servers
+        tx
       );
-    } catch (slugError) {
-      console.error(`Failed to generate slug for server ${newServer.uuid}:`, slugError);
-      // Continue without slug - server creation should still succeed
-    }
+
+      return server;
+    });
 
     // Track server installation
     try {

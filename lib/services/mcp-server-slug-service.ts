@@ -3,110 +3,131 @@
  * Handles slug generation, uniqueness, and management for MCP servers
  */
 
+import type { PgTransaction } from 'drizzle-orm/pg-core';
+import { and, eq, not } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { mcpServersTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 import { generateSlug, generateUniqueSlug, isValidSlug } from '@/lib/utils/slug-utils';
+import { generateSlugSchema } from '@/lib/validation/mcp-server-schemas';
 
 export class McpServerSlugService {
+  /**
+   * Build an AND() predicate for a profile, plus optional slug/uuid/excludeUuid.
+   */
+  private static buildPredicates(opts: {
+    profileUuid: string;
+    slug?: string;
+    uuid?: string;
+    excludeUuid?: string;
+  }) {
+    const predicates = [eq(mcpServersTable.profile_uuid, opts.profileUuid)];
+    if (opts.slug) predicates.push(eq(mcpServersTable.slug, opts.slug));
+    if (opts.uuid) predicates.push(eq(mcpServersTable.uuid, opts.uuid));
+    if (opts.excludeUuid) predicates.push(not(eq(mcpServersTable.uuid, opts.excludeUuid)));
+    return and(...predicates);
+  }
+
+  /**
+   * Run a select … limit(1) and return the single row or null.
+   */
+  private static async findOne(
+    fields: any,
+    where: any,
+    tx?: PgTransaction<any, any, any>
+  ): Promise<any> {
+    const dbInstance = tx || db;
+    const rows = await dbInstance
+      .select(fields)
+      .from(mcpServersTable)
+      .where(where)
+      .limit(1);
+    return rows[0] ?? null;
+  }
+
+  /**
+   * Validates input for slug generation
+   */
+  private static validateInput(input: {
+    name: string;
+    profileUuid: string;
+    excludeUuid?: string;
+  }) {
+    const result = generateSlugSchema.safeParse(input);
+    if (!result.success) {
+      throw new Error('Invalid input for slug generation');
+    }
+  }
+
+  /**
+   * Validates a slug format
+   * @param slug - The slug to validate
+   * @returns The validated slug
+   * @throws Error if slug is invalid
+   */
+  private static validateSlug(slug: string): string {
+    if (!isValidSlug(slug)) {
+      throw new Error(`Invalid slug format: ${slug}`);
+    }
+    return slug;
+  }
+
   /**
    * Generates a unique slug for an MCP server
    * @param serverName - The server name to generate slug from
    * @param profileUuid - The profile UUID to ensure uniqueness within profile scope
    * @param excludeUuid - Optional server UUID to exclude from uniqueness check (for updates)
+   * @param tx - Optional transaction to use
    * @returns A unique slug
    */
   static async generateUniqueSlug(
     serverName: string,
     profileUuid: string,
-    excludeUuid?: string
+    excludeUuid?: string,
+    tx?: PgTransaction<any, any, any>
   ): Promise<string> {
+    const dbInstance = tx || db;
     const baseSlug = generateSlug(serverName);
 
-    // Get existing slugs for this profile (excluding the current server if updating)
-    const existingServers = await db
+    // Get existing slugs for this profile (using proper SQL exclusion)
+    const existingServers = await dbInstance
       .select({ slug: mcpServersTable.slug })
       .from(mcpServersTable)
-      .where(eq(mcpServersTable.profile_uuid, profileUuid));
+      .where(
+        this.buildPredicates({ profileUuid, excludeUuid })
+      );
 
-    // Filter out null/undefined slugs first
-    let existingSlugs = existingServers
+    // Filter out null/undefined slugs
+    const existingSlugs = existingServers
       .map(server => server.slug)
       .filter((slug): slug is string => slug !== null && slug !== undefined);
-
-    // If we're updating an existing server, exclude its current slug from uniqueness check
-    if (excludeUuid) {
-      // Get the current slug of the server being updated to exclude it
-      const currentServer = await db
-        .select({ slug: mcpServersTable.slug })
-        .from(mcpServersTable)
-        .where(eq(mcpServersTable.uuid, excludeUuid))
-        .limit(1);
-
-      if (currentServer.length > 0 && currentServer[0].slug) {
-        existingSlugs = existingSlugs.filter(slug => slug !== currentServer[0].slug);
-      }
-    }
 
     return generateUniqueSlug(baseSlug, existingSlugs);
   }
 
   /**
-   * Validates and sanitizes a slug
-   * @param slug - The slug to validate
-   * @returns The sanitized slug or throws an error
-   */
-  static validateSlug(slug: string): string {
-    if (!slug || typeof slug !== 'string') {
-      throw new Error('Slug is required and must be a string');
-    }
-
-    const trimmedSlug = slug.trim().toLowerCase();
-
-    if (!isValidSlug(trimmedSlug)) {
-      throw new Error('Slug must contain only lowercase letters, numbers, and hyphens, and cannot start or end with a hyphen');
-    }
-
-    return trimmedSlug;
-  }
-
-  /**
-   * Checks if a slug is available for a profile
+   * Checks if a slug is available in the given profile
    * @param slug - The slug to check
    * @param profileUuid - The profile UUID
-   * @param excludeUuid - Optional server UUID to exclude from check
-   * @returns True if the slug is available
+   * @param excludeUuid - Optional server UUID to exclude from the check
+   * @param tx - Optional transaction to use
+   * @returns True if available, false otherwise
    */
   static async isSlugAvailable(
     slug: string,
     profileUuid: string,
-    excludeUuid?: string
+    excludeUuid?: string,
+    tx?: PgTransaction<any, any, any>
   ): Promise<boolean> {
     const validatedSlug = this.validateSlug(slug);
 
-    const existingServer = await db
-      .select({ uuid: mcpServersTable.uuid })
-      .from(mcpServersTable)
-      .where(
-        and(
-          eq(mcpServersTable.slug, validatedSlug),
-          eq(mcpServersTable.profile_uuid, profileUuid),
-          excludeUuid ? undefined : undefined // We'll check this in JS
-        )
-      )
-      .limit(1);
+    const server = await this.findOne(
+      { uuid: mcpServersTable.uuid },
+      this.buildPredicates({ profileUuid, slug: validatedSlug, excludeUuid }),
+      tx
+    );
 
-    // If no server found, slug is available
-    if (existingServer.length === 0) {
-      return true;
-    }
-
-    // If we have an exclude UUID and it matches the found server, slug is available
-    if (excludeUuid && existingServer[0].uuid === excludeUuid) {
-      return true;
-    }
-
-    return false;
+    return server === null;
   }
 
   /**
@@ -114,103 +135,102 @@ export class McpServerSlugService {
    * @param serverUuid - The server UUID
    * @param newSlug - The new slug
    * @param profileUuid - The profile UUID (for validation)
+   * @param tx - Optional transaction to use
    * @returns The updated slug
    */
   static async updateServerSlug(
     serverUuid: string,
     newSlug: string,
-    profileUuid: string
+    profileUuid: string,
+    tx?: PgTransaction<any, any, any>
   ): Promise<string> {
     const validatedSlug = this.validateSlug(newSlug);
+    const dbInstance = tx || db;
 
-    // Check if slug is available
-    const isAvailable = await this.isSlugAvailable(validatedSlug, profileUuid, serverUuid);
-    if (!isAvailable) {
-      throw new Error(`Slug "${validatedSlug}" is already in use by another server in this profile`);
+    if (!await this.isSlugAvailable(validatedSlug, profileUuid, serverUuid, tx)) {
+      throw new Error(`Slug "${validatedSlug}" is already in use`);
     }
 
-    // Update the server
-    await db
+    await dbInstance
       .update(mcpServersTable)
       .set({ slug: validatedSlug })
-      .where(
-        and(
-          eq(mcpServersTable.uuid, serverUuid),
-          eq(mcpServersTable.profile_uuid, profileUuid)
-        )
-      );
+      .where(this.buildPredicates({ profileUuid, uuid: serverUuid }));
 
     return validatedSlug;
   }
 
   /**
-   * Generates and sets a slug for a new MCP server
+   * Centralized method for generating and setting slugs with validation
    * @param serverUuid - The server UUID
    * @param serverName - The server name
    * @param profileUuid - The profile UUID
+   * @param excludeUuid - Optional UUID to exclude (for updates)
+   * @param tx - Optional transaction to use
    * @returns The generated slug
    */
   static async generateAndSetSlug(
     serverUuid: string,
     serverName: string,
-    profileUuid: string
+    profileUuid: string,
+    excludeUuid?: string,
+    tx?: PgTransaction<any, any, any>
   ): Promise<string> {
-    const slug = await this.generateUniqueSlug(serverName, profileUuid);
-
-    await db
+    // Validate input
+    this.validateInput({ name: serverName, profileUuid, excludeUuid });
+    
+    const dbInstance = tx || db;
+    const uniqueSlug = await this.generateUniqueSlug(serverName, profileUuid, excludeUuid, tx);
+    
+    // Update the server with the new slug
+    await dbInstance
       .update(mcpServersTable)
-      .set({ slug })
-      .where(
-        and(
-          eq(mcpServersTable.uuid, serverUuid),
-          eq(mcpServersTable.profile_uuid, profileUuid)
-        )
-      );
-
-    return slug;
+      .set({ slug: uniqueSlug })
+      .where(this.buildPredicates({ profileUuid, uuid: serverUuid }));
+    
+    return uniqueSlug;
   }
 
   /**
    * Gets the slug for a server by UUID
    * @param serverUuid - The server UUID
    * @param profileUuid - The profile UUID (for security)
+   * @param tx - Optional transaction to use
    * @returns The slug or null if not found
    */
-  static async getServerSlug(serverUuid: string, profileUuid: string): Promise<string | null> {
-    const server = await db
-      .select({ slug: mcpServersTable.slug })
-      .from(mcpServersTable)
-      .where(
-        and(
-          eq(mcpServersTable.uuid, serverUuid),
-          eq(mcpServersTable.profile_uuid, profileUuid)
-        )
-      )
-      .limit(1);
-
-    return server.length > 0 ? server[0].slug : null;
+  static async getServerSlug(
+    serverUuid: string,
+    profileUuid: string,
+    tx?: PgTransaction<any, any, any>
+  ): Promise<string | null> {
+    const row = await this.findOne(
+      { slug: mcpServersTable.slug },
+      this.buildPredicates({ profileUuid, uuid: serverUuid }),
+      tx
+    );
+    return row?.slug ?? null;
   }
 
   /**
    * Gets server information by slug
    * @param slug - The server slug
    * @param profileUuid - The profile UUID
+   * @param tx - Optional transaction to use
    * @returns Server information or null if not found
    */
-  static async getServerBySlug(slug: string, profileUuid: string) {
+  static async getServerBySlug(
+    slug: string,
+    profileUuid: string,
+    tx?: PgTransaction<any, any, any>
+  ): Promise<{ uuid: string; name: string } | null> {
     const validatedSlug = this.validateSlug(slug);
 
-    const server = await db
-      .select()
-      .from(mcpServersTable)
-      .where(
-        and(
-          eq(mcpServersTable.slug, validatedSlug),
-          eq(mcpServersTable.profile_uuid, profileUuid)
-        )
-      )
-      .limit(1);
-
-    return server.length > 0 ? server[0] : null;
+    return await this.findOne(
+      {
+        uuid: mcpServersTable.uuid,
+        name: mcpServersTable.name
+      },
+      this.buildPredicates({ profileUuid, slug: validatedSlug }),
+      tx
+    );
   }
 }

@@ -44,14 +44,14 @@ async function fetchTagsAsReleases(repoName: 'pluggedin-app' | 'pluggedin-mcp'):
           body: commit.commit.message,
         };
       } catch (error) {
-        console.error(`Error fetching commit details for tag ${tag.name}:`, error);
+        console.error('Error fetching commit details for tag %s:', tag.name, error);
         return null;
       }
     }));
 
     return releases.filter(Boolean);
   } catch (error) {
-    console.error(`Error fetching tags for ${repoName}:`, error);
+    console.error('Error fetching tags for %s:', repoName, error);
     throw new Error(`Failed to fetch tags for ${repoName}`);
   }
 }
@@ -80,7 +80,7 @@ export async function fetchReleases(repoName: 'pluggedin-app' | 'pluggedin-mcp',
 
     return releases;
   } catch (error) {
-    console.error(`Error fetching releases for ${repoName}:`, error);
+    console.error('Error fetching releases for %s:', repoName, error);
     return await fetchTagsAsReleases(repoName);
   }
 }
@@ -102,7 +102,7 @@ export async function fetchCommitsBetween(repoName: 'pluggedin-app' | 'pluggedin
     });
     return data.commits;
   } catch (error) {
-    console.error(`Error fetching commits between ${base} and ${head} for ${repoName}:`, error);
+    console.error('Error fetching commits between %s and %s for %s:', base, head, repoName, error);
     // If comparison fails, try to get commits directly
     try {
       const { data: commits } = await octokit.repos.listCommits({
@@ -208,7 +208,7 @@ export async function getProcessedReleaseNotes(repoName: 'pluggedin-app' | 'plug
         });
         commits = recentCommits;
       } catch (error) {
-        console.warn(`Could not fetch commits for first release ${currentRelease.tag_name}:`, error);
+        console.warn('Could not fetch commits for first release %s:', currentRelease.tag_name, error);
       }
     }
 
@@ -240,7 +240,7 @@ export async function getProcessedReleaseNotes(repoName: 'pluggedin-app' | 'plug
  * @returns A promise that resolves to an array of historical ReleaseNote objects.
  */
 export async function generateHistoricalReleaseNotes(repoName: 'pluggedin-app' | 'pluggedin-mcp'): Promise<ReleaseNote[]> {
-  console.warn(`generateHistoricalReleaseNotes for ${repoName} is not fully implemented.`);
+  console.warn('generateHistoricalReleaseNotes for %s is not fully implemented.', repoName);
   // 1. Fetch all tags (octokit.git.listMatchingRefs or octokit.repos.listTags)
   // 2. Fetch all commits (potentially paginated octokit.repos.listCommits)
   // 3. Implement logic to group commits between tags based on dates/messages.
