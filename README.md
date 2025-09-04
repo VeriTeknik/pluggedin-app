@@ -5,7 +5,7 @@
   <h3>The Crossroads for AI Data Exchanges</h3>
   <p>A unified management interface for all your MCP servers with RAG capabilities</p>
 
-  [![Version](https://img.shields.io/badge/version-2.7.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+  [![Version](https://img.shields.io/badge/version-2.9.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
   [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
   [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
   [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -623,6 +623,18 @@ The plugged.in project is actively developing several exciting features:
 - **Collaboration & Sharing**: Multi-user sessions and embeddable chat widgets
 
 ## 📝 Recent Updates
+
+### Version 2.9.0 (Septembr 2025) - Database & Security Improvements
+
+#### 🗄️ Database Schema Enhancements
+- **Profile-Scoped Slug Uniqueness**: Fixed MCP server slug constraints to be profile-scoped instead of globally unique
+- **Improved Data Integrity**: Enhanced database constraints for better multi-tenant isolation
+- **Migration Updates**: Added migration `0052_fix_slug_profile_uniqueness.sql` for existing installations
+
+#### 🔒 Complementary Security Updates
+- **Enhanced Input Validation**: Improved validation for slug generation and MCP server management
+- **Database Security**: Strengthened constraints and validation rules
+- **Multi-Tenant Security**: Better isolation between user profiles and projects
 
 ### Latest Development
 
