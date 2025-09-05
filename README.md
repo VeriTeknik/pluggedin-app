@@ -633,11 +633,8 @@ Starting with v2.9.1, we've upgraded our encryption system from using predictabl
    - Show progress and any errors
 
 7. **Verify Success**
-   ```bash
-   # Check if any records still use legacy encryption
-   echo "SELECT COUNT(*) FROM mcp_servers WHERE encryption_version = 1 OR encryption_version IS NULL;" | psql $DATABASE_URL
-   ```
-   This should return 0.
+   The migration script will report the number of successfully migrated records.
+   Check your application logs for any decryption errors after migration.
 
 #### Troubleshooting
 
