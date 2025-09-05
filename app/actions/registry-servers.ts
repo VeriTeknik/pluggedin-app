@@ -876,8 +876,9 @@ async function publishClaimedServerToRegistry(
     },
   };
   
-  // Publish to registry
-  const registryResponse = await fetch('https://registry.plugged.in/v0/publish', {
+  // Publish to registry with URL validation
+  const registryUrl = validateExternalUrl('https://registry.plugged.in/v0/publish');
+  const registryResponse = await fetch(registryUrl.toString(), {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${registryToken}`,

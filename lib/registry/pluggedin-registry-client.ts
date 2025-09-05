@@ -92,12 +92,22 @@ export class PluggedinRegistryClient {
     this.baseUrl = validatedUrl.toString();
   }
   
+  /**
+   * Helper method to validate URL and perform fetch with SSRF protection
+   * @param path - The API path to fetch
+   * @param options - Fetch options
+   * @returns Promise<Response>
+   */
+  private async fetchInternal(path: string, options?: RequestInit): Promise<Response> {
+    const url = validateInternalUrl(`${this.baseUrl}${path}`);
+    return fetch(url.toString(), options);
+  }
+  
   async listServers(limit = 30, cursor?: string): Promise<ListServersResponse> {
     const params = new URLSearchParams({ limit: limit.toString() });
     if (cursor) params.append('cursor', cursor);
     
-    const url = validateInternalUrl(`${this.baseUrl}/servers?${params}`);
-    const response = await fetch(url.toString());
+    const response = await this.fetchInternal(`/servers?${params}`);
     if (!response.ok) {
       throw new Error(`Registry error: ${response.status} ${response.statusText}`);
     }
@@ -119,8 +129,7 @@ export class PluggedinRegistryClient {
   }
   
   async getServerDetails(id: string): Promise<PluggedinRegistryServer> {
-    const url = validateInternalUrl(`${this.baseUrl}/servers/${id}`);
-    const response = await fetch(url.toString());
+    const response = await this.fetchInternal(`/servers/${id}`);
     if (!response.ok) {
       throw new Error(`Server not found: ${id}`);
     }
@@ -163,8 +172,7 @@ export class PluggedinRegistryClient {
   
   async healthCheck(): Promise<boolean> {
     try {
-      const url = validateInternalUrl(`${this.baseUrl}/health`);
-      const response = await fetch(url.toString());
+      const response = await this.fetchInternal(`/health`);
       const data: HealthResponse = await response.json();
       return data.status === 'ok';
     } catch {
@@ -176,8 +184,7 @@ export class PluggedinRegistryClient {
     serverData: PublishServerData,
     authToken: string
   ): Promise<PublishResponse> {
-    const url = validateInternalUrl(`${this.baseUrl}/publish`);
-    const response = await fetch(url.toString(), {
+    const response = await this.fetchInternal(`/publish`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`,
