@@ -11,6 +11,23 @@ export class ConsoleCapture {
     debug: typeof console.debug;
   };
 
+  // Sensitive key patterns for redaction
+  private static readonly SENSITIVE_KEYS = [
+    'password', 'token', 'apikey', 'api_key', 'secret', 'auth', 'authorization',
+    'bearer', 'credential', 'private_key', 'privatekey', 'oauth'
+  ];
+
+  // Sensitive value patterns for redaction
+  private static readonly SENSITIVE_PATTERNS: RegExp[] = [
+    /\b[A-Za-z0-9]{20,}\b/g,       // Generic long alphanumeric strings (API keys)
+    /sk-[A-Za-z0-9]{48,}/g,        // OpenAI API keys
+    /pk-[A-Za-z0-9]{48,}/g,        // Anthropic API keys
+    /Bearer\s+[A-Za-z0-9\-_\.]+/gi, // Bearer tokens
+    /token[=:\s]+[A-Za-z0-9\-_\.]+/gi, // Token patterns
+    /api[_-]?key[=:\s]+[A-Za-z0-9\-_\.]+/gi, // API key patterns
+    /password[=:\s]+[^\s]+/gi       // Password patterns
+  ];
+
   constructor() {
     this.originalConsole = {
       log: console.log,
@@ -74,18 +91,39 @@ export class ConsoleCapture {
   }
 
   /**
-   * Format console arguments into a single string
+   * Deep sanitizes objects (keys + string values) using JSON replacer
+   */
+  private sanitize(obj: any): string {
+    return JSON.stringify(obj, (key, value) => {
+      // Check for sensitive keys
+      if (ConsoleCapture.SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k))) {
+        return '[REDACTED]';
+      }
+      // Apply pattern matching for string values
+      if (typeof value === 'string') {
+        return ConsoleCapture.SENSITIVE_PATTERNS
+          .reduce((s, regex) => s.replace(regex, '[REDACTED]'), value);
+      }
+      return value;
+    }, 2);
+  }
+
+  /**
+   * Format console arguments into a single string with sensitive data filtering
    */
   private formatMessage(args: any[]): string {
     return args.map(arg => {
       if (typeof arg === 'object') {
         try {
-          return JSON.stringify(arg, null, 2);
+          return this.sanitize(arg);
         } catch {
-          return String(arg);
+          return '[Object - could not stringify]';
         }
       }
-      return String(arg);
+      // Non-object strings still need pattern redaction
+      const str = String(arg);
+      return ConsoleCapture.SENSITIVE_PATTERNS
+        .reduce((s, regex) => s.replace(regex, '[REDACTED]'), str);
     }).join(' ');
   }
 

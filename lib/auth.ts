@@ -10,6 +10,12 @@ import EmailProvider from 'next-auth/providers/email';
 import GithubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 import TwitterProvider from 'next-auth/providers/twitter';
+import { 
+  isAccountLocked, 
+  recordFailedLoginAttempt, 
+  clearFailedLoginAttempts 
+} from './auth-security';
+import log from './logger';
 
 // Extend the User type to include emailVerified
 declare module 'next-auth' {
@@ -113,9 +119,26 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" }
       },
-      async authorize(credentials: Record<string, string> | undefined) {
+      async authorize(credentials: Record<string, string> | undefined, request: any) {
         try {
           if (!credentials?.email || !credentials?.password) {
+            return null;
+          }
+
+          // Extract IP and user agent for security tracking
+          const ipAddress = request?.headers?.['x-forwarded-for'] || 
+                           request?.headers?.['x-real-ip'] || 
+                           request?.connection?.remoteAddress || 
+                           '127.0.0.1';
+          const userAgent = request?.headers?.['user-agent'] || 'Unknown';
+
+          // Check if account is locked
+          const isLocked = await isAccountLocked(credentials.email);
+          if (isLocked) {
+            log.warn('Login attempt on locked account', { 
+              email: credentials.email,
+              ip: ipAddress 
+            });
             return null;
           }
 
@@ -124,19 +147,42 @@ export const authOptions: NextAuthOptions = {
           });
 
           if (!user || !user.password) {
+            // Record failed attempt for non-existent user (security logging)
+            await recordFailedLoginAttempt(credentials.email, ipAddress, userAgent);
             return null;
           }
 
           // Check email verification
           if (!user.emailVerified) {
+            log.info('Login attempt with unverified email', { 
+              email: credentials.email,
+              userId: user.id 
+            });
             return null;
           }
 
           const isPasswordValid = await compare(credentials.password, user.password);
 
           if (!isPasswordValid) {
+            // Record failed login attempt
+            const { locked, remainingAttempts } = await recordFailedLoginAttempt(
+              credentials.email, 
+              ipAddress, 
+              userAgent
+            );
+            
+            if (locked) {
+              log.warn('Account locked due to failed attempts', { 
+                email: credentials.email,
+                userId: user.id 
+              });
+            }
+            
             return null;
           }
+
+          // Clear failed attempts on successful login
+          await clearFailedLoginAttempts(user.id, ipAddress, userAgent);
 
           return {
             id: user.id,
@@ -146,6 +192,7 @@ export const authOptions: NextAuthOptions = {
             emailVerified: user.emailVerified,
           };
         } catch (error) {
+          log.error('Authentication error', error as Error);
           return null;
         }
       }

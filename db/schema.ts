@@ -107,6 +107,12 @@ export const users = pgTable('users', {
   is_public: boolean('is_public').default(false).notNull(),
   language: languageEnum('language').default('en'),
   avatar_url: text('avatar_url'),
+  // Security fields
+  failed_login_attempts: integer('failed_login_attempts').default(0),
+  account_locked_until: timestamp('account_locked_until', { mode: 'date' }),
+  last_login_at: timestamp('last_login_at', { mode: 'date' }),
+  last_login_ip: text('last_login_ip'),
+  password_changed_at: timestamp('password_changed_at', { mode: 'date' }),
 },
 (table) => ({
   usersUsernameIdx: index('users_username_idx').on(table.username),

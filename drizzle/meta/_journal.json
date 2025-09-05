@@ -351,6 +351,13 @@
       "when": 1756751400928,
       "tag": "0049_minor_master_mold",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1757028247888,
+      "tag": "0050_sloppy_vulture",
+      "breakpoints": true
     }
   ]
 }

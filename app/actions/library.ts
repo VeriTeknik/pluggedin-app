@@ -2,7 +2,9 @@
 
 import { and, desc, eq, sum } from 'drizzle-orm';
 import { mkdir, unlink, writeFile } from 'fs/promises';
-import { join } from 'path';
+import { realpathSync } from 'fs';
+import { join, resolve, normalize } from 'path';
+import * as path from 'path';
 
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
@@ -30,6 +32,89 @@ const getDefaultUploadsDir = () => {
 };
 
 const UPLOADS_BASE_DIR = process.env.UPLOADS_DIR || getDefaultUploadsDir();
+
+/**
+ * Sanitize path components to prevent path injection attacks
+ * Removes dangerous characters and prevents directory traversal
+ */
+function sanitizePath(pathComponent: string): string {
+  if (!pathComponent || typeof pathComponent !== 'string') {
+    throw new Error('Invalid path component');
+  }
+
+  // Remove null bytes and other dangerous characters
+  let sanitized = pathComponent.replace(/[\x00-\x1f\x80-\x9f]/g, '');
+  
+  // Remove or replace path traversal sequences
+  sanitized = sanitized.replace(/\.\./g, '');
+  sanitized = sanitized.replace(/[\/\\]/g, '_');
+  
+  // Remove leading/trailing dots and spaces
+  sanitized = sanitized.replace(/^[\.\s]+|[\.\s]+$/g, '');
+  
+  // Ensure it's not empty after sanitization
+  if (!sanitized) {
+    throw new Error('Path component becomes empty after sanitization');
+  }
+  
+  // Limit length to prevent buffer overflow
+  if (sanitized.length > 255) {
+    sanitized = sanitized.substring(0, 255);
+  }
+  
+  return sanitized;
+}
+
+/**
+ * Check if child path is contained within parent path
+ * Handles path separators and prevents directory traversal
+ */
+function isSubPath(parent: string, child: string): boolean {
+  const rel = child.slice(parent.length);
+  return (
+    child === parent ||
+    (child.startsWith(parent + path.sep) && !rel.includes('..'))
+  );
+}
+
+/**
+ * Safely create a file path within the uploads directory
+ * Validates that the final path is within the allowed directory using real paths
+ */
+function createSafeFilePath(userId: string, fileName: string): { userDir: string; filePath: string; relativePath: string } {
+  const sanitizedUserId = sanitizePath(userId);
+  const sanitizedFileName = sanitizePath(fileName);
+  
+  // Create paths
+  const userDir = join(UPLOADS_BASE_DIR, sanitizedUserId);
+  const filePath = join(userDir, sanitizedFileName);
+  const relativePath = `${sanitizedUserId}/${sanitizedFileName}`;
+  
+  // Resolve real paths to handle symlinks and prevent bypasses
+  let resolvedUploadsDir: string;
+  let resolvedUserDir: string;
+  let resolvedFilePath: string;
+  
+  try {
+    resolvedUploadsDir = realpathSync(UPLOADS_BASE_DIR);
+    // For userDir and filePath, they may not exist yet, so we resolve the parent and join
+    resolvedUserDir = resolve(userDir);
+    resolvedFilePath = resolve(filePath);
+  } catch (err) {
+    throw new Error('Invalid path: unable to resolve real path');
+  }
+  
+  // Validate that paths are within the uploads directory (prevent directory traversal)
+  if (!isSubPath(resolvedUploadsDir, resolvedUserDir)) {
+    throw new Error('Invalid user directory path');
+  }
+  
+  if (!isSubPath(resolvedUserDir, resolvedFilePath)) {
+    throw new Error('Invalid file path');
+  }
+  
+  return { userDir, filePath, relativePath };
+}
 
 // Workspace storage limit: 100 MB
 const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
@@ -200,23 +285,22 @@ async function parseAndValidateFormData(formData: FormData) {
 
 // Helper function: Save file to disk in user-specific directory (outside public)
 async function saveFileToDisk(file: File, userId: string) {
-  // Create user-specific uploads directory
-  const userDir = join(UPLOADS_BASE_DIR, userId);
-  await mkdir(userDir, { recursive: true });
-
-  // Generate unique filename
+  // Generate unique filename with timestamp
   const timestamp = Date.now();
   const fileName = `${timestamp}-${file.name}`;
-  const filePath = join(userDir, fileName);
-  // Store only the user-relative path for later secure access
-  const relativePath = `${userId}/${fileName}`;
+
+  // Create safe file paths with validation
+  const { userDir, filePath, relativePath } = createSafeFilePath(userId, fileName);
+  
+  // Create user-specific uploads directory
+  await mkdir(userDir, { recursive: true });
 
   // Save file to disk
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
   await writeFile(filePath, buffer);
 
-  return { fileName, relativePath };
+  return { fileName: sanitizePath(fileName), relativePath };
 }
 
 // Helper function: Insert document record into database

@@ -1,7 +1,42 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { getToken } from 'next-auth/jwt';
-import { RateLimiters } from '@/lib/rate-limiter';
+import { NextRequest, NextResponse } from 'next/server';
+
 import { createErrorResponse } from '@/lib/api-errors';
+import { RateLimiters } from '@/lib/rate-limiter';
+
+/**
+ * Security headers configuration
+ */
+const securityHeaders = {
+  // Content Security Policy - helps prevent XSS attacks
+  // Note: In development, we allow unsafe-inline for hot reload to work
+  // In production, we use stricter CSP without unsafe-inline/unsafe-eval
+  'Content-Security-Policy': process.env.NODE_ENV === 'production'
+    ? "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+    : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self';",
+  
+  // Prevent clickjacking attacks
+  'X-Frame-Options': 'DENY',
+  
+  // Prevent MIME type sniffing
+  'X-Content-Type-Options': 'nosniff',
+  
+  // Control information sent with external requests
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  
+  // Restrict browser features
+  'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
+  
+  // Additional security headers
+  'X-XSS-Protection': '1; mode=block',
+  'X-Permitted-Cross-Domain-Policies': 'none',
+  
+  // Force HTTPS in production
+  ...(process.env.NODE_ENV === 'production' && {
+    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
+    'Expect-CT': 'enforce, max-age=86400',
+  }),
+};
 
 // Only run middleware on matching paths
 export const config = {
@@ -76,11 +111,11 @@ export async function middleware(request: NextRequest) {
   if (pathname.startsWith('/api/mcp/')) {
     const startTime = Date.now();
     const method = request.method;
-    const searchParams = Object.fromEntries(request.nextUrl.searchParams.entries());
+    const _searchParams = Object.fromEntries(request.nextUrl.searchParams.entries());
     const userAgent = request.headers.get('user-agent') || '';
     const forwardedFor = request.headers.get('x-forwarded-for') || '';
     const realIp = request.headers.get('x-real-ip') || '';
-    const ip = forwardedFor || realIp || '127.0.0.1';
+    const _ip = forwardedFor || realIp || '127.0.0.1';
     
     // Create a response
     const response = NextResponse.next();
@@ -127,12 +162,26 @@ export async function middleware(request: NextRequest) {
 
   // Allow access to public routes
   if (isPublicRoute) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    // Apply security headers to all responses
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      if (value) {
+        response.headers.set(key, value);
+      }
+    });
+    return response;
   }
 
   // Redirect authenticated users away from auth routes
   if (isAuthRoute && isAuthenticated) {
-    return NextResponse.redirect(new URL('/mcp-servers', request.url));
+    const response = NextResponse.redirect(new URL('/mcp-servers', request.url));
+    // Apply security headers to redirect responses
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      if (value) {
+        response.headers.set(key, value);
+      }
+    });
+    return response;
   }
 
   // Redirect unauthenticated users to login
@@ -140,8 +189,21 @@ export async function middleware(request: NextRequest) {
     // Store the current URL as the callback URL
     const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
     const response = NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));
+    // Apply security headers to redirect responses
+    Object.entries(securityHeaders).forEach(([key, value]) => {
+      if (value) {
+        response.headers.set(key, value);
+      }
+    });
     return response;
   }
 
-  return NextResponse.next();
+  const response = NextResponse.next();
+  // Apply security headers to all other responses
+  Object.entries(securityHeaders).forEach(([key, value]) => {
+    if (value) {
+      response.headers.set(key, value);
+    }
+  });
+  return response;
 } 
