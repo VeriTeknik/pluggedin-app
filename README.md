@@ -573,6 +573,86 @@ To enable sandboxing, install Firejail:
 sudo apt update && sudo apt install firejail
 ```
 
+### 🔒 Security Migration Guide (v2.9.1)
+
+#### Important: Encryption Upgrade Required
+
+Starting with v2.9.1, we've upgraded our encryption system from using predictable salts to cryptographically secure random salts. This significantly improves the security of your encrypted data.
+
+#### Why This Migration Is Needed
+
+- **Legacy encryption (v1)**: Used predictable salts derived from profile UUIDs (less secure)
+- **New encryption (v2)**: Uses cryptographically secure random salts (highly secure)
+- **Compliance**: Addresses security warnings from GitHub CodeQL and other security scanners
+- **Best Practices**: Aligns with current cryptographic standards
+
+#### Migration Steps
+
+1. **Backup Your Database** (Critical!)
+   ```bash
+   pg_dump $DATABASE_URL > backup_before_migration.sql
+   ```
+
+2. **Update to v2.9.1**
+   ```bash
+   git pull
+   pnpm install
+   ```
+
+3. **Configure Security Environment Variables**
+   Add these to your `.env` file:
+   ```bash
+   # Enable SSL for database connections
+   DATABASE_SSL=true
+   DATABASE_SSL_REJECT_UNAUTHORIZED=false
+   
+   # Generate a secure API key encryption secret
+   API_KEY_ENCRYPTION_SECRET=$(openssl rand -base64 32)
+   ```
+
+4. **Run Database Migrations**
+   ```bash
+   pnpm db:migrate
+   ```
+
+5. **Test Migration (Dry Run)**
+   ```bash
+   pnpm migrate:encryption:dry
+   ```
+   This shows what will be migrated without making changes.
+
+6. **Execute Migration**
+   ```bash
+   pnpm migrate:encryption
+   ```
+   The script will:
+   - Find all records using legacy encryption
+   - Decrypt data using the old method
+   - Re-encrypt with secure random salts
+   - Update encryption_version to 2
+   - Show progress and any errors
+
+7. **Verify Success**
+   ```bash
+   # Check if any records still use legacy encryption
+   echo "SELECT COUNT(*) FROM mcp_servers WHERE encryption_version = 1 OR encryption_version IS NULL;" | psql $DATABASE_URL
+   ```
+   This should return 0.
+
+#### Troubleshooting
+
+- **Migration fails**: Restore from backup and check error logs
+- **Decryption errors after migration**: Ensure NEXT_SERVER_ACTIONS_ENCRYPTION_KEY hasn't changed
+- **Performance issues**: The migration processes records in batches; large datasets may take time
+
+#### Timeline for Legacy Code Removal
+
+- **v2.9.1**: Migration tools provided, legacy decryption still supported
+- **v2.9.2-v2.9.x**: Grace period for migration
+- **v3.0.0**: Legacy encryption functions will be removed entirely
+
+⚠️ **After v3.0.0, data encrypted with legacy methods will not be readable without migration!**
+
 ## 🔄 Cloud vs. Self-Hosted
 
 | Feature | Self-Hosted | Cloud (plugged.in) |

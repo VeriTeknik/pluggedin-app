@@ -23,6 +23,8 @@
     "postversion": "git push && git push --tags",
     "test": "vitest run",
     "test:watch": "vitest",
+    "migrate:encryption": "tsx scripts/migrate-encryption.ts",
+    "migrate:encryption:dry": "tsx scripts/migrate-encryption.ts --dry",
     "knip": "knip",
     "knip:fix": "knip --fix",
     "knip:dependencies": "knip --dependencies",

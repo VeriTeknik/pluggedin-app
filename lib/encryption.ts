@@ -212,6 +212,7 @@ export function encryptServerData<T extends {
   args_encrypted?: string;
   env_encrypted?: string;
   url_encrypted?: string;
+  encryption_version?: number;
 } {
   const encrypted: any = { ...server };
   
@@ -235,6 +236,9 @@ export function encryptServerData<T extends {
     encrypted.url_encrypted = encryptField(server.url, profileUuid);
     delete encrypted.url;
   }
+  
+  // Mark as using new encryption (v2)
+  encrypted.encryption_version = 2;
   
   return encrypted;
 }
