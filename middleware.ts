@@ -12,7 +12,7 @@ const securityHeaders = {
   // Note: We need unsafe-inline and unsafe-eval for Next.js to work properly
   // This is a known limitation - Next.js requires inline scripts for hydration
   'Content-Security-Policy': process.env.NODE_ENV === 'production'
-    ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.stripe.com wss://*.plugged.in https://*.ingest.sentry.io https://*.ingest.de.sentry.io; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"
+    ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.stripe.com wss://*.plugged.in https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://api.github.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"
     : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self';",
   
   // Prevent clickjacking attacks
