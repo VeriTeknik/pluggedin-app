@@ -17,7 +17,6 @@ import postgres from 'postgres';
 import { eq, or, isNotNull, sql } from 'drizzle-orm';
 import { mcpServersTable } from '../db/schema';
 import { encryptField, decryptField } from '../lib/encryption';
-import { encryptSecure } from '../lib/encryption-v2';
 
 // Load environment variables
 config();
