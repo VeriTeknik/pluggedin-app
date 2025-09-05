@@ -1,4 +1,5 @@
 import { McpServerSource } from '@/db/schema';
+import { validateInternalUrl } from '@/lib/url-validator';
 
 // Extended interfaces with stats
 export interface ExtendedServer {
@@ -136,8 +137,9 @@ export class PluggedinRegistryVPClient {
   private vpUrl: string;
   
   constructor(baseUrl = process.env.REGISTRY_API_URL || 'https://registry.plugged.in/v0') {
-    // Use the baseUrl directly for v0 API
-    this.baseUrl = baseUrl;
+    // Validate the base URL to prevent SSRF
+    const validatedUrl = validateInternalUrl(baseUrl);
+    this.baseUrl = validatedUrl.toString();
     this.vpUrl = this.baseUrl; // VP endpoints are actually v0 endpoints
   }
   
@@ -161,7 +163,8 @@ export class PluggedinRegistryVPClient {
     if (filters?.sort) params.append('sort', filters.sort);
     if (filters?.search) params.append('search', filters.search);
     
-    const response = await fetch(`${this.vpUrl}/servers?${params}`);
+    const url = validateInternalUrl(`${this.vpUrl}/servers?${params}`);
+    const response = await fetch(url.toString());
     if (!response.ok) {
       throw new Error(`Registry VP error: ${response.status} ${response.statusText}`);
     }
@@ -171,7 +174,8 @@ export class PluggedinRegistryVPClient {
   
   // Get single server with stats
   async getServerWithStats(serverId: string): Promise<ExtendedServer> {
-    const response = await fetch(`${this.vpUrl}/servers/${serverId}`);
+    const url = validateInternalUrl(`${this.vpUrl}/servers/${serverId}`);
+    const response = await fetch(url.toString());
     if (!response.ok) {
       throw new Error(`Server not found: ${serverId}`);
     }
@@ -202,7 +206,8 @@ export class PluggedinRegistryVPClient {
     data: InstallRequest = {}
   ): Promise<InstallResponse> {
     try {
-      const response = await fetch(`${this.vpUrl}/servers/${serverId}/install`, {
+      const url = validateInternalUrl(`${this.vpUrl}/servers/${serverId}/install`);
+      const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -242,7 +247,8 @@ export class PluggedinRegistryVPClient {
         comment
       };
       
-      const response = await fetch(`${this.vpUrl}/servers/${serverId}/rate`, {
+      const url = validateInternalUrl(`${this.vpUrl}/servers/${serverId}/rate`);
+      const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -285,7 +291,8 @@ export class PluggedinRegistryVPClient {
   // Get server stats only
   async getServerStats(serverId: string): Promise<ServerStats | null> {
     try {
-      const response = await fetch(`${this.vpUrl}/servers/${serverId}/stats`);
+      const url = validateInternalUrl(`${this.vpUrl}/servers/${serverId}/stats`);
+      const response = await fetch(url.toString());
       if (!response.ok) {
         return null;
       }
@@ -301,7 +308,8 @@ export class PluggedinRegistryVPClient {
   // Get global stats
   async getGlobalStats(): Promise<GlobalStats | null> {
     try {
-      const response = await fetch(`${this.vpUrl}/stats/global`);
+      const url = validateInternalUrl(`${this.vpUrl}/stats/global`);
+      const response = await fetch(url.toString());
       if (!response.ok) {
         return null;
       }
@@ -324,7 +332,8 @@ export class PluggedinRegistryVPClient {
         limit: limit.toString(),
       });
       
-      const response = await fetch(`${this.vpUrl}/stats/leaderboard?${params}`);
+      const url = validateInternalUrl(`${this.vpUrl}/stats/leaderboard?${params}`);
+      const response = await fetch(url.toString());
       if (!response.ok) {
         return [];
       }
@@ -344,7 +353,8 @@ export class PluggedinRegistryVPClient {
         limit: limit.toString(),
       });
       
-      const response = await fetch(`${this.vpUrl}/stats/trending?${params}`);
+      const url = validateInternalUrl(`${this.vpUrl}/stats/trending?${params}`);
+      const response = await fetch(url.toString());
       if (!response.ok) {
         return [];
       }
@@ -383,7 +393,8 @@ export class PluggedinRegistryVPClient {
         sort,
       });
 
-      const response = await fetch(`${this.vpUrl}/servers/${serverId}/feedback?${params}`, {
+      const url = validateInternalUrl(`${this.vpUrl}/servers/${serverId}/feedback?${params}`);
+      const response = await fetch(url.toString(), {
         headers: {
           'User-Agent': 'PluggedIn-App/1.0',
         },
@@ -409,7 +420,8 @@ export class PluggedinRegistryVPClient {
    */
   async getUserRating(serverId: string, userId: string): Promise<UserRatingResponse> {
     try {
-      const response = await fetch(`${this.vpUrl}/servers/${serverId}/rating/${userId}`, {
+      const url = validateInternalUrl(`${this.vpUrl}/servers/${serverId}/rating/${userId}`);
+      const response = await fetch(url.toString(), {
         headers: {
           'User-Agent': 'PluggedIn-App/1.0',
         },
@@ -447,7 +459,8 @@ export class PluggedinRegistryVPClient {
         user_id: userId,
       };
 
-      const response = await fetch(`${this.vpUrl}/servers/${serverId}/feedback/${feedbackId}`, {
+      const url = validateInternalUrl(`${this.vpUrl}/servers/${serverId}/feedback/${feedbackId}`);
+      const response = await fetch(url.toString(), {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -481,7 +494,8 @@ export class PluggedinRegistryVPClient {
    */
   async deleteFeedback(serverId: string, feedbackId: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const response = await fetch(`${this.vpUrl}/servers/${serverId}/feedback/${feedbackId}`, {
+      const url = validateInternalUrl(`${this.vpUrl}/servers/${serverId}/feedback/${feedbackId}`);
+      const response = await fetch(url.toString(), {
         method: 'DELETE',
         headers: {
           'User-Agent': 'PluggedIn-App/1.0',

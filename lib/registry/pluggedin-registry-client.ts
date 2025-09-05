@@ -1,3 +1,5 @@
+import { validateInternalUrl } from '@/lib/url-validator';
+
 interface PluggedinRegistryServer {
   id: string;
   name: string;
@@ -85,14 +87,17 @@ export class PluggedinRegistryClient {
   private baseUrl: string;
   
   constructor(baseUrl = process.env.REGISTRY_API_URL || 'https://registry.plugged.in/v0') {
-    this.baseUrl = baseUrl;
+    // Validate the base URL to prevent SSRF
+    const validatedUrl = validateInternalUrl(baseUrl);
+    this.baseUrl = validatedUrl.toString();
   }
   
   async listServers(limit = 30, cursor?: string): Promise<ListServersResponse> {
     const params = new URLSearchParams({ limit: limit.toString() });
     if (cursor) params.append('cursor', cursor);
     
-    const response = await fetch(`${this.baseUrl}/servers?${params}`);
+    const url = validateInternalUrl(`${this.baseUrl}/servers?${params}`);
+    const response = await fetch(url.toString());
     if (!response.ok) {
       throw new Error(`Registry error: ${response.status} ${response.statusText}`);
     }
@@ -114,7 +119,8 @@ export class PluggedinRegistryClient {
   }
   
   async getServerDetails(id: string): Promise<PluggedinRegistryServer> {
-    const response = await fetch(`${this.baseUrl}/servers/${id}`);
+    const url = validateInternalUrl(`${this.baseUrl}/servers/${id}`);
+    const response = await fetch(url.toString());
     if (!response.ok) {
       throw new Error(`Server not found: ${id}`);
     }
@@ -157,7 +163,8 @@ export class PluggedinRegistryClient {
   
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`);
+      const url = validateInternalUrl(`${this.baseUrl}/health`);
+      const response = await fetch(url.toString());
       const data: HealthResponse = await response.json();
       return data.status === 'ok';
     } catch {
@@ -169,7 +176,8 @@ export class PluggedinRegistryClient {
     serverData: PublishServerData,
     authToken: string
   ): Promise<PublishResponse> {
-    const response = await fetch(`${this.baseUrl}/publish`, {
+    const url = validateInternalUrl(`${this.baseUrl}/publish`);
+    const response = await fetch(url.toString(), {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`,

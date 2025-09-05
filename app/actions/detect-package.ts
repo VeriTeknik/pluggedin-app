@@ -1,5 +1,7 @@
 'use server';
 
+import { validateExternalUrl } from '@/lib/url-validator';
+
 import { TransportType } from '@/lib/mcp/package-detector';
 
 interface GitHubFile {
@@ -56,8 +58,13 @@ async function fetchFileFromGitHub(
       headers['Authorization'] = `Bearer ${githubToken}`;
     }
     
+    // Validate the GitHub API URL to prevent SSRF
+    const githubUrl = validateExternalUrl(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
+    );
+    
     const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+      githubUrl.toString(),
       { headers }
     );
     

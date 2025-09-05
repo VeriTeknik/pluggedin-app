@@ -1,5 +1,7 @@
 'use server';
 
+import { validateExternalUrl } from '@/lib/url-validator';
+
 import { and,eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -78,7 +80,8 @@ export async function checkUserGitHubConnection() {
       }
 
       // Verify the token is still valid
-      const response = await fetch('https://api.github.com/user', {
+      const userUrl = validateExternalUrl('https://api.github.com/user');
+      const response = await fetch(userUrl.toString(), {
         headers: {
           Authorization: `Bearer ${githubToken}`,
           Accept: 'application/vnd.github.v3+json',
@@ -137,7 +140,8 @@ export async function verifyGitHubOwnership(registryToken: string | null, repoUr
     }
 
     // Check user info
-    const userResponse = await fetch('https://api.github.com/user', {
+    const userUrl = validateExternalUrl('https://api.github.com/user');
+    const userResponse = await fetch(userUrl.toString(), {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github.v3+json',
@@ -165,7 +169,8 @@ export async function verifyGitHubOwnership(registryToken: string | null, repoUr
     }
     
     // Check organizations
-    const orgsResponse = await fetch('https://api.github.com/user/orgs', {
+    const orgsUrl = validateExternalUrl('https://api.github.com/user/orgs');
+    const orgsResponse = await fetch(orgsUrl.toString(), {
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: 'application/vnd.github.v3+json',
@@ -740,7 +745,9 @@ async function fetchRepositoryVersion(
   
   try {
     // Get repository metadata
-    const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, {
+    // Validate GitHub API URL
+    const repoUrl = validateExternalUrl(`https://api.github.com/repos/${owner}/${repo}`);
+    const repoResponse = await fetch(repoUrl.toString(), {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github.v3+json',
@@ -752,7 +759,8 @@ async function fetchRepositoryVersion(
     }
 
     // Try to fetch version from package.json
-    const packageResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/package.json`, {
+    const packageUrl = validateExternalUrl(`https://api.github.com/repos/${owner}/${repo}/contents/package.json`);
+    const packageResponse = await fetch(packageUrl.toString(), {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Accept': 'application/vnd.github.v3+json',
@@ -769,7 +777,8 @@ async function fetchRepositoryVersion(
       }
     } else {
       // Try pyproject.toml for Python projects
-      const pyprojectResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/pyproject.toml`, {
+      const pyprojectUrl = validateExternalUrl(`https://api.github.com/repos/${owner}/${repo}/contents/pyproject.toml`);
+      const pyprojectResponse = await fetch(pyprojectUrl.toString(), {
         headers: {
           'Authorization': `Bearer ${registryToken}`,
           'Accept': 'application/vnd.github.v3+json',
@@ -787,7 +796,8 @@ async function fetchRepositoryVersion(
         }
       } else {
         // Try Cargo.toml for Rust projects
-        const cargoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/Cargo.toml`, {
+        const cargoUrl = validateExternalUrl(`https://api.github.com/repos/${owner}/${repo}/contents/Cargo.toml`);
+        const cargoResponse = await fetch(cargoUrl.toString(), {
           headers: {
             'Authorization': `Bearer ${registryToken}`,
             'Accept': 'application/vnd.github.v3+json',

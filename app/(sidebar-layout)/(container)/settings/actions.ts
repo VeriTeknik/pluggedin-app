@@ -66,7 +66,7 @@ export const removeConnectedAccount = async (userId: string, provider: string) =
     
     return { success: true };
   } catch (error) {
-    console.error(`Error removing ${provider} account:`, error);
+    console.error('Error removing account:', { provider, error });
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Unknown error' 
