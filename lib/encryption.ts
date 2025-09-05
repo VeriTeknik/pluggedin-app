@@ -1,12 +1,10 @@
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
-import { decryptLegacyData } from './encryption-legacy';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const TAG_LENGTH = 16;
 
-// Legacy functions moved to encryption-legacy.ts to isolate security warnings
-// They are only imported for backward compatibility during migration
+// Legacy encryption has been removed after successful production migration
 
 /**
  * Derives an encryption key using scrypt with a provided salt
@@ -90,37 +88,22 @@ function decryptWithModernKey(
 }
 
 /**
- * Decrypts a field value using AES-256-GCM with backward compatibility
+ * Decrypts a field value using AES-256-GCM
  */
-export function decryptField(encrypted: string, profileUuid: string): any {
+export function decryptField(encrypted: string, _profileUuid: string): any {
   const baseKey = process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
   if (!baseKey) {
     throw new Error('Encryption key not configured');
   }
 
   try {
-    const combined = Buffer.from(encrypted, 'base64');
-    const hasRandomSalt = combined.length >= (16 + IV_LENGTH + TAG_LENGTH);
-    
-    if (hasRandomSalt) {
-      // Try new format with random salt (SECURE)
-      try {
-        return decryptWithModernKey(encrypted, baseKey);
-      } catch (_newFormatError) {
-        // If new format fails, fall through to legacy formats
-      }
-    }
-    
-    // Fall back to legacy decryption (imported from encryption-legacy.ts)
-    // This isolation prevents CodeQL from flagging the main encryption file
-    return decryptLegacyData(encrypted, baseKey, profileUuid);
+    return decryptWithModernKey(encrypted, baseKey);
   } catch (error) {
-    console.error('Decryption failed with all methods:', error);
+    console.error('Decryption failed:', error);
     throw new Error('Failed to decrypt data');
   }
 }
 
-// Legacy decryption function moved to encryption-legacy.ts
 
 /**
  * Encrypts sensitive fields in an MCP server object

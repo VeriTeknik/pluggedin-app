@@ -48,31 +48,41 @@ export class ConsoleCapture {
     console.log = (...args: any[]) => {
       const message = this.formatMessage(args);
       this.logs.push(message);
-      this.originalConsole.log(...args);
+      // Apply sanitization before logging to original console
+      const sanitizedArgs = this.sanitizeArgs(args);
+      this.originalConsole.log(...sanitizedArgs);
     };
 
     console.error = (...args: any[]) => {
       const message = this.formatMessage(args);
       this.logs.push(`[ERROR] ${message}`);
-      this.originalConsole.error(...args);
+      // Apply sanitization before logging to original console
+      const sanitizedArgs = this.sanitizeArgs(args);
+      this.originalConsole.error(...sanitizedArgs);
     };
 
     console.warn = (...args: any[]) => {
       const message = this.formatMessage(args);
       this.logs.push(`[WARN] ${message}`);
-      this.originalConsole.warn(...args);
+      // Apply sanitization before logging to original console
+      const sanitizedArgs = this.sanitizeArgs(args);
+      this.originalConsole.warn(...sanitizedArgs);
     };
 
     console.info = (...args: any[]) => {
       const message = this.formatMessage(args);
       this.logs.push(`[INFO] ${message}`);
-      this.originalConsole.info(...args);
+      // Apply sanitization before logging to original console
+      const sanitizedArgs = this.sanitizeArgs(args);
+      this.originalConsole.info(...sanitizedArgs);
     };
 
     console.debug = (...args: any[]) => {
       const message = this.formatMessage(args);
       this.logs.push(`[DEBUG] ${message}`);
-      this.originalConsole.debug(...args);
+      // Apply sanitization before logging to original console
+      const sanitizedArgs = this.sanitizeArgs(args);
+      this.originalConsole.debug(...sanitizedArgs);
     };
   }
 
@@ -106,6 +116,28 @@ export class ConsoleCapture {
       }
       return value;
     }, 2);
+  }
+
+  /**
+   * Sanitize arguments to remove sensitive data before logging
+   */
+  private sanitizeArgs(args: any[]): any[] {
+    return args.map(arg => {
+      if (typeof arg === 'object') {
+        try {
+          // Parse and re-create object with sanitization
+          return JSON.parse(this.sanitize(arg));
+        } catch {
+          return '[Object - could not sanitize]';
+        }
+      }
+      // Non-object strings still need pattern redaction
+      if (typeof arg === 'string') {
+        return ConsoleCapture.SENSITIVE_PATTERNS
+          .reduce((s, regex) => s.replace(regex, '[REDACTED]'), arg);
+      }
+      return arg;
+    });
   }
 
   /**
