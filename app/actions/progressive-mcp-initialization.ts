@@ -3,6 +3,8 @@
 // Import necessary types from the library - Remove Stdio/SseServerParameters
 import { convertMcpToLangchainTools, McpServerCleanupFn, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 
+import { validateTimeouts } from '@/lib/timeout-validator';
+
 import { addServerLogForProfile } from './mcp-playground'; // Relative import
 
 // Interface for server initialization status
@@ -166,12 +168,18 @@ export async function progressivelyInitializeMcpServers(
 ): Promise<ProgressiveInitResult> {
   const {
     logger,
-    perServerTimeout = 20000, // 20 seconds per server default
-    totalTimeout = 60000, // 60 seconds total default
+    perServerTimeout: userPerServerTimeout,
+    totalTimeout: userTotalTimeout,
     skipHealthChecks = false,
     maxRetries = 2, // Default to 2 retries (3 attempts total)
     llmProvider
   } = options;
+  
+  // Validate and cap timeout values to prevent DoS attacks
+  const { perServerTimeout, totalTimeout } = validateTimeouts({
+    perServer: userPerServerTimeout,
+    total: userTotalTimeout
+  });
 
   const initStatus: ServerInitStatus[] = [];
   const allTools: any[] = [];

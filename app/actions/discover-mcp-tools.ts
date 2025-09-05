@@ -49,7 +49,7 @@ export async function discoverSingleServerTools(
     }
 
     // Decrypt the server configuration
-    const decryptedServerConfig = decryptServerData(serverConfig, profileUuid);
+    const decryptedServerConfig = decryptServerData(serverConfig);
     const discoveryServerConfig: McpServer = { 
         ...decryptedServerConfig,
         config: decryptedServerConfig.config as Record<string, any> | null

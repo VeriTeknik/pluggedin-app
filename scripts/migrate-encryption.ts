@@ -147,9 +147,9 @@ async function migrateEncryption() {
           if (server.command_encrypted) {
             try {
               // Decrypt with legacy method
-              const decrypted = decryptField(server.command_encrypted, server.profile_uuid);
+              const decrypted = decryptField(server.command_encrypted);
               // Re-encrypt with secure method
-              const reEncrypted = encryptField(decrypted, server.profile_uuid);
+              const reEncrypted = encryptField(decrypted);
               updates.command_encrypted = reEncrypted;
               hasEncryptedData = true;
               log(`  ✓ Migrated command field`, 'verbose');
@@ -162,8 +162,8 @@ async function migrateEncryption() {
 
           if (server.args_encrypted) {
             try {
-              const decrypted = decryptField(server.args_encrypted, server.profile_uuid);
-              const reEncrypted = encryptField(decrypted, server.profile_uuid);
+              const decrypted = decryptField(server.args_encrypted);
+              const reEncrypted = encryptField(decrypted);
               updates.args_encrypted = reEncrypted;
               hasEncryptedData = true;
               log(`  ✓ Migrated args field`, 'verbose');
@@ -176,8 +176,8 @@ async function migrateEncryption() {
 
           if (server.env_encrypted) {
             try {
-              const decrypted = decryptField(server.env_encrypted, server.profile_uuid);
-              const reEncrypted = encryptField(decrypted, server.profile_uuid);
+              const decrypted = decryptField(server.env_encrypted);
+              const reEncrypted = encryptField(decrypted);
               updates.env_encrypted = reEncrypted;
               hasEncryptedData = true;
               log(`  ✓ Migrated env field`, 'verbose');
@@ -190,8 +190,8 @@ async function migrateEncryption() {
 
           if (server.url_encrypted) {
             try {
-              const decrypted = decryptField(server.url_encrypted, server.profile_uuid);
-              const reEncrypted = encryptField(decrypted, server.profile_uuid);
+              const decrypted = decryptField(server.url_encrypted);
+              const reEncrypted = encryptField(decrypted);
               updates.url_encrypted = reEncrypted;
               hasEncryptedData = true;
               log(`  ✓ Migrated url field`, 'verbose');

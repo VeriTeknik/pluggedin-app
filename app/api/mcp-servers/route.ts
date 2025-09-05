@@ -48,7 +48,7 @@ export async function GET(request: Request) {
     
     // Decrypt sensitive fields before sending to MCP proxy
     const decryptedServers = activeMcpServers.map(server => 
-      decryptServerData(server, auth.activeProfile.uuid)
+      decryptServerData(server)
     );
     
     return NextResponse.json(decryptedServers);
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
       args,
       env,
       url
-    }, auth.activeProfile.uuid);
+    });
 
     const newMcpServer = await db
       .insert(mcpServersTable)

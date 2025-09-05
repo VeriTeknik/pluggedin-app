@@ -64,7 +64,7 @@ export async function GET(request: Request) {
       args_encrypted: serverDetails.serverArgs,
       env_encrypted: serverDetails.serverEnv,
       url_encrypted: serverDetails.serverUrl
-    }, profileUuid);
+    });
     
     return NextResponse.json({
         // Reconstruct a partial ServerParameters object for the proxy

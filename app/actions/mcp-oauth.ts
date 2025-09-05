@@ -193,7 +193,7 @@ export async function clearMcpServerOAuth(serverUuid: string): Promise<{
     }
 
     // Decrypt server data to get current environment
-    const decryptedData = await decryptServerData(server, profile.uuid);
+    const decryptedData = await decryptServerData(server);
     
     // Clear OAuth tokens from environment
     const env = { ...(decryptedData.env || {}) };
@@ -225,7 +225,7 @@ export async function clearMcpServerOAuth(serverUuid: string): Promise<{
     config.requires_auth = true; // Re-enable auth requirement
 
     // Encrypt the updated environment
-    const encryptedEnv = await encryptField(env, profile.uuid);
+    const encryptedEnv = encryptField(env);
 
     // Update the server
     await db
