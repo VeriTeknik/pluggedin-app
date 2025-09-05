@@ -225,7 +225,7 @@ export async function clearMcpServerOAuth(serverUuid: string): Promise<{
     config.requires_auth = true; // Re-enable auth requirement
 
     // Encrypt the updated environment
-    const encryptedEnv = await encryptField(env);
+    const encryptedEnv = encryptField(env);
 
     // Update the server
     await db
