@@ -131,7 +131,7 @@ export async function POST(request: Request) {
       args,
       env,
       url
-    }, auth.activeProfile.uuid);
+    });
 
     const newMcpServer = await db
       .insert(mcpServersTable)

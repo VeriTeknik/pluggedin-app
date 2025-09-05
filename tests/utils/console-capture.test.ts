@@ -1,3 +1,11 @@
+/**
+ * Unit tests for ConsoleCapture utility
+ * 
+ * NOTE: This file contains test data that may trigger secret detection tools.
+ * All "secrets" in this file are fake test data used to verify our sanitization works.
+ * They are not real credentials and pose no security risk.
+ */
+
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { ConsoleCapture } from '@/lib/utils/console-capture';
 
@@ -45,6 +53,7 @@ describe('ConsoleCapture', () => {
 
     it('should redact bearer tokens', () => {
       capture.start();
+      // gitguardian:ignore - This is test data to verify sanitization, not a real token
       console.log('Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9');
       const logs = capture.stop();
       
@@ -56,7 +65,7 @@ describe('ConsoleCapture', () => {
       capture.start();
       console.log({
         username: 'john',
-        password: 'secret123',
+        password: 'secret123', // gitguardian:ignore - Test data for sanitization verification
         apiKey: 'test-key-12345',
         data: 'normal data'
       });
@@ -75,10 +84,10 @@ describe('ConsoleCapture', () => {
         user: {
           name: 'Alice',
           credentials: {
-            password: 'secret',
-            token: 'Bearer abc123def456',
+            password: 'secret', // gitguardian:ignore - Test data
+            token: 'Bearer abc123def456', // gitguardian:ignore - Test data
             oauth: {
-              client_secret: 'oauth-secret-key',
+              client_secret: 'oauth-secret-key', // gitguardian:ignore - Test data
               redirect_uri: 'https://example.com'
             }
           }
@@ -115,7 +124,7 @@ describe('ConsoleCapture', () => {
     it('should handle circular references gracefully', () => {
       const obj: any = { name: 'test' };
       obj.circular = obj;
-      obj.password = 'secret';
+      obj.password = 'secret'; // gitguardian:ignore - Test data
       
       capture.start();
       console.log(obj);
@@ -130,7 +139,7 @@ describe('ConsoleCapture', () => {
       console.log({
         func: function() { return 'test'; },
         symbol: Symbol('test'),
-        password: 'secret123'
+        password: 'secret123' // gitguardian:ignore - Test data
       });
       const logs = capture.stop();
       
@@ -284,9 +293,9 @@ describe('ConsoleCapture', () => {
       const longString = 'Start ' + 
         'apikey=12345678901234567890 ' +
         'middle text ' +
-        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9 ' +
+        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9 ' + // gitguardian:ignore
         'more text ' +
-        'password: supersecret ' +
+        'password: supersecret ' + // gitguardian:ignore
         'end';
       
       capture.start();

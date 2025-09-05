@@ -522,7 +522,7 @@ async function storeOAuthToken(
     };
 
     // Encrypt environment if needed
-    const encryptedEnv = await encryptField(updatedEnv, profileUuid);
+    const encryptedEnv = await encryptField(updatedEnv);
 
     // Update server
     await db

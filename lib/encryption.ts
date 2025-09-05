@@ -19,7 +19,7 @@ function deriveKey(baseKey: string, salt: Buffer): Buffer {
  * Encrypts a field value using AES-256-GCM with RANDOM salt (secure)
  * NEVER uses predictable salts - always generates cryptographically random salt
  */
-export function encryptField(data: any, _profileUuid: string): string {
+export function encryptField(data: any): string {
   const baseKey = process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
   if (!baseKey) {
     throw new Error('Encryption key not configured');
@@ -99,7 +99,9 @@ export function decryptField(encrypted: string): any {
   try {
     return decryptWithModernKey(encrypted, baseKey);
   } catch (error) {
-    console.error('Decryption failed:', error);
+    // Sanitize error message to avoid leaking sensitive information
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('Decryption failed:', errorMessage.replace(/[A-Za-z0-9]{20,}/g, '[REDACTED]'));
     throw new Error('Failed to decrypt data');
   }
 }
@@ -113,7 +115,7 @@ export function encryptServerData<T extends {
   args?: string[] | null;
   env?: Record<string, string> | null;
   url?: string | null;
-}>(server: T, profileUuid: string): T & {
+}>(server: T): T & {
   command_encrypted?: string;
   args_encrypted?: string;
   env_encrypted?: string;
@@ -124,22 +126,22 @@ export function encryptServerData<T extends {
   
   // Encrypt each sensitive field if present
   if (server.command) {
-    encrypted.command_encrypted = encryptField(server.command, profileUuid);
+    encrypted.command_encrypted = encryptField(server.command);
     delete encrypted.command;
   }
   
   if (server.args && server.args.length > 0) {
-    encrypted.args_encrypted = encryptField(server.args, profileUuid);
+    encrypted.args_encrypted = encryptField(server.args);
     delete encrypted.args;
   }
   
   if (server.env && Object.keys(server.env).length > 0) {
-    encrypted.env_encrypted = encryptField(server.env, profileUuid);
+    encrypted.env_encrypted = encryptField(server.env);
     delete encrypted.env;
   }
   
   if (server.url) {
-    encrypted.url_encrypted = encryptField(server.url, profileUuid);
+    encrypted.url_encrypted = encryptField(server.url);
     delete encrypted.url;
   }
   

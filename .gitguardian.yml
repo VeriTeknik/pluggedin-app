@@ -1,0 +1,35 @@
+# GitGuardian Configuration
+# This file configures GitGuardian secret detection for the project
+
+# Exclude test files from secret detection or reduce severity
+# Test files often contain fake credentials for testing purposes
+paths-ignore:
+  - "**/tests/**/*.test.ts"
+  - "**/tests/**/*.test.tsx"
+  - "**/tests/**/*.spec.ts"
+  - "**/tests/**/*.spec.tsx"
+  - "**/__tests__/**/*"
+  - "**/test/**/*"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/*.spec.tsx"
+
+# Additional patterns to ignore
+# These are common test patterns that are not real secrets
+ignored-matches:
+  # Fake JWT tokens used in tests
+  - name: "Test JWT tokens"
+    match: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+  
+  # Common test passwords
+  - name: "Test passwords"
+    match: "secret123|password123|test-password|supersecret"
+  
+  # Test API keys
+  - name: "Test API keys"
+    match: "test-key-[0-9]+|sk-test[0-9]+|fake-api-key"
+  
+  # OAuth test secrets
+  - name: "Test OAuth secrets"
+    match: "oauth-secret-key|test-client-secret"

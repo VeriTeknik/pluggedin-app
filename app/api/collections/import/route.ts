@@ -166,7 +166,7 @@ export async function POST(request: Request) {
         };
 
         // Encrypt sensitive fields before insertion
-        const encryptedData = encryptServerData(serverData, profileUuid);
+        const encryptedData = encryptServerData(serverData);
 
         // Create new server
         const newServer = await db.insert(mcpServersTable).values(encryptedData).returning();

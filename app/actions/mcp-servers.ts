@@ -366,7 +366,7 @@ export async function updateMcpServer(
   
   // If we have sensitive data to update, encrypt it
   if (Object.keys(sensitiveData).length > 0) {
-    const encryptedData = encryptServerData(sensitiveData, profileUuid);
+    const encryptedData = encryptServerData(sensitiveData);
     Object.assign(updateData, encryptedData);
     
     // Always set the unencrypted fields to null when we have encrypted versions
@@ -547,7 +547,7 @@ export async function createMcpServer({
     };
     
     // Encrypt sensitive fields
-    const encryptedData = encryptServerData(serverData, profileUuid);
+    const encryptedData = encryptServerData(serverData);
     
     // Use transaction to ensure atomicity between server creation and slug generation
     const newServer = await db.transaction(async (tx) => {
@@ -678,7 +678,7 @@ export async function bulkImportMcpServers(
     };
 
     // Encrypt sensitive fields before insertion
-    const encryptedData = encryptServerData(serverData, profileUuid);
+    const encryptedData = encryptServerData(serverData);
 
     // Insert the server into the database
     const inserted = await db.insert(mcpServersTable).values(encryptedData).returning({ uuid: mcpServersTable.uuid });
@@ -748,7 +748,7 @@ export async function importSharedServer(
     };
 
     // Encrypt sensitive fields before insertion
-    const encryptedServerData = encryptServerData(serverToImport, profileUuid);
+    const encryptedServerData = encryptServerData(serverToImport);
 
     // Create new server based on shared server data
     const [newServer] = await db.insert(mcpServersTable)
