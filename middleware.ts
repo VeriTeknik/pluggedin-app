@@ -12,7 +12,7 @@ const securityHeaders = {
   // Note: In development, we allow unsafe-inline for hot reload to work
   // In production, we use stricter CSP without unsafe-inline/unsafe-eval
   'Content-Security-Policy': process.env.NODE_ENV === 'production'
-    ? "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.stripe.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';"
+    ? "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' https://api.stripe.com wss://*.plugged.in; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self';"
     : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self';",
   
   // Prevent clickjacking attacks
