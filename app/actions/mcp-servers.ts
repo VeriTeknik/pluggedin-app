@@ -83,7 +83,7 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
     servers.map(async ({ server, username }) => {
       try {
         // Decrypt sensitive fields
-        const decryptedServer = decryptServerData(server, profileUuid);
+        const decryptedServer = decryptServerData(server);
         
         // Process server data - transport options should now be separate from env
         const processedServer: any = { ...decryptedServer };
@@ -151,7 +151,7 @@ export async function getMcpServerByUuid(
   if (!server) return undefined;
   
   // Decrypt sensitive fields
-  const decryptedServer = decryptServerData(server, profileUuid);
+  const decryptedServer = decryptServerData(server);
   
   // Process server data - transport options should now be separate from env
   if (server.type === McpServerType.STREAMABLE_HTTP) {
@@ -812,7 +812,7 @@ export async function createShareableTemplate(server: McpServer): Promise<any> {
   // Check if server has encrypted fields and decrypt them if necessary
   if (serverAny.command_encrypted || serverAny.args_encrypted || serverAny.env_encrypted || serverAny.url_encrypted) {
     const { decryptServerData } = await import('@/lib/encryption');
-    decryptedServer = decryptServerData(serverAny, server.profile_uuid);
+    decryptedServer = decryptServerData(serverAny);
   }
   
   // Create template with basic server information (non-sensitive fields)

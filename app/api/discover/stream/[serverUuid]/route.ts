@@ -143,7 +143,7 @@ export async function GET(
         });
 
         const decryptedServerConfig: McpServer = {
-          ...decryptServerData(serverConfig, profileUuid),
+          ...decryptServerData(serverConfig),
           config: serverConfig.config as Record<string, any> | null
         };
 

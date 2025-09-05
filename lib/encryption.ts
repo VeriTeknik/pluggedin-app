@@ -90,7 +90,7 @@ function decryptWithModernKey(
 /**
  * Decrypts a field value using AES-256-GCM
  */
-export function decryptField(encrypted: string, _profileUuid: string): any {
+export function decryptField(encrypted: string): any {
   const baseKey = process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
   if (!baseKey) {
     throw new Error('Encryption key not configured');
@@ -157,7 +157,7 @@ export function decryptServerData<T extends {
   args_encrypted?: string | null;
   env_encrypted?: string | null;
   url_encrypted?: string | null;
-}>(server: T, profileUuid: string): T & {
+}>(server: T): T & {
   command?: string;
   args?: string[];
   env?: Record<string, string>;
@@ -168,7 +168,7 @@ export function decryptServerData<T extends {
   // Decrypt each field if present
   if (server.command_encrypted) {
     try {
-      decrypted.command = decryptField(server.command_encrypted, profileUuid);
+      decrypted.command = decryptField(server.command_encrypted);
     } catch (error) {
       console.error('Failed to decrypt command:', error);
       decrypted.command = null;
@@ -178,7 +178,7 @@ export function decryptServerData<T extends {
   
   if (server.args_encrypted) {
     try {
-      decrypted.args = decryptField(server.args_encrypted, profileUuid);
+      decrypted.args = decryptField(server.args_encrypted);
     } catch (error) {
       console.error('Failed to decrypt args:', error);
       decrypted.args = [];
@@ -188,7 +188,7 @@ export function decryptServerData<T extends {
   
   if (server.env_encrypted) {
     try {
-      decrypted.env = decryptField(server.env_encrypted, profileUuid);
+      decrypted.env = decryptField(server.env_encrypted);
     } catch (error) {
       console.error('Failed to decrypt env:', error);
       decrypted.env = {};
@@ -198,7 +198,7 @@ export function decryptServerData<T extends {
   
   if (server.url_encrypted) {
     try {
-      decrypted.url = decryptField(server.url_encrypted, profileUuid);
+      decrypted.url = decryptField(server.url_encrypted);
     } catch (error) {
       console.error('Failed to decrypt url:', error);
       decrypted.url = null;

@@ -3,6 +3,8 @@
 // Import necessary types from the library - Remove Stdio/SseServerParameters
 import { convertMcpToLangchainTools, McpServerCleanupFn, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 
+import { validateTimeouts } from '@/lib/timeout-validator';
+
 import { addServerLogForProfile } from './mcp-playground'; // Relative import
 
 // Interface for server initialization status
@@ -164,29 +166,20 @@ export async function progressivelyInitializeMcpServers(
     llmProvider?: 'anthropic' | 'openai' | 'google_genai' | 'google_gemini' | 'none';
   }
 ): Promise<ProgressiveInitResult> {
-  // Maximum allowed timeout values to prevent resource exhaustion
-  const MAX_PER_SERVER_TIMEOUT = 60000; // 60 seconds max per server
-  const MAX_TOTAL_TIMEOUT = 300000; // 5 minutes max total
-  
   const {
     logger,
-    perServerTimeout: userPerServerTimeout = 20000, // 20 seconds per server default
-    totalTimeout: userTotalTimeout = 60000, // 60 seconds total default
+    perServerTimeout: userPerServerTimeout,
+    totalTimeout: userTotalTimeout,
     skipHealthChecks = false,
     maxRetries = 2, // Default to 2 retries (3 attempts total)
     llmProvider
   } = options;
   
   // Validate and cap timeout values to prevent DoS attacks
-  const perServerTimeout = Math.min(
-    Math.max(1000, userPerServerTimeout || 20000), // Minimum 1 second
-    MAX_PER_SERVER_TIMEOUT
-  );
-  
-  const totalTimeout = Math.min(
-    Math.max(5000, userTotalTimeout || 60000), // Minimum 5 seconds
-    MAX_TOTAL_TIMEOUT
-  );
+  const { perServerTimeout, totalTimeout } = validateTimeouts({
+    perServer: userPerServerTimeout,
+    total: userTotalTimeout
+  });
 
   const initStatus: ServerInitStatus[] = [];
   const allTools: any[] = [];

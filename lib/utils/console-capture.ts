@@ -44,46 +44,23 @@ export class ConsoleCapture {
   start(): void {
     this.logs = [];
 
-    // Override console methods
-    console.log = (...args: any[]) => {
-      const message = this.formatMessage(args);
-      this.logs.push(message);
-      // Apply sanitization before logging to original console
-      const sanitizedArgs = this.sanitizeArgs(args);
-      this.originalConsole.log(...sanitizedArgs);
-    };
+    // DRY up console overrides by looping over levels + prefixes
+    const levels = [
+      { method: 'log' as const,   prefix: ''        },
+      { method: 'error' as const, prefix: '[ERROR] '},
+      { method: 'warn' as const,  prefix: '[WARN] ' },
+      { method: 'info' as const,  prefix: '[INFO] ' },
+      { method: 'debug' as const, prefix: '[DEBUG] '}
+    ];
 
-    console.error = (...args: any[]) => {
-      const message = this.formatMessage(args);
-      this.logs.push(`[ERROR] ${message}`);
-      // Apply sanitization before logging to original console
-      const sanitizedArgs = this.sanitizeArgs(args);
-      this.originalConsole.error(...sanitizedArgs);
-    };
-
-    console.warn = (...args: any[]) => {
-      const message = this.formatMessage(args);
-      this.logs.push(`[WARN] ${message}`);
-      // Apply sanitization before logging to original console
-      const sanitizedArgs = this.sanitizeArgs(args);
-      this.originalConsole.warn(...sanitizedArgs);
-    };
-
-    console.info = (...args: any[]) => {
-      const message = this.formatMessage(args);
-      this.logs.push(`[INFO] ${message}`);
-      // Apply sanitization before logging to original console
-      const sanitizedArgs = this.sanitizeArgs(args);
-      this.originalConsole.info(...sanitizedArgs);
-    };
-
-    console.debug = (...args: any[]) => {
-      const message = this.formatMessage(args);
-      this.logs.push(`[DEBUG] ${message}`);
-      // Apply sanitization before logging to original console
-      const sanitizedArgs = this.sanitizeArgs(args);
-      this.originalConsole.debug(...sanitizedArgs);
-    };
+    levels.forEach(({ method, prefix }) => {
+      (console as any)[method] = (...args: any[]) => {
+        const message = this.formatMessage(args);
+        this.logs.push(prefix + message);
+        const sanitizedArgs = this.sanitizeArgs(args);
+        this.originalConsole[method](...sanitizedArgs);
+      };
+    });
   }
 
   /**
@@ -101,21 +78,19 @@ export class ConsoleCapture {
   }
 
   /**
-   * Deep sanitizes objects (keys + string values) using JSON replacer
+   * JSON replacer for deep sanitization
    */
-  private sanitize(obj: any): string {
-    return JSON.stringify(obj, (key, value) => {
-      // Check for sensitive keys
-      if (ConsoleCapture.SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k))) {
-        return '[REDACTED]';
-      }
-      // Apply pattern matching for string values
-      if (typeof value === 'string') {
-        return ConsoleCapture.SENSITIVE_PATTERNS
-          .reduce((s, regex) => s.replace(regex, '[REDACTED]'), value);
-      }
-      return value;
-    }, 2);
+  private sanitizeReplacer(key: string, value: any): any {
+    // Check for sensitive keys
+    if (key && ConsoleCapture.SENSITIVE_KEYS.some(k => key.toLowerCase().includes(k))) {
+      return '[REDACTED]';
+    }
+    // Apply pattern matching for string values
+    if (typeof value === 'string') {
+      return ConsoleCapture.SENSITIVE_PATTERNS
+        .reduce((s, regex) => s.replace(regex, '[REDACTED]'), value);
+    }
+    return value;
   }
 
   /**
@@ -123,12 +98,13 @@ export class ConsoleCapture {
    */
   private sanitizeArgs(args: any[]): any[] {
     return args.map(arg => {
-      if (typeof arg === 'object') {
+      if (arg && typeof arg === 'object') {
         try {
-          // Parse and re-create object with sanitization
-          return JSON.parse(this.sanitize(arg));
-        } catch {
-          return '[Object - could not sanitize]';
+          // Single-pass deep sanitization using replacer
+          return JSON.parse(JSON.stringify(arg, this.sanitizeReplacer.bind(this)));
+        } catch (error) {
+          // Handle non-serializable objects (e.g., circular references, functions)
+          return `[Object - ${error instanceof Error ? error.message : 'could not sanitize'}]`;
         }
       }
       // Non-object strings still need pattern redaction
@@ -145,11 +121,11 @@ export class ConsoleCapture {
    */
   private formatMessage(args: any[]): string {
     return args.map(arg => {
-      if (typeof arg === 'object') {
+      if (arg && typeof arg === 'object') {
         try {
-          return this.sanitize(arg);
-        } catch {
-          return '[Object - could not stringify]';
+          return JSON.stringify(arg, this.sanitizeReplacer.bind(this), 2);
+        } catch (error) {
+          return `[Object - ${error instanceof Error ? error.message : 'could not stringify'}]`;
         }
       }
       // Non-object strings still need pattern redaction

@@ -43,7 +43,7 @@ export async function triggerMcpOAuth(serverUuid: string) {
       const { server: serverRow, profile } = serverQuery[0];
 
     // Decrypt server data with profile UUID
-    const decryptedData = await decryptServerData(serverRow, profile.uuid);
+    const decryptedData = await decryptServerData(serverRow);
     const mcpServer: McpServer = {
       ...serverRow,
       ...decryptedData,
