@@ -89,8 +89,16 @@ const DANGEROUS_HEADERS = [
 
 /**
  * Validates a URL for MCP connections to prevent SSRF attacks
+ * 
+ * @param url - The URL to validate
+ * @param options - Validation options
+ * @param options.allowLocalhost - Allow localhost and private networks (for development/enterprise)
+ * @returns Validation result with parsed URL if valid
  */
-export function validateMcpUrl(url: string): { valid: boolean; error?: string; parsedUrl?: URL } {
+export function validateMcpUrl(
+  url: string,
+  options: { allowLocalhost?: boolean } = {}
+): { valid: boolean; error?: string; parsedUrl?: URL } {
   try {
     const parsedUrl = new URL(url);
     
@@ -102,54 +110,67 @@ export function validateMcpUrl(url: string): { valid: boolean; error?: string; p
       };
     }
     
-    // Check for blocked hosts
-    const hostname = parsedUrl.hostname.toLowerCase();
+    // Determine if localhost should be allowed
+    const allowLocalhost = options.allowLocalhost || 
+                          process.env.NODE_ENV === 'development' || 
+                          process.env.ALLOW_LOCAL_MCP_SERVERS === 'true';
     
-    // Check exact matches
-    if (BLOCKED_HOSTS.includes(hostname as any)) {
-      return {
-        valid: false,
-        error: `Blocked hostname: ${hostname}. Private networks and localhost are not allowed.`
-      };
-    }
-    
-    // Check IP address patterns
-    for (const blockedPattern of BLOCKED_HOSTS) {
-      if (hostname.startsWith(blockedPattern)) {
+    // Skip host blocking if localhost is allowed
+    if (!allowLocalhost) {
+      // Check for blocked hosts
+      const hostname = parsedUrl.hostname.toLowerCase();
+      
+      // Check exact matches
+      if (BLOCKED_HOSTS.includes(hostname as any)) {
         return {
           valid: false,
-          error: `Blocked hostname pattern: ${hostname}. Private networks and localhost are not allowed.`
+          error: `Blocked hostname: ${hostname}. Private networks and localhost are not allowed in production.`
         };
+      }
+      
+      // Check IP address patterns
+      for (const blockedPattern of BLOCKED_HOSTS) {
+        if (hostname.startsWith(blockedPattern)) {
+          return {
+            valid: false,
+            error: `Blocked hostname pattern: ${hostname}. Private networks and localhost are not allowed in production.`
+          };
+        }
+      }
+      
+      // Additional checks for IPv6
+      if (hostname.includes(':')) {
+        // Basic IPv6 localhost check
+        if (hostname === '::1' || hostname.startsWith('fe80:') || hostname.startsWith('fc00:') || hostname.startsWith('fd00:')) {
+          return {
+            valid: false,
+            error: `Blocked IPv6 address: ${hostname}. Private networks and localhost are not allowed in production.`
+          };
+        }
       }
     }
     
-    // Additional checks for IPv6
-    if (hostname.includes(':')) {
-      // Basic IPv6 localhost check
-      if (hostname === '::1' || hostname.startsWith('fe80:') || hostname.startsWith('fc00:') || hostname.startsWith('fd00:')) {
-        return {
-          valid: false,
-          error: `Blocked IPv6 address: ${hostname}. Private networks and localhost are not allowed.`
-        };
-      }
-    }
-    
-    // Check port ranges (block common internal service ports)
+    // Check port ranges (always validate ports for security)
     const port = parsedUrl.port ? parseInt(parsedUrl.port, 10) : (parsedUrl.protocol === 'https:' ? 443 : 80);
-    if (port < 80 || (port > 65535)) {
+    
+    // Allow wider port range in development
+    const minPort = allowLocalhost ? 1 : 80;
+    if (port < minPort || (port > 65535)) {
       return {
         valid: false,
-        error: `Invalid port: ${port}. Only ports 80-65535 are allowed.`
+        error: `Invalid port: ${port}. Only ports ${minPort}-65535 are allowed.`
       };
     }
     
-    // Block common internal service ports
-    const blockedPorts = [22, 23, 25, 53, 110, 143, 993, 995, 1433, 1521, 3306, 5432, 6379, 27017];
-    if (blockedPorts.includes(port)) {
-      return {
-        valid: false,
-        error: `Blocked port: ${port}. This port is commonly used for internal services.`
-      };
+    // Block common internal service ports (unless localhost is allowed)
+    if (!allowLocalhost) {
+      const blockedPorts = [22, 23, 25, 53, 110, 143, 993, 995, 1433, 1521, 3306, 5432, 6379, 27017];
+      if (blockedPorts.includes(port)) {
+        return {
+          valid: false,
+          error: `Blocked port: ${port}. This port is commonly used for internal services.`
+        };
+      }
     }
     
     return { valid: true, parsedUrl };

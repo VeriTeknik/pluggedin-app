@@ -3,7 +3,7 @@
 // External imports
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { InferSelectModel } from 'drizzle-orm';
-import { AlertTriangle, FileJson2, Info, Loader2, Save } from 'lucide-react'; // Sorted icons
+import { AlertTriangle, Info, Loader2, Save } from 'lucide-react'; // Sorted icons
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -36,7 +36,7 @@ type CustomInstructionItem = InferSelectModel<typeof customInstructionsTable> | 
 // We'll define the actual schema inside the component where 't' is available
 interface FormData {
   description?: string;
-  messagesJson: string;
+  customInstruction?: string;
 }
 
 interface CustomInstructionsEditorProps {
@@ -53,16 +53,7 @@ export function CustomInstructionsEditor({ serverUuid, profileUuid }: CustomInst
   // Define the Zod schema *inside* the component where 't' is available
   const formSchema = z.object({
     description: z.string().optional(),
-    messagesJson: z.string().refine((val) => {
-      try {
-        const parsed = JSON.parse(val);
-        // Basic validation: check if it's an array
-        // More specific validation based on McpMessage type could be added here
-        return Array.isArray(parsed);
-      } catch (_e) {
-        return false;
-      }
-    }, { message: t('settings.validation.invalidJsonArray') }), // Now 't' is accessible
+    customInstruction: z.string().optional().default(''),
   });
 
   const { data: instructions, error, isLoading } = useSWR(apiUrl, fetcher, {
@@ -73,26 +64,49 @@ export function CustomInstructionsEditor({ serverUuid, profileUuid }: CustomInst
     resolver: zodResolver(formSchema),
     defaultValues: {
       description: '',
-      messagesJson: '[]', // Default to empty JSON array string
+      customInstruction: '', // Default to empty string
     },
   });
 
   // Reset form when data loads
   useEffect(() => {
     if (instructions) {
+      // Extract text from existing messages if they exist
+      let customText = '';
+      if (instructions.messages && Array.isArray(instructions.messages)) {
+        // Try to extract the text content from the first message
+        const firstMsg = instructions.messages[0];
+        if (firstMsg) {
+          if (typeof firstMsg === 'string') {
+            customText = firstMsg;
+          } else if (firstMsg.content) {
+            customText = typeof firstMsg.content === 'string' 
+              ? firstMsg.content 
+              : '';
+          }
+        }
+      }
+      
       form.reset({
         description: instructions.description ?? '',
-        messagesJson: JSON.stringify(instructions.messages ?? [], null, 2), // Pretty print JSON
+        customInstruction: customText,
       });
     } else if (!isLoading && !error) {
        // Handle case where instructions are null (not yet created)
-       form.reset({ description: '', messagesJson: '[]' });
+       form.reset({ description: '', customInstruction: '' });
     }
   }, [instructions, form, isLoading, error]);
 
   const onSubmit = async (data: FormData) => {
     try {
-      const messages = JSON.parse(data.messagesJson); // We know this is valid due to Zod refine
+      // Convert simple text to proper message format with correct type
+      const messages: any[] = data.customInstruction?.trim() 
+        ? [{
+            role: "system",
+            content: data.customInstruction.trim()
+          }]
+        : [];
+        
       const result = await upsertCustomInstructions(
         profileUuid,
         serverUuid,
@@ -152,50 +166,21 @@ export function CustomInstructionsEditor({ serverUuid, profileUuid }: CustomInst
         />
         <FormField
           control={form.control}
-          name="messagesJson"
+          name="customInstruction"
           render={({ field }) => (
             <FormItem>
-              <div className="flex items-center justify-between mb-2">
-                <FormLabel>{t('mcpServers.instructions.messagesLabel')}</FormLabel>
-                {(field.value === '[]' || field.value === '') && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      const template = JSON.stringify([
-                        {
-                          role: "system",
-                          content: "You are a helpful assistant specialized in [YOUR SPECIALTY HERE]"
-                        },
-                        {
-                          role: "user",
-                          content: "Example user question or context"
-                        },
-                        {
-                          role: "assistant",
-                          content: "Example assistant response"
-                        }
-                      ], null, 2);
-                      field.onChange(template);
-                    }}
-                  >
-                    <FileJson2 className="mr-2 h-3 w-3" />
-                    {t('mcpServers.instructions.insertTemplate')}
-                  </Button>
-                )}
-              </div>
+              <FormLabel>{t('mcpServers.instructions.messagesLabel')}</FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder={t('mcpServers.instructions.messagesPlaceholder')}
-                  className="min-h-[300px] font-mono text-sm"
+                  placeholder="Enter custom instructions for this server. For example: 'This is the production database, be careful with mutations' or 'Use TypeScript best practices and follow the company style guide'"
+                  className="min-h-[150px]"
                   {...field}
                 />
               </FormControl>
               <FormDescription>
-                {t('mcpServers.instructions.messagesHelp')}
+                Provide context or special instructions that will be included when using this MCP server
               </FormDescription>
-              <FormMessage /> {/* Shows validation errors */}
+              <FormMessage />
             </FormItem>
           )}
         />

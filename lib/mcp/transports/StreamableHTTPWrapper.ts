@@ -16,6 +16,7 @@ export class StreamableHTTPWrapper implements Transport {
   private profileUuid: string;
   private sessionManager = getSessionManager();
   private capturedSessionId: string | null = null;
+  private timeout: number;
 
   // Event handlers from Transport interface
   onclose?: () => void;
@@ -32,11 +33,13 @@ export class StreamableHTTPWrapper implements Transport {
     this.serverUuid = serverUuid;
     this.profileUuid = profileUuid;
     this.capturedSessionId = initialSessionId;
+    // Store timeout value (default 30 seconds if not specified)
+    this.timeout = options.timeout || 30000;
 
     // Create the underlying transport with our fetch wrapper
     this.transport = new StreamableHTTPClientTransport(url, {
       ...options,
-      // Add response interceptor to capture session ID
+      // Add response interceptor to capture session ID with timeout support
       fetchImplementation: this.createFetchWrapper(options.fetchImplementation),
     });
 
@@ -111,57 +114,84 @@ export class StreamableHTTPWrapper implements Transport {
         };
       }
 
-      // Make the request
-      const response = await fetchImpl(input, init);
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => {
+        controller.abort(new Error(`Request timeout after ${this.timeout}ms`));
+      }, this.timeout);
 
-      // Check if the response has the Mcp-Session-Id header
-      const sessionId = response.headers.get('Mcp-Session-Id');
-      if (sessionId && sessionId !== this.capturedSessionId) {
-        this.capturedSessionId = sessionId;
+      try {
+        // Make the request with timeout signal
+        const response = await fetchImpl(input, {
+          ...init,
+          signal: init?.signal || controller.signal,
+        });
+        
+        // Clear timeout on successful response
+        clearTimeout(timeoutId);
 
-        // Store session in database for persistence
-        try {
-          // First check if this session already exists
-          const existingSession = await this.sessionManager.getSession(sessionId);
-          
-          if (!existingSession) {
-            // Create session with the specific ID from the server
-            await this.sessionManager.createSession(this.serverUuid, this.profileUuid, sessionId);
-          } else {
-            // Update existing session's last activity
-            await this.sessionManager.updateSession(sessionId, {
-              last_activity: new Date(),
-              session_data: {
-                ...existingSession.session_data,
-                last_used: new Date().toISOString(),
-              },
-            });
+        // Check if the response has the Mcp-Session-Id header
+        const sessionId = response.headers.get('Mcp-Session-Id');
+        if (sessionId && sessionId !== this.capturedSessionId) {
+          this.capturedSessionId = sessionId;
+
+          // Store session in database for persistence
+          try {
+            // First check if this session already exists
+            const existingSession = await this.sessionManager.getSession(sessionId);
+            
+            if (!existingSession) {
+              // Create session with the specific ID from the server
+              await this.sessionManager.createSession(this.serverUuid, this.profileUuid, sessionId);
+            } else {
+              // Update existing session's last activity
+              await this.sessionManager.updateSession(sessionId, {
+                last_activity: new Date(),
+                session_data: {
+                  ...existingSession.session_data,
+                  last_used: new Date().toISOString(),
+                },
+              });
+            }
+          } catch (error) {
+            console.error(`[StreamableHTTPWrapper] Failed to store session ID:`, error);
           }
-        } catch (error) {
-          console.error(`[StreamableHTTPWrapper] Failed to store session ID:`, error);
         }
-      }
 
-      // Check for CORS errors related to session ID access
-      // If the server returns 400 Bad Request with specific error about session ID,
-      // it might indicate CORS configuration issues
-      if (response.status === 400) {
-        try {
-          const clonedResponse = response.clone();
-          const body = await clonedResponse.text();
-          if (body.includes('session') || body.includes('Session-Id')) {
-            console.warn(
-              `[StreamableHTTPWrapper] Possible CORS issue detected. ` +
-              `Server may need to expose 'Mcp-Session-Id' header via Access-Control-Expose-Headers. ` +
-              `Response: ${body}`
-            );
+        // Check for CORS errors related to session ID access
+        // If the server returns 400 Bad Request with specific error about session ID,
+        // it might indicate CORS configuration issues
+        if (response.status === 400) {
+          try {
+            const clonedResponse = response.clone();
+            const body = await clonedResponse.text();
+            if (body.includes('session') || body.includes('Session-Id')) {
+              console.warn(
+                `[StreamableHTTPWrapper] Possible CORS issue detected. ` +
+                `Server may need to expose 'Mcp-Session-Id' header via Access-Control-Expose-Headers. ` +
+                `Response: ${body}`
+              );
+            }
+          } catch {
+            // Ignore errors when trying to read response body
           }
-        } catch {
-          // Ignore errors when trying to read response body
         }
-      }
 
-      return response;
+        return response;
+      } catch (error) {
+        // Clear timeout on error
+        clearTimeout(timeoutId);
+        
+        // Enhance error message for timeout
+        if (error instanceof Error) {
+          if (error.name === 'AbortError' || error.message.includes('timeout')) {
+            throw new Error(`MCP server request timed out after ${this.timeout}ms. The server may be slow or unresponsive.`);
+          }
+        }
+        
+        // Re-throw other errors
+        throw error;
+      }
     };
   }
 

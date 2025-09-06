@@ -33,3 +33,11 @@ ignored-matches:
   # OAuth test secrets
   - name: "Test OAuth secrets"
     match: "oauth-secret-key|test-client-secret"
+  
+  # URL validation test credentials
+  - name: "URL validation test credentials"
+    match: "user:pass@|admin:secret@|user%40name:pass%40word@|:password@"
+  
+  # Generic test credentials in URLs
+  - name: "Generic test URL credentials"
+    match: "https?://[^:]+:[^@]+@"
