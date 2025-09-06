@@ -36,7 +36,7 @@ type CustomInstructionItem = InferSelectModel<typeof customInstructionsTable> | 
 // We'll define the actual schema inside the component where 't' is available
 interface FormData {
   description?: string;
-  customInstruction: string;
+  customInstruction?: string;
 }
 
 interface CustomInstructionsEditorProps {

@@ -44,8 +44,8 @@ export const dynamic = 'force-dynamic';
  *                 properties:
  *                   name:
  *                     type: string
- *                     description: A generated name for the instruction, typically prefixed with `pluggedin_instruction_`.
- *                     example: pluggedin_instruction_my_server_default
+ *                     description: A generated name for the instruction, using the pattern `{server}__system_context`.
+ *                     example: postgres__system_context
  *                   description:
  *                     type: string
  *                     description: The content of the custom instruction.
@@ -114,12 +114,10 @@ export async function GET(request: Request) {
     // Map DB results (each object in 'instructions' array) to the McpPromptListEntry structure
     const responsePayload: McpPromptListEntry[] = instructions.map(instr => {
         // Access properties from the 'instr' object based on the keys defined in '.select()'
-        const prefix = 'pluggedin_instruction';
         // Ensure serverName is treated as string before calling methods
         const serverPart = String(instr.serverName ?? '').toLowerCase().replace(/[^a-z0-9_]/g, '_');
-        // Use a fixed string for the instruction part as 'name' column doesn't exist
-        const instructionPart = 'default';
-        const generatedName = `${prefix}_${serverPart}_${instructionPart}`;
+        // Use consistent naming pattern with tools: {server}__system_context
+        const generatedName = `${serverPart}__system_context`;
 
         return {
             name: generatedName, // Use the generated name
