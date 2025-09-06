@@ -7,6 +7,8 @@
  * Add new domains here as needed for legitimate integrations
  */
 const ALLOWED_DOMAINS = [
+  'plugged.in',
+  'api.plugged.in',
   'registry.plugged.in',
   'api.registry.plugged.in',
   'staging.plugged.in',
