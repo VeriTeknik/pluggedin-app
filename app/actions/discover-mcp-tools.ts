@@ -85,7 +85,7 @@ export async function discoverSingleServerTools(
             await db.insert(toolsTable).values(toolsToInsert);
         }
     } catch (error: any) {
-        console.error(`[Action Error] Failed to discover/store tools for ${serverConfig.name || serverUuid}:`, error);
+        console.error('[Action Error] Failed to discover/store tools for server:', { server: serverConfig.name || serverUuid, error });
         toolError = error.message;
         
         // Check if this is a 401 authentication error
@@ -140,7 +140,7 @@ export async function discoverSingleServerTools(
             await db.insert(resourceTemplatesTable).values(templatesToInsert);
         }
     } catch (error: any) {
-        console.error(`[Action Error] Failed to discover/store resource templates for ${serverConfig.name || serverUuid}:`, error);
+        console.error('[Action Error] Failed to discover/store resource templates for server:', { server: serverConfig.name || serverUuid, error });
         templateError = error.message;
     }
 
@@ -165,7 +165,7 @@ export async function discoverSingleServerTools(
             await db.insert(resourcesTable).values(resourcesToInsert);
         }
     } catch (error: any) {
-        console.error(`[Action Error] Failed to discover/store static resources for ${serverConfig.name || serverUuid}:`, error);
+        console.error('[Action Error] Failed to discover/store static resources for server:', { server: serverConfig.name || serverUuid, error });
         resourceError = error.message;
     }
 
@@ -189,7 +189,7 @@ export async function discoverSingleServerTools(
             await db.insert(promptsTable).values(promptsToInsert);
         }
     } catch (error: any) {
-        console.error(`[Action Error] Failed to discover/store prompts for ${serverConfig.name || serverUuid}:`, error);
+        console.error('[Action Error] Failed to discover/store prompts for server:', { server: serverConfig.name || serverUuid, error });
         promptError = error.message;
     }
 
@@ -219,7 +219,7 @@ export async function discoverSingleServerTools(
     return { success, message, error: success ? undefined : (toolError || templateError || resourceError || promptError || 'Unknown discovery error') }; // Include promptError
 
   } catch (error: any) {
-    console.error(`[Action Error] Failed to discover tools for server ${serverUuid}:`, error);
+    console.error('[Action Error] Failed to discover tools for server:', { serverUuid, error });
     return { success: false, message: `Failed to discover tools for server ${serverUuid}.`, error: error.message };
   }
 }

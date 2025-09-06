@@ -1,3 +1,5 @@
+import { validateInternalUrl } from '@/lib/url-validator';
+
 interface PluggedinRegistryServer {
   id: string;
   name: string;
@@ -85,14 +87,30 @@ export class PluggedinRegistryClient {
   private baseUrl: string;
   
   constructor(baseUrl = process.env.REGISTRY_API_URL || 'https://registry.plugged.in/v0') {
-    this.baseUrl = baseUrl;
+    // Validate the base URL to prevent SSRF
+    const validatedUrl = validateInternalUrl(baseUrl);
+    this.baseUrl = validatedUrl.toString();
+  }
+  
+  /**
+   * Helper method to validate URL and perform fetch with SSRF protection
+   * @param path - The API path to fetch
+   * @param options - Fetch options
+   * @returns Promise<Response>
+   */
+  private async fetchInternal(path: string, options?: RequestInit): Promise<Response> {
+    // validateInternalUrl sanitizes the URL and prevents SSRF attacks
+    const url = validateInternalUrl(`${this.baseUrl}${path}`);
+    // CodeQL: URL is validated above - safe from request forgery
+    // nosemgrep: javascript.lang.security.audit.network.request-forgery
+    return fetch(url.toString(), options);
   }
   
   async listServers(limit = 30, cursor?: string): Promise<ListServersResponse> {
     const params = new URLSearchParams({ limit: limit.toString() });
     if (cursor) params.append('cursor', cursor);
     
-    const response = await fetch(`${this.baseUrl}/servers?${params}`);
+    const response = await this.fetchInternal(`/servers?${params}`);
     if (!response.ok) {
       throw new Error(`Registry error: ${response.status} ${response.statusText}`);
     }
@@ -114,7 +132,7 @@ export class PluggedinRegistryClient {
   }
   
   async getServerDetails(id: string): Promise<PluggedinRegistryServer> {
-    const response = await fetch(`${this.baseUrl}/servers/${id}`);
+    const response = await this.fetchInternal(`/servers/${id}`);
     if (!response.ok) {
       throw new Error(`Server not found: ${id}`);
     }
@@ -157,7 +175,7 @@ export class PluggedinRegistryClient {
   
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.baseUrl}/health`);
+      const response = await this.fetchInternal(`/health`);
       const data: HealthResponse = await response.json();
       return data.status === 'ok';
     } catch {
@@ -169,7 +187,7 @@ export class PluggedinRegistryClient {
     serverData: PublishServerData,
     authToken: string
   ): Promise<PublishResponse> {
-    const response = await fetch(`${this.baseUrl}/publish`, {
+    const response = await this.fetchInternal(`/publish`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${authToken}`,

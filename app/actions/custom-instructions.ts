@@ -43,7 +43,7 @@ export async function getCustomInstructionsForServer(profileUuid: string, server
     });
 
     if (!serverCheck) {
-        console.error(`[Action Error] getCustomInstructionsForServer: Server ${serverUuid} not found for profile ${profileUuid}.`);
+        console.error('[Action Error] getCustomInstructionsForServer: Server not found', { serverUuid, profileUuid });
         return null; // Or throw an error? Returning null might be safer for UI.
     }
 
@@ -55,7 +55,7 @@ export async function getCustomInstructionsForServer(profileUuid: string, server
     return instructions; // Returns the record or undefined if none exists
 
   } catch (error) {
-    console.error(`[Action Error] Failed to get custom instructions for server ${serverUuid}:`, error);
+    console.error('[Action Error] Failed to get custom instructions for server:', { serverUuid, error });
     return null; // Return null on error
   }
 }
@@ -122,7 +122,7 @@ export async function upsertCustomInstructions(
     return { success: true };
 
   } catch (error) {
-    console.error(`[Action Error] Failed to upsert custom instructions for server ${serverUuid}:`, error);
+    console.error('[Action Error] Failed to upsert custom instructions for server:', { serverUuid, error });
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return { success: false, error: `Failed to save custom instructions: ${errorMessage}` };
   }

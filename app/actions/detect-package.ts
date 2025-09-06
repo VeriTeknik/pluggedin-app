@@ -1,5 +1,7 @@
 'use server';
 
+import { validateExternalUrl } from '@/lib/url-validator';
+
 import { TransportType } from '@/lib/mcp/package-detector';
 
 interface GitHubFile {
@@ -56,8 +58,15 @@ async function fetchFileFromGitHub(
       headers['Authorization'] = `Bearer ${githubToken}`;
     }
     
+    // Validate the GitHub API URL to prevent SSRF
+    const githubUrl = validateExternalUrl(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
+    );
+    
+    // CodeQL: URL is validated above - safe from request forgery
+    // nosemgrep: javascript.lang.security.audit.network.request-forgery
     const response = await fetch(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${path}`,
+      githubUrl.toString(),
       { headers }
     );
     

@@ -63,13 +63,19 @@ async function safeCleanup(connectedClient: ConnectedMcpClient | undefined, serv
   } catch (cleanupError: any) {
     // For Streamable HTTP, completely suppress abort errors
     if (serverConfig.type === McpServerType.STREAMABLE_HTTP) {
-      // Only log non-abort errors at debug level
-      if (cleanupError?.code !== 20 && cleanupError?.name !== 'AbortError' && !cleanupError?.message?.includes('abort')) {
+      // Completely ignore abort errors - they're expected during cleanup
+      if (cleanupError?.code === 20 || 
+          cleanupError?.name === 'AbortError' || 
+          cleanupError?.message?.includes('abort') ||
+          cleanupError?.message?.includes('This operation was aborted')) {
+        return; // Silent return for expected abort errors
       }
-      // Don't re-throw or log abort errors at all
+      // Only log unexpected errors for debugging
+      console.debug('[MCP] Unexpected Streamable HTTP cleanup error:', cleanupError?.message);
       return;
     }
     // For other transport types, log the error
+    console.warn('[MCP] Cleanup error for', serverConfig.name, ':', cleanupError?.message);
   }
 }
 
@@ -680,10 +686,13 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         return null;
       }
       
-      // Validate URL for security
-      const urlValidation = validateMcpUrl(serverConfig.url);
+      // Validate URL for security (allow localhost in development)
+      const urlValidation = validateMcpUrl(serverConfig.url, {
+        allowLocalhost: process.env.NODE_ENV === 'development' || 
+                       process.env.ALLOW_LOCAL_MCP_SERVERS === 'true'
+      });
       if (!urlValidation.valid) {
-        throw new Error(`Invalid URL: ${urlValidation.error}`);
+        throw new Error(`MCP Server URL validation failed for ${serverConfig.name}: ${urlValidation.error}`);
       }
       
       transport = new SSEClientTransport(urlValidation.parsedUrl!);
@@ -692,10 +701,13 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         return null;
       }
       
-      // Validate URL for security
-      const urlValidation = validateMcpUrl(serverConfig.url);
+      // Validate URL for security (allow localhost in development)
+      const urlValidation = validateMcpUrl(serverConfig.url, {
+        allowLocalhost: process.env.NODE_ENV === 'development' || 
+                       process.env.ALLOW_LOCAL_MCP_SERVERS === 'true'
+      });
       if (!urlValidation.valid) {
-        throw new Error(`Invalid URL: ${urlValidation.error}`);
+        throw new Error(`MCP Server URL validation failed for ${serverConfig.name}: ${urlValidation.error}`);
       }
       
       const url = urlValidation.parsedUrl!;
@@ -761,10 +773,17 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         
         // Add a reasonable default timeout for all Streamable HTTP connections
         // This helps prevent indefinite hanging on slow servers
+        // Context7 and similar servers might need longer timeouts for complex queries
         if (streamableOptions?.timeout && typeof streamableOptions.timeout === 'number') {
           transportOptions.timeout = streamableOptions.timeout;
         } else {
-          transportOptions.timeout = 30000; // 30 seconds default
+          // Use longer timeout for known slow servers
+          const urlStr = url.toString().toLowerCase();
+          if (urlStr.includes('context7.com') || urlStr.includes('smithery.ai')) {
+            transportOptions.timeout = 60000; // 60 seconds for Context7/Smithery
+          } else {
+            transportOptions.timeout = 30000; // 30 seconds default
+          }
         }
         
         

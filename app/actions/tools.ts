@@ -29,7 +29,7 @@ export async function getToolsForServer(serverUuid: string): Promise<Tool[]> {
     // Ensure the return type matches the expected Tool interface
     return tools as Tool[];
   } catch (error) {
-    console.error(`[Action Error] Failed to fetch tools for server ${serverUuid}:`, error);
+    console.error('[Action Error] Failed to fetch tools for server:', { serverUuid, error });
     return []; // Return empty array on error
   }
 }

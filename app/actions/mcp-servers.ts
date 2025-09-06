@@ -410,11 +410,11 @@ export async function updateMcpServer(
   try {
     // Don't await this, let it run in the background
     discoverSingleServerTools(profileUuid, uuid).catch(discoveryError => {
-       console.error(`[Action Warning] Background tool discovery failed after update for server ${uuid}:`, discoveryError);
+       console.error('[Action Warning] Background tool discovery failed after update for server:', { uuid, error: discoveryError });
     });
   } catch (error) {
     // Catch synchronous errors if discoverSingleServerTools itself throws immediately (unlikely for async)
-    console.error(`[Action Warning] Failed to trigger tool discovery after update for server ${uuid}:`, error);
+    console.error('[Action Warning] Failed to trigger tool discovery after update for server:', { uuid, error });
     // Do not re-throw, allow the update operation to be considered successful
   }
 

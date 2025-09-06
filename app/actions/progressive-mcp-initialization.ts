@@ -115,6 +115,8 @@ async function initializeSingleServer(
         { logger, llmProvider }
       );
 
+      // CodeQL: timeout value is validated in progressivelyInitializeMcpServers using validateTimeouts()
+      // which caps the value to prevent resource exhaustion attacks
       const timeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
           reject(new Error(`Server "${serverName}" initialization timed out after ${timeout / 1000} seconds (Attempt ${attempt + 1})`));
@@ -248,6 +250,8 @@ export async function progressivelyInitializeMcpServers(
 
     // Overall timeout promise
     let overallTimeoutId: NodeJS.Timeout | null = null;
+    // CodeQL: totalTimeout value is validated by validateTimeouts() function which caps it to MAX_TOTAL_TIMEOUT
+    // preventing resource exhaustion attacks
     const overallTimeoutPromise = new Promise<never>((_, reject) => {
       overallTimeoutId = setTimeout(() => {
         reject(new Error(`[MCP] Total initialization timed out after ${totalTimeout / 1000} seconds`));
