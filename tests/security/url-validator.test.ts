@@ -99,19 +99,26 @@ describe('URL Validator Security Tests', () => {
 
     describe('Authentication Credential Blocking', () => {
       test('blocks URLs with username and password', () => {
+        // gitguardian:ignore - Fake credentials for security testing
         expect(() => validateExternalUrl('https://user:pass@github.com')).toThrow('URLs with authentication credentials are not allowed');
+        // gitguardian:ignore - Fake credentials for security testing
         expect(() => validateExternalUrl('https://admin:secret@api.github.com')).toThrow('URLs with authentication credentials are not allowed');
       });
 
       test('blocks URLs with only username', () => {
+        // gitguardian:ignore - Fake username for security testing
         expect(() => validateExternalUrl('https://user@github.com')).toThrow('URLs with authentication credentials are not allowed');
       });
 
       test('blocks URLs with only password', () => {
+        // gitguardian:ignore - Fake password for security testing
         expect(() => validateExternalUrl('https://:password@github.com')).toThrow('URLs with authentication credentials are not allowed');
       });
 
       test('blocks encoded credentials', () => {
+        // gitguardian:ignore - Test with fake encoded credentials to verify blocking
+        // These are intentionally fake credentials (user@name:pass@word) used to test
+        // that our validator correctly blocks URLs containing authentication data
         expect(() => validateExternalUrl('https://user%40name:pass%40word@github.com')).toThrow('URLs with authentication credentials are not allowed');
       });
     });
