@@ -297,10 +297,13 @@ class RagService {
       }
 
       const statusUrl = `${this.ragApiUrl}/rag/upload-status/${uploadId}?user_id=${ragIdentifier}`;
+      // validateExternalUrl sanitizes the URL and prevents SSRF attacks
       const validatedUrl = validateExternalUrl(statusUrl, {
         allowLocalhost: process.env.NODE_ENV === 'development'
       });
 
+      // CodeQL: URL is validated above - safe from request forgery
+      // nosemgrep: javascript.lang.security.audit.network.request-forgery
       const response = await fetch(validatedUrl.toString(), {
         method: 'GET',
         headers: {
