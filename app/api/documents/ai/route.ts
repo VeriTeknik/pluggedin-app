@@ -308,18 +308,7 @@ export async function POST(request: NextRequest) {
         // Create a dummy file object for AI-generated content
         const dummyFile = new File([textContent], filename, { type: mimeType });
         
-        ragService.uploadDocument({
-          id: documentId,
-          title: validatedData.title,
-          content: textContent,
-          metadata: {
-            filename: filename,
-            mimeType,
-            fileSize,
-            tags: validatedData.tags,
-            userId: apiKeyResult.user.id,
-          },
-        }, dummyFile, apiKeyResult.activeProfile.project_uuid || apiKeyResult.user.id).catch(async error => {
+        ragService.uploadDocument(dummyFile, apiKeyResult.activeProfile.project_uuid || apiKeyResult.user.id).catch(async error => {
           console.error('Failed to send AI document to RAG:', error);
           
           // Create a notification about the RAG failure

@@ -80,6 +80,17 @@ class RagService {
   }
 
   /**
+   * Parse RAG API response which can be either JSON or plain text
+   */
+  private async parseRagResponse(response: Response): Promise<any> {
+    try {
+      return await response.json();
+    } catch {
+      return await response.text();
+    }
+  }
+
+  /**
    * Query RAG for relevant context (used in playground)
    */
   async queryForContext(query: string, ragIdentifier: string): Promise<RagQueryResponse> {
@@ -109,15 +120,10 @@ class RagService {
       }
 
       // Handle both JSON and plain text responses
-      const contentType = response.headers.get('content-type');
-      let context: string;
-      
-      if (contentType?.includes('application/json')) {
-        const result = await response.json();
-        context = result.message || result.context || result.response || '';
-      } else {
-        context = await response.text();
-      }
+      const body = await this.parseRagResponse(response);
+      const context = typeof body === 'string'
+        ? body
+        : body.message || body.context || body.response || '';
       
       return {
         success: true,
@@ -163,8 +169,11 @@ class RagService {
         throw new Error(`RAG API responded with status: ${response.status}`);
       }
 
-      // The api.plugged.in RAG endpoint returns plain text, not JSON
-      const responseText = await response.text();
+      // Handle both JSON and plain text responses
+      const body = await this.parseRagResponse(response);
+      const responseText = typeof body === 'string'
+        ? body
+        : body.message || body.response || 'No response received';
       
       return {
         success: true,
@@ -172,12 +181,23 @@ class RagService {
       };
     } catch (error) {
       console.error('Error querying RAG for response:', error);
-      // Check if it's a connection error to RAG API
-      if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
-        return {
-          success: false,
-          error: 'RAG API service is not running. Please ensure the RAG service is started.',
-        };
+      // Check for common network errors to RAG API
+      if (error instanceof Error) {
+        // Check error code first (more reliable), then fall back to message
+        const errorCode = (error as any).code;
+        const errorMessage = error.message;
+        
+        if (errorCode === 'ECONNREFUSED' || errorMessage.includes('ECONNREFUSED') ||
+            errorCode === 'ETIMEDOUT' || errorMessage.includes('ETIMEDOUT') ||
+            errorCode === 'ENOTFOUND' || errorMessage.includes('ENOTFOUND') ||
+            errorCode === 'ECONNRESET' || errorMessage.includes('ECONNRESET') ||
+            errorCode === 'EHOSTUNREACH' || errorMessage.includes('EHOSTUNREACH') ||
+            errorCode === 'ENETUNREACH' || errorMessage.includes('ENETUNREACH')) {
+          return {
+            success: false,
+            error: 'Unable to connect to RAG API service. Please ensure the RAG service is running and reachable.',
+          };
+        }
       }
       return {
         success: false,
@@ -189,7 +209,7 @@ class RagService {
   /**
    * Upload document to RAG collection
    */
-  async uploadDocument(document: RAGDocumentRequest, file: File, ragIdentifier: string): Promise<RagUploadResponse> {
+  async uploadDocument(file: File, ragIdentifier: string): Promise<RagUploadResponse> {
     try {
       if (!this.isConfigured()) {
         return {
