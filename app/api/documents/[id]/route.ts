@@ -449,7 +449,7 @@ export async function PATCH(
       allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'code']),
       allowedAttributes: {
         ...sanitizeHtml.defaults.allowedAttributes,
-        img: ['alt', 'title', 'width', 'height'], // Remove 'src' to prevent SSRF
+        img: ['src', 'alt', 'title', 'width', 'height'], // Include 'src' for validation in transformTags
         code: ['class'],
         pre: ['class']
       },
@@ -461,16 +461,37 @@ export async function PATCH(
         'img': function(tagName, attribs) {
           // Validate image sources to prevent SSRF
           if (attribs.src) {
-            try {
-              const url = new URL(attribs.src);
-              // Only allow specific image hosting domains or data URLs
-              const allowedHosts = ['imgur.com', 'cloudinary.com', 'github.com'];
-              if (!allowedHosts.some(host => url.hostname.endsWith(host)) && !attribs.src.startsWith('data:image/')) {
+            // Allow data URLs for base64 images
+            if (attribs.src.startsWith('data:image/')) {
+              // Validate it's a proper image data URL
+              if (!/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);base64,/.test(attribs.src)) {
                 return { 
                   tagName: 'span', 
-                  text: '[Image removed for security]' 
+                  text: '[Invalid image data URL]' 
                 };
               }
+              return { tagName, attribs };
+            }
+            
+            // Validate external URLs
+            try {
+              const url = new URL(attribs.src);
+              // Only allow HTTPS for external images
+              if (url.protocol !== 'https:') {
+                return { 
+                  tagName: 'span', 
+                  text: '[Image removed - HTTPS required]' 
+                };
+              }
+              // Allow specific trusted image hosting domains
+              const allowedHosts = ['imgur.com', 'cloudinary.com', 'github.com', 'githubusercontent.com'];
+              if (!allowedHosts.some(host => url.hostname.endsWith(host))) {
+                return { 
+                  tagName: 'span', 
+                  text: '[Image removed - untrusted source]' 
+                };
+              }
+              return { tagName, attribs };
             } catch {
               // Invalid URL, remove the image
               return { 
@@ -479,7 +500,11 @@ export async function PATCH(
               };
             }
           }
-          return { tagName, attribs };
+          // No src attribute, remove the image tag
+          return { 
+            tagName: 'span', 
+            text: '[Image missing source]' 
+          };
         }
       }
     });
