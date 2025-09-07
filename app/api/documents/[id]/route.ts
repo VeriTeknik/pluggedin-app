@@ -10,6 +10,8 @@ import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable,documentVersionsTable } from '@/db/schema';
 import { ragService } from '@/lib/rag-service';
+import { rateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
+import { isPathWithinDirectory } from '@/lib/security';
 
 // Query parameters schema
 const getDocumentSchema = z.object({
@@ -348,6 +350,17 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Apply rate limiting for document updates
+    const rateLimiter = rateLimit({
+      windowMs: 5 * 60 * 1000, // 5 minutes
+      max: 10, // 10 updates per 5 minutes
+      message: 'Too many document updates. Please wait before making more changes.'
+    });
+    const rateLimitResponse = await rateLimiter(request);
+    if (rateLimitResponse) {
+      return rateLimitResponse;
+    }
+
     // Authenticate API key
     const authResult = await authenticateApiKey(request);
     if (authResult.error) {
@@ -361,21 +374,15 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateDocumentSchema.parse(body);
 
-    // Get the existing document
+    // Get the existing document - only allow updates by document owner
     const existingDocs = await db
       .select()
       .from(docsTable)
       .where(
         and(
           eq(docsTable.uuid, documentId),
-          or(
-            eq(docsTable.user_id, authResult.user.id),
-            eq(docsTable.visibility, 'public'),
-            and(
-              eq(docsTable.visibility, 'workspace'),
-              eq(docsTable.project_uuid, authResult.activeProfile.project_uuid)
-            )
-          )
+          eq(docsTable.profile_uuid, authResult.activeProfile.uuid), // Only owner can update
+          eq(docsTable.source, 'ai_generated') // Only AI-generated documents
         )
       )
       .limit(1);
@@ -389,18 +396,39 @@ export async function PATCH(
 
     const existingDoc = existingDocs[0];
 
-    // Only allow updates to AI-generated documents
-    if (existingDoc.source !== 'ai_generated') {
+    // Determine upload directory path
+    const getDefaultUploadsDir = () => {
+      if (process.platform === 'darwin') {
+        return join(process.cwd(), 'uploads');
+      } else if (process.platform === 'win32') {
+        return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
+      } else {
+        return '/home/pluggedin/uploads';
+      }
+    };
+    
+    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
+    const userUploadDir = join(baseUploadDir, authResult.user.id);
+    
+    // Construct file path with proper validation
+    const existingFilePath = existingDoc.file_path.startsWith('/')
+      ? existingDoc.file_path
+      : join(userUploadDir, existingDoc.file_path);
+    
+    // Validate path is within allowed directory to prevent path traversal
+    const resolvedPath = resolve(existingFilePath);
+    const resolvedUploadDir = resolve(baseUploadDir);
+    
+    if (!isPathWithinDirectory(resolvedPath, resolvedUploadDir)) {
+      console.error('Path traversal attempt detected:', existingDoc.file_path);
       return NextResponse.json(
-        { error: 'Only AI-generated documents can be updated' },
+        { error: 'Invalid file path' },
         { status: 403 }
       );
     }
-
+    
     // Read existing content
-    const uploadDir = join(process.cwd(), 'uploads', 'docs');
-    const existingFilePath = resolve(uploadDir, existingDoc.file_path);
-    const existingContent = await readFile(existingFilePath, 'utf-8');
+    const existingContent = await readFile(resolvedPath, 'utf-8');
 
     // Apply the operation
     let newContent: string;
@@ -416,17 +444,48 @@ export async function PATCH(
         break;
     }
 
-    // Sanitize the new content
+    // Sanitize the new content with enhanced security for image tags
     const sanitizedContent = sanitizeHtml(newContent, {
-      allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']),
+      allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'code']),
       allowedAttributes: {
         ...sanitizeHtml.defaults.allowedAttributes,
-        img: ['src', 'alt', 'title', 'width', 'height']
+        img: ['alt', 'title', 'width', 'height'], // Remove 'src' to prevent SSRF
+        code: ['class'],
+        pre: ['class']
+      },
+      allowedClasses: {
+        code: ['language-*'],
+        pre: ['language-*']
+      },
+      transformTags: {
+        'img': function(tagName, attribs) {
+          // Validate image sources to prevent SSRF
+          if (attribs.src) {
+            try {
+              const url = new URL(attribs.src);
+              // Only allow specific image hosting domains or data URLs
+              const allowedHosts = ['imgur.com', 'cloudinary.com', 'github.com'];
+              if (!allowedHosts.some(host => url.hostname.endsWith(host)) && !attribs.src.startsWith('data:image/')) {
+                return { 
+                  tagName: 'span', 
+                  text: '[Image removed for security]' 
+                };
+              }
+            } catch {
+              // Invalid URL, remove the image
+              return { 
+                tagName: 'span', 
+                text: '[Invalid image URL]' 
+              };
+            }
+          }
+          return { tagName, attribs };
+        }
       }
     });
 
-    // Write the new content to file
-    await writeFile(existingFilePath, sanitizedContent, 'utf-8');
+    // Write the new content to file with path validation
+    await writeFile(resolvedPath, sanitizedContent, 'utf-8');
 
     // Calculate new file size
     const newFileSize = Buffer.byteLength(sanitizedContent, 'utf-8');
@@ -435,10 +494,14 @@ export async function PATCH(
     let newRagDocumentId = existingDoc.rag_document_id;
     const ragIdentifier = authResult.activeProfile.project_uuid || authResult.user.id;
 
-    if (existingDoc.rag_document_id) {
+    if (existingDoc.rag_document_id && process.env.ENABLE_RAG === 'true') {
       try {
         // Step 1: Delete the old document from RAG
-        await ragService.removeDocument(existingDoc.rag_document_id, ragIdentifier);
+        const deleteResult = await ragService.removeDocument(existingDoc.rag_document_id, ragIdentifier);
+        
+        if (!deleteResult.success) {
+          console.warn('Failed to delete document from RAG:', deleteResult.error);
+        }
         
         // Step 2: Upload the new content to RAG
         const file = new File([sanitizedContent], existingDoc.file_name, { 
@@ -447,23 +510,43 @@ export async function PATCH(
         const uploadResult = await ragService.uploadDocument(file, ragIdentifier);
         
         if (uploadResult.success && uploadResult.upload_id) {
-          // Wait a bit for processing, then get the document ID
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Poll for upload status instead of fixed delay
+          let retries = 0;
+          const maxRetries = 10;
+          const retryDelay = 500; // 500ms between retries
           
-          // Get the new document ID from the collection
-          const docsResult = await ragService.getDocuments(ragIdentifier);
-          if (docsResult.success && docsResult.documents) {
-            const newDoc = docsResult.documents.find(([filename]) => 
-              filename === existingDoc.file_name
-            );
-            if (newDoc) {
-              newRagDocumentId = newDoc[1]; // document_id is the second element
+          while (retries < maxRetries) {
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
+            
+            const statusResult = await ragService.getUploadStatus(uploadResult.upload_id, ragIdentifier);
+            if (statusResult.success && statusResult.progress?.status === 'completed') {
+              // Get the new document ID from the collection
+              const docsResult = await ragService.getDocuments(ragIdentifier);
+              if (docsResult.success && docsResult.documents) {
+                const newDoc = docsResult.documents.find(([filename]) => 
+                  filename === existingDoc.file_name
+                );
+                if (newDoc) {
+                  newRagDocumentId = newDoc[1]; // document_id is the second element
+                  break;
+                }
+              }
+            } else if (statusResult.progress?.status === 'failed') {
+              console.error('RAG upload failed');
+              break;
             }
+            retries++;
           }
+          
+          if (retries >= maxRetries) {
+            console.warn('RAG upload status check timed out');
+          }
+        } else {
+          console.warn('RAG upload failed:', uploadResult.error);
         }
       } catch (ragError) {
         console.error('RAG update failed, continuing with database update:', ragError);
-        // Continue even if RAG update fails
+        // Continue even if RAG update fails - don't block the document update
       }
     }
 
