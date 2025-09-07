@@ -3,6 +3,8 @@
  * Consolidates RAG API interactions to avoid duplication across modules
  */
 
+import { validateExternalUrl } from './url-validator';
+
 export interface RagQueryResponse {
   success: boolean;
   response?: string;
@@ -58,7 +60,19 @@ class RagService {
   private readonly ragApiUrl: string;
 
   constructor() {
-    this.ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
+    const ragUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
+    // Validate URL to prevent SSRF attacks
+    try {
+      const validatedUrl = validateExternalUrl(ragUrl, {
+        allowLocalhost: process.env.NODE_ENV === 'development'
+      });
+      // Remove trailing slash if present
+      this.ragApiUrl = validatedUrl.toString().replace(/\/$/, '');
+    } catch (error) {
+      console.error('Invalid RAG_API_URL:', error);
+      // Use the default if validation fails
+      this.ragApiUrl = 'https://api.plugged.in';
+    }
   }
 
   private isConfigured(): boolean {
