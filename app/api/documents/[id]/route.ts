@@ -2,16 +2,34 @@ import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import { readFile, writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join, resolve } from 'path';
+import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 
+import { logAuditEvent } from '@/app/actions/audit-logger';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable,documentVersionsTable } from '@/db/schema';
+import { ragService } from '@/lib/rag-service';
 
 // Query parameters schema
 const getDocumentSchema = z.object({
   includeContent: z.enum(['true', 'false']).optional().default('false'),
   includeVersions: z.enum(['true', 'false']).optional().default('false'),
+});
+
+// Update document schema
+const updateDocumentSchema = z.object({
+  operation: z.enum(['replace', 'append', 'prepend']),
+  content: z.string().min(1).max(10000000), // 10MB limit
+  metadata: z.object({
+    changeSummary: z.string().optional(),
+    model: z.object({
+      name: z.string(),
+      provider: z.string(),
+      version: z.string().optional(),
+    }),
+    tags: z.array(z.string()).optional(),
+  }).optional(),
 });
 
 /**
@@ -329,12 +347,211 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  // Document updates are currently disabled as RAG system doesn't support updates
-  return NextResponse.json(
-    { 
-      error: 'Document updates are not supported at this time', 
-      details: 'The RAG system does not currently support document updates. Please create a new document instead.' 
-    },
-    { status: 501 } // Not Implemented
-  );
+  try {
+    // Authenticate API key
+    const authResult = await authenticateApiKey(request);
+    if (authResult.error) {
+      return authResult.error;
+    }
+
+    const resolvedParams = await params;
+    const documentId = resolvedParams.id;
+
+    // Parse and validate request body
+    const body = await request.json();
+    const validatedData = updateDocumentSchema.parse(body);
+
+    // Get the existing document
+    const existingDocs = await db
+      .select()
+      .from(docsTable)
+      .where(
+        and(
+          eq(docsTable.uuid, documentId),
+          or(
+            eq(docsTable.user_id, authResult.user.id),
+            eq(docsTable.visibility, 'public'),
+            and(
+              eq(docsTable.visibility, 'workspace'),
+              eq(docsTable.project_uuid, authResult.activeProfile.project_uuid)
+            )
+          )
+        )
+      )
+      .limit(1);
+
+    if (existingDocs.length === 0) {
+      return NextResponse.json(
+        { error: 'Document not found or access denied' },
+        { status: 404 }
+      );
+    }
+
+    const existingDoc = existingDocs[0];
+
+    // Only allow updates to AI-generated documents
+    if (existingDoc.source !== 'ai_generated') {
+      return NextResponse.json(
+        { error: 'Only AI-generated documents can be updated' },
+        { status: 403 }
+      );
+    }
+
+    // Read existing content
+    const uploadDir = join(process.cwd(), 'uploads', 'docs');
+    const existingFilePath = resolve(uploadDir, existingDoc.file_path);
+    const existingContent = await readFile(existingFilePath, 'utf-8');
+
+    // Apply the operation
+    let newContent: string;
+    switch (validatedData.operation) {
+      case 'replace':
+        newContent = validatedData.content;
+        break;
+      case 'append':
+        newContent = existingContent + '\n\n' + validatedData.content;
+        break;
+      case 'prepend':
+        newContent = validatedData.content + '\n\n' + existingContent;
+        break;
+    }
+
+    // Sanitize the new content
+    const sanitizedContent = sanitizeHtml(newContent, {
+      allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']),
+      allowedAttributes: {
+        ...sanitizeHtml.defaults.allowedAttributes,
+        img: ['src', 'alt', 'title', 'width', 'height']
+      }
+    });
+
+    // Write the new content to file
+    await writeFile(existingFilePath, sanitizedContent, 'utf-8');
+
+    // Calculate new file size
+    const newFileSize = Buffer.byteLength(sanitizedContent, 'utf-8');
+
+    // Handle RAG update using delete + re-upload workaround
+    let newRagDocumentId = existingDoc.rag_document_id;
+    const ragIdentifier = authResult.activeProfile.project_uuid || authResult.user.id;
+
+    if (existingDoc.rag_document_id) {
+      try {
+        // Step 1: Delete the old document from RAG
+        await ragService.removeDocument(existingDoc.rag_document_id, ragIdentifier);
+        
+        // Step 2: Upload the new content to RAG
+        const file = new File([sanitizedContent], existingDoc.file_name, { 
+          type: existingDoc.mime_type 
+        });
+        const uploadResult = await ragService.uploadDocument(file, ragIdentifier);
+        
+        if (uploadResult.success && uploadResult.upload_id) {
+          // Wait a bit for processing, then get the document ID
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Get the new document ID from the collection
+          const docsResult = await ragService.getDocuments(ragIdentifier);
+          if (docsResult.success && docsResult.documents) {
+            const newDoc = docsResult.documents.find(([filename]) => 
+              filename === existingDoc.file_name
+            );
+            if (newDoc) {
+              newRagDocumentId = newDoc[1]; // document_id is the second element
+            }
+          }
+        }
+      } catch (ragError) {
+        console.error('RAG update failed, continuing with database update:', ragError);
+        // Continue even if RAG update fails
+      }
+    }
+
+    // Update the document in database
+    const newVersion = existingDoc.version + 1;
+    await db
+      .update(docsTable)
+      .set({
+        file_size: newFileSize,
+        version: newVersion,
+        rag_document_id: newRagDocumentId,
+        updated_at: new Date(),
+        ai_metadata: {
+          ...existingDoc.ai_metadata,
+          lastUpdated: {
+            model: validatedData.metadata?.model,
+            timestamp: new Date().toISOString(),
+          }
+        },
+        tags: validatedData.metadata?.tags || existingDoc.tags,
+      })
+      .where(eq(docsTable.uuid, documentId));
+
+    // Create version record
+    if (validatedData.metadata?.model) {
+      await db.insert(documentVersionsTable).values({
+        document_id: documentId,
+        version_number: newVersion,
+        content: sanitizedContent,
+        created_by_model: validatedData.metadata.model,
+        change_summary: validatedData.metadata.changeSummary || `${validatedData.operation} operation`,
+        content_diff: {
+          additions: validatedData.operation === 'replace' 
+            ? newFileSize 
+            : newFileSize - existingDoc.file_size,
+          deletions: validatedData.operation === 'replace' 
+            ? existingDoc.file_size 
+            : 0,
+        }
+      });
+
+      // Add model attribution
+      await db.insert(documentModelAttributionsTable).values({
+        document_id: documentId,
+        model_name: validatedData.metadata.model.name,
+        model_provider: validatedData.metadata.model.provider,
+        contribution_type: 'updated',
+        contribution_metadata: {
+          version: validatedData.metadata.model.version,
+          changes_summary: validatedData.metadata.changeSummary,
+          operation: validatedData.operation,
+        }
+      });
+    }
+
+    // Log audit event
+    await logAuditEvent({
+      profileUuid: authResult.activeProfile.uuid,
+      type: 'MCP_REQUEST',
+      action: 'UPDATE_DOCUMENT',
+      metadata: {
+        documentId,
+        operation: validatedData.operation,
+        newVersion,
+        ragUpdated: newRagDocumentId !== existingDoc.rag_document_id,
+      }
+    });
+
+    return NextResponse.json({
+      success: true,
+      documentId,
+      version: newVersion,
+      message: 'Document updated successfully',
+    });
+
+  } catch (error) {
+    console.error('Error updating document:', error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Invalid request data', details: error.errors },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to update document' },
+      { status: 500 }
+    );
+  }
 }
