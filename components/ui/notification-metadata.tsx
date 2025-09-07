@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { enUS, hi, ja, nl, tr, zhCN } from 'date-fns/locale';
 import { useTranslation } from 'react-i18next';
 
-import type { NotificationMetadata, CompletedVia } from '@/lib/types/notifications';
+import type { CompletedVia,NotificationMetadata } from '@/lib/types/notifications';
 
 interface NotificationMetadataDisplayProps {
   metadata?: NotificationMetadata;

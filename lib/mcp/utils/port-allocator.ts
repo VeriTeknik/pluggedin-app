@@ -1,5 +1,5 @@
-import { createServer } from 'net';
 import { randomInt } from 'crypto';
+import { createServer } from 'net';
 
 /**
  * Port allocator for OAuth callback servers

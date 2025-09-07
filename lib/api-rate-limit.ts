@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { headers } from 'next/headers';
 
 interface RateLimitConfig {
   windowMs: number;
@@ -7,7 +6,15 @@ interface RateLimitConfig {
   message?: string;
 }
 
-// In-memory store for rate limiting (consider using Redis for production)
+// TODO: Implement Redis-backed rate limiting for production
+// Current in-memory store won't work in distributed deployments with multiple instances
+// Consider using:
+// - Redis with node-redis client
+// - rate-limit-redis package
+// - Or other distributed caching solutions
+// This is critical for production scalability
+
+// In-memory store for rate limiting (development only)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
 
 /**

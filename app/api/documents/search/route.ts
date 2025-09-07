@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable } from '@/db/schema';
+import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
 import { escapeLikePattern } from '@/lib/security';
-import { rateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 
 // Search query schema
 const searchDocumentsSchema = z.object({

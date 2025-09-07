@@ -1,8 +1,7 @@
 'use server';
 
-import { validateExternalUrl } from '@/lib/url-validator';
-
 import { TransportType } from '@/lib/mcp/package-detector';
+import { validateExternalUrl } from '@/lib/url-validator';
 
 interface GitHubFile {
   name: string;

@@ -102,7 +102,20 @@ class RagService {
         };
       }
 
+      // Validate query size (max 10KB)
+      if (query.length > 10 * 1024) {
+        return {
+          success: false,
+          error: 'Query too large. Maximum size is 10KB',
+        };
+      }
+
       const url = new URL('/rag/rag-query', this.ragApiUrl);
+      
+      // Add timeout to prevent hanging requests (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
@@ -113,7 +126,10 @@ class RagService {
           query: query,
           user_id: ragIdentifier,
         }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API error: ${response.status} ${response.statusText}`);
@@ -131,6 +147,14 @@ class RagService {
       };
     } catch (error) {
       console.error('Error querying RAG API for context:', error);
+      
+      // Check for timeout error
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request timed out after 30 seconds'
+        };
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -150,8 +174,20 @@ class RagService {
         };
       }
 
+      // Validate query size (max 10KB)
+      if (query.length > 10 * 1024) {
+        return {
+          success: false,
+          error: 'Query too large. Maximum size is 10KB',
+        };
+      }
+
       // Use the same endpoint as queryForContext which works in playground
       const apiUrl = `${this.ragApiUrl}/rag/rag-query`;
+
+      // Add timeout to prevent hanging requests (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -163,7 +199,10 @@ class RagService {
           user_id: ragIdentifier,
           query: query,
         }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API responded with status: ${response.status}`);
@@ -181,6 +220,14 @@ class RagService {
       };
     } catch (error) {
       console.error('Error querying RAG for response:', error);
+      
+      // Check for timeout error
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request timed out after 30 seconds'
+        };
+      }
       // Check for common network errors to RAG API
       if (error instanceof Error) {
         // Check error code first (more reliable), then fall back to message
@@ -222,6 +269,10 @@ class RagService {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Add timeout for upload (60 seconds for larger files)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
       const response = await fetch(`${this.ragApiUrl}/rag/upload-to-collection?user_id=${ragIdentifier}`, {
         method: 'POST',
         headers: {
@@ -229,7 +280,10 @@ class RagService {
           // Don't set Content-Type, let browser set it with boundary for multipart
         },
         body: formData,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API responded with status: ${response.status}`);
@@ -251,6 +305,14 @@ class RagService {
       };
     } catch (error) {
       console.error('Error sending to RAG API:', error);
+      
+      // Check for timeout error
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Upload timed out after 60 seconds'
+        };
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to upload to RAG'
@@ -268,12 +330,19 @@ class RagService {
         return { success: true }; // Don't fail if RAG is not configured
       }
 
+      // Add timeout (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(`${this.ragApiUrl}/rag/delete-from-collection?document_id=${documentId}&user_id=${ragIdentifier}`, {
         method: 'DELETE',
         headers: {
           'accept': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API responded with status: ${response.status}`);
@@ -301,12 +370,19 @@ class RagService {
         };
       }
 
+      // Add timeout (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(`${this.ragApiUrl}/rag/get-collection?user_id=${ragIdentifier}`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API responded with status: ${response.status}`);
@@ -341,12 +417,19 @@ class RagService {
 
       const statusUrl = `${this.ragApiUrl}/rag/upload-status/${uploadId}?user_id=${ragIdentifier}`;
 
+      // Add timeout (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(statusUrl, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
 
       if (!response.ok) {

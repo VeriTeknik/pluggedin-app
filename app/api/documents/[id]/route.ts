@@ -9,8 +9,8 @@ import { logAuditEvent } from '@/app/actions/audit-logger';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable,documentVersionsTable } from '@/db/schema';
+import {rateLimit } from '@/lib/api-rate-limit';
 import { ragService } from '@/lib/rag-service';
-import { rateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
 import { isPathWithinDirectory } from '@/lib/security';
 
 // Query parameters schema

@@ -10,11 +10,11 @@ import EmailProvider from 'next-auth/providers/email';
 import GithubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 import TwitterProvider from 'next-auth/providers/twitter';
+
 import { 
+  clearFailedLoginAttempts, 
   isAccountLocked, 
-  recordFailedLoginAttempt, 
-  clearFailedLoginAttempts 
-} from './auth-security';
+  recordFailedLoginAttempt} from './auth-security';
 import log from './logger';
 
 // Extend the User type to include emailVerified
