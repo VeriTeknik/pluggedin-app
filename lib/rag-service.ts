@@ -3,8 +3,6 @@
  * Consolidates RAG API interactions to avoid duplication across modules
  */
 
-import { validateExternalUrl } from '@/lib/url-validator';
-
 export interface RagQueryResponse {
   success: boolean;
   response?: string;
@@ -60,12 +58,7 @@ class RagService {
   private readonly ragApiUrl: string;
 
   constructor() {
-    const ragUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
-    // Validate the RAG API URL to prevent SSRF, allow localhost for development
-    const validatedUrl = validateExternalUrl(ragUrl, {
-      allowLocalhost: process.env.NODE_ENV === 'development'
-    });
-    this.ragApiUrl = validatedUrl.toString();
+    this.ragApiUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
   }
 
   private isConfigured(): boolean {
@@ -101,7 +94,16 @@ class RagService {
         throw new Error(`RAG API error: ${response.status} ${response.statusText}`);
       }
 
-      const context = await response.text();
+      // Handle both JSON and plain text responses
+      const contentType = response.headers.get('content-type');
+      let context: string;
+      
+      if (contentType?.includes('application/json')) {
+        const result = await response.json();
+        context = result.message || result.context || result.response || '';
+      } else {
+        context = await response.text();
+      }
       
       return {
         success: true,
@@ -147,15 +149,22 @@ class RagService {
         throw new Error(`RAG API responded with status: ${response.status}`);
       }
 
-      // The /rag/rag-query endpoint returns plain text, like queryForContext
-      const result = await response.text();
+      // The api.plugged.in RAG endpoint returns plain text, not JSON
+      const responseText = await response.text();
       
       return {
         success: true,
-        response: result || 'No response received',
+        response: responseText || 'No response received',
       };
     } catch (error) {
       console.error('Error querying RAG for response:', error);
+      // Check if it's a connection error to RAG API
+      if (error instanceof Error && error.message.includes('ECONNREFUSED')) {
+        return {
+          success: false,
+          error: 'RAG API service is not running. Please ensure the RAG service is started.',
+        };
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to query RAG',
@@ -297,14 +306,8 @@ class RagService {
       }
 
       const statusUrl = `${this.ragApiUrl}/rag/upload-status/${uploadId}?user_id=${ragIdentifier}`;
-      // validateExternalUrl sanitizes the URL and prevents SSRF attacks
-      const validatedUrl = validateExternalUrl(statusUrl, {
-        allowLocalhost: process.env.NODE_ENV === 'development'
-      });
 
-      // CodeQL: URL is validated above - safe from request forgery
-      // nosemgrep: javascript.lang.security.audit.network.request-forgery
-      const response = await fetch(validatedUrl.toString(), {
+      const response = await fetch(statusUrl, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
@@ -314,7 +317,7 @@ class RagService {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('RAG API upload status error (%d): %s', response.status, errorText);
+        console.error(`RAG API upload status error (${response.status}): ${errorText}`);
         
         // If upload not found, it might be completed already - check documents
         if (response.status === 404) {
