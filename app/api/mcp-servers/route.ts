@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
@@ -46,31 +46,36 @@ export async function GET(request: Request) {
         )
       );
     
-    // Fetch custom instructions for each server
-    const serversWithInstructions = await Promise.all(
-      activeMcpServers.map(async (server) => {
-        // Decrypt sensitive fields
-        const decryptedServer = decryptServerData(server);
-        
-        // Fetch custom instructions for this server
-        const instructions = await db
+    // Batch fetch all custom instructions for these servers in a single query
+    const serverUuids = activeMcpServers.map(s => s.uuid);
+    const allInstructions = serverUuids.length > 0 
+      ? await db
           .select()
           .from(customInstructionsTable)
-          .where(eq(customInstructionsTable.mcp_server_uuid, server.uuid))
-          .limit(1);
-        
-        // Add custom instructions to server data if they exist
-        if (instructions.length > 0 && instructions[0].messages) {
-          return {
-            ...decryptedServer,
-            customInstructions: instructions[0].messages,
-            customInstructionsDescription: instructions[0].description
-          };
-        }
-        
-        return decryptedServer;
-      })
+          .where(inArray(customInstructionsTable.mcp_server_uuid, serverUuids))
+      : [];
+    
+    // Create a Map for O(1) lookups of instructions by server UUID
+    const instructionsMap = new Map(
+      allInstructions.map(inst => [inst.mcp_server_uuid, inst])
     );
+    
+    // Map servers with their instructions (synchronous, no async needed)
+    const serversWithInstructions = activeMcpServers.map(server => {
+      const decryptedServer = decryptServerData(server);
+      const instructions = instructionsMap.get(server.uuid);
+      
+      // Add custom instructions if they exist
+      if (instructions?.messages) {
+        return {
+          ...decryptedServer,
+          customInstructions: instructions.messages,
+          customInstructionsDescription: instructions.description
+        };
+      }
+      
+      return decryptedServer;
+    });
     
     return NextResponse.json(serversWithInstructions);
   } catch (error) {
