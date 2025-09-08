@@ -1,7 +1,5 @@
 'use server';
 
-import { validateExternalUrl } from '@/lib/url-validator';
-
 import { and,eq } from 'drizzle-orm';
 import { z } from 'zod';
 
@@ -10,6 +8,7 @@ import { accounts, McpServerSource,projectsTable, registryServersTable, serverCl
 import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
 import { inferTransportFromPackages,transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
+import { validateExternalUrl } from '@/lib/url-validator';
 
 import { getRegistryOAuthToken } from './registry-oauth-session';
 

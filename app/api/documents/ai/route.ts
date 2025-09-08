@@ -1,15 +1,15 @@
-import { randomUUID, createHash } from 'crypto';
+import { createHash,randomUUID } from 'crypto';
 import { mkdir,writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'path';
 import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
-import { isPathWithinDirectory, isValidFilename } from '@/lib/security';
 
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable, notificationsTable } from '@/db/schema';
-import { rateLimit, RATE_LIMITS } from '@/lib/api-rate-limit';
+import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
+import { isPathWithinDirectory, isValidFilename } from '@/lib/security';
 
 // Validation schema for AI document creation
 const createAIDocumentSchema = z.object({
@@ -308,18 +308,7 @@ export async function POST(request: NextRequest) {
         // Create a dummy file object for AI-generated content
         const dummyFile = new File([textContent], filename, { type: mimeType });
         
-        ragService.uploadDocument({
-          id: documentId,
-          title: validatedData.title,
-          content: textContent,
-          metadata: {
-            filename: filename,
-            mimeType,
-            fileSize,
-            tags: validatedData.tags,
-            userId: apiKeyResult.user.id,
-          },
-        }, dummyFile, apiKeyResult.activeProfile.project_uuid || apiKeyResult.user.id).catch(async error => {
+        ragService.uploadDocument(dummyFile, apiKeyResult.activeProfile.project_uuid || apiKeyResult.user.id).catch(async error => {
           console.error('Failed to send AI document to RAG:', error);
           
           // Create a notification about the RAG failure

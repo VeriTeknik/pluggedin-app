@@ -1,9 +1,9 @@
 'use server';
 
 import { and, desc, eq, sum } from 'drizzle-orm';
-import { mkdir, unlink, writeFile } from 'fs/promises';
 import { realpathSync } from 'fs';
-import { join, resolve, normalize } from 'path';
+import { mkdir, unlink, writeFile } from 'fs/promises';
+import { join,resolve } from 'path';
 import * as path from 'path';
 
 import { db } from '@/db';
@@ -372,18 +372,7 @@ async function processRagUpload(
     // Use projectUuid for project-specific RAG, fallback to userId for legacy
     const ragIdentifier = projectUuid || userId;
     
-    const result = await ragService.uploadDocument({
-      id: docRecord.uuid,
-      title: name,
-      content: textContent,
-              metadata: {
-          filename: file.name,
-          mimeType: file.type,
-          fileSize: file.size,
-          tags,
-          userId,
-        },
-    }, file, ragIdentifier);
+    const result = await ragService.uploadDocument(file, ragIdentifier);
     
     if (result.success) {
       return { ragProcessed: true, ragError: undefined, upload_id: result.upload_id };

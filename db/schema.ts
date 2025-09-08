@@ -1,5 +1,4 @@
 import { relations,sql } from 'drizzle-orm';
-import type { NotificationMetadata } from '@/lib/types/notifications';
 import {
   boolean,
   index,
@@ -17,6 +16,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { locales } from '@/i18n/config';
+import type { NotificationMetadata } from '@/lib/types/notifications';
 
 import { enumToPgEnum } from './utils/enum-to-pg-enum';
 

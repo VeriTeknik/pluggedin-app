@@ -3,8 +3,8 @@
  * Handles slug generation, uniqueness, and management for MCP servers
  */
 
-import type { PgTransaction } from 'drizzle-orm/pg-core';
 import { and, eq, not } from 'drizzle-orm';
+import type { PgTransaction } from 'drizzle-orm/pg-core';
 
 import { db } from '@/db';
 import { mcpServersTable } from '@/db/schema';

@@ -23,12 +23,12 @@ import { Tabs, TabsContent } from '@/components/ui/tabs';
 import { useLibrary } from '@/hooks/use-library';
 import type { Doc } from '@/types/library';
 
-// Local components
-import { DocumentPreview } from './components/DocumentPreview';
 import { DocsControls } from './components/DocsControls';
 import { DocsGrid } from './components/DocsGrid';
 import { DocsStats } from './components/DocsStats';
 import { DocsTable } from './components/DocsTable';
+// Local components
+import { DocumentPreview } from './components/DocumentPreview';
 import { UploadDialog } from './components/UploadDialog';
 import { UploadProgress } from './components/UploadProgress';
 

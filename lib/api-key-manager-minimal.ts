@@ -4,6 +4,7 @@
  */
 
 import { randomBytes } from 'crypto';
+
 import log from './logger';
 
 // Configuration

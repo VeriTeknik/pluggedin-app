@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { Session } from 'next-auth';
 
 import { db } from '@/db';
-import { projectsTable, users } from '@/db/schema';
+import { projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 type AuthenticatedFunction<T> = (session: Session & { user: { id: string } }) => Promise<T>;

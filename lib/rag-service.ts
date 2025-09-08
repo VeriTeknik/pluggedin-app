@@ -3,7 +3,7 @@
  * Consolidates RAG API interactions to avoid duplication across modules
  */
 
-import { validateExternalUrl } from '@/lib/url-validator';
+import { validateExternalUrl } from './url-validator';
 
 export interface RagQueryResponse {
   success: boolean;
@@ -61,15 +61,33 @@ class RagService {
 
   constructor() {
     const ragUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
-    // Validate the RAG API URL to prevent SSRF, allow localhost for development
-    const validatedUrl = validateExternalUrl(ragUrl, {
-      allowLocalhost: process.env.NODE_ENV === 'development'
-    });
-    this.ragApiUrl = validatedUrl.toString();
+    // Validate URL to prevent SSRF attacks
+    try {
+      const validatedUrl = validateExternalUrl(ragUrl, {
+        allowLocalhost: process.env.NODE_ENV === 'development'
+      });
+      // Remove trailing slash if present
+      this.ragApiUrl = validatedUrl.toString().replace(/\/$/, '');
+    } catch (error) {
+      console.error('Invalid RAG_API_URL:', error);
+      // Use the default if validation fails
+      this.ragApiUrl = 'https://api.plugged.in';
+    }
   }
 
   private isConfigured(): boolean {
     return !!this.ragApiUrl;
+  }
+
+  /**
+   * Parse RAG API response which can be either JSON or plain text
+   */
+  private async parseRagResponse(response: Response): Promise<any> {
+    try {
+      return await response.json();
+    } catch {
+      return await response.text();
+    }
   }
 
   /**
@@ -84,7 +102,20 @@ class RagService {
         };
       }
 
+      // Validate query size (max 10KB)
+      if (query.length > 10 * 1024) {
+        return {
+          success: false,
+          error: 'Query too large. Maximum size is 10KB',
+        };
+      }
+
       const url = new URL('/rag/rag-query', this.ragApiUrl);
+      
+      // Add timeout to prevent hanging requests (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(url.toString(), {
         method: 'POST',
         headers: {
@@ -95,13 +126,20 @@ class RagService {
           query: query,
           user_id: ragIdentifier,
         }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API error: ${response.status} ${response.statusText}`);
       }
 
-      const context = await response.text();
+      // Handle both JSON and plain text responses
+      const body = await this.parseRagResponse(response);
+      const context = typeof body === 'string'
+        ? body
+        : body.message || body.context || body.response || '';
       
       return {
         success: true,
@@ -109,6 +147,14 @@ class RagService {
       };
     } catch (error) {
       console.error('Error querying RAG API for context:', error);
+      
+      // Check for timeout error
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request timed out after 30 seconds'
+        };
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error'
@@ -128,8 +174,20 @@ class RagService {
         };
       }
 
+      // Validate query size (max 10KB)
+      if (query.length > 10 * 1024) {
+        return {
+          success: false,
+          error: 'Query too large. Maximum size is 10KB',
+        };
+      }
+
       // Use the same endpoint as queryForContext which works in playground
       const apiUrl = `${this.ragApiUrl}/rag/rag-query`;
+
+      // Add timeout to prevent hanging requests (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(apiUrl, {
         method: 'POST',
@@ -141,21 +199,53 @@ class RagService {
           user_id: ragIdentifier,
           query: query,
         }),
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API responded with status: ${response.status}`);
       }
 
-      // The /rag/rag-query endpoint returns plain text, like queryForContext
-      const result = await response.text();
+      // Handle both JSON and plain text responses
+      const body = await this.parseRagResponse(response);
+      const responseText = typeof body === 'string'
+        ? body
+        : body.message || body.response || 'No response received';
       
       return {
         success: true,
-        response: result || 'No response received',
+        response: responseText || 'No response received',
       };
     } catch (error) {
       console.error('Error querying RAG for response:', error);
+      
+      // Check for timeout error
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request timed out after 30 seconds'
+        };
+      }
+      // Check for common network errors to RAG API
+      if (error instanceof Error) {
+        // Check error code first (more reliable), then fall back to message
+        const errorCode = (error as any).code;
+        const errorMessage = error.message;
+        
+        if (errorCode === 'ECONNREFUSED' || errorMessage.includes('ECONNREFUSED') ||
+            errorCode === 'ETIMEDOUT' || errorMessage.includes('ETIMEDOUT') ||
+            errorCode === 'ENOTFOUND' || errorMessage.includes('ENOTFOUND') ||
+            errorCode === 'ECONNRESET' || errorMessage.includes('ECONNRESET') ||
+            errorCode === 'EHOSTUNREACH' || errorMessage.includes('EHOSTUNREACH') ||
+            errorCode === 'ENETUNREACH' || errorMessage.includes('ENETUNREACH')) {
+          return {
+            success: false,
+            error: 'Unable to connect to RAG API service. Please ensure the RAG service is running and reachable.',
+          };
+        }
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to query RAG',
@@ -166,7 +256,7 @@ class RagService {
   /**
    * Upload document to RAG collection
    */
-  async uploadDocument(document: RAGDocumentRequest, file: File, ragIdentifier: string): Promise<RagUploadResponse> {
+  async uploadDocument(file: File, ragIdentifier: string): Promise<RagUploadResponse> {
     try {
       if (!this.isConfigured()) {
         return {
@@ -179,6 +269,10 @@ class RagService {
       const formData = new FormData();
       formData.append('file', file);
 
+      // Add timeout for upload (60 seconds for larger files)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+      
       const response = await fetch(`${this.ragApiUrl}/rag/upload-to-collection?user_id=${ragIdentifier}`, {
         method: 'POST',
         headers: {
@@ -186,7 +280,10 @@ class RagService {
           // Don't set Content-Type, let browser set it with boundary for multipart
         },
         body: formData,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API responded with status: ${response.status}`);
@@ -208,6 +305,14 @@ class RagService {
       };
     } catch (error) {
       console.error('Error sending to RAG API:', error);
+      
+      // Check for timeout error
+      if (error instanceof Error && error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Upload timed out after 60 seconds'
+        };
+      }
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to upload to RAG'
@@ -225,12 +330,19 @@ class RagService {
         return { success: true }; // Don't fail if RAG is not configured
       }
 
+      // Add timeout (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(`${this.ragApiUrl}/rag/delete-from-collection?document_id=${documentId}&user_id=${ragIdentifier}`, {
         method: 'DELETE',
         headers: {
           'accept': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API responded with status: ${response.status}`);
@@ -258,12 +370,19 @@ class RagService {
         };
       }
 
+      // Add timeout (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
       const response = await fetch(`${this.ragApiUrl}/rag/get-collection?user_id=${ragIdentifier}`, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error(`RAG API responded with status: ${response.status}`);
@@ -297,24 +416,25 @@ class RagService {
       }
 
       const statusUrl = `${this.ragApiUrl}/rag/upload-status/${uploadId}?user_id=${ragIdentifier}`;
-      // validateExternalUrl sanitizes the URL and prevents SSRF attacks
-      const validatedUrl = validateExternalUrl(statusUrl, {
-        allowLocalhost: process.env.NODE_ENV === 'development'
-      });
 
-      // CodeQL: URL is validated above - safe from request forgery
-      // nosemgrep: javascript.lang.security.audit.network.request-forgery
-      const response = await fetch(validatedUrl.toString(), {
+      // Add timeout (30 seconds)
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
+      
+      const response = await fetch(statusUrl, {
         method: 'GET',
         headers: {
           'accept': 'application/json',
         },
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
 
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('RAG API upload status error (%d): %s', response.status, errorText);
+        console.error(`RAG API upload status error (${response.status}): ${errorText}`);
         
         // If upload not found, it might be completed already - check documents
         if (response.status === 404) {
