@@ -1,8 +1,8 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { mcpServersTable, McpServerStatus } from '@/db/schema';
+import { customInstructionsTable,mcpServersTable, McpServerStatus } from '@/db/schema';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 
 import { authenticateApiKey } from '../auth';
@@ -46,12 +46,38 @@ export async function GET(request: Request) {
         )
       );
     
-    // Decrypt sensitive fields before sending to MCP proxy
-    const decryptedServers = activeMcpServers.map(server => 
-      decryptServerData(server)
+    // Batch fetch all custom instructions for these servers in a single query
+    const serverUuids = activeMcpServers.map(s => s.uuid);
+    const allInstructions = serverUuids.length > 0 
+      ? await db
+          .select()
+          .from(customInstructionsTable)
+          .where(inArray(customInstructionsTable.mcp_server_uuid, serverUuids))
+      : [];
+    
+    // Create a Map for O(1) lookups of instructions by server UUID
+    const instructionsMap = new Map(
+      allInstructions.map(inst => [inst.mcp_server_uuid, inst])
     );
     
-    return NextResponse.json(decryptedServers);
+    // Map servers with their instructions (synchronous, no async needed)
+    const serversWithInstructions = activeMcpServers.map(server => {
+      const decryptedServer = decryptServerData(server);
+      const instructions = instructionsMap.get(server.uuid);
+      
+      // Add custom instructions if they exist
+      if (instructions?.messages) {
+        return {
+          ...decryptedServer,
+          customInstructions: instructions.messages,
+          customInstructionsDescription: instructions.description
+        };
+      }
+      
+      return decryptedServer;
+    });
+    
+    return NextResponse.json(serversWithInstructions);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
