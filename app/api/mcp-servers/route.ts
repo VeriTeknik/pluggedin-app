@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { mcpServersTable, McpServerStatus } from '@/db/schema';
+import { customInstructionsTable,mcpServersTable, McpServerStatus } from '@/db/schema';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 
 import { authenticateApiKey } from '../auth';
@@ -46,12 +46,33 @@ export async function GET(request: Request) {
         )
       );
     
-    // Decrypt sensitive fields before sending to MCP proxy
-    const decryptedServers = activeMcpServers.map(server => 
-      decryptServerData(server)
+    // Fetch custom instructions for each server
+    const serversWithInstructions = await Promise.all(
+      activeMcpServers.map(async (server) => {
+        // Decrypt sensitive fields
+        const decryptedServer = decryptServerData(server);
+        
+        // Fetch custom instructions for this server
+        const instructions = await db
+          .select()
+          .from(customInstructionsTable)
+          .where(eq(customInstructionsTable.mcp_server_uuid, server.uuid))
+          .limit(1);
+        
+        // Add custom instructions to server data if they exist
+        if (instructions.length > 0 && instructions[0].messages) {
+          return {
+            ...decryptedServer,
+            customInstructions: instructions[0].messages,
+            customInstructionsDescription: instructions[0].description
+          };
+        }
+        
+        return decryptedServer;
+      })
     );
     
-    return NextResponse.json(decryptedServers);
+    return NextResponse.json(serversWithInstructions);
   } catch (error) {
     console.error(error);
     return NextResponse.json(
