@@ -467,7 +467,8 @@ export async function PATCH(
               if (!/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);base64,/.test(attribs.src)) {
                 return { 
                   tagName: 'span', 
-                  text: '[Invalid image data URL]' 
+                  text: '[Invalid image data URL]',
+                  attribs: {} 
                 };
               }
               return { tagName, attribs };
@@ -480,7 +481,8 @@ export async function PATCH(
               if (url.protocol !== 'https:') {
                 return { 
                   tagName: 'span', 
-                  text: '[Image removed - HTTPS required]' 
+                  text: '[Image removed - HTTPS required]',
+                  attribs: {} 
                 };
               }
               // Allow specific trusted image hosting domains
@@ -488,7 +490,8 @@ export async function PATCH(
               if (!allowedHosts.some(host => url.hostname.endsWith(host))) {
                 return { 
                   tagName: 'span', 
-                  text: '[Image removed - untrusted source]' 
+                  text: '[Image removed - untrusted source]',
+                  attribs: {} 
                 };
               }
               return { tagName, attribs };
@@ -496,14 +499,16 @@ export async function PATCH(
               // Invalid URL, remove the image
               return { 
                 tagName: 'span', 
-                text: '[Invalid image URL]' 
+                text: '[Invalid image URL]',
+                attribs: {} 
               };
             }
           }
           // No src attribute, remove the image tag
           return { 
             tagName: 'span', 
-            text: '[Image missing source]' 
+            text: '[Image missing source]',
+            attribs: {} 
           };
         }
       }
@@ -584,13 +589,12 @@ export async function PATCH(
         version: newVersion,
         rag_document_id: newRagDocumentId,
         updated_at: new Date(),
-        ai_metadata: {
+        ai_metadata: validatedData.metadata?.model ? {
           ...existingDoc.ai_metadata,
-          lastUpdated: {
-            model: validatedData.metadata?.model,
-            timestamp: new Date().toISOString(),
-          }
-        },
+          model: validatedData.metadata.model,
+          timestamp: new Date().toISOString(),
+          context: validatedData.metadata?.changeSummary || existingDoc.ai_metadata?.context,
+        } : existingDoc.ai_metadata,
         tags: validatedData.metadata?.tags || existingDoc.tags,
       })
       .where(eq(docsTable.uuid, documentId));
