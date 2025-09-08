@@ -413,7 +413,7 @@ export async function PATCH(
     // Construct file path with proper validation
     const existingFilePath = existingDoc.file_path.startsWith('/')
       ? existingDoc.file_path
-      : join(userUploadDir, existingDoc.file_path);
+      : join(baseUploadDir, existingDoc.file_path);
     
     // Validate path is within allowed directory to prevent path traversal
     const resolvedPath = resolve(existingFilePath);
