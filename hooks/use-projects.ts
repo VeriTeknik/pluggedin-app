@@ -103,13 +103,15 @@ export const useProjects = () => {
       localStorage.removeItem(CURRENT_PROJECT_KEY);
     }
 
-    // Instead of reloading, invalidate relevant SWR caches
+    // Instead of reloading, invalidate specific SWR caches
     // This will trigger re-fetches for data that depends on the current project
     if (project && sessionStatus === 'authenticated') {
-      // Trigger a mutation to refetch related data
-      mutate();
+      // Trigger a mutation to refetch project-specific data
+      // Using the specific key 'projects' that matches our SWR key
+      mutate('projects');
       
       // Emit a custom event that other components can listen to
+      // This allows components to react to project changes without coupling
       window.dispatchEvent(new CustomEvent('projectChanged', { 
         detail: { project } 
       }));

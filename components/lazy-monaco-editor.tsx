@@ -13,7 +13,9 @@ const MonacoEditor = lazy(() =>
 
 interface LazyMonacoEditorProps {
   value?: string;
+  defaultValue?: string;
   language?: string;
+  defaultLanguage?: string;
   theme?: string;
   onChange?: (value: string | undefined) => void;
   options?: any;
@@ -36,7 +38,9 @@ function EditorSkeleton({ height = '100%', width = '100%' }: { height?: string |
 
 export function LazyMonacoEditor({
   value,
-  language = 'javascript',
+  defaultValue,
+  language,
+  defaultLanguage = 'javascript',
   theme = 'vs-dark',
   onChange,
   options,
@@ -48,7 +52,9 @@ export function LazyMonacoEditor({
     <Suspense fallback={<EditorSkeleton height={height} width={width} />}>
       <MonacoEditor
         value={value}
+        defaultValue={defaultValue}
         language={language}
+        defaultLanguage={defaultLanguage}
         theme={theme}
         onChange={onChange}
         options={options}

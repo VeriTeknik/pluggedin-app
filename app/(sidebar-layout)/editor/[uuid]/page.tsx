@@ -51,8 +51,8 @@ export default function CodeEditorDetailPage({
     <div className='h-screen w-full'>
       <LazyMonacoEditor
         height='100vh'
-        language={language}
-        value={code.code}
+        defaultLanguage={language}
+        defaultValue={code.code}
         theme='vs-light'
         onChange={handleEditorChange}
         options={{
