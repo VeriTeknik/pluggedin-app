@@ -6,6 +6,7 @@ import { join } from 'path';
 import { db } from '@/db';
 import { accounts, apiKeysTable, customMcpServersTable,mcpServersTable, profilesTable, projectsTable, sessions, users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { notifyAdmins } from '@/lib/admin-notifications';
 
 export async function DELETE(_req: Request) {
   try {
@@ -31,59 +32,18 @@ export async function DELETE(_req: Request) {
       );
     }
 
+    // Store user info for GDPR logging before deletion
+    const userInfo = {
+      id: session.user.id,
+      email: session.user.email || 'unknown',
+      name: session.user.name || 'unknown',
+      deletionTime: new Date().toISOString(),
+      ipAddress: _req.headers.get('x-forwarded-for') || _req.headers.get('x-real-ip') || 'unknown'
+    };
+
     // Start a transaction to ensure all deletions succeed or none do
     await db.transaction(async (tx) => {
-      // Get user's projects to find associated profiles
-      const userProjects = await tx
-        .select()
-        .from(projectsTable)
-        .where(eq(projectsTable.user_id, session.user.id));
-
-      // Delete associated data for each project
-      for (const project of userProjects) {
-        // Get profiles associated with this project
-        const projectProfiles = await tx
-          .select()
-          .from(profilesTable)
-          .where(eq(profilesTable.project_uuid, project.uuid));
-
-        // Delete MCP servers for each profile
-        for (const profile of projectProfiles) {
-          await tx
-            .delete(mcpServersTable)
-            .where(eq(mcpServersTable.profile_uuid, profile.uuid));
-
-          await tx
-            .delete(customMcpServersTable)
-            .where(eq(customMcpServersTable.profile_uuid, profile.uuid));
-        }
-
-        // Delete API keys
-        await tx
-          .delete(apiKeysTable)
-          .where(eq(apiKeysTable.project_uuid, project.uuid));
-
-        // Delete profiles
-        await tx
-          .delete(profilesTable)
-          .where(eq(profilesTable.project_uuid, project.uuid));
-      }
-
-      // Delete projects
-      await tx
-        .delete(projectsTable)
-        .where(eq(projectsTable.user_id, session.user.id));
-
-      // Delete auth-related data
-      await tx
-        .delete(accounts)
-        .where(eq(accounts.userId, session.user.id));
-
-      await tx
-        .delete(sessions)
-        .where(eq(sessions.userId, session.user.id));
-
-      // Try to delete avatar file if it exists
+      // Try to delete avatar file if it exists (do this first since it's outside DB)
       if (session.user.image?.startsWith('/avatars/')) {
         try {
           const avatarPath = join(process.cwd(), 'public', session.user.image);
@@ -94,11 +54,59 @@ export async function DELETE(_req: Request) {
         }
       }
 
-      // Finally, delete the user
+      // Delete the user - CASCADE constraints will handle all related data
+      // This includes:
+      // - accounts (OAuth providers)
+      // - sessions
+      // - projects -> profiles -> mcp_servers, tools, prompts, resources, etc.
+      // - documents, notifications, followers, email tracking
+      // - shared servers and collections (now with GDPR fix)
+      // - registry servers claimed by user (now with GDPR fix)
       await tx
         .delete(users)
         .where(eq(users.id, session.user.id));
     });
+
+    // Log GDPR compliance - account deletion
+    console.log('[GDPR Compliance] User account deleted:', {
+      userId: userInfo.id,
+      email: userInfo.email,
+      timestamp: userInfo.deletionTime,
+      ip: userInfo.ipAddress,
+      reason: 'User requested account deletion'
+    });
+
+    // Notify admins about account deletion (for GDPR audit trail)
+    try {
+      await notifyAdmins({
+        subject: 'User Account Deleted (GDPR)',
+        title: 'User Account Deletion',
+        message: `A user has deleted their account in compliance with GDPR right to be forgotten.`,
+        severity: 'INFO',
+        metadata: {
+          ...userInfo,
+          gdprCompliance: true,
+          dataDeleted: [
+            'User account and profile',
+            'All projects and profiles',
+            'All MCP servers and configurations',
+            'All documents and RAG data',
+            'All shared servers and collections',
+            'All notifications and email data',
+            'All OAuth connections',
+            'All active sessions'
+          ]
+        },
+        userDetails: {
+          id: userInfo.id,
+          email: userInfo.email,
+          name: userInfo.name
+        }
+      });
+    } catch (error) {
+      // Don't fail deletion if admin notification fails
+      console.error('Failed to send admin notification:', error);
+    }
 
     // Clear the session cookie
     const response = NextResponse.json({ success: true });

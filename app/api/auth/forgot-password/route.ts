@@ -7,6 +7,7 @@ import { passwordResetTokens } from '@/db/schema';
 import { createErrorResponse } from '@/lib/api-errors';
 import { generatePasswordResetEmail, sendEmail } from '@/lib/email';
 import { RateLimiters } from '@/lib/rate-limiter';
+import { notifyAdminsOfSecurityEvent } from '@/lib/admin-notifications';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),
@@ -128,6 +129,14 @@ export async function POST(req: NextRequest) {
     if (!emailSent) {
       console.warn(`Failed to send password reset email to ${email}`);
     }
+    
+    // Notify admins about password reset request
+    await notifyAdminsOfSecurityEvent({
+      type: 'password_reset',
+      email: email,
+      ip: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown',
+      details: `Password reset requested for user: ${user.name || 'Unknown'} (${email})`,
+    });
 
     // For development, we'll also return the token for easier testing
     const isDev = process.env.NODE_ENV === 'development';

@@ -5,6 +5,7 @@ import { createNotification } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
 import { sendEmail as sendEmailHelper } from '@/lib/email';
 import type { NotificationMetadata } from '@/lib/types/notifications';
+import { notifyAdmins } from '@/lib/admin-notifications';
 
 const customNotificationSchema = z.object({
   title: z.string().optional(),
@@ -103,6 +104,21 @@ export async function POST(request: Request) {
       expiresInDays: 30, // Custom notifications expire in 30 days
       metadata
     });
+    
+    // Notify admins for ALERT severity notifications
+    if (severity === 'ALERT') {
+      await notifyAdmins({
+        subject: `Custom Alert: ${title}`,
+        title: `Custom Alert from Profile: ${auth.activeProfile.name || auth.activeProfile.uuid}`,
+        message,
+        severity: 'ALERT',
+        metadata: {
+          profileUuid: auth.activeProfile.uuid,
+          apiKeyId: auth.apiKey?.uuid,
+          apiKeyName: auth.apiKey?.name,
+        },
+      });
+    }
 
     let emailSent = false;
     

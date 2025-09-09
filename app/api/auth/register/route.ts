@@ -8,6 +8,8 @@ import { users, verificationTokens } from '@/db/schema';
 import { createErrorResponse, ErrorResponses } from '@/lib/api-errors';
 import { generateVerificationEmail, sendEmail } from '@/lib/email';
 import { RateLimiters } from '@/lib/rate-limiter';
+import { notifyAdminsOfNewUser } from '@/lib/admin-notifications';
+import { sendWelcomeEmail } from '@/lib/welcome-emails';
 
 const registerSchema = z.object({
   name: z.string().min(2).max(100),
@@ -138,8 +140,9 @@ export async function POST(req: NextRequest) {
     tokenExpiry.setHours(tokenExpiry.getHours() + 24); // Token valid for 24 hours
 
     // Create the user
+    const userId = nanoid();
     await db.insert(users).values({
-      id: nanoid(),
+      id: userId,
       name: data.name,
       email: data.email,
       password: hashedPassword,
@@ -148,31 +151,21 @@ export async function POST(req: NextRequest) {
       updated_at: new Date(),
     });
     
-        
-    // Send admin notification email
-    const adminEmailsEnv = process.env.ADMIN_NOTIFICATION_EMAILS || '';
-    const adminRecipients = adminEmailsEnv.split(',').map(email => email.trim()).filter(Boolean);
-
-    const adminEmailContent = `
-      <h2>New User Registration</h2>
-      <p>A new user has registered on Plugged.in:</p>
-      <ul>
-        <li><strong>Name:</strong> ${data.name}</li>
-        <li><strong>Email:</strong> ${data.email}</li>
-        <li><strong>Registration Time:</strong> ${new Date().toLocaleString()}</li>
-      </ul>
-    `;
-
-    // Send to all admin recipients
-    const adminEmailPromises = adminRecipients.map(recipient => 
-      sendEmail({
-        to: recipient,
-        subject: `New User Registration: ${data.name}`,
-        html: adminEmailContent
-      })
-    );
-
-    await Promise.all(adminEmailPromises);
+    // Send admin notification using the new centralized service
+    await notifyAdminsOfNewUser({
+      name: data.name,
+      email: data.email,
+      id: userId,
+      source: 'email',
+    });
+    
+    // Send welcome email to the user
+    await sendWelcomeEmail({
+      name: data.name,
+      email: data.email,
+      signupSource: 'email',
+      userId,
+    });
     
     // Store the verification token
     await db.insert(verificationTokens).values({

@@ -16,6 +16,8 @@ import {
   isAccountLocked, 
   recordFailedLoginAttempt} from './auth-security';
 import log from './logger';
+import { notifyAdminsOfNewUser } from './admin-notifications';
+import { sendWelcomeEmail } from './welcome-emails';
 
 // Extend the User type to include emailVerified
 declare module 'next-auth' {
@@ -241,9 +243,42 @@ export const authOptions: NextAuthOptions = {
           where: (users, { eq }) => eq(users.email, user.email as string),
         });
 
-        // If the user exists but this is a new OAuth account,
-        // link this new account to the existing user
-        if (existingUser) {
+        // Track if this is a new user signup
+        let isNewUser = false;
+
+        // If the user doesn't exist, they will be created by the adapter
+        if (!existingUser) {
+          isNewUser = true;
+          
+          // Send notifications for new OAuth user
+          // Note: The actual user creation happens after this callback
+          // So we schedule the notifications to be sent after a short delay
+          setTimeout(async () => {
+            // Get the newly created user
+            const newUser = await db.query.users.findFirst({
+              where: (users, { eq }) => eq(users.email, user.email as string),
+            });
+            
+            if (newUser) {
+              // Notify admins about new OAuth signup
+              await notifyAdminsOfNewUser({
+                name: newUser.name || 'Unknown',
+                email: newUser.email,
+                id: newUser.id,
+                source: account?.provider as 'google' | 'github' | 'twitter',
+              });
+              
+              // Send welcome email to new OAuth user
+              await sendWelcomeEmail({
+                name: newUser.name || 'User',
+                email: newUser.email,
+                signupSource: account?.provider,
+              });
+            }
+          }, 1000); // Wait 1 second for user creation to complete
+        } else {
+          // If the user exists but this is a new OAuth account,
+          // link this new account to the existing user
           // Check if this provider+providerAccountId combination exists already
           const existingAccount = await db.query.accounts.findFirst({
             where: (accounts, { and, eq }) => and(
