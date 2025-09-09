@@ -15,18 +15,20 @@ This document outlines the performance optimizations implemented based on compre
 
 ### 2. Memory Management (Critical)
 **File:** `lib/proxy-memory-manager.ts`
-- Implemented ProxyMemoryManager class with automatic cleanup
-- 5-minute cleanup intervals for stale entries
-- Configurable memory limits and thresholds
+- Implemented ProxyMemoryManager using battle-tested `lru-cache` library
+- Automatic TTL-based expiration (30 minutes default)
+- LRU eviction when cache reaches max size
+- No manual cleanup intervals needed
 - Comprehensive test coverage in `tests/proxy-memory-manager.test.ts`
-- **Expected Impact:** 40-50% reduction in memory usage
+- **Expected Impact:** 40-50% reduction in memory usage, better performance
 
 ### 3. React Performance (Medium Impact)
 **File:** `hooks/use-projects.ts`
 - Added useMemo for projects array to prevent re-renders
 - Replaced page reload with event-based updates
 - Implemented useCallback for event handlers
-- **Expected Impact:** Eliminates full page reloads, smoother UX
+- Use specific SWR key 'projects' for targeted cache updates
+- **Expected Impact:** Eliminates full page reloads, smoother UX, fewer unnecessary refetches
 
 ### 4. Bundle Size Optimization (High Impact)
 **Files:** 
@@ -34,6 +36,7 @@ This document outlines the performance optimizations implemented based on compre
 - `app/(sidebar-layout)/editor/[uuid]/page.tsx`
 - Implemented lazy loading for Monaco Editor
 - Added Suspense boundaries with loading states
+- Support for both controlled and uncontrolled editor modes
 - **Expected Impact:** ~2.5MB reduction in initial bundle size
 
 ### 5. Bundle Analysis Tools
@@ -114,9 +117,20 @@ pnpm test tests/proxy-memory-manager.test.ts
 
 If issues arise:
 1. Database indexes can be dropped without data loss
-2. ProxyMemoryManager can be disabled by removing integration
+2. LRU cache can be replaced with simpler Map-based implementation
 3. Lazy loading can be reverted to direct imports
 4. Bundle analyzer has no runtime impact
+
+## Code Review Updates (Latest)
+
+Based on code review feedback, the following improvements were made:
+
+1. **Monaco Editor**: Restored uncontrolled mode to prevent cursor/undo issues
+2. **SWR Mutations**: Now use specific cache keys instead of global invalidation
+3. **Memory Manager**: Replaced custom implementation with industry-standard LRU cache
+   - Eliminated 200+ lines of custom logic
+   - Better performance with proven algorithms
+   - Automatic cleanup without intervals
 
 ## Performance Gains Summary
 
