@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -34,8 +34,8 @@ export const useProjects = () => {
         
         // For auth issues, clear the stored project
         const isAuthIssue = 
-          error?.message?.toLowerCase().includes('unauthorized') ||
-          error?.message?.toLowerCase().includes('session expired');
+          _error?.message?.toLowerCase().includes('unauthorized') ||
+          _error?.message?.toLowerCase().includes('session expired');
           
         if (isAuthIssue) {
           localStorage.removeItem(CURRENT_PROJECT_KEY);
@@ -62,6 +62,9 @@ export const useProjects = () => {
 
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
+  // Memoize projects array to prevent unnecessary re-renders
+  const memoizedProjects = useMemo(() => data ?? [], [data]);
+
   // Load saved project on mount only if authenticated
   useEffect(() => {
     if (sessionStatus !== 'authenticated') {
@@ -71,16 +74,16 @@ export const useProjects = () => {
 
     try {
       const savedProjectUuid = localStorage.getItem(CURRENT_PROJECT_KEY);
-      if (data?.length) {
+      if (memoizedProjects.length) {
         if (savedProjectUuid) {
-          const savedProject = data.find((p: Project) => p.uuid === savedProjectUuid);
+          const savedProject = memoizedProjects.find((p: Project) => p.uuid === savedProjectUuid);
           if (savedProject) {
             setCurrentProject(savedProject);
             return;
           }
         }
         // If no saved project or saved project not found, use first project
-        setCurrentProject(data[0]);
+        setCurrentProject(memoizedProjects[0]);
       } else {
         setCurrentProject(null);
       }
@@ -88,10 +91,10 @@ export const useProjects = () => {
       console.warn('Failed to load project:', error);
       setCurrentProject(null);
     }
-  }, [data, sessionStatus]);
+  }, [memoizedProjects, sessionStatus]);
 
-  // Persist project selection
-  const handleSetCurrentProject = (project: Project | null) => {
+  // Persist project selection with memoized callback
+  const handleSetCurrentProject = useCallback((project: Project | null) => {
     setCurrentProject(project);
 
     if (project) {
@@ -100,14 +103,23 @@ export const useProjects = () => {
       localStorage.removeItem(CURRENT_PROJECT_KEY);
     }
 
-    // Only reload if we're changing projects while authenticated
+    // Instead of reloading, invalidate specific SWR caches
+    // This will trigger re-fetches for data that depends on the current project
     if (project && sessionStatus === 'authenticated') {
-      window.location.reload();
+      // Trigger a mutation to refetch project-specific data
+      // Using the specific key 'projects' that matches our SWR key
+      mutate('projects');
+      
+      // Emit a custom event that other components can listen to
+      // This allows components to react to project changes without coupling
+      window.dispatchEvent(new CustomEvent('projectChanged', { 
+        detail: { project } 
+      }));
     }
-  };
+  }, [mutate, sessionStatus]);
 
   return {
-    projects: data ?? [],
+    projects: memoizedProjects,
     currentProject,
     setCurrentProject: handleSetCurrentProject,
     mutate,

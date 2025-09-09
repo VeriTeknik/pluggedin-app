@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev --port=12005",
     "build": "next build",
+    "build:analyze": "ANALYZE=true next build",
     "postbuild": "node scripts/copy-pdf-worker.js",
     "start": "PORT=12005 node .next/standalone/server.js",
     "lint": "next lint",
@@ -113,6 +114,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.1",
+    "@next/bundle-analyzer": "^15.5.2",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.8.0",
     "@types/bcrypt": "^6.0.0",

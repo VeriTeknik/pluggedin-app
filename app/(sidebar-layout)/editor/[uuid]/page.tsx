@@ -1,11 +1,11 @@
 'use client';
 
-import { Editor } from '@monaco-editor/react';
 import debounce from 'lodash/debounce';
-import { use, useCallback, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import { getCode, updateCode } from '@/app/actions/code';
+import { LazyMonacoEditor } from '@/components/lazy-monaco-editor';
 
 export default function CodeEditorDetailPage({
   params,
@@ -19,13 +19,14 @@ export default function CodeEditorDetailPage({
     getCode(uuid)
   );
 
-  const debouncedUpdateCode = useCallback(() => {
-    return debounce(async (value: string) => {
-      if (!code) return;
-      await updateCode(uuid, code.fileName, value);
+  // Create stable debounced function using useMemo
+  const debouncedUpdateCode = useMemo(
+    () => debounce(async (value: string, fileName: string) => {
+      await updateCode(uuid, fileName, value);
       mutate();
-    }, 500);
-  }, [code, uuid, mutate])();
+    }, 500),
+    [uuid, mutate]
+  );
 
   // Cleanup debounced function on unmount
   useEffect(() => {
@@ -35,8 +36,8 @@ export default function CodeEditorDetailPage({
   }, [debouncedUpdateCode]);
 
   const handleEditorChange = (value: string | undefined) => {
-    if (!value) return;
-    debouncedUpdateCode(value);
+    if (!value || !code) return;
+    debouncedUpdateCode(value, code.fileName);
   };
 
   if (!code) {
@@ -49,7 +50,7 @@ export default function CodeEditorDetailPage({
 
   return (
     <div className='h-screen w-full'>
-      <Editor
+      <LazyMonacoEditor
         height='100vh'
         defaultLanguage={language}
         defaultValue={code.code}
