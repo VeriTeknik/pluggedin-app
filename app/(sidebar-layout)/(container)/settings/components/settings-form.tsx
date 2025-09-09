@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ImagePlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -42,6 +42,8 @@ import { useToast } from '@/components/ui/use-toast';
 import { users } from '@/db/schema';
 import { useLanguage } from '@/hooks/use-language';
 import { localeNames,locales } from '@/i18n/config'; // Import locales and names
+
+import { serverLogout } from '@/app/actions/auth';
 
 import { removeConnectedAccount } from '../actions';
 import { AppearanceSection } from './appearance-section';
@@ -214,11 +216,20 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         throw new Error(errorData.error || t('settings.account.error'));
       }
 
-      // Clear any session data
+      // Clear any local session data
       window.localStorage.clear();
       window.sessionStorage.clear();
       
-      // Redirect to login page and force a full page reload
+      // First clear server-side sessions from database
+      await serverLogout();
+      
+      // Then properly sign out using NextAuth to clear cookies and JWT
+      await signOut({ 
+        callbackUrl: '/login',
+        redirect: false  // We'll handle the redirect manually
+      });
+      
+      // Force a full page reload to /login
       window.location.href = '/login';
     } catch (error) {
       toast({
