@@ -5,6 +5,11 @@ import { Configuration as WebpackConfig } from 'webpack';
 
 import packageJson from './package.json';
 
+// Bundle analyzer for performance optimization
+const withBundleAnalyzer = require('@next/bundle-analyzer')({
+  enabled: process.env.ANALYZE === 'true',
+});
+
 const nextConfig: NextConfig = {
   output: 'standalone',
   allowedDevOrigins: ['plugged.in', 'staging.plugged.in'],
@@ -68,7 +73,10 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+// Wrap with bundle analyzer first, then Sentry
+const configWithAnalyzer = withBundleAnalyzer(nextConfig);
+
+export default withSentryConfig(configWithAnalyzer, {
   // For all available options, see:
   // https://www.npmjs.com/package/@sentry/webpack-plugin#options
 

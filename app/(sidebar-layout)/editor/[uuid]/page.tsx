@@ -1,11 +1,11 @@
 'use client';
 
-import { Editor } from '@monaco-editor/react';
 import debounce from 'lodash/debounce';
 import { use, useCallback, useEffect, useState } from 'react';
 import useSWR from 'swr';
 
 import { getCode, updateCode } from '@/app/actions/code';
+import { LazyMonacoEditor } from '@/components/lazy-monaco-editor';
 
 export default function CodeEditorDetailPage({
   params,
@@ -49,10 +49,10 @@ export default function CodeEditorDetailPage({
 
   return (
     <div className='h-screen w-full'>
-      <Editor
+      <LazyMonacoEditor
         height='100vh'
-        defaultLanguage={language}
-        defaultValue={code.code}
+        language={language}
+        value={code.code}
         theme='vs-light'
         onChange={handleEditorChange}
         options={{
