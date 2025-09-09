@@ -115,22 +115,45 @@ export class ProxyMemoryManager {
   }
 }
 
-// Singleton instance for the MCP proxy
-let proxyMemoryManager: ProxyMemoryManager | null = null;
+// Use WeakMap for better memory management in SSR/testing environments
+const managerInstances = new WeakMap<object, ProxyMemoryManager>();
+const MANAGER_KEY = Symbol.for('proxy.memory.manager');
 
-export function getProxyMemoryManager(): ProxyMemoryManager {
-  if (!proxyMemoryManager) {
-    proxyMemoryManager = new ProxyMemoryManager({
+/**
+ * Get or create a ProxyMemoryManager instance
+ * Uses WeakMap to allow garbage collection when context is destroyed
+ */
+export function getProxyMemoryManager(context: object = globalThis): ProxyMemoryManager {
+  let manager = managerInstances.get(context);
+  
+  if (!manager) {
+    manager = new ProxyMemoryManager({
       staleEntryThresholdMs: 1800000, // 30 minutes
       maxEntries: 5000, // Per cache limit
     });
+    managerInstances.set(context, manager);
   }
-  return proxyMemoryManager;
+  
+  return manager;
 }
 
-export function destroyProxyMemoryManager(): void {
-  if (proxyMemoryManager) {
-    proxyMemoryManager.destroy();
-    proxyMemoryManager = null;
+/**
+ * Destroy a ProxyMemoryManager instance for a given context
+ */
+export function destroyProxyMemoryManager(context: object = globalThis): void {
+  const manager = managerInstances.get(context);
+  if (manager) {
+    manager.destroy();
+    managerInstances.delete(context);
   }
+}
+
+/**
+ * Clean up all manager instances (useful for testing)
+ */
+export function destroyAllProxyMemoryManagers(): void {
+  // Note: WeakMap doesn't provide iteration, so we can't clean all instances
+  // This is actually good for memory management as they'll be GC'd automatically
+  // For testing, pass the test context explicitly to destroy
+  destroyProxyMemoryManager(globalThis);
 }

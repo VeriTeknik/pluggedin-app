@@ -1,7 +1,7 @@
 'use client';
 
 import debounce from 'lodash/debounce';
-import { use, useCallback, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import { getCode, updateCode } from '@/app/actions/code';
@@ -19,13 +19,14 @@ export default function CodeEditorDetailPage({
     getCode(uuid)
   );
 
-  const debouncedUpdateCode = useCallback(() => {
-    return debounce(async (value: string) => {
-      if (!code) return;
-      await updateCode(uuid, code.fileName, value);
+  // Create stable debounced function using useMemo
+  const debouncedUpdateCode = useMemo(
+    () => debounce(async (value: string, fileName: string) => {
+      await updateCode(uuid, fileName, value);
       mutate();
-    }, 500);
-  }, [code, uuid, mutate])();
+    }, 500),
+    [uuid, mutate]
+  );
 
   // Cleanup debounced function on unmount
   useEffect(() => {
@@ -35,8 +36,8 @@ export default function CodeEditorDetailPage({
   }, [debouncedUpdateCode]);
 
   const handleEditorChange = (value: string | undefined) => {
-    if (!value) return;
-    debouncedUpdateCode(value);
+    if (!value || !code) return;
+    debouncedUpdateCode(value, code.fileName);
   };
 
   if (!code) {

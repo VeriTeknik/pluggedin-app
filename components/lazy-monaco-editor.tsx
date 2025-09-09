@@ -3,6 +3,7 @@
 import { Suspense, lazy } from 'react';
 
 import { Skeleton } from '@/components/ui/skeleton';
+import { EditorErrorBoundary } from '@/components/editor-error-boundary';
 
 // Lazy load Monaco Editor to reduce initial bundle size
 const MonacoEditor = lazy(() => 
@@ -49,19 +50,21 @@ export function LazyMonacoEditor({
   className,
 }: LazyMonacoEditorProps) {
   return (
-    <Suspense fallback={<EditorSkeleton height={height} width={width} />}>
-      <MonacoEditor
-        value={value}
-        defaultValue={defaultValue}
-        language={language}
-        defaultLanguage={defaultLanguage}
-        theme={theme}
-        onChange={onChange}
-        options={options}
-        height={height}
-        width={width}
-        className={className}
-      />
-    </Suspense>
+    <EditorErrorBoundary>
+      <Suspense fallback={<EditorSkeleton height={height} width={width} />}>
+        <MonacoEditor
+          value={value}
+          defaultValue={defaultValue}
+          language={language}
+          defaultLanguage={defaultLanguage}
+          theme={theme}
+          onChange={onChange}
+          options={options}
+          height={height}
+          width={width}
+          className={className}
+        />
+      </Suspense>
+    </EditorErrorBoundary>
   );
 }

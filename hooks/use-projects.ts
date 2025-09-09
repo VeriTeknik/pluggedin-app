@@ -34,8 +34,8 @@ export const useProjects = () => {
         
         // For auth issues, clear the stored project
         const isAuthIssue = 
-          error?.message?.toLowerCase().includes('unauthorized') ||
-          error?.message?.toLowerCase().includes('session expired');
+          _error?.message?.toLowerCase().includes('unauthorized') ||
+          _error?.message?.toLowerCase().includes('session expired');
           
         if (isAuthIssue) {
           localStorage.removeItem(CURRENT_PROJECT_KEY);
