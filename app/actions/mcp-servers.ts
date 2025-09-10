@@ -14,7 +14,10 @@ import {
   serverInstallationsTable,
   users 
 } from '@/db/schema';
+import { auditLog, AuditLogTypes, AuditLogActions } from '@/lib/audit-logger';
+import { getAuthSession } from '@/lib/auth';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
+import { rateLimitServerAction, ServerActionRateLimits, formatRateLimitError } from '@/lib/server-action-rate-limiter';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import { McpServerSlugService } from '@/lib/services/mcp-server-slug-service';
 import { 
@@ -37,7 +40,58 @@ type ServerWithMetrics = typeof mcpServersTable.$inferSelect & {
   installationCount?: number;
 }
 
+/**
+ * Verify user authentication and profile ownership
+ * @throws Error if user is not authenticated or doesn't own the profile
+ */
+async function requireAuthentication(profileUuid: string): Promise<{ userId: string; hasAccess: boolean }> {
+  const session = await getAuthSession();
+  
+  if (!session?.user?.id) {
+    throw new Error('Unauthorized: No active session');
+  }
+  
+  // Verify user owns the profile
+  const profile = await db.query.profilesTable.findFirst({
+    where: eq(profilesTable.uuid, profileUuid),
+    with: {
+      project: {
+        columns: {
+          user_id: true
+        }
+      }
+    }
+  });
+  
+  if (!profile || profile.project.user_id !== session.user.id) {
+    throw new Error('Forbidden: Access denied to this profile');
+  }
+  
+  return { userId: session.user.id, hasAccess: true };
+}
+
+/**
+ * Apply rate limiting to an action
+ * @throws Error if rate limit is exceeded
+ */
+async function applyRateLimit(
+  userId: string,
+  action: string,
+  config = ServerActionRateLimits.serverModification
+): Promise<void> {
+  const rateLimitResult = await rateLimitServerAction(userId, action, config);
+  
+  if (!rateLimitResult.allowed) {
+    throw new Error(formatRateLimitError(rateLimitResult));
+  }
+}
+
 export async function getMcpServers(profileUuid: string): Promise<ServerWithMetrics[]> {
+  // Verify authentication and profile ownership
+  const { userId } = await requireAuthentication(profileUuid);
+  
+  // Apply rate limiting for read operations
+  await applyRateLimit(userId, 'get-servers', ServerActionRateLimits.serverRead);
   
   // Get the servers without type assertion
   const serversQuery = await db
@@ -68,12 +122,12 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
   
   
   // Debug: Log all servers before filtering to understand what's being excluded
-  const allServersDebug = await db
-    .select({
-      server: mcpServersTable,
-    })
-    .from(mcpServersTable)
-    .where(eq(mcpServersTable.profile_uuid, profileUuid));
+  // const allServersDebug = await db
+  //   .select({
+  //     server: mcpServersTable,
+  //   })
+  //   .from(mcpServersTable)
+  //   .where(eq(mcpServersTable.profile_uuid, profileUuid));
 
   // Type the result correctly
   const servers: ServerWithUsername[] = serversQuery;
@@ -85,37 +139,13 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
         // Decrypt sensitive fields
         const decryptedServer = decryptServerData(server);
         
-        // Process server data - transport options should now be separate from env
-        const processedServer: any = { ...decryptedServer };
-        
-        
-        // For backward compatibility, check if transport options are still in env
-        if (server.type === McpServerType.STREAMABLE_HTTP && decryptedServer.env) {
-          const { __transport, __streamableHTTPOptions, ...cleanEnv } = decryptedServer.env;
-          
-          // Clean up env from transport options
-          processedServer.env = cleanEnv;
-          
-          // If transport options are in env (legacy), extract them
-          if (__transport && !processedServer.transport) {
-            processedServer.transport = __transport;
-          }
-          if (__streamableHTTPOptions && !processedServer.streamableHTTPOptions) {
-            try {
-              processedServer.streamableHTTPOptions = JSON.parse(__streamableHTTPOptions);
-            } catch (e) {
-              console.error('Failed to parse streamableHTTPOptions from env:', e);
-            }
-          }
-        }
-        
         const metrics = await getServerRatingMetrics({
           source: server.source || McpServerSource.PLUGGEDIN,
           externalId: server.external_id || server.uuid
         });
 
         return {
-          ...processedServer,
+          ...decryptedServer,
           username,
           averageRating: metrics?.metrics?.averageRating,
           ratingCount: metrics?.metrics?.ratingCount,
@@ -141,6 +171,12 @@ export async function getMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<McpServer | undefined> {
+  // Verify authentication and profile ownership
+  const { userId } = await requireAuthentication(profileUuid);
+  
+  // Apply rate limiting for read operations
+  await applyRateLimit(userId, 'get-server', ServerActionRateLimits.serverRead);
+  
   const server = await db.query.mcpServersTable.findFirst({
       where: and(
         eq(mcpServersTable.uuid, uuid),
@@ -153,43 +189,32 @@ export async function getMcpServerByUuid(
   // Decrypt sensitive fields
   const decryptedServer = decryptServerData(server);
   
-  // Process server data - transport options should now be separate from env
-  if (server.type === McpServerType.STREAMABLE_HTTP) {
-    const processedServer: any = { ...decryptedServer };
-    
-    // For backward compatibility, check if transport options are still in env
-    if (decryptedServer.env) {
-      const { __transport, __streamableHTTPOptions, ...cleanEnv } = decryptedServer.env;
-      
-      // Clean up env from transport options
-      processedServer.env = cleanEnv;
-      
-      // If transport options are in env (legacy), extract them
-      if (__transport && !processedServer.transport) {
-        processedServer.transport = __transport;
-      }
-      if (__streamableHTTPOptions && !processedServer.streamableHTTPOptions) {
-        try {
-          processedServer.streamableHTTPOptions = JSON.parse(__streamableHTTPOptions);
-        } catch (e) {
-          console.error('Failed to parse streamableHTTPOptions from env:', e);
-        }
-      }
-    }
-    
-    return processedServer;
-  }
-  
   return {
     ...decryptedServer,
-    config: decryptedServer.config as Record<string, any> | null
-  };
+    config: decryptedServer.config as Record<string, any> | null,
+    transport: decryptedServer.transport as 'streamable_http' | 'sse' | 'stdio' | undefined
+  } as McpServer;
 }
 
 export async function deleteMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<void> {
+  // Verify authentication and profile ownership
+  const { userId } = await requireAuthentication(profileUuid);
+  
+  // Apply rate limiting for modification operations
+  await applyRateLimit(userId, 'delete-server', ServerActionRateLimits.serverModification);
+  
+  // Audit log the deletion attempt
+  await auditLog({
+    profileUuid,
+    type: AuditLogTypes.SERVER_DELETE,
+    action: AuditLogActions.DELETE,
+    serverUuid: uuid,
+    userId,
+  });
+  
   // Get server details before deletion for tracking
   const server = await db.query.mcpServersTable.findFirst({
     where: and(
@@ -211,7 +236,7 @@ export async function deleteMcpServerByUuid(
       }
     });
 
-    const userId = profileData?.project?.user_id || 'anonymous';
+    // const userId = profileData?.project?.user_id || 'anonymous';
 
     // TODO: Track uninstallation to new analytics service when available
 
@@ -285,8 +310,24 @@ export async function updateMcpServer(
       headers?: Record<string, string>;
     };
   }
-): Promise<void> { // Changed return type to void as it doesn't explicitly return the server
+): Promise<{ success: boolean; error?: string }> {
   try {
+    // Verify authentication and profile ownership
+    const { userId } = await requireAuthentication(profileUuid);
+    
+    // Apply rate limiting for modification operations
+    await applyRateLimit(userId, 'update-server', ServerActionRateLimits.serverModification);
+    
+    // Audit log the update attempt
+    await auditLog({
+      profileUuid,
+      type: AuditLogTypes.SERVER_UPDATE,
+      action: AuditLogActions.UPDATE,
+      serverUuid: uuid,
+      userId,
+      metadata: { fieldsUpdated: Object.keys(data) },
+    });
+    
     // Validate slug if it's being updated
     if (data.name !== undefined) {
       const slugValidation = generateSlugSchema.safeParse({
@@ -374,12 +415,15 @@ export async function updateMcpServer(
     updateData.args = null;
     updateData.env = null;
     updateData.url = null;
+    // Note: transport and streamableHTTPOptions don't exist as direct columns in the database
+    // They are stored in encrypted columns only
   }
 
   if (Object.keys(updateData).length === 0) {
     console.warn("updateMcpServer called with no fields to update.");
-    return; // No fields to update
+    return { success: true }; // No fields to update, but still successful
   }
+
 
   // Use transaction to ensure atomicity between server update and slug generation
   await db.transaction(async (tx) => {
@@ -420,9 +464,14 @@ export async function updateMcpServer(
 
   // Revalidate path if needed
   // revalidatePath('/mcp-servers');
+  
+  return { success: true };
   } catch (error) {
     console.error('[updateMcpServer] Error:', error);
-    throw error instanceof Error ? error : new Error('Failed to update MCP server');
+    return { 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Failed to update MCP server'
+    };
   }
 }
 
@@ -461,6 +510,21 @@ export async function createMcpServer({
   config?: Record<string, any>;
 }) { // Removed explicit return type to match actual returns
   try {
+    // Verify authentication and profile ownership
+    const { userId } = await requireAuthentication(profileUuid);
+    
+    // Apply rate limiting for modification operations
+    await applyRateLimit(userId, 'create-server', ServerActionRateLimits.serverModification);
+    
+    // Audit log the creation attempt
+    await auditLog({
+      profileUuid,
+      type: AuditLogTypes.SERVER_CREATE,
+      action: AuditLogActions.CREATE,
+      userId,
+      metadata: { serverName: name, serverType: type },
+    });
+    
     const serverType = type || McpServerType.STDIO;
     
     // Prepare data for Zod validation

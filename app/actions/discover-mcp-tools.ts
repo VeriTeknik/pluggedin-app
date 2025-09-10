@@ -85,8 +85,17 @@ export async function discoverSingleServerTools(
             await db.insert(toolsTable).values(toolsToInsert);
         }
     } catch (error: any) {
-        console.error('[Action Error] Failed to discover/store tools for server:', { server: serverConfig.name || serverUuid, error });
-        toolError = error.message;
+        // Ignore abort errors for Streamable HTTP - they're expected during cleanup
+        const isAbortError = error?.code === 20 || 
+                           error?.name === 'AbortError' || 
+                           error?.message?.includes('abort') ||
+                           error?.message?.includes('This operation was aborted');
+        
+        if (!isAbortError) {
+            console.error('[Action Error] Failed to discover/store tools for server:', { server: serverConfig.name || serverUuid, error });
+        }
+        
+        toolError = isAbortError ? null : error.message;
         
         // Check if this is a 401 authentication error
         const is401Error = error.message?.includes('401') || 
@@ -140,8 +149,17 @@ export async function discoverSingleServerTools(
             await db.insert(resourceTemplatesTable).values(templatesToInsert);
         }
     } catch (error: any) {
-        console.error('[Action Error] Failed to discover/store resource templates for server:', { server: serverConfig.name || serverUuid, error });
-        templateError = error.message;
+        // Ignore abort errors for Streamable HTTP - they're expected during cleanup
+        const isAbortError = error?.code === 20 || 
+                           error?.name === 'AbortError' || 
+                           error?.message?.includes('abort') ||
+                           error?.message?.includes('This operation was aborted');
+        
+        if (!isAbortError) {
+            console.error('[Action Error] Failed to discover/store resource templates for server:', { server: serverConfig.name || serverUuid, error });
+        }
+        
+        templateError = isAbortError ? null : error.message;
     }
 
     // --- Discover Static Resources ---
@@ -165,8 +183,17 @@ export async function discoverSingleServerTools(
             await db.insert(resourcesTable).values(resourcesToInsert);
         }
     } catch (error: any) {
-        console.error('[Action Error] Failed to discover/store static resources for server:', { server: serverConfig.name || serverUuid, error });
-        resourceError = error.message;
+        // Ignore abort errors for Streamable HTTP - they're expected during cleanup
+        const isAbortError = error?.code === 20 || 
+                           error?.name === 'AbortError' || 
+                           error?.message?.includes('abort') ||
+                           error?.message?.includes('This operation was aborted');
+        
+        if (!isAbortError) {
+            console.error('[Action Error] Failed to discover/store static resources for server:', { server: serverConfig.name || serverUuid, error });
+        }
+        
+        resourceError = isAbortError ? null : error.message;
     }
 
     // --- Discover Prompts ---
@@ -189,8 +216,17 @@ export async function discoverSingleServerTools(
             await db.insert(promptsTable).values(promptsToInsert);
         }
     } catch (error: any) {
-        console.error('[Action Error] Failed to discover/store prompts for server:', { server: serverConfig.name || serverUuid, error });
-        promptError = error.message;
+        // Ignore abort errors for Streamable HTTP - they're expected during cleanup
+        const isAbortError = error?.code === 20 || 
+                           error?.name === 'AbortError' || 
+                           error?.message?.includes('abort') ||
+                           error?.message?.includes('This operation was aborted');
+        
+        if (!isAbortError) {
+            console.error('[Action Error] Failed to discover/store prompts for server:', { server: serverConfig.name || serverUuid, error });
+        }
+        
+        promptError = isAbortError ? null : error.message;
     }
 
 

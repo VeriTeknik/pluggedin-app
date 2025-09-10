@@ -45,7 +45,8 @@ export function ProjectSwitcher() {
     return null;
   }
 
-  if (!projects) {
+  // Ensure projects is an array
+  if (!projects || !Array.isArray(projects)) {
     return <span>Loading Projects...</span>;
   }
 
@@ -86,7 +87,7 @@ export function ProjectSwitcher() {
                 <CommandInput placeholder='Search hubs...' />
                 <CommandEmpty>No hub found.</CommandEmpty>
                 <CommandGroup heading='Hubs'>
-                  {projects.map((project: Project) => (
+                  {(Array.isArray(projects) ? projects : []).map((project: Project) => (
                     <CommandItem
                       key={project.uuid}
                       onSelect={() => {
