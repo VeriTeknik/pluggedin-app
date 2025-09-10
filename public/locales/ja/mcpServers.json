@@ -136,7 +136,8 @@
       "fetchPromptsFailed": "プロンプトの読み込みに失敗しました。",
       "fetchToolsFailed": "ツールの読み込みに失敗しました。",
       "fetchInstructionsFailed": "カスタム指示の取得に失敗しました。",
-      "mustBeSharedForCollection": "サーバーはコレクションに含めるために共有される必要があります。"
+      "mustBeSharedForCollection": "サーバーはコレクションに含めるために共有される必要があります。",
+      "updateFailed": "サーバー設定の更新に失敗しました。"
     },
     "tabs": {
       "details": "サーバー詳細",
@@ -218,6 +219,9 @@
     "placeholders": {
       "serverName": "サーバー名を入力",
       "description": "クリックして説明を追加..."
+    },
+    "messages": {
+      "updateSuccess": "サーバー設定が正常に更新されました。"
     }
   }
 }

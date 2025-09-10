@@ -136,7 +136,8 @@
       "fetchPromptsFailed": "加载提示失败。",
       "fetchToolsFailed": "加载工具失败。",
       "fetchInstructionsFailed": "获取自定义指令失败。",
-      "mustBeSharedForCollection": "服务器必须共享才能包含在集合中。"
+      "mustBeSharedForCollection": "服务器必须共享才能包含在集合中。",
+      "updateFailed": "服务器配置更新失败。"
     },
     "tabs": {
       "details": "服务器详细信息",
@@ -218,6 +219,9 @@
     "placeholders": {
       "serverName": "输入服务器名称",
       "description": "点击添加描述..."
+    },
+    "messages": {
+      "updateSuccess": "服务器配置更新成功。"
     }
   }
 }

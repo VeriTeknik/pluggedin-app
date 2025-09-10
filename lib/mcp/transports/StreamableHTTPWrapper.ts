@@ -205,7 +205,19 @@ export class StreamableHTTPWrapper implements Transport {
   }
 
   async close(): Promise<void> {
-    return this.transport.close();
+    try {
+      await this.transport.close();
+    } catch (error: any) {
+      // Silently ignore abort errors - they're expected when closing Streamable HTTP connections
+      if (error?.code === 20 || 
+          error?.name === 'AbortError' || 
+          error?.message?.includes('abort') ||
+          error?.message?.includes('This operation was aborted')) {
+        return; // Silent return for expected abort errors
+      }
+      // Re-throw unexpected errors
+      throw error;
+    }
   }
 
   /**

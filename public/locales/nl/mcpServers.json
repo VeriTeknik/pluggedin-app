@@ -136,7 +136,8 @@
       "fetchPromptsFailed": "Laden van prompts mislukt.",
       "fetchToolsFailed": "Laden van tools mislukt.",
       "fetchInstructionsFailed": "Ophalen van aangepaste instructies mislukt.",
-      "mustBeSharedForCollection": "Server moet gedeeld worden om opgenomen te worden in een collectie."
+      "mustBeSharedForCollection": "Server moet gedeeld worden om opgenomen te worden in een collectie.",
+      "updateFailed": "Serverconfiguratie bijwerken mislukt."
     },
     "tabs": {
       "details": "Serverdetails",
@@ -218,6 +219,9 @@
     "placeholders": {
       "serverName": "Voer servernaam in",
       "description": "Klik om een beschrijving toe te voegen..."
+    },
+    "messages": {
+      "updateSuccess": "Serverconfiguratie succesvol bijgewerkt."
     }
   }
 }

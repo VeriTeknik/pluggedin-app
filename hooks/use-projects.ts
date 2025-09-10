@@ -40,8 +40,6 @@ export const useProjects = () => {
         if (isAuthIssue) {
           localStorage.removeItem(CURRENT_PROJECT_KEY);
         }
-        
-        return [];
       },
       // Add retry configuration
       shouldRetryOnError: (_err: Error) => {
@@ -63,7 +61,13 @@ export const useProjects = () => {
   const [currentProject, setCurrentProject] = useState<Project | null>(null);
 
   // Memoize projects array to prevent unnecessary re-renders
-  const memoizedProjects = useMemo(() => data ?? [], [data]);
+  // Ensure we always have an array, even if data is not an array
+  const memoizedProjects = useMemo(() => {
+    if (Array.isArray(data)) {
+      return data;
+    }
+    return [];
+  }, [data]);
 
   // Load saved project on mount only if authenticated
   useEffect(() => {

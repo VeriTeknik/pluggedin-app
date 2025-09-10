@@ -115,11 +115,18 @@ export function encryptServerData<T extends {
   args?: string[] | null;
   env?: Record<string, string> | null;
   url?: string | null;
+  transport?: string | null;
+  streamableHTTPOptions?: {
+    sessionId?: string;
+    headers?: Record<string, string>;
+  } | null;
 }>(server: T): T & {
   command_encrypted?: string;
   args_encrypted?: string;
   env_encrypted?: string;
   url_encrypted?: string;
+  transport_encrypted?: string;
+  streamable_http_options_encrypted?: string;
   encryption_version?: number;
 } {
   const encrypted: any = { ...server };
@@ -145,6 +152,18 @@ export function encryptServerData<T extends {
     delete encrypted.url;
   }
   
+  // Encrypt transport if present
+  if (server.transport) {
+    encrypted.transport_encrypted = encryptField(server.transport);
+    delete encrypted.transport;
+  }
+  
+  // Encrypt streamableHTTPOptions if present
+  if (server.streamableHTTPOptions) {
+    encrypted.streamable_http_options_encrypted = encryptField(server.streamableHTTPOptions);
+    delete encrypted.streamableHTTPOptions;
+  }
+  
   // Mark as using new encryption (v2)
   encrypted.encryption_version = 2;
   
@@ -159,11 +178,18 @@ export function decryptServerData<T extends {
   args_encrypted?: string | null;
   env_encrypted?: string | null;
   url_encrypted?: string | null;
+  transport_encrypted?: string | null;
+  streamable_http_options_encrypted?: string | null;
 }>(server: T): T & {
   command?: string;
   args?: string[];
   env?: Record<string, string>;
   url?: string;
+  transport?: string;
+  streamableHTTPOptions?: {
+    sessionId?: string;
+    headers?: Record<string, string>;
+  };
 } {
   const decrypted: any = { ...server };
   
@@ -190,7 +216,25 @@ export function decryptServerData<T extends {
   
   if (server.env_encrypted) {
     try {
-      decrypted.env = decryptField(server.env_encrypted);
+      const envData = decryptField(server.env_encrypted);
+      
+      // For backward compatibility: extract transport and streamableHTTPOptions from env if present
+      // This handles existing data that might have these stored in env
+      if (envData.__transport && !decrypted.transport && !server.transport_encrypted) {
+        decrypted.transport = envData.__transport;
+        delete envData.__transport;
+      }
+      
+      if (envData.__streamableHTTPOptions && !decrypted.streamableHTTPOptions && !server.streamable_http_options_encrypted) {
+        try {
+          decrypted.streamableHTTPOptions = JSON.parse(envData.__streamableHTTPOptions);
+        } catch (e) {
+          console.error('Failed to parse streamableHTTPOptions from env:', e);
+        }
+        delete envData.__streamableHTTPOptions;
+      }
+      
+      decrypted.env = envData;
     } catch (error) {
       console.error('Failed to decrypt env:', error);
       decrypted.env = {};
@@ -206,6 +250,28 @@ export function decryptServerData<T extends {
       decrypted.url = null;
     }
     delete decrypted.url_encrypted;
+  }
+  
+  // Decrypt transport if present (new dedicated column)
+  if (server.transport_encrypted) {
+    try {
+      decrypted.transport = decryptField(server.transport_encrypted);
+    } catch (error) {
+      console.error('Failed to decrypt transport:', error);
+      decrypted.transport = null;
+    }
+    delete decrypted.transport_encrypted;
+  }
+  
+  // Decrypt streamableHTTPOptions if present (new dedicated column)
+  if (server.streamable_http_options_encrypted) {
+    try {
+      decrypted.streamableHTTPOptions = decryptField(server.streamable_http_options_encrypted);
+    } catch (error) {
+      console.error('Failed to decrypt streamableHTTPOptions:', error);
+      decrypted.streamableHTTPOptions = null;
+    }
+    delete decrypted.streamable_http_options_encrypted;
   }
   
   return decrypted;
