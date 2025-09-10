@@ -136,6 +136,7 @@ export const accounts = pgTable(
     scope: text('scope'),
     id_token: text('id_token'),
     session_state: text('session_state'),
+    last_used: timestamp('last_used', { withTimezone: true }),
   },
   (account) => ({
     compoundKey: primaryKey({

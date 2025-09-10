@@ -4,6 +4,8 @@ type EmailOptions = {
   to: string;
   subject: string;
   html: string;
+  from?: string;
+  fromName?: string;
 };
 
 // Base64 logo for Plugged.in - a simple blue placeholder
@@ -14,7 +16,7 @@ const DEFAULT_LOGO_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASAAA
 /**
  * Send an email using Nodemailer
  */
-export async function sendEmail({ to, subject, html }: EmailOptions) {
+export async function sendEmail({ to, subject, html, from, fromName }: EmailOptions) {
   const { 
     EMAIL_SERVER_HOST, 
     EMAIL_SERVER_PORT, 
@@ -41,13 +43,17 @@ export async function sendEmail({ to, subject, html }: EmailOptions) {
   });
 
   try {
+    // Use provided from/fromName or fall back to environment variables
+    const senderEmail = from || EMAIL_FROM;
+    const senderName = fromName || EMAIL_FROM_NAME;
+    
     // Format sender with name if available
-    const from = EMAIL_FROM_NAME 
-      ? `"${EMAIL_FROM_NAME}" <${EMAIL_FROM}>`
-      : EMAIL_FROM;
+    const formattedFrom = senderName 
+      ? `"${senderName}" <${senderEmail}>`
+      : senderEmail;
 
     await transporter.sendMail({
-      from,
+      from: formattedFrom,
       to,
       subject,
       html,

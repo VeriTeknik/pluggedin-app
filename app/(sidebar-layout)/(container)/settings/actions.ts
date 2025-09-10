@@ -6,18 +6,30 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { accounts, users } from '@/db/schema';
 
+export interface ConnectedAccount {
+  provider: string;
+  lastUsed: Date | null;
+}
+
 /**
- * Get all connected accounts for a user
+ * Get all connected accounts for a user with last used information
  * This function fetches the OAuth provider accounts associated with a user
  */
-export async function getConnectedAccounts(userId: string): Promise<string[]> {
+export async function getConnectedAccounts(userId: string): Promise<ConnectedAccount[]> {
   try {
     const userAccounts = await db.query.accounts.findMany({
       where: eq(accounts.userId, userId),
+      columns: {
+        provider: true,
+        last_used: true,
+      },
     });
     
-    // Return an array of provider names
-    return userAccounts.map(account => account.provider);
+    // Return an array of provider info with last used dates
+    return userAccounts.map(account => ({
+      provider: account.provider,
+      lastUsed: account.last_used,
+    }));
   } catch (error) {
     console.error('Error fetching connected accounts:', error);
     return [];

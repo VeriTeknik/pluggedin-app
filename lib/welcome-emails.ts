@@ -1,8 +1,9 @@
 import { sendEmail } from '@/lib/email';
 import { db } from '@/db';
-import { emailTrackingTable, scheduledEmailsTable } from '@/db/schema';
+import { emailTrackingTable, scheduledEmailsTable, users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
-export type UserSegment = 'developer' | 'business' | 'enterprise';
+export type UserSegment = 'general' | 'developer' | 'security_focused' | 'enterprise';
 
 export interface WelcomeEmailOptions {
   name: string;
@@ -12,6 +13,13 @@ export interface WelcomeEmailOptions {
   trialUser?: boolean;
 }
 
+export interface UserMetrics {
+  documentCount: number;
+  queryCount: number;
+  knowledgeItems: number;
+  lastActive?: Date;
+}
+
 /**
  * Determine user segment based on email domain and other factors
  */
@@ -19,14 +27,24 @@ export function determineUserSegment(email: string, signupSource?: string): User
   const domain = email.split('@')[1]?.toLowerCase();
   
   // Enterprise domains (Fortune 500, large companies)
-  const enterpriseDomains = ['ibm.com', 'microsoft.com', 'google.com', 'amazon.com', 'apple.com'];
+  const enterpriseDomains = ['ibm.com', 'microsoft.com', 'google.com', 'amazon.com', 'apple.com', 'meta.com', 'oracle.com', 'salesforce.com'];
   if (domain && enterpriseDomains.some(d => domain.includes(d))) {
     return 'enterprise';
   }
   
+  // Security-focused indicators
+  const securityDomains = ['security', 'cyber', 'defense', '.gov', '.mil', 'bank', 'financial'];
+  const securitySources = ['security-audit', 'compliance', 'gdpr'];
+  if (
+    (domain && securityDomains.some(d => domain.includes(d))) ||
+    (signupSource && securitySources.includes(signupSource))
+  ) {
+    return 'security_focused';
+  }
+  
   // Developer indicators
-  const developerDomains = ['github.com', 'gitlab.com', 'dev.', '.dev', '.io'];
-  const developerSources = ['api', 'github', 'technical-docs'];
+  const developerDomains = ['github.com', 'gitlab.com', 'dev.', '.dev', '.io', 'vercel.com', 'netlify.com'];
+  const developerSources = ['api', 'github', 'technical-docs', 'npm', 'docker'];
   if (
     (domain && developerDomains.some(d => domain.includes(d))) ||
     (signupSource && developerSources.includes(signupSource))
@@ -34,8 +52,8 @@ export function determineUserSegment(email: string, signupSource?: string): User
     return 'developer';
   }
   
-  // Default to business for general users
-  return 'business';
+  // Default to general for most users
+  return 'general';
 }
 
 /**
@@ -43,17 +61,21 @@ export function determineUserSegment(email: string, signupSource?: string): User
  */
 function getWelcomeSubject(segment: UserSegment, abVariant: 'A' | 'B' = 'A'): string {
   const subjects = {
-    developer: {
-      A: 'Welcome to Plugged.in — Your MCP servers await connection',
-      B: "Let's integrate your first AI in 2 minutes",
-    },
-    business: {
-      A: 'Welcome to Plugged.in — Your AI assistant is ready',
+    general: {
+      A: 'Welcome to Plugged.in — Your AI data belongs to you',
       B: "You're in! Let's make AI work for you",
     },
+    developer: {
+      A: 'Welcome to Plugged.in — Full MCP protocol support',
+      B: "Let's ship your first MCP integration",
+    },
+    security_focused: {
+      A: 'Welcome to Plugged.in — End-to-end encrypted AI workspace',
+      B: 'Your secure AI command center is ready',
+    },
     enterprise: {
-      A: "Welcome to Plugged.in Enterprise — Your team's AI command center",
-      B: "{{company_name}}'s AI infrastructure is ready",
+      A: "Welcome to Plugged.in Enterprise — Your team's AI infrastructure",
+      B: "{{company_name}}'s secure AI workspace is ready",
     },
   };
   
@@ -64,259 +86,186 @@ function getWelcomeSubject(segment: UserSegment, abVariant: 'A' | 'B' = 'A'): st
  * Generate welcome email HTML based on user segment
  */
 function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegment }): string {
-  const { name, email, segment, trialUser } = options;
+  const { name, email, segment } = options;
   const firstName = name.split(' ')[0];
-  const appUrl = process.env.NEXTAUTH_URL || 'https://plugged.in';
-  const appName = process.env.EMAIL_FROM_NAME || 'Plugged.in';
+  const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
   
-  // Developer-focused template
-  if (segment === 'developer') {
+  // Common styles
+  const styles = `
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    a { color: #4F46E5; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .button { display: inline-block; padding: 12px 24px; background: #4F46E5; color: white !important; border-radius: 6px; text-decoration: none !important; margin: 16px 0; }
+    .button:hover { background: #4338CA; }
+    pre, code { background: #f6f6f6; padding: 12px; border-radius: 4px; font-family: 'Monaco', 'Courier New', monospace; }
+    .footer { color: #666; font-size: 0.9em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
+  `;
+  
+  // General user template (default)
+  if (segment === 'general') {
     return `
       <!DOCTYPE html>
       <html>
       <head>
-        <meta charset="utf-8">
+        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to ${appName}</title>
+        <style>${styles}</style>
       </head>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6; color: #1f2937;">
-        <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
-          <tr>
-            <td align="center">
-              <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                <!-- Header -->
-                <tr>
-                  <td style="background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%); padding: 32px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                      Welcome to ${appName}
-                    </h1>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 32px;">
-                    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5;">
-                      Hi ${firstName},
-                    </p>
-                    
-                    <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5;">
-                      Welcome to ${appName}! You're about to simplify how you manage AI interactions across all your tools.
-                    </p>
-                    
-                    <div style="background-color: #f0f9ff; border-left: 4px solid #3b82f6; padding: 16px; margin: 24px 0;">
-                      <p style="margin: 0; font-weight: 600; color: #1e40af;">
-                        Your first mission (should you choose to accept it):
-                      </p>
-                    </div>
-                    
-                    <div style="text-align: center; margin: 32px 0;">
-                      <a href="${appUrl}/mcp-servers/quick-connect" style="display: inline-block; padding: 14px 32px; background-color: #3b82f6; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">
-                        🚀 Connect Your First MCP Server
-                      </a>
-                      <p style="margin: 8px 0 0; color: #6b7280; font-size: 14px;">
-                        ^ This takes literally 2 minutes. We timed it.
-                      </p>
-                    </div>
-                    
-                    <div style="margin: 32px 0;">
-                      <h3 style="margin: 0 0 16px; color: #1f2937; font-size: 18px; font-weight: 600;">
-                        While you're here, you can also:
-                      </h3>
-                      <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8;">
-                        <li>Upload docs to your RAG library for contextual AI responses</li>
-                        <li>Set up your sequential thinking chains</li>
-                        <li>Configure your PostgreSQL connections</li>
-                      </ul>
-                    </div>
-                    
-                    <div style="background-color: #f9fafb; border-radius: 6px; padding: 20px; margin: 32px 0;">
-                      <h3 style="margin: 0 0 12px; color: #1f2937; font-size: 16px; font-weight: 600;">
-                        Quick resources for developers:
-                      </h3>
-                      <table style="width: 100%;">
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <a href="${appUrl}/docs/api" style="color: #3b82f6; text-decoration: none; font-weight: 500;">
-                              📖 API Documentation →
-                            </a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <a href="https://github.com/pluggedin/examples" style="color: #3b82f6; text-decoration: none; font-weight: 500;">
-                              💻 GitHub Examples →
-                            </a>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 8px 0;">
-                            <a href="${appUrl}/docs/quickstart" style="color: #3b82f6; text-decoration: none; font-weight: 500;">
-                              🎥 2-min Setup Video →
-                            </a>
-                          </td>
-                        </tr>
-                      </table>
-                    </div>
-                    
-                    <div style="margin: 32px 0; padding: 20px; background-color: #fef3c7; border-radius: 6px;">
-                      <p style="margin: 0; color: #92400e; font-size: 14px;">
-                        <strong>Pro tip:</strong> Join our Discord (discord.gg/pluggedin) where 1,000+ devs share their MCP configurations and workflows.
-                      </p>
-                    </div>
-                    
-                    <p style="margin: 24px 0 0; color: #4b5563; font-size: 14px; line-height: 1.5;">
-                      Got stuck? Hit reply. I read every email.
-                    </p>
-                    
-                    <p style="margin: 16px 0 0; color: #1f2937; font-size: 14px;">
-                      Happy building,<br>
-                      <strong>Sarah Chen</strong><br>
-                      Developer Success @ ${appName}
-                    </p>
-                  </td>
-                </tr>
-                
-                <!-- Footer -->
-                <tr>
-                  <td style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-                    <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;">
-                      © ${new Date().getFullYear()} ${appName}. All rights reserved.
-                    </p>
-                    <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                      <a href="${appUrl}/unsubscribe" style="color: #9ca3af;">Unsubscribe</a> | 
-                      <a href="${appUrl}/preferences" style="color: #9ca3af;">Email Preferences</a>
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
+      <body>
+        <div class="container">
+          <p>Hi ${firstName}, I'm Cem 👋</p>
+          
+          <p>I'm the founder (and chief code-wrangler 🐱) at Plugged.in.<br>
+          I started this platform with one belief: <strong>your AI data should always
+          belong to you</strong> — not be scattered across services you can't control.</p>
+          
+          <p>Here's what makes Plugged.in different:</p>
+          <ul>
+            <li>📚 Your documents + AI knowledge base, encrypted end-to-end</li>
+            <li>🔔 Smart notifications when your AI completes tasks</li>
+            <li>💾 Every interaction, securely stored under <em>your</em> ownership</li>
+            <li>🔐 OAuth-based integrations — no password juggling</li>
+          </ul>
+          
+          <p>You don't need extra servers to get started — we built the essentials in:</p>
+          <ul>
+            <li><strong>Document Management:</strong> upload once, and your AI remembers</li>
+            <li><strong>Sequential Thinking:</strong> for complex multi-step reasoning</li>
+            <li><strong>Database Tools:</strong> connect & query your own data securely</li>
+          </ul>
+          
+          <p>Best first step?<br>
+          <a href="${appUrl}/library/upload" class="button">📄 Upload your first document</a><br>
+          It takes 30 seconds — and your AI immediately becomes more useful.</p>
+          
+          <p>If you're curious about integrations,<br>
+          <a href="${appUrl}/mcp-server">browse the MCP marketplace</a><br>
+          (50+ tools, all running through our secure proxy).</p>
+          
+          <p>Want to talk shop, share feedback, or just send a cat emoji?<br>
+          Hit reply — I read every message myself.</p>
+          
+          <p>Welcome to true AI data ownership,<br>
+          Cem 🐾<br>
+          Founder @ Plugged.in</p>
+          
+          <div class="footer">
+            <p>P.S. We just shipped v2.2 — now with end-to-end encryption for all MCP configs.<br>
+            Think of it as a digital fortress… but friendlier. 🔒</p>
+            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> | 
+            <a href="${appUrl}/preferences">Email Preferences</a></p>
+          </div>
+        </div>
       </body>
       </html>
     `;
   }
   
-  // Business user template
-  if (segment === 'business') {
+  // Developer variant
+  if (segment === 'developer') {
     return `
       <!DOCTYPE html>
       <html>
       <head>
-        <meta charset="utf-8">
+        <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Welcome to ${appName}</title>
+        <style>${styles}</style>
       </head>
-      <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6; color: #1f2937;">
-        <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
-          <tr>
-            <td align="center">
-              <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-                <!-- Header -->
-                <tr>
-                  <td style="background: linear-gradient(135deg, #10b981 0%, #047857 100%); padding: 32px; text-align: center;">
-                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                      Welcome to ${appName}! 🎉
-                    </h1>
-                  </td>
-                </tr>
-                
-                <!-- Content -->
-                <tr>
-                  <td style="padding: 32px;">
-                    <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5;">
-                      Hi ${firstName},
-                    </p>
-                    
-                    <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5;">
-                      You just joined the easiest way to make AI work across all your business tools — no coding required.
-                    </p>
-                    
-                    <div style="background-color: #f0fdf4; border-left: 4px solid #10b981; padding: 16px; margin: 24px 0;">
-                      <p style="margin: 0; font-weight: 600; color: #047857;">
-                        Let's get your first win in 30 seconds:
-                      </p>
-                    </div>
-                    
-                    <div style="text-align: center; margin: 32px 0;">
-                      <a href="${appUrl}/library/upload" style="display: inline-block; padding: 14px 32px; background-color: #10b981; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">
-                        📚 Upload Your First Document
-                      </a>
-                      <p style="margin: 8px 0 0; color: #6b7280; font-size: 14px;">
-                        This instantly gives your AI context about your business
-                      </p>
-                    </div>
-                    
-                    <div style="margin: 32px 0;">
-                      <h3 style="margin: 0 0 16px; color: #1f2937; font-size: 18px; font-weight: 600;">
-                        Here's what successful teams do in their first week:
-                      </h3>
-                      <div style="background-color: #f9fafb; border-radius: 6px; padding: 20px;">
-                        <div style="margin-bottom: 16px;">
-                          <strong style="color: #10b981;">✓ Day 1:</strong> Upload key documents (product info, FAQs, processes)
-                        </div>
-                        <div style="margin-bottom: 16px;">
-                          <strong style="color: #10b981;">✓ Day 2:</strong> Connect their first AI assistant
-                        </div>
-                        <div>
-                          <strong style="color: #10b981;">✓ Day 3:</strong> Create their first automated workflow
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div style="background-color: #fef3c7; border-radius: 6px; padding: 20px; margin: 32px 0; text-align: center;">
-                      <p style="margin: 0 0 16px; color: #92400e; font-size: 16px; font-weight: 600;">
-                        Need a guided tour?
-                      </p>
-                      <a href="${appUrl}/onboarding/schedule" style="display: inline-block; padding: 12px 24px; background-color: #f59e0b; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 14px;">
-                        Book a 15-min Onboarding Call
-                      </a>
-                    </div>
-                    
-                    <div style="margin: 32px 0;">
-                      <p style="margin: 0 0 12px; color: #6b7280; font-size: 14px;">
-                        Or watch how Jennifer from TechCorp saves 6 hours weekly:
-                      </p>
-                      <a href="${appUrl}/success-stories/techcorp" style="color: #3b82f6; text-decoration: none; font-weight: 500;">
-                        🎥 Watch 3-min Success Story →
-                      </a>
-                    </div>
-                    
-                    <p style="margin: 24px 0 0; color: #4b5563; font-size: 14px; line-height: 1.5;">
-                      Questions? Just reply to this email — a real human (me!) will help.
-                    </p>
-                    
-                    <p style="margin: 16px 0 0; color: #1f2937; font-size: 14px;">
-                      Excited to see your productivity soar,<br>
-                      <strong>Michael Torres</strong><br>
-                      Customer Success @ ${appName}
-                    </p>
-                    
-                    <div style="margin: 24px 0 0; padding: 16px; background-color: #f0f9ff; border-radius: 6px;">
-                      <p style="margin: 0; color: #1e40af; font-size: 13px;">
-                        <strong>P.S.</strong> You're joining 5,000+ businesses already transforming their AI workflows. Welcome to the community!
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-                
-                <!-- Footer -->
-                <tr>
-                  <td style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-                    <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;">
-                      © ${new Date().getFullYear()} ${appName}. All rights reserved.
-                    </p>
-                    <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                      <a href="${appUrl}/unsubscribe" style="color: #9ca3af;">Unsubscribe</a> | 
-                      <a href="${appUrl}/preferences" style="color: #9ca3af;">Email Preferences</a>
-                    </p>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
+      <body>
+        <div class="container">
+          <p>Hey ${firstName}, I'm Cem 👋</p>
+
+          <p>Fellow dev here. I built Plugged.in because I was tired of my AI workflows being scattered across random services.</p>
+
+          <p>Here's what might make you smile:</p>
+          <ul>
+            <li>🔧 Full MCP protocol support (v1.4.0, Registry v2)</li>
+            <li>📦 npm: <code>@pluggedin/pluggedin-mcp-proxy</code></li>
+            <li>🐳 Docker containers tuned for prod</li>
+            <li>⚡ Lazy auth for Smithery compatibility</li>
+            <li>🔐 Configs stored with E2E encryption</li>
+          </ul>
+
+          <p>Built-in MCP servers, no setup drama:</p>
+          <pre>
+- Document management (RAG)
+- PostgreSQL connector
+- Sequential thinking
+- Notifications
+- WHOIS lookups</pre>
+
+          <p>Quick dev start:</p>
+          <ol>
+            <li><a href="${appUrl}/api-keys">Generate an API key</a></li>
+            <li><code>npm install @pluggedin/pluggedin-mcp-proxy</code></li>
+            <li><a href="https://docs.plugged.in/quickstart">Check the docs</a></li>
+          </ol>
+
+          <p>Code's evolving fast. Want to contribute, lurk, or just talk shop? Hit reply.</p>
+
+          <p>Happy hacking 🐾,<br>
+          Cem<br>
+          Founder @ Plugged.in</p>
+
+          <div class="footer">
+            <p>P.S. Our GitHub's open — <a href="https://github.com/VeriTeknik">star us</a> and watch us ship in real time.</p>
+            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> | 
+            <a href="${appUrl}/preferences">Email Preferences</a></p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+  
+  // Security-focused variant
+  if (segment === 'security_focused') {
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>${styles}</style>
+      </head>
+      <body>
+        <div class="container">
+          <p>Hi ${firstName}, I'm Cem 👋</p>
+
+          <p>You joined Plugged.in because you care about <strong>security</strong> — so do I.<br>
+          That's why I built this platform from the ground up for <em>data ownership</em>.</p>
+
+          <ul>
+            <li>🔐 End-to-end encryption (v2.2 and beyond)</li>
+            <li>🚫 Your data never trains other models</li>
+            <li>🏠 Everything lives in your own secure workspace</li>
+            <li>✅ Full export anytime — no lock-in</li>
+          </ul>
+
+          <p>Under the hood, we've baked in:</p>
+          <ul>
+            <li>SSRF protection on every external call</li>
+            <li>Command allowlisting for STDIO servers</li>
+            <li>Strict RFC-compliant header validation</li>
+            <li>OAuth-based integrations (no token leakage)</li>
+          </ul>
+
+          <p>First step:<br>
+          <a href="${appUrl}/settings/security" class="button">🔒 Review your security settings</a></p>
+
+          <p>If you ever spot something we could improve, reply — security notes go straight to me.</p>
+
+          <p>To building trust through transparency,<br>
+          Cem 🐾<br>
+          Founder @ Plugged.in</p>
+          
+          <div class="footer">
+            <p>P.S. We're GDPR compliant and working on SOC2. Your data sovereignty matters.</p>
+            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> | 
+            <a href="${appUrl}/preferences">Email Preferences</a></p>
+          </div>
+        </div>
       </body>
       </html>
     `;
@@ -327,126 +276,212 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
     <!DOCTYPE html>
     <html>
     <head>
-      <meta charset="utf-8">
+      <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <title>Welcome to ${appName} Enterprise</title>
+      <style>${styles}</style>
     </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f3f4f6; color: #1f2937;">
-      <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="background-color: #f3f4f6; padding: 40px 20px;">
-        <tr>
-          <td align="center">
-            <table role="presentation" cellspacing="0" cellpadding="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
-              <!-- Header -->
-              <tr>
-                <td style="background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%); padding: 32px; text-align: center;">
-                  <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">
-                    Welcome to ${appName} Enterprise
-                  </h1>
-                </td>
-              </tr>
-              
-              <!-- Content -->
-              <tr>
-                <td style="padding: 32px;">
-                  <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.5;">
-                    Dear ${firstName},
-                  </p>
-                  
-                  <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5;">
-                    Welcome to ${appName} Enterprise. Your organization now has access to enterprise-grade AI orchestration.
-                  </p>
-                  
-                  <div style="background-color: #eef2ff; border-left: 4px solid #6366f1; padding: 16px; margin: 24px 0;">
-                    <p style="margin: 0; font-weight: 600; color: #4338ca;">
-                      Your Priority Setup Checklist:
-                    </p>
-                  </div>
-                  
-                  <div style="margin: 24px 0;">
-                    <a href="${appUrl}/admin/permissions" style="display: inline-block; width: 100%; padding: 14px; background-color: #6366f1; color: #ffffff; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px; text-align: center; margin-bottom: 12px; box-sizing: border-box;">
-                      🔐 Configure Team Permissions
-                    </a>
-                    <a href="${appUrl}/admin/dashboard" style="display: inline-block; width: 100%; padding: 14px; background-color: #ffffff; color: #6366f1; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px; text-align: center; border: 2px solid #6366f1; box-sizing: border-box;">
-                      📊 View Your Admin Dashboard
-                    </a>
-                  </div>
-                  
-                  <div style="background-color: #f9fafb; border-radius: 6px; padding: 20px; margin: 32px 0;">
-                    <h3 style="margin: 0 0 16px; color: #1f2937; font-size: 16px; font-weight: 600;">
-                      As an enterprise customer, you have access to:
-                    </h3>
-                    <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.8;">
-                      <li>Dedicated onboarding specialist</li>
-                      <li>Priority support channel</li>
-                      <li>Custom integration assistance</li>
-                      <li>Quarterly business reviews</li>
-                    </ul>
-                  </div>
-                  
-                  <div style="background-color: #fef3c7; border-radius: 6px; padding: 20px; margin: 32px 0;">
-                    <p style="margin: 0; color: #92400e; font-size: 14px;">
-                      <strong>Important:</strong> Your dedicated success manager, Amanda Williams, will reach out within 24 hours to schedule your team's onboarding session.
-                    </p>
-                  </div>
-                  
-                  <div style="margin: 32px 0;">
-                    <h3 style="margin: 0 0 16px; color: #1f2937; font-size: 16px; font-weight: 600;">
-                      In the meantime:
-                    </h3>
-                    <table style="width: 100%;">
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <a href="${appUrl}/docs/enterprise-guide" style="color: #6366f1; text-decoration: none; font-weight: 500;">
-                            📋 Enterprise Setup Guide →
-                          </a>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <a href="${appUrl}/security" style="color: #6366f1; text-decoration: none; font-weight: 500;">
-                            🔒 Security Whitepaper →
-                          </a>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td style="padding: 8px 0;">
-                          <strong>📞 Priority Support:</strong> +1-555-PLUGGED
-                        </td>
-                      </tr>
-                    </table>
-                  </div>
-                  
-                  <p style="margin: 24px 0 0; color: #4b5563; font-size: 14px; line-height: 1.5;">
-                    We're committed to your team's success.
-                  </p>
-                  
-                  <p style="margin: 16px 0 0; color: #1f2937; font-size: 14px;">
-                    Best regards,<br>
-                    <strong>David Kim</strong><br>
-                    VP of Enterprise Success<br>
-                    ${appName}<br><br>
-                    Direct line: +1-555-0123<br>
-                    Email: david.kim@plugged.in
-                  </p>
-                </td>
-              </tr>
-              
-              <!-- Footer -->
-              <tr>
-                <td style="background-color: #f9fafb; padding: 24px; text-align: center; border-top: 1px solid #e5e7eb;">
-                  <p style="margin: 0 0 8px; color: #6b7280; font-size: 14px;">
-                    © ${new Date().getFullYear()} ${appName} Enterprise. All rights reserved.
-                  </p>
-                  <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                    <a href="${appUrl}/unsubscribe" style="color: #9ca3af;">Unsubscribe</a> | 
-                    <a href="${appUrl}/preferences" style="color: #9ca3af;">Email Preferences</a>
-                  </p>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>
+    <body>
+      <div class="container">
+        <p>Dear ${firstName},</p>
+        
+        <p>Welcome to Plugged.in Enterprise. I'm Cem, the founder.</p>
+        
+        <p>Your organization now has access to:</p>
+        <ul>
+          <li>🏢 Multi-tenant workspace isolation</li>
+          <li>🔐 Enterprise SSO integration</li>
+          <li>📊 Team analytics & usage insights</li>
+          <li>🛡️ Advanced security controls</li>
+          <li>📞 Priority support channel</li>
+        </ul>
+        
+        <p>Quick setup steps:</p>
+        <ol>
+          <li><a href="${appUrl}/admin/team">Invite your team members</a></li>
+          <li><a href="${appUrl}/admin/permissions">Configure access permissions</a></li>
+          <li><a href="${appUrl}/library/upload">Upload your first documents</a></li>
+        </ol>
+        
+        <p>Your dedicated success manager will reach out within 24 hours to schedule your onboarding.</p>
+        
+        <p>Need immediate assistance?<br>
+        Priority support: support+enterprise@plugged.in<br>
+        Direct line: +31 20 123 4567</p>
+        
+        <p>Looking forward to partnering with your team,<br>
+        Cem Karaca<br>
+        Founder & CEO @ Plugged.in</p>
+        
+        <div class="footer">
+          <p>VeriTeknik B.V. | Amsterdam, Netherlands | Enterprise Support Available 24/7</p>
+          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> | 
+          <a href="${appUrl}/preferences">Email Preferences</a></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Generate Day 3 follow-up email HTML
+ */
+function generateDay3Html(name: string, email: string, metrics: UserMetrics, segment: UserSegment): string {
+  const firstName = name.split(' ')[0];
+  const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        a { color: #4F46E5; text-decoration: none; }
+        .footer { color: #666; font-size: 0.9em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <p>${firstName}, quick check-in from Cem 👋</p>
+        
+        <p>You've been with us 3 days. How's it going?</p>
+        
+        <p>📊 Your workspace so far:<br>
+        • Documents: ${metrics.documentCount}<br>
+        • AI queries: ${metrics.queryCount}<br>
+        • Knowledge items: ${metrics.knowledgeItems}</p>
+        
+        <p>All of this? 100% yours. Export it, delete it, or keep building — your call.</p>
+        
+        <p>If you're stuck or curious about something, just reply.<br>
+        I'm usually debugging something anyway. 🐱</p>
+        
+        <p>Keep shipping,<br>
+        Cem 🐾</p>
+        
+        <div class="footer">
+          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Generate Day 7 follow-up email HTML (Active users)
+ */
+function generateDay7ActiveHtml(name: string, email: string, metrics: UserMetrics): string {
+  const firstName = name.split(' ')[0];
+  const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
+  const timeSaved = Math.round(metrics.queryCount * 0.5); // Estimate 30 min saved per query
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        a { color: #4F46E5; text-decoration: none; }
+        .footer { color: #666; font-size: 0.9em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <p>${firstName},</p>
+        
+        <p>It's been a week! You're making great progress:</p>
+        <p>✅ ${metrics.documentCount} documents uploaded<br>
+        ✅ ${metrics.queryCount} AI queries processed<br>
+        ✅ Approximately ${timeSaved} hours saved</p>
+        
+        <p>Hidden gems to explore next:</p>
+        
+        <ol>
+          <li>🔄 <strong>Sequential Thinking</strong><br>
+          My favorite feature. Breaks down complex problems step-by-step.<br>
+          <a href="${appUrl}/sequential">Try it here</a></li>
+          
+          <li>🔔 <strong>Smart Notifications</strong><br>
+          Get alerts when AI tasks complete.<br>
+          <a href="${appUrl}/settings/notifications">Configure alerts</a></li>
+          
+          <li>🌐 <strong>MCP Marketplace</strong><br>
+          50+ integrations, all secure.<br>
+          <a href="${appUrl}/discover">Browse integrations</a></li>
+        </ol>
+        
+        <p>Join our community:<br>
+        💬 <a href="https://discord.gg/pluggedin">Discord</a> — I'm active daily<br>
+        🐙 <a href="https://github.com/VeriTeknik">GitHub</a> — see what we're building</p>
+        
+        <p>Thanks for trusting us with your AI workspace,<br>
+        Cem 🐾</p>
+        
+        <div class="footer">
+          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a></p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+/**
+ * Generate Day 7 follow-up email HTML (Inactive users)
+ */
+function generateDay7InactiveHtml(name: string, email: string): string {
+  const firstName = name.split(' ')[0];
+  const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+        a { color: #4F46E5; text-decoration: none; }
+        .button { display: inline-block; padding: 12px 24px; background: #4F46E5; color: white !important; border-radius: 6px; text-decoration: none !important; margin: 16px 0; }
+        .footer { color: #666; font-size: 0.9em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <p>Hi ${firstName}, Cem here 👋</p>
+        
+        <p>I noticed you signed up but haven't had a chance to dive in yet.<br>
+        Totally get it — we're all swamped!</p>
+        
+        <p>Can I make this super easy?</p>
+        
+        <p>Option 1: Quick start (2 minutes)<br>
+        <a href="${appUrl}/library/upload" class="button">📄 Upload your first document</a></p>
+        
+        <p>Option 2: Let me help (15 minutes)<br>
+        <a href="https://calendly.com/cem-pluggedin/onboarding">📅 Book a quick call</a></p>
+        
+        <p>Option 3: Just reply<br>
+        Tell me what you're trying to accomplish, and I'll point you in the right direction.</p>
+        
+        <p>No pressure — here whenever you're ready!</p>
+        
+        <p>Cem 🐾</p>
+        
+        <div class="footer">
+          <p>P.S. If Plugged.in isn't what you need right now, no worries at all.<br>
+          Just let me know — always appreciate the feedback!</p>
+          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a></p>
+        </div>
+      </div>
     </body>
     </html>
   `;
@@ -468,7 +503,7 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
   const segment = options.segment || determineUserSegment(email, signupSource);
   
   // Get subject line (could implement A/B testing here)
-  const abVariant = Math.random() > 0.5 ? 'A' : 'B'; // Simple A/B test
+  const abVariant = Math.random() > 0.5 ? 'A' : 'B';
   const subject = getWelcomeSubject(segment, abVariant as 'A' | 'B');
   
   // Generate HTML content
@@ -479,6 +514,8 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
       to: email,
       subject,
       html,
+      from: process.env.EMAIL_FROM || 'cem@plugged.in',
+      fromName: 'Cem from Plugged.in',
     });
     
     if (result) {
@@ -519,28 +556,28 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
  */
 export async function scheduleFollowUpEmails(userId: string, email: string, segment: UserSegment) {
   try {
-    // Schedule Day 2 follow-up
-    const day2Date = new Date();
-    day2Date.setDate(day2Date.getDate() + 2);
+    // Schedule Day 3 follow-up
+    const day3Date = new Date();
+    day3Date.setDate(day3Date.getDate() + 3);
     
     await db.insert(scheduledEmailsTable).values({
       userId,
-      emailType: 'follow_up_2',
-      scheduledFor: day2Date,
+      emailType: 'day3',
+      scheduledFor: day3Date,
       metadata: {
         segment,
         email,
       },
     });
     
-    // Schedule Day 5 follow-up
-    const day5Date = new Date();
-    day5Date.setDate(day5Date.getDate() + 5);
+    // Schedule Day 7 follow-up
+    const day7Date = new Date();
+    day7Date.setDate(day7Date.getDate() + 7);
     
     await db.insert(scheduledEmailsTable).values({
       userId,
-      emailType: 'follow_up_5',
-      scheduledFor: day5Date,
+      emailType: 'day7',
+      scheduledFor: day7Date,
       metadata: {
         segment,
         email,
@@ -548,11 +585,177 @@ export async function scheduleFollowUpEmails(userId: string, email: string, segm
     });
     
     console.log(`Follow-up emails scheduled for user ${userId}:`, {
-      day2: day2Date,
-      day5: day5Date,
+      day3: day3Date,
+      day7: day7Date,
       segment,
     });
   } catch (error) {
     console.error('Failed to schedule follow-up emails:', error);
+  }
+}
+
+/**
+ * Get user metrics for email personalization
+ */
+export async function getUserMetrics(userId: string): Promise<UserMetrics> {
+  try {
+    // Get document count
+    const docsResult = await db.query.docs.findMany({
+      where: (docs, { eq }) => eq(docs.userId, userId),
+    });
+    
+    // For now, return placeholder metrics
+    // In production, you'd query actual metrics from your analytics tables
+    return {
+      documentCount: docsResult.length,
+      queryCount: 0, // Would come from query logs
+      knowledgeItems: docsResult.length,
+      lastActive: new Date(),
+    };
+  } catch (error) {
+    console.error('Failed to get user metrics:', error);
+    return {
+      documentCount: 0,
+      queryCount: 0,
+      knowledgeItems: 0,
+    };
+  }
+}
+
+/**
+ * Send Day 3 follow-up email
+ */
+export async function sendDay3Email(userId: string, email: string, name: string, segment: UserSegment): Promise<boolean> {
+  try {
+    const metrics = await getUserMetrics(userId);
+    const html = generateDay3Html(name, email, metrics, segment);
+    
+    const result = await sendEmail({
+      to: email,
+      subject: 'Your Plugged.in workspace update',
+      html,
+      from: process.env.EMAIL_FROM || 'cem@plugged.in',
+      fromName: 'Cem from Plugged.in',
+    });
+    
+    if (result) {
+      // Track email
+      await db.insert(emailTrackingTable).values({
+        userId,
+        emailType: 'day3',
+        segment,
+        subject: 'Your Plugged.in workspace update',
+        metadata: { metrics },
+      });
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Failed to send Day 3 email:', error);
+    return false;
+  }
+}
+
+/**
+ * Send Day 7 follow-up email
+ */
+export async function sendDay7Email(userId: string, email: string, name: string, segment: UserSegment): Promise<boolean> {
+  try {
+    const metrics = await getUserMetrics(userId);
+    const isActive = metrics.documentCount > 0 || metrics.queryCount > 0;
+    
+    const subject = isActive 
+      ? "You've been with us a week — here's what's next"
+      : 'Need a hand getting started?';
+    
+    const html = isActive
+      ? generateDay7ActiveHtml(name, email, metrics)
+      : generateDay7InactiveHtml(name, email);
+    
+    const result = await sendEmail({
+      to: email,
+      subject,
+      html,
+      from: process.env.EMAIL_FROM || 'cem@plugged.in',
+      fromName: 'Cem from Plugged.in',
+    });
+    
+    if (result) {
+      // Track email
+      await db.insert(emailTrackingTable).values({
+        userId,
+        emailType: 'day7',
+        segment,
+        variant: isActive ? 'active' : 'inactive',
+        subject,
+        metadata: { metrics, isActive },
+      });
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Failed to send Day 7 email:', error);
+    return false;
+  }
+}
+
+/**
+ * Process scheduled emails (to be called by a cron job)
+ */
+export async function processScheduledEmails(): Promise<void> {
+  try {
+    // Find all emails that should be sent
+    const now = new Date();
+    const scheduledEmails = await db.query.scheduledEmailsTable.findMany({
+      where: (scheduled, { and, eq, lte }) => 
+        and(
+          eq(scheduled.sent, false),
+          eq(scheduled.cancelled, false),
+          lte(scheduled.scheduledFor, now)
+        ),
+    });
+    
+    console.log(`Processing ${scheduledEmails.length} scheduled emails`);
+    
+    for (const scheduled of scheduledEmails) {
+      try {
+        // Get user details
+        const user = await db.query.users.findFirst({
+          where: eq(users.id, scheduled.userId),
+        });
+        
+        if (!user) {
+          console.log(`User not found for scheduled email ${scheduled.id}`);
+          continue;
+        }
+        
+        const email = scheduled.metadata?.email || user.email;
+        const segment = scheduled.metadata?.segment || 'general';
+        const name = user.name || 'Friend';
+        
+        let sent = false;
+        
+        // Send the appropriate email based on type
+        if (scheduled.emailType === 'day3') {
+          sent = await sendDay3Email(scheduled.userId, email, name, segment);
+        } else if (scheduled.emailType === 'day7') {
+          sent = await sendDay7Email(scheduled.userId, email, name, segment);
+        }
+        
+        // Mark as sent
+        if (sent) {
+          await db.update(scheduledEmailsTable)
+            .set({ 
+              sent: true, 
+              sentAt: new Date() 
+            })
+            .where(eq(scheduledEmailsTable.id, scheduled.id));
+        }
+      } catch (error) {
+        console.error(`Failed to process scheduled email ${scheduled.id}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to process scheduled emails:', error);
   }
 }
