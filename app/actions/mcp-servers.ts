@@ -119,15 +119,6 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
       )
     )
     .orderBy(desc(mcpServersTable.created_at));
-  
-  
-  // Debug: Log all servers before filtering to understand what's being excluded
-  // const allServersDebug = await db
-  //   .select({
-  //     server: mcpServersTable,
-  //   })
-  //   .from(mcpServersTable)
-  //   .where(eq(mcpServersTable.profile_uuid, profileUuid));
 
   // Type the result correctly
   const servers: ServerWithUsername[] = serversQuery;

@@ -13,6 +13,19 @@ import { McpServer } from '@/types/mcp-server';
 // import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 // Removed direct SDK type import
 
+// Helper function to detect abort errors from Streamable HTTP
+function isAbortError(error: any): boolean {
+    // Strictly differentiate abort errors from other transport errors
+    return (
+        // Node.js AbortError
+        error?.name === 'AbortError' ||
+        // DOMException AbortError (browser)
+        (typeof DOMException !== 'undefined' && error instanceof DOMException && error.name === 'AbortError') ||
+        // Standardized abort error code
+        error?.code === 20
+    );
+}
+
 // Infer Resource type
 type ResourcesArray = Awaited<ReturnType<typeof listResourcesFromServer>>;
 type InferredResource = ResourcesArray[number];
@@ -85,17 +98,23 @@ export async function discoverSingleServerTools(
             await db.insert(toolsTable).values(toolsToInsert);
         }
     } catch (error: any) {
-        // Ignore abort errors for Streamable HTTP - they're expected during cleanup
-        const isAbortError = error?.code === 20 || 
-                           error?.name === 'AbortError' || 
-                           error?.message?.includes('abort') ||
-                           error?.message?.includes('This operation was aborted');
+        const abort = isAbortError(error);
         
-        if (!isAbortError) {
+        if (abort) {
+            // Log abort errors separately for visibility
+            console.warn('[Action Info] Streamable HTTP request aborted (expected during cleanup):', {
+                server: serverConfig.name || serverUuid,
+                error: {
+                    name: error?.name,
+                    code: error?.code,
+                    message: error?.message,
+                },
+            });
+            toolError = null;
+        } else {
             console.error('[Action Error] Failed to discover/store tools for server:', { server: serverConfig.name || serverUuid, error });
+            toolError = error.message;
         }
-        
-        toolError = isAbortError ? null : error.message;
         
         // Check if this is a 401 authentication error
         const is401Error = error.message?.includes('401') || 
@@ -149,17 +168,23 @@ export async function discoverSingleServerTools(
             await db.insert(resourceTemplatesTable).values(templatesToInsert);
         }
     } catch (error: any) {
-        // Ignore abort errors for Streamable HTTP - they're expected during cleanup
-        const isAbortError = error?.code === 20 || 
-                           error?.name === 'AbortError' || 
-                           error?.message?.includes('abort') ||
-                           error?.message?.includes('This operation was aborted');
+        const abort = isAbortError(error);
         
-        if (!isAbortError) {
+        if (abort) {
+            console.warn('[Action Info] Streamable HTTP request aborted (expected during cleanup):', {
+                server: serverConfig.name || serverUuid,
+                context: 'resource templates',
+                error: {
+                    name: error?.name,
+                    code: error?.code,
+                    message: error?.message,
+                },
+            });
+            templateError = null;
+        } else {
             console.error('[Action Error] Failed to discover/store resource templates for server:', { server: serverConfig.name || serverUuid, error });
+            templateError = error.message;
         }
-        
-        templateError = isAbortError ? null : error.message;
     }
 
     // --- Discover Static Resources ---
@@ -183,17 +208,23 @@ export async function discoverSingleServerTools(
             await db.insert(resourcesTable).values(resourcesToInsert);
         }
     } catch (error: any) {
-        // Ignore abort errors for Streamable HTTP - they're expected during cleanup
-        const isAbortError = error?.code === 20 || 
-                           error?.name === 'AbortError' || 
-                           error?.message?.includes('abort') ||
-                           error?.message?.includes('This operation was aborted');
+        const abort = isAbortError(error);
         
-        if (!isAbortError) {
+        if (abort) {
+            console.warn('[Action Info] Streamable HTTP request aborted (expected during cleanup):', {
+                server: serverConfig.name || serverUuid,
+                context: 'static resources',
+                error: {
+                    name: error?.name,
+                    code: error?.code,
+                    message: error?.message,
+                },
+            });
+            resourceError = null;
+        } else {
             console.error('[Action Error] Failed to discover/store static resources for server:', { server: serverConfig.name || serverUuid, error });
+            resourceError = error.message;
         }
-        
-        resourceError = isAbortError ? null : error.message;
     }
 
     // --- Discover Prompts ---
@@ -216,17 +247,23 @@ export async function discoverSingleServerTools(
             await db.insert(promptsTable).values(promptsToInsert);
         }
     } catch (error: any) {
-        // Ignore abort errors for Streamable HTTP - they're expected during cleanup
-        const isAbortError = error?.code === 20 || 
-                           error?.name === 'AbortError' || 
-                           error?.message?.includes('abort') ||
-                           error?.message?.includes('This operation was aborted');
+        const abort = isAbortError(error);
         
-        if (!isAbortError) {
+        if (abort) {
+            console.warn('[Action Info] Streamable HTTP request aborted (expected during cleanup):', {
+                server: serverConfig.name || serverUuid,
+                context: 'prompts',
+                error: {
+                    name: error?.name,
+                    code: error?.code,
+                    message: error?.message,
+                },
+            });
+            promptError = null;
+        } else {
             console.error('[Action Error] Failed to discover/store prompts for server:', { server: serverConfig.name || serverUuid, error });
+            promptError = error.message;
         }
-        
-        promptError = isAbortError ? null : error.message;
     }
 
 
