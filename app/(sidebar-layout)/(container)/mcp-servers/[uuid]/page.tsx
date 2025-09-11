@@ -282,13 +282,13 @@ export default function McpServerDetailPage({
         // Reset hasChanges after successful save
         setHasChanges(false);
         toast({ 
-          title: t('common.success'), 
-          description: t('mcpServers.messages.updateSuccess'), 
+          title: t('common:common.success'), 
+          description: t('mcpServers:mcpServers.messages.updateSuccess'), 
         });
       } else {
         toast({ 
-          title: t('common.error'), 
-          description: result.error || t('mcpServers.errors.updateFailed'), 
+          title: t('common:common.error'), 
+          description: result.error || t('mcpServers:mcpServers.errors.updateFailed'), 
           variant: 'destructive' 
         });
       }
@@ -369,7 +369,7 @@ export default function McpServerDetailPage({
               disabled={isSaving}
             >
               <Save className='h-4 w-4 mr-2' />
-              {isSaving ? t('common.saving') : t('common.saveChanges')}
+              {isSaving ? t('common:common.saving') : t('common:common.saveChanges')}
             </Button>
           )}
           {/* Add Discover Button */}
