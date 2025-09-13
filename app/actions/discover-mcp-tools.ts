@@ -50,9 +50,10 @@ export async function discoverSingleServerTools(
 
     // Decrypt the server configuration
     const decryptedServerConfig = decryptServerData(serverConfig);
-    const discoveryServerConfig: McpServer = { 
+    const discoveryServerConfig: McpServer = {
         ...decryptedServerConfig,
-        config: decryptedServerConfig.config as Record<string, any> | null
+        config: decryptedServerConfig.config as Record<string, any> | null,
+        transport: decryptedServerConfig.transport as 'streamable_http' | 'sse' | 'stdio' | undefined
     };
 
     let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = [];

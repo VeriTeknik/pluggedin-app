@@ -20,6 +20,53 @@ export interface AuditLogEntry {
 }
 
 /**
+ * Sanitize metadata to remove sensitive headers
+ */
+function sanitizeMetadata(metadata: any): any {
+  if (!metadata) return metadata;
+
+  // Create a deep copy to avoid modifying original
+  const sanitized = JSON.parse(JSON.stringify(metadata));
+
+  // List of sensitive headers/fields to redact
+  const sensitiveFields = [
+    'authorization',
+    'cookie',
+    'x-api-key',
+    'api-key',
+    'apikey',
+    'password',
+    'secret',
+    'token',
+    'bearer',
+    'credentials',
+    'session',
+    'sessionid',
+    'auth',
+  ];
+
+  // Recursively sanitize object
+  function sanitizeObject(obj: any): any {
+    if (typeof obj !== 'object' || obj === null) return obj;
+
+    for (const key in obj) {
+      const lowerKey = key.toLowerCase();
+
+      // Check if this key contains sensitive data
+      if (sensitiveFields.some(field => lowerKey.includes(field))) {
+        obj[key] = '[REDACTED]';
+      } else if (typeof obj[key] === 'object') {
+        obj[key] = sanitizeObject(obj[key]);
+      }
+    }
+
+    return obj;
+  }
+
+  return sanitizeObject(sanitized);
+}
+
+/**
  * Log an audit entry for tracking sensitive operations
  * This function is designed to be non-blocking and fail-safe
  */
@@ -42,6 +89,9 @@ export async function auditLog(entry: AuditLogEntry): Promise<void> {
       }
     }
     
+    // Sanitize metadata before logging
+    const sanitizedMetadata = sanitizeMetadata(entry.metadata);
+
     // Insert audit log entry
     await db.insert(auditLogsTable).values({
       profile_uuid: entry.profileUuid,
@@ -52,7 +102,7 @@ export async function auditLog(entry: AuditLogEntry): Promise<void> {
       request_method: entry.requestMethod,
       ip_address: ipAddress,
       user_agent: userAgent,
-      metadata: entry.metadata,
+      metadata: sanitizedMetadata,
       created_at: new Date(),
     });
   } catch (error) {

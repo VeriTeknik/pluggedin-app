@@ -7,6 +7,30 @@ const TAG_LENGTH = 16;
 // Legacy encryption has been removed after successful production migration
 
 /**
+ * Validates encryption key configuration on startup
+ */
+export function validateEncryptionKey(): void {
+  const key = process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
+
+  if (!key) {
+    console.error('❌ CRITICAL: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY is not configured');
+    console.error('Generate a key with: openssl rand -base64 32');
+    throw new Error('Encryption key not configured. Server cannot start without encryption key.');
+  }
+
+  // Validate key is base64 and has appropriate length (32 bytes = ~44 chars in base64)
+  try {
+    const decoded = Buffer.from(key, 'base64');
+    if (decoded.length < 32) {
+      throw new Error('Encryption key must be at least 32 bytes (256 bits)');
+    }
+  } catch (error) {
+    console.error('❌ CRITICAL: Invalid encryption key format');
+    throw new Error('Encryption key must be valid base64. Generate with: openssl rand -base64 32');
+  }
+}
+
+/**
  * Derives an encryption key using scrypt with a provided salt
  */
 function deriveKey(baseKey: string, salt: Buffer): Buffer {

@@ -77,32 +77,38 @@ export async function rateLimitServerAction(
 }
 
 /**
+ * Get rate limit from environment or use defaults
+ */
+function getRateLimit(envPrefix: string, defaultWindow: number, defaultMax: number): RateLimitConfig {
+  const windowEnv = process.env[`${envPrefix}_WINDOW_MS`];
+  const windowMs = windowEnv ? parseInt(windowEnv, 10) : defaultWindow;
+
+  const maxEnv = process.env[`${envPrefix}_MAX`];
+  const max = maxEnv ? parseInt(maxEnv, 10) : defaultMax;
+
+  return { windowMs, max };
+}
+
+/**
  * Common rate limit configurations for MCP server actions
+ * Can be overridden via environment variables:
+ * - RATE_LIMIT_SERVER_MOD_WINDOW_MS / RATE_LIMIT_SERVER_MOD_MAX
+ * - RATE_LIMIT_SERVER_READ_WINDOW_MS / RATE_LIMIT_SERVER_READ_MAX
+ * - RATE_LIMIT_SENSITIVE_WINDOW_MS / RATE_LIMIT_SENSITIVE_MAX
+ * - RATE_LIMIT_DISCOVERY_WINDOW_MS / RATE_LIMIT_DISCOVERY_MAX
  */
 export const ServerActionRateLimits = {
   // Server modifications (create, update, delete)
-  serverModification: {
-    windowMs: 60000,  // 1 minute
-    max: 10,          // 10 operations per minute
-  },
-  
+  serverModification: getRateLimit('RATE_LIMIT_SERVER_MOD', 60000, 10),
+
   // Server reads (get, list)
-  serverRead: {
-    windowMs: 60000,  // 1 minute
-    max: 60,          // 60 reads per minute
-  },
-  
+  serverRead: getRateLimit('RATE_LIMIT_SERVER_READ', 60000, 60),
+
   // Sensitive operations (encryption key operations, bulk updates)
-  sensitive: {
-    windowMs: 3600000, // 1 hour
-    max: 10,           // 10 operations per hour
-  },
-  
+  sensitive: getRateLimit('RATE_LIMIT_SENSITIVE', 3600000, 10),
+
   // Discovery operations (tool discovery)
-  discovery: {
-    windowMs: 60000,  // 1 minute
-    max: 5,           // 5 discoveries per minute
-  },
+  discovery: getRateLimit('RATE_LIMIT_DISCOVERY', 60000, 5),
 };
 
 /**
