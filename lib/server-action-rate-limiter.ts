@@ -12,7 +12,15 @@ interface RateLimitStore {
 }
 
 // In-memory store for rate limiting
-// TODO: In production, use Redis for distributed systems
+// TODO: CRITICAL - Replace with Redis for production deployment
+// Current in-memory implementation will NOT work across multiple server instances
+// This can lead to rate limit bypass if running multiple Node.js processes
+// Implementation required:
+// 1. Install Redis client (ioredis or node-redis)
+// 2. Use Redis INCR with TTL for atomic counter operations
+// 3. Handle Redis connection failures gracefully (fallback to strict limits)
+// 4. Consider using Redis Cluster for high availability
+// Reference: https://github.com/animir/node-rate-limiter-flexible
 const store: RateLimitStore = {};
 
 // Clean up expired entries periodically

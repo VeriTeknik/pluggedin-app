@@ -5,7 +5,8 @@ import { and, eq } from 'drizzle-orm';
 // import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 // Import promptsTable and Prompt type
-import { mcpServersTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema'; // Sorted
+import { mcpServersTable, profilesTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema'; // Sorted
+import { withAuth } from '@/lib/auth-helpers';
 import { decryptServerData } from '@/lib/encryption';
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Sorted
 import { McpServer } from '@/types/mcp-server';
@@ -30,6 +31,31 @@ export async function discoverSingleServerTools(
     profileUuid: string,
     serverUuid: string
 ): Promise<{ success: boolean; message: string; error?: string }> {
+  // Authenticate user and verify profile ownership
+  const authResult = await withAuth(async (session) => {
+    // Get profile with its associated project
+    const profile = await db.query.profilesTable.findFirst({
+      where: eq(profilesTable.uuid, profileUuid),
+      with: {
+        project: true
+      }
+    });
+
+    if (!profile) {
+      return { success: false, message: 'Profile not found.' };
+    }
+
+    // Verify the project belongs to the authenticated user
+    if (profile.project.user_id !== session.user.id) {
+      return { success: false, message: 'Access denied. Profile does not belong to your account.' };
+    }
+
+    return { success: true, userId: session.user.id };
+  });
+
+  if (!authResult.success) {
+    return { success: false, message: authResult.message || 'Authentication required.' };
+  }
 
   if (!profileUuid || !serverUuid) {
       return { success: false, message: 'Profile UUID and Server UUID are required.' };

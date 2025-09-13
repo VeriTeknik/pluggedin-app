@@ -36,6 +36,11 @@ export function validateEncryptionKey(): void {
 function deriveKey(baseKey: string, salt: Buffer): Buffer {
   // Use scrypt for proper key derivation (CPU-intensive, resistant to brute force)
   // N=16384, r=8, p=1 are recommended parameters for good security/performance balance
+  // TODO: To upgrade to N=65536 for stronger security, we need to:
+  // 1. Implement versioning in encrypted data format
+  // 2. Support multiple scrypt parameters for backward compatibility
+  // 3. Gradually migrate existing encrypted data
+  // 4. Increase Node.js memory limit with --max-old-space-size flag
   return scryptSync(baseKey, salt, 32, { N: 16384, r: 8, p: 1 });
 }
 
