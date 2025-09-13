@@ -68,9 +68,29 @@ export async function GET(request: NextRequest) {
 
     // Forward the callback to the MCP server's local OAuth server
     try {
-      
+
       // Build the callback URL with all parameters
       const callbackUrl = new URL(oauthSession.callback_url);
+
+      // SSRF Protection: Validate the callback URL is to localhost only
+      const hostname = callbackUrl.hostname.toLowerCase();
+      const isLocalhost = hostname === 'localhost' ||
+                         hostname === '127.0.0.1' ||
+                         hostname === '::1' ||
+                         hostname === '[::1]';
+
+      if (!isLocalhost) {
+        console.error('[OAuth Proxy] Blocked non-localhost callback:', oauthSession.callback_url);
+        return createErrorResponse('Invalid callback URL', 'OAuth callback must be to localhost only.');
+      }
+
+      // Also validate port is in reasonable range (avoid privileged ports)
+      const port = callbackUrl.port ? parseInt(callbackUrl.port, 10) : 80;
+      if (port < 1024 || port > 65535) {
+        console.error('[OAuth Proxy] Invalid port in callback URL:', port);
+        return createErrorResponse('Invalid callback port', 'OAuth callback port must be between 1024 and 65535.');
+      }
+
       searchParams.forEach((value, key) => {
         callbackUrl.searchParams.append(key, value);
       });

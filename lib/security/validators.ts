@@ -56,19 +56,21 @@ const BLOCKED_HOSTS = [
 
 /**
  * Allowed commands for STDIO MCP servers
+ * SECURITY NOTE: Direct interpreter access increases attack surface.
+ * Prefer package managers (npx, uvx) over direct interpreters when possible.
  */
 const ALLOWED_COMMANDS = [
-  // Package managers only - for security
+  // Package managers (recommended - sandboxed execution)
   'npx',      // Node.js package executor
   'pnpm',     // pnpm package manager (uses dlx for execution)
   'uvx',      // Python package executor (fast, secure)
   'dnx',      // .NET package executor
-  // Legacy support - consider removing
-  'node',     // Direct Node.js execution (less secure)
-  'python',   // Direct Python execution (less secure)
-  'python3',  // Direct Python3 execution (less secure)
   'uv',       // Python package manager
   'uvenv',    // Python virtual environment tool
+  // Direct interpreters (use with caution - less secure)
+  'node',     // Direct Node.js execution
+  'python',   // Direct Python execution
+  'python3',  // Direct Python3 execution
 ] as const;
 
 /**
@@ -88,16 +90,41 @@ const DANGEROUS_HEADERS = [
 ] as const;
 
 /**
+ * Check if an IP address is in a private range
+ */
+function isPrivateIP(ip: string): boolean {
+  const parts = ip.split('.').map(Number);
+  if (parts.length !== 4) return false;
+  
+  // RFC 1918 private ranges
+  if (parts[0] === 10) return true;
+  if (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) return true;
+  if (parts[0] === 192 && parts[1] === 168) return true;
+  
+  // Loopback
+  if (parts[0] === 127) return true;
+  
+  // Link-local
+  if (parts[0] === 169 && parts[1] === 254) return true;
+  
+  // Reserved
+  if (parts[0] === 0) return true;
+  
+  return false;
+}
+
+/**
  * Validates a URL for MCP connections to prevent SSRF attacks
  * 
  * @param url - The URL to validate
  * @param options - Validation options
- * @param options.allowLocalhost - Allow localhost and private networks (for development/enterprise)
+ * @param options.allowLocalhost - Allow localhost and private networks (requires explicit user consent)
+ * @param options.userConsent - User has explicitly consented to localhost access
  * @returns Validation result with parsed URL if valid
  */
 export function validateMcpUrl(
   url: string,
-  options: { allowLocalhost?: boolean } = {}
+  options: { allowLocalhost?: boolean; userConsent?: boolean } = {}
 ): { valid: boolean; error?: string; parsedUrl?: URL } {
   try {
     const parsedUrl = new URL(url);
@@ -110,21 +137,29 @@ export function validateMcpUrl(
       };
     }
     
-    // Determine if localhost should be allowed
-    const allowLocalhost = options.allowLocalhost || 
-                          process.env.NODE_ENV === 'development' || 
-                          process.env.ALLOW_LOCAL_MCP_SERVERS === 'true';
+    // NEVER auto-allow based on NODE_ENV - require explicit user consent
+    const allowLocalhost = options.allowLocalhost && options.userConsent;
     
-    // Skip host blocking if localhost is allowed
+    // Skip host blocking if localhost is allowed with user consent
     if (!allowLocalhost) {
-      // Check for blocked hosts
       const hostname = parsedUrl.hostname.toLowerCase();
+      
+      // Enhanced IP address validation
+      // Check if hostname is an IP address
+      if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname)) {
+        if (isPrivateIP(hostname)) {
+          return {
+            valid: false,
+            error: 'Private IP addresses are not allowed without explicit consent'
+          };
+        }
+      }
       
       // Check exact matches
       if (BLOCKED_HOSTS.includes(hostname as any)) {
         return {
           valid: false,
-          error: `Blocked hostname: ${hostname}. Private networks and localhost are not allowed in production.`
+          error: `Blocked hostname: ${hostname}. Private networks and localhost are not allowed.`
         };
       }
       
@@ -133,7 +168,7 @@ export function validateMcpUrl(
         if (hostname.startsWith(blockedPattern)) {
           return {
             valid: false,
-            error: `Blocked hostname pattern: ${hostname}. Private networks and localhost are not allowed in production.`
+            error: `Blocked hostname pattern: ${hostname}. Private networks are not allowed.`
           };
         }
       }
@@ -144,9 +179,23 @@ export function validateMcpUrl(
         if (hostname === '::1' || hostname.startsWith('fe80:') || hostname.startsWith('fc00:') || hostname.startsWith('fd00:')) {
           return {
             valid: false,
-            error: `Blocked IPv6 address: ${hostname}. Private networks and localhost are not allowed in production.`
+            error: `Blocked IPv6 address: ${hostname}. Private networks are not allowed.`
           };
         }
+      }
+      
+      // Block common metadata endpoints (cloud providers)
+      const blockedEndpoints = [
+        '169.254.169.254', // AWS metadata
+        'metadata.google.internal', // GCP metadata
+        'metadata.azure.com', // Azure metadata
+      ];
+      
+      if (blockedEndpoints.includes(hostname)) {
+        return {
+          valid: false,
+          error: 'Cloud metadata endpoints are not allowed'
+        };
       }
     }
     

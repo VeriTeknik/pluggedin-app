@@ -333,6 +333,8 @@ export const mcpServersTable = pgTable(
     args_encrypted: text('args_encrypted'),
     env_encrypted: text('env_encrypted'),
     url_encrypted: text('url_encrypted'),
+    transport_encrypted: text('transport_encrypted'),
+    streamable_http_options_encrypted: text('streamable_http_options_encrypted'),
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),

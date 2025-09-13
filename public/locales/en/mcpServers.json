@@ -139,7 +139,11 @@
       "fetchPromptsFailed": "Failed to load prompts.",
       "fetchToolsFailed": "Failed to load tools.",
       "fetchInstructionsFailed": "Failed to fetch custom instructions.",
-      "mustBeSharedForCollection": "Server must be shared to be included in a collection."
+      "mustBeSharedForCollection": "Server must be shared to be included in a collection.",
+      "updateFailed": "Failed to update server configuration."
+    },
+    "messages": {
+      "updateSuccess": "Server configuration updated successfully."
     },
     "tabs": {
       "details": "Server Details",

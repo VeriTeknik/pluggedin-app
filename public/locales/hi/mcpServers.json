@@ -136,7 +136,8 @@
       "fetchPromptsFailed": "प्रॉम्प्ट लोड करने में विफल।",
       "fetchToolsFailed": "टूल लोड करने में विफल।",
       "fetchInstructionsFailed": "कस्टम निर्देश प्राप्त करने में विफल।",
-      "mustBeSharedForCollection": "सर्वर को संग्रह में शामिल करने के लिए साझा किया जाना चाहिए।"
+      "mustBeSharedForCollection": "सर्वर को संग्रह में शामिल करने के लिए साझा किया जाना चाहिए।",
+      "updateFailed": "सर्वर कॉन्फ़िगरेशन अपडेट करने में विफल।"
     },
     "tabs": {
       "details": "सर्वर विवरण",
@@ -218,6 +219,9 @@
     "placeholders": {
       "serverName": "सर्वर का नाम दर्ज करें",
       "description": "विवरण जोड़ने के लिए क्लिक करें..."
+    },
+    "messages": {
+      "updateSuccess": "सर्वर कॉन्फ़िगरेशन सफलतापूर्वक अपडेट किया गया।"
     }
   }
 }

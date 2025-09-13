@@ -189,6 +189,9 @@ DATABASE_URL=postgresql://user:password@localhost:5432/pluggedin
 NEXTAUTH_URL=http://localhost:12005
 NEXTAUTH_SECRET=your-secret-key
 
+# Security Configuration (REQUIRED)
+NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=  # Generate with: openssl rand -base64 32
+
 # Feature Flags (New in v2.1.0)
 ENABLE_RAG=true                    # Enable RAG features
 ENABLE_NOTIFICATIONS=true          # Enable notification system
@@ -214,7 +217,39 @@ FIREJAIL_MCP_WORKSPACE=/home/pluggedin/mcp-workspace
 
 # Tool Prefixing (for MCP clients like Claude Code)
 PLUGGEDIN_UUID_TOOL_PREFIXING=true  # Enable automatic tool name prefixing to prevent collisions
+
+# Rate Limiting Configuration (Optional - defaults are usually sufficient)
+RATE_LIMIT_SERVER_MOD_WINDOW_MS=60000    # Server modification window (default: 1 minute)
+RATE_LIMIT_SERVER_MOD_MAX=10             # Max server modifications per window (default: 10)
+RATE_LIMIT_SERVER_READ_WINDOW_MS=60000   # Server read window (default: 1 minute)
+RATE_LIMIT_SERVER_READ_MAX=60            # Max server reads per window (default: 60)
+RATE_LIMIT_SENSITIVE_WINDOW_MS=3600000   # Sensitive operations window (default: 1 hour)
+RATE_LIMIT_SENSITIVE_MAX=10              # Max sensitive operations per window (default: 10)
+RATE_LIMIT_DISCOVERY_WINDOW_MS=60000     # Discovery operations window (default: 1 minute)
+RATE_LIMIT_DISCOVERY_MAX=5                # Max discovery operations per window (default: 5)
 ```
+
+### Security Features
+
+#### Encryption
+All sensitive MCP server configuration data is encrypted at rest using AES-256-GCM encryption:
+- **Required**: Set `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` environment variable
+- **Generate key**: Run `openssl rand -base64 32` to generate a secure key
+- **Automatic**: Encryption/decryption happens transparently during operations
+- **Isolated**: Each profile has its own derived encryption key
+
+#### Rate Limiting
+Built-in rate limiting protects against abuse:
+- **Server modifications**: 10 operations per minute (configurable)
+- **Server reads**: 60 operations per minute (configurable)
+- **Sensitive operations**: 10 operations per hour (configurable)
+- **Discovery operations**: 5 operations per minute (configurable)
+
+#### Audit Logging
+All sensitive operations are logged for security and compliance:
+- **Automatic**: Security-critical operations are logged automatically
+- **Sanitized**: Sensitive headers and credentials are redacted from logs
+- **Non-blocking**: Logging failures don't affect main operations
 
 ### Feature Configuration
 
