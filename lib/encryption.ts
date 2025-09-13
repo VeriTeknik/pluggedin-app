@@ -6,12 +6,51 @@ const TAG_LENGTH = 16;
 
 // Legacy encryption has been removed after successful production migration
 
+// Field mapping for encryption/decryption
+const FIELD_MAP = [
+  { prop: 'command', encryptedProp: 'command_encrypted' },
+  { prop: 'args', encryptedProp: 'args_encrypted' },
+  { prop: 'env', encryptedProp: 'env_encrypted' },
+  { prop: 'url', encryptedProp: 'url_encrypted' },
+  { prop: 'transport', encryptedProp: 'transport_encrypted' },
+  { prop: 'streamableHTTPOptions', encryptedProp: 'streamable_http_options_encrypted' },
+] as const;
+
+/**
+ * Validates encryption key configuration on startup
+ */
+export function validateEncryptionKey(): void {
+  const key = process.env.NEXT_SERVER_ACTIONS_ENCRYPTION_KEY;
+
+  if (!key) {
+    console.error('❌ CRITICAL: NEXT_SERVER_ACTIONS_ENCRYPTION_KEY is not configured');
+    console.error('Generate a key with: openssl rand -base64 32');
+    throw new Error('Encryption key not configured. Server cannot start without encryption key.');
+  }
+
+  // Validate key is base64 and has appropriate length (32 bytes = ~44 chars in base64)
+  try {
+    const decoded = Buffer.from(key, 'base64');
+    if (decoded.length < 32) {
+      throw new Error('Encryption key must be at least 32 bytes (256 bits)');
+    }
+  } catch (error) {
+    console.error('❌ CRITICAL: Invalid encryption key format');
+    throw new Error('Encryption key must be valid base64. Generate with: openssl rand -base64 32');
+  }
+}
+
 /**
  * Derives an encryption key using scrypt with a provided salt
  */
 function deriveKey(baseKey: string, salt: Buffer): Buffer {
   // Use scrypt for proper key derivation (CPU-intensive, resistant to brute force)
   // N=16384, r=8, p=1 are recommended parameters for good security/performance balance
+  // TODO: To upgrade to N=65536 for stronger security, we need to:
+  // 1. Implement versioning in encrypted data format
+  // 2. Support multiple scrypt parameters for backward compatibility
+  // 3. Gradually migrate existing encrypted data
+  // 4. Increase Node.js memory limit with --max-old-space-size flag
   return scryptSync(baseKey, salt, 32, { N: 16384, r: 8, p: 1 });
 }
 
@@ -115,40 +154,80 @@ export function encryptServerData<T extends {
   args?: string[] | null;
   env?: Record<string, string> | null;
   url?: string | null;
+  transport?: string | null;
+  streamableHTTPOptions?: {
+    sessionId?: string;
+    headers?: Record<string, string>;
+  } | null;
 }>(server: T): T & {
   command_encrypted?: string;
   args_encrypted?: string;
   env_encrypted?: string;
   url_encrypted?: string;
+  transport_encrypted?: string;
+  streamable_http_options_encrypted?: string;
   encryption_version?: number;
 } {
   const encrypted: any = { ...server };
-  
-  // Encrypt each sensitive field if present
-  if (server.command) {
-    encrypted.command_encrypted = encryptField(server.command);
-    delete encrypted.command;
-  }
-  
-  if (server.args && server.args.length > 0) {
-    encrypted.args_encrypted = encryptField(server.args);
-    delete encrypted.args;
-  }
-  
-  if (server.env && Object.keys(server.env).length > 0) {
-    encrypted.env_encrypted = encryptField(server.env);
-    delete encrypted.env;
-  }
-  
-  if (server.url) {
-    encrypted.url_encrypted = encryptField(server.url);
-    delete encrypted.url;
-  }
-  
+
+  // Encrypt each field using the field map
+  FIELD_MAP.forEach(({ prop, encryptedProp }) => {
+    const value = (server as any)[prop];
+
+    // Check if field has content (arrays need length check, objects need keys check)
+    const hasContent = value != null && (
+      Array.isArray(value) ? value.length > 0 :
+      typeof value === 'object' ? Object.keys(value).length > 0 :
+      true
+    );
+
+    if (hasContent) {
+      encrypted[encryptedProp] = encryptField(value);
+      delete encrypted[prop];
+    }
+  });
+
   // Mark as using new encryption (v2)
   encrypted.encryption_version = 2;
-  
+
   return encrypted;
+}
+
+/**
+ * Apply legacy transforms for backward compatibility
+ * Handles old data that might have transport/streamableHTTPOptions stored in env
+ */
+function applyLegacyTransforms(decrypted: any, original: any): void {
+  // Only process if we have env_encrypted but not the new dedicated fields
+  if (!original.transport_encrypted && !original.streamable_http_options_encrypted && original.env_encrypted) {
+    try {
+      const envData = decryptField(original.env_encrypted);
+
+      // Extract transport from env if present
+      if (envData.__transport && !decrypted.transport) {
+        decrypted.transport = envData.__transport;
+        delete envData.__transport;
+      }
+
+      // Extract streamableHTTPOptions from env if present
+      if (envData.__streamableHTTPOptions && !decrypted.streamableHTTPOptions) {
+        try {
+          decrypted.streamableHTTPOptions = JSON.parse(envData.__streamableHTTPOptions);
+        } catch (e) {
+          console.error('Failed to parse streamableHTTPOptions from env:', e);
+        }
+        delete envData.__streamableHTTPOptions;
+      }
+
+      // Update env with cleaned data
+      decrypted.env = envData;
+    } catch (error) {
+      console.error('Failed to process legacy env data:', error);
+      if (!decrypted.env) {
+        decrypted.env = {};
+      }
+    }
+  }
 }
 
 /**
@@ -159,55 +238,42 @@ export function decryptServerData<T extends {
   args_encrypted?: string | null;
   env_encrypted?: string | null;
   url_encrypted?: string | null;
+  transport_encrypted?: string | null;
+  streamable_http_options_encrypted?: string | null;
 }>(server: T): T & {
   command?: string;
   args?: string[];
   env?: Record<string, string>;
   url?: string;
+  transport?: string;
+  streamableHTTPOptions?: {
+    sessionId?: string;
+    headers?: Record<string, string>;
+  };
 } {
   const decrypted: any = { ...server };
-  
-  // Decrypt each field if present
-  if (server.command_encrypted) {
-    try {
-      decrypted.command = decryptField(server.command_encrypted);
-    } catch (error) {
-      console.error('Failed to decrypt command:', error);
-      decrypted.command = null;
+
+  // Decrypt each field using the field map
+  FIELD_MAP.forEach(({ prop, encryptedProp }) => {
+    const encryptedValue = (server as any)[encryptedProp];
+
+    if (encryptedValue != null) {
+      try {
+        decrypted[prop] = decryptField(encryptedValue);
+
+        // Special handling for env field to support legacy transforms
+        if (prop === 'env') {
+          applyLegacyTransforms(decrypted, server);
+        }
+      } catch (error) {
+        console.error(`Failed to decrypt ${prop}:`, error);
+        // Set appropriate default values for failed decryptions
+        decrypted[prop] = prop === 'args' ? [] : prop === 'env' ? {} : null;
+      }
+      delete decrypted[encryptedProp];
     }
-    delete decrypted.command_encrypted;
-  }
-  
-  if (server.args_encrypted) {
-    try {
-      decrypted.args = decryptField(server.args_encrypted);
-    } catch (error) {
-      console.error('Failed to decrypt args:', error);
-      decrypted.args = [];
-    }
-    delete decrypted.args_encrypted;
-  }
-  
-  if (server.env_encrypted) {
-    try {
-      decrypted.env = decryptField(server.env_encrypted);
-    } catch (error) {
-      console.error('Failed to decrypt env:', error);
-      decrypted.env = {};
-    }
-    delete decrypted.env_encrypted;
-  }
-  
-  if (server.url_encrypted) {
-    try {
-      decrypted.url = decryptField(server.url_encrypted);
-    } catch (error) {
-      console.error('Failed to decrypt url:', error);
-      decrypted.url = null;
-    }
-    delete decrypted.url_encrypted;
-  }
-  
+  });
+
   return decrypted;
 }
 

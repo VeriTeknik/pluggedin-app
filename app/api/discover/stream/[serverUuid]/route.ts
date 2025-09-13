@@ -142,9 +142,11 @@ export async function GET(
           timestamp: Date.now(),
         });
 
+        const decryptedData = decryptServerData(serverConfig);
         const decryptedServerConfig: McpServer = {
-          ...decryptServerData(serverConfig),
-          config: serverConfig.config as Record<string, any> | null
+          ...decryptedData,
+          config: serverConfig.config as Record<string, any> | null,
+          transport: decryptedData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined
         };
 
         // Discovery phase indicators

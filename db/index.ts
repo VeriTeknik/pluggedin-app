@@ -23,7 +23,7 @@ const getPoolConfig = () => {
   // Connection pool settings for better performance
   config.max = 20; // Maximum number of clients in the pool
   config.idleTimeoutMillis = 30000; // Close idle clients after 30 seconds
-  config.connectionTimeoutMillis = 2000; // Return error after 2 seconds if connection cannot be established
+  config.connectionTimeoutMillis = 10000; // Return error after 10 seconds if connection cannot be established (increased for remote DB)
 
   return config;
 };

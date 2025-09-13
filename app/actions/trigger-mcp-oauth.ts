@@ -48,6 +48,7 @@ export async function triggerMcpOAuth(serverUuid: string) {
       ...serverRow,
       ...decryptedData,
       config: decryptedData.config as Record<string, any> | null,
+      transport: decryptedData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined,
     };
 
     // Determine OAuth approach based on server type and configuration
