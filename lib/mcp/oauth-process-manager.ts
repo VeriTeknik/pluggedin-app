@@ -127,10 +127,10 @@ export class OAuthProcessManager extends EventEmitter {
                     arguments: {}
                   }
                 }) + '\n');
-              } catch (error) {
+              } catch (_error) {
               }
             }, 2000);
-          } catch (error) {
+          } catch (_error) {
           }
         }, 1000);
       }
@@ -382,11 +382,11 @@ export class OAuthProcessManager extends EventEmitter {
           }, 1000);
         }
       });
-      
-      // Handle process exit
+
+      // Handle child process exit
       process.on('exit', async (code) => {
         clearTimeout(timeoutId);
-        
+
         if (tokenFound || code === 0) {
           // Check for token in .mcp-auth directory
           const token = await this.checkMcpAuthToken(serverName, mcpAuthDir);
@@ -395,15 +395,15 @@ export class OAuthProcessManager extends EventEmitter {
             return;
           }
         }
-        
+
         resolve({
           success: false,
           error: `Process exited with code ${code}: ${errorOutput || 'No error output'}`
         });
       });
-      
-      // Handle process error
-      process.on('error', (error) => {
+
+      // Handle child process error
+      process.on('error', (error: Error) => {
         clearTimeout(timeoutId);
         resolve({
           success: false,
@@ -582,7 +582,7 @@ export class OAuthProcessManager extends EventEmitter {
       }
       
       return null;
-    } catch (error) {
+    } catch (_error) {
       return null;
     }
   }
@@ -638,7 +638,7 @@ export class OAuthProcessManager extends EventEmitter {
       } catch (_e) {
         // Directory doesn't exist, that's ok
       }
-    } catch (error) {
+    } catch (_error) {
     }
   }
 
