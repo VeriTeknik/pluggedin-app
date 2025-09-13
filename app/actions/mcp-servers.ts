@@ -15,7 +15,7 @@ import {
   users 
 } from '@/db/schema';
 import { auditLog, AuditLogTypes, AuditLogActions } from '@/lib/audit-logger';
-import { getAuthSession } from '@/lib/auth';
+import { withProfileAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { rateLimitServerAction, ServerActionRateLimits, formatRateLimitError } from '@/lib/server-action-rate-limiter';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
@@ -41,36 +41,6 @@ type ServerWithMetrics = typeof mcpServersTable.$inferSelect & {
 }
 
 /**
- * Verify user authentication and profile ownership
- * @throws Error if user is not authenticated or doesn't own the profile
- */
-async function requireAuthentication(profileUuid: string): Promise<{ userId: string; hasAccess: boolean }> {
-  const session = await getAuthSession();
-  
-  if (!session?.user?.id) {
-    throw new Error('Unauthorized: No active session');
-  }
-  
-  // Verify user owns the profile
-  const profile = await db.query.profilesTable.findFirst({
-    where: eq(profilesTable.uuid, profileUuid),
-    with: {
-      project: {
-        columns: {
-          user_id: true
-        }
-      }
-    }
-  });
-  
-  if (!profile || profile.project.user_id !== session.user.id) {
-    throw new Error('Forbidden: Access denied to this profile');
-  }
-  
-  return { userId: session.user.id, hasAccess: true };
-}
-
-/**
  * Apply rate limiting to an action
  * @throws Error if rate limit is exceeded
  */
@@ -87,14 +57,14 @@ async function applyRateLimit(
 }
 
 export async function getMcpServers(profileUuid: string): Promise<ServerWithMetrics[]> {
-  // Verify authentication and profile ownership
-  const { userId } = await requireAuthentication(profileUuid);
-  
-  // Apply rate limiting for read operations
-  await applyRateLimit(userId, 'get-servers', ServerActionRateLimits.serverRead);
-  
-  // Get the servers without type assertion
-  const serversQuery = await db
+  return withProfileAuth(profileUuid, async (session) => {
+    const userId = session.user.id;
+
+    // Apply rate limiting for read operations
+    await applyRateLimit(userId, 'get-servers', ServerActionRateLimits.serverRead);
+
+    // Get the servers without type assertion
+    const serversQuery = await db
     .select({
       server: mcpServersTable,
       username: users.username
@@ -164,58 +134,51 @@ export async function getMcpServers(profileUuid: string): Promise<ServerWithMetr
     })
   );
 
-  return serversWithMetrics;
+    return serversWithMetrics;
+  });
 }
 
 export async function getMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<McpServer | undefined> {
-  // Verify authentication and profile ownership
-  const { userId } = await requireAuthentication(profileUuid);
-  
-  // Apply rate limiting for read operations
-  await applyRateLimit(userId, 'get-server', ServerActionRateLimits.serverRead);
-  
-  const server = await db.query.mcpServersTable.findFirst({
+  return withProfileAuth(profileUuid, async (session) => {
+    const userId = session.user.id;
+
+    // Apply rate limiting for read operations
+    await applyRateLimit(userId, 'get-server', ServerActionRateLimits.serverRead);
+
+    const server = await db.query.mcpServersTable.findFirst({
       where: and(
         eq(mcpServersTable.uuid, uuid),
         eq(mcpServersTable.profile_uuid, profileUuid)
       ),
     });
-    
-  if (!server) return undefined;
-  
-  // Decrypt sensitive fields
-  const decryptedServer = decryptServerData(server);
-  
-  return {
-    ...decryptedServer,
-    config: decryptedServer.config as Record<string, any> | null,
-    transport: decryptedServer.transport as 'streamable_http' | 'sse' | 'stdio' | undefined
-  } as McpServer;
+
+    if (!server) return undefined;
+
+    // Decrypt sensitive fields
+    const decryptedServer = decryptServerData(server);
+
+    return {
+      ...decryptedServer,
+      config: decryptedServer.config as Record<string, any> | null,
+      transport: decryptedServer.transport as 'streamable_http' | 'sse' | 'stdio' | undefined
+    } as McpServer;
+  });
 }
 
 export async function deleteMcpServerByUuid(
   profileUuid: string,
   uuid: string
 ): Promise<void> {
-  // Verify authentication and profile ownership
-  const { userId } = await requireAuthentication(profileUuid);
-  
-  // Apply rate limiting for modification operations
-  await applyRateLimit(userId, 'delete-server', ServerActionRateLimits.serverModification);
-  
-  // Audit log the deletion attempt
-  await auditLog({
-    profileUuid,
-    type: AuditLogTypes.SERVER_DELETE,
-    action: AuditLogActions.DELETE,
-    serverUuid: uuid,
-    userId,
-  });
-  
-  // Get server details before deletion for tracking
+  return withProfileAuth(profileUuid, async (session) => {
+    const userId = session.user.id;
+
+    // Apply rate limiting for modification operations
+    await applyRateLimit(userId, 'delete-server', ServerActionRateLimits.serverModification);
+
+    // Get server details before deletion for tracking
   const server = await db.query.mcpServersTable.findFirst({
     where: and(
       eq(mcpServersTable.uuid, uuid),
@@ -224,20 +187,6 @@ export async function deleteMcpServerByUuid(
   });
 
   if (server) {
-    // Get user ID for analytics tracking
-    const profileData = await db.query.profilesTable.findFirst({
-      where: eq(profilesTable.uuid, profileUuid),
-      with: {
-        project: {
-          columns: {
-            user_id: true
-          }
-        }
-      }
-    });
-
-    // const userId = profileData?.project?.user_id || 'anonymous';
-
     // TODO: Track uninstallation to new analytics service when available
 
     // Remove from local installations table
@@ -274,6 +223,20 @@ export async function deleteMcpServerByUuid(
         eq(mcpServersTable.profile_uuid, profileUuid)
       )
     );
+
+  // Audit log the successful deletion
+  await auditLog({
+    profileUuid,
+    type: AuditLogTypes.SERVER_DELETE,
+    action: AuditLogActions.DELETE,
+    serverUuid: uuid,
+    userId,
+    metadata: {
+      serverName: server?.name || 'Unknown',
+      status: 'success'
+    }
+    });
+  });
 }
 
 export async function toggleMcpServerStatus(
@@ -311,12 +274,12 @@ export async function updateMcpServer(
     };
   }
 ): Promise<{ success: boolean; error?: string }> {
-  try {
-    // Verify authentication and profile ownership
-    const { userId } = await requireAuthentication(profileUuid);
-    
-    // Apply rate limiting for modification operations
-    await applyRateLimit(userId, 'update-server', ServerActionRateLimits.serverModification);
+  return withProfileAuth(profileUuid, async (session) => {
+    const userId = session.user.id;
+
+    try {
+      // Apply rate limiting for modification operations
+      await applyRateLimit(userId, 'update-server', ServerActionRateLimits.serverModification);
     
     // Audit log the update attempt
     await auditLog({
@@ -466,13 +429,14 @@ export async function updateMcpServer(
   // revalidatePath('/mcp-servers');
   
   return { success: true };
-  } catch (error) {
-    console.error('[updateMcpServer] Error:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to update MCP server'
-    };
-  }
+    } catch (error) {
+      console.error('[updateMcpServer] Error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update MCP server'
+      };
+    }
+  });
 }
 
 export async function createMcpServer({
@@ -509,12 +473,12 @@ export async function createMcpServer({
   skipDiscovery?: boolean;
   config?: Record<string, any>;
 }) { // Removed explicit return type to match actual returns
-  try {
-    // Verify authentication and profile ownership
-    const { userId } = await requireAuthentication(profileUuid);
-    
-    // Apply rate limiting for modification operations
-    await applyRateLimit(userId, 'create-server', ServerActionRateLimits.serverModification);
+  return withProfileAuth(profileUuid, async (session) => {
+    const userId = session.user.id;
+
+    try {
+      // Apply rate limiting for modification operations
+      await applyRateLimit(userId, 'create-server', ServerActionRateLimits.serverModification);
     
     // Audit log the creation attempt
     await auditLog({
@@ -666,13 +630,14 @@ export async function createMcpServer({
     }
 
     return { success: true, data: newServer }; // Return success and the new server data
-  } catch (error) {
-    console.error('Error creating MCP server:', error);
-    return {
-      success: false,
-      error: `Failed to create MCP server: ${error instanceof Error ? error.message : 'Unknown error'}`,
-    };
-  }
+    } catch (error) {
+      console.error('Error creating MCP server:', error);
+      return {
+        success: false,
+        error: `Failed to create MCP server: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      };
+    }
+  });
 }
 
 export async function bulkImportMcpServers(

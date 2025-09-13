@@ -6,6 +6,16 @@ const TAG_LENGTH = 16;
 
 // Legacy encryption has been removed after successful production migration
 
+// Field mapping for encryption/decryption
+const FIELD_MAP = [
+  { prop: 'command', encryptedProp: 'command_encrypted' },
+  { prop: 'args', encryptedProp: 'args_encrypted' },
+  { prop: 'env', encryptedProp: 'env_encrypted' },
+  { prop: 'url', encryptedProp: 'url_encrypted' },
+  { prop: 'transport', encryptedProp: 'transport_encrypted' },
+  { prop: 'streamableHTTPOptions', encryptedProp: 'streamable_http_options_encrypted' },
+] as const;
+
 /**
  * Validates encryption key configuration on startup
  */
@@ -159,44 +169,65 @@ export function encryptServerData<T extends {
   encryption_version?: number;
 } {
   const encrypted: any = { ...server };
-  
-  // Encrypt each sensitive field if present
-  if (server.command) {
-    encrypted.command_encrypted = encryptField(server.command);
-    delete encrypted.command;
-  }
-  
-  if (server.args && server.args.length > 0) {
-    encrypted.args_encrypted = encryptField(server.args);
-    delete encrypted.args;
-  }
-  
-  if (server.env && Object.keys(server.env).length > 0) {
-    encrypted.env_encrypted = encryptField(server.env);
-    delete encrypted.env;
-  }
-  
-  if (server.url) {
-    encrypted.url_encrypted = encryptField(server.url);
-    delete encrypted.url;
-  }
-  
-  // Encrypt transport if present
-  if (server.transport) {
-    encrypted.transport_encrypted = encryptField(server.transport);
-    delete encrypted.transport;
-  }
-  
-  // Encrypt streamableHTTPOptions if present
-  if (server.streamableHTTPOptions) {
-    encrypted.streamable_http_options_encrypted = encryptField(server.streamableHTTPOptions);
-    delete encrypted.streamableHTTPOptions;
-  }
-  
+
+  // Encrypt each field using the field map
+  FIELD_MAP.forEach(({ prop, encryptedProp }) => {
+    const value = (server as any)[prop];
+
+    // Check if field has content (arrays need length check, objects need keys check)
+    const hasContent = value != null && (
+      Array.isArray(value) ? value.length > 0 :
+      typeof value === 'object' ? Object.keys(value).length > 0 :
+      true
+    );
+
+    if (hasContent) {
+      encrypted[encryptedProp] = encryptField(value);
+      delete encrypted[prop];
+    }
+  });
+
   // Mark as using new encryption (v2)
   encrypted.encryption_version = 2;
-  
+
   return encrypted;
+}
+
+/**
+ * Apply legacy transforms for backward compatibility
+ * Handles old data that might have transport/streamableHTTPOptions stored in env
+ */
+function applyLegacyTransforms(decrypted: any, original: any): void {
+  // Only process if we have env_encrypted but not the new dedicated fields
+  if (!original.transport_encrypted && !original.streamable_http_options_encrypted && original.env_encrypted) {
+    try {
+      const envData = decryptField(original.env_encrypted);
+
+      // Extract transport from env if present
+      if (envData.__transport && !decrypted.transport) {
+        decrypted.transport = envData.__transport;
+        delete envData.__transport;
+      }
+
+      // Extract streamableHTTPOptions from env if present
+      if (envData.__streamableHTTPOptions && !decrypted.streamableHTTPOptions) {
+        try {
+          decrypted.streamableHTTPOptions = JSON.parse(envData.__streamableHTTPOptions);
+        } catch (e) {
+          console.error('Failed to parse streamableHTTPOptions from env:', e);
+        }
+        delete envData.__streamableHTTPOptions;
+      }
+
+      // Update env with cleaned data
+      decrypted.env = envData;
+    } catch (error) {
+      console.error('Failed to process legacy env data:', error);
+      if (!decrypted.env) {
+        decrypted.env = {};
+      }
+    }
+  }
 }
 
 /**
@@ -221,88 +252,28 @@ export function decryptServerData<T extends {
   };
 } {
   const decrypted: any = { ...server };
-  
-  // Decrypt each field if present
-  if (server.command_encrypted) {
-    try {
-      decrypted.command = decryptField(server.command_encrypted);
-    } catch (error) {
-      console.error('Failed to decrypt command:', error);
-      decrypted.command = null;
-    }
-    delete decrypted.command_encrypted;
-  }
-  
-  if (server.args_encrypted) {
-    try {
-      decrypted.args = decryptField(server.args_encrypted);
-    } catch (error) {
-      console.error('Failed to decrypt args:', error);
-      decrypted.args = [];
-    }
-    delete decrypted.args_encrypted;
-  }
-  
-  if (server.env_encrypted) {
-    try {
-      const envData = decryptField(server.env_encrypted);
-      
-      // For backward compatibility: extract transport and streamableHTTPOptions from env if present
-      // This handles existing data that might have these stored in env
-      if (envData.__transport && !decrypted.transport && !server.transport_encrypted) {
-        decrypted.transport = envData.__transport;
-        delete envData.__transport;
-      }
-      
-      if (envData.__streamableHTTPOptions && !decrypted.streamableHTTPOptions && !server.streamable_http_options_encrypted) {
-        try {
-          decrypted.streamableHTTPOptions = JSON.parse(envData.__streamableHTTPOptions);
-        } catch (e) {
-          console.error('Failed to parse streamableHTTPOptions from env:', e);
+
+  // Decrypt each field using the field map
+  FIELD_MAP.forEach(({ prop, encryptedProp }) => {
+    const encryptedValue = (server as any)[encryptedProp];
+
+    if (encryptedValue != null) {
+      try {
+        decrypted[prop] = decryptField(encryptedValue);
+
+        // Special handling for env field to support legacy transforms
+        if (prop === 'env') {
+          applyLegacyTransforms(decrypted, server);
         }
-        delete envData.__streamableHTTPOptions;
+      } catch (error) {
+        console.error(`Failed to decrypt ${prop}:`, error);
+        // Set appropriate default values for failed decryptions
+        decrypted[prop] = prop === 'args' ? [] : prop === 'env' ? {} : null;
       }
-      
-      decrypted.env = envData;
-    } catch (error) {
-      console.error('Failed to decrypt env:', error);
-      decrypted.env = {};
+      delete decrypted[encryptedProp];
     }
-    delete decrypted.env_encrypted;
-  }
-  
-  if (server.url_encrypted) {
-    try {
-      decrypted.url = decryptField(server.url_encrypted);
-    } catch (error) {
-      console.error('Failed to decrypt url:', error);
-      decrypted.url = null;
-    }
-    delete decrypted.url_encrypted;
-  }
-  
-  // Decrypt transport if present (new dedicated column)
-  if (server.transport_encrypted) {
-    try {
-      decrypted.transport = decryptField(server.transport_encrypted);
-    } catch (error) {
-      console.error('Failed to decrypt transport:', error);
-      decrypted.transport = null;
-    }
-    delete decrypted.transport_encrypted;
-  }
-  
-  // Decrypt streamableHTTPOptions if present (new dedicated column)
-  if (server.streamable_http_options_encrypted) {
-    try {
-      decrypted.streamableHTTPOptions = decryptField(server.streamable_http_options_encrypted);
-    } catch (error) {
-      console.error('Failed to decrypt streamableHTTPOptions:', error);
-      decrypted.streamableHTTPOptions = null;
-    }
-    delete decrypted.streamable_http_options_encrypted;
-  }
-  
+  });
+
   return decrypted;
 }
 
