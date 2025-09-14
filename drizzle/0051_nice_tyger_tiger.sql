@@ -1,0 +1,1 @@
+ALTER TABLE "profiles" ADD COLUMN IF NOT EXISTS "language" "language" DEFAULT 'en';

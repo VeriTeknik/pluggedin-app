@@ -56,11 +56,12 @@ export default function McpServerDetailPage({
   const { currentProfile } = useProfiles();
   const { uuid } = use(params);
   const router = useRouter();
-  const { t } = useTranslation(); // Initialize useTranslation
+  const { t } = useTranslation(['mcpServers', 'common']); // Initialize useTranslation with namespaces
   const { toast } = useToast(); // Initialize useToast
   const [hasChanges, setHasChanges] = useState(false);
   const [isDiscovering, setIsDiscovering] = useState(false); // Add state for discovery loading
   const [showStreamingToast, setShowStreamingToast] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm({
     defaultValues: {
@@ -159,6 +160,7 @@ export default function McpServerDetailPage({
         sessionId,
       });
       setHasChanges(false);
+      setIsSaving(false); // Reset saving state when data changes
     }
   }, [mcpServer, form]);
 
@@ -191,11 +193,13 @@ export default function McpServerDetailPage({
                 .map(([key, value]) => `${key}: ${value}`)
                 .join('\n')
             : '';
-          isDifferent = isDifferent || value.headers !== currentHeaders;
+          const formHeaders = value.headers || '';
+          isDifferent = isDifferent || formHeaders !== currentHeaders;
           
           // Check sessionId
           const currentSessionId = mcpServer.streamableHTTPOptions?.sessionId || '';
-          isDifferent = isDifferent || value.sessionId !== currentSessionId;
+          const formSessionId = value.sessionId || '';
+          isDifferent = isDifferent || formSessionId !== currentSessionId;
         }
 
         setHasChanges(isDifferent);
@@ -217,59 +221,87 @@ export default function McpServerDetailPage({
     headers: string; // For Streamable HTTP
     sessionId: string; // For Streamable HTTP
   }) => {
-    if (!mcpServer || !currentProfile?.uuid) {
+    if (!mcpServer || !currentProfile?.uuid || isSaving) {
       return;
     }
-
-    // Process args and env before submission
-    const processedData: any = {
-      ...data,
-      args: data.type === McpServerType.STDIO
-        ? data.args
-          .trim()
-          .split(/\s+/)
-          .filter((arg) => arg.length > 0)
-          .map((arg) => arg.trim())
-        : [],
-      env: data.type === McpServerType.STDIO
-        ? Object.fromEntries(
-          data.env
-            .split('\n')
-            .filter((line: string) => line.includes('=')) // Add type for line
-            .map((line: string) => { // Add type for line
-              const [key, ...values] = line.split('=');
-              return [key.trim(), values.join('=').trim()];
-            })
-        ) || {}
-        : {},
-      command: data.type === McpServerType.STDIO ? data.command : undefined,
-      url: (data.type === McpServerType.SSE || data.type === McpServerType.STREAMABLE_HTTP) ? data.url : undefined,
-      notes: data.notes, // Include notes in processed data
-    };
     
-    // Add streamableHTTPOptions for Streamable HTTP type
-    if (data.type === McpServerType.STREAMABLE_HTTP) {
-      const headers: Record<string, string> = {};
-      if (data.headers) {
-        data.headers.split('\n')
-          .filter((line) => line.includes(':'))
-          .forEach((line) => {
-            const [key, ...values] = line.split(':');
-            headers[key.trim()] = values.join(':').trim();
-          });
-      }
-      
-      processedData.streamableHTTPOptions = {
-        headers: Object.keys(headers).length > 0 ? headers : undefined,
-        sessionId: data.sessionId || undefined,
-      };
-    }
+    setIsSaving(true);
 
-    // Ensure processedData aligns with the expected type for updateMcpServer
-    // The action now accepts null for description, command, url, notes
-    await updateMcpServer(currentProfile.uuid, mcpServer.uuid, processedData);
-    await mutate(); // Re-fetch server data after update
-    // setHasChanges(false); // Resetting form in useEffect handles this
+    try {
+      // Process args and env before submission
+      const processedData: any = {
+        ...data,
+        args: data.type === McpServerType.STDIO
+          ? data.args
+            .trim()
+            .split(/\s+/)
+            .filter((arg) => arg.length > 0)
+            .map((arg) => arg.trim())
+          : [],
+        env: data.type === McpServerType.STDIO
+          ? Object.fromEntries(
+            data.env
+              .split('\n')
+              .filter((line: string) => line.includes('=')) // Add type for line
+              .map((line: string) => { // Add type for line
+                const [key, ...values] = line.split('=');
+                return [key.trim(), values.join('=').trim()];
+              })
+          ) || {}
+          : {},
+        command: data.type === McpServerType.STDIO ? data.command : undefined,
+        url: (data.type === McpServerType.SSE || data.type === McpServerType.STREAMABLE_HTTP) ? data.url : undefined,
+        notes: data.notes, // Include notes in processed data
+      };
+      
+      // Add streamableHTTPOptions for Streamable HTTP type
+      if (data.type === McpServerType.STREAMABLE_HTTP) {
+        const headers: Record<string, string> = {};
+        if (data.headers) {
+          data.headers.split('\n')
+            .filter((line) => line.includes(':'))
+            .forEach((line) => {
+              const [key, ...values] = line.split(':');
+              headers[key.trim()] = values.join(':').trim();
+            });
+        }
+        
+        processedData.streamableHTTPOptions = {
+          headers: Object.keys(headers).length > 0 ? headers : undefined,
+          sessionId: data.sessionId || undefined,
+        };
+      }
+
+      // Ensure processedData aligns with the expected type for updateMcpServer
+      // The action now accepts null for description, command, url, notes
+      const result = await updateMcpServer(currentProfile.uuid, mcpServer.uuid, processedData);
+      
+      if (result.success) {
+        // Re-fetch server data after update
+        await mutate();
+        // Reset hasChanges after successful save
+        setHasChanges(false);
+        toast({ 
+          title: t('common:common.success'), 
+          description: t('mcpServers:mcpServers.messages.updateSuccess'), 
+        });
+      } else {
+        toast({ 
+          title: t('common:common.error'), 
+          description: result.error || t('mcpServers:mcpServers.errors.updateFailed'), 
+          variant: 'destructive' 
+        });
+      }
+    } catch (error) {
+      console.error('Error updating server:', error);
+      toast({ 
+        title: t('common.error'), 
+        description: t('mcpServers.errors.updateFailed'), 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -334,9 +366,10 @@ export default function McpServerDetailPage({
               variant='default'
               className="shadow-sm"
               onClick={form.handleSubmit(onSubmit)}
+              disabled={isSaving}
             >
               <Save className='h-4 w-4 mr-2' />
-              {t('common.saveChanges')}
+              {isSaving ? t('common:common.saving') : t('common:common.saveChanges')}
             </Button>
           )}
           {/* Add Discover Button */}

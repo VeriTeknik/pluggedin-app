@@ -136,7 +136,11 @@
       "fetchPromptsFailed": "İstemler yüklenemedi.",
       "fetchToolsFailed": "Araçlar yüklenemedi.",
       "fetchInstructionsFailed": "Özel talimatlar alınamadı.",
-      "mustBeSharedForCollection": "Sunucu bir koleksiyona dahil edilmek için paylaşılmalıdır."
+      "mustBeSharedForCollection": "Sunucu bir koleksiyona dahil edilmek için paylaşılmalıdır.",
+      "updateFailed": "Sunucu yapılandırması güncellenemedi."
+    },
+    "messages": {
+      "updateSuccess": "Sunucu yapılandırması başarıyla güncellendi."
     },
     "tabs": {
       "details": "Sunucu Detayları",
