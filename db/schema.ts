@@ -611,7 +611,7 @@ export const auditLogsTable = pgTable("audit_logs", {
   response_time_ms: integer("response_time_ms"),
   user_agent: text("user_agent"),
   ip_address: text("ip_address"),
-  server_uuid: uuid("server_uuid").references(() => mcpServersTable.uuid),
+  server_uuid: uuid("server_uuid"),
   created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   metadata: jsonb("metadata"),
 },
