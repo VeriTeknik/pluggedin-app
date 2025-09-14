@@ -12,10 +12,11 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { LazyMonacoEditor } from '@/components/lazy-monaco-editor';
-import { Send, Eye, Save, Users, AlertCircle, CheckCircle } from 'lucide-react';
+import { Send, Eye, Save, Users, AlertCircle, CheckCircle, Languages, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { sendBulkProductUpdate, getEmailRecipients, getEmailTemplates, saveEmailTemplate } from '../actions';
+import { sendBulkProductUpdate, getEmailRecipients, getEmailTemplates, saveEmailTemplate, translateEmailContent } from '../actions';
+import { languageNames, type SupportedLanguage, type EmailTranslations } from '@/lib/email-translation-service';
 import { toast } from 'sonner';
 
 interface EmailTemplate {
@@ -35,6 +36,9 @@ export default function EmailComposePage() {
   const [recipientCount, setRecipientCount] = useState(0);
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState('');
+  const [translations, setTranslations] = useState<EmailTranslations | null>(null);
+  const [translating, setTranslating] = useState(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('en');
 
   useEffect(() => {
     loadTemplates();
@@ -65,6 +69,33 @@ export default function EmailComposePage() {
       setSubject(template.subject);
       setContent(template.content);
       setSelectedTemplate(templateId);
+    }
+  };
+
+  const handleTranslate = async () => {
+    if (!subject || !content) {
+      toast.error('Please enter subject and content before translating');
+      return;
+    }
+
+    setTranslating(true);
+    try {
+      const result = await translateEmailContent({
+        subject,
+        content,
+        sourceLanguage: 'en', // Assuming source is English by default
+      });
+
+      if (result.success && result.data) {
+        setTranslations(result.data);
+        toast.success('Email translated to all languages successfully');
+      } else {
+        toast.error(result.error || 'Failed to translate email');
+      }
+    } catch (error) {
+      toast.error('An error occurred while translating');
+    } finally {
+      setTranslating(false);
     }
   };
 
@@ -105,6 +136,7 @@ export default function EmailComposePage() {
         markdownContent: content,
         segment,
         testMode,
+        translations: translations || undefined,
       });
 
       if (result.success && result.data) {
@@ -125,7 +157,24 @@ export default function EmailComposePage() {
     }
   };
 
-  const processedContent = content
+  // Get the current content based on selected language and translations
+  const getCurrentContent = () => {
+    if (translations && selectedLanguage !== 'en') {
+      const translation = translations.translations.find(t => t.language === selectedLanguage);
+      return translation?.content || content;
+    }
+    return content;
+  };
+
+  const getCurrentSubject = () => {
+    if (translations && selectedLanguage !== 'en') {
+      const translation = translations.translations.find(t => t.language === selectedLanguage);
+      return translation?.subject || subject;
+    }
+    return subject;
+  };
+
+  const processedContent = getCurrentContent()
     .replace(/{{firstName}}/g, 'John')
     .replace(/{{email}}/g, 'user@example.com');
 
@@ -236,9 +285,64 @@ export default function EmailComposePage() {
             />
           </div>
 
+          {/* Translation Button */}
+          <div className="flex justify-between items-center">
+            <Label>Content *</Label>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTranslate}
+              disabled={translating || !subject || !content}
+            >
+              {translating ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Translating...
+                </>
+              ) : (
+                <>
+                  <Languages className="mr-2 h-4 w-4" />
+                  Auto-Translate to All Languages
+                </>
+              )}
+            </Button>
+          </div>
+
+          {/* Language Tabs (shown when translations exist) */}
+          {translations && (
+            <div className="border rounded-md p-2 bg-muted/30">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm font-medium">Language:</span>
+                {Object.entries(languageNames).map(([code, name]) => {
+                  const hasTranslation = translations.translations.some(t => t.language === code);
+                  return (
+                    <Button
+                      key={code}
+                      variant={selectedLanguage === code ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setSelectedLanguage(code as SupportedLanguage)}
+                      disabled={!hasTranslation}
+                      className="text-xs"
+                    >
+                      {name}
+                      {hasTranslation && translations.translations.find(t => t.language === code)?.success === false && (
+                        <AlertCircle className="ml-1 h-3 w-3 text-destructive" />
+                      )}
+                    </Button>
+                  );
+                })}
+              </div>
+              {selectedLanguage !== 'en' && (
+                <div className="mt-2 p-2 bg-background rounded">
+                  <p className="text-sm font-medium mb-1">Translated Subject:</p>
+                  <p className="text-sm text-muted-foreground">{getCurrentSubject()}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Content Editor with Preview */}
           <div className="space-y-2">
-            <Label>Content *</Label>
             <Tabs defaultValue="edit" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="edit">Edit</TabsTrigger>
@@ -248,8 +352,16 @@ export default function EmailComposePage() {
               <TabsContent value="edit" className="mt-4">
                 <div className="border rounded-md">
                   <LazyMonacoEditor
-                    value={content}
-                    onChange={(value) => setContent(value || '')}
+                    value={selectedLanguage === 'en' ? content : getCurrentContent()}
+                    onChange={(value) => {
+                      if (selectedLanguage === 'en') {
+                        setContent(value || '');
+                        // Clear translations if original content is edited
+                        if (translations) {
+                          setTranslations(null);
+                        }
+                      }
+                    }}
                     language="markdown"
                     height="400px"
                     theme="vs-light"
@@ -258,6 +370,7 @@ export default function EmailComposePage() {
                       lineNumbers: 'on',
                       wordWrap: 'on',
                       fontSize: 14,
+                      readOnly: selectedLanguage !== 'en',
                     }}
                   />
                 </div>

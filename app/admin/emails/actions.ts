@@ -7,6 +7,7 @@ import { getAdminEmails } from '@/lib/admin-notifications';
 import { sendEmail } from '@/lib/email';
 import { generateUnsubscribeUrl } from '@/lib/unsubscribe-tokens';
 import { checkAdminRateLimit } from '@/lib/admin-rate-limiter';
+import { translateToAllLanguages, supportedLanguages, type SupportedLanguage, type EmailTranslations } from '@/lib/email-translation-service';
 import { eq, and, gte, lte, sql, desc, asc, or, ne } from 'drizzle-orm';
 import { marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
@@ -171,11 +172,20 @@ export async function getEmailRecipients(options: {
     const { segment = 'all', testMode = false } = options;
 
     if (testMode) {
-      // In test mode, only return the admin's email
+      // In test mode, only return the admin's email with their language preference
+      const adminUser = await db.query.users.findFirst({
+        where: eq(users.id, session.user.id),
+      });
+
       return {
         success: true,
         data: {
-          recipients: [{ id: session.user.id, email: session.user.email!, name: session.user.name }],
+          recipients: [{
+            id: session.user.id,
+            email: session.user.email!,
+            name: session.user.name,
+            language: adminUser?.language || 'en'
+          }],
           count: 1,
         },
       };
@@ -187,6 +197,7 @@ export async function getEmailRecipients(options: {
         id: users.id,
         email: users.email,
         name: users.name,
+        language: users.language,
       })
       .from(users)
       .leftJoin(
@@ -224,6 +235,20 @@ const sendBulkEmailSchema = z.object({
   markdownContent: z.string().min(1),
   segment: z.enum(['all', 'developer', 'business', 'enterprise']).default('all'),
   testMode: z.boolean().default(true),
+  translations: z.object({
+    original: z.object({
+      language: z.enum(['en', 'tr', 'zh', 'hi', 'ja', 'nl']),
+      subject: z.string(),
+      content: z.string(),
+    }),
+    translations: z.array(z.object({
+      language: z.enum(['en', 'tr', 'zh', 'hi', 'ja', 'nl']),
+      subject: z.string(),
+      content: z.string(),
+      success: z.boolean(),
+      error: z.string().optional(),
+    })),
+  }).optional(),
 });
 
 export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailSchema>) {
@@ -255,79 +280,6 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
       };
     }
 
-    // Convert markdown to HTML
-    const rawHtml = await marked(validated.markdownContent);
-
-    // Sanitize HTML with enhanced security
-    const cleanHtml = sanitizeHtml(rawHtml, {
-      allowedTags: [
-        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-        'p', 'br', 'hr',
-        'strong', 'em', 'u', 's', 'code', 'pre',
-        'blockquote', 'q',
-        'ul', 'ol', 'li',
-        'a',
-        'table', 'thead', 'tbody', 'tr', 'th', 'td',
-        'div', 'span',
-      ],
-      allowedAttributes: {
-        a: ['href', 'title'],
-        // Removed img tag completely for security
-      },
-      allowedSchemes: ['http', 'https', 'mailto'],
-      allowProtocolRelative: false,
-      enforceHtmlBoundary: true,
-      transformTags: {
-        // Transform all links to open in new tab with security attributes
-        a: (tagName, attribs) => {
-          return {
-            tagName: 'a',
-            attribs: {
-              ...attribs,
-              target: '_blank',
-              rel: 'noopener noreferrer',
-            },
-          };
-        },
-      },
-    });
-
-    // Generate email HTML template
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005';
-    const generateEmailHtml = async (recipient: typeof recipients[0]) => `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          a { color: #4F46E5; text-decoration: none; }
-          .content { margin: 20px 0; }
-          .footer { color: #666; font-size: 0.9em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
-          h1, h2, h3 { color: #111; margin-top: 20px; }
-          pre, code { background: #f6f6f6; padding: 12px; border-radius: 4px; font-family: 'Monaco', 'Courier New', monospace; }
-          blockquote { border-left: 4px solid #4F46E5; padding-left: 16px; margin: 16px 0; color: #666; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="content">
-            ${cleanHtml}
-          </div>
-
-          <div class="footer">
-            <p>Best regards,<br>The Plugged.in Team</p>
-            <p>
-              <a href="${await generateUnsubscribeUrl(recipient.id)}">Unsubscribe</a> |
-              <a href="${appUrl}/settings">Email Preferences</a>
-            </p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
 
     // Send emails in batches
     const batchSize = 10;
@@ -339,10 +291,94 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
 
       const emailPromises = batch.map(async (recipient) => {
         try {
-          const html = await generateEmailHtml(recipient);
+          // Determine which subject and content to use based on user language
+          let emailSubject = validated.subject;
+          let emailContent = validated.markdownContent;
+
+          if (validated.translations && recipient.language) {
+            const userLang = recipient.language as SupportedLanguage;
+            const translation = validated.translations.translations.find(
+              t => t.language === userLang && t.success
+            );
+
+            if (translation) {
+              emailSubject = translation.subject;
+              emailContent = translation.content;
+            }
+          }
+
+          // Convert markdown to HTML for the selected language content
+          const rawHtml = await marked(emailContent);
+          const cleanHtml = sanitizeHtml(rawHtml, {
+            allowedTags: [
+              'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+              'p', 'br', 'hr',
+              'strong', 'em', 'u', 's', 'code', 'pre',
+              'blockquote', 'q',
+              'ul', 'ol', 'li',
+              'a',
+              'table', 'thead', 'tbody', 'tr', 'th', 'td',
+              'div', 'span',
+            ],
+            allowedAttributes: {
+              a: ['href', 'title'],
+            },
+            allowedSchemes: ['http', 'https', 'mailto'],
+            allowProtocolRelative: false,
+            enforceHtmlBoundary: true,
+            transformTags: {
+              a: (tagName, attribs) => {
+                return {
+                  tagName: 'a',
+                  attribs: {
+                    ...attribs,
+                    target: '_blank',
+                    rel: 'noopener noreferrer',
+                  },
+                };
+              },
+            },
+          });
+
+          // Generate localized HTML
+          const html = `
+            <!DOCTYPE html>
+            <html>
+            <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; }
+                .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                a { color: #4F46E5; text-decoration: none; }
+                .content { margin: 20px 0; }
+                .footer { color: #666; font-size: 0.9em; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; }
+                h1, h2, h3 { color: #111; margin-top: 20px; }
+                pre, code { background: #f6f6f6; padding: 12px; border-radius: 4px; font-family: 'Monaco', 'Courier New', monospace; }
+                blockquote { border-left: 4px solid #4F46E5; padding-left: 16px; margin: 16px 0; color: #666; }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <div class="content">
+                  ${cleanHtml}
+                </div>
+
+                <div class="footer">
+                  <p>Best regards,<br>The Plugged.in Team</p>
+                  <p>
+                    <a href="${await generateUnsubscribeUrl(recipient.id)}">Unsubscribe</a> |
+                    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005'}/settings">Email Preferences</a>
+                  </p>
+                </div>
+              </div>
+            </body>
+            </html>
+          `;
+
           const result = await sendEmail({
             to: recipient.email,
-            subject: validated.subject,
+            subject: emailSubject,
             html,
             from: process.env.EMAIL_FROM || 'noreply@plugged.in',
             fromName: 'Plugged.in',
@@ -350,15 +386,17 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
           });
 
           if (result) {
-            // Track the email
+            // Track the email with language information
             await db.insert(emailTrackingTable).values({
               userId: recipient.id,
               emailType: 'product_update',
-              subject: validated.subject,
+              subject: emailSubject,
               segment: validated.segment,
               metadata: {
                 testMode: validated.testMode,
                 sentBy: session.user.email,
+                language: recipient.language || 'en',
+                isTranslated: emailSubject !== validated.subject,
               },
             });
 
@@ -777,6 +815,55 @@ P.S. Seriously, just reply if you need help. I read every email.`,
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to get templates',
+    };
+  }
+}
+
+// Translation action for email content
+const translateEmailSchema = z.object({
+  subject: z.string().min(1),
+  content: z.string().min(1),
+  sourceLanguage: z.enum(['en', 'tr', 'zh', 'hi', 'ja', 'nl']).default('en'),
+});
+
+export async function translateEmailContent(input: z.infer<typeof translateEmailSchema>): Promise<{
+  success: boolean;
+  data?: EmailTranslations;
+  error?: string;
+}> {
+  try {
+    const session = await checkAdminAuth();
+
+    // Rate limit translation requests
+    await checkAdminRateLimit(session.user.id, 'general');
+
+    const validated = translateEmailSchema.parse(input);
+
+    // Log the translation action
+    await logAdminAction(
+      session.user.id,
+      'email_translate',
+      'email',
+      undefined,
+      { sourceLanguage: validated.sourceLanguage }
+    );
+
+    // Perform translations
+    const translations = await translateToAllLanguages(
+      validated.subject,
+      validated.content,
+      validated.sourceLanguage
+    );
+
+    return {
+      success: true,
+      data: translations,
+    };
+  } catch (error) {
+    console.error('Translation error:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to translate email',
     };
   }
 }
