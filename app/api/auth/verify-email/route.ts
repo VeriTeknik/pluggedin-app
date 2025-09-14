@@ -160,6 +160,34 @@ export async function POST(req: NextRequest) {
           .update(projectsTable)
           .set({ active_profile_uuid: profile.uuid })
           .where(eq(projectsTable.uuid, project.uuid));
+
+        // Add sample MCP servers within the same transaction
+        try {
+          const { SAMPLE_MCP_SERVERS } = await import('@/lib/sample-mcp-servers');
+          const { mcpServersTable, McpServerType } = await import('@/db/schema');
+
+          const serversToAdd = SAMPLE_MCP_SERVERS.map(server => ({
+            profile_uuid: profile.uuid,
+            name: server.name,
+            slug: server.slug,
+            description: server.description,
+            type: server.type,
+            command: server.type === McpServerType.STDIO ? server.command : undefined,
+            args: server.type === McpServerType.STDIO ? server.args : undefined,
+            env: server.type === McpServerType.STDIO ? server.env : undefined,
+            url: server.type === McpServerType.STREAMABLE_HTTP ? server.url : undefined,
+            headers: server.type === McpServerType.STREAMABLE_HTTP ? server.headers : undefined,
+            notes: server.notes,
+            created_at: new Date(),
+            updated_at: new Date()
+          }));
+
+          await tx.insert(mcpServersTable).values(serversToAdd);
+          console.log(`✅ Added ${SAMPLE_MCP_SERVERS.length} sample MCP servers for profile ${profile.uuid}`);
+        } catch (error) {
+          console.error('Failed to add sample MCP servers:', error);
+          // Don't fail the verification process if sample servers can't be added
+        }
       });
     } catch (projectError) {
       console.error('Error creating default project:', projectError);

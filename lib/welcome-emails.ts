@@ -1,6 +1,6 @@
-import { sendEmail } from '@/lib/email';
 import { db } from '@/db';
 import { emailTrackingTable, scheduledEmailsTable, users } from '@/db/schema';
+import { sendEmail } from '@/lib/email';
 import { eq } from 'drizzle-orm';
 
 export type UserSegment = 'general' | 'developer' | 'security_focused' | 'enterprise';
@@ -134,10 +134,26 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
             <li><strong>Sequential Thinking:</strong> for complex multi-step reasoning</li>
             <li><strong>Database Tools:</strong> connect & query your own data securely</li>
           </ul>
-          
+
+          <p>🎁 <strong>We've added 3 sample MCP servers to get you started:</strong></p>
+          <ul>
+            <li><strong>Context7:</strong> Access up-to-date documentation for any library<br>
+                <em style="font-size: 0.9em;">→ Get your API key from <a href="https://context7.com/dashboard">context7.com/dashboard</a></em><br>
+                <em style="font-size: 0.9em;">→ Go to <a href="${appUrl}/mcp-servers">MCP Servers</a>, click Edit on Context7</em><br>
+                <em style="font-size: 0.9em;">→ Add to Headers:</em><br>
+                <code style="font-size: 0.85em; display: inline-block; margin-left: 20px;">Authorization: Bearer YOUR_API_KEY</code></li>
+            <li><strong>Whois:</strong> Domain lookup capabilities (ready to use!)</li>
+            <li><strong>Random Number Generator:</strong> Test MCP functionality (ready to use!)</li>
+          </ul>
+
+          <p>🤖 <strong>Connect to your favorite AI:</strong><br>
+          Ready to use with Claude Desktop, Continue Dev, or any MCP-compatible client.<br>
+          <a href="https://plugged.in/setup-guide">Setup Guide</a> | <a href="https://docs.plugged.in">Documentation</a></p>
+
           <p>Best first step?<br>
-          <a href="${appUrl}/library/upload" class="button">📄 Upload your first document</a><br>
-          It takes 30 seconds — and your AI immediately becomes more useful.</p>
+          <a href="${appUrl}/library" class="button">📄 Upload your first document</a><br>
+          It takes 30 seconds — and your AI immediately becomes more useful.<br>
+          <em style="font-size: 0.9em;">Your uploaded docs will be available in Claude Desktop via "Ask Knowledge Base" or "List Documents" tools!</em></p>
           
           <p>If you're curious about integrations,<br>
           <a href="${appUrl}/mcp-server">browse the MCP marketplace</a><br>
@@ -151,10 +167,10 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
           Founder @ Plugged.in</p>
           
           <div class="footer">
-            <p>P.S. We just shipped v2.2 — now with end-to-end encryption for all MCP configs.<br>
-            Think of it as a digital fortress… but friendlier. 🔒</p>
-            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> | 
-            <a href="${appUrl}/preferences">Email Preferences</a></p>
+            <p>P.S. We ship updates weekly! Check out <a href="${appUrl}/release-notes">what's new</a> — latest: end-to-end encryption for all MCP configs. 🔒</p>
+            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> |
+            <a href="${appUrl}/settings">Email Preferences</a> |
+            <a href="https://docs.plugged.in">Documentation</a></p>
           </div>
         </div>
       </body>
@@ -192,8 +208,20 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
 - Document management (RAG)
 - PostgreSQL connector
 - Sequential thinking
-- Notifications
-- WHOIS lookups</pre>
+- Notifications</pre>
+
+          <p>🎁 <strong>Sample servers already in your workspace:</strong></p>
+          <pre style="font-size: 0.9em;">
+- Context7 (API docs for any library)
+  → Get API key: context7.com/dashboard
+  → Edit server in /mcp-servers
+  → Add Header: Authorization: Bearer KEY
+- Whois (domain lookups) - ready to use
+- Random Number Generator - ready to use</pre>
+
+          <p>🤖 <strong>Connect to Claude Desktop or Continue Dev:</strong><br>
+          <code>npm install -g @pluggedin/pluggedin-mcp-proxy</code><br>
+          📚 Resources: <a href="https://plugged.in/setup-guide">Setup Guide</a> | <a href="https://docs.plugged.in">Documentation</a></p>
 
           <p>Quick dev start:</p>
           <ol>
@@ -209,9 +237,10 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
           Founder @ Plugged.in</p>
 
           <div class="footer">
-            <p>P.S. Our GitHub's open — <a href="https://github.com/VeriTeknik">star us</a> and watch us ship in real time.</p>
-            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> | 
-            <a href="${appUrl}/preferences">Email Preferences</a></p>
+            <p>P.S. Track our progress: <a href="${appUrl}/release-notes">Release Notes</a> | <a href="https://github.com/VeriTeknik">GitHub</a> — watch us ship in real time! 🚀</p>
+            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> |
+            <a href="${appUrl}/settings">Email Preferences</a> |
+            <a href="https://docs.plugged.in">Documentation</a></p>
           </div>
         </div>
       </body>
@@ -237,7 +266,7 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
           That's why I built this platform from the ground up for <em>data ownership</em>.</p>
 
           <ul>
-            <li>🔐 End-to-end encryption (v2.2 and beyond)</li>
+            <li>🔐 End-to-end encryption across all features</li>
             <li>🚫 Your data never trains other models</li>
             <li>🏠 Everything lives in your own secure workspace</li>
             <li>✅ Full export anytime — no lock-in</li>
@@ -254,6 +283,18 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
           <p>First step:<br>
           <a href="${appUrl}/settings/security" class="button">🔒 Review your security settings</a></p>
 
+          <p>🎁 <strong>We've added 3 vetted sample MCP servers to your workspace:</strong></p>
+          <ul style="margin: 10px 0;">
+            <li>Context7 (secure API docs) - requires API key from <a href="https://context7.com/dashboard">context7.com</a></li>
+            <li>Whois (domain intel) - ready to use</li>
+            <li>Test server - ready to use</li>
+          </ul>
+          <p style="margin: 15px 0;">📝 <strong>Quick Context7 setup:</strong><br>
+          Go to <a href="${appUrl}/mcp-servers">MCP Servers</a> → Edit Context7 → Add API key to Headers</p>
+          <p>🤖 <strong>Connect to Claude Desktop:</strong><br>
+          Secure MCP proxy ready for your AI tools.<br>
+          📚 Resources: <a href="https://plugged.in/setup-guide">Setup Guide</a> | <a href="https://docs.plugged.in">Documentation</a></p>
+
           <p>If you ever spot something we could improve, reply — security notes go straight to me.</p>
 
           <p>To building trust through transparency,<br>
@@ -262,8 +303,9 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
           
           <div class="footer">
             <p>P.S. We're GDPR compliant and working on SOC2. Your data sovereignty matters.</p>
-            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> | 
-            <a href="${appUrl}/preferences">Email Preferences</a></p>
+            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> |
+            <a href="${appUrl}/settings">Email Preferences</a> |
+            <a href="https://docs.plugged.in">Documentation</a></p>
           </div>
         </div>
       </body>
@@ -299,8 +341,18 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
         <ol>
           <li><a href="${appUrl}/admin/team">Invite your team members</a></li>
           <li><a href="${appUrl}/admin/permissions">Configure access permissions</a></li>
-          <li><a href="${appUrl}/library/upload">Upload your first documents</a></li>
+          <li><a href="${appUrl}/library">Upload your first documents</a></li>
+          <li><a href="https://plugged.in/setup-guide">Review the MCP setup guide</a></li>
         </ol>
+
+        <p>🎁 <strong>Pre-configured sample MCP servers:</strong><br>
+        We've added Context7, Whois, and test servers to help your team get started immediately.<br>
+        <em style="font-size: 0.95em;">Note: Context7 requires an API key from <a href="https://context7.com/dashboard">context7.com/dashboard</a>.<br>
+        Configure in <a href="${appUrl}/mcp-servers">MCP Servers</a> → Edit → Headers.</em></p>
+
+        <p>🤖 <strong>Enterprise AI Integration:</strong><br>
+        Connect your team's Claude Desktop, Continue Dev, or custom MCP clients.<br>
+        📚 Resources: <a href="https://plugged.in/setup-guide">Setup Guide</a> | <a href="https://docs.plugged.in">Documentation</a></p>
         
         <p>Your dedicated success manager will reach out within 24 hours to schedule your onboarding.</p>
         
@@ -314,8 +366,8 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
         
         <div class="footer">
           <p>VeriTeknik B.V. | Amsterdam, Netherlands | Enterprise Support Available 24/7</p>
-          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> | 
-          <a href="${appUrl}/preferences">Email Preferences</a></p>
+          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> |
+          <a href="${appUrl}/settings">Email Preferences</a></p>
         </div>
       </div>
     </body>
@@ -326,7 +378,7 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
 /**
  * Generate Day 3 follow-up email HTML
  */
-function generateDay3Html(name: string, email: string, metrics: UserMetrics, segment: UserSegment): string {
+function generateDay3Html(name: string, email: string, metrics: UserMetrics, _segment: UserSegment): string {
   const firstName = name.split(' ')[0];
   const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
   
@@ -464,7 +516,8 @@ function generateDay7InactiveHtml(name: string, email: string): string {
         <p>Can I make this super easy?</p>
         
         <p>Option 1: Quick start (2 minutes)<br>
-        <a href="${appUrl}/library/upload" class="button">📄 Upload your first document</a></p>
+        <a href="${appUrl}/library" class="button">📄 Upload your first document</a><br>
+        <em style="font-size: 0.9em;">Your docs become searchable in Claude Desktop via MCP tools!</em></p>
         
         <p>Option 2: Let me help (15 minutes)<br>
         <a href="https://calendly.com/cem-pluggedin/onboarding">📅 Book a quick call</a></p>
@@ -514,8 +567,9 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
       to: email,
       subject,
       html,
-      from: process.env.EMAIL_FROM || 'cem@plugged.in',
+      from: process.env.EMAIL_FROM || 'noreply@plugged.in',
       fromName: 'Cem from Plugged.in',
+      replyTo: process.env.EMAIL_REPLY_TO || 'cem@plugged.in',
     });
     
     if (result) {
@@ -634,8 +688,9 @@ export async function sendDay3Email(userId: string, email: string, name: string,
       to: email,
       subject: 'Your Plugged.in workspace update',
       html,
-      from: process.env.EMAIL_FROM || 'cem@plugged.in',
+      from: process.env.EMAIL_FROM || 'noreply@plugged.in',
       fromName: 'Cem from Plugged.in',
+      replyTo: process.env.EMAIL_REPLY_TO || 'cem@plugged.in',
     });
     
     if (result) {
@@ -676,8 +731,9 @@ export async function sendDay7Email(userId: string, email: string, name: string,
       to: email,
       subject,
       html,
-      from: process.env.EMAIL_FROM || 'cem@plugged.in',
+      from: process.env.EMAIL_FROM || 'noreply@plugged.in',
       fromName: 'Cem from Plugged.in',
+      replyTo: process.env.EMAIL_REPLY_TO || 'cem@plugged.in',
     });
     
     if (result) {

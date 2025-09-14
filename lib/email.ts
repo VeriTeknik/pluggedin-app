@@ -6,6 +6,7 @@ type EmailOptions = {
   html: string;
   from?: string;
   fromName?: string;
+  replyTo?: string;
 };
 
 // Base64 logo for Plugged.in - a simple blue placeholder
@@ -16,14 +17,15 @@ const DEFAULT_LOGO_BASE64 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAASAAA
 /**
  * Send an email using Nodemailer
  */
-export async function sendEmail({ to, subject, html, from, fromName }: EmailOptions) {
-  const { 
-    EMAIL_SERVER_HOST, 
-    EMAIL_SERVER_PORT, 
-    EMAIL_SERVER_USER, 
-    EMAIL_SERVER_PASSWORD, 
+export async function sendEmail({ to, subject, html, from, fromName, replyTo }: EmailOptions) {
+  const {
+    EMAIL_SERVER_HOST,
+    EMAIL_SERVER_PORT,
+    EMAIL_SERVER_USER,
+    EMAIL_SERVER_PASSWORD,
     EMAIL_FROM,
-    EMAIL_FROM_NAME
+    EMAIL_FROM_NAME,
+    EMAIL_REPLY_TO
   } = process.env;
 
   // Check if email configuration exists
@@ -46,18 +48,26 @@ export async function sendEmail({ to, subject, html, from, fromName }: EmailOpti
     // Use provided from/fromName or fall back to environment variables
     const senderEmail = from || EMAIL_FROM;
     const senderName = fromName || EMAIL_FROM_NAME;
-    
+    const replyToEmail = replyTo || EMAIL_REPLY_TO;
+
     // Format sender with name if available
-    const formattedFrom = senderName 
+    const formattedFrom = senderName
       ? `"${senderName}" <${senderEmail}>`
       : senderEmail;
 
-    await transporter.sendMail({
+    const mailOptions: any = {
       from: formattedFrom,
       to,
       subject,
       html,
-    });
+    };
+
+    // Add reply-to if provided
+    if (replyToEmail) {
+      mailOptions.replyTo = replyToEmail;
+    }
+
+    await transporter.sendMail(mailOptions);
     return true;
   } catch (error) {
     console.error('Error sending email:', error);
