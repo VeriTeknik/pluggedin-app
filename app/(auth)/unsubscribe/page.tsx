@@ -5,7 +5,8 @@ import { eq } from 'drizzle-orm';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { Mail } from 'lucide-react';
+import { Mail, AlertCircle } from 'lucide-react';
+import { verifyUnsubscribeToken } from '@/lib/unsubscribe-tokens';
 
 interface UnsubscribePageProps {
   searchParams: Promise<{
@@ -18,31 +19,83 @@ export default async function UnsubscribePage({ searchParams }: UnsubscribePageP
   const { token } = params;
 
   if (!token) {
-    redirect('/login');
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <CardTitle>Invalid Unsubscribe Link</CardTitle>
+            <CardDescription>
+              This unsubscribe link is invalid or has expired
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Please use the unsubscribe link from a recent email, or manage your preferences from your account settings.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Link href="/settings">
+                <Button variant="outline" className="w-full">
+                  Go to settings
+                </Button>
+              </Link>
+              <Link href="/">
+                <Button className="w-full">
+                  Go to homepage
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
-  // Decode the email from the token
-  let email: string;
-  try {
-    email = Buffer.from(token, 'base64').toString('utf-8');
-  } catch (error) {
-    redirect('/login');
-  }
+  // Verify the secure token
+  const userId = await verifyUnsubscribeToken(token);
 
-  // Find the user
-  const user = await db.query.users.findFirst({
-    where: eq(users.email, email),
-  });
-
-  if (!user) {
-    redirect('/login');
+  if (!userId) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+              <AlertCircle className="h-6 w-6 text-red-600" />
+            </div>
+            <CardTitle>Invalid or Expired Token</CardTitle>
+            <CardDescription>
+              This unsubscribe link has expired or already been used
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground text-center">
+              Unsubscribe links expire after 48 hours for security reasons. Please request a new unsubscribe link from a recent email.
+            </p>
+            <div className="flex flex-col gap-2">
+              <Link href="/settings">
+                <Button variant="outline" className="w-full">
+                  Manage email preferences
+                </Button>
+              </Link>
+              <Link href="/">
+                <Button className="w-full">
+                  Go to homepage
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
   }
 
   // Update preferences to unsubscribe from all
   await db
     .insert(userEmailPreferencesTable)
     .values({
-      userId: user.id,
+      userId: userId,
       welcomeEmails: false,
       productUpdates: false,
       marketingEmails: false,

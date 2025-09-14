@@ -1,11 +1,6 @@
 {
-<<<<<<< HEAD
-  "id": "e8e2817e-221d-4db6-ac5a-84549b182829",
-  "prevId": "74c28d49-47f8-465d-802b-0f184bbf88be",
-=======
-  "id": "a2609f7c-600d-48c5-8804-cb24afef1e28",
-  "prevId": "bac7ce24-9dc3-4c45-9b7e-315ce41dc59c",
->>>>>>> origin/main
+  "id": "1247b9c1-87e8-4ee0-811c-e8eb4befcdb6",
+  "prevId": "31c4dd4c-be7c-4687-aceb-0b5bf699dd52",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -78,15 +73,12 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-<<<<<<< HEAD
         },
         "last_used": {
           "name": "last_used",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
-=======
->>>>>>> origin/main
         }
       },
       "indexes": {
@@ -130,6 +122,135 @@
           ]
         }
       },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.admin_audit_log": {
+      "name": "admin_audit_log",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "admin_id": {
+          "name": "admin_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "action": {
+          "name": "action",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_type": {
+          "name": "target_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_id": {
+          "name": "target_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "details": {
+          "name": "details",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
+        "ip_address": {
+          "name": "ip_address",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "user_agent": {
+          "name": "user_agent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_admin_audit_log_admin": {
+          "name": "idx_admin_audit_log_admin",
+          "columns": [
+            {
+              "expression": "admin_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_admin_audit_log_action": {
+          "name": "idx_admin_audit_log_action",
+          "columns": [
+            {
+              "expression": "action",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_admin_audit_log_created": {
+          "name": "idx_admin_audit_log_created",
+          "columns": [
+            {
+              "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "admin_audit_log_admin_id_users_id_fk": {
+          "name": "admin_audit_log_admin_id_users_id_fk",
+          "tableFrom": "admin_audit_log",
+          "tableTo": "users",
+          "columnsFrom": [
+            "admin_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -369,19 +490,6 @@
             "uuid"
           ],
           "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "audit_logs_server_uuid_mcp_servers_uuid_fk": {
-          "name": "audit_logs_server_uuid_mcp_servers_uuid_fk",
-          "tableFrom": "audit_logs",
-          "tableTo": "mcp_servers",
-          "columnsFrom": [
-            "server_uuid"
-          ],
-          "columnsTo": [
-            "uuid"
-          ],
-          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
@@ -1226,7 +1334,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
     "public.email_tracking": {
       "name": "email_tracking",
       "schema": "",
@@ -1370,8 +1477,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-=======
->>>>>>> origin/main
     "public.embedded_chats": {
       "name": "embedded_chats",
       "schema": "",
@@ -3181,11 +3286,7 @@
           "columnsTo": [
             "id"
           ],
-<<<<<<< HEAD
           "onDelete": "cascade",
-=======
-          "onDelete": "set null",
->>>>>>> origin/main
           "onUpdate": "no action"
         }
       },
@@ -3479,7 +3580,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
     "public.scheduled_emails": {
       "name": "scheduled_emails",
       "schema": "",
@@ -3598,8 +3698,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-=======
->>>>>>> origin/main
     "public.search_cache": {
       "name": "search_cache",
       "schema": "",
@@ -4521,11 +4619,7 @@
           "columnsTo": [
             "id"
           ],
-<<<<<<< HEAD
           "onDelete": "cascade",
-=======
-          "onDelete": "set null",
->>>>>>> origin/main
           "onUpdate": "no action"
         },
         "shared_mcp_servers_registry_server_uuid_registry_servers_uuid_fk": {
@@ -4840,7 +4934,130 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-<<<<<<< HEAD
+    "public.unsubscribe_tokens": {
+      "name": "unsubscribe_tokens",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token_hash": {
+          "name": "token_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "used_at": {
+          "name": "used_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "idx_unsubscribe_tokens_token": {
+          "name": "idx_unsubscribe_tokens_token",
+          "columns": [
+            {
+              "expression": "token",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_unsubscribe_tokens_user": {
+          "name": "idx_unsubscribe_tokens_user",
+          "columns": [
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_unsubscribe_tokens_expires": {
+          "name": "idx_unsubscribe_tokens_expires",
+          "columns": [
+            {
+              "expression": "expires_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "unsubscribe_tokens_user_id_users_id_fk": {
+          "name": "unsubscribe_tokens_user_id_users_id_fk",
+          "tableFrom": "unsubscribe_tokens",
+          "tableTo": "users",
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "unsubscribe_tokens_token_unique": {
+          "name": "unsubscribe_tokens_token_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "token"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.user_email_preferences": {
       "name": "user_email_preferences",
       "schema": "",
@@ -4923,8 +5140,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-=======
->>>>>>> origin/main
     "public.users": {
       "name": "users",
       "schema": "",
@@ -5040,6 +5255,32 @@
         "password_changed_at": {
           "name": "password_changed_at",
           "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_admin": {
+          "name": "is_admin",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "requires_2fa": {
+          "name": "requires_2fa",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "two_fa_secret": {
+          "name": "two_fa_secret",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "two_fa_backup_codes": {
+          "name": "two_fa_backup_codes",
+          "type": "text",
           "primaryKey": false,
           "notNull": false
         }

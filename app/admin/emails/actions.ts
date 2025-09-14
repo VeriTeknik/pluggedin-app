@@ -1,34 +1,78 @@
 'use server';
 
 import { db } from '@/db';
-import { users, userEmailPreferencesTable, emailTrackingTable } from '@/db/schema';
+import { users, userEmailPreferencesTable, emailTrackingTable, adminAuditLogTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { getAdminEmails } from '@/lib/admin-notifications';
 import { sendEmail } from '@/lib/email';
+import { generateUnsubscribeUrl } from '@/lib/unsubscribe-tokens';
+import { checkAdminRateLimit } from '@/lib/admin-rate-limiter';
 import { eq, and, gte, lte, sql, desc, asc, or, ne } from 'drizzle-orm';
 import { marked } from 'marked';
 import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
+import { headers } from 'next/headers';
 
-// Check if current user is admin
+// Check if current user is admin with database check
 async function checkAdminAuth() {
   const session = await getAuthSession();
-  if (!session?.user?.email) {
+  if (!session?.user?.email || !session?.user?.id) {
     throw new Error('Unauthorized');
   }
 
-  const adminEmails = getAdminEmails();
-  if (!adminEmails.includes(session.user.email)) {
-    throw new Error('Unauthorized: Admin access required');
+  // Check database for admin status
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, session.user.id),
+  });
+
+  if (!user?.is_admin) {
+    // Fallback to environment variable check for backward compatibility
+    const adminEmails = getAdminEmails();
+    if (!adminEmails.includes(session.user.email)) {
+      throw new Error('Unauthorized: Admin access required');
+    }
   }
 
   return session;
 }
 
+// Log admin action for audit trail
+async function logAdminAction(
+  adminId: string,
+  action: string,
+  targetType?: string,
+  targetId?: string,
+  details?: any
+) {
+  try {
+    const headersList = await headers();
+    const ipAddress = headersList.get('x-forwarded-for') ||
+                     headersList.get('x-real-ip') ||
+                     'unknown';
+    const userAgent = headersList.get('user-agent') || 'unknown';
+
+    await db.insert(adminAuditLogTable).values({
+      adminId,
+      action,
+      targetType,
+      targetId,
+      details,
+      ipAddress,
+      userAgent,
+    });
+  } catch (error) {
+    console.error('Failed to log admin action:', error);
+    // Don't throw - audit logging failure shouldn't prevent the action
+  }
+}
+
 // Get email statistics for dashboard
 export async function getEmailStats() {
   try {
-    await checkAdminAuth();
+    const session = await checkAdminAuth();
+
+    // Check general admin rate limit
+    await checkAdminRateLimit(session.user.id, 'general');
 
     // Get total users
     const totalUsersResult = await db
@@ -186,6 +230,9 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
   try {
     const session = await checkAdminAuth();
 
+    // Check rate limit for email campaigns
+    await checkAdminRateLimit(session.user.id, 'email');
+
     // Validate input
     const validated = sendBulkEmailSchema.parse(input);
 
@@ -211,18 +258,43 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
     // Convert markdown to HTML
     const rawHtml = await marked(validated.markdownContent);
 
-    // Sanitize HTML
+    // Sanitize HTML with enhanced security
     const cleanHtml = sanitizeHtml(rawHtml, {
-      allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img']),
+      allowedTags: [
+        'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+        'p', 'br', 'hr',
+        'strong', 'em', 'u', 's', 'code', 'pre',
+        'blockquote', 'q',
+        'ul', 'ol', 'li',
+        'a',
+        'table', 'thead', 'tbody', 'tr', 'th', 'td',
+        'div', 'span',
+      ],
       allowedAttributes: {
-        ...sanitizeHtml.defaults.allowedAttributes,
-        img: ['src', 'alt', 'width', 'height'],
+        a: ['href', 'title'],
+        // Removed img tag completely for security
+      },
+      allowedSchemes: ['http', 'https', 'mailto'],
+      allowProtocolRelative: false,
+      enforceHtmlBoundary: true,
+      transformTags: {
+        // Transform all links to open in new tab with security attributes
+        a: (tagName, attribs) => {
+          return {
+            tagName: 'a',
+            attribs: {
+              ...attribs,
+              target: '_blank',
+              rel: 'noopener noreferrer',
+            },
+          };
+        },
       },
     });
 
     // Generate email HTML template
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:12005';
-    const generateEmailHtml = (recipient: typeof recipients[0]) => `
+    const generateEmailHtml = async (recipient: typeof recipients[0]) => `
       <!DOCTYPE html>
       <html>
       <head>
@@ -248,7 +320,7 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
           <div class="footer">
             <p>Best regards,<br>The Plugged.in Team</p>
             <p>
-              <a href="${appUrl}/unsubscribe?token=${Buffer.from(recipient.email).toString('base64')}">Unsubscribe</a> |
+              <a href="${await generateUnsubscribeUrl(recipient.id)}">Unsubscribe</a> |
               <a href="${appUrl}/settings">Email Preferences</a>
             </p>
           </div>
@@ -267,7 +339,7 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
 
       const emailPromises = batch.map(async (recipient) => {
         try {
-          const html = generateEmailHtml(recipient);
+          const html = await generateEmailHtml(recipient);
           const result = await sendEmail({
             to: recipient.email,
             subject: validated.subject,
@@ -303,6 +375,22 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
       successCount += results.filter(r => r).length;
       failedCount += results.filter(r => !r).length;
     }
+
+    // Log the admin action
+    await logAdminAction(
+      session.user.id,
+      'send_bulk_email',
+      'email_campaign',
+      undefined,
+      {
+        subject: validated.subject,
+        segment: validated.segment,
+        testMode: validated.testMode,
+        recipientCount: recipients.length,
+        successCount,
+        failedCount,
+      }
+    );
 
     return {
       success: true,

@@ -1,6 +1,9 @@
 import { redirect } from 'next/navigation';
 import { getAuthSession } from '@/lib/auth';
 import { getAdminEmails } from '@/lib/admin-notifications';
+import { db } from '@/db';
+import { users } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 
 export default async function AdminLayout({
   children,
@@ -9,13 +12,22 @@ export default async function AdminLayout({
 }) {
   const session = await getAuthSession();
 
-  if (!session?.user?.email) {
+  if (!session?.user?.email || !session?.user?.id) {
     redirect('/login');
   }
 
-  // Check if user is an admin
-  const adminEmails = getAdminEmails();
-  const isAdmin = adminEmails.includes(session.user.email);
+  // Check database for admin status first
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, session.user.id),
+  });
+
+  let isAdmin = user?.is_admin || false;
+
+  // Fallback to environment variable check for backward compatibility
+  if (!isAdmin) {
+    const adminEmails = getAdminEmails();
+    isAdmin = adminEmails.includes(session.user.email);
+  }
 
   if (!isAdmin) {
     // Redirect non-admin users to home page
