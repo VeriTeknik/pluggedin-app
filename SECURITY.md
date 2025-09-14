@@ -395,7 +395,209 @@ add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" alway
 
 ---
 
-**Last Updated**: January 15, 2025 (Critical vulnerability fixes - XSS, SSRF, URL validation)  
+## Recent Security Enhancements (January 2025 - Admin Email System)
+
+### 🔒 Critical Security Improvements Implemented
+
+#### 1. Secure Unsubscribe Token System
+- **Previous Issue**: Weak base64 encoding of email addresses allowing anyone to unsubscribe any user
+- **Solution**: Cryptographically secure tokens with HMAC-SHA256 verification
+- **Implementation**:
+  - 48-hour token expiry
+  - Timing-safe comparison to prevent timing attacks
+  - Database tracking in `unsubscribe_tokens` table
+  - Automatic cleanup of expired tokens
+
+#### 2. Database-Backed Admin Roles
+- **Previous Issue**: Admin access only via environment variables, no audit trail
+- **Solution**: Database `is_admin` field with comprehensive audit logging
+- **Management**: Use `scripts/set-admin-user.ts` for admin privilege management
+```bash
+# Grant or revoke admin privileges
+npx tsx scripts/set-admin-user.ts
+```
+
+#### 3. Enhanced XSS Protection in Emails
+- **Previous Issue**: Potential XSS via img tags and unsanitized content
+- **Solution**: Strict HTML sanitization with whitelist approach
+  - Removed all img tags (prevents tracking pixels)
+  - Enforced CSP-compatible sanitization
+  - Added security headers to all links (noopener noreferrer)
+
+#### 4. Comprehensive Audit Logging
+- **New Feature**: `admin_audit_log` table tracks all admin actions
+- **Logged Data**:
+  - Admin user ID and action performed
+  - Target type and ID
+  - IP address and user agent
+  - Detailed metadata in JSONB format
+  - Timestamp with timezone
+
+#### 5. Rate Limiting for Admin Endpoints
+- **Implementation**: Tiered rate limits to prevent abuse
+  - General admin actions: 100 requests/minute
+  - Email campaigns: 10/hour
+  - Bulk operations: 5/hour
+  - Sensitive actions (role changes): 20/hour
+
+### 📋 Production Deployment Checklist
+
+#### Step 1: Environment Configuration
+```bash
+# Generate secure token secret
+export UNSUBSCRIBE_TOKEN_SECRET=$(openssl rand -hex 32)
+
+# Add to production .env
+echo "UNSUBSCRIBE_TOKEN_SECRET=$UNSUBSCRIBE_TOKEN_SECRET" >> .env
+```
+
+#### Step 2: Database Migration
+```bash
+# Apply security migration
+pnpm db:migrate
+
+# Verify new tables exist
+psql $DATABASE_URL -c "\dt unsubscribe_tokens"
+psql $DATABASE_URL -c "\dt admin_audit_log"
+```
+
+#### Step 3: Initial Admin Setup
+```bash
+# Set up admin users interactively
+npx tsx scripts/set-admin-user.ts
+
+# Verify admin users
+psql $DATABASE_URL -c "SELECT email, is_admin, requires_2fa FROM users WHERE is_admin = true"
+```
+
+#### Step 4: Monitoring Setup
+```sql
+-- Create monitoring views
+CREATE VIEW admin_activity_summary AS
+SELECT
+  DATE(created_at) as activity_date,
+  admin_id,
+  action,
+  COUNT(*) as action_count
+FROM admin_audit_log
+GROUP BY DATE(created_at), admin_id, action
+ORDER BY activity_date DESC;
+
+-- Alert query for suspicious activity
+CREATE VIEW suspicious_admin_activity AS
+SELECT * FROM admin_audit_log
+WHERE action IN ('send_bulk_email', 'update_user_role', 'delete_content')
+  AND created_at > NOW() - INTERVAL '1 hour'
+ORDER BY created_at DESC;
+```
+
+#### Step 5: Automated Token Cleanup
+```bash
+# Add to crontab (runs daily at 3 AM)
+0 3 * * * cd /path/to/app && node -e "require('./lib/unsubscribe-tokens').cleanupExpiredTokens()"
+```
+
+### 🔐 Security Monitoring Queries
+
+```sql
+-- Daily admin activity report
+SELECT
+  u.email,
+  COUNT(*) as actions_today,
+  array_agg(DISTINCT a.action) as action_types
+FROM admin_audit_log a
+JOIN users u ON a.admin_id = u.id
+WHERE a.created_at > CURRENT_DATE
+GROUP BY u.email;
+
+-- Failed authentication attempts
+SELECT
+  ip_address,
+  COUNT(*) as attempts,
+  MAX(created_at) as last_attempt
+FROM admin_audit_log
+WHERE action = 'failed_login'
+  AND created_at > NOW() - INTERVAL '24 hours'
+GROUP BY ip_address
+HAVING COUNT(*) > 3;
+
+-- Email campaign monitoring
+SELECT
+  u.email as admin,
+  a.details->>'recipientCount' as recipients,
+  a.details->>'subject' as subject,
+  a.created_at
+FROM admin_audit_log a
+JOIN users u ON a.admin_id = u.id
+WHERE a.action = 'send_bulk_email'
+ORDER BY a.created_at DESC
+LIMIT 10;
+```
+
+### 🚨 Emergency Response Procedures
+
+#### If Admin Account is Compromised
+```sql
+-- Step 1: Immediately disable compromised admin
+UPDATE users SET is_admin = false
+WHERE email = 'compromised@example.com';
+
+-- Step 2: Review all actions by compromised account
+SELECT * FROM admin_audit_log
+WHERE admin_id = (SELECT id FROM users WHERE email = 'compromised@example.com')
+ORDER BY created_at DESC;
+
+-- Step 3: Invalidate all unsubscribe tokens if email system compromised
+UPDATE unsubscribe_tokens
+SET used_at = NOW()
+WHERE used_at IS NULL;
+
+-- Step 4: Reset all admin sessions
+DELETE FROM sessions
+WHERE user_id IN (SELECT id FROM users WHERE is_admin = true);
+```
+
+### 🔄 Ongoing Security Maintenance
+
+#### Weekly Tasks
+- Review admin audit logs for anomalies
+- Check rate limit violations
+- Verify admin user list is current
+- Review failed authentication attempts
+
+#### Monthly Tasks
+- Rotate UNSUBSCRIBE_TOKEN_SECRET
+- Review and update admin privileges
+- Update security dependencies
+- Analyze email campaign patterns
+
+#### Quarterly Tasks
+- Full security audit of admin functions
+- Penetration testing of admin endpoints
+- Review and update security documentation
+- Conduct admin security training
+
+### 🎯 Next Security Priorities
+
+1. **Two-Factor Authentication (2FA)**
+   - Database fields ready: `requires_2fa`, `two_fa_secret`, `two_fa_backup_codes`
+   - Implement TOTP-based 2FA for all admin accounts
+   - Mandatory 2FA for users with admin privileges
+
+2. **Advanced Threat Detection**
+   - Implement anomaly detection for admin actions
+   - Set up real-time alerting for suspicious patterns
+   - Create automated response for common threats
+
+3. **Security Information and Event Management (SIEM)**
+   - Centralize logging from all security components
+   - Implement correlation rules for threat detection
+   - Set up dashboard for security monitoring
+
+---
+
+**Last Updated**: January 15, 2025 (Critical vulnerability fixes - XSS, SSRF, URL validation, Admin Email Security)
+**Security Improvements**: Secure tokens, admin roles, audit logging, rate limiting, XSS protection
 **Next Review**: April 2025
 
-For questions about this security policy, please contact our security team or create a GitHub issue. 
+For questions about this security policy or to report vulnerabilities, please contact our security team or create a GitHub Security Advisory. 
