@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
   "id": "e8e2817e-221d-4db6-ac5a-84549b182829",
   "prevId": "74c28d49-47f8-465d-802b-0f184bbf88be",
+=======
+  "id": "a2609f7c-600d-48c5-8804-cb24afef1e28",
+  "prevId": "bac7ce24-9dc3-4c45-9b7e-315ce41dc59c",
+>>>>>>> origin/main
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -73,12 +78,15 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+<<<<<<< HEAD
         },
         "last_used": {
           "name": "last_used",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+=======
+>>>>>>> origin/main
         }
       },
       "indexes": {
@@ -1218,6 +1226,7 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+<<<<<<< HEAD
     "public.email_tracking": {
       "name": "email_tracking",
       "schema": "",
@@ -1361,6 +1370,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+=======
+>>>>>>> origin/main
     "public.embedded_chats": {
       "name": "embedded_chats",
       "schema": "",
@@ -3170,7 +3181,11 @@
           "columnsTo": [
             "id"
           ],
+<<<<<<< HEAD
           "onDelete": "cascade",
+=======
+          "onDelete": "set null",
+>>>>>>> origin/main
           "onUpdate": "no action"
         }
       },
@@ -3464,6 +3479,7 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+<<<<<<< HEAD
     "public.scheduled_emails": {
       "name": "scheduled_emails",
       "schema": "",
@@ -3582,6 +3598,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+=======
+>>>>>>> origin/main
     "public.search_cache": {
       "name": "search_cache",
       "schema": "",
@@ -4503,7 +4521,11 @@
           "columnsTo": [
             "id"
           ],
+<<<<<<< HEAD
           "onDelete": "cascade",
+=======
+          "onDelete": "set null",
+>>>>>>> origin/main
           "onUpdate": "no action"
         },
         "shared_mcp_servers_registry_server_uuid_registry_servers_uuid_fk": {
@@ -4818,6 +4840,7 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+<<<<<<< HEAD
     "public.user_email_preferences": {
       "name": "user_email_preferences",
       "schema": "",
@@ -4900,6 +4923,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+=======
+>>>>>>> origin/main
     "public.users": {
       "name": "users",
       "schema": "",
