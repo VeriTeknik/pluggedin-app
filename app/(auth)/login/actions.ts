@@ -16,7 +16,7 @@ export interface LastUsedSSO {
 export async function getLastUsedSSO(): Promise<LastUsedSSO | null> {
   try {
     // Try to get the last login email from cookies
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const lastEmail = cookieStore.get('last-login-email')?.value;
     
     if (!lastEmail) {

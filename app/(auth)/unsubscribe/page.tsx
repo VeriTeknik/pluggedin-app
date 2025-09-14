@@ -8,13 +8,14 @@ import Link from 'next/link';
 import { Mail } from 'lucide-react';
 
 interface UnsubscribePageProps {
-  searchParams: {
+  searchParams: Promise<{
     token?: string;
-  };
+  }>;
 }
 
 export default async function UnsubscribePage({ searchParams }: UnsubscribePageProps) {
-  const { token } = searchParams;
+  const params = await searchParams;
+  const { token } = params;
 
   if (!token) {
     redirect('/login');

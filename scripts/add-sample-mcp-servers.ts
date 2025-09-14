@@ -7,7 +7,7 @@
 
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { mcpServersTable, profilesTable, projectsTable, users as usersTable } from '../db/schema';
+import { mcpServersTable, profilesTable, projectsTable, users as usersTable, McpServerType } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import * as dotenv from 'dotenv';
 import path from 'path';
@@ -131,15 +131,16 @@ async function addSampleServers() {
           profile_uuid: profile.uuid,
           name: server.name,
           description: server.description,
-          type: server.type,
+          type: server.type === 'STDIO' ? McpServerType.STDIO : McpServerType.STREAMABLE_HTTP,
           command: server.type === 'STDIO' ? server.command : undefined,
           args: server.type === 'STDIO' ? server.args : undefined,
           env: server.type === 'STDIO' ? server.env : undefined,
           url: server.type === 'STREAMABLE_HTTP' ? server.url : undefined,
-          headers: server.type === 'STREAMABLE_HTTP' ? server.headers : undefined,
+          streamable_http_options_encrypted: server.type === 'STREAMABLE_HTTP' && server.headers
+            ? JSON.stringify({ headers: server.headers })
+            : undefined,
           notes: server.notes,
-          created_at: new Date(),
-          updated_at: new Date()
+          created_at: new Date()
         });
 
         console.log(`✅ Added "${server.name}"`);

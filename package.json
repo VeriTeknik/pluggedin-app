@@ -26,6 +26,8 @@
     "test:watch": "vitest",
     "migrate:encryption": "tsx scripts/migrate-encryption.ts",
     "migrate:encryption:dry": "tsx scripts/migrate-encryption.ts --dry",
+    "setup:email-consents": "tsx scripts/setup-email-consents.ts",
+    "setup:email-consents:dry": "tsx scripts/setup-email-consents.ts --dry",
     "knip": "knip",
     "knip:fix": "knip --fix",
     "knip:dependencies": "knip --dependencies",

@@ -34,6 +34,15 @@ export default async function SettingsPage() {
   // Fetch email preferences
   const emailPreferences = await getUserEmailPreferences(session.user.id);
 
+  // Transform null values to undefined for the component
+  const transformedPreferences = emailPreferences ? {
+    welcomeEmails: emailPreferences.welcomeEmails ?? undefined,
+    productUpdates: emailPreferences.productUpdates ?? undefined,
+    marketingEmails: emailPreferences.marketingEmails ?? undefined,
+    adminNotifications: emailPreferences.adminNotifications ?? undefined,
+    notificationSeverity: emailPreferences.notificationSeverity ?? undefined,
+  } : undefined;
+
   return (
     <div className="container mx-auto py-10">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -44,7 +53,7 @@ export default async function SettingsPage() {
         />
         <EmailPreferencesSection
           userId={session.user.id}
-          preferences={emailPreferences}
+          preferences={transformedPreferences}
         />
       </div>
     </div>

@@ -654,8 +654,8 @@ export async function scheduleFollowUpEmails(userId: string, email: string, segm
 export async function getUserMetrics(userId: string): Promise<UserMetrics> {
   try {
     // Get document count
-    const docsResult = await db.query.docs.findMany({
-      where: (docs, { eq }) => eq(docs.userId, userId),
+    const docsResult = await db.query.docsTable.findMany({
+      where: (docs, { eq }) => eq(docs.user_id, userId),
     });
     
     // For now, return placeholder metrics
@@ -785,8 +785,9 @@ export async function processScheduledEmails(): Promise<void> {
           continue;
         }
         
-        const email = scheduled.metadata?.email || user.email;
-        const segment = scheduled.metadata?.segment || 'general';
+        const metadata = scheduled.metadata as { email?: string; segment?: UserSegment } || {};
+        const email = metadata.email || user.email;
+        const segment = metadata.segment || 'general' as UserSegment;
         const name = user.name || 'Friend';
         
         let sent = false;
