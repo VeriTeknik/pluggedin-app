@@ -46,6 +46,52 @@ ${content}
 
 Respond with JSON only, no additional text:`;
 
+// Configuration for retry logic
+const RETRY_CONFIG = {
+  maxRetries: 3,
+  initialDelay: 1000, // 1 second
+  maxDelay: 5000, // 5 seconds
+  backoffMultiplier: 2,
+};
+
+async function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function withRetry<T>(
+  fn: () => Promise<T | null>,
+  retryConfig = RETRY_CONFIG
+): Promise<T | null> {
+  let lastError: Error | null = null;
+  let delay = retryConfig.initialDelay;
+
+  for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
+    try {
+      const result = await fn();
+      if (result !== null) {
+        return result;
+      }
+      // If result is null but no error, don't retry
+      if (attempt === 0) {
+        return null;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.warn(`Attempt ${attempt + 1} failed:`, lastError.message);
+
+      if (attempt < retryConfig.maxRetries) {
+        await sleep(delay);
+        delay = Math.min(delay * retryConfig.backoffMultiplier, retryConfig.maxDelay);
+      }
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+  return null;
+}
+
 export async function translateEmail(
   subject: string,
   content: string,
@@ -69,37 +115,90 @@ export async function translateEmail(
     const googleKey = process.env.GOOGLE_API_KEY;
 
     let result: { subject: string; content: string } | null = null;
+    const errors: string[] = [];
 
+    // Try providers in order of preference with retry logic
     if (anthropicKey) {
-      result = await translateWithAnthropic(
-        subject,
-        content,
-        fromLanguage,
-        toLanguage,
-        anthropicKey
-      );
-    } else if (openaiKey) {
-      result = await translateWithOpenAI(
-        subject,
-        content,
-        fromLanguage,
-        toLanguage,
-        openaiKey
-      );
-    } else if (googleKey) {
-      result = await translateWithGoogle(
-        subject,
-        content,
-        fromLanguage,
-        toLanguage,
-        googleKey
-      );
-    } else {
+      try {
+        result = await withRetry(() =>
+          translateWithAnthropic(
+            subject,
+            content,
+            fromLanguage,
+            toLanguage,
+            anthropicKey
+          )
+        );
+        if (result) {
+          return {
+            language: toLanguage,
+            subject: result.subject,
+            content: result.content,
+            success: true,
+          };
+        }
+      } catch (error) {
+        errors.push(`Anthropic: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    if (openaiKey && !result) {
+      try {
+        result = await withRetry(() =>
+          translateWithOpenAI(
+            subject,
+            content,
+            fromLanguage,
+            toLanguage,
+            openaiKey
+          )
+        );
+        if (result) {
+          return {
+            language: toLanguage,
+            subject: result.subject,
+            content: result.content,
+            success: true,
+          };
+        }
+      } catch (error) {
+        errors.push(`OpenAI: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    if (googleKey && !result) {
+      try {
+        result = await withRetry(() =>
+          translateWithGoogle(
+            subject,
+            content,
+            fromLanguage,
+            toLanguage,
+            googleKey
+          )
+        );
+        if (result) {
+          return {
+            language: toLanguage,
+            subject: result.subject,
+            content: result.content,
+            success: true,
+          };
+        }
+      } catch (error) {
+        errors.push(`Google: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
+    }
+
+    if (!anthropicKey && !openaiKey && !googleKey) {
       throw new Error('No AI API keys configured for translation');
     }
 
     if (!result) {
-      throw new Error('Translation failed');
+      const errorMessage = errors.length > 0
+        ? `All providers failed: ${errors.join('; ')}`
+        : 'Translation failed with no specific error';
+      throw new Error(errorMessage);
     }
 
     return {
@@ -282,6 +381,31 @@ export async function translateToAllLanguages(
   );
 
   const results = await Promise.all(translationPromises);
+
+  // Check for failed translations and retry them sequentially with longer delays
+  const failedTranslations = results.filter(r => !r.success);
+  if (failedTranslations.length > 0) {
+    console.warn(`${failedTranslations.length} translations failed, attempting sequential retry...`);
+
+    for (const failed of failedTranslations) {
+      // Wait a bit before retrying to avoid rate limits
+      await sleep(2000);
+
+      const retryResult = await translateEmail(
+        subject,
+        content,
+        sourceLanguage,
+        failed.language
+      );
+
+      // Replace the failed result with the retry result
+      const index = results.findIndex(r => r.language === failed.language);
+      if (index !== -1) {
+        results[index] = retryResult;
+      }
+    }
+  }
+
   translations.push(...results);
 
   // Add the original as well
@@ -291,6 +415,19 @@ export async function translateToAllLanguages(
     content,
     success: true,
   });
+
+  // Log summary of translation results
+  const successCount = translations.filter(t => t.success).length;
+  const totalCount = translations.length;
+  console.log(`Translation summary: ${successCount}/${totalCount} successful`);
+
+  if (successCount < totalCount) {
+    const failedLangs = translations
+      .filter(t => !t.success)
+      .map(t => languageNames[t.language])
+      .join(', ');
+    console.warn(`Failed languages: ${failedLangs}`);
+  }
 
   return {
     original: {

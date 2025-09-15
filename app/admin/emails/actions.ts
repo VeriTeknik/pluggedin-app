@@ -8,9 +8,10 @@ import { sendEmail } from '@/lib/email';
 import { generateUnsubscribeUrl } from '@/lib/unsubscribe-tokens';
 import { checkAdminRateLimit } from '@/lib/admin-rate-limiter';
 import { translateToAllLanguages, supportedLanguages, type SupportedLanguage, type EmailTranslations } from '@/lib/email-translation-service';
+import { sanitizeStrict, sanitizeEmailSubject } from '@/lib/sanitization';
+import { isEmailConfigured, isTranslationAvailable, getAvailableAIProviders } from '@/lib/env-validation';
 import { eq, and, gte, lte, sql, desc, asc, or, ne } from 'drizzle-orm';
 import { marked } from 'marked';
-import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 import { headers } from 'next/headers';
 
@@ -258,8 +259,23 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
     // Check rate limit for email campaigns
     await checkAdminRateLimit(session.user.id, 'email');
 
+    // Validate environment configuration
+    if (!isEmailConfigured()) {
+      return {
+        success: false,
+        error: 'Email service is not properly configured. Please check EMAIL_SERVER settings.',
+      };
+    }
+
     // Validate input
     const validated = sendBulkEmailSchema.parse(input);
+
+    // Check if translations are requested but not available
+    if (!validated.testMode) {
+      if (!isTranslationAvailable()) {
+        console.warn('Translation requested but no AI API keys configured. Emails will be sent in original language only.');
+      }
+    }
 
     // Get recipients
     const recipientsResult = await getEmailRecipients({
@@ -309,36 +325,8 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
 
           // Convert markdown to HTML for the selected language content
           const rawHtml = await marked(emailContent);
-          const cleanHtml = sanitizeHtml(rawHtml, {
-            allowedTags: [
-              'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
-              'p', 'br', 'hr',
-              'strong', 'em', 'u', 's', 'code', 'pre',
-              'blockquote', 'q',
-              'ul', 'ol', 'li',
-              'a',
-              'table', 'thead', 'tbody', 'tr', 'th', 'td',
-              'div', 'span',
-            ],
-            allowedAttributes: {
-              a: ['href', 'title'],
-            },
-            allowedSchemes: ['http', 'https', 'mailto'],
-            allowProtocolRelative: false,
-            enforceHtmlBoundary: true,
-            transformTags: {
-              a: (tagName, attribs) => {
-                return {
-                  tagName: 'a',
-                  attribs: {
-                    ...attribs,
-                    target: '_blank',
-                    rel: 'noopener noreferrer',
-                  },
-                };
-              },
-            },
-          });
+          // Use centralized strict sanitization (no images allowed)
+          const cleanHtml = sanitizeStrict(rawHtml);
 
           // Generate localized HTML
           const html = `
@@ -378,7 +366,7 @@ export async function sendBulkProductUpdate(input: z.infer<typeof sendBulkEmailS
 
           const result = await sendEmail({
             to: recipient.email,
-            subject: emailSubject,
+            subject: sanitizeEmailSubject(emailSubject),
             html,
             from: process.env.EMAIL_FROM || 'noreply@plugged.in',
             fromName: 'Plugged.in',
@@ -834,6 +822,14 @@ export async function translateEmailContent(input: z.infer<typeof translateEmail
   try {
     const session = await checkAdminAuth();
 
+    // Check if translation is available
+    if (!isTranslationAvailable()) {
+      return {
+        success: false,
+        error: 'Translation service is not configured. Please add at least one AI API key (ANTHROPIC_API_KEY, OPENAI_API_KEY, or GOOGLE_API_KEY).',
+      };
+    }
+
     // Rate limit translation requests
     await checkAdminRateLimit(session.user.id, 'general');
 
@@ -864,6 +860,58 @@ export async function translateEmailContent(input: z.infer<typeof translateEmail
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to translate email',
+    };
+  }
+}
+
+// Get email service configuration status
+export async function getEmailConfigStatus(): Promise<{
+  success: boolean;
+  data?: {
+    emailConfigured: boolean;
+    translationAvailable: boolean;
+    aiProviders: string[];
+    warnings: string[];
+  };
+  error?: string;
+}> {
+  try {
+    await checkAdminAuth();
+
+    const warnings: string[] = [];
+
+    // Check email configuration
+    const emailConfigured = isEmailConfigured();
+    if (!emailConfigured) {
+      warnings.push('Email service is not configured. Emails cannot be sent.');
+    }
+
+    // Check translation availability
+    const translationAvailable = isTranslationAvailable();
+    const aiProviders = getAvailableAIProviders();
+
+    if (!translationAvailable) {
+      warnings.push('No AI API keys configured. Email translation is unavailable.');
+    }
+
+    // Check unsubscribe token secret
+    if (!process.env.UNSUBSCRIBE_TOKEN_SECRET) {
+      warnings.push('UNSUBSCRIBE_TOKEN_SECRET not set. Using NEXTAUTH_SECRET as fallback.');
+    }
+
+    return {
+      success: true,
+      data: {
+        emailConfigured,
+        translationAvailable,
+        aiProviders,
+        warnings,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to get configuration status',
     };
   }
 }

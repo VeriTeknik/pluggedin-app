@@ -2,6 +2,7 @@ import { db } from '@/db';
 import { emailTrackingTable, scheduledEmailsTable, users } from '@/db/schema';
 import { sendEmail } from '@/lib/email';
 import { eq } from 'drizzle-orm';
+import crypto from 'crypto';
 
 export type UserSegment = 'general' | 'developer' | 'security_focused' | 'enterprise';
 
@@ -556,7 +557,8 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
   const segment = options.segment || determineUserSegment(email, signupSource);
   
   // Get subject line (could implement A/B testing here)
-  const abVariant = Math.random() > 0.5 ? 'A' : 'B';
+  // Use crypto.randomInt for secure random selection
+  const abVariant = crypto.randomInt(2) === 0 ? 'A' : 'B';
   const subject = getWelcomeSubject(segment, abVariant as 'A' | 'B');
   
   // Generate HTML content
