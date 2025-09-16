@@ -122,7 +122,7 @@ export function LandingSecuritySection() {
             {t('security.compliance')}
           </p>
           <Button asChild>
-            <a href="/docs/tutorials/security-best-practices">
+            <a href="https://docs.plugged.in/security/best-practices" target="_blank" rel="noopener noreferrer">
               {t('security.action')}
             </a>
           </Button>

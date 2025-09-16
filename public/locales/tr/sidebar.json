@@ -1,9 +1,0 @@
-{
-  "sidebar": {
-    "toggle": "Kenar Çubuğunu Aç/Kapat",
-    "navigation": "Gezinme",
-    "keyboard": {
-      "shortcut": "Klavye kısayolu: {{key}}"
-    }
-  }
-}

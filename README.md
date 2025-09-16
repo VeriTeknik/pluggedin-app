@@ -8,6 +8,7 @@
   [![Version](https://img.shields.io/badge/version-2.9.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
   [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
   [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
+  [![Documentation](https://img.shields.io/badge/Docs-docs.plugged.in-orange?style=for-the-badge)](https://docs.plugged.in)
   [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
   [![MCP](https://img.shields.io/badge/MCP-Compatible-green?style=for-the-badge)](https://modelcontextprotocol.io/)
 </div>
@@ -707,8 +708,9 @@ The plugged.in App is designed to work seamlessly with the [plugged.in MCP Proxy
 - Support for the latest MCP specification including Streamable HTTP transport
 - Compatible with STDIO, SSE, and Streamable HTTP server types
 
-## 📚 Related Resources
+## 📚 Documentation & Resources
 
+- [📖 Official Documentation](https://docs.plugged.in) - Complete guides, API reference, and tutorials
 - [plugged.in MCP Proxy Repository](https://github.com/VeriTeknik/pluggedin-mcp)
 - [Model Context Protocol (MCP) Specification](https://modelcontextprotocol.io/)
 - [Claude Desktop Documentation](https://docs.anthropic.com/claude/docs/claude-desktop)

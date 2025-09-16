@@ -138,9 +138,9 @@ export function LandingDevelopersSection() {
 
         <div className="mt-12 text-center">
           <Button asChild size="lg">
-            <Link href="/docs">
+            <a href="https://docs.plugged.in" target="_blank" rel="noopener noreferrer">
               {t('developers.action')}
-            </Link>
+            </a>
           </Button>
         </div>
       </div>
