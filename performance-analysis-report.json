@@ -1,0 +1,369 @@
+{
+  "databasePerformance": {
+    "newTables": {
+      "admin_audit_log": {
+        "purpose": "Admin action auditing",
+        "columns": 11,
+        "indexes": 3,
+        "expectedGrowthRate": "Medium (admin actions only)",
+        "performanceImpact": "Low-Medium",
+        "concerns": [
+          "Sequential ID could become bottleneck with high admin activity",
+          "JSONB details column may impact query performance if frequently searched",
+          "No automatic cleanup mechanism visible"
+        ]
+      },
+      "unsubscribe_tokens": {
+        "purpose": "Secure email unsubscribe tokens",
+        "columns": 7,
+        "indexes": 3,
+        "expectedGrowthRate": "Medium (email frequency dependent)",
+        "performanceImpact": "Low",
+        "concerns": [
+          "Token uniqueness constraint could cause contention under load",
+          "No visible cleanup of expired tokens",
+          "HMAC verification requires CPU for each unsubscribe"
+        ]
+      }
+    },
+    "modifiedTables": {
+      "users": {
+        "newColumns": 4,
+        "additions": [
+          "is_admin",
+          "requires_2fa",
+          "two_fa_secret",
+          "two_fa_backup_codes"
+        ],
+        "performanceImpact": "Minimal",
+        "indexRecommendations": [
+          "Consider index on is_admin for admin checks",
+          "Monitor query patterns for 2FA fields"
+        ]
+      }
+    },
+    "indexAnalysis": {
+      "new_indexes": [
+        "idx_admin_audit_log_admin - B-tree on admin_id",
+        "idx_admin_audit_log_action - B-tree on action",
+        "idx_admin_audit_log_created - B-tree on created_at",
+        "idx_unsubscribe_tokens_token - B-tree on token",
+        "idx_unsubscribe_tokens_user - B-tree on user_id",
+        "idx_unsubscribe_tokens_expires - B-tree on expires_at"
+      ],
+      "effectiveness": "High for expected query patterns",
+      "maintenance_overhead": "Low-Medium"
+    },
+    "foreignKeyImpact": {
+      "cascading_deletes": [
+        "admin_audit_log -> users (ON DELETE CASCADE)",
+        "unsubscribe_tokens -> users (ON DELETE CASCADE)"
+      ],
+      "performance_concern": "Medium - GDPR compliance requires cascading deletes",
+      "recommendation": "Monitor delete performance for users with many audit logs"
+    }
+  },
+  "applicationPerformance": {
+    "rateLimiterMemoryUsage": {
+      "library": "rate-limiter-flexible",
+      "storage": "In-memory",
+      "limiters": 4,
+      "estimatedMemoryPerUser": "1-2KB",
+      "considerations": [
+        "Memory usage scales with number of active users",
+        "Data lost on application restart",
+        "No persistence across instances",
+        "Potential memory leak if not properly cleaned"
+      ]
+    },
+    "cryptographicOperations": {
+      "hmac_sha256": {
+        "usage": "Unsubscribe token verification",
+        "frequency": "Low (only on unsubscribe)",
+        "cpu_impact": "Minimal",
+        "timing_considerations": "Uses timing-safe comparison"
+      },
+      "random_bytes": {
+        "usage": "Token generation",
+        "frequency": "Medium (email sending)",
+        "cpu_impact": "Low",
+        "entropy_source": "Node.js crypto.randomBytes()"
+      }
+    },
+    "additionalDatabaseQueries": {
+      "admin_checks": {
+        "frequency": "Every admin action",
+        "query_complexity": "Simple (single table lookup)",
+        "cache_potential": "High (user sessions)",
+        "recommendation": "Consider caching admin status in session"
+      },
+      "audit_logging": {
+        "frequency": "High (every admin action + API calls)",
+        "query_complexity": "Simple INSERT",
+        "async_implementation": "Recommended to prevent blocking",
+        "failure_handling": "Non-blocking (audit failure should not prevent action)"
+      }
+    },
+    "inputValidationOverhead": {
+      "zod_validation": {
+        "performance": "Fast for simple schemas",
+        "memory_impact": "Minimal",
+        "recommendation": "Pre-compile schemas for better performance"
+      },
+      "html_sanitization": {
+        "library": "sanitize-html",
+        "performance": "Medium (DOM parsing)",
+        "frequency": "Email template processing",
+        "recommendation": "Cache sanitized templates when possible"
+      }
+    }
+  },
+  "apiPerformance": {
+    "rateLimitingLatency": {
+      "check_time": "< 1ms (in-memory)",
+      "failure_handling": "Immediate rejection with retry-after",
+      "impact_on_response_time": "Minimal",
+      "scalability_concern": "Memory usage grows with user base"
+    },
+    "auditLoggingLatency": {
+      "synchronous_impact": "Medium (database INSERT)",
+      "recommended_implementation": "Asynchronous",
+      "failure_resilience": "Should not block primary operation",
+      "batch_optimization": "Consider batching for high-frequency operations"
+    },
+    "adminAuthenticationOverhead": {
+      "database_lookup": "Required on every admin action",
+      "session_caching": "Possible optimization",
+      "fallback_check": "Environment variable (backward compatibility)",
+      "performance_impact": "Low-Medium"
+    },
+    "inputValidationTiming": {
+      "zod_schemas": "Fast validation",
+      "email_sanitization": "Medium (HTML parsing for email templates)",
+      "json_validation": "Fast for typical payloads",
+      "recommendation": "Pre-compile complex schemas"
+    },
+    "newEndpoints": {
+      "/api/audit-log": {
+        "purpose": "Audit event recording",
+        "expected_frequency": "High",
+        "performance_characteristics": "Simple INSERT operation",
+        "optimization_opportunities": [
+          "Async processing",
+          "Batch writes for high frequency",
+          "Connection pooling"
+        ]
+      }
+    }
+  },
+  "securityOverhead": {},
+  "recommendations": [
+    {
+      "priority": "High",
+      "category": "Performance",
+      "recommendation": "Implement Asynchronous Audit Logging",
+      "reasoning": "Audit logging should not block primary operations",
+      "implementation": "Use event queues or background jobs for audit writes",
+      "effort": "Medium"
+    },
+    {
+      "priority": "High",
+      "category": "Scalability",
+      "recommendation": "Move Rate Limiting to Redis",
+      "reasoning": "In-memory rate limiting doesn't scale across instances",
+      "implementation": "Configure rate-limiter-flexible with Redis backend",
+      "effort": "Low-Medium"
+    },
+    {
+      "priority": "Medium",
+      "category": "Performance",
+      "recommendation": "Cache Admin Status in Sessions",
+      "reasoning": "Reduce database queries for admin role checks",
+      "implementation": "Extend NextAuth session with admin flag, invalidate on role changes",
+      "effort": "Low"
+    },
+    {
+      "priority": "Medium",
+      "category": "Maintenance",
+      "recommendation": "Implement Audit Log Rotation",
+      "reasoning": "Prevent unlimited table growth affecting performance",
+      "implementation": "Partition by date, archive old records, automated cleanup",
+      "effort": "Medium"
+    },
+    {
+      "priority": "Medium",
+      "category": "Security",
+      "recommendation": "Add Token Cleanup Automation",
+      "reasoning": "Prevent table bloat from expired tokens",
+      "implementation": "Scheduled job to delete expired unsubscribe tokens",
+      "effort": "Low"
+    },
+    {
+      "priority": "Low",
+      "category": "Performance",
+      "recommendation": "Pre-compile Zod Schemas",
+      "reasoning": "Improve validation performance for frequently used schemas",
+      "implementation": "Create schema instances at module level",
+      "effort": "Low"
+    },
+    {
+      "priority": "Low",
+      "category": "Monitoring",
+      "recommendation": "Add Performance Metrics Collection",
+      "reasoning": "Monitor the impact of security features on performance",
+      "implementation": "Instrument key operations with metrics collection",
+      "effort": "Medium"
+    }
+  ],
+  "bottlenecks": {
+    "immediate_concerns": [
+      {
+        "issue": "Synchronous Audit Logging",
+        "severity": "Medium",
+        "impact": "Increased API response times",
+        "solution": "Implement asynchronous audit logging with proper error handling",
+        "implementation": "Use background jobs or event queues"
+      },
+      {
+        "issue": "Admin Role Checks on Every Action",
+        "severity": "Low-Medium",
+        "impact": "Additional database query per admin action",
+        "solution": "Cache admin status in user session",
+        "implementation": "Extend NextAuth session with admin flag"
+      },
+      {
+        "issue": "Rate Limiter Memory Usage",
+        "severity": "Medium",
+        "impact": "Memory consumption scales with user base",
+        "solution": "Consider Redis-based rate limiting for production",
+        "implementation": "rate-limiter-flexible supports Redis backend"
+      }
+    ],
+    "potential_future_issues": [
+      {
+        "issue": "Audit Log Table Growth",
+        "severity": "Medium-High",
+        "impact": "Query performance degradation over time",
+        "solution": "Implement log rotation and archival strategy",
+        "implementation": "Partition by date, archive old records"
+      },
+      {
+        "issue": "Unsubscribe Token Cleanup",
+        "severity": "Low",
+        "impact": "Gradual table bloat",
+        "solution": "Implement automated cleanup of expired tokens",
+        "implementation": "Scheduled job to delete expired tokens"
+      },
+      {
+        "issue": "HMAC Computation Under Load",
+        "severity": "Low",
+        "impact": "CPU usage during mass unsubscribe events",
+        "solution": "Monitor CPU usage, consider token caching",
+        "implementation": "Short-term cache for recently verified tokens"
+      }
+    ],
+    "optimization_opportunities": [
+      {
+        "area": "Database Queries",
+        "optimization": "Batch audit log inserts",
+        "benefit": "Reduced database connection overhead",
+        "complexity": "Medium"
+      },
+      {
+        "area": "Caching",
+        "optimization": "Cache admin user status",
+        "benefit": "Reduced database queries for admin checks",
+        "complexity": "Low"
+      },
+      {
+        "area": "Rate Limiting",
+        "optimization": "Redis-based distributed rate limiting",
+        "benefit": "Better scalability and persistence",
+        "complexity": "Medium"
+      },
+      {
+        "area": "Input Validation",
+        "optimization": "Pre-compile Zod schemas",
+        "benefit": "Faster validation performance",
+        "complexity": "Low"
+      }
+    ]
+  },
+  "loadTesting": {
+    "test_scenarios": [
+      {
+        "scenario": "Admin Action Burst",
+        "description": "Multiple admins performing actions simultaneously",
+        "target_metrics": [
+          "Response time increase due to audit logging",
+          "Database connection pool usage",
+          "Rate limiter memory consumption"
+        ],
+        "test_parameters": {
+          "concurrent_admins": "5-10",
+          "actions_per_minute": "100-500",
+          "duration": "10-30 minutes"
+        }
+      },
+      {
+        "scenario": "Rate Limit Stress Test",
+        "description": "Test rate limiting under various load patterns",
+        "target_metrics": [
+          "Rate limiter response times",
+          "Memory usage growth",
+          "Accuracy of rate limiting"
+        ],
+        "test_parameters": {
+          "concurrent_users": "100-1000",
+          "request_pattern": "Burst and sustained",
+          "rate_limit_breaches": "Intentional"
+        }
+      },
+      {
+        "scenario": "Audit Log Write Performance",
+        "description": "High-frequency audit events",
+        "target_metrics": [
+          "Database write performance",
+          "Audit log table growth",
+          "Index maintenance overhead"
+        ],
+        "test_parameters": {
+          "events_per_second": "100-1000",
+          "duration": "1-2 hours",
+          "concurrent_writers": "10-50"
+        }
+      },
+      {
+        "scenario": "Unsubscribe Token Generation",
+        "description": "Mass email campaign simulation",
+        "target_metrics": [
+          "Token generation performance",
+          "HMAC computation time",
+          "Database insert performance"
+        ],
+        "test_parameters": {
+          "emails_sent": "10,000-100,000",
+          "batch_size": "100-1000",
+          "concurrent_processes": "5-20"
+        }
+      }
+    ],
+    "monitoring_metrics": [
+      "API response times (p50, p95, p99)",
+      "Database query performance",
+      "Memory usage (rate limiters)",
+      "CPU usage (cryptographic operations)",
+      "Database connection pool utilization",
+      "Error rates and timeout frequencies",
+      "Audit log write latency",
+      "Rate limiter accuracy"
+    ],
+    "alerting_thresholds": {
+      "response_time_p95": "> 500ms",
+      "audit_log_latency": "> 100ms",
+      "rate_limiter_memory": "> 100MB",
+      "database_connections": "> 80% of pool",
+      "error_rate": "> 1%"
+    }
+  }
+}

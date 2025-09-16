@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ImagePlus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut } from 'next-auth/react';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
@@ -43,7 +43,7 @@ import { users } from '@/db/schema';
 import { useLanguage } from '@/hooks/use-language';
 import { localeNames,locales } from '@/i18n/config'; // Import locales and names
 
-import { removeConnectedAccount } from '../actions';
+import { removeConnectedAccount, type ConnectedAccount } from '../actions';
 import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';
@@ -52,7 +52,7 @@ type User = typeof users.$inferSelect;
 
 interface SettingsFormProps {
   user: User;
-  connectedAccounts: string[];
+  connectedAccounts: ConnectedAccount[];
 }
 
 const profileSchema = z.object({
@@ -77,6 +77,41 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  
+  // Helper function to format relative time
+  const formatLastUsed = (date: Date | null) => {
+    if (!date) return null;
+    
+    const now = new Date();
+    const diff = now.getTime() - new Date(date).getTime();
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    return 'Just now';
+  };
+  
+  // Find the most recently used account
+  const mostRecentAccount = connectedAccounts.reduce((latest, account) => {
+    if (!latest) return account;
+    if (!account.lastUsed) return latest;
+    if (!latest.lastUsed) return account;
+    return new Date(account.lastUsed) > new Date(latest.lastUsed) ? account : latest;
+  }, null as ConnectedAccount | null);
+  
+  // Helper to check if account is connected
+  const isAccountConnected = (provider: string) => {
+    return connectedAccounts.some(acc => acc.provider === provider);
+  };
+  
+  // Helper to get account info
+  const getAccountInfo = (provider: string) => {
+    return connectedAccounts.find(acc => acc.provider === provider);
+  };
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
   const [isRemovingAccount, setIsRemovingAccount] = useState<string | null>(null);
 
@@ -214,11 +249,21 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
         throw new Error(errorData.error || t('settings.account.error'));
       }
 
-      // Clear any session data
+      // Clear any local session data
       window.localStorage.clear();
       window.sessionStorage.clear();
       
-      // Redirect to login page and force a full page reload
+      // Note: serverLogout() is not needed here because the DELETE endpoint
+      // already handles session cleanup as part of the CASCADE deletion
+      
+      // Sign out using NextAuth to clear client-side auth state
+      // Using redirect: false to avoid race conditions
+      await signOut({ 
+        callbackUrl: '/login',
+        redirect: false
+      });
+      
+      // Force a full page reload to /login
       window.location.href = '/login';
     } catch (error) {
       toast({
@@ -370,15 +415,19 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
               <div>
                 <div className="font-medium">GitHub</div>
                 <div className="text-sm text-muted-foreground">
-                  {connectedAccounts.includes('github') 
+                  {isAccountConnected('github') 
                     ? t('settings.connectedAccounts.github.connected', 'Connected to GitHub')
                     : t('settings.connectedAccounts.github.connect', 'Connect your GitHub account')}
                 </div>
               </div>
             </div>
-            {connectedAccounts.includes('github') ? (
+            {isAccountConnected('github') ? (
               <div className="flex items-center gap-2">
-                {/* Re-added children */}
+                {mostRecentAccount?.provider === 'github' && mostRecentAccount.lastUsed && (
+                  <Badge variant="default" className="shrink-0 bg-green-600">
+                    Last used {formatLastUsed(mostRecentAccount.lastUsed)}
+                  </Badge>
+                )}
                 <Badge variant="secondary" className="shrink-0"> 
                   {t('settings.connectedAccounts.connected', 'Connected')}
                 </Badge>
@@ -410,15 +459,19 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
               <div>
                 <div className="font-medium">Google</div>
                 <div className="text-sm text-muted-foreground">
-                  {connectedAccounts.includes('google') 
+                  {isAccountConnected('google') 
                     ? t('settings.connectedAccounts.google.connected', 'Connected to Google')
                     : t('settings.connectedAccounts.google.connect', 'Connect your Google account')}
                 </div>
               </div>
             </div>
-            {connectedAccounts.includes('google') ? (
+            {isAccountConnected('google') ? (
               <div className="flex items-center gap-2">
-                 {/* Re-added children */}
+                {mostRecentAccount?.provider === 'google' && mostRecentAccount.lastUsed && (
+                  <Badge variant="default" className="shrink-0 bg-green-600">
+                    Last used {formatLastUsed(mostRecentAccount.lastUsed)}
+                  </Badge>
+                )}
                 <Badge variant="secondary" className="shrink-0">
                   {t('settings.connectedAccounts.connected', 'Connected')}
                 </Badge>
@@ -447,15 +500,19 @@ export function SettingsForm({ user, connectedAccounts }: SettingsFormProps) {
               <div>
                 <div className="font-medium">Twitter</div>
                 <div className="text-sm text-muted-foreground">
-                  {connectedAccounts.includes('twitter') 
+                  {isAccountConnected('twitter') 
                     ? t('settings.connectedAccounts.twitter.connected', 'Connected to Twitter')
                     : t('settings.connectedAccounts.twitter.connect', 'Connect your Twitter account')}
                 </div>
               </div>
             </div>
-            {connectedAccounts.includes('twitter') ? (
+            {isAccountConnected('twitter') ? (
               <div className="flex items-center gap-2">
-                 {/* Re-added children */}
+                {mostRecentAccount?.provider === 'twitter' && mostRecentAccount.lastUsed && (
+                  <Badge variant="default" className="shrink-0 bg-green-600">
+                    Last used {formatLastUsed(mostRecentAccount.lastUsed)}
+                  </Badge>
+                )}
                 <Badge variant="secondary" className="shrink-0">
                   {t('settings.connectedAccounts.connected', 'Connected')}
                 </Badge>

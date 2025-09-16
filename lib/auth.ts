@@ -1,7 +1,7 @@
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import { compare } from 'bcrypt';
 import { randomUUID } from 'crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { NextAuthOptions } from 'next-auth';
 import { AdapterUser } from 'next-auth/adapters';
 import { getServerSession } from 'next-auth/next';
@@ -10,12 +10,15 @@ import EmailProvider from 'next-auth/providers/email';
 import GithubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 import TwitterProvider from 'next-auth/providers/twitter';
+import { cookies } from 'next/headers';
 
 import { 
   clearFailedLoginAttempts, 
   isAccountLocked, 
   recordFailedLoginAttempt} from './auth-security';
 import log from './logger';
+import { notifyAdminsOfNewUser } from './admin-notifications';
+import { sendWelcomeEmail } from './welcome-emails';
 
 // Extend the User type to include emailVerified
 declare module 'next-auth' {
@@ -241,9 +244,54 @@ export const authOptions: NextAuthOptions = {
           where: (users, { eq }) => eq(users.email, user.email as string),
         });
 
-        // If the user exists but this is a new OAuth account,
-        // link this new account to the existing user
-        if (existingUser) {
+        // Track if this is a new user signup
+        let isNewUser = false;
+
+        // If the user doesn't exist, they will be created by the adapter
+        if (!existingUser) {
+          isNewUser = true;
+          
+          // Send notifications for new OAuth user
+          // Note: The actual user creation happens after this callback
+          // So we schedule the notifications to be sent after a short delay
+          setTimeout(async () => {
+            // Get the newly created user
+            const newUser = await db.query.users.findFirst({
+              where: (users, { eq }) => eq(users.email, user.email as string),
+            });
+            
+            if (newUser) {
+              // Notify admins about new OAuth signup
+              await notifyAdminsOfNewUser({
+                name: newUser.name || 'Unknown',
+                email: newUser.email,
+                id: newUser.id,
+                source: account?.provider as 'google' | 'github' | 'twitter',
+              });
+              
+              // Send welcome email to new OAuth user
+              await sendWelcomeEmail({
+                name: newUser.name || 'User',
+                email: newUser.email,
+                signupSource: account?.provider,
+              });
+            }
+          }, 1000); // Wait 1 second for user creation to complete
+        } else {
+          // Update last_used timestamp for existing OAuth account
+          if (account?.provider && account?.providerAccountId) {
+            await db.update(accounts)
+              .set({ last_used: new Date() })
+              .where(
+                and(
+                  eq(accounts.provider, account.provider),
+                  eq(accounts.providerAccountId, account.providerAccountId)
+                )
+              );
+          }
+          
+          // If the user exists but this is a new OAuth account,
+          // link this new account to the existing user
           // Check if this provider+providerAccountId combination exists already
           const existingAccount = await db.query.accounts.findFirst({
             where: (accounts, { and, eq }) => and(
@@ -266,6 +314,7 @@ export const authOptions: NextAuthOptions = {
               scope: account.scope,
               id_token: account.id_token,
               session_state: account.session_state,
+              last_used: new Date(),
             });
             
             // Update user information if needed

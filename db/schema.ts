@@ -113,6 +113,11 @@ export const users = pgTable('users', {
   last_login_at: timestamp('last_login_at', { mode: 'date' }),
   last_login_ip: text('last_login_ip'),
   password_changed_at: timestamp('password_changed_at', { mode: 'date' }),
+  // Admin and 2FA fields
+  is_admin: boolean('is_admin').default(false).notNull(),
+  requires_2fa: boolean('requires_2fa').default(false).notNull(),
+  two_fa_secret: text('two_fa_secret'),
+  two_fa_backup_codes: text('two_fa_backup_codes'),
 },
 (table) => ({
   usersUsernameIdx: index('users_username_idx').on(table.username),
@@ -136,6 +141,7 @@ export const accounts = pgTable(
     scope: text('scope'),
     id_token: text('id_token'),
     session_state: text('session_state'),
+    last_used: timestamp('last_used', { withTimezone: true }),
   },
   (account) => ({
     compoundKey: primaryKey({
@@ -1115,7 +1121,7 @@ export const sharedMcpServersTable = pgTable(
     // Claim fields
     is_claimed: boolean('is_claimed').default(false).notNull(),
     claimed_by_user_id: text('claimed_by_user_id')
-      .references(() => users.id, { onDelete: 'set null' }),
+      .references(() => users.id, { onDelete: 'cascade' }), // GDPR: cascade for complete data deletion
     claimed_at: timestamp('claimed_at', { withTimezone: true }),
     registry_server_uuid: uuid('registry_server_uuid')
       .references(() => registryServersTable.uuid, { onDelete: 'set null' }),
@@ -1241,7 +1247,7 @@ export const registryServersTable = pgTable(
     is_claimed: boolean('is_claimed').default(false).notNull(),
     is_published: boolean('is_published').default(false).notNull(), // Whether it's in official registry
     claimed_by_user_id: text('claimed_by_user_id')
-      .references(() => users.id, { onDelete: 'set null' }),
+      .references(() => users.id, { onDelete: 'cascade' }), // GDPR: cascade for complete data deletion
     claimed_at: timestamp('claimed_at', { withTimezone: true }),
     published_at: timestamp('published_at', { withTimezone: true }),
     metadata: jsonb('metadata'), // Full server data
@@ -1437,3 +1443,154 @@ export const registryOAuthSessionsRelations = relations(registryOAuthSessions, (
     references: [users.id],
   }),
 }));
+
+// Email tracking table for monitoring email engagement
+export const emailTrackingTable = pgTable(
+  'email_tracking',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    emailType: text('email_type').notNull(), // 'welcome', 'follow_up_2', 'follow_up_5', 'admin_notification'
+    sentAt: timestamp('sent_at', { withTimezone: true }).defaultNow(),
+    openedAt: timestamp('opened_at', { withTimezone: true }),
+    clickedAt: timestamp('clicked_at', { withTimezone: true }),
+    segment: text('segment'), // 'developer', 'business', 'enterprise'
+    variant: text('variant'), // For A/B testing (e.g., 'A', 'B')
+    subject: text('subject'),
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    emailTrackingUserIdx: index('idx_email_tracking_user_id').on(table.userId),
+    emailTrackingTypeIdx: index('idx_email_tracking_email_type').on(table.emailType),
+    emailTrackingSentIdx: index('idx_email_tracking_sent_at').on(table.sentAt),
+  })
+);
+
+// User email preferences table
+export const userEmailPreferencesTable = pgTable(
+  'user_email_preferences',
+  {
+    userId: text('user_id')
+      .primaryKey()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    welcomeEmails: boolean('welcome_emails').default(true),
+    productUpdates: boolean('product_updates').default(true),
+    marketingEmails: boolean('marketing_emails').default(false),
+    adminNotifications: boolean('admin_notifications').default(true),
+    notificationSeverity: text('notification_severity').default('ALERT,CRITICAL'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow(),
+  }
+);
+
+// Scheduled emails table for follow-up automation
+export const scheduledEmailsTable = pgTable(
+  'scheduled_emails',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    emailType: text('email_type').notNull(), // 'follow_up_2', 'follow_up_5', etc.
+    scheduledFor: timestamp('scheduled_for', { withTimezone: true }).notNull(),
+    sent: boolean('sent').default(false),
+    sentAt: timestamp('sent_at', { withTimezone: true }),
+    cancelled: boolean('cancelled').default(false),
+    metadata: jsonb('metadata').default({}),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow(),
+  },
+  (table) => ({
+    scheduledEmailsScheduledIdx: index('idx_scheduled_emails_scheduled_for')
+      .on(table.scheduledFor)
+      .where(sql`sent = false AND cancelled = false`),
+    scheduledEmailsUserIdx: index('idx_scheduled_emails_user_id').on(table.userId),
+  })
+);
+
+// Relations for email tracking
+export const emailTrackingRelations = relations(emailTrackingTable, ({ one }) => ({
+  user: one(users, {
+    fields: [emailTrackingTable.userId],
+    references: [users.id],
+  }),
+}));
+
+// Relations for user email preferences
+export const userEmailPreferencesRelations = relations(userEmailPreferencesTable, ({ one }) => ({
+  user: one(users, {
+    fields: [userEmailPreferencesTable.userId],
+    references: [users.id],
+  }),
+}));
+
+// Relations for scheduled emails
+export const scheduledEmailsRelations = relations(scheduledEmailsTable, ({ one }) => ({
+  user: one(users, {
+    fields: [scheduledEmailsTable.userId],
+    references: [users.id],
+  }),
+}));
+
+// Secure unsubscribe tokens table
+export const unsubscribeTokensTable = pgTable(
+  'unsubscribe_tokens',
+  {
+    id: serial('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    token: text('token').notNull().unique(),
+    tokenHash: text('token_hash').notNull(), // HMAC hash for verification
+    expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+    usedAt: timestamp('used_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    unsubscribeTokensTokenIdx: index('idx_unsubscribe_tokens_token').on(table.token),
+    unsubscribeTokensUserIdx: index('idx_unsubscribe_tokens_user').on(table.userId),
+    unsubscribeTokensExpiresIdx: index('idx_unsubscribe_tokens_expires').on(table.expiresAt),
+  })
+);
+
+// Admin audit log table
+export const adminAuditLogTable = pgTable(
+  'admin_audit_log',
+  {
+    id: serial('id').primaryKey(),
+    adminId: text('admin_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    action: text('action').notNull(), // e.g., 'send_email', 'update_user_role', 'delete_content'
+    targetType: text('target_type'), // e.g., 'user', 'email', 'server'
+    targetId: text('target_id'), // ID of affected entity
+    details: jsonb('details').default({}), // Additional action details
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    adminAuditLogAdminIdx: index('idx_admin_audit_log_admin').on(table.adminId),
+    adminAuditLogActionIdx: index('idx_admin_audit_log_action').on(table.action),
+    adminAuditLogCreatedIdx: index('idx_admin_audit_log_created').on(table.createdAt),
+  })
+);
+
+// Relations for unsubscribe tokens
+export const unsubscribeTokensRelations = relations(unsubscribeTokensTable, ({ one }) => ({
+  user: one(users, {
+    fields: [unsubscribeTokensTable.userId],
+    references: [users.id],
+  }),
+}));
+
+// Relations for admin audit log
+export const adminAuditLogRelations = relations(adminAuditLogTable, ({ one }) => ({
+  admin: one(users, {
+    fields: [adminAuditLogTable.adminId],
+    references: [users.id],
+  }),
+}));
+
