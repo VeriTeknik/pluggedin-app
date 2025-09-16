@@ -74,9 +74,9 @@ export function LandingCta() {
             </Link>
           </Button>
           <Button asChild variant="outline" size="lg">
-            <Link href="/docs">
+            <a href="https://docs.plugged.in" target="_blank" rel="noopener noreferrer">
               {t('cta.secondaryAction')}
-            </Link>
+            </a>
           </Button>
         </div>
         
