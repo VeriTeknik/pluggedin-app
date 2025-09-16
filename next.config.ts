@@ -76,13 +76,15 @@ const nextConfig: NextConfig = {
     };
 
     // Alternative: Configure cache to handle large strings better
-    config.cache = {
-      ...config.cache,
-      type: 'filesystem',
-      buildDependencies: {
-        config: [__filename],
-      },
-    };
+    if (typeof config.cache === 'object' && config.cache !== null && !Array.isArray(config.cache)) {
+      config.cache = {
+        ...config.cache,
+        type: 'filesystem',
+        buildDependencies: {
+          config: [__filename],
+        },
+      };
+    }
 
     return config;
   },
