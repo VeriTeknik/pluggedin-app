@@ -5,9 +5,11 @@ import { initReactI18next } from 'react-i18next';
 // Import English chunks
 import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
+import enCollections from '../public/locales/en/collections.json';
 import enCommon from '../public/locales/en/common.json';
 import enDiscover from '../public/locales/en/discover.json';
 import enDiscoverDialog from '../public/locales/en/discover_dialog.json';
+import enInstall from '../public/locales/en/install.json';
 import enIntelligentServer from '../public/locales/en/intelligent_server.json';
 import enLibrary from '../public/locales/en/library.json';
 import enLanding from '../public/locales/en/landing.json';
@@ -24,9 +26,11 @@ import enWhatsNew from '../public/locales/en/whatsNew.json';
 // Import Hindi chunks
 import hiApiKeys from '../public/locales/hi/apiKeys.json';
 import hiAuth from '../public/locales/hi/auth.json';
+import hiCollections from '../public/locales/hi/collections.json';
 import hiCommon from '../public/locales/hi/common.json';
 import hiDiscover from '../public/locales/hi/discover.json';
 import hiDiscoverDialog from '../public/locales/hi/discover_dialog.json';
+import hiInstall from '../public/locales/hi/install.json';
 import hiIntelligentServer from '../public/locales/hi/intelligent_server.json';
 import hiLibrary from '../public/locales/hi/library.json';
 import hiLanding from '../public/locales/hi/landing.json';
@@ -43,9 +47,11 @@ import hiWhatsNew from '../public/locales/hi/whatsNew.json';
 // Import Japanese chunks
 import jaApiKeys from '../public/locales/ja/apiKeys.json';
 import jaAuth from '../public/locales/ja/auth.json';
+import jaCollections from '../public/locales/ja/collections.json';
 import jaCommon from '../public/locales/ja/common.json';
 import jaDiscover from '../public/locales/ja/discover.json';
 import jaDiscoverDialog from '../public/locales/ja/discover_dialog.json';
+import jaInstall from '../public/locales/ja/install.json';
 import jaIntelligentServer from '../public/locales/ja/intelligent_server.json';
 import jaLibrary from '../public/locales/ja/library.json';
 import jaLanding from '../public/locales/ja/landing.json';
@@ -62,9 +68,11 @@ import jaWhatsNew from '../public/locales/ja/whatsNew.json';
 // Import Dutch chunks
 import nlApiKeys from '../public/locales/nl/apiKeys.json';
 import nlAuth from '../public/locales/nl/auth.json';
+import nlCollections from '../public/locales/nl/collections.json';
 import nlCommon from '../public/locales/nl/common.json';
 import nlDiscover from '../public/locales/nl/discover.json';
 import nlDiscoverDialog from '../public/locales/nl/discover_dialog.json';
+import nlInstall from '../public/locales/nl/install.json';
 import nlIntelligentServer from '../public/locales/nl/intelligent_server.json';
 import nlLibrary from '../public/locales/nl/library.json';
 import nlLanding from '../public/locales/nl/landing.json';
@@ -81,9 +89,11 @@ import nlWhatsNew from '../public/locales/nl/whatsNew.json';
 // Import Turkish chunks
 import trApiKeys from '../public/locales/tr/apiKeys.json';
 import trAuth from '../public/locales/tr/auth.json';
+import trCollections from '../public/locales/tr/collections.json';
 import trCommon from '../public/locales/tr/common.json';
 import trDiscover from '../public/locales/tr/discover.json';
 import trDiscoverDialog from '../public/locales/tr/discover_dialog.json';
+import trInstall from '../public/locales/tr/install.json';
 import trIntelligentServer from '../public/locales/tr/intelligent_server.json';
 import trLibrary from '../public/locales/tr/library.json';
 import trLanding from '../public/locales/tr/landing.json';
@@ -100,9 +110,11 @@ import trWhatsNew from '../public/locales/tr/whatsNew.json';
 // Import Chinese chunks
 import zhApiKeys from '../public/locales/zh/apiKeys.json';
 import zhAuth from '../public/locales/zh/auth.json';
+import zhCollections from '../public/locales/zh/collections.json';
 import zhCommon from '../public/locales/zh/common.json';
 import zhDiscover from '../public/locales/zh/discover.json';
 import zhDiscoverDialog from '../public/locales/zh/discover_dialog.json';
+import zhInstall from '../public/locales/zh/install.json';
 import zhIntelligentServer from '../public/locales/zh/intelligent_server.json';
 import zhLibrary from '../public/locales/zh/library.json';
 import zhLanding from '../public/locales/zh/landing.json';
@@ -140,9 +152,11 @@ const resources = {
     },
     apiKeys: enApiKeys,
     auth: enAuth,
+    collections: enCollections,
     common: enCommon,
     discover: enDiscover,
     discover_dialog: enDiscoverDialog,
+    install: enInstall,
     intelligent_server: enIntelligentServer,
     library: enLibrary,
     landing: enLanding,
@@ -177,9 +191,11 @@ const resources = {
     },
     apiKeys: hiApiKeys,
     auth: hiAuth,
+    collections: hiCollections,
     common: hiCommon,
     discover: hiDiscover,
     discover_dialog: hiDiscoverDialog,
+    install: hiInstall,
     intelligent_server: hiIntelligentServer,
     library: hiLibrary,
     landing: hiLanding,
@@ -214,9 +230,11 @@ const resources = {
     },
     apiKeys: jaApiKeys,
     auth: jaAuth,
+    collections: jaCollections,
     common: jaCommon,
     discover: jaDiscover,
     discover_dialog: jaDiscoverDialog,
+    install: jaInstall,
     intelligent_server: jaIntelligentServer,
     library: jaLibrary,
     landing: jaLanding,
@@ -251,9 +269,11 @@ const resources = {
     },
     apiKeys: nlApiKeys,
     auth: nlAuth,
+    collections: nlCollections,
     common: nlCommon,
     discover: nlDiscover,
     discover_dialog: nlDiscoverDialog,
+    install: nlInstall,
     intelligent_server: nlIntelligentServer,
     library: nlLibrary,
     landing: nlLanding,
@@ -288,9 +308,11 @@ const resources = {
     },
     apiKeys: trApiKeys,
     auth: trAuth,
+    collections: trCollections,
     common: trCommon,
     discover: trDiscover,
     discover_dialog: trDiscoverDialog,
+    install: trInstall,
     intelligent_server: trIntelligentServer,
     library: trLibrary,
     landing: trLanding,
@@ -325,9 +347,11 @@ const resources = {
     },
     apiKeys: zhApiKeys,
     auth: zhAuth,
+    collections: zhCollections,
     common: zhCommon,
     discover: zhDiscover,
     discover_dialog: zhDiscoverDialog,
+    install: zhInstall,
     intelligent_server: zhIntelligentServer,
     library: zhLibrary,
     landing: zhLanding,
