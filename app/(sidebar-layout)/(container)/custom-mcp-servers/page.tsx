@@ -9,7 +9,6 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import * as dotenv from 'dotenv';
 import { Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -196,8 +195,17 @@ export default function CustomMCPServersPage() {
       const additionalArgs = values.additionalArgs.trim().split(/\s+/).filter(Boolean);
       let env: Record<string, string> = {};
       try {
-        // Use dotenv.parse for secure parsing that handles quotes, multiline values, etc.
-        env = dotenv.parse(values.env || '');
+        // Simple client-side parsing of environment variables
+        const lines = (values.env || '').split('\n');
+        for (const line of lines) {
+          const trimmedLine = line.trim();
+          if (trimmedLine && !trimmedLine.startsWith('#')) {
+            const [key, ...valueParts] = trimmedLine.split('=');
+            if (key && valueParts.length > 0) {
+              env[key.trim()] = valueParts.join('=').trim();
+            }
+          }
+        }
       } catch (e) {
         console.error('Failed to parse env:', e);
         toast({
