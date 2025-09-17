@@ -9,9 +9,18 @@ services:
     restart: always
     ports:
       - '12005:3000'
+    volumes:
+      - mcp-cache:/app/.cache
+      - app-uploads:/app/uploads
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
+      - MCP_ISOLATION_TYPE=bubblewrap
+      - MCP_ISOLATION_FALLBACK=firejail
+      - MCP_ENABLE_NETWORK_ISOLATION=false
+      - MCP_PACKAGE_STORE_DIR=/app/.cache/mcp-packages
+      - MCP_PNPM_STORE_DIR=/app/.cache/mcp-packages/pnpm-store
+      - MCP_UV_CACHE_DIR=/app/.cache/mcp-packages/uv-cache
     depends_on:
       pluggedin-postgres:
         condition: service_healthy
@@ -63,4 +72,8 @@ services:
 
 volumes:
   pluggedin-postgres:
+    driver: local
+  mcp-cache:
+    driver: local
+  app-uploads:
     driver: local

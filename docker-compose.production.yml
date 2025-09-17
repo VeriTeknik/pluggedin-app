@@ -1,0 +1,112 @@
+version: '3.8'
+
+services:
+  pluggedin-app:
+    image: veriteknik/pluggedin:latest
+    container_name: pluggedin-app
+    restart: always
+    ports:
+      - '3000:3000'
+    volumes:
+      - mcp-cache:/app/.cache
+      - app-uploads:/app/uploads
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - PLUGGEDIN_API_KEY=${PLUGGEDIN_API_KEY}
+      # Sandboxing configuration
+      - MCP_ISOLATION_TYPE=bubblewrap
+      - MCP_ISOLATION_FALLBACK=firejail
+      - MCP_ENABLE_NETWORK_ISOLATION=false
+      - MCP_PACKAGE_STORE_DIR=/app/.cache/mcp-packages
+      - MCP_PNPM_STORE_DIR=/app/.cache/mcp-packages/pnpm-store
+      - MCP_UV_CACHE_DIR=/app/.cache/mcp-packages/uv-cache
+      # Optional: Redis for sessions
+      - REDIS_URL=redis://pluggedin-redis:6379
+    depends_on:
+      - pluggedin-postgres
+      - pluggedin-redis
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+    networks:
+      - pluggedin-network
+
+  pluggedin-postgres:
+    image: postgres:16.2-alpine3.18
+    container_name: pluggedin-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${DB_NAME:-pluggedin}
+      POSTGRES_USER: ${DB_USER:-pluggedin}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backup:/backup
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-pluggedin} -d ${DB_NAME:-pluggedin}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "max_connections=200"
+    networks:
+      - pluggedin-network
+
+  pluggedin-redis:
+    image: redis:7-alpine
+    container_name: pluggedin-redis
+    restart: always
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    networks:
+      - pluggedin-network
+
+  pluggedin-nginx:
+    image: nginx:alpine
+    container_name: pluggedin-nginx
+    restart: always
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - nginx-cache:/var/cache/nginx
+    depends_on:
+      - pluggedin-app
+    networks:
+      - pluggedin-network
+
+volumes:
+  postgres-data:
+    driver: local
+  redis-data:
+    driver: local
+  mcp-cache:
+    driver: local
+  app-uploads:
+    driver: local
+  nginx-cache:
+    driver: local
+
+networks:
+  pluggedin-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
