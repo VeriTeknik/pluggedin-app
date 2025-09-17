@@ -135,6 +135,14 @@ export function DocsGrid({
                 <span>{formatFileSize(doc.file_size)}</span>
                 <span className="mx-1">•</span>
                 <span>{new Date(doc.created_at).toLocaleDateString()}</span>
+                {doc.source === 'ai_generated' && doc.version > 1 && (
+                  <>
+                    <span className="mx-1">•</span>
+                    <Badge variant="outline" className="text-xs px-1 py-0">
+                      v{doc.version}
+                    </Badge>
+                  </>
+                )}
               </div>
               {doc.tags && doc.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">

@@ -3,8 +3,10 @@
 import {
   ChevronLeft,
   ChevronRight,
+  Clock,
   Download,
   FileText,
+  GitBranch,
   Image as ImageIcon,
   Loader2,
   Maximize2,
@@ -62,6 +64,9 @@ export function DocumentPreview({
   const [currentDocIndex, setCurrentDocIndex] = useState(0);
   const [textContent, setTextContent] = useState<string | null>(null);
   const [isLoadingText, setIsLoadingText] = useState(false);
+  const [versions, setVersions] = useState<any[]>([]);
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
 
   // Use hook for DOCX content
   const { docxContent, isLoadingDocx } = useDocxContent(doc, open, currentProject?.uuid);
@@ -79,7 +84,51 @@ export function DocumentPreview({
   // Reset zoom when document changes
   useEffect(() => {
     setImageZoom(1);
+    setShowVersionHistory(false);
+    setVersions([]);
   }, [doc?.uuid]);
+
+  // Fetch version history for AI-generated documents
+  useEffect(() => {
+    if (!doc || !open || doc.source !== 'ai_generated') {
+      setVersions([]);
+      return;
+    }
+
+    // Don't fetch versions if we already have them or if not needed
+    if (!doc.version || doc.version <= 1) {
+      setVersions([]);
+      return;
+    }
+
+    const fetchVersions = async () => {
+      setIsLoadingVersions(true);
+      try {
+        const { getDocumentVersions } = await import('@/app/actions/library');
+        const { useSafeSession } = await import('@/hooks/use-safe-session');
+
+        // Get session to fetch versions
+        const response = await getDocumentVersions(
+          doc.user_id,
+          doc.uuid,
+          currentProject?.uuid
+        );
+
+        if (response.success && response.versions) {
+          setVersions(response.versions);
+        } else {
+          setVersions([]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch version history:', error);
+        setVersions([]);
+      } finally {
+        setIsLoadingVersions(false);
+      }
+    };
+
+    fetchVersions();
+  }, [doc, open, currentProject?.uuid]);
 
   // Fetch text content for text files
   useEffect(() => {
@@ -412,6 +461,26 @@ export function DocumentPreview({
                 </>
               )}
 
+              {/* Version History Button - Only for AI-generated documents */}
+              {doc.source === 'ai_generated' && doc.version > 1 && (
+                <>
+                  <Button
+                    variant={showVersionHistory ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => setShowVersionHistory(!showVersionHistory)}
+                    disabled={isLoadingVersions}
+                  >
+                    {isLoadingVersions ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <GitBranch className="h-4 w-4" />
+                    )}
+                    <span className="ml-2 text-xs">v{doc.version}</span>
+                  </Button>
+                  <Separator orientation="vertical" className="h-6" />
+                </>
+              )}
+
               {/* Actions */}
               <Button
                 variant="ghost"
@@ -424,7 +493,7 @@ export function DocumentPreview({
                   <Maximize2 className="h-4 w-4" />
                 )}
               </Button>
-              
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -452,8 +521,97 @@ export function DocumentPreview({
               </ErrorBoundary>
             </div>
 
+            {/* Version History Panel */}
+            {showVersionHistory && doc.source === 'ai_generated' && (
+              <div className="w-96 border-l bg-muted/30">
+                <ScrollArea className="h-full p-4">
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-medium text-lg mb-4 flex items-center gap-2">
+                        <GitBranch className="h-4 w-4" />
+                        {t('preview.versionHistory', 'Version History')}
+                      </h3>
+
+                      {isLoadingVersions ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : versions.length > 0 ? (
+                        <div className="space-y-3">
+                          {/* Current version */}
+                          <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Badge variant="default" className="text-xs">
+                                    v{doc.version}
+                                  </Badge>
+                                  <Badge variant="secondary" className="text-xs">
+                                    Current
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {new Date(doc.updated_at).toLocaleString()}
+                                </p>
+                                {doc.ai_metadata?.model && (
+                                  <div className="mt-2 text-xs">
+                                    <span className="text-muted-foreground">By: </span>
+                                    <span className="font-medium">
+                                      {doc.ai_metadata.model.name} ({doc.ai_metadata.model.provider})
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Previous versions */}
+                          {versions.map((version, index) => (
+                            <div key={index} className="p-3 rounded-lg border bg-card/50">
+                              <div className="flex items-start justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      v{version.versionNumber}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      <Clock className="inline h-3 w-3 mr-1" />
+                                      {new Date(version.createdAt).toLocaleString()}
+                                    </span>
+                                  </div>
+                                  {version.changeSummary && (
+                                    <p className="text-xs mt-2 text-muted-foreground">
+                                      {version.changeSummary}
+                                    </p>
+                                  )}
+                                  {version.createdByModel && (
+                                    <div className="mt-2 text-xs">
+                                      <span className="text-muted-foreground">By: </span>
+                                      <span className="font-medium">
+                                        {version.createdByModel.name} ({version.createdByModel.provider})
+                                      </span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-center py-8">
+                          <p className="text-sm text-muted-foreground">
+                            {t('preview.noVersionHistory', 'No version history available')}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
             {/* Sidebar with metadata */}
-            {!isFullscreen && (
+            {!isFullscreen && !showVersionHistory && (
               <div className="w-80 border-l bg-muted/30">
                 <ScrollArea className="h-full p-4">
                   <div className="space-y-4">

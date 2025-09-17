@@ -189,6 +189,21 @@ export default function LibraryContent() {
       ),
       header: t('page.tableHeaders.tags'),
     }),
+    columnHelper.accessor('version', {
+      cell: (info) => {
+        const version = info.getValue();
+        const source = info.row.original.source;
+        if (source === 'ai_generated' && version > 1) {
+          return (
+            <Badge variant="outline" className="text-xs">
+              v{version}
+            </Badge>
+          );
+        }
+        return <span className="text-muted-foreground">v{version || 1}</span>;
+      },
+      header: t('page.tableHeaders.version', 'Version'),
+    }),
     columnHelper.accessor('created_at', {
       cell: (info) => info.getValue().toLocaleDateString(),
       header: t('page.tableHeaders.created'),

@@ -7,7 +7,7 @@ import { join,resolve } from 'path';
 import * as path from 'path';
 
 import { db } from '@/db';
-import { docsTable } from '@/db/schema';
+import { docsTable, documentVersionsTable } from '@/db/schema';
 import { ragService } from '@/lib/rag-service';
 import type { 
   Doc, 
@@ -122,7 +122,7 @@ const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
 export async function getDocs(userId: string, projectUuid?: string): Promise<DocListResponse> {
   try {
     let docs;
-    
+
     if (projectUuid) {
       // Get documents specifically for this project
       docs = await db.query.docsTable.findMany({
@@ -209,6 +209,45 @@ export async function getDocByUuid(userId: string, docUuid: string, projectUuid?
   } catch (error) {
     console.error('Error fetching doc:', error);
     return null;
+  }
+}
+
+// Helper function: Get document versions
+export async function getDocumentVersions(userId: string, documentId: string, projectUuid?: string) {
+  try {
+    // First verify the user has access to this document
+    const doc = await getDocByUuid(userId, documentId, projectUuid);
+
+    if (!doc) {
+      return {
+        success: false,
+        error: 'Document not found or access denied',
+      };
+    }
+
+    // Fetch version history
+    const versions = await db
+      .select()
+      .from(documentVersionsTable)
+      .where(eq(documentVersionsTable.document_id, documentId))
+      .orderBy(desc(documentVersionsTable.version_number));
+
+    return {
+      success: true,
+      versions: versions.map(v => ({
+        versionNumber: v.version_number,
+        createdAt: v.created_at,
+        createdByModel: v.created_by_model,
+        changeSummary: v.change_summary,
+        contentDiff: v.content_diff,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching document versions:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch document versions',
+    };
   }
 }
 
