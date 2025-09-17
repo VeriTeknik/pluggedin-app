@@ -13,7 +13,6 @@ import { Badge, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
 import { useCallback,useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 // Internal components
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -149,63 +148,85 @@ export default function LibraryContent() {
   const columns = useMemo(() => [
     columnHelper.accessor('name', {
       cell: (info) => (
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{getMimeTypeIcon(info.row.original.mime_type)}</span>
-          <div>
-            <div className="font-medium flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-lg flex-shrink-0">{getMimeTypeIcon(info.row.original.mime_type)}</span>
+          <div className="min-w-0 flex-1">
+            <div className="font-medium truncate">
               {info.getValue()}
-              {info.row.original.source === 'ai_generated' && info.row.original.ai_metadata?.model && (
-                <ModelAttributionBadge
-                  modelName={info.row.original.ai_metadata.model.name}
-                  modelProvider={info.row.original.ai_metadata.model.provider}
-                  modelVersion={info.row.original.ai_metadata.model.version}
-                  timestamp={info.row.original.ai_metadata.timestamp}
-                />
-              )}
             </div>
-            <div className="text-sm text-muted-foreground">{info.row.original.file_name}</div>
+            <div className="text-sm text-muted-foreground truncate">{info.row.original.file_name}</div>
           </div>
         </div>
       ),
       header: t('page.tableHeaders.name'),
     }),
     columnHelper.accessor('description', {
-      cell: (info) => info.getValue() || '-',
+      cell: (info) => {
+        const desc = info.getValue();
+        if (!desc) return <span className="text-muted-foreground text-sm">-</span>;
+
+        // Truncate long descriptions
+        const maxLength = 100;
+        const truncated = desc.length > maxLength ? `${desc.substring(0, maxLength)}...` : desc;
+        return (
+          <span className="text-sm line-clamp-2" title={desc}>
+            {truncated}
+          </span>
+        );
+      },
       header: t('page.tableHeaders.description'),
     }),
+    columnHelper.display({
+      id: 'ai_model',
+      cell: (info) => {
+        const doc = info.row.original;
+        if (doc.source === 'ai_generated' && doc.ai_metadata?.model) {
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="font-medium text-sm truncate">
+                {doc.ai_metadata.model.name}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {doc.ai_metadata.model.provider}
+                {doc.ai_metadata.model.version && ` v${doc.ai_metadata.model.version}`}
+              </div>
+            </div>
+          );
+        }
+        return <span className="text-muted-foreground text-sm">-</span>;
+      },
+      header: t('page.tableHeaders.aiModel', 'AI Model'),
+    }),
     columnHelper.accessor('file_size', {
-      cell: (info) => formatFileSize(info.getValue()),
+      cell: (info) => (
+        <span className="text-sm whitespace-nowrap">{formatFileSize(info.getValue())}</span>
+      ),
       header: t('page.tableHeaders.size'),
     }),
     columnHelper.accessor('tags', {
-      cell: (info) => (
-        <div className="flex gap-1 flex-wrap">
-          {info.getValue()?.map((tag, index) => (
-            <Badge key={index} variant="secondary" className="text-xs">
-              {tag}
-            </Badge>
-          )) || '-'}
-        </div>
-      ),
+      cell: (info) => {
+        const tags = info.getValue();
+        if (!tags || tags.length === 0) {
+          return <span className="text-muted-foreground text-sm">-</span>;
+        }
+
+        // Show all tags in a compact, scrollable container
+        return (
+          <div className="flex items-center gap-1 flex-wrap max-w-[250px]">
+            {tags.map((tag, index) => (
+              <Badge key={index} variant="secondary" className="text-xs px-1.5 py-0">
+                {tag}
+              </Badge>
+            ))}
+          </div>
+        );
+      },
       header: t('page.tableHeaders.tags'),
     }),
-    columnHelper.accessor('version', {
-      cell: (info) => {
-        const version = info.getValue();
-        const source = info.row.original.source;
-        if (source === 'ai_generated' && version > 1) {
-          return (
-            <Badge variant="outline" className="text-xs">
-              v{version}
-            </Badge>
-          );
-        }
-        return <span className="text-muted-foreground">v{version || 1}</span>;
-      },
-      header: t('page.tableHeaders.version', 'Version'),
-    }),
     columnHelper.accessor('created_at', {
-      cell: (info) => info.getValue().toLocaleDateString(),
+      cell: (info) => (
+        <span className="text-sm whitespace-nowrap">{info.getValue().toLocaleDateString()}</span>
+      ),
       header: t('page.tableHeaders.created'),
     }),
     columnHelper.display({
