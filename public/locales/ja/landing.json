@@ -113,21 +113,6 @@
     "benefit4": "最新のMCPトレンドを常に把握します。",
     "visualPlaceholder": "サーバー共有/評価を示すビジュアル"
   },
-  "testimonials": {
-    "title": "開発者の声",
-    "subtitle": "コミュニティからの声を聞く",
-    "sectionTitle": "世界中の開発者から信頼されています",
-    "sectionSubtitle": "ユーザーがPlugged.inについて語る声を聞いてください。",
-    "quote1": "\"Plugged.inは、私たちのチームがMCPサーバーを管理する方法に革命をもたらしました。整理機能は素晴らしいです！\"",
-    "name1": "ジェーン・ドウ",
-    "title1": "リードAIエンジニア、TechCorp",
-    "quote2": "\"コミュニティ共有の側面はゲームチェンジャーです。新しいツールを発見するのがこれまで以上に簡単になりました。\"",
-    "name2": "アレックス・スミス",
-    "title2": "独立開発者",
-    "quote3": "\"MCPプレイグラウンドでのデバッグにより、数え切れないほどの時間を節約できました。強くお勧めします！\"",
-    "name3": "マリア・キム",
-    "title3": "創設者、AI Solutions Inc."
-  },
   "search": {
     "title": "インテリジェント発見エンジン",
     "subtitle": "GitHub、Smithery、npmを横断して完璧なMCPサーバーを見つける",
@@ -374,6 +359,160 @@
     "security": {
       "title": "エンタープライズグレードセキュリティ",
       "description": "データは多層認証、Firejailサンドボックス、包括的監査証跡で保護されています。完全な制御のためにセルフホストできます。"
+    }
+  },
+  "aiModels": {
+    "badge": "Langchainによる提供",
+    "title": "1つのプラットフォーム、すべてのモデル",
+    "subtitle": "すべてのモデルが同じナレッジベースにアクセスし、同じツールを使用し、同じメモリを共有します。",
+    "moreModels": "Langchain統合により、さらに数十のモデル",
+    "viewAll": "すべてのモデルを表示",
+    "feature1": {
+      "title": "共有ナレッジベース",
+      "description": "すべてのモデルがドキュメントをクエリし、カスタムコンテキストにアクセスできます。"
+    },
+    "feature2": {
+      "title": "ユニバーサルツールアクセス",
+      "description": "すべてのモデルが同じMCPツールを使用してアクションを実行できます。"
+    },
+    "feature3": {
+      "title": "永続的メモリ（開発中）",
+      "description": "すべてのモデルが間もなく会話全体で同じメモリを共有します。"
+    },
+    "feature4": {
+      "title": "ワンクリック切り替え",
+      "description": "コンテキストを失うことなく、モデル間で即座に切り替え。"
+    },
+    "supportedModels": {
+      "claude": "Claude",
+      "gpt4": "GPT-4",
+      "llama": "Llama",
+      "gemini": "Gemini"
+    }
+  },
+  "whyPluggedin": {
+    "title": "なぜplugged.in?",
+    "subtitle": "AIには会話以上のものが必要です",
+    "problem": {
+      "title": "欠けているピース",
+      "description": "AIは強力ですが、3つの重要な機能が欠けています：特定のドキュメントからの知識、過去のやり取りの記憶、実際のアクションを実行するツール。これらがなければ、すべての会話がゼロから始まります。"
+    },
+    "solution": {
+      "title": "AIを完成させる",
+      "description": "plugged.inはAIに必要な三位一体を提供します：",
+      "benefit1": "📚 知識：ドキュメントをアップロードして、AIに特定のコンテキストへのアクセスを許可",
+      "benefit2": "🧠 メモリ：近日公開 - すべての会話にわたる永続的なコンテキスト",
+      "benefit3": "🔧 ツール：任意のMCPサーバーを接続して、AIに実世界の機能を提供",
+      "benefit4": "🔄 ユニバーサル：Claude、GPT-4、Gemini、およびすべての主要モデルで動作"
+    },
+    "bridge": {
+      "title": "オープンスタンダードに基づいて構築",
+      "description": "技術的な基盤としてModel Context Protocol（MCP）を活用しています。これはトレンディだからではなく、真のデータ所有権を可能にするオープンスタンダードだからです。MCPは、あなたのデータが独自のプラットフォームにロックされるのではなく、ポータブルな資産になることを保証します。"
+    },
+    "visual": {
+      "hub": "plugged.in ハブ",
+      "aiSupport": "Claude、GPT-4、Gemini...",
+      "feature": {
+        "knowledge": "📚 知識",
+        "memory": "🧠 メモリ",
+        "tools": "🔧 ツール"
+      },
+      "knowledge": {
+        "title": "知識",
+        "description": "ドキュメントとコンテキスト"
+      },
+      "memory": {
+        "title": "メモリ",
+        "description": "近日公開"
+      },
+      "tools": {
+        "title": "ツール",
+        "description": "MCPサーバー"
+      }
+    }
+  },
+  "trust": {
+    "title": "エンタープライズの信頼性とセキュリティ",
+    "subtitle": "数千の組織が重要なAIインフラストラクチャをPlugged.inに託しています",
+    "certifications": {
+      "soc2": {
+        "label": "SOC 2 Type II",
+        "description": "認定済み"
+      },
+      "iso": {
+        "label": "ISO 27001",
+        "description": "準拠"
+      },
+      "gdpr": {
+        "label": "GDPR",
+        "description": "準拠"
+      },
+      "hipaa": {
+        "label": "HIPAA",
+        "description": "対応"
+      }
+    },
+    "growth": {
+      "title": "30日で0から14,000以上のAPIコール",
+      "subtitle": "最も急速に成長しているAI統合プラットフォームで未来を構築する620以上の開発者に加わりましょう",
+      "stats": {
+        "documents": "87以上のAIドキュメント",
+        "servers": "460のアクティブサーバー",
+        "projects": "650以上のプロジェクト作成"
+      }
+    }
+  },
+  "metrics": {
+    "growth": {
+      "value": "718",
+      "suffix": "%",
+      "label": "月間成長率"
+    },
+    "tools": {
+      "value": "7,268",
+      "suffix": "+",
+      "label": "検証済みツール"
+    },
+    "servers": {
+      "value": "1,500",
+      "suffix": "+",
+      "label": "MCPサーバー"
+    },
+    "apiCalls": {
+      "value": "14K",
+      "suffix": "+",
+      "label": "月間APIコール"
+    },
+    "projects": {
+      "value": "650",
+      "suffix": "+",
+      "label": "アクティブプロジェクト"
+    },
+    "users": {
+      "value": "620",
+      "suffix": "+",
+      "label": "アクティブ開発者"
+    },
+    "activeServers": {
+      "value": "460",
+      "suffix": "+",
+      "label": "アクティブサーバー"
+    },
+    "response": {
+      "value": "100",
+      "prefix": "<",
+      "suffix": "ms",
+      "label": "応答時間"
+    },
+    "uptime": {
+      "value": "99.9",
+      "suffix": "%",
+      "label": "稼働時間SLA"
+    },
+    "documents": {
+      "value": "87",
+      "suffix": "+",
+      "label": "AIドキュメント"
     }
   }
 }
