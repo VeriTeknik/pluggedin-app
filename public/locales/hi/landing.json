@@ -18,6 +18,11 @@
     "cta": {
       "getStarted": "समुदाय में शामिल हों",
       "learnMore": "विशेषताएं एक्सप्लोर करें"
+    },
+    "features": {
+      "security": "Enterprise Security",
+      "fast": "Lightning Fast",
+      "scale": "Global Scale"
     }
   },
   "features": {

@@ -22,6 +22,11 @@
     "cta": {
       "getStarted": "加入社区",
       "learnMore": "探索功能"
+    },
+    "features": {
+      "security": "Enterprise Security",
+      "fast": "Lightning Fast",
+      "scale": "Global Scale"
     }
   },
   "whyPluggedin": {

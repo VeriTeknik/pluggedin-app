@@ -18,6 +18,11 @@
     "cta": {
       "getStarted": "Word lid van de community",
       "learnMore": "Verken functies"
+    },
+    "features": {
+      "security": "Enterprise Security",
+      "fast": "Lightning Fast",
+      "scale": "Global Scale"
     }
   },
   "features": {

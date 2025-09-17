@@ -22,15 +22,15 @@ const metrics = [
   PLATFORM_METRICS.RESPONSE_TIME,
 ];
 
-const features = [
-  { icon: Shield, text: 'Enterprise Security' },
-  { icon: Zap, text: 'Lightning Fast' },
-  { icon: Globe, text: 'Global Scale' },
-];
-
 export function LandingHeroEnterpriseSection() {
   const mounted = useMounted();
   const { t, ready } = useTranslation('landing');
+
+  const features = [
+    { icon: Shield, text: t('hero.features.security') },
+    { icon: Zap, text: t('hero.features.fast') },
+    { icon: Globe, text: t('hero.features.scale') },
+  ];
   const { ref, inView } = useInView({
     threshold: 0.1,
     triggerOnce: true,
@@ -165,9 +165,9 @@ export function LandingHeroEnterpriseSection() {
                     <AnimatedMetric
                       value={metric.value}
                       suffix={metric.suffix}
-                      prefix={metric.prefix}
+                      prefix={'prefix' in metric ? metric.prefix : undefined}
                       label={metric.label}
-                      decimals={metric.decimals}
+                      decimals={'decimals' in metric ? metric.decimals : undefined}
                     />
                   </GlowCard>
                 </motion.div>

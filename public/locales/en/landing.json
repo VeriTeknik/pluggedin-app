@@ -25,6 +25,11 @@
       "getStarted": "Join 620+ Developers",
       "learnMore": "Explore 7,000+ Tools",
       "watchDemo": "Watch Demo"
+    },
+    "features": {
+      "security": "Enterprise Security",
+      "fast": "Lightning Fast",
+      "scale": "Global Scale"
     }
   },
   "whyPluggedin": {

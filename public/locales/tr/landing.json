@@ -22,6 +22,11 @@
     "cta": {
       "getStarted": "Ücretsiz Başla",
       "learnMore": "Neden plugged.in"
+    },
+    "features": {
+      "security": "Enterprise Security",
+      "fast": "Lightning Fast",
+      "scale": "Global Scale"
     }
   },
   "whyPluggedin": {

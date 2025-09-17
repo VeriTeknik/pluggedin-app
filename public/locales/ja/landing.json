@@ -18,6 +18,11 @@
     "cta": {
       "getStarted": "コミュニティに参加",
       "learnMore": "機能を探索"
+    },
+    "features": {
+      "security": "Enterprise Security",
+      "fast": "Lightning Fast",
+      "scale": "Global Scale"
     }
   },
   "features": {
