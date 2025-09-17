@@ -14,13 +14,13 @@ import { useClickOutside } from '@/hooks/useClickOutside';
 import { useKeyPress } from '@/hooks/useKeyPress';
 
 // Navigation links
-const navLinks = [
+const navLinks: Array<{ href: string; labelKey: string; external?: boolean }> = [
   { href: '#why-pluggedin', labelKey: 'navigation.whyPluggedin' },
   { href: '#features', labelKey: 'navigation.features' },
   { href: '#ai-models', labelKey: 'navigation.aiModels' },
   { href: '#pricing', labelKey: 'navigation.pricing' },
   { href: '#community', labelKey: 'navigation.community' },
-  { href: '/docs', labelKey: 'navigation.documentation' },
+  { href: 'https://docs.plugged.in', labelKey: 'navigation.documentation', external: true },
 ];
 
 export function LandingNavbar() {
@@ -56,15 +56,27 @@ export function LandingNavbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-6">
-            {navLinks.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {t(link.labelKey)}
-              </Link> 
-            ))}
+            {navLinks.map((link) =>
+              link.external ? (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {t(link.labelKey)}
+                </a>
+              ) : (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {t(link.labelKey)}
+                </Link>
+              )
+            )}
             <ThemeToggle />
             <Button asChild size="sm">
               <Link href="/login">
@@ -87,16 +99,29 @@ export function LandingNavbar() {
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-14 left-0 w-full bg-background border-b pb-4 animate-in fade-in-20 slide-in-from-top-5">
             <div className="container mx-auto flex flex-col space-y-4 px-4 md:px-6 lg:px-8 pt-4">
-              {navLinks.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                  onClick={toggleMobileMenu}
-                >
-                  {t(link.labelKey)}
-                </Link>
-              ))}
+              {navLinks.map((link) =>
+                link.external ? (
+                  <a
+                    key={link.href}
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    onClick={toggleMobileMenu}
+                  >
+                    {t(link.labelKey)}
+                  </a>
+                ) : (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                    onClick={toggleMobileMenu}
+                  >
+                    {t(link.labelKey)}
+                  </Link>
+                )
+              )}
               <Button asChild className="w-full">
                 <Link href="/login" onClick={toggleMobileMenu}>
                   {t('navigation.getStarted')}

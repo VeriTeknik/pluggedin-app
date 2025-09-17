@@ -11,11 +11,12 @@ import { LandingCta } from '@/components/landing-sections/cta';
 import { LandingDevelopersSection } from '@/components/landing-sections/developers';
 import { LandingFeaturesOverview } from '@/components/landing-sections/features-overview';
 import { LandingGettingStartedSection } from '@/components/landing-sections/getting-started';
-import { LandingHeroSection } from '@/components/landing-sections/hero';
+import { LandingHeroEnterpriseSection } from '@/components/landing-sections/hero-enterprise';
 import { LandingMcpPlayground } from '@/components/landing-sections/mcp-playground';
 import { LandingPricingSection } from '@/components/landing-sections/pricing';
 import { LandingSearchFunctionality } from '@/components/landing-sections/search-functionality';
 import { LandingSecuritySection } from '@/components/landing-sections/security';
+import { TrustIndicatorsSection } from '@/components/landing-sections/trust-indicators';
 import { LandingWhyPluggedin } from '@/components/landing-sections/why-pluggedin';
 //import { LandingTestimonials } from '@/components/landing-sections/testimonials';   // TODO: Add testimonials when we have them
 
@@ -32,7 +33,8 @@ export default function Home() {
     <div className="flex flex-col min-h-screen">
       <LandingNavbar />
       <main className="flex-grow">
-        <LandingHeroSection />
+        <LandingHeroEnterpriseSection />
+        <TrustIndicatorsSection />
         <LandingWhyPluggedin />
         <LandingFeaturesOverview />
         <LandingAiModelsSection />

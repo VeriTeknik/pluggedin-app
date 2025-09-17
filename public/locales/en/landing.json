@@ -14,30 +14,33 @@
   "hero": {
     "title": "The AI Crossroads",
     "subtitle": "Connect, create, and extend your AI capabilities with a unified platform. Build and manage plugins that enhance your AI workflows.",
-    "headline": "The AI Crossroads: Connect Every Model, Own Every Interaction",
-    "subheadline": "Powered by MCP Registry - The Open Standard for AI Data Ownership",
-    "analogy": "\"Your AI ecosystem, unified and social\"",
-    "valueBanner": "Your AI-Generated Data. Every Model. Every Interaction. Under Your Control.",
+    "headline": "Give Your AI Knowledge, Memory, and Tools",
+    "subheadline": "Join the fastest-growing AI platform with 718% monthly growth. Access 7,000+ tools through MCP and transform your AI capabilities.",
+    "analogy": "\"7,000+ Tools. 1,500+ Servers. One Platform.\"",
+    "valueBanner": "📚 Knowledge from your documents • 🧠 Memory across conversations • 🔧 Tools to take action",
+    "growthBadge": "718% Monthly Growth",
+    "statsBar": "7,000+ Tools | 1,500+ Servers | <100ms Response | 99.9% Uptime",
     "openSource": "Proudly Open Source",
     "cta": {
-      "getStarted": "Start Free",
-      "learnMore": "Why plugged.in"
+      "getStarted": "Join 620+ Developers",
+      "learnMore": "Explore 7,000+ Tools",
+      "watchDemo": "Watch Demo"
     }
   },
   "whyPluggedin": {
     "title": "Why plugged.in?",
-    "subtitle": "The crossroads where all your AI interactions converge",
+    "subtitle": "Your AI needs more than just conversation",
     "problem": {
-      "title": "The Problem We Solve",
-      "description": "Every time you interact with AI - whether it's Claude, GPT, or any other model - valuable data is generated. Insights, configurations, successful prompts, and contextual knowledge. But this data lives in silos, controlled by different platforms, impossible to leverage across tools."
+      "title": "The Missing Pieces",
+      "description": "Your AI is powerful, but it lacks three essential capabilities: Knowledge from your specific documents, Memory of past interactions, and Tools to take real actions. Without these, every conversation starts from scratch."
     },
     "solution": {
-      "title": "Our Solution",
-      "description": "plugged.in acts as the universal crossroads where:",
-      "benefit1": "Every AI interaction flows through your controlled environment",
-      "benefit2": "Every piece of generated data remains yours to own, analyze, and reuse",
-      "benefit3": "Every model connects through a single, unified interface",
-      "benefit4": "Every insight builds upon the last, creating compounding value"
+      "title": "Complete Your AI",
+      "description": "plugged.in provides the trinity your AI needs:",
+      "benefit1": "📚 Knowledge: Upload documents and let AI access your specific context",
+      "benefit2": "🧠 Memory: Coming soon - persistent context across all conversations",
+      "benefit3": "🔧 Tools: Connect any MCP server to give AI real-world capabilities",
+      "benefit4": "🔄 Universal: Works with Claude, GPT-4, Gemini, and all major models"
     },
     "bridge": {
       "title": "Built on Open Standards",
@@ -63,20 +66,20 @@
   "aiModels": {
     "badge": "Powered by Langchain",
     "title": "One Platform, Every Model",
-    "subtitle": "Test the same prompt across models instantly. Your data works everywhere - no retraining needed.",
+    "subtitle": "All models access the same knowledge base, use the same tools, and will share the same memory.",
     "moreModels": "Plus dozens more models through our Langchain integration",
     "viewAll": "View All Models",
     "feature1": {
-      "title": "Instant Model Switching",
-      "description": "Compare responses from different models side-by-side with one click."
+      "title": "Shared Knowledge Base",
+      "description": "Every model can query your documents and access your custom context."
     },
     "feature2": {
-      "title": "Unified Prompting",
-      "description": "Your prompts and context work seamlessly across all AI models."
+      "title": "Universal Tool Access",
+      "description": "All models can use the same MCP tools to take actions."
     },
     "feature3": {
-      "title": "Model-Agnostic Data",
-      "description": "Build once, use everywhere. Your AI assets aren't locked to any model."
+      "title": "Persistent Memory (Coming)",
+      "description": "Soon - conversations with any model will build on shared memory."
     },
     "cta": {
       "title": "Ready to test with multiple models?",
@@ -86,8 +89,22 @@
   "features": {
     "title": "Features",
     "subtitle": "Everything you need to manage your MCP servers",
-    "sectionTitle": "Own Your AI Journey",
-    "sectionSubtitle": "From data ownership to community collaboration - everything you need in one platform.",
+    "sectionTitle": "The Three Pillars of AI Enhancement",
+    "sectionSubtitle": "Knowledge to understand, Memory to learn, Tools to act.",
+    "pillars": {
+      "knowledge": {
+        "title": "📚 Knowledge",
+        "subtitle": "Your documents become AI context"
+      },
+      "memory": {
+        "title": "🧠 Memory",
+        "subtitle": "Coming Soon"
+      },
+      "tools": {
+        "title": "🔧 Tools",
+        "subtitle": "MCP servers for real actions"
+      }
+    },
     "universalAiHub": {
       "title": "Universal AI Hub",
       "description": "Connect Claude, GPT, Llama, and any AI model through one interface. Test the same prompt across models instantly."
@@ -143,6 +160,26 @@
     "ragIntegration": {
       "title": "AI Knowledge Platform (RAG)",
       "description": "Upload documents, create knowledge bases, and query them through any MCP client. Secure, project-based isolation with enterprise-grade security."
+    },
+    "documentLibrary": {
+      "title": "Document Library",
+      "description": "Upload PDFs, DOCX, TXT, and Markdown files. Your AI can query and reference your specific documents."
+    },
+    "aiDocumentExchange": {
+      "title": "AI-Generated Documents",
+      "description": "Let AI models create and update documents in your library. Full version tracking and attribution."
+    },
+    "semanticSearch": {
+      "title": "Semantic Search",
+      "description": "Query your entire knowledge base with natural language. Find relevant context instantly."
+    },
+    "customInstructions": {
+      "title": "Custom Instructions",
+      "description": "Auto-inject context and instructions into every tool. Your AI knows your preferences."
+    },
+    "realtimeNotifications": {
+      "title": "Real-time Notifications",
+      "description": "Get alerts from AI workflows via notifications and optional email delivery."
     },
     "notifications": {
       "title": "Real-time Activity Monitoring",
@@ -469,6 +506,59 @@
     "security": {
       "title": "Enterprise-Grade Security",
       "description": "Your data is protected with multi-layer authentication, Firejail sandboxing, and comprehensive audit trails. Self-host for complete control."
+    }
+  },
+  "metrics": {
+    "growth": {
+      "value": "718",
+      "suffix": "%",
+      "label": "Monthly Growth"
+    },
+    "tools": {
+      "value": "7,268",
+      "suffix": "+",
+      "label": "Available Tools"
+    },
+    "servers": {
+      "value": "1,500",
+      "suffix": "+",
+      "label": "MCP Servers"
+    },
+    "apiCalls": {
+      "value": "14K",
+      "suffix": "+",
+      "label": "Monthly API Calls"
+    },
+    "projects": {
+      "value": "650",
+      "suffix": "+",
+      "label": "Active Projects"
+    },
+    "users": {
+      "value": "620",
+      "suffix": "+",
+      "label": "Active Developers"
+    },
+    "response": {
+      "value": "100",
+      "prefix": "<",
+      "suffix": "ms",
+      "label": "Response Time"
+    },
+    "uptime": {
+      "value": "99.9",
+      "suffix": "%",
+      "label": "Uptime SLA"
+    },
+    "documents": {
+      "value": "87",
+      "suffix": "+",
+      "label": "AI Documents"
+    },
+    "activeServers": {
+      "value": "460",
+      "suffix": "",
+      "label": "Active Servers"
     }
   }
 }
