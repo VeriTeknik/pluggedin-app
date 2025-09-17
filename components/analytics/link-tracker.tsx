@@ -27,7 +27,13 @@ class LinkTracker {
   }
 
   private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    // Use crypto.getRandomValues for secure randomness
+    const array = new Uint8Array(16);
+    if (typeof window !== 'undefined' && window.crypto) {
+      window.crypto.getRandomValues(array);
+    }
+    const randomHex = Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+    return `session_${Date.now()}_${randomHex.substring(0, 9)}`;
   }
 
   trackLink(url: string, category: LinkAnalytics['category'], label?: string) {
@@ -178,15 +184,37 @@ export function useExternalLinkTracking() {
       );
 
       if (isExternal) {
-        // Determine category based on URL patterns
+        // Determine category based on URL patterns using proper URL parsing
         let category: LinkAnalytics['category'] = 'external';
 
-        if (href.includes('docs.') || href.includes('/docs/') || href.includes('documentation')) {
-          category = 'documentation';
-        } else if (href.includes('github.com') || href.includes('twitter.com') || href.includes('linkedin.com')) {
-          category = 'social';
-        } else if (href.includes('download') || href.endsWith('.pdf') || href.endsWith('.zip')) {
-          category = 'download';
+        try {
+          const url = new URL(href);
+          const hostname = url.hostname.toLowerCase();
+          const pathname = url.pathname.toLowerCase();
+
+          // Check documentation sites using hostname and pathname
+          if (hostname.includes('docs.') ||
+              pathname.includes('/docs/') ||
+              pathname.includes('/documentation')) {
+            category = 'documentation';
+          }
+          // Check social media sites using exact hostname matching
+          else if (hostname === 'github.com' || hostname === 'www.github.com' ||
+                   hostname === 'twitter.com' || hostname === 'www.twitter.com' ||
+                   hostname === 'x.com' || hostname === 'www.x.com' ||
+                   hostname === 'linkedin.com' || hostname === 'www.linkedin.com') {
+            category = 'social';
+          }
+          // Check downloads using pathname extensions
+          else if (pathname.includes('/download') ||
+                   pathname.endsWith('.pdf') ||
+                   pathname.endsWith('.zip') ||
+                   pathname.endsWith('.tar.gz')) {
+            category = 'download';
+          }
+        } catch (e) {
+          // If URL parsing fails, keep default 'external' category
+          console.warn('Failed to parse URL for categorization:', href);
         }
 
         // Get label from data attribute or link text
