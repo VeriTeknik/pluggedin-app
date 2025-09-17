@@ -65,19 +65,62 @@ vi.mock('@/db', () => ({
     where: vi.fn().mockReturnThis(),
     values: vi.fn().mockReturnThis(),
     set: vi.fn().mockReturnThis(),
-    returning: vi.fn().mockReturnThis(),
+    returning: vi.fn().mockResolvedValue([]),
     leftJoin: vi.fn().mockReturnThis(),
     innerJoin: vi.fn().mockReturnThis(),
     orderBy: vi.fn().mockReturnThis(),
     limit: vi.fn().mockReturnThis(),
     offset: vi.fn().mockReturnThis(),
+    execute: vi.fn().mockResolvedValue([]),
+    transaction: vi.fn((callback: any) => callback({
+      insert: vi.fn().mockReturnThis(),
+      update: vi.fn().mockReturnThis(),
+      delete: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      values: vi.fn().mockReturnThis(),
+      set: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue([]),
+    })),
     query: {
       users: {
-        findFirst: vi.fn(),
-        findMany: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
       },
       verificationTokens: {
-        findFirst: vi.fn(),
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
+      accounts: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      projectsTable: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      profilesTable: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      mcpServersTable: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      sharedMcpServersTable: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      registryServersTable: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      serverClaimRequestsTable: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
+      },
+      toolsTable: {
+        findFirst: vi.fn().mockResolvedValue(null),
+        findMany: vi.fn().mockResolvedValue([]),
       },
     },
   },
@@ -90,7 +133,27 @@ vi.mock('@/lib/auth', () => ({
 }));
 
 // Global test utilities
-global.fetch = vi.fn();
+// Provide a default mock implementation for fetch that returns proper Response objects
+global.fetch = vi.fn().mockImplementation((url: string, options?: any) => {
+  // Default mock response
+  const mockResponse = {
+    ok: true,
+    status: 200,
+    statusText: 'OK',
+    headers: new Headers(),
+    json: vi.fn().mockResolvedValue({}),
+    text: vi.fn().mockResolvedValue(''),
+    blob: vi.fn().mockResolvedValue(new Blob()),
+    arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0)),
+    formData: vi.fn().mockResolvedValue(new FormData()),
+    clone: vi.fn().mockReturnThis(),
+    redirected: false,
+    type: 'basic' as ResponseType,
+    url,
+  };
+
+  return Promise.resolve(mockResponse as unknown as Response);
+});
 
 // Mock console methods to reduce noise during tests
 global.console = {
@@ -132,6 +195,13 @@ Object.defineProperty(global.window, 'matchMedia', {
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
+});
+
+// Mock CSS modules and Tailwind classes
+Object.defineProperty(global.window, 'getComputedStyle', {
+  value: () => ({
+    getPropertyValue: (prop: string) => '',
+  }),
 });
 
 // Mock IntersectionObserver

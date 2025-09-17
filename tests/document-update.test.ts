@@ -1,13 +1,32 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
+import { setupFetchMocks } from './test-utils';
 
 describe('Document Update API', () => {
   const API_URL = 'http://localhost:12005';
   let apiKey: string;
-  let documentId: string;
+  let documentId: string = 'test-doc-id';
 
   beforeAll(() => {
     // Use test API key from environment
     apiKey = process.env.TEST_API_KEY || 'test-api-key';
+  });
+
+  beforeEach(() => {
+    // Setup fetch mocks for all API endpoints
+    setupFetchMocks({
+      '/api/documents/ai': {
+        success: true,
+        documentId: 'test-doc-id',
+        version: 1,
+      },
+      '/api/documents/test-doc-id': {
+        success: true,
+        documentId: 'test-doc-id',
+        version: 2,
+        content: 'Updated content',
+      },
+      '/api/documents/non-existent-id': new Error('Document not found'),
+    });
   });
 
   it('should update document content via PATCH endpoint', async () => {
