@@ -1,20 +1,26 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { 
+import {
   Brain,
-  Filter, 
+  Filter,
   Github,
-  Globe, 
+  Globe,
   Package,
   Star,
   Users,
-  Zap
+  Zap,
+  Layers,
+  TrendingUp,
+  Search
 } from 'lucide-react';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
+import { useInView } from 'react-intersection-observer';
 
 import { Card, CardContent } from '@/components/ui/card';
+import { AnimatedMetric } from '@/components/ui/animated-metric';
+import { cn } from '@/lib/utils';
 
 // TODO: Integrate MagicUI components when available:
 // - Safari component
@@ -36,28 +42,75 @@ const safariVariants = {
 };
 
 export function LandingSearchFunctionality() {
-  // Explicitly use the 'landing' namespace
   const { t } = useTranslation('landing');
+  const { ref, inView } = useInView({
+    threshold: 0.1,
+    triggerOnce: true,
+  });
+
+  const stats = [
+    { value: 7268, suffix: '+', label: 'Verified Tools' },
+    { value: 1500, suffix: '+', label: 'MCP Servers' },
+    { value: 460, suffix: '+', label: 'Active Servers' },
+    { value: 620, suffix: '+', label: 'Contributors' },
+  ];
 
   return (
     <motion.section
-      id="search" // Consider if this ID is needed or if it should be part of features/community etc.
-      className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32"
+      ref={ref}
+      id="search"
+      className="py-12 sm:py-16 md:py-20 lg:py-24 xl:py-32 bg-gradient-to-b from-background via-muted/20 to-background relative overflow-hidden"
       variants={sectionVariants}
       initial="hidden"
       whileInView="visible"
       viewport={{ once: true, amount: 0.2 }}
     >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div className="mb-12 text-center max-w-2xl mx-auto" variants={textVariants}>
+      {/* Background Pattern */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#06b6d408_1px,transparent_1px),linear-gradient(to_bottom,#06b6d408_1px,transparent_1px)] bg-[size:50px_50px]" />
+
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+        {/* Stats Bar */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={inView ? { opacity: 1, y: 0 } : {}}
+          transition={{ duration: 0.5 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+          {stats.map((stat, index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={inView ? { opacity: 1, scale: 1 } : {}}
+              transition={{ delay: index * 0.1 }}
+              className="text-center">
+              <AnimatedMetric
+                value={stat.value}
+                suffix={stat.suffix}
+                label={stat.label}
+                decimals={0}
+              />
+            </motion.div>
+          ))}
+        </motion.div>
+
+        <motion.div className="mb-12 text-center max-w-3xl mx-auto" variants={textVariants}>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={inView ? { opacity: 1, scale: 1 } : {}}
+            transition={{ delay: 0.2 }}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-electric-cyan/10 border border-electric-cyan/20 mb-4">
+            <Search className="h-4 w-4 text-electric-cyan" />
+            <span className="text-sm font-semibold text-electric-cyan">7,268+ Verified Tools Ready to Use</span>
+          </motion.div>
           <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            {t('search.title')}
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-electric-cyan to-neon-purple">
+              {t('search.title')}
+            </span>
           </h2>
           <p className="mt-4 text-lg text-muted-foreground">
-            {t('search.subtitle')}
+            Search 7,268+ verified tools with secure keys and 1,500+ MCP servers
           </p>
           <p className="mt-2 text-base text-muted-foreground">
-            {t('search.description')}
+            Join 620+ developers discovering new AI capabilities daily
           </p>
         </motion.div>
 

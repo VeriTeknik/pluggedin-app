@@ -725,7 +725,7 @@ Did you know you can create your own MCP servers? [Learn how →](https://plugge
 Share server collections with your team for consistent setups. [Explore →](https://plugged.in/social/collections)
 
 **3. API Access**
-Integrate Plugged.in with your existing tools. [API Docs →](https://plugged.in/api-docs)
+Integrate Plugged.in with your existing tools. [API Docs →](https://docs.plugged.in/api-reference)
 
 ### 🎁 Special Offer
 As a thank you for being an early adopter, here's 20% off any paid plan:

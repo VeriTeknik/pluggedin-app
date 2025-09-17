@@ -18,6 +18,11 @@
     "cta": {
       "getStarted": "Word lid van de community",
       "learnMore": "Verken functies"
+    },
+    "features": {
+      "security": "Enterprise Security",
+      "fast": "Lightning Fast",
+      "scale": "Global Scale"
     }
   },
   "features": {
@@ -144,21 +149,6 @@
     "benefit3": "Werk samen en bouw voort op community-creaties.",
     "benefit4": "Blijf op de hoogte van de nieuwste MCP-trends.",
     "visualPlaceholder": "Visualisatie van server delen/beoordelingen"
-  },
-  "testimonials": {
-    "title": "Wat ontwikkelaars zeggen",
-    "subtitle": "Hoor van de community",
-    "sectionTitle": "Vertrouwd door ontwikkelaars wereldwijd",
-    "sectionSubtitle": "Hoor wat onze gebruikers te zeggen hebben over Plugged.in.",
-    "quote1": "\"Plugged.in heeft een revolutie teweeggebracht in hoe ons team MCP-servers beheert. De organisatiefuncties zijn fantastisch!\"",
-    "name1": "Jane Doe",
-    "title1": "Lead AI Engineer, TechCorp",
-    "quote2": "\"Het community-sharing aspect is een game-changer. Nieuwe tools ontdekken is eenvoudiger dan ooit.\"",
-    "name2": "Alex Smith",
-    "title2": "Onafhankelijke ontwikkelaar",
-    "quote3": "\"Debuggen met de MCP Playground heeft ons talloze uren bespaard. Sterk aanbevolen!\"",
-    "name3": "Maria Kim",
-    "title3": "Oprichter, AI Solutions Inc."
   },
   "search": {
     "title": "Intelligente ontdekkingsengine",
@@ -421,6 +411,160 @@
     "security": {
       "title": "Enterprise-grade beveiliging",
       "description": "Uw data is beschermd met multi-layer authenticatie, Firejail sandboxing en uitgebreide audittrails. Self-host voor volledige controle."
+    }
+  },
+  "aiModels": {
+    "badge": "Aangedreven door Langchain",
+    "title": "Één platform, elk model",
+    "subtitle": "Alle modellen hebben toegang tot dezelfde kennisbank, gebruiken dezelfde tools en delen hetzelfde geheugen.",
+    "moreModels": "Plus tientallen andere modellen via onze Langchain-integratie",
+    "viewAll": "Bekijk alle modellen",
+    "feature1": {
+      "title": "Gedeelde kennisbank",
+      "description": "Elk model kan uw documenten doorzoeken en toegang krijgen tot uw aangepaste context."
+    },
+    "feature2": {
+      "title": "Universele tool toegang",
+      "description": "Alle modellen kunnen dezelfde MCP-tools gebruiken om acties uit te voeren."
+    },
+    "feature3": {
+      "title": "Persistent geheugen (binnenkort)",
+      "description": "Alle modellen delen binnenkort hetzelfde geheugen over gesprekken heen."
+    },
+    "feature4": {
+      "title": "One-click schakelen",
+      "description": "Schakel direct tussen modellen zonder uw context te verliezen."
+    },
+    "supportedModels": {
+      "claude": "Claude",
+      "gpt4": "GPT-4",
+      "llama": "Llama",
+      "gemini": "Gemini"
+    }
+  },
+  "whyPluggedin": {
+    "title": "Waarom plugged.in?",
+    "subtitle": "Uw AI heeft meer nodig dan alleen conversatie",
+    "problem": {
+      "title": "De ontbrekende stukken",
+      "description": "Uw AI is krachtig, maar mist drie essentiële mogelijkheden: kennis uit uw specifieke documenten, geheugen van eerdere interacties en tools om echte acties uit te voeren. Zonder deze begint elk gesprek vanaf nul."
+    },
+    "solution": {
+      "title": "Maak uw AI compleet",
+      "description": "plugged.in biedt de drieëenheid die uw AI nodig heeft:",
+      "benefit1": "📚 Kennis: Upload documenten en laat AI toegang krijgen tot uw specifieke context",
+      "benefit2": "🧠 Geheugen: Binnenkort - blijvende context over alle gesprekken",
+      "benefit3": "🔧 Tools: Verbind elke MCP-server om AI real-world mogelijkheden te geven",
+      "benefit4": "🔄 Universeel: Werkt met Claude, GPT-4, Gemini en alle belangrijke modellen"
+    },
+    "bridge": {
+      "title": "Gebouwd op open standaarden",
+      "description": "We maken gebruik van Model Context Protocol (MCP) als technische basis - niet omdat het trendy is, maar omdat het de open standaard is die echt data-eigendom mogelijk maakt. MCP zorgt ervoor dat uw data niet opgesloten zit in propriëtaire platforms maar uw draagbare bezit wordt."
+    },
+    "visual": {
+      "hub": "plugged.in Hub",
+      "aiSupport": "Claude, GPT-4, Gemini...",
+      "feature": {
+        "knowledge": "📚 Kennis",
+        "memory": "🧠 Geheugen",
+        "tools": "🔧 Tools"
+      },
+      "knowledge": {
+        "title": "Kennis",
+        "description": "Documenten en context"
+      },
+      "memory": {
+        "title": "Geheugen",
+        "description": "Binnenkort"
+      },
+      "tools": {
+        "title": "Tools",
+        "description": "MCP-servers"
+      }
+    }
+  },
+  "trust": {
+    "title": "Enterprise Vertrouwen & Beveiliging",
+    "subtitle": "Duizenden organisaties vertrouwen op Plugged.in voor hun kritieke AI-infrastructuur",
+    "certifications": {
+      "soc2": {
+        "label": "SOC 2 Type II",
+        "description": "Gecertificeerd"
+      },
+      "iso": {
+        "label": "ISO 27001",
+        "description": "Conform"
+      },
+      "gdpr": {
+        "label": "GDPR",
+        "description": "Conform"
+      },
+      "hipaa": {
+        "label": "HIPAA",
+        "description": "Gereed"
+      }
+    },
+    "growth": {
+      "title": "Van 0 naar 14.000+ API-oproepen in slechts 30 dagen",
+      "subtitle": "Sluit je aan bij 620+ ontwikkelaars die de toekomst bouwen met het snelst groeiende AI-integratieplatform",
+      "stats": {
+        "documents": "87+ AI-documenten",
+        "servers": "460 Actieve servers",
+        "projects": "650+ Projecten aangemaakt"
+      }
+    }
+  },
+  "metrics": {
+    "growth": {
+      "value": "718",
+      "suffix": "%",
+      "label": "Maandelijkse groei"
+    },
+    "tools": {
+      "value": "7,268",
+      "suffix": "+",
+      "label": "Geverifieerde tools"
+    },
+    "servers": {
+      "value": "1,500",
+      "suffix": "+",
+      "label": "MCP-servers"
+    },
+    "apiCalls": {
+      "value": "14K",
+      "suffix": "+",
+      "label": "Maandelijkse API-oproepen"
+    },
+    "projects": {
+      "value": "650",
+      "suffix": "+",
+      "label": "Actieve projecten"
+    },
+    "users": {
+      "value": "620",
+      "suffix": "+",
+      "label": "Actieve ontwikkelaars"
+    },
+    "activeServers": {
+      "value": "460",
+      "suffix": "+",
+      "label": "Actieve servers"
+    },
+    "response": {
+      "value": "100",
+      "prefix": "<",
+      "suffix": "ms",
+      "label": "Responstijd"
+    },
+    "uptime": {
+      "value": "99.9",
+      "suffix": "%",
+      "label": "Uptime SLA"
+    },
+    "documents": {
+      "value": "87",
+      "suffix": "+",
+      "label": "AI-documenten"
     }
   }
 }

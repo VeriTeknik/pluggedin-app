@@ -69,6 +69,23 @@ const nextConfig: NextConfig = {
       // PDF.js worker is now served as static file from /public/pdf.worker.min.mjs
     }
 
+    // Suppress webpack cache warnings for large translation files
+    config.infrastructureLogging = {
+      ...config.infrastructureLogging,
+      level: 'error', // Only show errors, not warnings
+    };
+
+    // Alternative: Configure cache to handle large strings better
+    if (typeof config.cache === 'object' && config.cache !== null && !Array.isArray(config.cache)) {
+      config.cache = {
+        ...config.cache,
+        type: 'filesystem',
+        buildDependencies: {
+          config: [__filename],
+        },
+      };
+    }
+
     return config;
   },
 };

@@ -23,6 +23,9 @@ import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Toaster } from '@/components/ui/toaster';
+import { WebVitalsReporter } from '@/components/analytics/web-vitals';
+import { StructuredData } from '@/components/seo/structured-data';
+import { AnalyticsProvider } from '@/components/analytics/analytics-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -137,17 +140,28 @@ export default async function RootLayout({
       <body
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} ${quicksand.variable} ${nunito.variable} ${poppins.variable} ${roboto.variable} ${ubuntu.variable} ${workSans.variable} ${zillaSlab.variable} ${comfortaa.variable} antialiased`}>
+        <StructuredData type="Organization" />
+        <StructuredData type="WebSite" />
+        <StructuredData type="Product" />
+        <StructuredData type="FAQPage" />
         <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
           <SessionProvider>
             <I18nProviderWrapper>
               <NotificationProvider>
-                <div suppressHydrationWarning>
-                  <LanguageSwitcher />
-                </div>
-                {children}
+                <AnalyticsProvider>
+                  <div suppressHydrationWarning>
+                    <LanguageSwitcher />
+                  </div>
+                  {children}
+                </AnalyticsProvider>
               </NotificationProvider>
             </I18nProviderWrapper>
           </SessionProvider>
+          <WebVitalsReporter
+            analyticsEnabled={process.env.NODE_ENV === 'production'}
+            debug={process.env.NODE_ENV === 'development'}
+            reportToConsole={process.env.NODE_ENV === 'development'}
+          />
           <Toaster />
           <SonnerToaster position="bottom-right" />
         </ThemeProvider>

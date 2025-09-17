@@ -1,10 +1,10 @@
 {
   "navigation": {
     "enterApp": "Uygulamaya Gir",
-    "whyPluggedin": "Neden plugged.in", 
+    "whyPluggedin": "Neden plugged.in",
     "features": "Özellikler",
-    "aiModels": "AI Modelleri", 
-    "pricing": "Fiyatlandırma", 
+    "aiModels": "AI Modelleri",
+    "pricing": "Fiyatlandırma",
     "community": "Topluluk",
     "collections": "Koleksiyonlar",
     "playground": "Oyun Alanı",
@@ -22,6 +22,11 @@
     "cta": {
       "getStarted": "Ücretsiz Başla",
       "learnMore": "Neden plugged.in"
+    },
+    "features": {
+      "security": "Enterprise Security",
+      "fast": "Lightning Fast",
+      "scale": "Global Scale"
     }
   },
   "whyPluggedin": {
@@ -207,21 +212,6 @@
     "benefit3": "Topluluk eserleri üzerinde işbirliği yapın ve geliştirin.",
     "benefit4": "En son MCP trendlerinden haberdar olun.",
     "visualPlaceholder": "Sunucu paylaşımını/derecelendirmelerini gösteren görsel"
-  },
-  "testimonials": {
-    "title": "Geliştiriciler Ne Diyor",
-    "subtitle": "Topluluktan dinleyin",
-    "sectionTitle": "Dünya Çapında Geliştiriciler Tarafından Güveniliyor",
-    "sectionSubtitle": "Kullanıcılarımızın Plugged.in hakkında söylediklerini dinleyin.",
-    "quote1": "\"Plugged.in, ekibimizin MCP sunucularını yönetme şeklini devrimleştirdi. Organizasyon özellikleri harika!\"",
-    "name1": "Jane Doe",
-    "title1": "Baş Yapay Zeka Mühendisi, TechCorp",
-    "quote2": "\"Topluluk paylaşım özelliği oyunun kurallarını değiştiriyor. Yeni araçlar keşfetmek hiç bu kadar kolay olmamıştı.\"",
-    "name2": "Alex Smith",
-    "title2": "Bağımsız Geliştirici",
-    "quote3": "\"MCP Oyun Alanı ile hata ayıklamak bize sayısız saat kazandırdı. Şiddetle tavsiye edilir!\"",
-    "name3": "Maria Kim",
-    "title3": "Kurucu, AI Solutions Inc."
   },
   "search": {
     "title": "Akıllı Keşif Motoru",
@@ -469,6 +459,90 @@
     "security": {
       "title": "Kurumsal Düzeyde Güvenlik",
       "description": "Verileriniz çok katmanlı kimlik doğrulama, Firejail sandboxing ve kapsamlı denetim izleri ile korunur. Tam kontrol için kendi kendine barındırın."
+    }
+  },
+  "trust": {
+    "title": "Kurumsal Güvenilirlik ve Güvenlik",
+    "subtitle": "Binlerce kuruluş kritik AI altyapıları için Plugged.in'e güveniyor",
+    "certifications": {
+      "soc2": {
+        "label": "SOC 2 Type II",
+        "description": "Sertifikalı"
+      },
+      "iso": {
+        "label": "ISO 27001",
+        "description": "Uyumlu"
+      },
+      "gdpr": {
+        "label": "GDPR",
+        "description": "Uyumlu"
+      },
+      "hipaa": {
+        "label": "HIPAA",
+        "description": "Hazır"
+      }
+    },
+    "growth": {
+      "title": "30 günde 0'dan 14.000+ API çağrısına",
+      "subtitle": "En hızlı büyüyen AI entegrasyon platformu ile geleceği inşa eden 620+ geliştiriciye katılın",
+      "stats": {
+        "documents": "87+ AI Belgesi",
+        "servers": "460 Aktif Sunucu",
+        "projects": "650+ Oluşturulan Proje"
+      }
+    }
+  },
+  "metrics": {
+    "growth": {
+      "value": "718",
+      "suffix": "%",
+      "label": "Aylık Büyüme"
+    },
+    "tools": {
+      "value": "7,268",
+      "suffix": "+",
+      "label": "Doğrulanmış Araçlar"
+    },
+    "servers": {
+      "value": "1,500",
+      "suffix": "+",
+      "label": "MCP Sunucuları"
+    },
+    "apiCalls": {
+      "value": "14K",
+      "suffix": "+",
+      "label": "Aylık API Çağrısı"
+    },
+    "projects": {
+      "value": "650",
+      "suffix": "+",
+      "label": "Aktif Projeler"
+    },
+    "users": {
+      "value": "620",
+      "suffix": "+",
+      "label": "Aktif Geliştiriciler"
+    },
+    "activeServers": {
+      "value": "460",
+      "suffix": "+",
+      "label": "Aktif Sunucular"
+    },
+    "response": {
+      "value": "100",
+      "prefix": "<",
+      "suffix": "ms",
+      "label": "Yanıt Süresi"
+    },
+    "uptime": {
+      "value": "99.9",
+      "suffix": "%",
+      "label": "Çalışma Süresi SLA"
+    },
+    "documents": {
+      "value": "87",
+      "suffix": "+",
+      "label": "AI Belgeleri"
     }
   }
 }

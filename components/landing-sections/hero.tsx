@@ -83,7 +83,7 @@ export function LandingHeroSection() {
             mounted ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
           )}
         >
-          v{process.env.NEXT_PUBLIC_APP_VERSION || '2.10.0'}
+          v{process.env.NEXT_PUBLIC_APP_VERSION || '2.10.3'}
         </div>
 
         {/* Actions */}

@@ -22,6 +22,11 @@
     "cta": {
       "getStarted": "加入社区",
       "learnMore": "探索功能"
+    },
+    "features": {
+      "security": "Enterprise Security",
+      "fast": "Lightning Fast",
+      "scale": "Global Scale"
     }
   },
   "whyPluggedin": {
@@ -175,21 +180,6 @@
     "benefit3": "在社区创作基础上协作和构建。",
     "benefit4": "了解最新的 MCP 趋势。",
     "visualPlaceholder": "显示服务器共享/评分的视觉"
-  },
-  "testimonials": {
-    "title": "开发者评价",
-    "subtitle": "听听社区的声音",
-    "sectionTitle": "受到全球开发者信赖",
-    "sectionSubtitle": "听听我们的用户对 Plugged.in 的评价。",
-    "quote1": "\"Plugged.in 彻底改变了我们团队管理 MCP 服务器的方式。组织功能非常棒！\"",
-    "name1": "Jane Doe",
-    "title1": "首席 AI 工程师，TechCorp",
-    "quote2": "\"社区共享功能改变了游戏规则。发现新工具从未如此简单。\"",
-    "name2": "Alex Smith",
-    "title2": "独立开发者",
-    "quote3": "\"使用 MCP 演练场调试为我们节省了无数小时。强烈推荐！\"",
-    "name3": "Maria Kim",
-    "title3": "创始人，AI Solutions Inc."
   },
   "search": {
     "title": "智能发现引擎",
@@ -437,6 +427,90 @@
     "security": {
       "title": "企业级安全",
       "description": "您的数据通过多层身份验证、Firejail 沙盒和全面审计跟踪得到保护。自托管以实现完全控制。"
+    }
+  },
+  "trust": {
+    "title": "企业信任与安全",
+    "subtitle": "数千家组织信任 Plugged.in 作为其关键 AI 基础设施",
+    "certifications": {
+      "soc2": {
+        "label": "SOC 2 Type II",
+        "description": "认证"
+      },
+      "iso": {
+        "label": "ISO 27001",
+        "description": "合规"
+      },
+      "gdpr": {
+        "label": "GDPR",
+        "description": "合规"
+      },
+      "hipaa": {
+        "label": "HIPAA",
+        "description": "就绪"
+      }
+    },
+    "growth": {
+      "title": "30 天内从 0 到 14,000+ API 调用",
+      "subtitle": "加入 620+ 开发者，共同使用增长最快的 AI 集成平台构建未来",
+      "stats": {
+        "documents": "87+ AI 文档",
+        "servers": "460 活跃服务器",
+        "projects": "650+ 创建的项目"
+      }
+    }
+  },
+  "metrics": {
+    "growth": {
+      "value": "718",
+      "suffix": "%",
+      "label": "月度增长"
+    },
+    "tools": {
+      "value": "7,268",
+      "suffix": "+",
+      "label": "已验证工具"
+    },
+    "servers": {
+      "value": "1,500",
+      "suffix": "+",
+      "label": "MCP 服务器"
+    },
+    "apiCalls": {
+      "value": "14K",
+      "suffix": "+",
+      "label": "月度 API 调用"
+    },
+    "projects": {
+      "value": "650",
+      "suffix": "+",
+      "label": "活跃项目"
+    },
+    "users": {
+      "value": "620",
+      "suffix": "+",
+      "label": "活跃开发者"
+    },
+    "activeServers": {
+      "value": "460",
+      "suffix": "+",
+      "label": "活跃服务器"
+    },
+    "response": {
+      "value": "100",
+      "prefix": "<",
+      "suffix": "ms",
+      "label": "响应时间"
+    },
+    "uptime": {
+      "value": "99.9",
+      "suffix": "%",
+      "label": "正常运行时间 SLA"
+    },
+    "documents": {
+      "value": "87",
+      "suffix": "+",
+      "label": "AI 文档"
     }
   }
 }

@@ -71,10 +71,10 @@ export function UserMenu() {
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href="/docs" className="flex items-center cursor-pointer">
+          <a href="https://docs.plugged.in" target="_blank" rel="noopener noreferrer" className="flex items-center cursor-pointer">
             <BookOpen className="mr-2 h-4 w-4" />
             <span>{t('docs.title', 'Documentation')}</span>
-          </Link>
+          </a>
         </DropdownMenuItem>
          <DropdownMenuItem asChild>
           <Link href="/api-keys" className="flex items-center cursor-pointer">
