@@ -1534,6 +1534,58 @@ export const scheduledEmailsRelations = relations(scheduledEmailsTable, ({ one }
   }),
 }));
 
+// Email templates table for admin email management
+export const emailTemplatesTable = pgTable(
+  'email_templates',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    name: text('name').notNull().unique(),
+    subject: text('subject').notNull(),
+    content: text('content').notNull(),
+    category: text('category').notNull().default('other'), // 'product_update', 'feature_announcement', 'newsletter', 'other'
+    variables: jsonb('variables').default([]), // List of template variables like ['firstName', 'email']
+    isActive: boolean('is_active').default(true),
+    createdBy: text('created_by')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    updatedBy: text('updated_by')
+      .references(() => users.id, { onDelete: 'restrict' }),
+    version: integer('version').default(1).notNull(),
+    parentId: uuid('parent_id'), // For versioning - reference to parent template
+    metadata: jsonb('metadata').default({}), // Additional metadata like usage stats
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => ({
+    emailTemplatesCategoryIdx: index('idx_email_templates_category').on(table.category),
+    emailTemplatesActiveIdx: index('idx_email_templates_active').on(table.isActive),
+    emailTemplatesCreatedByIdx: index('idx_email_templates_created_by').on(table.createdBy),
+    emailTemplatesParentIdx: index('idx_email_templates_parent_id').on(table.parentId),
+  })
+);
+
+// Relations for email templates
+export const emailTemplatesRelations = relations(emailTemplatesTable, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [emailTemplatesTable.createdBy],
+    references: [users.id],
+    relationName: 'emailTemplateCreator',
+  }),
+  updatedBy: one(users, {
+    fields: [emailTemplatesTable.updatedBy],
+    references: [users.id],
+    relationName: 'emailTemplateUpdater',
+  }),
+  parent: one(emailTemplatesTable, {
+    fields: [emailTemplatesTable.parentId],
+    references: [emailTemplatesTable.id],
+    relationName: 'templateVersions',
+  }),
+  versions: many(emailTemplatesTable, {
+    relationName: 'templateVersions',
+  }),
+}));
+
 // Secure unsubscribe tokens table
 export const unsubscribeTokensTable = pgTable(
   'unsubscribe_tokens',

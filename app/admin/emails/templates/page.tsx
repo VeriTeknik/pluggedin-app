@@ -4,10 +4,21 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { getEmailTemplates } from '../actions';
-import { FileText, Plus, Edit, Trash2 } from 'lucide-react';
+import { getEmailTemplates, deleteEmailTemplate } from '../actions';
+import { FileText, Plus, Edit, Trash2, Copy, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useRouter } from 'next/navigation';
 
 interface EmailTemplate {
   id: string;
@@ -15,11 +26,19 @@ interface EmailTemplate {
   subject: string;
   content: string;
   category: string;
+  version?: number;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: { email: string };
+  updatedBy?: { email: string };
 }
 
 export default function EmailTemplatesPage() {
+  const router = useRouter();
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [templateToDelete, setTemplateToDelete] = useState<EmailTemplate | null>(null);
 
   useEffect(() => {
     loadTemplates();
@@ -37,6 +56,31 @@ export default function EmailTemplatesPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!templateToDelete) return;
+
+    try {
+      const result = await deleteEmailTemplate(templateToDelete.id);
+      if (result.success) {
+        toast.success('Template deleted successfully');
+        setTemplates(templates.filter(t => t.id !== templateToDelete.id));
+      } else {
+        toast.error(result.error || 'Failed to delete template');
+      }
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+      toast.error('Failed to delete template');
+    } finally {
+      setDeleteDialogOpen(false);
+      setTemplateToDelete(null);
+    }
+  };
+
+  const confirmDelete = (template: EmailTemplate) => {
+    setTemplateToDelete(template);
+    setDeleteDialogOpen(true);
   };
 
   const getCategoryBadge = (category: string) => {
@@ -68,7 +112,7 @@ export default function EmailTemplatesPage() {
             Manage reusable email templates for quick composition
           </p>
         </div>
-        <Link href="/admin/emails/compose">
+        <Link href="/admin/emails/templates/new/edit">
           <Button>
             <Plus className="mr-2 h-4 w-4" />
             Create Template
@@ -84,7 +128,7 @@ export default function EmailTemplatesPage() {
             <p className="text-muted-foreground text-center mb-4">
               Create your first email template to get started
             </p>
-            <Link href="/admin/emails/compose">
+            <Link href="/admin/emails/templates/new/edit">
               <Button>
                 <Plus className="mr-2 h-4 w-4" />
                 Create Template
@@ -112,13 +156,34 @@ export default function EmailTemplatesPage() {
                   <div className="text-sm text-muted-foreground line-clamp-3">
                     {template.content.substring(0, 150)}...
                   </div>
-                  <div className="flex justify-between items-center pt-2">
-                    <Link href={`/admin/emails/compose?template=${template.id}`}>
-                      <Button variant="outline" size="sm">
+                  {template.version && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="h-3 w-3" />
+                      Version {template.version}
+                      {template.updatedAt && ` • ${new Date(template.updatedAt).toLocaleDateString()}`}
+                    </div>
+                  )}
+                  <div className="flex gap-2 pt-2">
+                    <Link href={`/admin/emails/templates/${template.id}/edit`} className="flex-1">
+                      <Button variant="outline" size="sm" className="w-full">
                         <Edit className="mr-2 h-3 w-3" />
-                        Use Template
+                        Edit
                       </Button>
                     </Link>
+                    <Link href={`/admin/emails/compose?template=${template.id}`} className="flex-1">
+                      <Button variant="default" size="sm" className="w-full">
+                        <Copy className="mr-2 h-3 w-3" />
+                        Use
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => confirmDelete(template)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -156,6 +221,30 @@ export default function EmailTemplatesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the template "{templateToDelete?.name}".
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setTemplateToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Template
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

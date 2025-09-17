@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/db';
-import { users, userEmailPreferencesTable, emailTrackingTable, adminAuditLogTable } from '@/db/schema';
+import { users, userEmailPreferencesTable, emailTrackingTable, adminAuditLogTable, emailTemplatesTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { getAdminEmails } from '@/lib/admin-notifications';
 import { sendEmail } from '@/lib/email';
@@ -489,320 +489,339 @@ const emailTemplateSchema = z.object({
   category: z.enum(['product_update', 'feature_announcement', 'newsletter', 'other']).default('other'),
 });
 
-// For now, we'll store templates in memory (you can add a database table later)
-const templates = new Map<string, z.infer<typeof emailTemplateSchema>>();
-
-export async function saveEmailTemplate(input: z.infer<typeof emailTemplateSchema>) {
+// Create a new email template
+export async function createEmailTemplate(input: z.infer<typeof emailTemplateSchema>) {
   try {
-    await checkAdminAuth();
-
+    const session = await checkAdminAuth();
     const validated = emailTemplateSchema.parse(input);
-    const templateId = validated.name.toLowerCase().replace(/\s+/g, '-');
 
-    templates.set(templateId, validated);
+    // Check if template name already exists
+    const existing = await db.query.emailTemplatesTable.findFirst({
+      where: eq(emailTemplatesTable.name, validated.name),
+    });
+
+    if (existing) {
+      return {
+        success: false,
+        error: 'Template with this name already exists',
+      };
+    }
+
+    // Insert new template
+    const [newTemplate] = await db
+      .insert(emailTemplatesTable)
+      .values({
+        name: validated.name,
+        subject: validated.subject,
+        content: validated.content,
+        category: validated.category,
+        variables: [], // Will be extracted from content later
+        createdBy: session.user.id,
+        updatedBy: session.user.id,
+      })
+      .returning();
+
+    // Log admin action
+    await logAdminAction(session.user.id, 'CREATE_EMAIL_TEMPLATE', 'email_template', newTemplate.id, {
+      templateName: validated.name,
+      category: validated.category,
+    });
 
     return {
       success: true,
-      data: {
-        id: templateId,
-        ...validated,
-      },
+      data: newTemplate,
     };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to save template',
+      error: error instanceof Error ? error.message : 'Failed to create template',
     };
   }
+}
+
+// Update existing email template
+export async function updateEmailTemplate(id: string, input: Partial<z.infer<typeof emailTemplateSchema>>) {
+  try {
+    const session = await checkAdminAuth();
+
+    // Check if template exists
+    const existing = await db.query.emailTemplatesTable.findFirst({
+      where: eq(emailTemplatesTable.id, id),
+    });
+
+    if (!existing) {
+      return {
+        success: false,
+        error: 'Template not found',
+      };
+    }
+
+    // Create a new version if content or subject changes
+    let newVersion = existing.version;
+    let parentId = existing.parentId || existing.id;
+
+    if (input.content !== existing.content || input.subject !== existing.subject) {
+      newVersion = existing.version + 1;
+
+      // Archive current version by creating a copy
+      await db.insert(emailTemplatesTable).values({
+        ...existing,
+        id: undefined, // Let database generate new ID
+        parentId: parentId,
+        isActive: false,
+        updatedAt: new Date(),
+      });
+    }
+
+    // Update the template
+    const [updatedTemplate] = await db
+      .update(emailTemplatesTable)
+      .set({
+        ...(input.name && { name: input.name }),
+        ...(input.subject && { subject: input.subject }),
+        ...(input.content && { content: input.content }),
+        ...(input.category && { category: input.category }),
+        version: newVersion,
+        updatedBy: session.user.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(emailTemplatesTable.id, id))
+      .returning();
+
+    // Log admin action
+    await logAdminAction(session.user.id, 'UPDATE_EMAIL_TEMPLATE', 'email_template', id, {
+      changes: Object.keys(input),
+      version: newVersion,
+    });
+
+    return {
+      success: true,
+      data: updatedTemplate,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to update template',
+    };
+  }
+}
+
+// Delete email template (soft delete)
+export async function deleteEmailTemplate(id: string) {
+  try {
+    const session = await checkAdminAuth();
+
+    // Check if template exists
+    const existing = await db.query.emailTemplatesTable.findFirst({
+      where: eq(emailTemplatesTable.id, id),
+    });
+
+    if (!existing) {
+      return {
+        success: false,
+        error: 'Template not found',
+      };
+    }
+
+    // Soft delete by setting isActive to false
+    await db
+      .update(emailTemplatesTable)
+      .set({
+        isActive: false,
+        updatedBy: session.user.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(emailTemplatesTable.id, id));
+
+    // Log admin action
+    await logAdminAction(session.user.id, 'DELETE_EMAIL_TEMPLATE', 'email_template', id, {
+      templateName: existing.name,
+    });
+
+    return {
+      success: true,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to delete template',
+    };
+  }
+}
+
+// Get single email template
+export async function getEmailTemplate(id: string) {
+  try {
+    await checkAdminAuth();
+
+    const template = await db.query.emailTemplatesTable.findFirst({
+      where: and(
+        eq(emailTemplatesTable.id, id),
+        eq(emailTemplatesTable.isActive, true)
+      ),
+      with: {
+        createdBy: {
+          columns: {
+            email: true,
+          },
+        },
+        updatedBy: {
+          columns: {
+            email: true,
+          },
+        },
+      },
+    });
+
+    if (!template) {
+      return {
+        success: false,
+        error: 'Template not found',
+      };
+    }
+
+    return {
+      success: true,
+      data: template,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch template',
+    };
+  }
+}
+
+// Duplicate email template
+export async function duplicateEmailTemplate(id: string, newName: string) {
+  try {
+    const session = await checkAdminAuth();
+
+    // Get original template
+    const original = await db.query.emailTemplatesTable.findFirst({
+      where: eq(emailTemplatesTable.id, id),
+    });
+
+    if (!original) {
+      return {
+        success: false,
+        error: 'Template not found',
+      };
+    }
+
+    // Check if new name already exists
+    const existing = await db.query.emailTemplatesTable.findFirst({
+      where: eq(emailTemplatesTable.name, newName),
+    });
+
+    if (existing) {
+      return {
+        success: false,
+        error: 'Template with this name already exists',
+      };
+    }
+
+    // Create duplicate
+    const [newTemplate] = await db
+      .insert(emailTemplatesTable)
+      .values({
+        name: newName,
+        subject: original.subject,
+        content: original.content,
+        category: original.category,
+        variables: original.variables,
+        createdBy: session.user.id,
+        updatedBy: session.user.id,
+      })
+      .returning();
+
+    // Log admin action
+    await logAdminAction(session.user.id, 'DUPLICATE_EMAIL_TEMPLATE', 'email_template', newTemplate.id, {
+      originalId: id,
+      originalName: original.name,
+      newName: newName,
+    });
+
+    return {
+      success: true,
+      data: newTemplate,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to duplicate template',
+    };
+  }
+}
+
+// Backwards compatibility - redirect to createEmailTemplate
+export async function saveEmailTemplate(input: z.infer<typeof emailTemplateSchema>) {
+  return createEmailTemplate(input);
 }
 
 export async function getEmailTemplates() {
   try {
     await checkAdminAuth();
 
-    const templateList = Array.from(templates.entries()).map(([id, template]) => ({
-      id,
-      ...template,
-    }));
-
-    // Add some default templates if none exist
-    if (templateList.length === 0) {
-      const defaultTemplates = [
-        {
-          id: 'product-update',
-          name: 'Product Update',
-          subject: '🚀 New Features in Plugged.in',
-          content: `Hi {{firstName}},
-
-We've been busy building new features to make your Plugged.in experience even better!
-
-## What's New
-
-### 🎯 Feature 1
-Description of the first new feature.
-
-### 🔧 Feature 2
-Description of the second new feature.
-
-### 📊 Feature 3
-Description of the third new feature.
-
-## Coming Soon
-- Upcoming feature 1
-- Upcoming feature 2
-
-[Check out the new features →](https://plugged.in)
-
-Happy building!`,
-          category: 'product_update' as const,
+    // Get all active templates from database
+    const templates = await db.query.emailTemplatesTable.findMany({
+      where: eq(emailTemplatesTable.isActive, true),
+      orderBy: [desc(emailTemplatesTable.createdAt)],
+      with: {
+        createdBy: {
+          columns: {
+            email: true,
+          },
         },
-        {
-          id: 'feature-announcement',
-          name: 'Feature Announcement',
-          subject: 'Introducing: [Feature Name]',
-          content: `Hi {{firstName}},
-
-We're excited to announce a new feature that will revolutionize how you work with MCP servers!
-
-## Introducing [Feature Name]
-
-[Description of the feature and its benefits]
-
-### How It Works
-1. Step one
-2. Step two
-3. Step three
-
-### Get Started
-[Link to documentation or tutorial]
-
-We can't wait to see what you build with this!`,
-          category: 'feature_announcement' as const,
+        updatedBy: {
+          columns: {
+            email: true,
+          },
         },
-        {
-          id: 'day-3-followup',
-          name: 'Day 3 Follow-up',
-          subject: 'Quick tip: Your docs are now AI-searchable 📚',
-          content: `Hi {{firstName}},
-
-Just a quick tip that might save you hours...
-
-Did you know that every document you upload to Plugged.in becomes instantly searchable by your AI?
-
-Here's the magic:
-1. **Upload any document** → [plugged.in/library](https://plugged.in/library)
-2. **Your AI can now search it** using "Ask Knowledge Base" in Claude Desktop
-3. **No more copy-pasting** - your AI remembers everything
-
-### 🎯 Pro Tip
-Upload your project docs, API references, or meeting notes. Your AI will reference them automatically when you ask questions.
-
-### Popular Use Cases Our Users Love:
-- 📝 **Project documentation** - "What was our decision about the auth flow?"
-- 📊 **Data sheets** - "What were last quarter's metrics?"
-- 🔧 **API docs** - "How do I authenticate with our backend?"
-
-[Upload your first document →](https://plugged.in/library)
-
-Takes 30 seconds, saves hours of searching.
-
-P.S. Your documents are encrypted and only accessible by you. Privacy first, always.`,
-          category: 'newsletter' as const,
-        },
-        {
-          id: 'day-7-followup',
-          name: 'Day 7 Follow-up',
-          subject: 'Your MCP servers, working together 🔗',
-          content: `Hi {{firstName}},
-
-Hope you've had a chance to explore Plugged.in!
-
-Here's something cool: **your MCP servers can work together**.
-
-### Example Workflow
-Imagine you have:
-- 📚 **Context7** for documentation
-- 🗄️ **Database** for your data
-- 📧 **Email** for notifications
-
-Your AI can now:
-1. Look up documentation (Context7)
-2. Query your database based on those docs
-3. Send you a summary via email
-
-All in one conversation. No switching tools.
-
-### 🎯 Quick Setup Ideas:
-**For Developers:**
-- Context7 + GitHub + Slack = Automated PR reviews with notifications
-
-**For Data Analysts:**
-- Database + Sequential Thinking + Notifications = Complex analysis with alerts
-
-**For Everyone:**
-- Document Library + Any MCP = Your personal knowledge assistant
-
-### Need Help Setting This Up?
-- 📖 [Setup Guide](https://plugged.in/setup-guide)
-- 💬 [Join our Discord](https://discord.gg/pluggedin)
-- 📅 [Book a quick call](https://calendly.com/cem-pluggedin/onboarding)
-
-Or just reply to this email - I read everything personally!
-
-Keep building amazing things,
-Cem 🐾`,
-          category: 'newsletter' as const,
-        },
-        {
-          id: 'day-14-followup',
-          name: 'Day 14 Follow-up',
-          subject: "You're sitting on a goldmine of data 💎",
-          content: `Hi {{firstName}},
-
-Two weeks in - how's your Plugged.in journey going?
-
-Here's what successful users do differently: **they upload their existing knowledge**.
-
-### Your Data Goldmine:
-- 📄 **Old project docs** → Instant project memory
-- 📊 **Spreadsheets** → AI-powered analysis
-- 📝 **Meeting notes** → Never forget a decision
-- 📚 **Research papers** → Your personal research assistant
-
-### The Magic Moment ✨
-Users tell us their "aha!" moment comes when they ask their AI something like:
-- "What did we decide about pricing in the Q2 meeting?"
-- "How did we solve the authentication bug last time?"
-- "What were the key findings from that research paper?"
-
-And their AI just... knows.
-
-### 📈 By The Numbers:
-- Average user uploads **12 documents** in first month
-- Saves **3+ hours per week** on information retrieval
-- **87% faster** at finding past decisions
-
-### Ready to unlock your goldmine?
-1. [Upload your documents](https://plugged.in/library)
-2. Ask your AI anything about them
-3. Watch the magic happen
-
-Still have questions? Just reply - I personally read every email.
-
-Happy building!
-Cem 🐾
-
-P.S. Did you know you can share MCP server collections with your team? [Check it out →](https://plugged.in/social/collections)`,
-          category: 'newsletter' as const,
-        },
-        {
-          id: 'day-30-followup',
-          name: 'Day 30 Check-in',
-          subject: "One month with Plugged.in - what's next? 🎯",
-          content: `Hi {{firstName}},
-
-It's been a month since you joined Plugged.in! 🎉
-
-### Quick Check-in:
-How's everything going? I'd love to hear:
-- What's working well?
-- What could be better?
-- What features would you like to see?
-
-Just reply to this email - I read every response personally.
-
-### 📊 Your Plugged.in Journey So Far:
-- Documents uploaded: [Check your library](https://plugged.in/library)
-- MCP servers connected: [View servers](https://plugged.in/mcp-servers)
-- Time saved: Probably hours by now!
-
-### 🚀 Advanced Features You Might Have Missed:
-
-**1. Custom MCP Servers**
-Did you know you can create your own MCP servers? [Learn how →](https://plugged.in/docs/custom-servers)
-
-**2. Team Collaboration**
-Share server collections with your team for consistent setups. [Explore →](https://plugged.in/social/collections)
-
-**3. API Access**
-Integrate Plugged.in with your existing tools. [API Docs →](https://docs.plugged.in/api-reference)
-
-### 🎁 Special Offer
-As a thank you for being an early adopter, here's 20% off any paid plan:
-Code: **MONTH1-20**
-
-### Need Help?
-- 📅 [Book a 1-on-1 call](https://calendly.com/cem-pluggedin/power-user)
-- 💬 [Join our Discord](https://discord.gg/pluggedin)
-- 📧 Just reply to this email
-
-Looking forward to hearing from you!
-
-Cem 🐾
-Founder @ Plugged.in
-
-P.S. We ship new features every week. [See what's new →](https://plugged.in/release-notes)`,
-          category: 'newsletter' as const,
-        },
-        {
-          id: 'inactive-user-reengagement',
-          name: 'Re-engagement Email',
-          subject: "We miss you at Plugged.in 👋",
-          content: `Hi {{firstName}},
-
-It's been a while since we've seen you at Plugged.in!
-
-Just wanted to check in and let you know about some exciting updates you might have missed:
-
-### 🆕 What's New:
-- **AI Document Search**: Your uploaded docs are now AI-searchable
-- **Team Sharing**: Share MCP server collections with colleagues
-- **10+ New MCP Servers**: Including databases, APIs, and more
-
-### 💡 Quick Win:
-Takes 2 minutes to see the magic:
-1. [Upload a document](https://plugged.in/library)
-2. Ask Claude Desktop about it
-3. Be amazed 🤯
-
-### Need Help Getting Started?
-Sometimes we all need a nudge. Here are some resources:
-- 🎥 [2-minute video tutorial](https://plugged.in/quick-start)
-- 📖 [Step-by-step guide](https://plugged.in/setup-guide)
-- 💬 [Chat with support](https://plugged.in/support)
-
-### 🎁 Welcome Back Offer
-Use code **COMEBACK** for 30% off your first month of any paid plan.
-
-If Plugged.in isn't right for you, no worries at all! You can [unsubscribe here](https://plugged.in/unsubscribe).
-
-But if you're ready to give it another try, we're here to help!
-
-Cem 🐾
-
-P.S. Seriously, just reply if you need help. I read every email.`,
-          category: 'newsletter' as const,
-        },
-      ];
-
-      defaultTemplates.forEach(template => {
-        templates.set(template.id, template);
-      });
-
-      return {
-        success: true,
-        data: defaultTemplates,
-      };
-    }
+      },
+    });
 
     return {
       success: true,
-      data: templateList,
+      data: templates,
     };
   } catch (error) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get templates',
+      error: error instanceof Error ? error.message : 'Failed to fetch templates',
+    };
+  }
+}
+
+// Get template version history
+export async function getTemplateVersions(templateId: string) {
+  try {
+    await checkAdminAuth();
+
+    // Get all versions of a template
+    const versions = await db.query.emailTemplatesTable.findMany({
+      where: or(
+        eq(emailTemplatesTable.id, templateId),
+        eq(emailTemplatesTable.parentId, templateId)
+      ),
+      orderBy: [desc(emailTemplatesTable.version)],
+      with: {
+        updatedBy: {
+          columns: {
+            email: true,
+          },
+        },
+      },
+    });
+
+    return {
+      success: true,
+      data: versions,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch template versions',
     };
   }
 }
