@@ -5,6 +5,33 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.11.1] - 2025-01-18
+
+### Added
+- **RAG Document Source Attribution**
+  - Display source documents in library AI search results
+  - Clickable document sources that open preview modal
+  - Document names/IDs shown as badges below AI answers
+  - Support for metadata in RAG API responses
+- **Enhanced AI Search Experience**
+  - New `AiSearchAnswer` component for displaying AI responses
+  - `useKnowledgeBaseSearch` hook with 500ms debounce
+  - Collapsible AI answer panel with source attribution
+  - AI search toggle with sparkles icon in library controls
+- **MCP Tool Enhancement Support**
+  - API endpoint now supports `includeMetadata` parameter
+  - Returns JSON with sources when metadata requested
+  - Maintains backward compatibility with plain text responses
+  - Improved audit logging for metadata requests
+
+### Fixed
+- Null safety for document ID handling in library
+- Translation keys for AI search features in all 6 languages
+
+### Changed
+- RAG service updated to handle new response format with sources
+- Library actions enhanced to pass through document metadata
+
 ## [2.8.0] - 2025-01-27
 
 ### Added
