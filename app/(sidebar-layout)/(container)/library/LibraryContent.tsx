@@ -169,7 +169,7 @@ export default function LibraryContent() {
       // This handles cases where the documentId is a Milvus document_id
       const matchingDoc = docs.find(d =>
         d.rag_document_id?.includes(documentId) ||
-        d.id?.includes(documentId)
+        d.uuid?.includes(documentId)
       );
       if (matchingDoc) {
         handlePreview(matchingDoc);
