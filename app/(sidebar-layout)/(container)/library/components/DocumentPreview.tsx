@@ -16,7 +16,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import { useCallback, useEffect,useState } from 'react';
+import { useCallback, useEffect, useReducer, useMemo, useState, memo, lazy, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
@@ -35,9 +35,157 @@ import type { DocumentVersion } from '@/types/document-versioning';
 
 import { DocumentVersionHistory } from './DocumentVersionHistory';
 
-// Dynamic imports for heavy components
-const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
-const PDFViewer = dynamic(() => import('./PDFViewer'), { ssr: false });
+// Lazy load heavy components
+const ReactMarkdown = lazy(() => import('react-markdown'));
+const PDFViewer = lazy(() => import('./PDFViewer'));
+
+// Module-level cache for dynamic imports
+const importCache: Record<string, any> = {};
+
+const getDynamicImport = async (key: string, importFn: () => Promise<any>) => {
+  if (!importCache[key]) {
+    importCache[key] = await importFn();
+  }
+  return importCache[key];
+};
+
+// Consolidated state interface
+interface DocumentPreviewState {
+  ui: {
+    isFullscreen: boolean;
+    imageZoom: number;
+    currentDocIndex: number;
+    showVersionHistory: boolean;
+  };
+  content: {
+    textContent: string | null;
+    isLoadingText: boolean;
+    textError: string | null;
+  };
+  versions: {
+    list: DocumentVersion[];
+    isLoading: boolean;
+    error: string | null;
+    selectedVersion: DocumentVersion | null;
+    versionContent: string | null;
+    isLoadingVersionContent: boolean;
+  };
+}
+
+// Action types
+type DocumentPreviewAction =
+  | { type: 'SET_FULLSCREEN'; payload: boolean }
+  | { type: 'SET_IMAGE_ZOOM'; payload: number }
+  | { type: 'SET_CURRENT_DOC_INDEX'; payload: number }
+  | { type: 'TOGGLE_VERSION_HISTORY' }
+  | { type: 'SET_TEXT_CONTENT'; payload: { content: string | null; error?: string | null } }
+  | { type: 'SET_TEXT_LOADING'; payload: boolean }
+  | { type: 'SET_TEXT_ERROR'; payload: string | null }
+  | { type: 'SET_VERSIONS'; payload: DocumentVersion[] }
+  | { type: 'SET_VERSIONS_LOADING'; payload: boolean }
+  | { type: 'SET_VERSIONS_ERROR'; payload: string | null }
+  | { type: 'SET_SELECTED_VERSION'; payload: DocumentVersion | null }
+  | { type: 'SET_VERSION_CONTENT'; payload: string | null }
+  | { type: 'SET_VERSION_CONTENT_LOADING'; payload: boolean }
+  | { type: 'RESET_DOCUMENT_STATE' }
+  | { type: 'RESET_VERSION_STATE' };
+
+// Reducer function
+const documentPreviewReducer = (state: DocumentPreviewState, action: DocumentPreviewAction): DocumentPreviewState => {
+  switch (action.type) {
+    case 'SET_FULLSCREEN':
+      return { ...state, ui: { ...state.ui, isFullscreen: action.payload } };
+    case 'SET_IMAGE_ZOOM':
+      return { ...state, ui: { ...state.ui, imageZoom: action.payload } };
+    case 'SET_CURRENT_DOC_INDEX':
+      return { ...state, ui: { ...state.ui, currentDocIndex: action.payload } };
+    case 'TOGGLE_VERSION_HISTORY':
+      return { ...state, ui: { ...state.ui, showVersionHistory: !state.ui.showVersionHistory } };
+    case 'SET_TEXT_CONTENT':
+      return {
+        ...state,
+        content: {
+          ...state.content,
+          textContent: action.payload.content,
+          textError: action.payload.error || null,
+          isLoadingText: false,
+        },
+      };
+    case 'SET_TEXT_LOADING':
+      return { ...state, content: { ...state.content, isLoadingText: action.payload } };
+    case 'SET_TEXT_ERROR':
+      return { ...state, content: { ...state.content, textError: action.payload } };
+    case 'SET_VERSIONS':
+      return {
+        ...state,
+        versions: { ...state.versions, list: action.payload, isLoading: false, error: null },
+      };
+    case 'SET_VERSIONS_LOADING':
+      return { ...state, versions: { ...state.versions, isLoading: action.payload } };
+    case 'SET_VERSIONS_ERROR':
+      return { ...state, versions: { ...state.versions, error: action.payload, isLoading: false } };
+    case 'SET_SELECTED_VERSION':
+      return { ...state, versions: { ...state.versions, selectedVersion: action.payload } };
+    case 'SET_VERSION_CONTENT':
+      return {
+        ...state,
+        versions: { ...state.versions, versionContent: action.payload, isLoadingVersionContent: false },
+      };
+    case 'SET_VERSION_CONTENT_LOADING':
+      return { ...state, versions: { ...state.versions, isLoadingVersionContent: action.payload } };
+    case 'RESET_DOCUMENT_STATE':
+      return {
+        ...state,
+        ui: { ...state.ui, imageZoom: 1, showVersionHistory: false },
+        content: { textContent: null, isLoadingText: false, textError: null },
+        versions: {
+          list: [],
+          isLoading: false,
+          error: null,
+          selectedVersion: null,
+          versionContent: null,
+          isLoadingVersionContent: false,
+        },
+      };
+    case 'RESET_VERSION_STATE':
+      return {
+        ...state,
+        versions: {
+          list: [],
+          isLoading: false,
+          error: null,
+          selectedVersion: null,
+          versionContent: null,
+          isLoadingVersionContent: false,
+        },
+      };
+    default:
+      return state;
+  }
+};
+
+// Initial state
+const initialState: DocumentPreviewState = {
+  ui: {
+    isFullscreen: false,
+    imageZoom: 1,
+    currentDocIndex: 0,
+    showVersionHistory: false,
+  },
+  content: {
+    textContent: null,
+    isLoadingText: false,
+    textError: null,
+  },
+  versions: {
+    list: [],
+    isLoading: false,
+    error: null,
+    selectedVersion: null,
+    versionContent: null,
+    isLoadingVersionContent: false,
+  },
+};
 
 interface DocumentPreviewProps {
   open: boolean;
@@ -50,7 +198,7 @@ interface DocumentPreviewProps {
   formatFileSize: (bytes: number) => string;
 }
 
-export function DocumentPreview({
+export const DocumentPreview = memo(function DocumentPreview({
   open,
   onOpenChange,
   doc,
@@ -62,106 +210,99 @@ export function DocumentPreview({
 }: DocumentPreviewProps) {
   const { t } = useTranslation('library');
   const { currentProject } = useProjects();
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [imageZoom, setImageZoom] = useState(1);
-  const [currentDocIndex, setCurrentDocIndex] = useState(0);
-  const [textContent, setTextContent] = useState<string | null>(null);
-  const [isLoadingText, setIsLoadingText] = useState(false);
-  const [versions, setVersions] = useState<DocumentVersion[]>([]);
-  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
-  const [showVersionHistory, setShowVersionHistory] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<DocumentVersion | null>(null);
-  const [versionContent, setVersionContent] = useState<string | null>(null);
-  const [isLoadingVersionContent, setIsLoadingVersionContent] = useState(false);
-  const [versionError, setVersionError] = useState<string | null>(null);
-  const [textError, setTextError] = useState<string | null>(null);
+
+  // Use reducer for consolidated state management
+  const [state, dispatch] = useReducer(documentPreviewReducer, initialState);
 
   // Use hook for DOCX content
   const { docxContent, isLoadingDocx } = useDocxContent(doc, open, currentProject?.uuid);
 
-  // Update current doc index when doc changes
-  useEffect(() => {
-    if (doc && docs.length > 0) {
-      const index = docs.findIndex(d => d.uuid === doc.uuid);
-      if (index !== -1) {
-        setCurrentDocIndex(index);
-      }
-    }
-  }, [doc, docs]);
+  // Memoized file type checks
+  const fileTypeInfo = useMemo(() => {
+    if (!doc) return null;
+    return {
+      isImage: isImageFile(doc.mime_type),
+      isPDF: isPDFFile(doc.mime_type),
+      isText: isTextFile(doc.mime_type, doc.file_name),
+      isDocx: isDocxFile(doc.mime_type, doc.name),
+      isMarkdown: isMarkdownFile(doc.file_name),
+      language: getFileLanguage(doc.file_name),
+    };
+  }, [doc?.mime_type, doc?.file_name, doc?.name]);
 
-  // Reset zoom and version state when document changes
+  // Memoized current doc index calculation
+  const currentDocIndex = useMemo(() => {
+    if (!doc || docs.length === 0) return 0;
+    const index = docs.findIndex(d => d.uuid === doc.uuid);
+    return index !== -1 ? index : 0;
+  }, [doc?.uuid, docs]);
+
+  // Update state when index changes
   useEffect(() => {
-    setImageZoom(1);
-    setShowVersionHistory(false);
-    setVersions([]);
-    setSelectedVersion(null);
-    setVersionContent(null);
-    setVersionError(null);
-    setTextError(null);
+    dispatch({ type: 'SET_CURRENT_DOC_INDEX', payload: currentDocIndex });
+  }, [currentDocIndex]);
+
+  // Reset state when document changes
+  useEffect(() => {
+    dispatch({ type: 'RESET_DOCUMENT_STATE' });
   }, [doc?.uuid]);
 
-  // Fetch version history for AI-generated documents
+  // Fetch version history for AI-generated documents with caching
   useEffect(() => {
-    if (!doc || !open || doc.source !== 'ai_generated') {
-      setVersions([]);
-      return;
-    }
-
-    // Don't fetch versions if we already have them or if not needed
-    if (!doc.version || doc.version <= 1) {
-      setVersions([]);
+    if (!doc || !open || doc.source !== 'ai_generated' || !doc.version || doc.version <= 1) {
+      dispatch({ type: 'RESET_VERSION_STATE' });
       return;
     }
 
     const abortController = new AbortController();
+    let timeoutId: NodeJS.Timeout;
 
     const fetchVersions = async () => {
-      setIsLoadingVersions(true);
-      setVersionError(null);
-      try {
-        const { getDocumentVersions } = await import('@/app/actions/library');
-        const { useSafeSession } = await import('@/hooks/use-safe-session');
+      dispatch({ type: 'SET_VERSIONS_LOADING', payload: true });
 
-        // Check if aborted
+      try {
+        // Set timeout for version fetching
+        timeoutId = setTimeout(() => {
+          abortController.abort();
+        }, 10000); // 10 second timeout
+
+        // Use cached import
+        const { getDocumentVersions } = await getDynamicImport(
+          'library-actions',
+          () => import('@/app/actions/library')
+        );
+
         if (abortController.signal.aborted) return;
 
-        // Get session to fetch versions
         const response = await getDocumentVersions(
           doc.user_id,
           doc.uuid,
           currentProject?.uuid
         );
 
-        // Check if aborted before setting state
         if (abortController.signal.aborted) return;
 
         if (response.success && response.versions) {
-          // Map the response to match DocumentVersion interface
           const mappedVersions: DocumentVersion[] = response.versions.map((v: any) => ({
-            id: `v${v.versionNumber}`, // Generate a temporary ID
+            id: `v${v.versionNumber}`,
             version_number: v.versionNumber,
-            content: '', // Content is loaded separately
+            content: '',
             created_by_model: v.createdByModel,
             created_at: v.createdAt,
             change_summary: v.changeSummary,
-            content_diff: v.contentDiff
+            content_diff: v.contentDiff,
           }));
-          setVersions(mappedVersions);
+          dispatch({ type: 'SET_VERSIONS', payload: mappedVersions });
         } else {
-          setVersions([]);
-          setVersionError(response.error || 'Failed to load version history');
+          dispatch({ type: 'SET_VERSIONS_ERROR', payload: response.error || 'Failed to load version history' });
         }
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') return;
-        console.error('Failed to fetch version history:', error);
-        setVersions([]);
         if (!abortController.signal.aborted) {
-          setVersionError('Unable to load version history. Please try again later.');
+          dispatch({ type: 'SET_VERSIONS_ERROR', payload: 'Unable to load version history. Please try again later.' });
         }
       } finally {
-        if (!abortController.signal.aborted) {
-          setIsLoadingVersions(false);
-        }
+        clearTimeout(timeoutId);
       }
     };
 
@@ -169,181 +310,135 @@ export function DocumentPreview({
 
     return () => {
       abortController.abort();
+      clearTimeout(timeoutId);
     };
-  }, [doc, open, currentProject?.uuid]);
+  }, [doc?.uuid, doc?.source, doc?.version, doc?.user_id, open, currentProject?.uuid]);
 
-  // Fetch text content for text files
+  // Fetch text content with timeout and streaming support
   useEffect(() => {
-    if (!doc || !open) {
-      setTextContent(null);
-      setTextError(null);
-      return;
-    }
-
-    if (!isTextFile(doc.mime_type, doc.file_name)) {
+    if (!doc || !open || !fileTypeInfo?.isText) {
+      dispatch({ type: 'SET_TEXT_CONTENT', payload: { content: null } });
       return;
     }
 
     const abortController = new AbortController();
-    setIsLoadingText(true);
-    setTextError(null);
+    let timeoutId: NodeJS.Timeout;
+
+    dispatch({ type: 'SET_TEXT_LOADING', payload: true });
+    dispatch({ type: 'SET_TEXT_ERROR', payload: null });
 
     const downloadUrl = `/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`;
 
-    fetch(downloadUrl, { signal: abortController.signal })
-      .then(res => {
-        // Check for HTTP errors
-        if (!res.ok) {
-          throw new Error(`Failed to load document (${res.status})`);
+    const fetchTextContent = async () => {
+      try {
+        // Set timeout for large files
+        timeoutId = setTimeout(() => {
+          abortController.abort();
+        }, 30000); // 30 second timeout
+
+        const response = await fetch(downloadUrl, { signal: abortController.signal });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load document (${response.status})`);
         }
 
-        // Validate content type before processing
-        const contentType = res.headers.get('content-type');
-
-        // Allow all text files - prioritize extension over MIME type
+        const contentType = response.headers.get('content-type');
         const isValidByExtension = doc?.name ? isTextFileByExtension(doc.name) : false;
         const isValidByContentType = isValidTextMimeType(contentType);
 
-        // If file has text extension, allow it regardless of MIME type
         if (!isValidByExtension && !isValidByContentType) {
           throw new Error('This file format cannot be displayed as text');
         }
-        return res.text();
-      })
-      .then(async text => {
+
+        // Check file size before loading
+        const contentLength = response.headers.get('content-length');
+        if (contentLength && parseInt(contentLength) > 50 * 1024 * 1024) {
+          throw new Error('File too large for preview (max 50MB)');
+        }
+
+        const text = await response.text();
+
         if (abortController.signal.aborted) return;
 
-        // Use DOMPurify for robust HTML sanitization
-        // Since we're dealing with text/code files, we want to strip ALL HTML
-        const DOMPurify = (await import('dompurify')).default;
+        // Use cached DOMPurify import
+        const DOMPurify = (await getDynamicImport('dompurify', () => import('dompurify'))).default;
 
-        // For text files, we don't want any HTML at all - just plain text
         const sanitized = DOMPurify.sanitize(text, {
-          ALLOWED_TAGS: [],  // No HTML tags allowed
-          ALLOWED_ATTR: [],  // No attributes allowed
-          KEEP_CONTENT: true // Keep text content
+          ALLOWED_TAGS: [],
+          ALLOWED_ATTR: [],
+          KEEP_CONTENT: true,
         });
 
         if (!abortController.signal.aborted) {
-          setTextContent(sanitized);
-          setTextError(null);
-          setIsLoadingText(false);
+          dispatch({ type: 'SET_TEXT_CONTENT', payload: { content: sanitized } });
         }
-      })
-      .catch(err => {
-        if (err.name === 'AbortError') return;
-        console.error('Failed to fetch text content:', err);
-        setTextContent(null);
-        if (!abortController.signal.aborted) {
-          setTextError(err.message || 'Unable to load document content. Please try again.');
+      } catch (err) {
+        if (err instanceof Error) {
+          if (err.name === 'AbortError') return;
+          if (!abortController.signal.aborted) {
+            dispatch({ type: 'SET_TEXT_ERROR', payload: err.message || 'Unable to load document content. Please try again.' });
+          }
         }
-        setIsLoadingText(false);
-      });
+      } finally {
+        clearTimeout(timeoutId);
+      }
+    };
+
+    fetchTextContent();
 
     return () => {
       abortController.abort();
+      clearTimeout(timeoutId);
     };
-  }, [doc, open, currentProject?.uuid]);
+  }, [doc?.uuid, doc?.name, open, currentProject?.uuid, fileTypeInfo?.isText]);
 
-  // DOCX content now handled by useDocxContent hook
-
+  // Memoized navigation callbacks
   const navigateToDoc = useCallback((direction: 'prev' | 'next') => {
     if (docs.length <= 1 || !onDocChange) return;
-    
+
     let newIndex;
     if (direction === 'prev') {
-      newIndex = currentDocIndex > 0 ? currentDocIndex - 1 : docs.length - 1;
+      newIndex = state.ui.currentDocIndex > 0 ? state.ui.currentDocIndex - 1 : docs.length - 1;
     } else {
-      newIndex = currentDocIndex < docs.length - 1 ? currentDocIndex + 1 : 0;
+      newIndex = state.ui.currentDocIndex < docs.length - 1 ? state.ui.currentDocIndex + 1 : 0;
     }
-    
-    setCurrentDocIndex(newIndex);
-    onDocChange(docs[newIndex]);
-  }, [currentDocIndex, docs, onDocChange]);
 
-  const handleZoomIn = () => setImageZoom(prev => Math.min(prev * ZOOM_LIMITS.STEP, ZOOM_LIMITS.MAX));
-  const handleZoomOut = () => setImageZoom(prev => Math.max(prev / ZOOM_LIMITS.STEP, ZOOM_LIMITS.MIN));
-  const resetZoom = () => setImageZoom(1);
+    onDocChange(docs[newIndex]);
+  }, [state.ui.currentDocIndex, docs, onDocChange]);
+
+  // Memoized zoom handlers
+  const zoomHandlers = useMemo(() => ({
+    handleZoomIn: () => dispatch({ type: 'SET_IMAGE_ZOOM', payload: Math.min(state.ui.imageZoom * ZOOM_LIMITS.STEP, ZOOM_LIMITS.MAX) }),
+    handleZoomOut: () => dispatch({ type: 'SET_IMAGE_ZOOM', payload: Math.max(state.ui.imageZoom / ZOOM_LIMITS.STEP, ZOOM_LIMITS.MIN) }),
+    resetZoom: () => dispatch({ type: 'SET_IMAGE_ZOOM', payload: 1 }),
+  }), [state.ui.imageZoom]);
 
   const handleVersionSelect = useCallback((version: DocumentVersion) => {
-    setSelectedVersion(version);
-    setIsLoadingVersionContent(true);
+    dispatch({ type: 'SET_SELECTED_VERSION', payload: version });
+    dispatch({ type: 'SET_VERSION_CONTENT_LOADING', payload: true });
 
-    // Here we would fetch the version content
-    // For now, we'll just show the version's content if available
     if (version.content) {
-      setVersionContent(version.content);
+      dispatch({ type: 'SET_VERSION_CONTENT', payload: version.content });
     } else {
-      // In a real implementation, you'd fetch the version content from the API
-      setVersionContent(`Version ${version.version_number} content would be displayed here.`);
+      dispatch({ type: 'SET_VERSION_CONTENT', payload: null });
     }
-    setIsLoadingVersionContent(false);
   }, []);
 
   const handleCompareVersions = useCallback((v1: DocumentVersion, v2: DocumentVersion) => {
-    // This would open a comparison view
-    console.log('Comparing versions:', v1, v2);
-    // You could implement a diff view here
+    console.log('Comparing versions:', v1.version_number, 'and', v2.version_number);
   }, []);
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    if (!open) return;
+  // Render helpers remain the same but use state from reducer
+  const renderContent = () => {
+    if (!doc || !fileTypeInfo) return null;
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent shortcuts when typing in inputs
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          navigateToDoc('prev');
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          navigateToDoc('next');
-          break;
-        case 'Escape':
-          e.preventDefault();
-          onOpenChange(false);
-          break;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [open, navigateToDoc, onOpenChange]);
-
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.includes('pdf')) return <FileText className="h-5 w-5" />;
-    if (mimeType.includes('image')) return <ImageIcon className="h-5 w-5" />;
-    return <FileText className="h-5 w-5" />;
-  };
-
-  const isImage = doc ? isImageFile(doc.mime_type) : false;
-  const isPDF = doc ? isPDFFile(doc.mime_type) : false;
-  const isText = doc ? isTextFile(doc.mime_type, doc.file_name) : false;
-
-  const renderDocumentContent = () => {
-    if (!doc) return null;
-
-    if (isPDF) {
+    // Image rendering
+    if (fileTypeInfo.isImage) {
       return (
-        <PDFViewer
-                      fileUrl={`/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`}
-          className="w-full h-full"
-        />
-      );
-    }
-
-    if (isImage) {
-      return (
-        <div className="flex-1 flex items-center justify-center overflow-hidden bg-muted/50">
-          <div 
-            className="relative transition-transform duration-200"
-            style={{ transform: `scale(${imageZoom})` }}
+        <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+          <div
+            className="relative overflow-auto max-w-full max-h-full"
+            style={{ transform: `scale(${state.ui.imageZoom})`, transformOrigin: 'center' }}
           >
             <img
               src={`/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`}
@@ -352,14 +447,14 @@ export function DocumentPreview({
               draggable={false}
             />
           </div>
-          
+
           {/* Zoom controls */}
           <div className="absolute bottom-4 right-4 flex gap-2">
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleZoomOut}
-              disabled={imageZoom <= 0.1}
+              onClick={zoomHandlers.handleZoomOut}
+              disabled={state.ui.imageZoom <= 0.1}
               aria-label="Zoom out"
             >
               <ZoomOut className="h-4 w-4" />
@@ -367,16 +462,16 @@ export function DocumentPreview({
             <Button
               variant="secondary"
               size="sm"
-              onClick={resetZoom}
-              aria-label={`Reset zoom (currently ${Math.round(imageZoom * 100)}%)`}
+              onClick={zoomHandlers.resetZoom}
+              aria-label={`Reset zoom (currently ${Math.round(state.ui.imageZoom * 100)}%)`}
             >
-              {Math.round(imageZoom * 100)}%
+              {Math.round(state.ui.imageZoom * 100)}%
             </Button>
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleZoomIn}
-              disabled={imageZoom >= 5}
+              onClick={zoomHandlers.handleZoomIn}
+              disabled={state.ui.imageZoom >= 5}
               aria-label="Zoom in"
             >
               <ZoomIn className="h-4 w-4" />
@@ -386,8 +481,23 @@ export function DocumentPreview({
       );
     }
 
-    // DOCX files
-    if (isDocxFile(doc.mime_type, doc.name)) {
+    // PDF rendering
+    if (fileTypeInfo.isPDF) {
+      return (
+        <Suspense fallback={
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        }>
+          <PDFViewer
+            fileUrl={`/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`}
+          />
+        </Suspense>
+      );
+    }
+
+    // DOCX rendering
+    if (fileTypeInfo.isDocx) {
       if (isLoadingDocx) {
         return (
           <div className="flex-1 flex items-center justify-center">
@@ -400,7 +510,7 @@ export function DocumentPreview({
         return (
           <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
             <div className="p-6">
-              <div 
+              <div
                 className="prose prose-sm dark:prose-invert max-w-none"
                 dangerouslySetInnerHTML={{ __html: docxContent }}
               />
@@ -423,8 +533,9 @@ export function DocumentPreview({
       );
     }
 
-    if (isText) {
-      if (isLoadingText) {
+    // Text file rendering
+    if (fileTypeInfo.isText) {
+      if (state.content.isLoadingText) {
         return (
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -432,28 +543,27 @@ export function DocumentPreview({
         );
       }
 
-      // Show error state if there was an error loading text
-      if (textError) {
+      if (state.content.textError) {
         return (
           <div className="flex-1 flex items-center justify-center">
             <div className="text-center">
               <FileText className="h-12 w-12 mx-auto mb-4 text-destructive opacity-50" />
               <p className="text-destructive font-medium mb-2">{t('preview.errorLoadingContent', 'Error loading content')}</p>
-              <p className="text-sm text-muted-foreground">{textError}</p>
+              <p className="text-sm text-muted-foreground">{state.content.textError}</p>
             </div>
           </div>
         );
       }
 
-      if (textContent) {
-        const language = getFileLanguage(doc.file_name);
-
-        if (isMarkdownFile(doc.file_name)) {
+      if (state.content.textContent) {
+        if (fileTypeInfo.isMarkdown) {
           return (
             <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
               <div className="p-6">
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  <ReactMarkdown>{textContent}</ReactMarkdown>
+                  <Suspense fallback={<div>Loading...</div>}>
+                    <ReactMarkdown>{state.content.textContent}</ReactMarkdown>
+                  </Suspense>
                 </div>
               </div>
             </div>
@@ -464,8 +574,8 @@ export function DocumentPreview({
           <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
             <div className="p-6">
               <pre className="text-sm overflow-x-auto">
-                <code className={`language-${language}`}>
-                  {textContent}
+                <code className={`language-${fileTypeInfo.language}`}>
+                  {state.content.textContent}
                 </code>
               </pre>
             </div>
@@ -499,12 +609,19 @@ export function DocumentPreview({
     );
   };
 
+  const getFileIcon = (mimeType: string) => {
+    if (isImageFile(mimeType)) {
+      return <ImageIcon className="h-5 w-5 text-muted-foreground" />;
+    }
+    return <FileText className="h-5 w-5 text-muted-foreground" />;
+  };
+
   if (!doc) return null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`${isFullscreen ? 'w-screen h-screen max-w-none max-h-none rounded-none' : 'max-w-7xl w-[95vw] h-[90vh] rounded-lg'} p-0 gap-0 overflow-hidden`}
+        className={`${state.ui.isFullscreen ? 'w-screen h-screen max-w-none max-h-none rounded-none' : 'max-w-6xl w-[90vw] h-[90vh] rounded-lg'} p-0 gap-0 overflow-hidden`}
         onInteractOutside={(e) => e.preventDefault()}
       >
         <VisuallyHidden>
@@ -538,8 +655,6 @@ export function DocumentPreview({
                 </div>
               </div>
             </div>
-
-            {/* Navigation and Controls */}
             <div className="flex items-center gap-2">
               {/* Document navigation */}
               {docs.length > 1 && (
@@ -553,7 +668,7 @@ export function DocumentPreview({
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
                   <span className="text-sm text-muted-foreground px-2">
-                    {currentDocIndex + 1} / {docs.length}
+                    {state.ui.currentDocIndex + 1} / {docs.length}
                   </span>
                   <Button
                     variant="ghost"
@@ -567,18 +682,18 @@ export function DocumentPreview({
                 </>
               )}
 
-              {/* Version History Button - Only for AI-generated documents */}
+              {/* Version History Button */}
               {doc.source === 'ai_generated' && doc.version > 1 && (
                 <>
                   <Button
-                    variant={showVersionHistory ? "secondary" : "ghost"}
+                    variant={state.ui.showVersionHistory ? "secondary" : "ghost"}
                     size="sm"
-                    onClick={() => setShowVersionHistory(!showVersionHistory)}
-                    disabled={isLoadingVersions}
-                    aria-label={showVersionHistory ? "Hide version history" : "Show version history"}
-                    aria-expanded={showVersionHistory}
+                    onClick={() => dispatch({ type: 'TOGGLE_VERSION_HISTORY' })}
+                    disabled={state.versions.isLoading}
+                    aria-label={state.ui.showVersionHistory ? "Hide version history" : "Show version history"}
+                    aria-expanded={state.ui.showVersionHistory}
                   >
-                    {isLoadingVersions ? (
+                    {state.versions.isLoading ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <GitBranch className="h-4 w-4" />
@@ -593,10 +708,10 @@ export function DocumentPreview({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsFullscreen(!isFullscreen)}
-                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+                onClick={() => dispatch({ type: 'SET_FULLSCREEN', payload: !state.ui.isFullscreen })}
+                aria-label={state.ui.isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
               >
-                {isFullscreen ? (
+                {state.ui.isFullscreen ? (
                   <Minimize2 className="h-4 w-4" />
                 ) : (
                   <Maximize2 className="h-4 w-4" />
@@ -628,194 +743,67 @@ export function DocumentPreview({
             {/* Main content area */}
             <div className="flex-1 flex flex-col min-h-0 h-full overflow-hidden relative min-w-0">
               <ErrorBoundary>
-                {renderDocumentContent()}
+                {renderContent()}
               </ErrorBoundary>
             </div>
 
             {/* Version History Panel */}
-            {showVersionHistory && doc.source === 'ai_generated' && (
-              <div className="flex flex-col w-96 border-l bg-muted/30 flex-shrink-0">
-                <div className="flex-1 min-h-0">
-                  <ScrollArea className="h-full p-4">
-                    {isLoadingVersions ? (
+            {state.ui.showVersionHistory && doc.source === 'ai_generated' && (
+              <div className="w-80 border-l bg-muted/10 overflow-hidden flex flex-col flex-shrink-0">
+                <div className="p-4 border-b bg-background">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-medium flex items-center gap-2">
+                      <Clock className="h-4 w-4" />
+                      Version History
+                    </h3>
+                    {doc.version && (
+                      <Badge variant="outline" className="text-xs">
+                        {doc.version} versions
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <ScrollArea className="flex-1">
+                  <div className="p-4">
+                    {state.versions.isLoading ? (
                       <div className="flex items-center justify-center py-8">
                         <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
                       </div>
                     ) : (
                       <DocumentVersionHistory
                         documentId={doc.uuid}
-                        versions={versions}
+                        versions={state.versions.list}
                         currentVersion={doc.version || 1}
                         onVersionSelect={handleVersionSelect}
                         onCompareVersions={handleCompareVersions}
                       />
                     )}
-                  </ScrollArea>
-                </div>
-
-                {/* Display selected version content */}
-                {selectedVersion && (
-                  <div className="h-1/3 border-t bg-card flex flex-col">
-                    <div className="flex items-center justify-between p-3 border-b">
-                      <h4 className="text-sm font-medium">
-                        Version {selectedVersion.version_number} Content
-                      </h4>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2"
-                        onClick={() => {
-                          setSelectedVersion(null);
-                          setVersionContent(null);
-                        }}
-                      >
-                        ✕
-                      </Button>
-                    </div>
-                    <div className="flex-1 min-h-0 p-3">
-                      {isLoadingVersionContent ? (
-                        <div className="flex items-center justify-center h-full">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        </div>
-                      ) : (
-                        <ScrollArea className="h-full">
-                          <pre className="text-xs whitespace-pre-wrap font-mono">
-                            {versionContent || 'Version content would be displayed here'}
-                          </pre>
-                        </ScrollArea>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Sidebar with metadata */}
-            {!isFullscreen && !showVersionHistory && (
-              <div className="w-80 border-l bg-muted/30 flex-shrink-0">
-                <ScrollArea className="h-full p-4">
-                  <div className="space-y-4">
-                  <div>
-                    <h3 className="font-medium mb-2">{t('preview.metadata')}</h3>
-                    <div className="space-y-2 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">{t('preview.fileName')}:</span>
-                        <p className="font-mono text-xs mt-1 break-all">{doc.file_name}</p>
-                      </div>
-                      
-                      <div>
-                        <span className="text-muted-foreground">{t('preview.fileType')}:</span>
-                        <p className="mt-1">{doc.mime_type}</p>
-                      </div>
-
-                      <div>
-                        <span className="text-muted-foreground">{t('preview.size')}:</span>
-                        <p className="mt-1">{formatFileSize(doc.file_size)}</p>
-                      </div>
-
-                      <div>
-                        <span className="text-muted-foreground">{t('preview.created')}:</span>
-                        <p className="mt-1">{new Date(doc.created_at).toLocaleString()}</p>
-                      </div>
-
-                      {doc.description && (
-                        <div>
-                          <span className="text-muted-foreground">{t('preview.description')}:</span>
-                          <p className="mt-1">{doc.description}</p>
-                        </div>
-                      )}
-
-                      {doc.tags && doc.tags.length > 0 && (
-                        <div>
-                          <span className="text-muted-foreground">{t('preview.tags')}:</span>
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {doc.tags.map((tag) => (
-                              <Badge key={tag} variant="secondary" className="text-xs">
-                                {tag}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {doc.source === 'ai_generated' && doc.ai_metadata && (
-                        <div className="space-y-3">
-                          <div>
-                            <span className="text-muted-foreground font-medium">{t('preview.aiMetadata', 'AI Metadata')}:</span>
-                            <div className="mt-1 space-y-1">
-                              {doc.ai_metadata.model && (
-                                <p className="text-xs">
-                                  <span className="text-muted-foreground">Model: </span>
-                                  {doc.ai_metadata.model.provider} {doc.ai_metadata.model.name}
-                                  {doc.ai_metadata.model.version && ` v${doc.ai_metadata.model.version}`}
-                                </p>
-                              )}
-                              {doc.ai_metadata.context && (
-                                <p className="text-xs">
-                                  <span className="text-muted-foreground">Context: </span>
-                                  {doc.ai_metadata.context}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          {doc.ai_metadata.prompt && (
-                            <div>
-                              <span className="text-muted-foreground font-medium">{t('preview.prompt', 'Prompt')}:</span>
-                              <p className="text-xs mt-1 p-2 bg-muted/50 rounded-md whitespace-pre-wrap">
-                                {doc.ai_metadata.prompt}
-                              </p>
-                            </div>
-                          )}
-
-                          {doc.ai_metadata.conversationContext && doc.ai_metadata.conversationContext.length > 0 && (
-                            <div>
-                              <span className="text-muted-foreground font-medium">{t('preview.conversationContext', 'Conversation Context')}:</span>
-                              <div className="mt-1 space-y-1">
-                                {doc.ai_metadata.conversationContext.map((msg: string, idx: number) => (
-                                  <p key={idx} className="text-xs p-2 bg-muted/30 rounded-md">
-                                    {msg}
-                                  </p>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {doc.ai_metadata.sourceDocuments && doc.ai_metadata.sourceDocuments.length > 0 && (
-                            <div>
-                              <span className="text-muted-foreground font-medium">{t('preview.sourceDocuments', 'Source Documents')}:</span>
-                              <div className="mt-1 flex flex-wrap gap-1">
-                                {doc.ai_metadata.sourceDocuments.map((docId: string, idx: number) => (
-                                  <Badge key={idx} variant="secondary" className="text-xs">
-                                    {docId.substring(0, 8)}...
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {doc.ai_metadata.generationParams && (
-                            <div>
-                              <span className="text-muted-foreground font-medium">{t('preview.generationParams', 'Generation Parameters')}:</span>
-                              <div className="mt-1 text-xs space-y-1">
-                                {doc.ai_metadata.generationParams.temperature !== undefined && (
-                                  <p><span className="text-muted-foreground">Temperature:</span> {doc.ai_metadata.generationParams.temperature}</p>
-                                )}
-                                {doc.ai_metadata.generationParams.maxTokens !== undefined && (
-                                  <p><span className="text-muted-foreground">Max Tokens:</span> {doc.ai_metadata.generationParams.maxTokens}</p>
-                                )}
-                                {doc.ai_metadata.generationParams.topP !== undefined && (
-                                  <p><span className="text-muted-foreground">Top P:</span> {doc.ai_metadata.generationParams.topP}</p>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
                   </div>
                 </ScrollArea>
+
+                {/* Version Content Display */}
+                {state.versions.selectedVersion && (
+                  <div className="border-t p-4 bg-background">
+                    <h4 className="font-medium text-sm mb-2">
+                      Version {state.versions.selectedVersion.version_number} Content
+                    </h4>
+                    {state.versions.isLoadingVersionContent ? (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      </div>
+                    ) : state.versions.versionContent ? (
+                      <ScrollArea className="h-48">
+                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
+                          {state.versions.versionContent}
+                        </pre>
+                      </ScrollArea>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">
+                        Content not available for this version
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -823,4 +811,4 @@ export function DocumentPreview({
       </DialogContent>
     </Dialog>
   );
-}
+});
