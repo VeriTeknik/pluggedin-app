@@ -82,10 +82,27 @@ export async function POST(request: NextRequest) {
 
     // Return JSON with metadata if requested (for enhanced MCP tool)
     if (includeMetadata) {
+      // Sanitize document IDs and sources to prevent XSS
+      const sanitizedSources = (ragResult.sources || []).map(source =>
+        sanitizeHtml(source, {
+          allowedTags: [],
+          allowedAttributes: {},
+          disallowedTagsMode: 'discard'
+        })
+      );
+
+      const sanitizedDocumentIds = (ragResult.documentIds || []).map(id =>
+        sanitizeHtml(id, {
+          allowedTags: [],
+          allowedAttributes: {},
+          disallowedTagsMode: 'discard'
+        })
+      );
+
       return NextResponse.json({
         answer: responseText,
-        sources: ragResult.sources || [],
-        documentIds: ragResult.documentIds || []
+        sources: sanitizedSources,
+        documentIds: sanitizedDocumentIds
       });
     }
 

@@ -5,6 +5,7 @@ import { realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { join,resolve } from 'path';
 import * as path from 'path';
+import sanitizeHtml from 'sanitize-html';
 
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
@@ -691,13 +692,28 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
               // Documents are typically returned in order of relevance
               const relevance = Math.max(100 - (index * 15), 60); // Start at 100%, decrease by 15% per position, min 60%
 
+              // Sanitize document name to prevent XSS
+              const sanitizedName = sanitizeHtml(doc.name, {
+                allowedTags: [],
+                allowedAttributes: {},
+                disallowedTagsMode: 'discard'
+              });
+
               return {
                 id: doc.uuid,
-                name: doc.name,
+                name: sanitizedName,
                 relevance,
                 model: doc.ai_metadata?.model ? {
-                  name: doc.ai_metadata.model.name || 'Unknown',
-                  provider: doc.ai_metadata.model.provider || 'Unknown'
+                  name: sanitizeHtml(doc.ai_metadata.model.name || 'Unknown', {
+                    allowedTags: [],
+                    allowedAttributes: {},
+                    disallowedTagsMode: 'discard'
+                  }),
+                  provider: sanitizeHtml(doc.ai_metadata.model.provider || 'Unknown', {
+                    allowedTags: [],
+                    allowedAttributes: {},
+                    disallowedTagsMode: 'discard'
+                  })
                 } : undefined,
                 source: doc.source || 'upload'
               };

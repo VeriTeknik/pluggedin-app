@@ -175,10 +175,11 @@ export async function POST(request: NextRequest) {
     const documentId = randomUUID();
     const timestamp = new Date();
 
-    // Create safe filename
+    // Create safe filename with timestamp including milliseconds to avoid collisions
     const safeModelName = validatedData.metadata.model.name.replace(/[^a-zA-Z0-9-_]/g, '_');
     const safeTitle = validatedData.title.replace(/[^a-zA-Z0-9-_]/g, '_').substring(0, 50);
-    const filename = `${timestamp.toISOString().split('T')[0]}_${safeModelName}_${safeTitle}.${validatedData.format}`;
+    const timestampStr = timestamp.toISOString().replace(/[:.]/g, '-').replace('T', '_');
+    const filename = `${timestampStr}_${safeModelName}_${safeTitle}.${validatedData.format}`;
 
     // Validate filename is safe
     if (!isValidFilename(filename)) {
@@ -267,7 +268,7 @@ export async function POST(request: NextRequest) {
           context: validatedData.metadata.context,
           timestamp: timestamp.toISOString(),
           sessionId: request.headers.get('x-session-id') || undefined,
-        } as any,
+        },
         content_hash: contentHash,
         visibility: validatedData.metadata.visibility,
         version: 1,

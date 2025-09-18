@@ -360,8 +360,10 @@ export function DocumentFilters({
                         <input
                           type="checkbox"
                           checked={filters.tags?.includes(tag) || false}
-                          onChange={() => {}}
+                          onChange={() => handleTagToggle(tag)}
+                          onClick={(e) => e.stopPropagation()}
                           className="h-4 w-4"
+                          aria-label={`Select tag ${tag}`}
                         />
                         <span className="flex-1">{tag}</span>
                         {filters.tags?.includes(tag) && (

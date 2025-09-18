@@ -31,6 +31,7 @@ import { DocsStats } from './components/DocsStats';
 import { DocsTable } from './components/DocsTable';
 // Local components
 import { DocumentPreview } from './components/DocumentPreview';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { UploadDialog } from './components/UploadDialog';
 import { UploadProgress } from './components/UploadProgress';
 
@@ -443,16 +444,18 @@ export default function LibraryContent() {
 
         {/* AI Search Answer */}
         {aiSearchEnabled && (
-          <AiSearchAnswer
-            answer={aiAnswer}
-            sources={aiSources}
-            documentIds={aiDocumentIds}
-            documents={aiDocuments}
-            isLoading={isAiLoading}
-            error={aiError}
-            query={aiSearchQuery}
-            onDocumentClick={handleDocumentIdClick}
-          />
+          <ErrorBoundary>
+            <AiSearchAnswer
+              answer={aiAnswer}
+              sources={aiSources}
+              documentIds={aiDocumentIds}
+              documents={aiDocuments}
+              isLoading={isAiLoading}
+              error={aiError}
+              query={aiSearchQuery}
+              onDocumentClick={handleDocumentIdClick}
+            />
+          </ErrorBoundary>
         )}
 
         {/* Content */}
