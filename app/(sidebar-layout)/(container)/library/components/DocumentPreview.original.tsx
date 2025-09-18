@@ -18,6 +18,7 @@ import {
 import dynamic from 'next/dynamic';
 import { useCallback, useEffect,useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import sanitizeHtml from 'sanitize-html';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 import { Badge } from '@/components/ui/badge';
@@ -397,12 +398,48 @@ export function DocumentPreview({
       }
 
       if (docxContent) {
+        // Sanitize the DOCX content to prevent XSS
+        const sanitizedContent = sanitizeHtml(docxContent, {
+          allowedTags: sanitizeHtml.defaults.allowedTags.concat([
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+            'pre', 'code', 'table', 'thead', 'tbody', 'tfoot',
+            'tr', 'td', 'th', 'col', 'colgroup',
+            'sup', 'sub', 'mark', 'del', 'ins'
+          ]),
+          allowedAttributes: {
+            ...sanitizeHtml.defaults.allowedAttributes,
+            '*': ['class', 'style'],
+            'table': ['border', 'cellpadding', 'cellspacing'],
+            'td': ['colspan', 'rowspan', 'align', 'valign'],
+            'th': ['colspan', 'rowspan', 'align', 'valign']
+          },
+          allowedStyles: {
+            '*': {
+              // Allow safe CSS properties for document formatting
+              'color': [/^#([0-9a-f]{3}){1,2}$/i, /^rgb\(/],
+              'background-color': [/^#([0-9a-f]{3}){1,2}$/i, /^rgb\(/],
+              'font-size': [/^\d+(?:px|em|rem|%)$/],
+              'font-weight': [/^(normal|bold|\d{3})$/],
+              'text-align': [/^(left|right|center|justify)$/],
+              'text-decoration': [/^(none|underline|overline|line-through)$/],
+              'font-style': [/^(normal|italic|oblique)$/],
+              'margin': [/^\d+(?:px|em|rem|%)$/],
+              'padding': [/^\d+(?:px|em|rem|%)$/],
+              'border': [/^\d+px\s+\w+\s+#([0-9a-f]{3}){1,2}$/i]
+            }
+          },
+          transformTags: {
+            // Ensure links open in new tab for security
+            'a': sanitizeHtml.simpleTransform('a', { target: '_blank', rel: 'noopener noreferrer' })
+          }
+        });
+
         return (
           <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
             <div className="p-6">
-              <div 
+              <div
                 className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: docxContent }}
+                dangerouslySetInnerHTML={{ __html: sanitizedContent }}
               />
             </div>
           </div>

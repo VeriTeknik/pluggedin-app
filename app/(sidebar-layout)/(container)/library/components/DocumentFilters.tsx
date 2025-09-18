@@ -10,7 +10,7 @@ import {
   Tag,
   X
 } from 'lucide-react';
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { DateRange } from 'react-day-picker';
 import { useTranslation } from 'react-i18next';
 
@@ -109,28 +109,28 @@ export function DocumentFilters({
     ).length;
   }, [filters]);
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     onFiltersChange({});
-  };
+  }, [onFiltersChange]);
 
-  const handleSourceChange = (source: DocumentFiltersState['source']) => {
+  const handleSourceChange = useCallback((source: DocumentFiltersState['source']) => {
     onFiltersChange({ ...filters, source });
-  };
+  }, [filters, onFiltersChange]);
 
-  const handleModelProviderChange = (provider: string) => {
+  const handleModelProviderChange = useCallback((provider: string) => {
     const newFilters = { ...filters, modelProvider: provider };
     // Clear model name when provider changes
     if (provider !== filters.modelProvider) {
       delete newFilters.modelName;
     }
     onFiltersChange(newFilters);
-  };
+  }, [filters, onFiltersChange]);
 
-  const handleDateRangeChange = (range: DateRange | undefined) => {
+  const handleDateRangeChange = useCallback((range: DateRange | undefined) => {
     onFiltersChange({ ...filters, dateRange: range });
-  };
+  }, [filters, onFiltersChange]);
 
-  const handleTagToggle = (tag: string) => {
+  const handleTagToggle = useCallback((tag: string) => {
     const currentTags = filters.tags || [];
     const newTags = currentTags.includes(tag)
       ? currentTags.filter(t => t !== tag)
@@ -140,7 +140,7 @@ export function DocumentFilters({
       ...filters,
       tags: newTags.length > 0 ? newTags : undefined
     });
-  };
+  }, [filters, onFiltersChange]);
 
   const handleCategoryChange = (category: string) => {
     onFiltersChange({

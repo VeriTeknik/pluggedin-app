@@ -165,6 +165,8 @@ export function DocumentVersionHistory({
                                   onChange={() => toggleVersionSelection(version.id)}
                                   onClick={(e) => e.stopPropagation()}
                                   className="ml-auto"
+                                  aria-label={`Select version ${version.version_number} for comparison`}
+                                  title={`Select version ${version.version_number} for comparison`}
                                 />
                               )}
                             </div>

@@ -39,7 +39,10 @@ interface AIMetadata {
   timestamp?: string;
   sessionId?: string;
   prompt?: string;
-  conversationContext?: string[];
+  conversationContext?: Array<{
+    role: string;
+    content: string;
+  }>;
   sourceDocuments?: string[];
   generationParams?: {
     temperature?: number;
@@ -199,14 +202,19 @@ export function AIMetadataPanel({
                       key={idx}
                       className={cn(
                         "text-sm p-2 rounded-md",
-                        idx % 2 === 0 ? "bg-muted/30" : "bg-muted/50"
+                        message.role === 'user' ? "bg-blue-50 dark:bg-blue-950/30" :
+                        message.role === 'assistant' ? "bg-muted/50" : "bg-muted/30"
                       )}
                     >
-                      <span className="text-xs text-muted-foreground">
-                        #{idx + 1}:
-                      </span>{' '}
-                      {message.substring(0, 100)}
-                      {message.length > 100 && '...'}
+                      <div className="flex items-start gap-2">
+                        <span className="text-xs font-medium text-muted-foreground capitalize">
+                          {message.role || 'system'}:
+                        </span>
+                        <span className="flex-1">
+                          {message.content.substring(0, 150)}
+                          {message.content.length > 150 && '...'}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
