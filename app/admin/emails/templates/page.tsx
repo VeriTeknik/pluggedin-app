@@ -48,7 +48,7 @@ export default function EmailTemplatesPage() {
     try {
       const result = await getEmailTemplates();
       if (result.success && result.data) {
-        setTemplates(result.data);
+        setTemplates(result.data as unknown as EmailTemplate[]);
       }
     } catch (error) {
       console.error('Failed to load templates:', error);

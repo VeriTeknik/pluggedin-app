@@ -52,7 +52,7 @@ export default function EmailComposePage() {
   const loadTemplates = async () => {
     const result = await getEmailTemplates();
     if (result.success && result.data) {
-      setTemplates(result.data);
+      setTemplates(result.data as unknown as EmailTemplate[]);
     }
   };
 

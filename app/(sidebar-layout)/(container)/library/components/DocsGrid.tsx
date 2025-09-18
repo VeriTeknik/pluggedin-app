@@ -54,12 +54,22 @@ export function DocsGrid({
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className="text-2xl flex-shrink-0">{getMimeTypeIcon(doc.mime_type)}</span>
                 <div className="min-w-0 flex-1">
-                  <CardTitle
-                    className="text-base font-semibold truncate"
-                    title={doc.name}
-                  >
-                    {doc.name}
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle
+                      className="text-base font-semibold truncate flex-1"
+                      title={doc.name}
+                    >
+                      {doc.name}
+                    </CardTitle>
+                    {doc.version && doc.version > 1 && (
+                      <Badge
+                        variant="default"
+                        className="text-xs flex-shrink-0"
+                      >
+                        v{doc.version}
+                      </Badge>
+                    )}
+                  </div>
                   {doc.source === 'ai_generated' && doc.ai_metadata?.model && (
                     <div className="flex items-center gap-2 mt-1">
                       <ModelAttributionBadge
@@ -142,14 +152,6 @@ export function DocsGrid({
                 <span>{formatFileSize(doc.file_size)}</span>
                 <span className="mx-1">•</span>
                 <span>{new Date(doc.created_at).toLocaleDateString()}</span>
-                {doc.source === 'ai_generated' && doc.version > 1 && (
-                  <>
-                    <span className="mx-1">•</span>
-                    <Badge variant="outline" className="text-xs px-1 py-0">
-                      v{doc.version}
-                    </Badge>
-                  </>
-                )}
               </div>
               {doc.tags && doc.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">

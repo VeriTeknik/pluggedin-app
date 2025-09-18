@@ -80,7 +80,7 @@ The Team`);
         name,
         subject,
         content,
-        category,
+        category: category as "other" | "product_update" | "feature_announcement" | "newsletter",
       });
 
       if (result.success && result.data) {

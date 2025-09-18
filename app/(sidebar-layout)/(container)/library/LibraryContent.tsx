@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Internal components
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageContainer } from '@/components/ui/page-container';
@@ -217,8 +218,18 @@ export default function LibraryContent() {
         <div className="flex items-center gap-2 min-w-0">
           <span className="text-lg flex-shrink-0">{getMimeTypeIcon(info.row.original.mime_type)}</span>
           <div className="min-w-0 flex-1">
-            <div className="font-medium truncate">
-              {info.getValue()}
+            <div className="flex items-center gap-2">
+              <span className="font-medium truncate">
+                {info.getValue()}
+              </span>
+              {info.row.original.version && info.row.original.version > 1 && (
+                <Badge
+                  variant="default"
+                  className="text-xs flex-shrink-0"
+                >
+                  v{info.row.original.version}
+                </Badge>
+              )}
             </div>
             <div className="text-sm text-muted-foreground truncate">{info.row.original.file_name}</div>
           </div>
