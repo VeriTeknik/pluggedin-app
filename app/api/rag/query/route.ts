@@ -39,6 +39,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { query } = RagQuerySchema.parse(body);
 
+    // Check if metadata is requested (for MCP tool enhancement)
+    const includeMetadata = body.includeMetadata === true;
+
     // Authentication check using database-stored API keys only
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
@@ -54,7 +57,8 @@ export async function POST(request: NextRequest) {
       metadata: {
         queryLength: query.length,
         projectUuid: actualRagIdentifier,
-        endpoint: '/api/rag/query'
+        endpoint: '/api/rag/query',
+        includeMetadata
       }
     });
 
@@ -71,12 +75,21 @@ export async function POST(request: NextRequest) {
     // Limit response size for security (prevent data exfiltration)
     const MAX_RESPONSE_SIZE = 10000; // 10KB limit
     let responseText = ragResult.response || 'No response generated';
-    
+
     if (responseText.length > MAX_RESPONSE_SIZE) {
       responseText = responseText.substring(0, MAX_RESPONSE_SIZE) + '\n\n[Response truncated for security]';
     }
 
-    // Return the RAG response as a plain string (as specified in the architecture)
+    // Return JSON with metadata if requested (for enhanced MCP tool)
+    if (includeMetadata) {
+      return NextResponse.json({
+        answer: responseText,
+        sources: ragResult.sources || [],
+        documentIds: ragResult.documentIds || []
+      });
+    }
+
+    // Return plain text for backward compatibility
     return new NextResponse(responseText, {
       status: 200,
       headers: {
