@@ -47,6 +47,8 @@
   },
   "controls": {
     "searchPlaceholder": "搜索文档...",
+    "aiSearchPlaceholder": "询问有关您文档的问题...",
+    "aiSearch": "AI 搜索",
     "grid": "网格",
     "table": "表格",
     "sourceFilter": {
@@ -56,6 +58,15 @@
       "api": "API"
     }
   },
+  "aiSearch": {
+    "loading": "正在搜索您的文档...",
+    "loadingDescription": "AI 正在分析您的文档以找到最佳答案。",
+    "errorTitle": "搜索错误",
+    "answerTitle": "AI 答案",
+    "collapse": "折叠答案",
+    "expand": "展开答案",
+    "questionPrefix": "问题："
+    ,"sources": "Sources"  },
   "grid": {
     "noDocuments": "未找到文档。",
     "openMenu": "打开菜单",

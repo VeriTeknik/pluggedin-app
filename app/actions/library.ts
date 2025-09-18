@@ -625,6 +625,44 @@ export async function queryRag(ragIdentifier: string, query: string): Promise<{ 
   return ragService.queryForResponse(ragIdentifier, query);
 }
 
+export async function askKnowledgeBase(userId: string, query: string, projectUuid?: string): Promise<{
+  success: boolean;
+  answer?: string;
+  sources?: string[];
+  documentIds?: string[];
+  error?: string
+}> {
+  'use server';
+
+  try {
+    // For now, we'll use the RAG service directly since the MCP tool
+    // is designed for external access. In production, this would integrate
+    // with the MCP infrastructure
+    const ragIdentifier = projectUuid || userId;
+    const result = await ragService.queryForResponse(ragIdentifier, query);
+
+    if (result.success && result.response) {
+      return {
+        success: true,
+        answer: result.response,
+        sources: result.sources || [],
+        documentIds: result.documentIds || []
+      };
+    }
+
+    return {
+      success: false,
+      error: result.error || 'Failed to get response from knowledge base'
+    };
+  } catch (error) {
+    console.error('Error querying knowledge base:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
 
 
  

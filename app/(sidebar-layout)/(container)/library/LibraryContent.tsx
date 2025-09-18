@@ -9,8 +9,8 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Badge, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
-import { useCallback,useMemo, useState } from 'react';
+import { Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 // Internal components
@@ -19,9 +19,11 @@ import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageContainer } from '@/components/ui/page-container';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 // Internal hooks and types
+import { useKnowledgeBaseSearch } from '@/hooks/use-knowledge-base-search';
 import { useLibrary } from '@/hooks/use-library';
 import type { Doc } from '@/types/library';
 
+import { AiSearchAnswer } from './components/AiSearchAnswer';
 import { DocsControls } from './components/DocsControls';
 import { DocsGrid } from './components/DocsGrid';
 import { DocsStats } from './components/DocsStats';
@@ -47,6 +49,19 @@ export default function LibraryContent() {
   const [sourceFilter, setSourceFilter] = useState<'all' | 'upload' | 'ai_generated' | 'api'>('all');
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // AI Search state
+  const [aiSearchEnabled, setAiSearchEnabled] = useState(false);
+  const [aiSearchQuery, setAiSearchQuery] = useState('');
+  const {
+    answer: aiAnswer,
+    sources: aiSources,
+    documentIds: aiDocumentIds,
+    isLoading: isAiLoading,
+    error: aiError,
+    setQuery: setAiQuery,
+    clearAnswer: clearAiAnswer,
+  } = useKnowledgeBaseSearch();
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -144,6 +159,57 @@ export default function LibraryContent() {
     setPreviewOpen(true);
   }, []);
 
+  const handleDocumentIdClick = useCallback((documentId: string) => {
+    // Find document by RAG document ID
+    const doc = docs.find(d => d.rag_document_id === documentId);
+    if (doc) {
+      handlePreview(doc);
+    } else {
+      // If not found by rag_document_id, try to match by partial ID
+      // This handles cases where the documentId is a Milvus document_id
+      const matchingDoc = docs.find(d =>
+        d.rag_document_id?.includes(documentId) ||
+        d.id?.includes(documentId)
+      );
+      if (matchingDoc) {
+        handlePreview(matchingDoc);
+      }
+    }
+  }, [docs, handlePreview]);
+
+  // Handle search input based on AI mode
+  const handleSearchChange = useCallback((value: string) => {
+    if (aiSearchEnabled) {
+      setAiSearchQuery(value);
+      setAiQuery(value);
+    } else {
+      setGlobalFilter(value);
+    }
+  }, [aiSearchEnabled, setAiQuery]);
+
+  // Handle AI search toggle
+  const handleAiSearchToggle = useCallback((enabled: boolean) => {
+    setAiSearchEnabled(enabled);
+    if (!enabled) {
+      // Clear AI search when toggling off
+      setAiSearchQuery('');
+      clearAiAnswer();
+    } else {
+      // Clear regular search when toggling on
+      setGlobalFilter('');
+    }
+  }, [clearAiAnswer]);
+
+  // Update effect to sync search states
+  useEffect(() => {
+    if (aiSearchEnabled) {
+      setGlobalFilter('');
+    } else {
+      setAiSearchQuery('');
+      clearAiAnswer();
+    }
+  }, [aiSearchEnabled, clearAiAnswer]);
+
   // Table columns configuration
   const columns = useMemo(() => [
     columnHelper.accessor('name', {
@@ -210,14 +276,12 @@ export default function LibraryContent() {
           return <span className="text-muted-foreground text-sm">-</span>;
         }
 
-        // Show all tags in a compact, scrollable container
+        // Join tags with commas for a cleaner, more readable display
         return (
-          <div className="flex items-center gap-1 flex-wrap max-w-[250px]">
-            {tags.map((tag, index) => (
-              <Badge key={index} variant="secondary" className="text-xs px-1.5 py-0">
-                {tag}
-              </Badge>
-            ))}
+          <div className="text-sm text-muted-foreground max-w-[200px]" title={tags.join(', ')}>
+            <span className="line-clamp-2">
+              {tags.join(', ')}
+            </span>
           </div>
         );
       },
@@ -348,14 +412,29 @@ export default function LibraryContent() {
         {/* Controls */}
         <div className='py-4'>
           <DocsControls
-            searchTerm={globalFilter}
-            onSearchChange={setGlobalFilter}
+            searchTerm={aiSearchEnabled ? aiSearchQuery : globalFilter}
+            onSearchChange={handleSearchChange}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             sourceFilter={sourceFilter}
             onSourceFilterChange={setSourceFilter}
+            aiSearchEnabled={aiSearchEnabled}
+            onAiSearchToggle={handleAiSearchToggle}
           />
         </div>
+
+        {/* AI Search Answer */}
+        {aiSearchEnabled && (
+          <AiSearchAnswer
+            answer={aiAnswer}
+            sources={aiSources}
+            documentIds={aiDocumentIds}
+            isLoading={isAiLoading}
+            error={aiError}
+            query={aiSearchQuery}
+            onDocumentClick={handleDocumentIdClick}
+          />
+        )}
 
         {/* Content */}
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'grid' | 'table')} className="flex-1">

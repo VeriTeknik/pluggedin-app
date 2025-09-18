@@ -47,6 +47,8 @@
   },
   "controls": {
     "searchPlaceholder": "Zoek documenten...",
+    "aiSearchPlaceholder": "Stel een vraag over je documenten...",
+    "aiSearch": "AI Zoeken",
     "grid": "Raster",
     "table": "Tabel",
     "sourceFilter": {
@@ -56,6 +58,15 @@
       "api": "API"
     }
   },
+  "aiSearch": {
+    "loading": "Je documenten doorzoeken...",
+    "loadingDescription": "AI analyseert je documenten om het beste antwoord te vinden.",
+    "errorTitle": "Zoekfout",
+    "answerTitle": "AI Antwoord",
+    "collapse": "Antwoord inklappen",
+    "expand": "Antwoord uitklappen",
+    "questionPrefix": "Vraag:"
+    ,"sources": "Sources"  },
   "grid": {
     "noDocuments": "Geen documenten gevonden.",
     "openMenu": "Menu openen",

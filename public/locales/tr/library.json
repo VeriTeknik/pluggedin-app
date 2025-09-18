@@ -47,6 +47,8 @@
   },
   "controls": {
     "searchPlaceholder": "Belgelerde ara...",
+    "aiSearchPlaceholder": "Belgeleriniz hakkında bir soru sorun...",
+    "aiSearch": "AI Araması",
     "grid": "Izgara",
     "table": "Tablo",
     "sourceFilter": {
@@ -56,6 +58,15 @@
       "api": "API"
     }
   },
+  "aiSearch": {
+    "loading": "Belgelerinizde aranıyor...",
+    "loadingDescription": "AI, en iyi yanıtı bulmak için belgelerinizi analiz ediyor.",
+    "errorTitle": "Arama Hatası",
+    "answerTitle": "AI Yanıtı",
+    "collapse": "Yanıtı daralt",
+    "expand": "Yanıtı genişlet",
+    "questionPrefix": "Soru:"
+    ,"sources": "Sources"  },
   "grid": {
     "noDocuments": "Belge bulunamadı.",
     "openMenu": "Menüyü aç",

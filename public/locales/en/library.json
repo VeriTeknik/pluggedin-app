@@ -47,6 +47,8 @@
   },
   "controls": {
     "searchPlaceholder": "Search documents...",
+    "aiSearchPlaceholder": "Ask a question about your documents...",
+    "aiSearch": "AI Search",
     "grid": "Grid",
     "table": "Table",
     "sourceFilter": {
@@ -55,6 +57,16 @@
       "aiGenerated": "AI Generated",
       "api": "API"
     }
+  },
+  "aiSearch": {
+    "loading": "Searching your documents...",
+    "loadingDescription": "AI is analyzing your documents to find the best answer.",
+    "errorTitle": "Search Error",
+    "answerTitle": "AI Answer",
+    "collapse": "Collapse answer",
+    "expand": "Expand answer",
+    "questionPrefix": "Question:",
+    "sources": "Sources"
   },
   "grid": {
     "noDocuments": "No documents found.",
