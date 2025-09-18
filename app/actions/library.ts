@@ -630,6 +630,7 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
   answer?: string;
   sources?: string[];
   documentIds?: string[];
+  documents?: Array<{ id: string; name: string }>;
   error?: string
 }> {
   'use server';
@@ -642,11 +643,43 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
     const result = await ragService.queryForResponse(ragIdentifier, query);
 
     if (result.success && result.response) {
+      // Fetch document names if we have document IDs
+      let documents: Array<{ id: string; name: string }> = [];
+      if (result.documentIds && result.documentIds.length > 0) {
+        try {
+          const docs = await db
+            .select({
+              uuid: docsTable.uuid,
+              name: docsTable.name,
+              rag_document_id: docsTable.rag_document_id
+            })
+            .from(docsTable)
+            .where(
+              and(
+                eq(docsTable.user_id, userId),
+                projectUuid ? eq(docsTable.project_uuid, projectUuid) : undefined
+              )
+            );
+
+          // Map RAG document IDs to document names
+          documents = result.documentIds
+            .map(ragId => {
+              const doc = docs.find(d => d.rag_document_id === ragId);
+              return doc ? { id: doc.uuid, name: doc.name } : null;
+            })
+            .filter((doc): doc is { id: string; name: string } => doc !== null);
+        } catch (dbError) {
+          console.error('Error fetching document names:', dbError);
+          // Continue without document names if DB query fails
+        }
+      }
+
       return {
         success: true,
         answer: result.response,
         sources: result.sources || [],
-        documentIds: result.documentIds || []
+        documentIds: result.documentIds || [],
+        documents
       };
     }
 

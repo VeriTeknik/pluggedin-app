@@ -11,6 +11,7 @@ interface UseKnowledgeBaseSearchReturn {
   answer: string | null;
   sources: string[];
   documentIds: string[];
+  documents: Array<{ id: string; name: string }>;
   isLoading: boolean;
   error: string | null;
   searchKnowledgeBase: (query: string) => Promise<void>;
@@ -25,6 +26,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
   const [answer, setAnswer] = useState<string | null>(null);
   const [sources, setSources] = useState<string[]>([]);
   const [documentIds, setDocumentIds] = useState<string[]>([]);
+  const [documents, setDocuments] = useState<Array<{ id: string; name: string }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
@@ -39,6 +41,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
       setAnswer(null);
       setSources([]);
       setDocumentIds([]);
+      setDocuments([]);
       setError(null);
       return;
     }
@@ -57,11 +60,13 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
         setAnswer(result.answer);
         setSources(result.sources || []);
         setDocumentIds(result.documentIds || []);
+        setDocuments(result.documents || []);
       } else {
         setError(result.error || 'Failed to get answer');
         setAnswer(null);
         setSources([]);
         setDocumentIds([]);
+        setDocuments([]);
       }
     } catch (err) {
       console.error('Knowledge base search error:', err);
@@ -69,6 +74,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
       setAnswer(null);
       setSources([]);
       setDocumentIds([]);
+      setDocuments([]);
     } finally {
       setIsLoading(false);
     }
@@ -89,6 +95,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
       setAnswer(null);
       setSources([]);
       setDocumentIds([]);
+      setDocuments([]);
       setError(null);
     }
 
@@ -103,6 +110,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
     setAnswer(null);
     setSources([]);
     setDocumentIds([]);
+    setDocuments([]);
     setError(null);
     setQuery('');
   }, []);
@@ -113,6 +121,7 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
     answer,
     sources,
     documentIds,
+    documents,
     isLoading,
     error,
     searchKnowledgeBase,

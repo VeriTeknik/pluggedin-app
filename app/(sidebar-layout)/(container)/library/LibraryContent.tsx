@@ -58,6 +58,7 @@ export default function LibraryContent() {
     answer: aiAnswer,
     sources: aiSources,
     documentIds: aiDocumentIds,
+    documents: aiDocuments,
     isLoading: isAiLoading,
     error: aiError,
     setQuery: setAiQuery,
@@ -161,19 +162,25 @@ export default function LibraryContent() {
   }, []);
 
   const handleDocumentIdClick = useCallback((documentId: string) => {
-    // Find document by RAG document ID
-    const doc = docs.find(d => d.rag_document_id === documentId);
+    // First try to find by exact UUID (from documents array)
+    const doc = docs.find(d => d.uuid === documentId);
     if (doc) {
       handlePreview(doc);
     } else {
-      // If not found by rag_document_id, try to match by partial ID
-      // This handles cases where the documentId is a Milvus document_id
-      const matchingDoc = docs.find(d =>
-        d.rag_document_id?.includes(documentId) ||
-        d.uuid?.includes(documentId)
-      );
-      if (matchingDoc) {
-        handlePreview(matchingDoc);
+      // If not found by UUID, try by RAG document ID
+      const ragDoc = docs.find(d => d.rag_document_id === documentId);
+      if (ragDoc) {
+        handlePreview(ragDoc);
+      } else {
+        // If not found by rag_document_id, try to match by partial ID
+        // This handles cases where the documentId is a Milvus document_id
+        const matchingDoc = docs.find(d =>
+          d.rag_document_id?.includes(documentId) ||
+          d.uuid?.includes(documentId)
+        );
+        if (matchingDoc) {
+          handlePreview(matchingDoc);
+        }
       }
     }
   }, [docs, handlePreview]);
@@ -440,6 +447,7 @@ export default function LibraryContent() {
             answer={aiAnswer}
             sources={aiSources}
             documentIds={aiDocumentIds}
+            documents={aiDocuments}
             isLoading={isAiLoading}
             error={aiError}
             query={aiSearchQuery}
