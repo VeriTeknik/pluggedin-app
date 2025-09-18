@@ -29,6 +29,8 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
+import { withErrorBoundary } from './withErrorBoundary';
+
 interface AIMetadata {
   model?: {
     name: string;
@@ -66,7 +68,7 @@ interface AIMetadataPanelProps {
   onSourceDocumentClick?: (documentId: string) => void;
 }
 
-export function AIMetadataPanel({
+function AIMetadataPanelBase({
   metadata,
   documentName,
   source,
@@ -375,3 +377,6 @@ export function AIMetadataPanel({
     </Card>
   );
 }
+
+// Export the component with error boundary protection
+export const AIMetadataPanel = withErrorBoundary(AIMetadataPanelBase);

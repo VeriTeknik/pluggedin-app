@@ -43,6 +43,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
+import { withErrorBoundary } from './withErrorBoundary';
+
 export interface DocumentFiltersState {
   source?: 'all' | 'upload' | 'ai_generated' | 'api';
   modelProvider?: string;
@@ -89,7 +91,7 @@ const FILTER_PRESETS = [
   { id: 'code-docs', label: 'Code & Docs', filters: { category: 'code,documentation' } },
 ];
 
-export function DocumentFilters({
+function DocumentFiltersBase({
   filters,
   onFiltersChange,
   availableTags = [],
@@ -142,16 +144,16 @@ export function DocumentFilters({
     });
   }, [filters, onFiltersChange]);
 
-  const handleCategoryChange = (category: string) => {
+  const handleCategoryChange = useCallback((category: string) => {
     onFiltersChange({
       ...filters,
       category: filters.category === category ? undefined : category
     });
-  };
+  }, [filters, onFiltersChange]);
 
-  const applyPreset = (preset: typeof FILTER_PRESETS[0]) => {
+  const applyPreset = useCallback((preset: typeof FILTER_PRESETS[0]) => {
     onFiltersChange({ ...filters, ...preset.filters });
-  };
+  }, [filters, onFiltersChange]);
 
   // Memoize filtered tags to avoid recalculating on every render
   const filteredTags = useMemo(() => {
@@ -506,3 +508,6 @@ export function DocumentFilters({
     </div>
   );
 }
+
+// Export the component with error boundary protection
+export const DocumentFilters = withErrorBoundary(DocumentFiltersBase);
