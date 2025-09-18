@@ -630,7 +630,16 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
   answer?: string;
   sources?: string[];
   documentIds?: string[];
-  documents?: Array<{ id: string; name: string }>;
+  documents?: Array<{
+    id: string;
+    name: string;
+    relevance?: number;
+    model?: {
+      name: string;
+      provider: string;
+    };
+    source?: string;
+  }>;
   error?: string
 }> {
   'use server';
@@ -643,15 +652,26 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
     const result = await ragService.queryForResponse(ragIdentifier, query);
 
     if (result.success && result.response) {
-      // Fetch document names if we have document IDs
-      let documents: Array<{ id: string; name: string }> = [];
+      // Fetch document names and metadata if we have document IDs
+      let documents: Array<{
+        id: string;
+        name: string;
+        relevance?: number;
+        model?: {
+          name: string;
+          provider: string;
+        };
+        source?: string;
+      }> = [];
       if (result.documentIds && result.documentIds.length > 0) {
         try {
           const docs = await db
             .select({
               uuid: docsTable.uuid,
               name: docsTable.name,
-              rag_document_id: docsTable.rag_document_id
+              rag_document_id: docsTable.rag_document_id,
+              source: docsTable.source,
+              ai_metadata: docsTable.ai_metadata
             })
             .from(docsTable)
             .where(
@@ -661,13 +681,30 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
               )
             );
 
-          // Map RAG document IDs to document names
-          documents = result.documentIds
-            .map(ragId => {
+          // Map RAG document IDs to document names with metadata
+          const mappedDocs = result.documentIds
+            .map((ragId, index) => {
               const doc = docs.find(d => d.rag_document_id === ragId);
-              return doc ? { id: doc.uuid, name: doc.name } : null;
-            })
-            .filter((doc): doc is { id: string; name: string } => doc !== null);
+              if (!doc) return null;
+
+              // Calculate relevance score (simulated based on order, in production this would come from RAG)
+              // Documents are typically returned in order of relevance
+              const relevance = Math.max(100 - (index * 15), 60); // Start at 100%, decrease by 15% per position, min 60%
+
+              return {
+                id: doc.uuid,
+                name: doc.name,
+                relevance,
+                model: doc.ai_metadata?.model ? {
+                  name: doc.ai_metadata.model.name || 'Unknown',
+                  provider: doc.ai_metadata.model.provider || 'Unknown'
+                } : undefined,
+                source: doc.source || 'upload'
+              };
+            });
+
+          // Filter out null values with proper typing
+          documents = mappedDocs.filter((doc): doc is NonNullable<typeof doc> => doc !== null);
         } catch (dbError) {
           console.error('Error fetching document names:', dbError);
           // Continue without document names if DB query fails

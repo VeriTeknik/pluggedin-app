@@ -11,7 +11,16 @@ interface UseKnowledgeBaseSearchReturn {
   answer: string | null;
   sources: string[];
   documentIds: string[];
-  documents: Array<{ id: string; name: string }>;
+  documents: Array<{
+    id: string;
+    name: string;
+    relevance?: number;
+    model?: {
+      name: string;
+      provider: string;
+    };
+    source?: string;
+  }>;
   isLoading: boolean;
   error: string | null;
   searchKnowledgeBase: (query: string) => Promise<void>;
@@ -26,7 +35,16 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
   const [answer, setAnswer] = useState<string | null>(null);
   const [sources, setSources] = useState<string[]>([]);
   const [documentIds, setDocumentIds] = useState<string[]>([]);
-  const [documents, setDocuments] = useState<Array<{ id: string; name: string }>>([]);
+  const [documents, setDocuments] = useState<Array<{
+    id: string;
+    name: string;
+    relevance?: number;
+    model?: {
+      name: string;
+      provider: string;
+    };
+    source?: string;
+  }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
