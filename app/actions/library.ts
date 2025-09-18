@@ -5,9 +5,10 @@ import { realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { join,resolve } from 'path';
 import * as path from 'path';
+import sanitizeHtml from 'sanitize-html';
 
 import { db } from '@/db';
-import { docsTable } from '@/db/schema';
+import { docsTable, documentVersionsTable } from '@/db/schema';
 import { ragService } from '@/lib/rag-service';
 import type { 
   Doc, 
@@ -122,7 +123,7 @@ const WORKSPACE_STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
 export async function getDocs(userId: string, projectUuid?: string): Promise<DocListResponse> {
   try {
     let docs;
-    
+
     if (projectUuid) {
       // Get documents specifically for this project
       docs = await db.query.docsTable.findMany({
@@ -209,6 +210,45 @@ export async function getDocByUuid(userId: string, docUuid: string, projectUuid?
   } catch (error) {
     console.error('Error fetching doc:', error);
     return null;
+  }
+}
+
+// Helper function: Get document versions
+export async function getDocumentVersions(userId: string, documentId: string, projectUuid?: string) {
+  try {
+    // First verify the user has access to this document
+    const doc = await getDocByUuid(userId, documentId, projectUuid);
+
+    if (!doc) {
+      return {
+        success: false,
+        error: 'Document not found or access denied',
+      };
+    }
+
+    // Fetch version history
+    const versions = await db
+      .select()
+      .from(documentVersionsTable)
+      .where(eq(documentVersionsTable.document_id, documentId))
+      .orderBy(desc(documentVersionsTable.version_number));
+
+    return {
+      success: true,
+      versions: versions.map(v => ({
+        versionNumber: v.version_number,
+        createdAt: v.created_at,
+        createdByModel: v.created_by_model,
+        changeSummary: v.change_summary,
+        contentDiff: v.content_diff,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching document versions:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to fetch document versions',
+    };
   }
 }
 
@@ -584,6 +624,129 @@ export async function getRagDocuments(ragIdentifier: string): Promise<{ success:
 
 export async function queryRag(ragIdentifier: string, query: string): Promise<{ success: boolean; response?: string; error?: string }> {
   return ragService.queryForResponse(ragIdentifier, query);
+}
+
+export async function askKnowledgeBase(userId: string, query: string, projectUuid?: string): Promise<{
+  success: boolean;
+  answer?: string;
+  sources?: string[];
+  documentIds?: string[];
+  documents?: Array<{
+    id: string;
+    name: string;
+    relevance?: number;
+    model?: {
+      name: string;
+      provider: string;
+    };
+    source?: string;
+  }>;
+  error?: string
+}> {
+  'use server';
+
+  try {
+    // For now, we'll use the RAG service directly since the MCP tool
+    // is designed for external access. In production, this would integrate
+    // with the MCP infrastructure
+    const ragIdentifier = projectUuid || userId;
+    const result = await ragService.queryForResponse(ragIdentifier, query);
+
+    if (result.success && result.response) {
+      // Fetch document names and metadata if we have document IDs
+      let documents: Array<{
+        id: string;
+        name: string;
+        relevance?: number;
+        model?: {
+          name: string;
+          provider: string;
+        };
+        source?: string;
+      }> = [];
+      if (result.documentIds && result.documentIds.length > 0) {
+        try {
+          const docs = await db
+            .select({
+              uuid: docsTable.uuid,
+              name: docsTable.name,
+              rag_document_id: docsTable.rag_document_id,
+              source: docsTable.source,
+              ai_metadata: docsTable.ai_metadata
+            })
+            .from(docsTable)
+            .where(
+              and(
+                eq(docsTable.user_id, userId),
+                projectUuid ? eq(docsTable.project_uuid, projectUuid) : undefined
+              )
+            );
+
+          // Map RAG document IDs to document names with metadata
+          const mappedDocs = result.documentIds
+            .map((ragId, index) => {
+              const doc = docs.find(d => d.rag_document_id === ragId);
+              if (!doc) return null;
+
+              // Calculate relevance score (simulated based on order, in production this would come from RAG)
+              // Documents are typically returned in order of relevance
+              const relevance = Math.max(100 - (index * 15), 60); // Start at 100%, decrease by 15% per position, min 60%
+
+              // Sanitize document name to prevent XSS
+              const sanitizedName = sanitizeHtml(doc.name, {
+                allowedTags: [],
+                allowedAttributes: {},
+                disallowedTagsMode: 'discard'
+              });
+
+              return {
+                id: doc.uuid,
+                name: sanitizedName,
+                relevance,
+                model: doc.ai_metadata?.model ? {
+                  name: sanitizeHtml(doc.ai_metadata.model.name || 'Unknown', {
+                    allowedTags: [],
+                    allowedAttributes: {},
+                    disallowedTagsMode: 'discard'
+                  }),
+                  provider: sanitizeHtml(doc.ai_metadata.model.provider || 'Unknown', {
+                    allowedTags: [],
+                    allowedAttributes: {},
+                    disallowedTagsMode: 'discard'
+                  })
+                } : undefined,
+                source: doc.source || 'upload'
+              };
+            });
+
+          // Filter out null values with proper typing
+          documents = mappedDocs.filter((doc): doc is NonNullable<typeof doc> => doc !== null);
+        } catch (dbError) {
+          console.error('Error fetching document names:', dbError);
+          // Continue without document names if DB query fails
+        }
+      }
+
+      return {
+        success: true,
+        answer: result.response,
+        sources: result.sources || [],
+        documentIds: result.documentIds || [],
+        documents
+      };
+    }
+
+    return {
+      success: false,
+      error: result.error || 'Failed to get response from knowledge base'
+    };
+  } catch (error) {
+    console.error('Error querying knowledge base:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
 }
 
 

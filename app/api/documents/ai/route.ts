@@ -26,6 +26,14 @@ const createAIDocumentSchema = z.object({
     }),
     context: z.string().optional(),
     visibility: z.enum(['private', 'workspace', 'public']).default('private'),
+    prompt: z.string().optional(),
+    conversationContext: z.array(z.string()).optional(),
+    sourceDocuments: z.array(z.string()).optional(),
+    generationParams: z.object({
+      temperature: z.number().optional(),
+      maxTokens: z.number().optional(),
+      topP: z.number().optional(),
+    }).optional(),
   }),
 });
 
@@ -167,10 +175,11 @@ export async function POST(request: NextRequest) {
     const documentId = randomUUID();
     const timestamp = new Date();
 
-    // Create safe filename
+    // Create safe filename with timestamp including milliseconds to avoid collisions
     const safeModelName = validatedData.metadata.model.name.replace(/[^a-zA-Z0-9-_]/g, '_');
     const safeTitle = validatedData.title.replace(/[^a-zA-Z0-9-_]/g, '_').substring(0, 50);
-    const filename = `${timestamp.toISOString().split('T')[0]}_${safeModelName}_${safeTitle}.${validatedData.format}`;
+    const timestampStr = timestamp.toISOString().replace(/[:.]/g, '-').replace('T', '_');
+    const filename = `${timestampStr}_${safeModelName}_${safeTitle}.${validatedData.format}`;
 
     // Validate filename is safe
     if (!isValidFilename(filename)) {
@@ -275,6 +284,10 @@ export async function POST(request: NextRequest) {
           version: validatedData.metadata.model.version,
           category: validatedData.category,
           tags: validatedData.tags,
+          prompt: validatedData.metadata.prompt,
+          conversationContext: validatedData.metadata.conversationContext,
+          sourceDocuments: validatedData.metadata.sourceDocuments,
+          generationParams: validatedData.metadata.generationParams,
         },
       });
 

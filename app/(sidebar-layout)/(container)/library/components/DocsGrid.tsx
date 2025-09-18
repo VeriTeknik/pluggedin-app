@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, Eye, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Download, Eye, MessageSquare, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
@@ -54,20 +54,37 @@ export function DocsGrid({
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <span className="text-2xl flex-shrink-0">{getMimeTypeIcon(doc.mime_type)}</span>
                 <div className="min-w-0 flex-1">
-                  <CardTitle
-                    className="text-base font-semibold truncate"
-                    title={doc.name}
-                  >
-                    {doc.name}
-                  </CardTitle>
+                  <div className="flex items-center gap-2">
+                    <CardTitle
+                      className="text-base font-semibold truncate flex-1"
+                      title={doc.name}
+                    >
+                      {doc.name}
+                    </CardTitle>
+                    {doc.version && doc.version > 1 && (
+                      <Badge
+                        variant="default"
+                        className="text-xs flex-shrink-0"
+                      >
+                        v{doc.version}
+                      </Badge>
+                    )}
+                  </div>
                   {doc.source === 'ai_generated' && doc.ai_metadata?.model && (
-                    <ModelAttributionBadge
-                      modelName={doc.ai_metadata.model.name}
-                      modelProvider={doc.ai_metadata.model.provider}
-                      modelVersion={doc.ai_metadata.model.version}
-                      timestamp={doc.ai_metadata.timestamp}
-                      className="mt-1"
-                    />
+                    <div className="flex items-center gap-2 mt-1">
+                      <ModelAttributionBadge
+                        modelName={doc.ai_metadata.model.name}
+                        modelProvider={doc.ai_metadata.model.provider}
+                        modelVersion={doc.ai_metadata.model.version}
+                        timestamp={doc.ai_metadata.timestamp}
+                      />
+                      {doc.ai_metadata.prompt && (
+                        <div className="flex items-center gap-1" title={`Prompt: ${doc.ai_metadata.prompt.substring(0, 100)}...`}>
+                          <MessageSquare className="h-3 w-3 text-muted-foreground" />
+                          <span className="text-xs text-muted-foreground">Prompted</span>
+                        </div>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -146,6 +163,20 @@ export function DocsGrid({
                   {doc.tags.length > 2 && (
                     <Badge variant="outline" className="text-xs">
                       +{doc.tags.length - 2}
+                    </Badge>
+                  )}
+                </div>
+              )}
+              {doc.source === 'ai_generated' && doc.ai_metadata && (
+                <div className="flex gap-2 mt-2">
+                  {doc.ai_metadata.sourceDocuments && doc.ai_metadata.sourceDocuments.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {doc.ai_metadata.sourceDocuments.length} source{doc.ai_metadata.sourceDocuments.length > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {doc.ai_metadata.conversationContext && doc.ai_metadata.conversationContext.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {doc.ai_metadata.conversationContext.length} context msg{doc.ai_metadata.conversationContext.length > 1 ? 's' : ''}
                     </Badge>
                   )}
                 </div>

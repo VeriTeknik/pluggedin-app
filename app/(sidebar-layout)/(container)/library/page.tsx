@@ -3,6 +3,8 @@
 import { Loader2 } from 'lucide-react';
 import dynamic from 'next/dynamic';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
+
 // Dynamically import the LibraryContent component to avoid blocking page load
 const LibraryContent = dynamic(() => import('./LibraryContent'), {
   loading: () => (
@@ -17,5 +19,9 @@ const LibraryContent = dynamic(() => import('./LibraryContent'), {
 });
 
 export default function LibraryPage() {
-  return <LibraryContent />;
+  return (
+    <ErrorBoundary>
+      <LibraryContent />
+    </ErrorBoundary>
+  );
 }

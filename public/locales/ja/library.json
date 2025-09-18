@@ -47,6 +47,8 @@
   },
   "controls": {
     "searchPlaceholder": "ドキュメントを検索...",
+    "aiSearchPlaceholder": "ドキュメントについて質問してください...",
+    "aiSearch": "AI検索",
     "grid": "グリッド",
     "table": "テーブル",
     "sourceFilter": {
@@ -56,6 +58,15 @@
       "api": "API"
     }
   },
+  "aiSearch": {
+    "loading": "ドキュメントを検索中...",
+    "loadingDescription": "AIがベストな回答を見つけるためにドキュメントを分析しています。",
+    "errorTitle": "検索エラー",
+    "answerTitle": "AI回答",
+    "collapse": "回答を折りたたむ",
+    "expand": "回答を展開",
+    "questionPrefix": "質問："
+    ,"sources": "Sources"  },
   "grid": {
     "noDocuments": "ドキュメントが見つかりません。",
     "openMenu": "メニューを開く",

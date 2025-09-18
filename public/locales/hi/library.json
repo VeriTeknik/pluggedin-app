@@ -47,6 +47,8 @@
   },
   "controls": {
     "searchPlaceholder": "दस्तावेज़ खोजें...",
+    "aiSearchPlaceholder": "अपने दस्तावेज़ों के बारे में एक प्रश्न पूछें...",
+    "aiSearch": "AI खोज",
     "grid": "ग्रिड",
     "table": "तालिका",
     "sourceFilter": {
@@ -56,6 +58,15 @@
       "api": "API"
     }
   },
+  "aiSearch": {
+    "loading": "आपके दस्तावेज़ खोजे जा रहे हैं...",
+    "loadingDescription": "AI सबसे अच्छा उत्तर खोजने के लिए आपके दस्तावेज़ों का विश्लेषण कर रहा है।",
+    "errorTitle": "खोज त्रुटि",
+    "answerTitle": "AI उत्तर",
+    "collapse": "उत्तर संकुचित करें",
+    "expand": "उत्तर विस्तारित करें",
+    "questionPrefix": "प्रश्न:"
+    ,"sources": "Sources"  },
   "grid": {
     "noDocuments": "कोई दस्तावेज़ नहीं मिला।",
     "openMenu": "मेनू खोलें",

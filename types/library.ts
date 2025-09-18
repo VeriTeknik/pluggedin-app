@@ -29,6 +29,14 @@ export interface Doc {
     context?: string;
     timestamp?: string;
     sessionId?: string;
+    prompt?: string;
+    conversationContext?: string[];
+    sourceDocuments?: string[];
+    generationParams?: {
+      temperature?: number;
+      maxTokens?: number;
+      topP?: number;
+    };
     lastUpdatedBy?: {
       name: string;
       provider: string;

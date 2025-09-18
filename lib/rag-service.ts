@@ -9,6 +9,8 @@ export interface RagQueryResponse {
   success: boolean;
   response?: string;
   context?: string;
+  sources?: string[];
+  documentIds?: string[];
   error?: string;
 }
 
@@ -210,13 +212,42 @@ class RagService {
 
       // Handle both JSON and plain text responses
       const body = await this.parseRagResponse(response);
-      const responseText = typeof body === 'string'
-        ? body
-        : body.message || body.response || 'No response received';
-      
+
+      if (typeof body === 'string') {
+        return {
+          success: true,
+          response: body || 'No response received',
+          sources: [],
+          documentIds: [],
+        };
+      }
+
+      // Handle new format with sources
+      if (body.results !== undefined) {
+        return {
+          success: true,
+          response: body.results || 'No response received',
+          sources: body.sources || [],
+          documentIds: body.document_ids || [],
+        };
+      }
+
+      // Handle no documents found case
+      if (body.message === 'No relevant documents found') {
+        return {
+          success: true,
+          response: body.message,
+          sources: [],
+          documentIds: [],
+        };
+      }
+
+      // Fallback for old format
       return {
         success: true,
-        response: responseText || 'No response received',
+        response: body.message || body.response || 'No response received',
+        sources: [],
+        documentIds: [],
       };
     } catch (error) {
       console.error('Error querying RAG for response:', error);

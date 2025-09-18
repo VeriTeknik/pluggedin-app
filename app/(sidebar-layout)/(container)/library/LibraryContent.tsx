@@ -9,26 +9,29 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Badge, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
-import { useCallback,useMemo, useState } from 'react';
+import { Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 // Internal components
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { PageContainer } from '@/components/ui/page-container';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 // Internal hooks and types
+import { useKnowledgeBaseSearch } from '@/hooks/use-knowledge-base-search';
 import { useLibrary } from '@/hooks/use-library';
 import type { Doc } from '@/types/library';
 
+import { AiSearchAnswer } from './components/AiSearchAnswer';
 import { DocsControls } from './components/DocsControls';
 import { DocsGrid } from './components/DocsGrid';
 import { DocsStats } from './components/DocsStats';
 import { DocsTable } from './components/DocsTable';
 // Local components
 import { DocumentPreview } from './components/DocumentPreview';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { UploadDialog } from './components/UploadDialog';
 import { UploadProgress } from './components/UploadProgress';
 
@@ -48,6 +51,20 @@ export default function LibraryContent() {
   const [sourceFilter, setSourceFilter] = useState<'all' | 'upload' | 'ai_generated' | 'api'>('all');
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // AI Search state
+  const [aiSearchEnabled, setAiSearchEnabled] = useState(false);
+  const [aiSearchQuery, setAiSearchQuery] = useState('');
+  const {
+    answer: aiAnswer,
+    sources: aiSources,
+    documentIds: aiDocumentIds,
+    documents: aiDocuments,
+    isLoading: isAiLoading,
+    error: aiError,
+    setQuery: setAiQuery,
+    clearAnswer: clearAiAnswer,
+  } = useKnowledgeBaseSearch();
 
   // Upload form state
   const [uploadForm, setUploadForm] = useState({
@@ -145,52 +162,154 @@ export default function LibraryContent() {
     setPreviewOpen(true);
   }, []);
 
+  const handleDocumentIdClick = useCallback((documentId: string) => {
+    // First try to find by exact UUID (from documents array)
+    const doc = docs.find(d => d.uuid === documentId);
+    if (doc) {
+      handlePreview(doc);
+    } else {
+      // If not found by UUID, try by RAG document ID
+      const ragDoc = docs.find(d => d.rag_document_id === documentId);
+      if (ragDoc) {
+        handlePreview(ragDoc);
+      } else {
+        // If not found by rag_document_id, try to match by partial ID
+        // This handles cases where the documentId is a Milvus document_id
+        const matchingDoc = docs.find(d =>
+          d.rag_document_id?.includes(documentId) ||
+          d.uuid?.includes(documentId)
+        );
+        if (matchingDoc) {
+          handlePreview(matchingDoc);
+        }
+      }
+    }
+  }, [docs, handlePreview]);
+
+  // Handle search input based on AI mode
+  const handleSearchChange = useCallback((value: string) => {
+    if (aiSearchEnabled) {
+      setAiSearchQuery(value);
+      setAiQuery(value);
+    } else {
+      setGlobalFilter(value);
+    }
+  }, [aiSearchEnabled, setAiQuery]);
+
+  // Handle AI search toggle
+  const handleAiSearchToggle = useCallback((enabled: boolean) => {
+    setAiSearchEnabled(enabled);
+    if (!enabled) {
+      // Clear AI search when toggling off
+      setAiSearchQuery('');
+      clearAiAnswer();
+    } else {
+      // Clear regular search when toggling on
+      setGlobalFilter('');
+    }
+  }, [clearAiAnswer]);
+
+  // Update effect to sync search states
+  useEffect(() => {
+    if (aiSearchEnabled) {
+      setGlobalFilter('');
+    } else {
+      setAiSearchQuery('');
+      clearAiAnswer();
+    }
+  }, [aiSearchEnabled, clearAiAnswer]);
+
   // Table columns configuration
   const columns = useMemo(() => [
     columnHelper.accessor('name', {
       cell: (info) => (
-        <div className="flex items-center gap-2">
-          <span className="text-lg">{getMimeTypeIcon(info.row.original.mime_type)}</span>
-          <div>
-            <div className="font-medium flex items-center gap-2">
-              {info.getValue()}
-              {info.row.original.source === 'ai_generated' && info.row.original.ai_metadata?.model && (
-                <ModelAttributionBadge
-                  modelName={info.row.original.ai_metadata.model.name}
-                  modelProvider={info.row.original.ai_metadata.model.provider}
-                  modelVersion={info.row.original.ai_metadata.model.version}
-                  timestamp={info.row.original.ai_metadata.timestamp}
-                />
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-lg flex-shrink-0">{getMimeTypeIcon(info.row.original.mime_type)}</span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="font-medium truncate">
+                {info.getValue()}
+              </span>
+              {info.row.original.version && info.row.original.version > 1 && (
+                <Badge
+                  variant="default"
+                  className="text-xs flex-shrink-0"
+                >
+                  v{info.row.original.version}
+                </Badge>
               )}
             </div>
-            <div className="text-sm text-muted-foreground">{info.row.original.file_name}</div>
+            <div className="text-sm text-muted-foreground truncate">{info.row.original.file_name}</div>
           </div>
         </div>
       ),
       header: t('page.tableHeaders.name'),
     }),
     columnHelper.accessor('description', {
-      cell: (info) => info.getValue() || '-',
+      cell: (info) => {
+        const desc = info.getValue();
+        if (!desc) return <span className="text-muted-foreground text-sm">-</span>;
+
+        // Truncate long descriptions
+        const maxLength = 100;
+        const truncated = desc.length > maxLength ? `${desc.substring(0, maxLength)}...` : desc;
+        return (
+          <span className="text-sm line-clamp-2" title={desc}>
+            {truncated}
+          </span>
+        );
+      },
       header: t('page.tableHeaders.description'),
     }),
+    columnHelper.display({
+      id: 'ai_model',
+      cell: (info) => {
+        const doc = info.row.original;
+        if (doc.source === 'ai_generated' && doc.ai_metadata?.model) {
+          return (
+            <div className="flex flex-col gap-0.5">
+              <div className="font-medium text-sm truncate">
+                {doc.ai_metadata.model.name}
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {doc.ai_metadata.model.provider}
+                {doc.ai_metadata.model.version && ` v${doc.ai_metadata.model.version}`}
+              </div>
+            </div>
+          );
+        }
+        return <span className="text-muted-foreground text-sm">-</span>;
+      },
+      header: t('page.tableHeaders.aiModel', 'AI Model'),
+    }),
     columnHelper.accessor('file_size', {
-      cell: (info) => formatFileSize(info.getValue()),
+      cell: (info) => (
+        <span className="text-sm whitespace-nowrap">{formatFileSize(info.getValue())}</span>
+      ),
       header: t('page.tableHeaders.size'),
     }),
     columnHelper.accessor('tags', {
-      cell: (info) => (
-        <div className="flex gap-1 flex-wrap">
-          {info.getValue()?.map((tag, index) => (
-            <Badge key={index} variant="secondary" className="text-xs">
-              {tag}
-            </Badge>
-          )) || '-'}
-        </div>
-      ),
+      cell: (info) => {
+        const tags = info.getValue();
+        if (!tags || tags.length === 0) {
+          return <span className="text-muted-foreground text-sm">-</span>;
+        }
+
+        // Join tags with commas for a cleaner, more readable display
+        return (
+          <div className="text-sm text-muted-foreground max-w-[200px]" title={tags.join(', ')}>
+            <span className="line-clamp-2">
+              {tags.join(', ')}
+            </span>
+          </div>
+        );
+      },
       header: t('page.tableHeaders.tags'),
     }),
     columnHelper.accessor('created_at', {
-      cell: (info) => info.getValue().toLocaleDateString(),
+      cell: (info) => (
+        <span className="text-sm whitespace-nowrap">{info.getValue().toLocaleDateString()}</span>
+      ),
       header: t('page.tableHeaders.created'),
     }),
     columnHelper.display({
@@ -312,14 +431,32 @@ export default function LibraryContent() {
         {/* Controls */}
         <div className='py-4'>
           <DocsControls
-            searchTerm={globalFilter}
-            onSearchChange={setGlobalFilter}
+            searchTerm={aiSearchEnabled ? aiSearchQuery : globalFilter}
+            onSearchChange={handleSearchChange}
             viewMode={viewMode}
             onViewModeChange={setViewMode}
             sourceFilter={sourceFilter}
             onSourceFilterChange={setSourceFilter}
+            aiSearchEnabled={aiSearchEnabled}
+            onAiSearchToggle={handleAiSearchToggle}
           />
         </div>
+
+        {/* AI Search Answer */}
+        {aiSearchEnabled && (
+          <ErrorBoundary>
+            <AiSearchAnswer
+              answer={aiAnswer}
+              sources={aiSources}
+              documentIds={aiDocumentIds}
+              documents={aiDocuments}
+              isLoading={isAiLoading}
+              error={aiError}
+              query={aiSearchQuery}
+              onDocumentClick={handleDocumentIdClick}
+            />
+          </ErrorBoundary>
+        )}
 
         {/* Content */}
         <Tabs value={viewMode} onValueChange={(value) => setViewMode(value as 'grid' | 'table')} className="flex-1">

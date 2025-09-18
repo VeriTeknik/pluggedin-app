@@ -39,6 +39,7 @@
     "tableHeaders": {
       "name": "Name",
       "description": "Description",
+      "aiModel": "AI Model",
       "size": "Size",
       "tags": "Tags",
       "created": "Created",
@@ -47,6 +48,8 @@
   },
   "controls": {
     "searchPlaceholder": "Search documents...",
+    "aiSearchPlaceholder": "Ask a question about your documents...",
+    "aiSearch": "AI Search",
     "grid": "Grid",
     "table": "Table",
     "sourceFilter": {
@@ -55,6 +58,16 @@
       "aiGenerated": "AI Generated",
       "api": "API"
     }
+  },
+  "aiSearch": {
+    "loading": "Searching your documents...",
+    "loadingDescription": "AI is analyzing your documents to find the best answer.",
+    "errorTitle": "Search Error",
+    "answerTitle": "AI Answer",
+    "collapse": "Collapse answer",
+    "expand": "Expand answer",
+    "questionPrefix": "Question:",
+    "sources": "Sources"
   },
   "grid": {
     "noDocuments": "No documents found.",
@@ -88,7 +101,64 @@
     "download": "Download File",
     "pdfError": "Error loading PDF",
     "downloadPDF": "Download PDF",
-    "loadingPDF": "Loading PDF..."
+    "loadingPDF": "Loading PDF...",
+    "prompt": "Prompt",
+    "conversationContext": "Conversation Context",
+    "sourceDocuments": "Source Documents",
+    "generationParams": "Generation Parameters"
+  },
+  "versionHistory": {
+    "title": "Version History",
+    "compareMode": "Compare",
+    "compareSelected": "Compare Selected",
+    "version": "Version",
+    "current": "Current",
+    "changes": "Changes",
+    "view": "View"
+  },
+  "metadata": {
+    "title": "AI Generation Details",
+    "model": "Model Information",
+    "createdBy": "Created by",
+    "lastUpdatedBy": "Last updated by",
+    "version": "Version",
+    "generationContext": "Generation Context",
+    "prompt": "Prompt",
+    "context": "Additional Context",
+    "conversationHistory": "Conversation History",
+    "messages": "messages",
+    "sourceDocuments": "Source Documents",
+    "generationParams": "Generation Parameters",
+    "temperature": "Temperature",
+    "topP": "Top-P",
+    "maxTokens": "Max Tokens",
+    "tempVeryFocused": "Very focused",
+    "tempFocused": "Focused",
+    "tempBalanced": "Balanced",
+    "tempCreative": "Creative",
+    "timestamps": "Timestamps",
+    "created": "Created",
+    "lastUpdated": "Last updated",
+    "sessionId": "Session ID"
+  },
+  "filters": {
+    "quickFilters": "Quick filters:",
+    "allSources": "All Sources",
+    "uploaded": "Uploaded",
+    "aiGenerated": "AI Generated",
+    "api": "API",
+    "allModels": "All Models",
+    "dateRange": "Date Range",
+    "tags": "Tags",
+    "tagsSelected": "tags",
+    "searchTags": "Search tags...",
+    "noTags": "No tags found",
+    "category": "Category",
+    "allCategories": "All Categories",
+    "reset": "Reset",
+    "source": "Source",
+    "model": "Model",
+    "dates": "Dates"
   },
   "uploadProgress": {
     "title": "Upload Progress",

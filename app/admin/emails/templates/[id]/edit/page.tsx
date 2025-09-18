@@ -104,7 +104,7 @@ export default function EmailTemplateEditPage() {
     try {
       const result = await getEmailTemplate(templateId);
       if (result.success && result.data) {
-        setTemplate(result.data);
+        setTemplate(result.data as unknown as EmailTemplate);
         setName(result.data.name);
         setSubject(result.data.subject);
         setContent(result.data.content);
@@ -117,7 +117,7 @@ export default function EmailTemplateEditPage() {
       // Load version history
       const versionsResult = await getTemplateVersions(templateId);
       if (versionsResult.success && versionsResult.data) {
-        setVersions(versionsResult.data);
+        setVersions(versionsResult.data as unknown as TemplateVersion[]);
       }
     } catch (error) {
       console.error('Failed to load template:', error);
@@ -156,19 +156,19 @@ export default function EmailTemplateEditPage() {
         name,
         subject,
         content,
-        category,
+        category: category as "other" | "product_update" | "feature_announcement" | "newsletter",
       });
 
       if (result.success) {
         toast.success('Template saved successfully');
         if (result.data) {
-          setTemplate(result.data);
+          setTemplate(result.data as unknown as EmailTemplate);
         }
         // Reload version history if content changed
         if (template?.content !== content || template?.subject !== subject) {
           const versionsResult = await getTemplateVersions(templateId);
           if (versionsResult.success && versionsResult.data) {
-            setVersions(versionsResult.data);
+            setVersions(versionsResult.data as unknown as TemplateVersion[]);
           }
         }
       } else {
