@@ -18,24 +18,7 @@ import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadg
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-
-interface DocumentVersion {
-  id: string;
-  version_number: number;
-  content: string;
-  content_diff?: {
-    additions?: number;
-    deletions?: number;
-    changes?: Array<{ type: string; content: string }>;
-  };
-  created_by_model: {
-    name: string;
-    provider: string;
-    version?: string;
-  };
-  created_at: Date;
-  change_summary?: string;
-}
+import type { DocumentVersion } from '@/types/document-versioning';
 
 interface DocumentVersionHistoryProps {
   documentId: string;

@@ -31,6 +31,7 @@ import { useProjects } from '@/hooks/use-projects';
 import { useDocxContent } from '@/hooks/useDocxContent';
 import { getFileLanguage, isDocxFile, isImageFile, isMarkdownFile, isPDFFile, isTextFile, isTextFileByExtension, isValidTextMimeType, ZOOM_LIMITS } from '@/lib/file-utils';
 import { Doc } from '@/types/library';
+import type { DocumentVersion } from '@/types/document-versioning';
 
 import { DocumentVersionHistory } from './DocumentVersionHistory';
 
@@ -66,12 +67,14 @@ export function DocumentPreview({
   const [currentDocIndex, setCurrentDocIndex] = useState(0);
   const [textContent, setTextContent] = useState<string | null>(null);
   const [isLoadingText, setIsLoadingText] = useState(false);
-  const [versions, setVersions] = useState<any[]>([]);
+  const [versions, setVersions] = useState<DocumentVersion[]>([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
   const [showVersionHistory, setShowVersionHistory] = useState(false);
-  const [selectedVersion, setSelectedVersion] = useState<any>(null);
+  const [selectedVersion, setSelectedVersion] = useState<DocumentVersion | null>(null);
   const [versionContent, setVersionContent] = useState<string | null>(null);
   const [isLoadingVersionContent, setIsLoadingVersionContent] = useState(false);
+  const [versionError, setVersionError] = useState<string | null>(null);
+  const [textError, setTextError] = useState<string | null>(null);
 
   // Use hook for DOCX content
   const { docxContent, isLoadingDocx } = useDocxContent(doc, open, currentProject?.uuid);
@@ -93,6 +96,8 @@ export function DocumentPreview({
     setVersions([]);
     setSelectedVersion(null);
     setVersionContent(null);
+    setVersionError(null);
+    setTextError(null);
   }, [doc?.uuid]);
 
   // Fetch version history for AI-generated documents
@@ -108,11 +113,17 @@ export function DocumentPreview({
       return;
     }
 
+    const abortController = new AbortController();
+
     const fetchVersions = async () => {
       setIsLoadingVersions(true);
+      setVersionError(null);
       try {
         const { getDocumentVersions } = await import('@/app/actions/library');
         const { useSafeSession } = await import('@/hooks/use-safe-session');
+
+        // Check if aborted
+        if (abortController.signal.aborted) return;
 
         // Get session to fetch versions
         const response = await getDocumentVersions(
@@ -121,68 +132,117 @@ export function DocumentPreview({
           currentProject?.uuid
         );
 
+        // Check if aborted before setting state
+        if (abortController.signal.aborted) return;
+
         if (response.success && response.versions) {
-          setVersions(response.versions);
+          // Map the response to match DocumentVersion interface
+          const mappedVersions: DocumentVersion[] = response.versions.map((v: any) => ({
+            id: `v${v.versionNumber}`, // Generate a temporary ID
+            version_number: v.versionNumber,
+            content: '', // Content is loaded separately
+            created_by_model: v.createdByModel,
+            created_at: v.createdAt,
+            change_summary: v.changeSummary,
+            content_diff: v.contentDiff
+          }));
+          setVersions(mappedVersions);
         } else {
           setVersions([]);
+          setVersionError(response.error || 'Failed to load version history');
         }
       } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') return;
         console.error('Failed to fetch version history:', error);
         setVersions([]);
+        if (!abortController.signal.aborted) {
+          setVersionError('Unable to load version history. Please try again later.');
+        }
       } finally {
-        setIsLoadingVersions(false);
+        if (!abortController.signal.aborted) {
+          setIsLoadingVersions(false);
+        }
       }
     };
 
     fetchVersions();
+
+    return () => {
+      abortController.abort();
+    };
   }, [doc, open, currentProject?.uuid]);
 
   // Fetch text content for text files
   useEffect(() => {
     if (!doc || !open) {
       setTextContent(null);
+      setTextError(null);
       return;
     }
 
-    if (isTextFile(doc.mime_type, doc.file_name)) {
-      setIsLoadingText(true);
-      const downloadUrl = `/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`;
-      fetch(downloadUrl)
-        .then(res => {
-          // Validate content type before processing
-          const contentType = res.headers.get('content-type');
-          
-          // Allow all text files - prioritize extension over MIME type
-          const isValidByExtension = doc?.name ? isTextFileByExtension(doc.name) : false;
-          const isValidByContentType = isValidTextMimeType(contentType);
-          
-          // If file has text extension, allow it regardless of MIME type
-          if (!isValidByExtension && !isValidByContentType) {
-            throw new Error('Invalid content type for text processing');
-          }
-          return res.text();
-        })
-        .then(async text => {
-          // Use DOMPurify for robust HTML sanitization
-          // Since we're dealing with text/code files, we want to strip ALL HTML
-          const DOMPurify = (await import('dompurify')).default;
-          
-          // For text files, we don't want any HTML at all - just plain text
-          const sanitized = DOMPurify.sanitize(text, { 
-            ALLOWED_TAGS: [],  // No HTML tags allowed
-            ALLOWED_ATTR: [],  // No attributes allowed
-            KEEP_CONTENT: true // Keep text content
-          });
-          
-          setTextContent(sanitized);
-          setIsLoadingText(false);
-        })
-        .catch(err => {
-          console.error('Failed to fetch text content:', err);
-          setTextContent(null);
-          setIsLoadingText(false);
-        });
+    if (!isTextFile(doc.mime_type, doc.file_name)) {
+      return;
     }
+
+    const abortController = new AbortController();
+    setIsLoadingText(true);
+    setTextError(null);
+
+    const downloadUrl = `/api/library/download/${doc.uuid}${currentProject?.uuid ? `?projectUuid=${currentProject.uuid}` : ''}`;
+
+    fetch(downloadUrl, { signal: abortController.signal })
+      .then(res => {
+        // Check for HTTP errors
+        if (!res.ok) {
+          throw new Error(`Failed to load document (${res.status})`);
+        }
+
+        // Validate content type before processing
+        const contentType = res.headers.get('content-type');
+
+        // Allow all text files - prioritize extension over MIME type
+        const isValidByExtension = doc?.name ? isTextFileByExtension(doc.name) : false;
+        const isValidByContentType = isValidTextMimeType(contentType);
+
+        // If file has text extension, allow it regardless of MIME type
+        if (!isValidByExtension && !isValidByContentType) {
+          throw new Error('This file format cannot be displayed as text');
+        }
+        return res.text();
+      })
+      .then(async text => {
+        if (abortController.signal.aborted) return;
+
+        // Use DOMPurify for robust HTML sanitization
+        // Since we're dealing with text/code files, we want to strip ALL HTML
+        const DOMPurify = (await import('dompurify')).default;
+
+        // For text files, we don't want any HTML at all - just plain text
+        const sanitized = DOMPurify.sanitize(text, {
+          ALLOWED_TAGS: [],  // No HTML tags allowed
+          ALLOWED_ATTR: [],  // No attributes allowed
+          KEEP_CONTENT: true // Keep text content
+        });
+
+        if (!abortController.signal.aborted) {
+          setTextContent(sanitized);
+          setTextError(null);
+          setIsLoadingText(false);
+        }
+      })
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        console.error('Failed to fetch text content:', err);
+        setTextContent(null);
+        if (!abortController.signal.aborted) {
+          setTextError(err.message || 'Unable to load document content. Please try again.');
+        }
+        setIsLoadingText(false);
+      });
+
+    return () => {
+      abortController.abort();
+    };
   }, [doc, open, currentProject?.uuid]);
 
   // DOCX content now handled by useDocxContent hook
@@ -205,7 +265,7 @@ export function DocumentPreview({
   const handleZoomOut = () => setImageZoom(prev => Math.max(prev / ZOOM_LIMITS.STEP, ZOOM_LIMITS.MIN));
   const resetZoom = () => setImageZoom(1);
 
-  const handleVersionSelect = useCallback((version: any) => {
+  const handleVersionSelect = useCallback((version: DocumentVersion) => {
     setSelectedVersion(version);
     setIsLoadingVersionContent(true);
 
@@ -220,7 +280,7 @@ export function DocumentPreview({
     setIsLoadingVersionContent(false);
   }, []);
 
-  const handleCompareVersions = useCallback((v1: any, v2: any) => {
+  const handleCompareVersions = useCallback((v1: DocumentVersion, v2: DocumentVersion) => {
     // This would open a comparison view
     console.log('Comparing versions:', v1, v2);
     // You could implement a diff view here
@@ -300,6 +360,7 @@ export function DocumentPreview({
               size="sm"
               onClick={handleZoomOut}
               disabled={imageZoom <= 0.1}
+              aria-label="Zoom out"
             >
               <ZoomOut className="h-4 w-4" />
             </Button>
@@ -307,6 +368,7 @@ export function DocumentPreview({
               variant="secondary"
               size="sm"
               onClick={resetZoom}
+              aria-label={`Reset zoom (currently ${Math.round(imageZoom * 100)}%)`}
             >
               {Math.round(imageZoom * 100)}%
             </Button>
@@ -315,6 +377,7 @@ export function DocumentPreview({
               size="sm"
               onClick={handleZoomIn}
               disabled={imageZoom >= 5}
+              aria-label="Zoom in"
             >
               <ZoomIn className="h-4 w-4" />
             </Button>
@@ -365,6 +428,19 @@ export function DocumentPreview({
         return (
           <div className="flex-1 flex items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        );
+      }
+
+      // Show error state if there was an error loading text
+      if (textError) {
+        return (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center">
+              <FileText className="h-12 w-12 mx-auto mb-4 text-destructive opacity-50" />
+              <p className="text-destructive font-medium mb-2">{t('preview.errorLoadingContent', 'Error loading content')}</p>
+              <p className="text-sm text-muted-foreground">{textError}</p>
+            </div>
           </div>
         );
       }
@@ -472,6 +548,7 @@ export function DocumentPreview({
                     variant="ghost"
                     size="sm"
                     onClick={() => navigateToDoc('prev')}
+                    aria-label="Previous document"
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </Button>
@@ -482,6 +559,7 @@ export function DocumentPreview({
                     variant="ghost"
                     size="sm"
                     onClick={() => navigateToDoc('next')}
+                    aria-label="Next document"
                   >
                     <ChevronRight className="h-4 w-4" />
                   </Button>
@@ -497,6 +575,8 @@ export function DocumentPreview({
                     size="sm"
                     onClick={() => setShowVersionHistory(!showVersionHistory)}
                     disabled={isLoadingVersions}
+                    aria-label={showVersionHistory ? "Hide version history" : "Show version history"}
+                    aria-expanded={showVersionHistory}
                   >
                     {isLoadingVersions ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
@@ -514,6 +594,7 @@ export function DocumentPreview({
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsFullscreen(!isFullscreen)}
+                aria-label={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
               >
                 {isFullscreen ? (
                   <Minimize2 className="h-4 w-4" />
@@ -526,6 +607,7 @@ export function DocumentPreview({
                 variant="ghost"
                 size="sm"
                 onClick={() => onDownload(doc)}
+                aria-label="Download document"
               >
                 <Download className="h-4 w-4" />
               </Button>
@@ -534,6 +616,7 @@ export function DocumentPreview({
                 variant="ghost"
                 size="sm"
                 onClick={() => onDelete(doc)}
+                aria-label="Delete document"
               >
                 <Trash2 className="h-4 w-4 text-destructive" />
               </Button>
@@ -561,19 +644,7 @@ export function DocumentPreview({
                     ) : (
                       <DocumentVersionHistory
                         documentId={doc.uuid}
-                        versions={versions.map(v => ({
-                          id: v.id || `v${v.versionNumber}`,
-                          version_number: v.versionNumber || v.version_number,
-                          content: v.content,
-                          content_diff: v.contentDiff || v.content_diff,
-                          created_by_model: v.createdByModel || v.created_by_model || {
-                            name: v.model_name,
-                            provider: v.model_provider,
-                            version: v.model_version
-                          },
-                          created_at: v.createdAt || v.created_at,
-                          change_summary: v.changeSummary || v.change_summary
-                        }))}
+                        versions={versions}
                         currentVersion={doc.version || 1}
                         onVersionSelect={handleVersionSelect}
                         onCompareVersions={handleCompareVersions}

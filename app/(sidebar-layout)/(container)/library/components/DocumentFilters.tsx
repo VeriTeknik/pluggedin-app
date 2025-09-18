@@ -10,7 +10,7 @@ import {
   Tag,
   X
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { DateRange } from 'react-day-picker';
 import { useTranslation } from 'react-i18next';
 
@@ -102,9 +102,12 @@ export function DocumentFilters({
   const [isModelOpen, setIsModelOpen] = useState(false);
   const [tagSearch, setTagSearch] = useState('');
 
-  const activeFilterCount = Object.values(filters).filter(v =>
-    v !== undefined && v !== 'all' && v !== ''
-  ).length;
+  // Memoize expensive filter count calculation
+  const activeFilterCount = useMemo(() => {
+    return Object.values(filters).filter(v =>
+      v !== undefined && v !== 'all' && v !== ''
+    ).length;
+  }, [filters]);
 
   const handleReset = () => {
     onFiltersChange({});
@@ -150,13 +153,19 @@ export function DocumentFilters({
     onFiltersChange({ ...filters, ...preset.filters });
   };
 
-  const filteredTags = availableTags.filter(tag =>
-    tag.toLowerCase().includes(tagSearch.toLowerCase())
-  );
+  // Memoize filtered tags to avoid recalculating on every render
+  const filteredTags = useMemo(() => {
+    return availableTags.filter(tag =>
+      tag.toLowerCase().includes(tagSearch.toLowerCase())
+    );
+  }, [availableTags, tagSearch]);
 
-  const providerModels = availableModels.filter(
-    m => m.provider === filters.modelProvider
-  );
+  // Memoize provider models filtering
+  const providerModels = useMemo(() => {
+    return availableModels.filter(
+      m => m.provider === filters.modelProvider
+    );
+  }, [availableModels, filters.modelProvider]);
 
   return (
     <div className={cn("space-y-4", className)}>
