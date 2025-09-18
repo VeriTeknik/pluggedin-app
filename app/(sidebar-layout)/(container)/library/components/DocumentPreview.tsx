@@ -659,19 +659,77 @@ export function DocumentPreview({
                       )}
 
                       {doc.source === 'ai_generated' && doc.ai_metadata && (
-                        <div>
-                          <span className="text-muted-foreground">{t('preview.aiMetadata')}:</span>
-                          <div className="mt-1 space-y-1">
-                            {doc.ai_metadata.model && (
-                              <p className="text-xs">
-                                {doc.ai_metadata.model.provider} {doc.ai_metadata.model.name}
-                                {doc.ai_metadata.model.version && ` v${doc.ai_metadata.model.version}`}
-                              </p>
-                            )}
-                            {doc.ai_metadata.context && (
-                              <p className="text-xs text-muted-foreground">{doc.ai_metadata.context}</p>
-                            )}
+                        <div className="space-y-3">
+                          <div>
+                            <span className="text-muted-foreground font-medium">{t('preview.aiMetadata', 'AI Metadata')}:</span>
+                            <div className="mt-1 space-y-1">
+                              {doc.ai_metadata.model && (
+                                <p className="text-xs">
+                                  <span className="text-muted-foreground">Model: </span>
+                                  {doc.ai_metadata.model.provider} {doc.ai_metadata.model.name}
+                                  {doc.ai_metadata.model.version && ` v${doc.ai_metadata.model.version}`}
+                                </p>
+                              )}
+                              {doc.ai_metadata.context && (
+                                <p className="text-xs">
+                                  <span className="text-muted-foreground">Context: </span>
+                                  {doc.ai_metadata.context}
+                                </p>
+                              )}
+                            </div>
                           </div>
+
+                          {doc.ai_metadata.prompt && (
+                            <div>
+                              <span className="text-muted-foreground font-medium">{t('preview.prompt', 'Prompt')}:</span>
+                              <p className="text-xs mt-1 p-2 bg-muted/50 rounded-md whitespace-pre-wrap">
+                                {doc.ai_metadata.prompt}
+                              </p>
+                            </div>
+                          )}
+
+                          {doc.ai_metadata.conversationContext && doc.ai_metadata.conversationContext.length > 0 && (
+                            <div>
+                              <span className="text-muted-foreground font-medium">{t('preview.conversationContext', 'Conversation Context')}:</span>
+                              <div className="mt-1 space-y-1">
+                                {doc.ai_metadata.conversationContext.map((msg: string, idx: number) => (
+                                  <p key={idx} className="text-xs p-2 bg-muted/30 rounded-md">
+                                    {msg}
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {doc.ai_metadata.sourceDocuments && doc.ai_metadata.sourceDocuments.length > 0 && (
+                            <div>
+                              <span className="text-muted-foreground font-medium">{t('preview.sourceDocuments', 'Source Documents')}:</span>
+                              <div className="mt-1 flex flex-wrap gap-1">
+                                {doc.ai_metadata.sourceDocuments.map((docId: string, idx: number) => (
+                                  <Badge key={idx} variant="secondary" className="text-xs">
+                                    {docId.substring(0, 8)}...
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {doc.ai_metadata.generationParams && (
+                            <div>
+                              <span className="text-muted-foreground font-medium">{t('preview.generationParams', 'Generation Parameters')}:</span>
+                              <div className="mt-1 text-xs space-y-1">
+                                {doc.ai_metadata.generationParams.temperature !== undefined && (
+                                  <p><span className="text-muted-foreground">Temperature:</span> {doc.ai_metadata.generationParams.temperature}</p>
+                                )}
+                                {doc.ai_metadata.generationParams.maxTokens !== undefined && (
+                                  <p><span className="text-muted-foreground">Max Tokens:</span> {doc.ai_metadata.generationParams.maxTokens}</p>
+                                )}
+                                {doc.ai_metadata.generationParams.topP !== undefined && (
+                                  <p><span className="text-muted-foreground">Top P:</span> {doc.ai_metadata.generationParams.topP}</p>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
