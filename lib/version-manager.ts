@@ -10,6 +10,7 @@ import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { isPathWithinDirectory, sanitizeUserIdForFileSystem } from './security';
+import { validateDocumentId, validateUserId, validateVersionNumber, validateFilename } from './path-validation';
 import { ragService } from './rag-service';
 
 export interface VersionInfo {
@@ -49,8 +50,13 @@ export function getVersionDirectory(
   userId: string,
   documentId: string
 ): string {
-  const safeUserId = sanitizeUserIdForFileSystem(userId);
-  return join(baseUploadDir, safeUserId, 'versions', documentId);
+  // Pre-validate inputs
+  const validatedDocumentId = validateDocumentId(documentId);
+  const validatedUserId = validateUserId(userId);
+  const safeUserId = sanitizeUserIdForFileSystem(validatedUserId);
+
+  // Build path from validated components
+  return join(baseUploadDir, safeUserId, 'versions', validatedDocumentId);
 }
 
 /**
@@ -60,10 +66,14 @@ export function generateVersionFilename(
   originalFilename: string,
   versionNumber: number
 ): string {
-  const ext = extname(originalFilename);
-  const baseName = basename(originalFilename, ext);
+  // Validate inputs
+  const validatedFilename = validateFilename(originalFilename);
+  const validatedVersion = validateVersionNumber(versionNumber);
+
+  const ext = extname(validatedFilename);
+  const baseName = basename(validatedFilename, ext);
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, -5);
-  return `${baseName}_v${versionNumber}_${timestamp}${ext}`;
+  return `${baseName}_v${validatedVersion}_${timestamp}${ext}`;
 }
 
 /**
@@ -83,13 +93,17 @@ export async function saveDocumentVersion(
     previousContent
   } = options;
 
+  // Pre-validate all inputs
+  const validatedDocumentId = validateDocumentId(documentId);
+  const validatedUserId = validateUserId(userId);
+
   // Use transaction to ensure atomic version increment
   const versionResult = await db.transaction(async (tx) => {
     // Get the document with row lock
     const [document] = await tx
       .select()
       .from(docsTable)
-      .where(eq(docsTable.uuid, documentId))
+      .where(eq(docsTable.uuid, validatedDocumentId))
       .limit(1);
 
     if (!document) {
@@ -98,7 +112,7 @@ export async function saveDocumentVersion(
 
     // Determine base upload directory
     const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
-    const versionDir = getVersionDirectory(baseUploadDir, userId, documentId);
+    const versionDir = getVersionDirectory(baseUploadDir, validatedUserId, validatedDocumentId);
 
     // Create version directory if it doesn't exist (use async method)
     try {
@@ -118,7 +132,7 @@ export async function saveDocumentVersion(
     await tx
       .update(docsTable)
       .set({ version: newVersionNumber })
-      .where(eq(docsTable.uuid, documentId));
+      .where(eq(docsTable.uuid, validatedDocumentId));
 
     return { document, newVersionNumber, versionDir, baseUploadDir };
   });
@@ -144,14 +158,23 @@ export async function saveDocumentVersion(
     throw new Error('Invalid version filename');
   }
 
-  // Write the version file
-  await writeFile(versionFilePath, content, 'utf-8');
+  // Track if file was written for cleanup on failure
+  let fileWritten = false;
+
+  try {
+    // Write the version file
+    await writeFile(versionFilePath, content, 'utf-8');
+    fileWritten = true;
+  } catch (writeError) {
+    console.error('Failed to write version file:', writeError);
+    throw new Error('Failed to save version file');
+  }
 
   // Calculate content diff
   const contentDiff = calculateContentDiff(previousContent || '', content, operation);
 
   // Store the relative path for database
-  const relativeVersionPath = `${sanitizeUserIdForFileSystem(userId)}/versions/${documentId}/${versionFilename}`;
+  const relativeVersionPath = `${sanitizeUserIdForFileSystem(validatedUserId)}/versions/${validatedDocumentId}/${versionFilename}`;
 
   // Upload to RAG if enabled
   let ragDocumentId: string | null = null;
@@ -203,37 +226,51 @@ export async function saveDocumentVersion(
     }
   }
 
-  // Update all existing versions to not be current
-  await db
-    .update(documentVersionsTable)
-    .set({ is_current: false })
-    .where(eq(documentVersionsTable.document_id, documentId));
+  // Perform database operations with cleanup on failure
+  try {
+    // Update all existing versions to not be current
+    await db
+      .update(documentVersionsTable)
+      .set({ is_current: false })
+      .where(eq(documentVersionsTable.document_id, validatedDocumentId));
 
-  // Create version record in database
-  const [versionRecord] = await db
-    .insert(documentVersionsTable)
-    .values({
-      document_id: documentId,
-      version_number: newVersionNumber,
-      content: content,
-      file_path: relativeVersionPath,
-      is_current: true,
-      rag_document_id: ragDocumentId,
-      created_by_model: createdByModel,
-      change_summary: changeSummary || `${operation} operation by ${createdByModel.name}`,
-      content_diff: contentDiff
-    })
-    .returning();
+    // Create version record in database
+    const [versionRecord] = await db
+      .insert(documentVersionsTable)
+      .values({
+        document_id: validatedDocumentId,
+        version_number: newVersionNumber,
+        content: content,
+        file_path: relativeVersionPath,
+        is_current: true,
+        rag_document_id: ragDocumentId,
+        created_by_model: createdByModel,
+        change_summary: changeSummary || `${operation} operation by ${createdByModel.name}`,
+        content_diff: contentDiff
+      })
+      .returning();
 
-  return {
-    versionNumber: versionRecord.version_number,
-    filePath: versionRecord.file_path!,
-    ragDocumentId: versionRecord.rag_document_id || undefined,
-    createdAt: versionRecord.created_at,
-    createdByModel: versionRecord.created_by_model as any,
-    changeSummary: versionRecord.change_summary || undefined,
-    isCurrent: versionRecord.is_current!
-  };
+    return {
+      versionNumber: versionRecord.version_number,
+      filePath: versionRecord.file_path!,
+      ragDocumentId: versionRecord.rag_document_id || undefined,
+      createdAt: versionRecord.created_at,
+      createdByModel: versionRecord.created_by_model as any,
+      changeSummary: versionRecord.change_summary || undefined,
+      isCurrent: versionRecord.is_current!
+    };
+  } catch (dbError) {
+    // Clean up the file if database operations fail
+    if (fileWritten) {
+      try {
+        await unlink(versionFilePath);
+        console.log(`Cleaned up version file after database error: ${versionFilePath}`);
+      } catch (cleanupError) {
+        console.error('Failed to cleanup version file:', cleanupError);
+      }
+    }
+    throw dbError;
+  }
 }
 
 /**
@@ -245,14 +282,18 @@ export async function getVersionContent(
   versionNumber: number
 ): Promise<string | null> {
   try {
+    // Pre-validate inputs
+    const validatedDocumentId = validateDocumentId(documentId);
+    const validatedUserId = validateUserId(userId);
+    const validatedVersion = validateVersionNumber(versionNumber);
     // Get version record from database
     const [version] = await db
       .select()
       .from(documentVersionsTable)
       .where(
         and(
-          eq(documentVersionsTable.document_id, documentId),
-          eq(documentVersionsTable.version_number, versionNumber)
+          eq(documentVersionsTable.document_id, validatedDocumentId),
+          eq(documentVersionsTable.version_number, validatedVersion)
         )
       )
       .limit(1);
@@ -309,8 +350,13 @@ export async function restoreVersion(
   }
 ): Promise<boolean> {
   try {
+    // Pre-validate inputs
+    const validatedDocumentId = validateDocumentId(documentId);
+    const validatedUserId = validateUserId(userId);
+    const validatedVersion = validateVersionNumber(versionNumber);
+
     // Get the version to restore
-    const versionContent = await getVersionContent(userId, documentId, versionNumber);
+    const versionContent = await getVersionContent(validatedUserId, validatedDocumentId, validatedVersion);
     if (!versionContent) {
       throw new Error('Version content not found');
     }
@@ -319,7 +365,7 @@ export async function restoreVersion(
     const [document] = await db
       .select()
       .from(docsTable)
-      .where(eq(docsTable.uuid, documentId))
+      .where(eq(docsTable.uuid, validatedDocumentId))
       .limit(1);
 
     if (!document) {
@@ -347,16 +393,16 @@ export async function restoreVersion(
     // Create a backup version of the current state
     if (currentContent) {
       await saveDocumentVersion({
-        documentId,
+        documentId: validatedDocumentId,
         content: currentContent,
-        userId,
+        userId: validatedUserId,
         projectUuid: document.project_uuid || undefined,
         createdByModel: {
           name: 'System',
           provider: 'internal',
           version: '1.0'
         },
-        changeSummary: `Backup before restoring version ${versionNumber}`,
+        changeSummary: `Backup before restoring version ${validatedVersion}`,
         operation: 'replace',
         previousContent: currentContent
       });
@@ -364,16 +410,16 @@ export async function restoreVersion(
 
     // Create a new version with the restored content
     const restoredVersion = await saveDocumentVersion({
-      documentId,
+      documentId: validatedDocumentId,
       content: versionContent,
-      userId,
+      userId: validatedUserId,
       projectUuid: document.project_uuid || undefined,
       createdByModel: restoredByModel || {
         name: 'System',
         provider: 'internal',
         version: '1.0'
       },
-      changeSummary: `Restored from version ${versionNumber}`,
+      changeSummary: `Restored from version ${validatedVersion}`,
       operation: 'replace',
       previousContent: currentContent
     });
@@ -389,7 +435,7 @@ export async function restoreVersion(
         rag_document_id: restoredVersion.ragDocumentId || document.rag_document_id,
         updated_at: new Date()
       })
-      .where(eq(docsTable.uuid, documentId));
+      .where(eq(docsTable.uuid, validatedDocumentId));
 
     return true;
   } catch (error) {
@@ -399,16 +445,41 @@ export async function restoreVersion(
 }
 
 /**
- * List all versions of a document
+ * List all versions of a document (optimized to exclude content)
  */
 export async function listDocumentVersions(
-  documentId: string
+  documentId: string,
+  options?: {
+    limit?: number;
+    offset?: number;
+    includeContent?: boolean;
+  }
 ): Promise<VersionInfo[]> {
-  const versions = await db
-    .select()
+  // Pre-validate inputs
+  const validatedDocumentId = validateDocumentId(documentId);
+
+  const { limit = 100, offset = 0, includeContent = false } = options || {};
+
+  // Build query - exclude content by default for performance
+  const query = db
+    .select({
+      version_number: documentVersionsTable.version_number,
+      file_path: documentVersionsTable.file_path,
+      rag_document_id: documentVersionsTable.rag_document_id,
+      created_at: documentVersionsTable.created_at,
+      created_by_model: documentVersionsTable.created_by_model,
+      change_summary: documentVersionsTable.change_summary,
+      is_current: documentVersionsTable.is_current,
+      // Only include content if explicitly requested
+      ...(includeContent ? { content: documentVersionsTable.content } : {})
+    })
     .from(documentVersionsTable)
-    .where(eq(documentVersionsTable.document_id, documentId))
-    .orderBy(desc(documentVersionsTable.version_number));
+    .where(eq(documentVersionsTable.document_id, validatedDocumentId))
+    .orderBy(desc(documentVersionsTable.version_number))
+    .limit(limit)
+    .offset(offset);
+
+  const versions = await query;
 
   return versions.map(v => ({
     versionNumber: v.version_number,
@@ -430,14 +501,19 @@ export async function deleteVersion(
   versionNumber: number
 ): Promise<boolean> {
   try {
+    // Pre-validate inputs
+    const validatedDocumentId = validateDocumentId(documentId);
+    const validatedUserId = validateUserId(userId);
+    const validatedVersion = validateVersionNumber(versionNumber);
+
     // Don't allow deletion of the current version
     const [version] = await db
       .select()
       .from(documentVersionsTable)
       .where(
         and(
-          eq(documentVersionsTable.document_id, documentId),
-          eq(documentVersionsTable.version_number, versionNumber)
+          eq(documentVersionsTable.document_id, validatedDocumentId),
+          eq(documentVersionsTable.version_number, validatedVersion)
         )
       )
       .limit(1);
@@ -471,10 +547,10 @@ export async function deleteVersion(
         const [document] = await db
           .select({ project_uuid: docsTable.project_uuid })
           .from(docsTable)
-          .where(eq(docsTable.uuid, documentId))
+          .where(eq(docsTable.uuid, validatedDocumentId))
           .limit(1);
 
-        const ragIdentifier = document?.project_uuid || userId;
+        const ragIdentifier = document?.project_uuid || validatedUserId;
         await ragService.removeDocument(version.rag_document_id, ragIdentifier);
       } catch (ragError) {
         console.error('Failed to remove version from RAG:', ragError);
@@ -486,8 +562,8 @@ export async function deleteVersion(
       .delete(documentVersionsTable)
       .where(
         and(
-          eq(documentVersionsTable.document_id, documentId),
-          eq(documentVersionsTable.version_number, versionNumber)
+          eq(documentVersionsTable.document_id, validatedDocumentId),
+          eq(documentVersionsTable.version_number, validatedVersion)
         )
       );
 
@@ -559,6 +635,8 @@ export async function migrateExistingVersions(userId: string): Promise<{
   failed: number;
 }> {
   try {
+    // Pre-validate inputs
+    const validatedUserId = validateUserId(userId);
     // Get all versions that don't have file_path
     const versionsToMigrate = await db
       .select()
@@ -579,14 +657,17 @@ export async function migrateExistingVersions(userId: string): Promise<{
           .where(eq(docsTable.uuid, version.document_id))
           .limit(1);
 
-        if (!document || document.user_id !== userId) {
+        if (!document || document.user_id !== validatedUserId) {
           failed++;
           continue;
         }
 
+        // Validate document ID before using it
+        const validatedDocId = validateDocumentId(version.document_id);
+
         // Create version file
         const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
-        const versionDir = getVersionDirectory(baseUploadDir, userId, version.document_id);
+        const versionDir = getVersionDirectory(baseUploadDir, validatedUserId, validatedDocId);
 
         // Check if directory exists using async method
         try {
