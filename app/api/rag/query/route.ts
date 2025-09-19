@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import sanitizeHtml from 'sanitize-html';
+import { sanitizeToPlainText } from '@/lib/sanitization';
 import { z } from 'zod';
 
 import { logAuditEvent } from '@/app/actions/audit-logger';
@@ -12,13 +12,8 @@ const RagQuerySchema = z.object({
     .min(1, 'Query cannot be empty')
     .max(1000, 'Query too long') // Prevent abuse with overly long queries
     .transform((query) => {
-      // Use sanitize-html to remove all unsafe content
-      const sanitized = sanitizeHtml(query, {
-        allowedTags: [], // Disallow all HTML tags
-        allowedAttributes: {}, // Disallow all attributes
-        allowedSchemes: [], // Disallow all URL schemes (javascript:, data:, etc.)
-        disallowedTagsMode: 'discard' // Remove disallowed tags completely
-      });
+      // Use centralized sanitization to remove all unsafe content
+      const sanitized = sanitizeToPlainText(query);
       
       return sanitized.trim();
     })
@@ -84,19 +79,11 @@ export async function POST(request: NextRequest) {
     if (includeMetadata) {
       // Sanitize document IDs and sources to prevent XSS
       const sanitizedSources = (ragResult.sources || []).map(source =>
-        sanitizeHtml(source, {
-          allowedTags: [],
-          allowedAttributes: {},
-          disallowedTagsMode: 'discard'
-        })
+        sanitizeToPlainText(source)
       );
 
       const sanitizedDocumentIds = (ragResult.documentIds || []).map(id =>
-        sanitizeHtml(id, {
-          allowedTags: [],
-          allowedAttributes: {},
-          disallowedTagsMode: 'discard'
-        })
+        sanitizeToPlainText(id)
       );
 
       return NextResponse.json({

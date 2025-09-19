@@ -32,18 +32,94 @@ export function sanitizeUserIdForFileSystem(userId: string): string {
 }
 
 /**
+ * Sanitizes a path component to prevent path traversal attacks
+ * @param pathComponent - The path component to sanitize
+ * @returns The sanitized path component
+ */
+function sanitizePathComponent(pathComponent: string): string {
+  if (!pathComponent || typeof pathComponent !== 'string') {
+    return '';
+  }
+
+  // Remove any path traversal sequences
+  let sanitized = pathComponent
+    .split(/[\/\\]+/) // Split by any path separator
+    .filter(part => part !== '..' && part !== '.' && part !== '') // Remove traversal sequences
+    .join(path.sep); // Rejoin with proper separator
+
+  // Remove any null bytes and control characters
+  sanitized = sanitized.replace(/[\x00-\x1f\x80-\x9f]/g, '');
+
+  // Remove any colon except for Windows drive letters
+  if (process.platform === 'win32') {
+    // Allow C:, D:, etc. at the start
+    sanitized = sanitized.replace(/^([a-zA-Z]):/, '$1:').replace(/:/g, '');
+  } else {
+    sanitized = sanitized.replace(/:/g, '');
+  }
+
+  return sanitized;
+}
+
+/**
  * Validates that a file path is within the allowed directory
- * Prevents path traversal attacks
+ * Prevents path traversal attacks with cross-platform support
  * @param filePath - The file path to validate
  * @param allowedDirectory - The directory that files must be within
  * @returns true if the path is safe, false otherwise
  */
 export function isPathWithinDirectory(filePath: string, allowedDirectory: string): boolean {
-  const resolvedPath = path.resolve(filePath);
-  const resolvedAllowedDir = path.resolve(allowedDirectory);
-  
-  // Ensure the resolved path starts with the allowed directory
-  return resolvedPath.startsWith(resolvedAllowedDir + path.sep);
+  // Input validation
+  if (!filePath || !allowedDirectory ||
+      typeof filePath !== 'string' || typeof allowedDirectory !== 'string') {
+    return false;
+  }
+
+  // Check for obvious path traversal attempts before resolution
+  const traversalPatterns = [
+    /\.\.[\/\\]/,      // ../
+    /[\/\\]\.\./,      // /..
+    /\.\.\./,          // ...
+    /\.\.0/,           // ..0 (null byte variant)
+    /%2e%2e/i,         // URL encoded ..
+    /\x00/,            // Null bytes
+  ];
+
+  for (const pattern of traversalPatterns) {
+    if (pattern.test(filePath)) {
+      return false; // Reject obvious traversal attempts
+    }
+  }
+
+  // Sanitize inputs before resolution
+  const sanitizedPath = sanitizePathComponent(filePath);
+  const sanitizedAllowedDir = sanitizePathComponent(allowedDirectory);
+
+  // Resolve and normalize both paths to handle relative paths and symlinks
+  // Use sanitized inputs to prevent path injection
+  const resolvedPath = path.resolve(path.normalize(sanitizedPath));
+  const resolvedAllowedDir = path.resolve(path.normalize(sanitizedAllowedDir));
+
+  // Remove trailing slashes for consistent comparison
+  const cleanPath = resolvedPath.replace(/[\\\/]+$/, '');
+  const cleanAllowedDir = resolvedAllowedDir.replace(/[\\\/]+$/, '');
+
+  // Check for exact directory equality
+  if (cleanPath === cleanAllowedDir) {
+    return true;
+  }
+
+  // Check if target is inside base directory
+  // On Windows, paths are case-insensitive
+  if (process.platform === 'win32') {
+    // Convert to lowercase for Windows case-insensitive comparison
+    const lowerPath = cleanPath.toLowerCase();
+    const lowerAllowedDir = cleanAllowedDir.toLowerCase();
+    return lowerPath.startsWith(lowerAllowedDir + path.sep.toLowerCase());
+  } else {
+    // Case-sensitive comparison for Unix-like systems
+    return cleanPath.startsWith(cleanAllowedDir + path.sep);
+  }
 }
 
 /**

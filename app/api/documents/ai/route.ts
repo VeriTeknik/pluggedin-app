@@ -2,14 +2,14 @@ import { createHash,randomUUID } from 'crypto';
 import { mkdir,writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'path';
-import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';
 
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable, notificationsTable } from '@/db/schema';
 import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
-import { isPathWithinDirectory, isValidFilename } from '@/lib/security';
+import { isPathWithinDirectory, isValidFilename, sanitizeUserIdForFileSystem } from '@/lib/security';
+import { sanitizeModerate } from '@/lib/sanitization';
 
 // Validation schema for AI document creation
 const createAIDocumentSchema = z.object({
@@ -155,20 +155,11 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createAIDocumentSchema.parse(body);
 
-    // Sanitize content if HTML or markdown
+    // Sanitize content if HTML or markdown using strict rules
     let processedContent = validatedData.content;
     if (validatedData.format === 'html' || validatedData.format === 'md') {
-      processedContent = sanitizeHtml(validatedData.content, {
-        allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'code']),
-        allowedAttributes: {
-          ...sanitizeHtml.defaults.allowedAttributes,
-          img: ['src', 'alt', 'title', 'width', 'height'],
-          code: ['class'],
-        },
-        allowedClasses: {
-          code: ['language-*'],
-        },
-      });
+      // Use moderate sanitization which allows safe images but prevents XSS
+      processedContent = sanitizeModerate(validatedData.content);
     }
 
     // Generate unique identifiers
@@ -189,7 +180,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine upload directory path with user ID - use platform-specific defaults
+    // Determine upload directory path with sanitized user ID for maximum security
     const getDefaultUploadsDir = () => {
       if (process.platform === 'darwin') {
         // macOS: Use project's uploads directory for local development
@@ -202,10 +193,12 @@ export async function POST(request: NextRequest) {
         return '/home/pluggedin/uploads';
       }
     };
-    
+
     const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
-    const userUploadDir = join(baseUploadDir, user.id);
-    
+    // Use sanitized user ID to prevent any path traversal attempts
+    const safeUserId = sanitizeUserIdForFileSystem(user.id);
+    const userUploadDir = join(baseUploadDir, safeUserId);
+
     // Ensure the user upload directory is within the base upload directory
     if (!isPathWithinDirectory(userUploadDir, baseUploadDir)) {
       console.error('Path traversal attempt detected:', userUploadDir);
@@ -214,11 +207,12 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
-    
+
     await mkdir(userUploadDir, { recursive: true });
 
     const filePath = join(userUploadDir, filename);
-    const relativePath = `${user.id}/${filename}`;
+    // Store original user.id in database but use safe path for file system
+    const relativePath = `${safeUserId}/${filename}`;
     
     // Double-check the final file path is within allowed directory
     if (!isPathWithinDirectory(filePath, userUploadDir)) {
@@ -309,21 +303,70 @@ export async function POST(request: NextRequest) {
     // Trigger RAG processing only for specific file formats
     if (process.env.ENABLE_RAG === 'true' && ['md', 'txt', 'pdf'].includes(validatedData.format)) {
       // Extract text content based on format
-      const textContent = validatedData.format === 'md' || validatedData.format === 'txt' 
-        ? processedContent 
+      const textContent = validatedData.format === 'md' || validatedData.format === 'txt'
+        ? processedContent
         : ''; // PDF would need special extraction
-      
+
       if (textContent) {
-        // Import RAG service dynamically to avoid circular dependencies
+        // Import RAG service and helper function dynamically to avoid circular dependencies
         const { ragService } = await import('@/lib/rag-service');
-        
-        // Send to RAG service asynchronously (fire and forget)
+        const { updateDocRagId } = await import('@/app/actions/library');
+
         // Create a dummy file object for AI-generated content
         const dummyFile = new File([textContent], filename, { type: mimeType });
-        
-        ragService.uploadDocument(dummyFile, apiKeyResult.activeProfile.project_uuid || apiKeyResult.user.id).catch(async error => {
-          console.error('Failed to send AI document to RAG:', error);
-          
+
+        try {
+          // Upload to RAG and get upload_id
+          const uploadResult = await ragService.uploadDocument(
+            dummyFile,
+            activeProfile.project_uuid || user.id
+          );
+
+          if (uploadResult.success && uploadResult.upload_id) {
+            // Poll for upload completion to get document_id
+            const maxAttempts = 30; // 30 seconds max wait
+            let ragDocumentId: string | null = null;
+
+            for (let attempt = 0; attempt < maxAttempts; attempt++) {
+              // Wait 1 second between polls
+              await new Promise(resolve => setTimeout(resolve, 1000));
+
+              try {
+                const statusResult = await ragService.getUploadStatus(
+                  uploadResult.upload_id,
+                  activeProfile.project_uuid || user.id
+                );
+
+                if (statusResult.progress?.status === 'completed' && statusResult.progress?.document_id) {
+                  ragDocumentId = statusResult.progress.document_id;
+                  console.log(`RAG upload completed for AI document ${documentId}, RAG ID: ${ragDocumentId}`);
+
+                  // Update document with RAG document ID
+                  const updateResult = await updateDocRagId(documentId, ragDocumentId, user.id);
+                  if (!updateResult.success) {
+                    console.error(`Failed to update RAG ID for document ${documentId}:`, updateResult.error);
+                  }
+                  break;
+                } else if (statusResult.progress?.status === 'failed') {
+                  console.error('RAG upload failed:', statusResult.progress);
+                  throw new Error('RAG processing failed');
+                }
+              } catch (pollError) {
+                console.error(`Error polling upload status (attempt ${attempt + 1}/${maxAttempts}):`, pollError);
+                // Continue polling unless it's the last attempt
+                if (attempt === maxAttempts - 1) {
+                  throw pollError;
+                }
+              }
+            }
+
+            if (!ragDocumentId) {
+              console.warn(`RAG upload timed out for document ${documentId} after ${maxAttempts} seconds`);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to process AI document in RAG:', error);
+
           // Create a notification about the RAG failure
           try {
             await db.insert(notificationsTable).values({
@@ -339,7 +382,7 @@ export async function POST(request: NextRequest) {
           } catch (notificationError) {
             console.error('Failed to create RAG failure notification:', notificationError);
           }
-        });
+        }
       }
     }
 

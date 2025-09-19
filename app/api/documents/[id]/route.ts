@@ -2,7 +2,7 @@ import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import { readFile, writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join, resolve } from 'path';
-import sanitizeHtml from 'sanitize-html';
+import { sanitizeModerate } from '@/lib/sanitization';
 import { z } from 'zod';
 
 import { logAuditEvent } from '@/app/actions/audit-logger';
@@ -444,75 +444,9 @@ export async function PATCH(
         break;
     }
 
-    // Sanitize the new content with enhanced security for image tags
-    const sanitizedContent = sanitizeHtml(newContent, {
-      allowedTags: sanitizeHtml.defaults.allowedTags.concat(['img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'pre', 'code']),
-      allowedAttributes: {
-        ...sanitizeHtml.defaults.allowedAttributes,
-        img: ['src', 'alt', 'title', 'width', 'height'], // Include 'src' for validation in transformTags
-        code: ['class'],
-        pre: ['class']
-      },
-      allowedClasses: {
-        code: ['language-*'],
-        pre: ['language-*']
-      },
-      transformTags: {
-        'img': function(tagName, attribs) {
-          // Validate image sources to prevent SSRF
-          if (attribs.src) {
-            // Allow data URLs for base64 images
-            if (attribs.src.startsWith('data:image/')) {
-              // Validate it's a proper image data URL
-              if (!/^data:image\/(png|jpeg|jpg|gif|webp|svg\+xml);base64,/.test(attribs.src)) {
-                return { 
-                  tagName: 'span', 
-                  text: '[Invalid image data URL]',
-                  attribs: {} 
-                };
-              }
-              return { tagName, attribs };
-            }
-            
-            // Validate external URLs
-            try {
-              const url = new URL(attribs.src);
-              // Only allow HTTPS for external images
-              if (url.protocol !== 'https:') {
-                return { 
-                  tagName: 'span', 
-                  text: '[Image removed - HTTPS required]',
-                  attribs: {} 
-                };
-              }
-              // Allow specific trusted image hosting domains
-              const allowedHosts = ['imgur.com', 'cloudinary.com', 'github.com', 'githubusercontent.com'];
-              if (!allowedHosts.some(host => url.hostname.endsWith(host))) {
-                return { 
-                  tagName: 'span', 
-                  text: '[Image removed - untrusted source]',
-                  attribs: {} 
-                };
-              }
-              return { tagName, attribs };
-            } catch {
-              // Invalid URL, remove the image
-              return { 
-                tagName: 'span', 
-                text: '[Invalid image URL]',
-                attribs: {} 
-              };
-            }
-          }
-          // No src attribute, remove the image tag
-          return { 
-            tagName: 'span', 
-            text: '[Image missing source]',
-            attribs: {} 
-          };
-        }
-      }
-    });
+    // Sanitize the new content using centralized moderate sanitization rules
+    // This prevents XSS while allowing safe images
+    const sanitizedContent = sanitizeModerate(newContent);
 
     // Write the new content to file with path validation
     await writeFile(resolvedPath, sanitizedContent, 'utf-8');

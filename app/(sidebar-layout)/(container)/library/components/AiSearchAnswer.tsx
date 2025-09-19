@@ -127,6 +127,34 @@ export function AiSearchAnswer({ answer, sources = [], documentIds = [], documen
                                             doc.relevance && doc.relevance >= 60 ? 'text-yellow-600' :
                                             'text-gray-600';
 
+                      // Check if document is unresolved (couldn't be matched to database)
+                      const isUnresolved = (doc as any).isUnresolved === true;
+
+                      if (isUnresolved) {
+                        // Unresolved documents are non-clickable with visual indication
+                        return (
+                          <Badge
+                            key={`${doc.id}-${index}`}
+                            variant="outline"
+                            className="text-xs cursor-not-allowed opacity-60 px-2 py-1 border-dashed"
+                            title={`Document reference could not be resolved. RAG ID: ${doc.id}`}
+                          >
+                            <FileText className="h-3 w-3 mr-1 inline opacity-50" />
+                            <span className="inline-flex items-center gap-1">
+                              <span className="italic">{displayName}</span>
+                              {doc.relevance && (
+                                <span className={`ml-1 ${relevanceColor}`}>
+                                  ({doc.relevance}%)
+                                </span>
+                              )}
+                              <span className="ml-1 text-xs text-muted-foreground">
+                                [Unresolved]
+                              </span>
+                            </span>
+                          </Badge>
+                        );
+                      }
+
                       return onDocumentClick ? (
                         <Button
                           key={`${doc.id}-${index}`}

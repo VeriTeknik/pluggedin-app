@@ -8,6 +8,7 @@ import {
   FileText,
   GitBranch,
   Image as ImageIcon,
+  Info,
   Loader2,
   Maximize2,
   Minimize2,
@@ -33,6 +34,7 @@ import { getFileLanguage, isDocxFile, isImageFile, isMarkdownFile, isPDFFile, is
 import { Doc } from '@/types/library';
 import type { DocumentVersion } from '@/types/document-versioning';
 
+import { AIMetadataPanel } from './AIMetadataPanel';
 import { DocumentVersionHistory } from './DocumentVersionHistory';
 
 // Lazy load heavy components
@@ -56,6 +58,7 @@ interface DocumentPreviewState {
     imageZoom: number;
     currentDocIndex: number;
     showVersionHistory: boolean;
+    showMetadataPanel: boolean;
   };
   content: {
     textContent: string | null;
@@ -78,6 +81,7 @@ type DocumentPreviewAction =
   | { type: 'SET_IMAGE_ZOOM'; payload: number }
   | { type: 'SET_CURRENT_DOC_INDEX'; payload: number }
   | { type: 'TOGGLE_VERSION_HISTORY' }
+  | { type: 'TOGGLE_METADATA_PANEL' }
   | { type: 'SET_TEXT_CONTENT'; payload: { content: string | null; error?: string | null } }
   | { type: 'SET_TEXT_LOADING'; payload: boolean }
   | { type: 'SET_TEXT_ERROR'; payload: string | null }
@@ -101,6 +105,8 @@ const documentPreviewReducer = (state: DocumentPreviewState, action: DocumentPre
       return { ...state, ui: { ...state.ui, currentDocIndex: action.payload } };
     case 'TOGGLE_VERSION_HISTORY':
       return { ...state, ui: { ...state.ui, showVersionHistory: !state.ui.showVersionHistory } };
+    case 'TOGGLE_METADATA_PANEL':
+      return { ...state, ui: { ...state.ui, showMetadataPanel: !state.ui.showMetadataPanel } };
     case 'SET_TEXT_CONTENT':
       return {
         ...state,
@@ -136,7 +142,7 @@ const documentPreviewReducer = (state: DocumentPreviewState, action: DocumentPre
     case 'RESET_DOCUMENT_STATE':
       return {
         ...state,
-        ui: { ...state.ui, imageZoom: 1, showVersionHistory: false },
+        ui: { ...state.ui, imageZoom: 1, showVersionHistory: false, showMetadataPanel: false },
         content: { textContent: null, isLoadingText: false, textError: null },
         versions: {
           list: [],
@@ -171,6 +177,7 @@ const initialState: DocumentPreviewState = {
     imageZoom: 1,
     currentDocIndex: 0,
     showVersionHistory: false,
+    showMetadataPanel: false,
   },
   content: {
     textContent: null,
@@ -682,6 +689,23 @@ export const DocumentPreview = memo(function DocumentPreview({
                 </>
               )}
 
+              {/* AI Metadata Button */}
+              {doc.source === 'ai_generated' && doc.ai_metadata && (
+                <>
+                  <Button
+                    variant={state.ui.showMetadataPanel ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => dispatch({ type: 'TOGGLE_METADATA_PANEL' })}
+                    aria-label={state.ui.showMetadataPanel ? "Hide AI metadata" : "Show AI metadata"}
+                    aria-expanded={state.ui.showMetadataPanel}
+                  >
+                    <Info className="h-4 w-4" />
+                    <span className="ml-2 text-xs">AI Info</span>
+                  </Button>
+                  <Separator orientation="vertical" className="h-6" />
+                </>
+              )}
+
               {/* Version History Button */}
               {doc.source === 'ai_generated' && doc.version > 1 && (
                 <>
@@ -747,6 +771,22 @@ export const DocumentPreview = memo(function DocumentPreview({
               </ErrorBoundary>
             </div>
 
+            {/* AI Metadata Panel */}
+            {state.ui.showMetadataPanel && doc.source === 'ai_generated' && doc.ai_metadata && (
+              <div className="w-96 border-l bg-muted/10 overflow-hidden flex flex-col flex-shrink-0">
+                <ScrollArea className="flex-1">
+                  <div className="p-4">
+                    <AIMetadataPanel
+                      metadata={doc.ai_metadata}
+                      documentName={doc.name}
+                      source={doc.source}
+                      version={doc.version}
+                    />
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
+
             {/* Version History Panel */}
             {state.ui.showVersionHistory && doc.source === 'ai_generated' && (
               <div className="w-80 border-l bg-muted/10 overflow-hidden flex flex-col flex-shrink-0">
@@ -763,7 +803,7 @@ export const DocumentPreview = memo(function DocumentPreview({
                     )}
                   </div>
                 </div>
-                <ScrollArea className="flex-1">
+                <ScrollArea className="flex-1 h-0">
                   <div className="p-4">
                     {state.versions.isLoading ? (
                       <div className="flex items-center justify-center py-8">
