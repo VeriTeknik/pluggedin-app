@@ -116,7 +116,14 @@ export async function saveDocumentVersion(
 
   // Validate the path is within allowed directory
   if (!isPathWithinDirectory(versionFilePath, baseUploadDir)) {
+    console.error('Path traversal attempt in version creation:', versionFilePath);
     throw new Error('Invalid version file path');
+  }
+
+  // Additional validation to ensure filename is safe
+  if (versionFilename.includes('../') || versionFilename.includes('..\\')) {
+    console.error('Suspicious filename pattern:', versionFilename);
+    throw new Error('Invalid version filename');
   }
 
   // Write the version file
@@ -228,8 +235,15 @@ export async function getVersionContent(
     const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
     const fullPath = join(baseUploadDir, version.file_path);
 
-    // Validate path security
+    // Re-validate path security after database retrieval to prevent path traversal
     if (!isPathWithinDirectory(fullPath, baseUploadDir)) {
+      console.error('Path traversal attempt detected in version retrieval:', version.file_path);
+      throw new Error('Invalid version file path');
+    }
+
+    // Additional validation: ensure the path doesn't contain suspicious patterns
+    if (version.file_path.includes('../') || version.file_path.includes('..\\')) {
+      console.error('Suspicious path pattern detected:', version.file_path);
       throw new Error('Invalid version file path');
     }
 

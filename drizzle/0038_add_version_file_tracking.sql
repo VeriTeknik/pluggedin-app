@@ -14,6 +14,10 @@ CREATE INDEX IF NOT EXISTS document_versions_rag_id_idx
 ON document_versions (rag_document_id)
 WHERE rag_document_id IS NOT NULL;
 
+-- Add composite index for efficient version lookups
+CREATE INDEX IF NOT EXISTS document_versions_lookup_idx
+ON document_versions (document_id, is_current, version_number DESC);
+
 -- Update existing versions to mark the latest as current
 UPDATE document_versions dv1
 SET is_current = true

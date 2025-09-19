@@ -23,7 +23,10 @@ const getDocumentSchema = z.object({
 // Update document schema
 const updateDocumentSchema = z.object({
   operation: z.enum(['replace', 'append', 'prepend']),
-  content: z.string().min(1).max(10000000), // 10MB limit
+  content: z.string()
+    .min(1)
+    .max(10000000) // 10MB limit
+    .refine(val => !val.includes('\0'), 'Null bytes not allowed'),
   metadata: z.object({
     changeSummary: z.string().optional(),
     model: z.object({
@@ -530,38 +533,40 @@ export async function PATCH(
       }
     }
 
-    // Update the document in database with version info
-    await db
-      .update(docsTable)
-      .set({
-        file_size: newFileSize,
-        version: versionInfo.versionNumber,
-        rag_document_id: versionInfo.ragDocumentId || newRagDocumentId,
-        updated_at: new Date(),
-        ai_metadata: validatedData.metadata?.model ? {
-          ...existingDoc.ai_metadata,
-          model: validatedData.metadata.model,
-          timestamp: new Date().toISOString(),
-          context: validatedData.metadata?.changeSummary || existingDoc.ai_metadata?.context,
-        } : existingDoc.ai_metadata,
-        tags: validatedData.metadata?.tags || existingDoc.tags,
-      })
-      .where(eq(docsTable.uuid, documentId));
+    // Update the document in database with version info - use transaction for consistency
+    await db.transaction(async (tx) => {
+      await tx
+        .update(docsTable)
+        .set({
+          file_size: newFileSize,
+          version: versionInfo.versionNumber,
+          rag_document_id: versionInfo.ragDocumentId || newRagDocumentId,
+          updated_at: new Date(),
+          ai_metadata: validatedData.metadata?.model ? {
+            ...existingDoc.ai_metadata,
+            model: validatedData.metadata.model,
+            timestamp: new Date().toISOString(),
+            context: validatedData.metadata?.changeSummary || existingDoc.ai_metadata?.context,
+          } : existingDoc.ai_metadata,
+          tags: validatedData.metadata?.tags || existingDoc.tags,
+        })
+        .where(eq(docsTable.uuid, documentId));
 
-    // Add model attribution (version record was already created by saveDocumentVersion)
-    if (validatedData.metadata?.model) {
-      await db.insert(documentModelAttributionsTable).values({
-        document_id: documentId,
-        model_name: validatedData.metadata.model.name,
-        model_provider: validatedData.metadata.model.provider,
-        contribution_type: 'updated',
-        contribution_metadata: {
-          version: validatedData.metadata.model.version,
-          changes_summary: validatedData.metadata.changeSummary,
-          operation: validatedData.operation,
-        }
-      });
-    }
+      // Add model attribution (version record was already created by saveDocumentVersion)
+      if (validatedData.metadata?.model) {
+        await tx.insert(documentModelAttributionsTable).values({
+          document_id: documentId,
+          model_name: validatedData.metadata.model.name,
+          model_provider: validatedData.metadata.model.provider,
+          contribution_type: 'updated',
+          contribution_metadata: {
+            version: validatedData.metadata.model.version,
+            changes_summary: validatedData.metadata.changeSummary,
+            operation: validatedData.operation,
+          }
+        });
+      }
+    });
 
     // Log audit event
     await logAuditEvent({
