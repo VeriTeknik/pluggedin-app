@@ -33,21 +33,36 @@ export function sanitizeUserIdForFileSystem(userId: string): string {
 
 /**
  * Validates that a file path is within the allowed directory
- * Prevents path traversal attacks
+ * Prevents path traversal attacks with cross-platform support
  * @param filePath - The file path to validate
  * @param allowedDirectory - The directory that files must be within
  * @returns true if the path is safe, false otherwise
  */
 export function isPathWithinDirectory(filePath: string, allowedDirectory: string): boolean {
-  const resolvedPath = path.resolve(filePath);
-  const resolvedAllowedDir = path.resolve(allowedDirectory);
+  // Resolve and normalize both paths to handle relative paths and symlinks
+  const resolvedPath = path.resolve(path.normalize(filePath));
+  const resolvedAllowedDir = path.resolve(path.normalize(allowedDirectory));
 
-  // Normalize paths to handle trailing slashes consistently
-  const normalizedPath = resolvedPath + path.sep;
-  const normalizedAllowedDir = resolvedAllowedDir + path.sep;
+  // Remove trailing slashes for consistent comparison
+  const cleanPath = resolvedPath.replace(/[\\\/]+$/, '');
+  const cleanAllowedDir = resolvedAllowedDir.replace(/[\\\/]+$/, '');
 
-  // Check if the path is exactly the allowed directory or within it
-  return resolvedPath === resolvedAllowedDir || normalizedPath.startsWith(normalizedAllowedDir);
+  // Check for exact directory equality
+  if (cleanPath === cleanAllowedDir) {
+    return true;
+  }
+
+  // Check if target is inside base directory
+  // On Windows, paths are case-insensitive
+  if (process.platform === 'win32') {
+    // Convert to lowercase for Windows case-insensitive comparison
+    const lowerPath = cleanPath.toLowerCase();
+    const lowerAllowedDir = cleanAllowedDir.toLowerCase();
+    return lowerPath.startsWith(lowerAllowedDir + path.sep.toLowerCase());
+  } else {
+    // Case-sensitive comparison for Unix-like systems
+    return cleanPath.startsWith(cleanAllowedDir + path.sep);
+  }
 }
 
 /**

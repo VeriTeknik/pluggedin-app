@@ -3,11 +3,11 @@
 import { and, desc, eq, isNull, sum } from 'drizzle-orm';
 import { realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
-import { join,resolve } from 'path';
 import * as path from 'path';
-import { sanitizeToPlainText } from '@/lib/sanitization';
+import { join, resolve } from 'path';
 
 import { db } from '@/db';
+import { sanitizeToPlainText } from '@/lib/sanitization';
 import { docsTable, documentVersionsTable } from '@/db/schema';
 import { ragService } from '@/lib/rag-service';
 import type { 
@@ -705,7 +705,7 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
                   id: ragId, // Use RAG ID as fallback
                   name: sanitizeToPlainText(displayName),
                   relevance,
-                  source: 'unknown' as 'unknown',
+                  source: 'unknown' as const,
                   isUnresolved: true // Mark as unresolved for UI handling
                 };
               }
@@ -757,13 +757,60 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
 }
 
 /**
+ * Helper function to process items in batches with concurrency control
+ */
+async function processInBatches<T, R>(
+  items: T[],
+  processFn: (item: T) => Promise<R>,
+  batchSize: number,
+  maxConcurrency: number
+): Promise<R[]> {
+  const results: R[] = [];
+  const total = items.length;
+
+  // Process items in chunks with limited concurrency
+  for (let i = 0; i < total; i += batchSize) {
+    const batch = items.slice(i, Math.min(i + batchSize, total));
+
+    // Process batch with limited concurrency
+    for (let j = 0; j < batch.length; j += maxConcurrency) {
+      const concurrentItems = batch.slice(j, Math.min(j + maxConcurrency, batch.length));
+      const concurrentPromises = concurrentItems.map(item => processFn(item));
+      const concurrentResults = await Promise.allSettled(concurrentPromises);
+
+      // Collect successful results
+      for (const result of concurrentResults) {
+        if (result.status === 'fulfilled') {
+          results.push(result.value);
+        }
+      }
+
+      // Add delay between concurrent batches to avoid rate limiting
+      if (j + maxConcurrency < batch.length) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // 100ms delay
+      }
+    }
+
+    // Add delay between batches to avoid overwhelming the service
+    if (i + batchSize < total) {
+      await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay between batches
+    }
+  }
+
+  return results;
+}
+
+/**
  * Repair function to fix AI-generated documents without rag_document_id
  * This can be run as a one-time migration or periodic cleanup task
+ * Implements batching and rate limiting to avoid service overload
  */
 export async function repairMissingRagDocumentIds(
   userId: string,
-  projectUuid?: string
-): Promise<{ success: boolean; repaired: number; error?: string }> {
+  projectUuid?: string,
+  batchSize: number = 10,
+  maxConcurrency: number = 3
+): Promise<{ success: boolean; repaired: number; failed: number; error?: string }> {
   'use server';
 
   try {
@@ -789,52 +836,96 @@ export async function repairMissingRagDocumentIds(
 
     console.log(`Found ${orphanedDocs.length} AI documents without RAG IDs to repair`);
 
-    let repairedCount = 0;
+    if (orphanedDocs.length === 0) {
+      return {
+        success: true,
+        repaired: 0,
+        failed: 0
+      };
+    }
+
     const ragIdentifier = projectUuid || userId;
 
-    for (const doc of orphanedDocs) {
+    // Fetch RAG documents once to avoid repeated API calls
+    let ragDocuments: [string, string][] = [];
+    try {
+      const documentsResult = await ragService.getDocuments(ragIdentifier);
+      if (documentsResult.success && documentsResult.documents) {
+        ragDocuments = documentsResult.documents;
+      }
+    } catch (error) {
+      console.error('Error fetching RAG documents:', error);
+      // Continue with empty list - individual repairs might still work
+    }
+
+    // Process documents in batches with rate limiting
+    const processDocument = async (doc: typeof orphanedDocs[0]): Promise<boolean> => {
       try {
-        // Try to find the document in RAG by filename
-        const documentsResult = await ragService.getDocuments(ragIdentifier);
+        // Look for a matching document by filename in pre-fetched list
+        const matchingDoc = ragDocuments.find(
+          ([filename]) => filename === doc.file_name || filename === doc.name
+        );
 
-        if (documentsResult.success && documentsResult.documents) {
-          // Look for a matching document by filename
-          const matchingDoc = documentsResult.documents.find(
-            ([filename]) => filename === doc.file_name || filename === doc.name
-          );
+        if (matchingDoc) {
+          const [, ragDocId] = matchingDoc;
+          console.log(`Found matching RAG document for ${doc.name}: ${ragDocId}`);
 
-          if (matchingDoc) {
-            const [, ragDocId] = matchingDoc;
-            console.log(`Found matching RAG document for ${doc.name}: ${ragDocId}`);
-
-            // Update the document with the found RAG ID
-            const updateResult = await updateDocRagId(doc.uuid, ragDocId, userId);
-            if (updateResult.success) {
-              repairedCount++;
+          // Update the document with the found RAG ID
+          const updateResult = await updateDocRagId(doc.uuid, ragDocId, userId);
+          return updateResult.success;
+        } else {
+          // If not found in pre-fetched list, try individual lookup
+          // This is a fallback for recently added documents
+          try {
+            const freshResult = await ragService.getDocuments(ragIdentifier);
+            if (freshResult.success && freshResult.documents) {
+              const freshMatch = freshResult.documents.find(
+                ([filename]) => filename === doc.file_name || filename === doc.name
+              );
+              if (freshMatch) {
+                const [, ragDocId] = freshMatch;
+                console.log(`Found matching RAG document on retry for ${doc.name}: ${ragDocId}`);
+                const updateResult = await updateDocRagId(doc.uuid, ragDocId, userId);
+                return updateResult.success;
+              }
             }
-          } else {
-            console.log(`No matching RAG document found for ${doc.name}, may need re-upload`);
-
-            // Optionally, re-upload the document to RAG
-            // This would require reading the file content from disk
-            // For now, we'll just log it
+          } catch (retryError) {
+            console.error(`Error on retry for document ${doc.name}:`, retryError);
           }
+
+          console.log(`No matching RAG document found for ${doc.name}, may need re-upload`);
+          return false;
         }
       } catch (error) {
         console.error(`Error repairing document ${doc.uuid}:`, error);
-        // Continue with next document
+        return false;
       }
-    }
+    };
+
+    // Process documents with batching and rate limiting
+    const results = await processInBatches(
+      orphanedDocs,
+      processDocument,
+      batchSize,
+      maxConcurrency
+    );
+
+    const repairedCount = results.filter(Boolean).length;
+    const failedCount = results.filter(r => !r).length;
+
+    console.log(`Repair complete: ${repairedCount} fixed, ${failedCount} failed`);
 
     return {
       success: true,
-      repaired: repairedCount
+      repaired: repairedCount,
+      failed: failedCount
     };
   } catch (error) {
     console.error('Error repairing RAG document IDs:', error);
     return {
       success: false,
       repaired: 0,
+      failed: 0,
       error: error instanceof Error ? error.message : 'Failed to repair documents'
     };
   }
