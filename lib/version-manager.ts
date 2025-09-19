@@ -3,7 +3,7 @@
  * Handles creation, storage, and retrieval of document versions
  */
 
-import { mkdir, writeFile, readFile, unlink, rename } from 'fs/promises';
+import { mkdir, writeFile, readFile, unlink, rename, access, constants } from 'fs/promises';
 import { join, extname, basename, dirname } from 'path';
 import { existsSync } from 'fs';
 import { db } from '@/db';
@@ -83,29 +83,47 @@ export async function saveDocumentVersion(
     previousContent
   } = options;
 
-  // Get the document details
-  const [document] = await db
-    .select()
-    .from(docsTable)
-    .where(eq(docsTable.uuid, documentId))
-    .limit(1);
+  // Use transaction to ensure atomic version increment
+  const versionResult = await db.transaction(async (tx) => {
+    // Get the document with row lock
+    const [document] = await tx
+      .select()
+      .from(docsTable)
+      .where(eq(docsTable.uuid, documentId))
+      .limit(1);
 
-  if (!document) {
-    throw new Error('Document not found');
-  }
+    if (!document) {
+      throw new Error('Document not found');
+    }
 
-  // Determine base upload directory
-  const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
-  const versionDir = getVersionDirectory(baseUploadDir, userId, documentId);
+    // Determine base upload directory
+    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
+    const versionDir = getVersionDirectory(baseUploadDir, userId, documentId);
 
-  // Create version directory if it doesn't exist
-  if (!existsSync(versionDir)) {
-    await mkdir(versionDir, { recursive: true });
-  }
+    // Create version directory if it doesn't exist (use async method)
+    try {
+      await access(versionDir, constants.F_OK);
+    } catch {
+      await mkdir(versionDir, { recursive: true });
+    }
 
-  // Get the current version number
-  const currentVersion = document.version || 1;
-  const newVersionNumber = currentVersion + 1;
+    // Get the current version number - fail if not set
+    if (!document.version) {
+      throw new Error('Document version not initialized. Document must have an initial version.');
+    }
+    const currentVersionNumber = document.version;
+    const newVersionNumber = currentVersionNumber + 1;
+
+    // Update the document version immediately to claim this version number
+    await tx
+      .update(docsTable)
+      .set({ version: newVersionNumber })
+      .where(eq(docsTable.uuid, documentId));
+
+    return { document, newVersionNumber, versionDir, baseUploadDir };
+  });
+
+  const { document, newVersionNumber, versionDir, baseUploadDir } = versionResult;
 
   // Generate version filename
   const versionFilename = generateVersionFilename(
@@ -140,17 +158,30 @@ export async function saveDocumentVersion(
   if (process.env.ENABLE_RAG === 'true') {
     try {
       const ragIdentifier = projectUuid || userId;
-      const file = new File([content], versionFilename, {
-        type: document.mime_type
-      });
+      // Use Buffer instead of File API for server-side operations
+      const contentBuffer = Buffer.from(content, 'utf-8');
+      const blob = new Blob([contentBuffer], { type: document.mime_type });
 
-      const uploadResult = await ragService.uploadDocument(file, ragIdentifier);
+      // Create a File-like object for RAG service
+      const fileData = {
+        name: versionFilename,
+        type: document.mime_type,
+        arrayBuffer: async () => contentBuffer.buffer.slice(
+          contentBuffer.byteOffset,
+          contentBuffer.byteOffset + contentBuffer.byteLength
+        ),
+        size: contentBuffer.length
+      } as File;
+
+      const uploadResult = await ragService.uploadDocument(fileData, ragIdentifier);
 
       if (uploadResult.success && uploadResult.upload_id) {
-        // Poll for completion
-        const maxAttempts = 30;
+        // Poll for completion with configurable parameters
+        const maxAttempts = parseInt(process.env.RAG_POLL_MAX_ATTEMPTS || '30');
+        const pollInterval = parseInt(process.env.RAG_POLL_INTERVAL_MS || '1000');
+
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
 
           const statusResult = await ragService.getUploadStatus(
             uploadResult.upload_id,
@@ -247,12 +278,16 @@ export async function getVersionContent(
       throw new Error('Invalid version file path');
     }
 
-    // Read and return file content
-    if (existsSync(fullPath)) {
+    // Check if file exists using async method
+    try {
+      await access(fullPath, constants.F_OK);
       return await readFile(fullPath, 'utf-8');
+    } catch {
+      // File doesn't exist, fall through to database content
     }
 
     // Fallback to database content if file doesn't exist
+    console.log(`Version file not found, falling back to database content for version ${versionNumber} of document ${documentId}`);
     return version.content;
   } catch (error) {
     console.error('Error retrieving version content:', error);
@@ -291,6 +326,42 @@ export async function restoreVersion(
       throw new Error('Document not found');
     }
 
+    // Create a backup of the current version before restoring
+    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
+    const mainFilePath = document.file_path.startsWith('/')
+      ? document.file_path
+      : join(baseUploadDir, document.file_path);
+
+    // Read current content for backup
+    let currentContent: string;
+    try {
+      await access(mainFilePath, constants.F_OK);
+      currentContent = await readFile(mainFilePath, 'utf-8');
+    } catch {
+      // If main file doesn't exist, try to get the last version's content
+      const lastVersion = await getVersionContent(userId, documentId, document.version || 0);
+      currentContent = lastVersion || '';
+      console.log(`Main file not found for document ${documentId}, using last version content for backup`);
+    }
+
+    // Create a backup version of the current state
+    if (currentContent) {
+      await saveDocumentVersion({
+        documentId,
+        content: currentContent,
+        userId,
+        projectUuid: document.project_uuid || undefined,
+        createdByModel: {
+          name: 'System',
+          provider: 'internal',
+          version: '1.0'
+        },
+        changeSummary: `Backup before restoring version ${versionNumber}`,
+        operation: 'replace',
+        previousContent: currentContent
+      });
+    }
+
     // Create a new version with the restored content
     const restoredVersion = await saveDocumentVersion({
       documentId,
@@ -303,15 +374,11 @@ export async function restoreVersion(
         version: '1.0'
       },
       changeSummary: `Restored from version ${versionNumber}`,
-      operation: 'replace'
+      operation: 'replace',
+      previousContent: currentContent
     });
 
     // Update the main document file
-    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
-    const mainFilePath = document.file_path.startsWith('/')
-      ? document.file_path
-      : join(baseUploadDir, document.file_path);
-
     await writeFile(mainFilePath, versionContent, 'utf-8');
 
     // Update document record
@@ -388,8 +455,13 @@ export async function deleteVersion(
       const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
       const fullPath = join(baseUploadDir, version.file_path);
 
-      if (isPathWithinDirectory(fullPath, baseUploadDir) && existsSync(fullPath)) {
-        await unlink(fullPath);
+      if (isPathWithinDirectory(fullPath, baseUploadDir)) {
+        try {
+          await access(fullPath, constants.F_OK);
+          await unlink(fullPath);
+        } catch {
+          // File doesn't exist, continue
+        }
       }
     }
 
@@ -516,7 +588,10 @@ export async function migrateExistingVersions(userId: string): Promise<{
         const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
         const versionDir = getVersionDirectory(baseUploadDir, userId, version.document_id);
 
-        if (!existsSync(versionDir)) {
+        // Check if directory exists using async method
+        try {
+          await access(versionDir, constants.F_OK);
+        } catch {
           await mkdir(versionDir, { recursive: true });
         }
 

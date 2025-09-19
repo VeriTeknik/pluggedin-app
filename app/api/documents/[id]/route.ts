@@ -26,7 +26,14 @@ const updateDocumentSchema = z.object({
   content: z.string()
     .min(1)
     .max(10000000) // 10MB limit
-    .refine(val => !val.includes('\0'), 'Null bytes not allowed'),
+    .refine(val => !val.includes('\0'), 'Null bytes not allowed')
+    .refine(val => {
+      // Check for other dangerous control characters
+      // Allow: \t (tab), \n (newline), \r (carriage return)
+      // Block: all other control characters
+      const dangerousChars = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
+      return !dangerousChars.test(val);
+    }, 'Control characters not allowed except newline, tab, and carriage return'),
   metadata: z.object({
     changeSummary: z.string().optional(),
     model: z.object({
