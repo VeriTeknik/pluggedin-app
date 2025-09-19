@@ -667,10 +667,12 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
       }> = [];
       if (result.documentIds && result.documentIds.length > 0) {
         try {
+          // First, get all user documents
           const docs = await db
             .select({
               uuid: docsTable.uuid,
               name: docsTable.name,
+              file_name: docsTable.file_name,
               rag_document_id: docsTable.rag_document_id,
               source: docsTable.source,
               ai_metadata: docsTable.ai_metadata
@@ -683,23 +685,71 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
               )
             );
 
+          // Get RAG document list for filename-based fallback matching
+          let ragDocumentMap: Map<string, string> = new Map();
+          try {
+            const ragDocsResult = await ragService.getDocuments(ragIdentifier);
+            if (ragDocsResult.success && ragDocsResult.documents) {
+              // Create a map of RAG document ID to filename
+              ragDocsResult.documents.forEach(([filename, docId]) => {
+                ragDocumentMap.set(docId, filename);
+              });
+            }
+          } catch (ragError) {
+            console.error('Failed to fetch RAG document list for fallback:', ragError);
+          }
+
           // Map RAG document IDs to document names with metadata
           const mappedDocs = result.documentIds
             .map((ragId, index) => {
-              const doc = docs.find(d => d.rag_document_id === ragId);
+              // First try direct RAG ID match
+              let doc = docs.find(d => d.rag_document_id === ragId);
+
+              // If not found, try filename-based matching
+              if (!doc && ragDocumentMap.has(ragId)) {
+                const ragFilename = ragDocumentMap.get(ragId);
+                if (ragFilename) {
+                  // Try to match by file_name or by name
+                  doc = docs.find(d =>
+                    d.file_name === ragFilename ||
+                    d.name === ragFilename ||
+                    // Also try matching the filename part of file_name (after timestamp-)
+                    (d.file_name && d.file_name.includes('-') &&
+                     d.file_name.substring(d.file_name.indexOf('-') + 1) === ragFilename)
+                  );
+
+                  if (doc) {
+                    console.log(`Matched document by filename: ${ragFilename} -> ${doc.name}`);
+                    // Update the document's RAG ID for future queries
+                    updateDocRagId(doc.uuid, ragId, userId).catch(err =>
+                      console.error(`Failed to update RAG ID for ${doc!.uuid}:`, err)
+                    );
+                  }
+                }
+              }
 
               // Calculate relevance score (simulated based on order, in production this would come from RAG)
               // Documents are typically returned in order of relevance
               const relevance = Math.max(100 - (index * 15), 60); // Start at 100%, decrease by 15% per position, min 60%
 
               if (!doc) {
-                // Create fallback entry for unmatched documents
-                console.warn(`Document not found for RAG ID: ${ragId}`);
+                // Try to get a better display name from RAG document map
+                const ragFilename = ragDocumentMap.get(ragId);
+                let displayName: string;
 
-                // Truncate the ID for display
-                const displayName = ragId.length > 20
-                  ? `Document ${ragId.substring(0, 8)}...${ragId.substring(ragId.length - 4)}`
-                  : `Document ${ragId}`;
+                if (ragFilename) {
+                  // Use the filename if available
+                  displayName = ragFilename.length > 50
+                    ? ragFilename.substring(0, 47) + '...'
+                    : ragFilename;
+                } else {
+                  // Fallback to truncated ID
+                  displayName = ragId.length > 20
+                    ? `Document ${ragId.substring(0, 8)}...${ragId.substring(ragId.length - 4)}`
+                    : `Document ${ragId}`;
+                }
+
+                console.warn(`Document not found for RAG ID: ${ragId}${ragFilename ? ` (${ragFilename})` : ''}`);
 
                 return {
                   id: ragId, // Use RAG ID as fallback
@@ -757,6 +807,129 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
 }
 
 /**
+ * Manual repair function with detailed feedback for fixing document-RAG ID mismatches
+ */
+export async function manualRepairDocumentRagIds(
+  userId: string,
+  projectUuid?: string
+): Promise<{
+  success: boolean;
+  details?: {
+    totalDocuments: number;
+    orphanedDocuments: number;
+    repairedDocuments: number;
+    failedDocuments: number;
+    repairedList?: string[];
+    failedList?: string[];
+  };
+  error?: string;
+}> {
+  'use server';
+
+  try {
+    // Get the project UUID or use user ID as identifier
+    const ragIdentifier = projectUuid || userId;
+
+    // Get all documents for the user
+    const allDocs = await db
+      .select({
+        uuid: docsTable.uuid,
+        name: docsTable.name,
+        file_name: docsTable.file_name,
+        rag_document_id: docsTable.rag_document_id,
+        created_at: docsTable.created_at
+      })
+      .from(docsTable)
+      .where(
+        and(
+          eq(docsTable.user_id, userId),
+          projectUuid ? eq(docsTable.project_uuid, projectUuid) : undefined
+        )
+      )
+      .orderBy(desc(docsTable.created_at));
+
+    const orphanedDocs = allDocs.filter(doc => !doc.rag_document_id);
+
+    // Get all RAG documents
+    let ragDocuments: Array<[string, string]> = [];
+    try {
+      const ragDocsResult = await ragService.getDocuments(ragIdentifier);
+      if (ragDocsResult.success && ragDocsResult.documents) {
+        ragDocuments = ragDocsResult.documents;
+      }
+    } catch (error) {
+      console.error('Error fetching RAG documents:', error);
+    }
+
+    const repairedList: string[] = [];
+    const failedList: string[] = [];
+
+    // Process each orphaned document
+    for (const doc of orphanedDocs) {
+      try {
+        // Use the enhanced matching function
+        const ragDocId = findMatchingRagDocument(doc, ragDocuments);
+
+        if (ragDocId) {
+          console.log(`Found matching RAG document for ${doc.name}: ${ragDocId}`);
+          const updateResult = await updateDocRagId(doc.uuid, ragDocId, userId);
+          if (updateResult.success) {
+            repairedList.push(doc.name);
+          } else {
+            failedList.push(doc.name);
+          }
+        } else {
+          // Try fetching fresh list
+          try {
+            const freshResult = await ragService.getDocuments(ragIdentifier);
+            if (freshResult.success && freshResult.documents) {
+              const freshRagDocId = findMatchingRagDocument(doc, freshResult.documents);
+              if (freshRagDocId) {
+                console.log(`Found matching RAG document on retry for ${doc.name}: ${freshRagDocId}`);
+                const updateResult = await updateDocRagId(doc.uuid, freshRagDocId, userId);
+                if (updateResult.success) {
+                  repairedList.push(doc.name);
+                } else {
+                  failedList.push(doc.name);
+                }
+              } else {
+                failedList.push(doc.name);
+              }
+            } else {
+              failedList.push(doc.name);
+            }
+          } catch (retryError) {
+            console.error(`Error on retry for document ${doc.name}:`, retryError);
+            failedList.push(doc.name);
+          }
+        }
+      } catch (error) {
+        console.error(`Error processing document ${doc.name}:`, error);
+        failedList.push(doc.name);
+      }
+    }
+
+    return {
+      success: true,
+      details: {
+        totalDocuments: allDocs.length,
+        orphanedDocuments: orphanedDocs.length,
+        repairedDocuments: repairedList.length,
+        failedDocuments: failedList.length,
+        repairedList,
+        failedList
+      }
+    };
+  } catch (error) {
+    console.error('Error in manual repair:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to repair documents'
+    };
+  }
+}
+
+/**
  * Helper function to process items in batches with concurrency control
  */
 async function processInBatches<T, R>(
@@ -798,6 +971,79 @@ async function processInBatches<T, R>(
   }
 
   return results;
+}
+
+/**
+ * Helper function to match documents with RAG entries using various patterns
+ */
+function findMatchingRagDocument(
+  doc: { file_name: string; name: string },
+  ragDocuments: Array<[string, string]>
+): string | null {
+  // Try various matching strategies
+  for (const [filename, ragId] of ragDocuments) {
+    // 1. Exact file_name match
+    if (doc.file_name === filename) {
+      return ragId;
+    }
+
+    // 2. Exact name match
+    if (doc.name === filename) {
+      return ragId;
+    }
+
+    // 3. Match after removing timestamp prefix (e.g., "1234567890-filename.ext" -> "filename.ext")
+    if (doc.file_name && doc.file_name.includes('-')) {
+      const withoutTimestamp = doc.file_name.substring(doc.file_name.indexOf('-') + 1);
+      if (withoutTimestamp === filename) {
+        return ragId;
+      }
+    }
+
+    // 4. Match by removing version suffixes (e.g., "document_v2_timestamp.md" -> "document.md")
+    const docBaseName = doc.file_name
+      ?.replace(/_v\d+_[\d-TZ]+/, '') // Remove version pattern
+      ?.replace(/\d{4}-\d{2}-\d{2}_/, '') // Remove date prefix
+      ?.replace(/^\d+-/, ''); // Remove timestamp prefix
+
+    const ragBaseName = filename
+      ?.replace(/_v\d+_[\d-TZ]+/, '')
+      ?.replace(/\d{4}-\d{2}-\d{2}_/, '')
+      ?.replace(/^\d+-/, '');
+
+    if (docBaseName && ragBaseName && docBaseName === ragBaseName) {
+      return ragId;
+    }
+
+    // 5. Fuzzy match for AI-generated documents with complex naming
+    // e.g., "2025-09-18_18-19-00-872Z_claude-opus-4-1_AI_Integration_Best_Practices_Guide.md"
+    const normalizedDocName = doc.file_name
+      ?.replace(/[-_]/g, '')
+      ?.toLowerCase();
+    const normalizedRagName = filename
+      ?.replace(/[-_]/g, '')
+      ?.toLowerCase();
+
+    if (normalizedDocName && normalizedRagName) {
+      // Check if one contains the other (for partial matches)
+      if (normalizedDocName.includes(normalizedRagName) ||
+          normalizedRagName.includes(normalizedDocName)) {
+        return ragId;
+      }
+
+      // Check for AI-generated pattern match
+      if (doc.file_name?.includes('claude') && filename.includes('claude')) {
+        // Extract the meaningful part after model name
+        const docPart = doc.file_name.split(/claude[^_]*_/)[1];
+        const ragPart = filename.split(/claude[^_]*_/)[1];
+        if (docPart && ragPart && docPart === ragPart) {
+          return ragId;
+        }
+      }
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -861,13 +1107,10 @@ export async function repairMissingRagDocumentIds(
     // Process documents in batches with rate limiting
     const processDocument = async (doc: typeof orphanedDocs[0]): Promise<boolean> => {
       try {
-        // Look for a matching document by filename in pre-fetched list
-        const matchingDoc = ragDocuments.find(
-          ([filename]) => filename === doc.file_name || filename === doc.name
-        );
+        // Use the enhanced matching function to find the RAG document
+        const ragDocId = findMatchingRagDocument(doc, ragDocuments);
 
-        if (matchingDoc) {
-          const [, ragDocId] = matchingDoc;
+        if (ragDocId) {
           console.log(`Found matching RAG document for ${doc.name}: ${ragDocId}`);
 
           // Update the document with the found RAG ID
@@ -879,13 +1122,11 @@ export async function repairMissingRagDocumentIds(
           try {
             const freshResult = await ragService.getDocuments(ragIdentifier);
             if (freshResult.success && freshResult.documents) {
-              const freshMatch = freshResult.documents.find(
-                ([filename]) => filename === doc.file_name || filename === doc.name
-              );
-              if (freshMatch) {
-                const [, ragDocId] = freshMatch;
-                console.log(`Found matching RAG document on retry for ${doc.name}: ${ragDocId}`);
-                const updateResult = await updateDocRagId(doc.uuid, ragDocId, userId);
+              // Use enhanced matching on fresh results
+              const freshRagDocId = findMatchingRagDocument(doc, freshResult.documents);
+              if (freshRagDocId) {
+                console.log(`Found matching RAG document on retry for ${doc.name}: ${freshRagDocId}`);
+                const updateResult = await updateDocRagId(doc.uuid, freshRagDocId, userId);
                 return updateResult.success;
               }
             }

@@ -12,6 +12,7 @@ import { docsTable, documentModelAttributionsTable,documentVersionsTable } from 
 import {rateLimit } from '@/lib/api-rate-limit';
 import { ragService } from '@/lib/rag-service';
 import { isPathWithinDirectory } from '@/lib/security';
+import { saveDocumentVersion } from '@/lib/version-manager';
 
 // Query parameters schema
 const getDocumentSchema = z.object({
@@ -448,7 +449,22 @@ export async function PATCH(
     // This prevents XSS while allowing safe images
     const sanitizedContent = sanitizeModerate(newContent);
 
-    // Write the new content to file with path validation
+    // Save version using the version manager - this creates a version file
+    const versionInfo = await saveDocumentVersion({
+      documentId,
+      content: sanitizedContent,
+      userId: authResult.user.id,
+      projectUuid: authResult.activeProfile.project_uuid,
+      createdByModel: validatedData.metadata?.model || {
+        name: 'Unknown',
+        provider: 'Unknown'
+      },
+      changeSummary: validatedData.metadata?.changeSummary,
+      operation: validatedData.operation,
+      previousContent: existingContent
+    });
+
+    // Also update the main document file for backward compatibility
     await writeFile(resolvedPath, sanitizedContent, 'utf-8');
 
     // Calculate new file size
@@ -514,14 +530,13 @@ export async function PATCH(
       }
     }
 
-    // Update the document in database
-    const newVersion = existingDoc.version + 1;
+    // Update the document in database with version info
     await db
       .update(docsTable)
       .set({
         file_size: newFileSize,
-        version: newVersion,
-        rag_document_id: newRagDocumentId,
+        version: versionInfo.versionNumber,
+        rag_document_id: versionInfo.ragDocumentId || newRagDocumentId,
         updated_at: new Date(),
         ai_metadata: validatedData.metadata?.model ? {
           ...existingDoc.ai_metadata,
@@ -533,25 +548,8 @@ export async function PATCH(
       })
       .where(eq(docsTable.uuid, documentId));
 
-    // Create version record
+    // Add model attribution (version record was already created by saveDocumentVersion)
     if (validatedData.metadata?.model) {
-      await db.insert(documentVersionsTable).values({
-        document_id: documentId,
-        version_number: newVersion,
-        content: sanitizedContent,
-        created_by_model: validatedData.metadata.model,
-        change_summary: validatedData.metadata.changeSummary || `${validatedData.operation} operation`,
-        content_diff: {
-          additions: validatedData.operation === 'replace' 
-            ? newFileSize 
-            : newFileSize - existingDoc.file_size,
-          deletions: validatedData.operation === 'replace' 
-            ? existingDoc.file_size 
-            : 0,
-        }
-      });
-
-      // Add model attribution
       await db.insert(documentModelAttributionsTable).values({
         document_id: documentId,
         model_name: validatedData.metadata.model.name,
@@ -573,7 +571,7 @@ export async function PATCH(
       metadata: {
         documentId,
         operation: validatedData.operation,
-        newVersion,
+        newVersion: versionInfo.versionNumber,
         ragUpdated: newRagDocumentId !== existingDoc.rag_document_id,
       }
     });
@@ -581,7 +579,8 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       documentId,
-      version: newVersion,
+      version: versionInfo.versionNumber,
+      versionFilePath: versionInfo.filePath,
       message: 'Document updated successfully',
     });
 
