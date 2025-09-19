@@ -1,11 +1,11 @@
 'use server';
 
-import { and, desc, eq, sum } from 'drizzle-orm';
+import { and, desc, eq, isNull, sum } from 'drizzle-orm';
 import { realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import { join,resolve } from 'path';
 import * as path from 'path';
-import sanitizeHtml from 'sanitize-html';
+import { sanitizeToPlainText } from '@/lib/sanitization';
 
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
@@ -640,6 +640,7 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
       provider: string;
     };
     source?: string;
+    isUnresolved?: boolean;
   }>;
   error?: string
 }> {
@@ -686,41 +687,47 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
           const mappedDocs = result.documentIds
             .map((ragId, index) => {
               const doc = docs.find(d => d.rag_document_id === ragId);
-              if (!doc) return null;
 
               // Calculate relevance score (simulated based on order, in production this would come from RAG)
               // Documents are typically returned in order of relevance
               const relevance = Math.max(100 - (index * 15), 60); // Start at 100%, decrease by 15% per position, min 60%
 
+              if (!doc) {
+                // Create fallback entry for unmatched documents
+                console.warn(`Document not found for RAG ID: ${ragId}`);
+
+                // Truncate the ID for display
+                const displayName = ragId.length > 20
+                  ? `Document ${ragId.substring(0, 8)}...${ragId.substring(ragId.length - 4)}`
+                  : `Document ${ragId}`;
+
+                return {
+                  id: ragId, // Use RAG ID as fallback
+                  name: sanitizeToPlainText(displayName),
+                  relevance,
+                  source: 'unknown' as 'unknown',
+                  isUnresolved: true // Mark as unresolved for UI handling
+                };
+              }
+
               // Sanitize document name to prevent XSS
-              const sanitizedName = sanitizeHtml(doc.name, {
-                allowedTags: [],
-                allowedAttributes: {},
-                disallowedTagsMode: 'discard'
-              });
+              const sanitizedName = sanitizeToPlainText(doc.name);
 
               return {
                 id: doc.uuid,
                 name: sanitizedName,
                 relevance,
                 model: doc.ai_metadata?.model ? {
-                  name: sanitizeHtml(doc.ai_metadata.model.name || 'Unknown', {
-                    allowedTags: [],
-                    allowedAttributes: {},
-                    disallowedTagsMode: 'discard'
-                  }),
-                  provider: sanitizeHtml(doc.ai_metadata.model.provider || 'Unknown', {
-                    allowedTags: [],
-                    allowedAttributes: {},
-                    disallowedTagsMode: 'discard'
-                  })
+                  name: sanitizeToPlainText(doc.ai_metadata.model.name || 'Unknown'),
+                  provider: sanitizeToPlainText(doc.ai_metadata.model.provider || 'Unknown')
                 } : undefined,
-                source: doc.source || 'upload'
+                source: doc.source || 'upload',
+                isUnresolved: false // Explicitly mark as resolved
               };
             });
 
-          // Filter out null values with proper typing
-          documents = mappedDocs.filter((doc): doc is NonNullable<typeof doc> => doc !== null);
+          // Include all documents (both matched and unmatched)
+          documents = mappedDocs;
         } catch (dbError) {
           console.error('Error fetching document names:', dbError);
           // Continue without document names if DB query fails
@@ -749,6 +756,86 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
   }
 }
 
+/**
+ * Repair function to fix AI-generated documents without rag_document_id
+ * This can be run as a one-time migration or periodic cleanup task
+ */
+export async function repairMissingRagDocumentIds(
+  userId: string,
+  projectUuid?: string
+): Promise<{ success: boolean; repaired: number; error?: string }> {
+  'use server';
 
+  try {
+    // Find AI-generated documents without rag_document_id
+    const orphanedDocs = await db
+      .select({
+        uuid: docsTable.uuid,
+        name: docsTable.name,
+        file_path: docsTable.file_path,
+        file_name: docsTable.file_name,
+        mime_type: docsTable.mime_type,
+        source: docsTable.source
+      })
+      .from(docsTable)
+      .where(
+        and(
+          eq(docsTable.user_id, userId),
+          eq(docsTable.source, 'ai_generated'),
+          isNull(docsTable.rag_document_id),
+          projectUuid ? eq(docsTable.project_uuid, projectUuid) : undefined
+        )
+      );
 
- 
+    console.log(`Found ${orphanedDocs.length} AI documents without RAG IDs to repair`);
+
+    let repairedCount = 0;
+    const ragIdentifier = projectUuid || userId;
+
+    for (const doc of orphanedDocs) {
+      try {
+        // Try to find the document in RAG by filename
+        const documentsResult = await ragService.getDocuments(ragIdentifier);
+
+        if (documentsResult.success && documentsResult.documents) {
+          // Look for a matching document by filename
+          const matchingDoc = documentsResult.documents.find(
+            ([filename]) => filename === doc.file_name || filename === doc.name
+          );
+
+          if (matchingDoc) {
+            const [, ragDocId] = matchingDoc;
+            console.log(`Found matching RAG document for ${doc.name}: ${ragDocId}`);
+
+            // Update the document with the found RAG ID
+            const updateResult = await updateDocRagId(doc.uuid, ragDocId, userId);
+            if (updateResult.success) {
+              repairedCount++;
+            }
+          } else {
+            console.log(`No matching RAG document found for ${doc.name}, may need re-upload`);
+
+            // Optionally, re-upload the document to RAG
+            // This would require reading the file content from disk
+            // For now, we'll just log it
+          }
+        }
+      } catch (error) {
+        console.error(`Error repairing document ${doc.uuid}:`, error);
+        // Continue with next document
+      }
+    }
+
+    return {
+      success: true,
+      repaired: repairedCount
+    };
+  } catch (error) {
+    console.error('Error repairing RAG document IDs:', error);
+    return {
+      success: false,
+      repaired: 0,
+      error: error instanceof Error ? error.message : 'Failed to repair documents'
+    };
+  }
+}

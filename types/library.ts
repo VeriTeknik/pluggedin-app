@@ -30,7 +30,10 @@ export interface Doc {
     timestamp?: string;
     sessionId?: string;
     prompt?: string;
-    conversationContext?: string[];
+    conversationContext?: Array<{
+      role: string;
+      content: string;
+    }>;
     sourceDocuments?: string[];
     generationParams?: {
       temperature?: number;

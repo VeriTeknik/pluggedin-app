@@ -41,9 +41,13 @@ export function sanitizeUserIdForFileSystem(userId: string): string {
 export function isPathWithinDirectory(filePath: string, allowedDirectory: string): boolean {
   const resolvedPath = path.resolve(filePath);
   const resolvedAllowedDir = path.resolve(allowedDirectory);
-  
-  // Ensure the resolved path starts with the allowed directory
-  return resolvedPath.startsWith(resolvedAllowedDir + path.sep);
+
+  // Normalize paths to handle trailing slashes consistently
+  const normalizedPath = resolvedPath + path.sep;
+  const normalizedAllowedDir = resolvedAllowedDir + path.sep;
+
+  // Check if the path is exactly the allowed directory or within it
+  return resolvedPath === resolvedAllowedDir || normalizedPath.startsWith(normalizedAllowedDir);
 }
 
 /**
