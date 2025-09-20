@@ -5,6 +5,7 @@
 
 import { validateExternalUrl } from './url-validator';
 import { estimateStorageFromDocumentCount } from './rag-storage-utils';
+import { LRUCache } from './lru-cache';
 
 export interface RagQueryResponse {
   success: boolean;
@@ -72,7 +73,7 @@ export interface RAGDocumentRequest {
 
 class RagService {
   private readonly ragApiUrl: string;
-  private storageStatsCache: Map<string, { data: RagStorageStatsResponse; expiry: number }>;
+  private storageStatsCache: LRUCache<RagStorageStatsResponse>;
   private readonly CACHE_TTL: number;
   private readonly MAX_CACHE_SIZE = 1000; // Maximum number of cache entries
 
@@ -93,8 +94,11 @@ class RagService {
       this.ragApiUrl = 'https://api.plugged.in';
     }
 
-    // Initialize cache
-    this.storageStatsCache = new Map();
+    // Initialize LRU cache with configurable size and TTL
+    this.storageStatsCache = new LRUCache<RagStorageStatsResponse>(
+      this.MAX_CACHE_SIZE,
+      this.CACHE_TTL
+    );
   }
 
   private isConfigured(): boolean {
@@ -597,12 +601,12 @@ class RagService {
         };
       }
 
-      // Check cache first
+      // Check cache first (LRU cache handles expiry internally)
       const cacheKey = `storage-stats-${ragIdentifier}`;
       const cached = this.storageStatsCache.get(cacheKey);
 
-      if (cached && Date.now() < cached.expiry) {
-        return cached.data;
+      if (cached) {
+        return cached;
       }
 
       // Try to fetch from the backend storage-stats endpoint
@@ -627,8 +631,8 @@ class RagService {
             isEstimate: false,
           };
 
-          // Cache successful result with eviction if needed
-          this.setCacheWithEviction(cacheKey, result);
+          // Cache successful result (LRU cache handles eviction automatically)
+          this.storageStatsCache.set(cacheKey, result);
 
           return result;
         }
@@ -669,32 +673,6 @@ class RagService {
   }
 
   /**
-   * Set cache with eviction strategy to prevent unbounded growth
-   */
-  private setCacheWithEviction(key: string, data: RagStorageStatsResponse): void {
-    // Evict expired entries if cache is getting full
-    if (this.storageStatsCache.size >= this.MAX_CACHE_SIZE) {
-      const now = Date.now();
-      for (const [k, v] of this.storageStatsCache) {
-        if (v.expiry <= now) {
-          this.storageStatsCache.delete(k);
-        }
-      }
-
-      // If still full, remove oldest entries
-      if (this.storageStatsCache.size >= this.MAX_CACHE_SIZE) {
-        const keysToDelete = Array.from(this.storageStatsCache.keys()).slice(0, Math.floor(this.MAX_CACHE_SIZE / 4));
-        keysToDelete.forEach(k => this.storageStatsCache.delete(k));
-      }
-    }
-
-    this.storageStatsCache.set(key, {
-      data,
-      expiry: Date.now() + this.CACHE_TTL
-    });
-  }
-
-  /**
    * Invalidate storage stats cache for a specific identifier
    */
   invalidateStorageCache(ragIdentifier: string): void {
@@ -707,6 +685,13 @@ class RagService {
    */
   clearStorageCache(): void {
     this.storageStatsCache.clear();
+  }
+
+  /**
+   * Destroy the service and clean up resources (useful for testing or shutdown)
+   */
+  destroy(): void {
+    this.storageStatsCache.destroy();
   }
 }
 

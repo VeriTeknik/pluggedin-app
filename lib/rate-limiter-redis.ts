@@ -1,8 +1,22 @@
 import { NextRequest } from 'next/server';
 import Redis from 'ioredis';
+import { createRateLimiter as createInMemoryRateLimiter } from './rate-limiter';
 
 // Redis client singleton
 let redisClient: Redis | null = null;
+
+// In-memory fallback store for Redis failures
+const inMemoryFallback = new Map<string, { count: number; resetTime: number }>();
+
+// Cleanup expired entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of inMemoryFallback.entries()) {
+    if (value.resetTime <= now) {
+      inMemoryFallback.delete(key);
+    }
+  }
+}, 60000); // Clean up every minute
 
 // Initialize Redis client
 function getRedisClient(): Redis | null {
@@ -62,8 +76,7 @@ export function createRedisRateLimiter(config: RateLimitConfig) {
 
     // Fallback to in-memory if Redis is not available
     if (!redis) {
-      const { createRateLimiter } = await import('./rate-limiter');
-      const fallbackLimiter = createRateLimiter(config);
+      const fallbackLimiter = createInMemoryRateLimiter(config);
       return fallbackLimiter(req);
     }
 
@@ -97,21 +110,44 @@ export function createRedisRateLimiter(config: RateLimitConfig) {
         retryAfter: allowed ? undefined : Math.ceil((reset - now) / 1000),
       };
     } catch (error) {
-      console.error('Redis rate limit error:', error);
+      console.error('Redis rate limit error, using in-memory fallback:', error);
 
-      // On Redis error, be permissive but log for monitoring
+      // Use in-memory fallback during Redis failures
+      const fallbackKey = `fallback:${key}:${windowStart}`;
+      const fallbackEntry = inMemoryFallback.get(fallbackKey);
+      const resetTime = windowStart + windowMs;
+
+      if (!fallbackEntry || fallbackEntry.resetTime <= now) {
+        // New window
+        inMemoryFallback.set(fallbackKey, { count: 1, resetTime });
+        return {
+          allowed: true,
+          limit: max,
+          remaining: max - 1,
+          reset: resetTime,
+        };
+      }
+
+      // Increment count
+      fallbackEntry.count++;
+      const allowed = fallbackEntry.count <= max;
+      const remaining = Math.max(0, max - fallbackEntry.count);
+
       return {
-        allowed: true,
+        allowed,
         limit: max,
-        remaining: max,
-        reset: now + windowMs,
+        remaining,
+        reset: resetTime,
+        retryAfter: allowed ? undefined : Math.ceil((resetTime - now) / 1000),
       };
     }
   };
 }
 
 /**
- * Default key generator using IP address and fingerprinting
+ * Default key generator using IP address only
+ * User-agent removed to prevent bypass through rotation
+ * For sensitive endpoints, this provides better security
  */
 async function defaultKeyGenerator(req: NextRequest): Promise<string> {
   const forwardedFor = req.headers.get('x-forwarded-for');
@@ -124,11 +160,8 @@ async function defaultKeyGenerator(req: NextRequest): Promise<string> {
              realIp ||
              'unknown';
 
-  // Add user agent hash for better fingerprinting
-  const userAgent = req.headers.get('user-agent') || '';
-  const uaHash = await hashString(userAgent);
-
-  return `${ip}:${req.nextUrl.pathname}:${uaHash}`;
+  // Use IP and pathname only - no user agent to prevent bypass
+  return `${ip}:${req.nextUrl.pathname}`;
 }
 
 /**
