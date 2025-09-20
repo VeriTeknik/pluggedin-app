@@ -3,20 +3,29 @@
  * Handles creation, storage, and retrieval of document versions
  */
 
-import { and, desc,eq } from 'drizzle-orm';
+import { and, desc, eq, sql } from 'drizzle-orm';
 import { access, constants, mkdir, readFile, unlink, writeFile } from 'fs/promises';
-import { basename,extname, join } from 'path';
+import { basename, extname } from 'path';
 
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
 
-import { validateDocumentId, validateFilename,validateUserId, validateVersionNumber } from './path-validation';
+import { validateDocumentId, validateFilename, validateUserId, validateVersionNumber } from './path-validation';
 import { ragService } from './rag-service';
 import { isPathWithinDirectory, sanitizeUserIdForFileSystem } from './security';
+import {
+  buildSecurePath,
+  buildSecureVersionDir,
+  buildSecureVersionFilePath,
+  validateStoredPath,
+  extractRelativePath,
+  getSecureBaseUploadDir
+} from './secure-path-builder';
 
 export interface VersionInfo {
   versionNumber: number;
   filePath: string;
+  fileWritten: boolean; // Indicates if the file was successfully written to disk
   ragDocumentId?: string;
   createdAt: Date;
   createdByModel?: {
@@ -51,13 +60,8 @@ export function getVersionDirectory(
   userId: string,
   documentId: string
 ): string {
-  // Pre-validate inputs
-  const validatedDocumentId = validateDocumentId(documentId);
-  const validatedUserId = validateUserId(userId);
-  const safeUserId = sanitizeUserIdForFileSystem(validatedUserId);
-
-  // Build path from validated components
-  return join(baseUploadDir, safeUserId, 'versions', validatedDocumentId);
+  // Use secure path builder which validates all inputs
+  return buildSecureVersionDir(baseUploadDir, userId, documentId);
 }
 
 /**
@@ -101,14 +105,15 @@ export async function saveDocumentVersion(
   // Calculate content diff early
   const contentDiff = calculateContentDiff(previousContent || '', content, operation);
 
-  // ALL database operations MUST be in ONE ATOMIC transaction
+  // ALL database operations MUST be in ONE ATOMIC transaction with row locking
   const transactionResult = await db.transaction(async (tx) => {
-    // Get the document with row lock
-    const [document] = await tx
-      .select()
-      .from(docsTable)
-      .where(eq(docsTable.uuid, validatedDocumentId))
-      .limit(1);
+    // Get the document with FOR UPDATE row lock to prevent concurrent modifications
+    // This ensures only one transaction can modify this document at a time
+    const documentResult = await tx.execute(
+      sql`SELECT * FROM ${docsTable} WHERE uuid = ${validatedDocumentId} FOR UPDATE`
+    );
+
+    const document = documentResult.rows[0] as typeof docsTable.$inferSelect | undefined;
 
     if (!document) {
       throw new Error('Document not found');
@@ -128,17 +133,14 @@ export async function saveDocumentVersion(
       .set({ version: newVersionNumber })
       .where(eq(docsTable.uuid, validatedDocumentId));
 
-    // Prepare file paths
-    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
-    const versionDir = getVersionDirectory(baseUploadDir, validatedUserId, validatedDocumentId);
+    // Prepare file paths using secure path builder
+    const baseUploadDir = getSecureBaseUploadDir();
+    const versionDir = buildSecureVersionDir(baseUploadDir, validatedUserId, validatedDocumentId);
     const versionFilename = generateVersionFilename(document.file_name, newVersionNumber);
-    const versionFilePath = join(versionDir, versionFilename);
-    const relativeVersionPath = `${sanitizeUserIdForFileSystem(validatedUserId)}/versions/${validatedDocumentId}/${versionFilename}`;
+    const versionFilePath = buildSecureVersionFilePath(versionDir, versionFilename);
+    const relativeVersionPath = extractRelativePath(versionFilePath, baseUploadDir);
 
-    // Validate path security BEFORE proceeding
-    if (!isPathWithinDirectory(versionFilePath, baseUploadDir)) {
-      throw new Error('Security violation: Path traversal detected');
-    }
+    // Path security is already validated by buildSecureVersionFilePath
 
     // Update all existing versions to not be current
     await tx
@@ -261,7 +263,7 @@ export async function saveDocumentVersion(
       console.error('[Version Manager] Failed to upload version to RAG', {
         error: ragError instanceof Error ? ragError.message : String(ragError),
         documentId: validatedDocumentId,
-        versionNumber: newVersionNumber,
+        versionNumber: transactionResult.newVersionNumber,
         fallback: 'Version created without RAG integration'
       });
       // Continue without RAG - don't block version creation
@@ -285,10 +287,11 @@ export async function saveDocumentVersion(
     }
   }
 
-  // Return the version info
+  // Return the version info with file write status
   return {
     versionNumber: transactionResult.versionRecord.version_number,
     filePath: transactionResult.versionRecord.file_path || '',
+    fileWritten, // Include the file write status
     ragDocumentId: ragDocumentId || undefined,
     createdAt: transactionResult.versionRecord.created_at,
     createdByModel: transactionResult.versionRecord.created_by_model as any,
@@ -305,11 +308,15 @@ export async function getVersionContent(
   documentId: string,
   versionNumber: number
 ): Promise<string | null> {
+  // Initialize validated values outside try block for error handling
+  let validatedDocumentId: string = documentId;
+  let validatedVersion: number = versionNumber;
+
   try {
     // Pre-validate inputs
-    const validatedDocumentId = validateDocumentId(documentId);
+    validatedDocumentId = validateDocumentId(documentId);
     const _validatedUserId = validateUserId(userId);
-    const validatedVersion = validateVersionNumber(versionNumber);
+    validatedVersion = validateVersionNumber(versionNumber);
     // Get version record from database
     const [version] = await db
       .select()
@@ -327,21 +334,10 @@ export async function getVersionContent(
       return version?.content || null;
     }
 
-    // Construct full file path
-    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
-    const fullPath = join(baseUploadDir, version.file_path);
-
-    // Re-validate path security after database retrieval to prevent path traversal
-    if (!isPathWithinDirectory(fullPath, baseUploadDir)) {
-      console.error('Path traversal attempt detected in version retrieval:', version.file_path);
-      throw new Error('Invalid version file path');
-    }
-
-    // Additional validation: ensure the path doesn't contain suspicious patterns
-    if (version.file_path.includes('../') || version.file_path.includes('..\\')) {
-      console.error('Suspicious path pattern detected:', version.file_path);
-      throw new Error('Invalid version file path');
-    }
+    // Construct and validate full file path using secure path builder
+    const baseUploadDir = getSecureBaseUploadDir();
+    // validateStoredPath validates and normalizes the path from database
+    const fullPath = validateStoredPath(version.file_path, baseUploadDir);
 
     // Check if file exists using async method
     try {
@@ -408,23 +404,15 @@ export async function restoreVersion(
     }
 
     // Create a backup of the current version before restoring
-    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
+    const baseUploadDir = getSecureBaseUploadDir();
 
-    // Validate document file path before using it
-    if (!document.file_path ||
-        document.file_path.includes('../') ||
-        document.file_path.includes('..\\')) {
-      throw new Error('Invalid document file path detected');
+    // Validate document file path using secure path builder
+    if (!document.file_path) {
+      throw new Error('Document file path not found');
     }
 
-    const mainFilePath = document.file_path.startsWith('/')
-      ? document.file_path
-      : join(baseUploadDir, document.file_path);
-
-    // Additional security check to ensure path is within allowed directory
-    if (!isPathWithinDirectory(mainFilePath, baseUploadDir)) {
-      throw new Error('Security violation: Document path outside allowed directory');
-    }
+    // validateStoredPath handles all path validation and security checks
+    const mainFilePath = validateStoredPath(document.file_path, baseUploadDir);
 
     // Read current content for backup
     let currentContent: string;
@@ -630,16 +618,14 @@ export async function deleteVersion(
 
     // Delete the file if it exists
     if (version.file_path) {
-      const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
-      const fullPath = join(baseUploadDir, version.file_path);
-
-      if (isPathWithinDirectory(fullPath, baseUploadDir)) {
-        try {
-          await access(fullPath, constants.F_OK);
-          await unlink(fullPath);
-        } catch {
-          // File doesn't exist, continue
-        }
+      const baseUploadDir = getSecureBaseUploadDir();
+      try {
+        // validateStoredPath ensures the path is safe
+        const fullPath = validateStoredPath(version.file_path, baseUploadDir);
+        await access(fullPath, constants.F_OK);
+        await unlink(fullPath);
+      } catch {
+        // File doesn't exist or invalid path, continue
       }
     }
 
@@ -727,15 +713,10 @@ function calculateContentDiff(
 
 /**
  * Get default uploads directory based on platform
+ * DEPRECATED: Use getSecureBaseUploadDir() from secure-path-builder instead
  */
 function getDefaultUploadsDir(): string {
-  if (process.platform === 'darwin') {
-    return join(process.cwd(), 'uploads');
-  } else if (process.platform === 'win32') {
-    return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
-  } else {
-    return '/home/pluggedin/uploads';
-  }
+  return getSecureBaseUploadDir();
 }
 
 /**
@@ -826,13 +807,13 @@ export async function migrateExistingVersions(userId: string): Promise<{
           document.file_name,
           version.version_number
         );
-        const versionFilePath = join(versionDir, versionFilename);
+        const versionFilePath = buildSecureVersionFilePath(versionDir, versionFilename);
 
         // Write version content to file
         await writeFile(versionFilePath, version.content, 'utf-8');
 
         // Update database with file path
-        const relativeVersionPath = `${sanitizeUserIdForFileSystem(validatedUserId)}/versions/${version.document_id}/${versionFilename}`;
+        const relativeVersionPath = extractRelativePath(versionFilePath, getSecureBaseUploadDir());
 
         await db
           .update(documentVersionsTable)

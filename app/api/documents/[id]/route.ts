@@ -513,9 +513,30 @@ export async function PATCH(
               // Get the new document ID from the collection
               const docsResult = await ragService.getDocuments(ragIdentifier);
               if (docsResult.success && docsResult.documents) {
-                const newDoc = docsResult.documents.find(([filename]) => 
-                  filename === existingDoc.file_name
-                );
+                // Use more robust filename matching:
+                // 1. Try exact match first
+                // 2. Then try matching by base filename (without timestamp/version suffixes)
+                const newDoc = docsResult.documents.find(([filename]) => {
+                  // Exact match
+                  if (filename === existingDoc.file_name) return true;
+
+                  // Extract base names for comparison (handle versioned filenames)
+                  const getBaseName = (fname: string) => {
+                    // Remove common version/timestamp patterns
+                    return fname
+                      .replace(/_v\d+_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/, '') // _v1_2024-01-01_12-00-00
+                      .replace(/_\d{13,}/, '') // Unix timestamp
+                      .replace(/_copy\d*/, '') // _copy, _copy2, etc
+                      .replace(/\(\d+\)/, ''); // (1), (2), etc
+                  };
+
+                  const baseExisting = getBaseName(existingDoc.file_name);
+                  const baseCandidate = getBaseName(filename);
+
+                  // Match if base names are the same and it's a recent upload
+                  return baseExisting === baseCandidate;
+                });
+
                 if (newDoc) {
                   newRagDocumentId = newDoc[1]; // document_id is the second element
                   break;
@@ -575,7 +596,7 @@ export async function PATCH(
       }
     });
 
-    // Log audit event
+    // Log audit event with file write status
     await logAuditEvent({
       profileUuid: authResult.activeProfile.uuid,
       type: 'MCP_REQUEST',
@@ -584,6 +605,7 @@ export async function PATCH(
         documentId,
         operation: validatedData.operation,
         newVersion: versionInfo.versionNumber,
+        fileWritten: versionInfo.fileWritten,
         ragUpdated: newRagDocumentId !== existingDoc.rag_document_id,
       }
     });
@@ -592,8 +614,11 @@ export async function PATCH(
       success: true,
       documentId,
       version: versionInfo.versionNumber,
+      fileWritten: versionInfo.fileWritten,
       // Security: Never expose internal file paths in API responses
-      message: 'Document updated successfully',
+      message: versionInfo.fileWritten
+        ? 'Document updated successfully'
+        : 'Document version saved (file write pending)',
     });
 
   } catch (error) {

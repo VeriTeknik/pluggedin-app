@@ -40,27 +40,42 @@ export function validateDocumentId(documentId: string): string {
 }
 
 /**
- * Validate and sanitize a user ID (can be various formats)
+ * Validate a user ID with strict pattern matching to prevent collisions
+ * Only allows alphanumeric, underscore, hyphen, and period characters
  */
 export function validateUserId(userId: string): string {
-  // Remove any path traversal attempts
-  const cleaned = userId
-    .replace(/\.\./g, '')
-    .replace(/[\/\\]/g, '_')
-    .replace(/:/g, '_')
-    .replace(/\0/g, '');
-
-  // Ensure it's not empty after cleaning
-  if (!cleaned || cleaned.length === 0) {
-    throw new Error('Invalid user ID after sanitization');
+  // Check for empty or invalid type
+  if (!userId || typeof userId !== 'string') {
+    throw new Error('User ID must be a non-empty string');
   }
 
-  // Limit length
-  if (cleaned.length > 100) {
-    throw new Error('User ID too long');
+  // Trim whitespace
+  const trimmed = userId.trim();
+
+  // Check length constraints
+  if (trimmed.length === 0) {
+    throw new Error('User ID is empty');
   }
 
-  return cleaned;
+  if (trimmed.length > 100) {
+    throw new Error('User ID exceeds maximum length of 100 characters');
+  }
+
+  // Only allow safe characters: alphanumeric, underscore, hyphen, and period
+  // This prevents ambiguous mapping and ID collisions
+  const validUserIdPattern = /^[a-zA-Z0-9_.-]+$/;
+
+  if (!validUserIdPattern.test(trimmed)) {
+    throw new Error(`User ID contains invalid characters. Only alphanumeric, underscore, hyphen, and period are allowed.`);
+  }
+
+  // Check for dangerous patterns even in valid character set
+  if (trimmed === '.' || trimmed === '..' ||
+      trimmed.startsWith('.') || trimmed.endsWith('.')) {
+    throw new Error('User ID cannot be or start/end with dots');
+  }
+
+  return trimmed;
 }
 
 /**
@@ -87,22 +102,104 @@ export function validateFilename(filename: string): string {
 
 /**
  * Check if a path component is safe (no traversal)
+ * Expanded list includes Windows reserved names and common dangerous files
  */
 export function isSafePathComponent(component: string): boolean {
+  // Convert to lowercase for case-insensitive comparison
+  const lowerComponent = component.toLowerCase();
+
+  // Expanded list of dangerous components
   const dangerous = [
+    // Path navigation
     '..',
     '.',
     '',
     '~',
+
+    // Hidden/config directories
     '.git',
     '.ssh',
-    '.env'
+    '.env',
+    '.aws',
+    '.config',
+    '.docker',
+    '.kube',
+    '.npm',
+    '.gnupg',
+    '.local',
+
+    // Common hidden files
+    '.DS_Store',
+    '.npmrc',
+    '.bashrc',
+    '.bash_profile',
+    '.zshrc',
+    '.profile',
+    '.gitconfig',
+    '.netrc',
+    '.htaccess',
+    '.htpasswd',
+
+    // Windows system files
+    'Thumbs.db',
+    'desktop.ini',
+    'config.sys',
+    'autoexec.bat',
+    'pagefile.sys',
+    'hiberfil.sys',
+    'swapfile.sys',
+    'bootmgr',
+    'ntldr',
+
+    // Windows reserved device names (case-insensitive)
+    'con',
+    'prn',
+    'aux',
+    'nul',
+    'com1',
+    'com2',
+    'com3',
+    'com4',
+    'com5',
+    'com6',
+    'com7',
+    'com8',
+    'com9',
+    'lpt1',
+    'lpt2',
+    'lpt3',
+    'lpt4',
+    'lpt5',
+    'lpt6',
+    'lpt7',
+    'lpt8',
+    'lpt9',
+    'clock$'
   ];
 
-  return !dangerous.includes(component) &&
-         !component.includes('/') &&
+  // Check against dangerous list (case-insensitive for Windows reserved names)
+  if (dangerous.includes(lowerComponent)) {
+    return false;
+  }
+
+  // Check for Windows reserved names with extensions (e.g., 'con.txt')
+  const windowsReserved = ['con', 'prn', 'aux', 'nul', 'com', 'lpt'];
+  for (const reserved of windowsReserved) {
+    if (lowerComponent === reserved ||
+        lowerComponent.startsWith(reserved + '.') ||
+        (reserved !== 'com' && reserved !== 'lpt' && lowerComponent === reserved)) {
+      return false;
+    }
+  }
+
+  // Check for path separators and null bytes
+  return !component.includes('/') &&
          !component.includes('\\') &&
-         !component.includes('\0');
+         !component.includes('\0') &&
+         // Also check for URL encoded traversal
+         !component.includes('%2e%2e') &&
+         !component.includes('%2f') &&
+         !component.includes('%5c');
 }
 
 /**
