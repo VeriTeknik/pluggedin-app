@@ -12,14 +12,12 @@ import { docsTable, documentVersionsTable } from '@/db/schema';
 
 import { validateDocumentId, validateFilename, validateUserId, validateVersionNumber } from './path-validation';
 import { ragService } from './rag-service';
-import { isPathWithinDirectory, sanitizeUserIdForFileSystem } from './security';
 import {
-  buildSecurePath,
   buildSecureVersionDir,
   buildSecureVersionFilePath,
-  validateStoredPath,
   extractRelativePath,
-  getSecureBaseUploadDir
+  getSecureBaseUploadDir,
+  validateStoredPath
 } from './secure-path-builder';
 
 export interface VersionInfo {
@@ -723,7 +721,7 @@ function getDefaultUploadsDir(): string {
 /**
  * Helper function to update version's RAG ID asynchronously
  */
-async function updateVersionRagId(
+async function _updateVersionRagId(
   documentId: string,
   versionNumber: number,
   ragDocumentId: string
