@@ -5,7 +5,7 @@
   <h3>The Crossroads for AI Data Exchanges</h3>
   <p>A unified management interface for all your MCP servers with RAG capabilities</p>
 
-  [![Version](https://img.shields.io/badge/version-2.9.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+  [![Version](https://img.shields.io/badge/version-2.12.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
   [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
   [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
   [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
@@ -21,6 +21,16 @@ This application enables seamless integration with any MCP client (Claude, Cline
 > ⭐ **If you find this project useful, please consider giving it a star on GitHub!** It helps us reach more developers and motivates us to keep improving.
 
 ## ✨ Key Features
+
+### 🛡️ New in v2.12.0 - Enhanced Security & Performance
+- **Redis-Based Rate Limiting**: Advanced rate limiting with Redis and intelligent in-memory fallback for improved DDoS protection
+- **LRU Cache Implementation**: Efficient memory-managed caching with automatic eviction of least recently used items
+- **Enhanced Password Security**: Bcrypt cost factor 14 for stronger password hashing (16,384 iterations)
+- **Dynamic CSP Nonces**: Cryptographically secure Content Security Policy nonces for XSS prevention
+- **Dual Storage Display**: Library page now shows both file storage and RAG vector storage usage
+- **Security Headers**: Comprehensive security headers including HSTS, X-Frame-Options, and X-Content-Type-Options
+- **Memory Optimization**: Configurable cache TTL and automatic cleanup to prevent memory leaks
+- **Build Performance**: Replaced dynamic imports with static imports for faster build times
 
 ### 🎯 New in v2.7.0 (Registry v2)
 - **MCP Registry Integration**: Modified fork of the official [MCP Registry](https://github.com/modelcontextprotocol/registry) - users can now claim MCP servers with GitHub credentials
@@ -90,13 +100,13 @@ docker compose up --build -d
 
 Then open http://localhost:12005 in your browser to access the plugged.in App.
 
-### 🔄 Upgrading to v2.1.0
+### 🔄 Upgrading to Latest Version
 
-For existing installations upgrading to v2.2.0:
+For existing installations upgrading to v2.12.0:
 
 ```bash
 # Quick upgrade for Docker users
-docker pull ghcr.io/veriteknik/pluggedin-app:v2.2.0
+docker pull ghcr.io/veriteknik/pluggedin-app:v2.12.0
 docker-compose down && docker-compose up -d
 
 # The encryption will be applied automatically to existing servers
