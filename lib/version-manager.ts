@@ -222,13 +222,22 @@ export async function saveDocumentVersion(
       const uploadResult = await ragService.uploadDocument(fileData, ragIdentifier);
 
       if (uploadResult.success && uploadResult.upload_id) {
-        // Poll for completion with exponential backoff
-        const maxAttempts = parseInt(process.env.RAG_POLL_MAX_ATTEMPTS || '30');
-        const initialInterval = parseInt(process.env.RAG_POLL_INITIAL_INTERVAL_MS || '1000');
-        const maxInterval = parseInt(process.env.RAG_POLL_MAX_INTERVAL_MS || '30000');
+        // Poll for completion with exponential backoff (max 30 seconds total)
+        const maxAttempts = parseInt(process.env.RAG_POLL_MAX_ATTEMPTS || '10'); // Reduced from 30
+        const initialInterval = parseInt(process.env.RAG_POLL_INITIAL_INTERVAL_MS || '500'); // Start faster
+        const maxInterval = parseInt(process.env.RAG_POLL_MAX_INTERVAL_MS || '5000'); // Cap at 5 seconds
         const backoffMultiplier = parseFloat(process.env.RAG_POLL_BACKOFF_MULTIPLIER || '1.5');
 
+        const startTime = Date.now();
+        const maxTotalTime = 30000; // Hard limit: 30 seconds total
+
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          // Check if we've exceeded total time limit
+          if (Date.now() - startTime > maxTotalTime) {
+            console.warn('RAG polling timeout exceeded, continuing without RAG');
+            break;
+          }
+
           // Calculate exponential backoff with jitter
           const baseDelay = Math.min(initialInterval * Math.pow(backoffMultiplier, attempt), maxInterval);
           const jitter = Math.random() * 0.3 * baseDelay; // Add 0-30% jitter
