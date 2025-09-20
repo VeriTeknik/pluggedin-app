@@ -82,6 +82,47 @@ class RagService {
   }
 
   /**
+   * Helper function to retry API calls with exponential backoff
+   */
+  private async retryWithBackoff<T>(
+    operation: () => Promise<T>,
+    operationName: string,
+    maxRetries: number = 3
+  ): Promise<T> {
+    let lastError: any;
+    const initialDelay = 1000; // 1 second
+
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+      try {
+        return await operation();
+      } catch (error) {
+        lastError = error;
+
+        // Don't retry on client errors (4xx) except 429 (rate limit)
+        if (error instanceof Error &&
+            error.message.includes('status: 4') &&
+            !error.message.includes('status: 429')) {
+          throw error;
+        }
+
+        // Check if we should retry
+        if (attempt < maxRetries - 1) {
+          const delay = initialDelay * Math.pow(2, attempt);
+          const jitter = Math.random() * 0.3 * delay; // Add 30% jitter
+          const totalDelay = Math.floor(delay + jitter);
+
+          console.log(`[RAG Service] Retrying ${operationName} after ${totalDelay}ms (attempt ${attempt + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, totalDelay));
+        }
+      }
+    }
+
+    // If all retries failed, throw the last error
+    console.error(`[RAG Service] All ${maxRetries} attempts failed for ${operationName}`);
+    throw lastError;
+  }
+
+  /**
    * Parse RAG API response which can be either JSON or plain text
    */
   private async parseRagResponse(response: Response): Promise<any> {
@@ -184,31 +225,38 @@ class RagService {
         };
       }
 
-      // Use the same endpoint as queryForContext which works in playground
-      const apiUrl = `${this.ragApiUrl}/rag/rag-query`;
+      // Wrap the API call in retry logic
+      const result = await this.retryWithBackoff(async () => {
+        // Use the same endpoint as queryForContext which works in playground
+        const apiUrl = `${this.ragApiUrl}/rag/rag-query`;
 
-      // Add timeout to prevent hanging requests (30 seconds)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000);
+        // Add timeout to prevent hanging requests (30 seconds)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
 
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'accept': 'application/json',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: ragIdentifier,
-          query: query,
-        }),
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            user_id: ragIdentifier,
+            query: query,
+          }),
+          signal: controller.signal,
+        });
 
-      if (!response.ok) {
-        throw new Error(`RAG API responded with status: ${response.status}`);
-      }
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          throw new Error(`RAG API responded with status: ${response.status}`);
+        }
+
+        return response;
+      }, 'RAG query', 2); // Retry up to 2 times for queries
+
+      const response = result;
 
       // Handle both JSON and plain text responses
       const body = await this.parseRagResponse(response);
@@ -416,6 +464,30 @@ class RagService {
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        // Check if it's a backend error we can work around
+        if (response.status === 500) {
+          try {
+            const errorText = await response.text();
+
+            // Check for known backend issues
+            if (errorText.includes('milvus_manager') ||
+                errorText.includes('Milvus connection') ||
+                errorText.includes('Failed to get documents')) {
+              console.warn('RAG backend service issue detected:', errorText.substring(0, 200));
+
+              // Return gracefully with empty documents list
+              return {
+                success: false,
+                error: 'Document listing temporarily unavailable due to backend service issues',
+                documents: [] // Return empty list to allow search to continue
+              };
+            }
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+          }
+        }
+
+        // For other errors, throw as before
         throw new Error(`RAG API responded with status: ${response.status}`);
       }
 

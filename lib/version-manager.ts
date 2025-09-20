@@ -352,11 +352,12 @@ export async function getVersionContent(
     }
 
     // Fallback to database content if file doesn't exist
-    console.log('[Version Manager] Version file not found, using database fallback', {
+    console.warn('[Version Manager] Version fallback activated', {
       documentId: validatedDocumentId,
       versionNumber: validatedVersion,
       fallbackSource: 'database',
-      reason: 'File not accessible or does not exist'
+      reason: 'File not accessible or does not exist',
+      timestamp: new Date().toISOString()
     });
     return version.content;
   } catch (error) {
@@ -408,9 +409,22 @@ export async function restoreVersion(
 
     // Create a backup of the current version before restoring
     const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
+
+    // Validate document file path before using it
+    if (!document.file_path ||
+        document.file_path.includes('../') ||
+        document.file_path.includes('..\\')) {
+      throw new Error('Invalid document file path detected');
+    }
+
     const mainFilePath = document.file_path.startsWith('/')
       ? document.file_path
       : join(baseUploadDir, document.file_path);
+
+    // Additional security check to ensure path is within allowed directory
+    if (!isPathWithinDirectory(mainFilePath, baseUploadDir)) {
+      throw new Error('Security violation: Document path outside allowed directory');
+    }
 
     // Read current content for backup
     let currentContent: string;
@@ -533,7 +547,20 @@ export async function listDocumentVersions(
   // Pre-validate inputs
   const validatedDocumentId = validateDocumentId(documentId);
 
-  const { limit = 100, offset = 0, includeContent = false } = options || {};
+  // Apply reasonable limits to prevent memory issues
+  const maxLimit = 100;
+  const requestedLimit = options?.limit || 50; // Default to 50 instead of 100
+  const limit = Math.min(requestedLimit, maxLimit); // Cap at maximum
+  const offset = options?.offset || 0;
+  const includeContent = options?.includeContent || false;
+
+  if (requestedLimit > maxLimit) {
+    console.warn('[Version Manager] Version listing limit exceeded', {
+      requested: requestedLimit,
+      applied: limit,
+      documentId: validatedDocumentId
+    });
+  }
 
   // Build query - exclude content by default for performance
   const query = db
@@ -708,6 +735,39 @@ function getDefaultUploadsDir(): string {
     return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
   } else {
     return '/home/pluggedin/uploads';
+  }
+}
+
+/**
+ * Helper function to update version's RAG ID asynchronously
+ */
+async function updateVersionRagId(
+  documentId: string,
+  versionNumber: number,
+  ragDocumentId: string
+): Promise<void> {
+  try {
+    await db
+      .update(documentVersionsTable)
+      .set({ rag_document_id: ragDocumentId })
+      .where(
+        and(
+          eq(documentVersionsTable.document_id, documentId),
+          eq(documentVersionsTable.version_number, versionNumber)
+        )
+      );
+    console.log('[Version Manager] Updated version RAG ID asynchronously', {
+      documentId,
+      versionNumber,
+      ragDocumentId
+    });
+  } catch (error) {
+    console.error('[Version Manager] Failed to update version RAG ID', {
+      error: error instanceof Error ? error.message : String(error),
+      documentId,
+      versionNumber,
+      ragDocumentId
+    });
   }
 }
 

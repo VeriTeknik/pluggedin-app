@@ -592,7 +592,7 @@ export async function PATCH(
       success: true,
       documentId,
       version: versionInfo.versionNumber,
-      versionFilePath: versionInfo.filePath,
+      // Security: Never expose internal file paths in API responses
       message: 'Document updated successfully',
     });
 

@@ -687,6 +687,8 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
 
           // Get RAG document list for filename-based fallback matching
           const ragDocumentMap: Map<string, string> = new Map();
+          let ragServicePartiallyAvailable = false;
+
           try {
             const ragDocsResult = await ragService.getDocuments(ragIdentifier);
             if (ragDocsResult.success && ragDocsResult.documents) {
@@ -694,9 +696,16 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
               ragDocsResult.documents.forEach(([filename, docId]) => {
                 ragDocumentMap.set(docId, filename);
               });
+            } else if (!ragDocsResult.success) {
+              // Document listing failed but search may still work
+              console.warn('RAG document listing unavailable:', ragDocsResult.error);
+              ragServicePartiallyAvailable = true;
             }
           } catch (ragError) {
-            console.error('Failed to fetch RAG document list for fallback:', ragError);
+            // Log error but continue with search
+            console.error('Failed to fetch RAG document list for fallback, continuing with search:', ragError);
+            ragServicePartiallyAvailable = true;
+            // Search results will show with document IDs instead of names
           }
 
           // Map RAG document IDs to document names with metadata
@@ -749,7 +758,12 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
                     : `Document ${ragId}`;
                 }
 
-                console.warn(`Document not found for RAG ID: ${ragId}${ragFilename ? ` (${ragFilename})` : ''}`);
+                console.warn(`Document not found for RAG ID: ${ragId}${ragFilename ? ` (${ragFilename})` : ''}${ragServicePartiallyAvailable ? ' (RAG service partially unavailable)' : ''}`);
+
+                // Adjust display name if RAG service is partially unavailable
+                if (ragServicePartiallyAvailable && !ragFilename) {
+                  displayName = `Document (service temporarily limited)`;
+                }
 
                 return {
                   id: ragId, // Use RAG ID as fallback
