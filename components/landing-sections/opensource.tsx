@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 
 interface Repository {
   name: string;
-  repo: string;
+  repo: 'VeriTeknik/pluggedin-app' | 'VeriTeknik/pluggedin-mcp-proxy';
   description: string;
   url: string;
 }
