@@ -375,7 +375,7 @@ class RagService {
       // Add timeout for upload (60 seconds for larger files)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 60000);
-      
+
       const response = await fetch(`${this.ragApiUrl}/rag/upload-to-collection?user_id=${ragIdentifier}`, {
         method: 'POST',
         headers: {
@@ -385,15 +385,83 @@ class RagService {
         body: formData,
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
 
       if (!response.ok) {
-        throw new Error(`RAG API responded with status: ${response.status}`);
+        // Handle 422 Unprocessable Entity specially
+        if (response.status === 422) {
+          let errorDetail = 'Document validation failed';
+          try {
+            const errorBody = await response.json();
+            if (errorBody.detail) {
+              // Extract meaningful error from FastAPI validation error format
+              if (typeof errorBody.detail === 'string') {
+                errorDetail = errorBody.detail;
+              } else if (Array.isArray(errorBody.detail)) {
+                // FastAPI validation errors are often arrays
+                errorDetail = errorBody.detail.map((e: any) => e.msg || e.message || JSON.stringify(e)).join(', ');
+              } else {
+                errorDetail = JSON.stringify(errorBody.detail);
+              }
+            } else if (errorBody.message) {
+              errorDetail = errorBody.message;
+            }
+          } catch (parseError) {
+            // If we can't parse the error, try to get it as text
+            try {
+              errorDetail = await response.text();
+            } catch {
+              // Keep default error message
+            }
+          }
+          console.error(`RAG API 422 error for file "${file.name}":`, errorDetail);
+          return {
+            success: false,
+            error: `Document upload failed: ${errorDetail}. File may already exist or have invalid format.`
+          };
+        }
+
+        // Handle 409 Conflict (duplicate document)
+        if (response.status === 409) {
+          console.warn(`RAG API 409 conflict for file "${file.name}": Document already exists`);
+          return {
+            success: false,
+            error: `Document "${file.name}" already exists in RAG. Consider using a different filename or version.`
+          };
+        }
+
+        // Handle 413 Payload Too Large
+        if (response.status === 413) {
+          return {
+            success: false,
+            error: `File "${file.name}" is too large. Maximum file size allowed is 10MB.`
+          };
+        }
+
+        // Handle 415 Unsupported Media Type
+        if (response.status === 415) {
+          return {
+            success: false,
+            error: `File type of "${file.name}" is not supported. Please upload a supported document format.`
+          };
+        }
+
+        // Generic error handling
+        let errorMessage = `RAG API responded with status: ${response.status}`;
+        try {
+          const errorBody = await response.text();
+          if (errorBody) {
+            errorMessage += ` - ${errorBody.substring(0, 200)}`; // Limit error message length
+          }
+        } catch {
+          // Ignore parse errors
+        }
+        throw new Error(errorMessage);
       }
 
       const result = await response.json();
-      
+
       if (!result.upload_id) {
         console.error('Warning: No upload_id in RAG API response, falling back to legacy behavior');
         return {
@@ -401,14 +469,14 @@ class RagService {
           error: 'No upload_id returned from RAG API'
         };
       }
-      
-      return { 
+
+      return {
         success: true,
-        upload_id: result.upload_id 
+        upload_id: result.upload_id
       };
     } catch (error) {
       console.error('Error sending to RAG API:', error);
-      
+
       // Check for timeout error
       if (error instanceof Error && error.name === 'AbortError') {
         return {
@@ -436,7 +504,7 @@ class RagService {
       // Add timeout (30 seconds)
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30000);
-      
+
       const response = await fetch(`${this.ragApiUrl}/rag/delete-from-collection?document_id=${documentId}&user_id=${ragIdentifier}`, {
         method: 'DELETE',
         headers: {
@@ -444,10 +512,36 @@ class RagService {
         },
         signal: controller.signal,
       });
-      
+
       clearTimeout(timeoutId);
 
       if (!response.ok) {
+        // Handle 404 Not Found (document doesn't exist)
+        if (response.status === 404) {
+          console.warn(`RAG document ${documentId} not found, treating as successful deletion`);
+          return { success: true }; // Consider it successful if already gone
+        }
+
+        // Handle 422 Unprocessable Entity
+        if (response.status === 422) {
+          let errorDetail = 'Invalid document ID or user ID';
+          try {
+            const errorBody = await response.json();
+            if (errorBody.detail) {
+              errorDetail = typeof errorBody.detail === 'string'
+                ? errorBody.detail
+                : JSON.stringify(errorBody.detail);
+            }
+          } catch {
+            // Keep default error message
+          }
+          console.error(`RAG API 422 error when deleting ${documentId}:`, errorDetail);
+          return {
+            success: false,
+            error: `Cannot delete document: ${errorDetail}`
+          };
+        }
+
         throw new Error(`RAG API responded with status: ${response.status}`);
       }
 

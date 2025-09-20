@@ -480,86 +480,8 @@ export async function PATCH(
     // Calculate new file size
     const newFileSize = Buffer.byteLength(sanitizedContent, 'utf-8');
 
-    // Handle RAG update using delete + re-upload workaround
-    let newRagDocumentId = existingDoc.rag_document_id;
-    const ragIdentifier = authResult.activeProfile.project_uuid || authResult.user.id;
-
-    if (existingDoc.rag_document_id && process.env.ENABLE_RAG === 'true') {
-      try {
-        // Step 1: Delete the old document from RAG
-        const deleteResult = await ragService.removeDocument(existingDoc.rag_document_id, ragIdentifier);
-        
-        if (!deleteResult.success) {
-          console.warn('Failed to delete document from RAG:', deleteResult.error);
-        }
-        
-        // Step 2: Upload the new content to RAG
-        const file = new File([sanitizedContent], existingDoc.file_name, { 
-          type: existingDoc.mime_type 
-        });
-        const uploadResult = await ragService.uploadDocument(file, ragIdentifier);
-        
-        if (uploadResult.success && uploadResult.upload_id) {
-          // Poll for upload status instead of fixed delay
-          let retries = 0;
-          const maxRetries = 10;
-          const retryDelay = 500; // 500ms between retries
-          
-          while (retries < maxRetries) {
-            await new Promise(resolve => setTimeout(resolve, retryDelay));
-            
-            const statusResult = await ragService.getUploadStatus(uploadResult.upload_id, ragIdentifier);
-            if (statusResult.success && statusResult.progress?.status === 'completed') {
-              // Get the new document ID from the collection
-              const docsResult = await ragService.getDocuments(ragIdentifier);
-              if (docsResult.success && docsResult.documents) {
-                // Use more robust filename matching:
-                // 1. Try exact match first
-                // 2. Then try matching by base filename (without timestamp/version suffixes)
-                const newDoc = docsResult.documents.find(([filename]) => {
-                  // Exact match
-                  if (filename === existingDoc.file_name) return true;
-
-                  // Extract base names for comparison (handle versioned filenames)
-                  const getBaseName = (fname: string) => {
-                    // Remove common version/timestamp patterns
-                    return fname
-                      .replace(/_v\d+_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/, '') // _v1_2024-01-01_12-00-00
-                      .replace(/_\d{13,}/, '') // Unix timestamp
-                      .replace(/_copy\d*/, '') // _copy, _copy2, etc
-                      .replace(/\(\d+\)/, ''); // (1), (2), etc
-                  };
-
-                  const baseExisting = getBaseName(existingDoc.file_name);
-                  const baseCandidate = getBaseName(filename);
-
-                  // Match if base names are the same and it's a recent upload
-                  return baseExisting === baseCandidate;
-                });
-
-                if (newDoc) {
-                  newRagDocumentId = newDoc[1]; // document_id is the second element
-                  break;
-                }
-              }
-            } else if (statusResult.progress?.status === 'failed') {
-              console.error('RAG upload failed');
-              break;
-            }
-            retries++;
-          }
-          
-          if (retries >= maxRetries) {
-            console.warn('RAG upload status check timed out');
-          }
-        } else {
-          console.warn('RAG upload failed:', uploadResult.error);
-        }
-      } catch (ragError) {
-        console.error('RAG update failed, continuing with database update:', ragError);
-        // Continue even if RAG update fails - don't block the document update
-      }
-    }
+    // Note: RAG upload is handled by version-manager.ts for each version
+    // This preserves all versions in RAG instead of replacing them
 
     // Update the document in database with version info - use transaction for consistency
     await db.transaction(async (tx) => {
@@ -568,7 +490,7 @@ export async function PATCH(
         .set({
           file_size: newFileSize,
           version: versionInfo.versionNumber,
-          rag_document_id: versionInfo.ragDocumentId || newRagDocumentId,
+          rag_document_id: versionInfo.ragDocumentId || existingDoc.rag_document_id,
           updated_at: new Date(),
           ai_metadata: validatedData.metadata?.model ? {
             ...existingDoc.ai_metadata,
