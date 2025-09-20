@@ -8,6 +8,10 @@ import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { RateLimiters } from '@/lib/rate-limiter';
 
+// Bcrypt cost factor: higher values increase security but also CPU usage.
+// Monitor server load and adjust as needed for your environment.
+const BCRYPT_COST_FACTOR = 14;
+
 const passwordSchema = z.object({
   currentPassword: z.string().min(8),
   newPassword: z.string().min(8),
@@ -49,8 +53,8 @@ export async function POST(req: NextRequest) {
     // Verify current password with timing-safe comparison
     const isValid = await compare(currentPassword, user.password);
     if (!isValid) {
-      // Add delay to prevent timing attacks
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
+      // Add fixed delay to prevent timing attacks
+      await new Promise(resolve => setTimeout(resolve, 1000));
       return new NextResponse('Current password is incorrect', { status: 400 });
     }
 
@@ -60,8 +64,8 @@ export async function POST(req: NextRequest) {
       return new NextResponse('New password must be different from current password', { status: 400 });
     }
 
-    // Hash new password with stronger cost factor
-    const hashedPassword = await hash(newPassword, 14); // Increased from 12 to 14 for better security
+    // Hash new password with configurable cost factor
+    const hashedPassword = await hash(newPassword, BCRYPT_COST_FACTOR);
 
     // Update password
     await db

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
       authenticatedUserId = session.user.id;
     }
 
-    const searchParams = request.nextUrl.searchParams;
+    const {searchParams} = request.nextUrl;
     const requestedUserId = searchParams.get('user_id');
 
     if (!requestedUserId) {

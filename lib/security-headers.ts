@@ -3,7 +3,28 @@
  * OWASP Security Headers Best Practices
  */
 
-export function getSecurityHeaders(isDevelopment: boolean = false) {
+/**
+ * Generate a cryptographically secure nonce for CSP
+ */
+export function generateNonce(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+
+  // Fallback for environments without crypto.randomUUID
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const buffer = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(buffer)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  }
+
+  // Last resort fallback (not cryptographically secure)
+  console.warn('Using non-secure nonce generation');
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+export function getSecurityHeaders(isDevelopment: boolean = false, nonce?: string) {
   const baseHeaders = {
     // Prevent clickjacking attacks
     'X-Frame-Options': 'DENY',
@@ -54,13 +75,13 @@ export function getSecurityHeaders(isDevelopment: boolean = false) {
     // Certificate Transparency
     'Expect-CT': 'enforce, max-age=86400',
 
-    // Content Security Policy with nonce support
-    'Content-Security-Policy': generateCSP(false),
+    // Content Security Policy with dynamic nonce support
+    'Content-Security-Policy': generateCSP(false, nonce || generateNonce()),
   };
 
   // Development-specific headers
   const developmentHeaders = {
-    'Content-Security-Policy': generateCSP(true),
+    'Content-Security-Policy': generateCSP(true, nonce || generateNonce()),
   };
 
   return {
@@ -72,12 +93,12 @@ export function getSecurityHeaders(isDevelopment: boolean = false) {
 /**
  * Generate Content Security Policy with proper directives
  */
-function generateCSP(isDevelopment: boolean): string {
+function generateCSP(isDevelopment: boolean, nonce: string): string {
   const directives: Record<string, string[]> = {
     'default-src': ["'self'"],
     'script-src': [
       "'self'",
-      isDevelopment ? "'unsafe-inline'" : "'nonce-{NONCE}'",
+      isDevelopment ? "'unsafe-inline'" : `'nonce-${nonce}'`,
       "'unsafe-eval'", // Required for Next.js, consider removing in production
       'https://js.stripe.com',
       'https://www.googletagmanager.com',

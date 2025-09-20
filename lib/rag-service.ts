@@ -678,6 +678,21 @@ class RagService {
       };
     }
   }
+
+  /**
+   * Invalidate storage stats cache for a specific identifier
+   */
+  invalidateStorageCache(ragIdentifier: string): void {
+    const cacheKey = `storage-stats-${ragIdentifier}`;
+    this.storageStatsCache.delete(cacheKey);
+  }
+
+  /**
+   * Clear entire storage stats cache
+   */
+  clearStorageCache(): void {
+    this.storageStatsCache.clear();
+  }
 }
 
 // Export singleton instance

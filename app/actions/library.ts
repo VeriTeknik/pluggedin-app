@@ -491,8 +491,10 @@ async function processRagUpload(
     const ragIdentifier = projectUuid || userId;
     
     const result = await ragService.uploadDocument(file, ragIdentifier);
-    
+
     if (result.success) {
+      // Invalidate storage cache after uploading document
+      ragService.invalidateStorageCache(ragIdentifier);
       return { ragProcessed: true, ragError: undefined, upload_id: result.upload_id };
     } else {
       throw new Error(result.error || 'RAG upload failed');
@@ -682,6 +684,9 @@ export async function deleteDoc(
       ragService.removeDocument(doc.rag_document_id, ragIdentifier).catch(error => {
         console.error('Failed to remove document from RAG API:', error);
       });
+
+      // Invalidate storage cache after removing document
+      ragService.invalidateStorageCache(ragIdentifier);
     }
 
     return {
