@@ -895,6 +895,17 @@ export const docsTable = pgTable(
         timestamp?: string;
         sessionId?: string;
       }>(),
+    upload_metadata: jsonb('upload_metadata')
+      .$type<{
+        purpose?: string;
+        relatedTo?: string;
+        notes?: string;
+        uploadMethod?: 'drag-drop' | 'file-picker' | 'api' | 'paste';
+        userAgent?: string;
+        uploadedAt?: string;
+        originalFileName?: string;
+        fileLastModified?: string;
+      }>(),
     content_hash: text('content_hash'), // For deduplication
     visibility: text('visibility').notNull().default('private'), // 'private', 'workspace', 'public'
     version: integer('version').notNull().default(1),
@@ -947,11 +958,14 @@ export const documentVersionsTable = pgTable(
       .references(() => docsTable.uuid, { onDelete: 'cascade' }),
     version_number: integer('version_number').notNull(),
     content: text('content').notNull(),
+    file_path: text('file_path'), // Path to the version file
+    is_current: boolean('is_current').default(false), // Whether this is the current version
+    rag_document_id: text('rag_document_id'), // RAG ID for this specific version
     content_diff: jsonb('content_diff')
-      .$type<{ 
-        additions?: number; 
-        deletions?: number; 
-        changes?: Array<{ type: string; content: string }> 
+      .$type<{
+        additions?: number;
+        deletions?: number;
+        changes?: Array<{ type: string; content: string }>
       }>(),
     created_by_model: jsonb('created_by_model')
       .$type<{

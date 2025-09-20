@@ -43,7 +43,7 @@ import { users } from '@/db/schema';
 import { useLanguage } from '@/hooks/use-language';
 import { localeNames,locales } from '@/i18n/config'; // Import locales and names
 
-import { removeConnectedAccount, type ConnectedAccount } from '../actions';
+import { type ConnectedAccount,removeConnectedAccount } from '../actions';
 import { AppearanceSection } from './appearance-section';
 import { CurrentProfileSection } from './current-profile-section';
 import { CurrentProjectSection } from './current-project-section';

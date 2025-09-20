@@ -1,14 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, Rocket, Shield, TrendingUp, Users, Layers, Zap } from 'lucide-react';
+import { ArrowRight, Check, Layers, Rocket, Shield, TrendingUp, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
+import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { AnimatedMetric } from '@/components/ui/animated-metric';
 
 // Animation variants
 const sectionVariants = {

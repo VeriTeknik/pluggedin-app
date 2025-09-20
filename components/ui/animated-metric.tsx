@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useInView } from 'react-intersection-observer';
 import CountUp from 'react-countup';
+import { useInView } from 'react-intersection-observer';
+
 import { cn } from '@/lib/utils';
 
 interface AnimatedMetricProps {

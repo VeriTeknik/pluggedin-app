@@ -2,7 +2,6 @@ import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import { readFile, writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join, resolve } from 'path';
-import { sanitizeModerate } from '@/lib/sanitization';
 import { z } from 'zod';
 
 import { logAuditEvent } from '@/app/actions/audit-logger';
@@ -11,7 +10,9 @@ import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable,documentVersionsTable } from '@/db/schema';
 import {rateLimit } from '@/lib/api-rate-limit';
 import { ragService } from '@/lib/rag-service';
+import { sanitizeModerate } from '@/lib/sanitization';
 import { isPathWithinDirectory } from '@/lib/security';
+import { saveDocumentVersion } from '@/lib/version-manager';
 
 // Query parameters schema
 const getDocumentSchema = z.object({
@@ -22,7 +23,17 @@ const getDocumentSchema = z.object({
 // Update document schema
 const updateDocumentSchema = z.object({
   operation: z.enum(['replace', 'append', 'prepend']),
-  content: z.string().min(1).max(10000000), // 10MB limit
+  content: z.string()
+    .min(1)
+    .max(10000000) // 10MB limit
+    .refine(val => !val.includes('\0'), 'Null bytes not allowed')
+    .refine(val => {
+      // Check for other dangerous control characters
+      // Allow: \t (tab), \n (newline), \r (carriage return)
+      // Block: all other control characters
+      const dangerousChars = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
+      return !dangerousChars.test(val);
+    }, 'Control characters not allowed except newline, tab, and carriage return'),
   metadata: z.object({
     changeSummary: z.string().optional(),
     model: z.object({
@@ -448,7 +459,22 @@ export async function PATCH(
     // This prevents XSS while allowing safe images
     const sanitizedContent = sanitizeModerate(newContent);
 
-    // Write the new content to file with path validation
+    // Save version using the version manager - this creates a version file
+    const versionInfo = await saveDocumentVersion({
+      documentId,
+      content: sanitizedContent,
+      userId: authResult.user.id,
+      projectUuid: authResult.activeProfile.project_uuid,
+      createdByModel: validatedData.metadata?.model || {
+        name: 'Unknown',
+        provider: 'Unknown'
+      },
+      changeSummary: validatedData.metadata?.changeSummary,
+      operation: validatedData.operation,
+      previousContent: existingContent
+    });
+
+    // Also update the main document file for backward compatibility
     await writeFile(resolvedPath, sanitizedContent, 'utf-8');
 
     // Calculate new file size
@@ -487,9 +513,30 @@ export async function PATCH(
               // Get the new document ID from the collection
               const docsResult = await ragService.getDocuments(ragIdentifier);
               if (docsResult.success && docsResult.documents) {
-                const newDoc = docsResult.documents.find(([filename]) => 
-                  filename === existingDoc.file_name
-                );
+                // Use more robust filename matching:
+                // 1. Try exact match first
+                // 2. Then try matching by base filename (without timestamp/version suffixes)
+                const newDoc = docsResult.documents.find(([filename]) => {
+                  // Exact match
+                  if (filename === existingDoc.file_name) return true;
+
+                  // Extract base names for comparison (handle versioned filenames)
+                  const getBaseName = (fname: string) => {
+                    // Remove common version/timestamp patterns
+                    return fname
+                      .replace(/_v\d+_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}/, '') // _v1_2024-01-01_12-00-00
+                      .replace(/_\d{13,}/, '') // Unix timestamp
+                      .replace(/_copy\d*/, '') // _copy, _copy2, etc
+                      .replace(/\(\d+\)/, ''); // (1), (2), etc
+                  };
+
+                  const baseExisting = getBaseName(existingDoc.file_name);
+                  const baseCandidate = getBaseName(filename);
+
+                  // Match if base names are the same and it's a recent upload
+                  return baseExisting === baseCandidate;
+                });
+
                 if (newDoc) {
                   newRagDocumentId = newDoc[1]; // document_id is the second element
                   break;
@@ -514,58 +561,42 @@ export async function PATCH(
       }
     }
 
-    // Update the document in database
-    const newVersion = existingDoc.version + 1;
-    await db
-      .update(docsTable)
-      .set({
-        file_size: newFileSize,
-        version: newVersion,
-        rag_document_id: newRagDocumentId,
-        updated_at: new Date(),
-        ai_metadata: validatedData.metadata?.model ? {
-          ...existingDoc.ai_metadata,
-          model: validatedData.metadata.model,
-          timestamp: new Date().toISOString(),
-          context: validatedData.metadata?.changeSummary || existingDoc.ai_metadata?.context,
-        } : existingDoc.ai_metadata,
-        tags: validatedData.metadata?.tags || existingDoc.tags,
-      })
-      .where(eq(docsTable.uuid, documentId));
+    // Update the document in database with version info - use transaction for consistency
+    await db.transaction(async (tx) => {
+      await tx
+        .update(docsTable)
+        .set({
+          file_size: newFileSize,
+          version: versionInfo.versionNumber,
+          rag_document_id: versionInfo.ragDocumentId || newRagDocumentId,
+          updated_at: new Date(),
+          ai_metadata: validatedData.metadata?.model ? {
+            ...existingDoc.ai_metadata,
+            model: validatedData.metadata.model,
+            timestamp: new Date().toISOString(),
+            context: validatedData.metadata?.changeSummary || existingDoc.ai_metadata?.context,
+          } : existingDoc.ai_metadata,
+          tags: validatedData.metadata?.tags || existingDoc.tags,
+        })
+        .where(eq(docsTable.uuid, documentId));
 
-    // Create version record
-    if (validatedData.metadata?.model) {
-      await db.insert(documentVersionsTable).values({
-        document_id: documentId,
-        version_number: newVersion,
-        content: sanitizedContent,
-        created_by_model: validatedData.metadata.model,
-        change_summary: validatedData.metadata.changeSummary || `${validatedData.operation} operation`,
-        content_diff: {
-          additions: validatedData.operation === 'replace' 
-            ? newFileSize 
-            : newFileSize - existingDoc.file_size,
-          deletions: validatedData.operation === 'replace' 
-            ? existingDoc.file_size 
-            : 0,
-        }
-      });
+      // Add model attribution (version record was already created by saveDocumentVersion)
+      if (validatedData.metadata?.model) {
+        await tx.insert(documentModelAttributionsTable).values({
+          document_id: documentId,
+          model_name: validatedData.metadata.model.name,
+          model_provider: validatedData.metadata.model.provider,
+          contribution_type: 'updated',
+          contribution_metadata: {
+            version: validatedData.metadata.model.version,
+            changes_summary: validatedData.metadata.changeSummary,
+            operation: validatedData.operation,
+          }
+        });
+      }
+    });
 
-      // Add model attribution
-      await db.insert(documentModelAttributionsTable).values({
-        document_id: documentId,
-        model_name: validatedData.metadata.model.name,
-        model_provider: validatedData.metadata.model.provider,
-        contribution_type: 'updated',
-        contribution_metadata: {
-          version: validatedData.metadata.model.version,
-          changes_summary: validatedData.metadata.changeSummary,
-          operation: validatedData.operation,
-        }
-      });
-    }
-
-    // Log audit event
+    // Log audit event with file write status
     await logAuditEvent({
       profileUuid: authResult.activeProfile.uuid,
       type: 'MCP_REQUEST',
@@ -573,7 +604,8 @@ export async function PATCH(
       metadata: {
         documentId,
         operation: validatedData.operation,
-        newVersion,
+        newVersion: versionInfo.versionNumber,
+        fileWritten: versionInfo.fileWritten,
         ragUpdated: newRagDocumentId !== existingDoc.rag_document_id,
       }
     });
@@ -581,8 +613,12 @@ export async function PATCH(
     return NextResponse.json({
       success: true,
       documentId,
-      version: newVersion,
-      message: 'Document updated successfully',
+      version: versionInfo.versionNumber,
+      fileWritten: versionInfo.fileWritten,
+      // Security: Never expose internal file paths in API responses
+      message: versionInfo.fileWritten
+        ? 'Document updated successfully'
+        : 'Document version saved (file write pending)',
     });
 
   } catch (error) {

@@ -6,9 +6,9 @@ import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 import { getConnectedAccounts, getUserEmailPreferences } from './actions';
+import { EmailPreferencesSection } from './components/email-preferences-section';
 import { SettingsForm } from './components/settings-form';
 import { SettingsTitle } from './components/settings-title';
-import { EmailPreferencesSection } from './components/email-preferences-section';
 
 export const dynamic = 'force-dynamic';
 

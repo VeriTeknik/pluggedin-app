@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/ui/badge';
 
 interface LastUsedSSO {
   provider: string;

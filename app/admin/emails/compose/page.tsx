@@ -1,23 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { AlertCircle, Languages, Loader2,Save, Send, Users } from 'lucide-react';
+import { useEffect,useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { toast } from 'sonner';
+
+import { LazyMonacoEditor } from '@/components/lazy-monaco-editor';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { LazyMonacoEditor } from '@/components/lazy-monaco-editor';
-import { Send, Eye, Save, Users, AlertCircle, CheckCircle, Languages, Loader2 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { sendBulkProductUpdate, getEmailRecipients, getEmailTemplates, saveEmailTemplate, translateEmailContent } from '../actions';
-import { languageNames, type SupportedLanguage, type EmailTranslations } from '@/lib/email-translation-service';
-import { toast } from 'sonner';
+import { type EmailTranslations,languageNames, type SupportedLanguage } from '@/lib/email-translation-service';
+
+import { getEmailRecipients, getEmailTemplates, saveEmailTemplate, sendBulkProductUpdate, translateEmailContent } from '../actions';
 
 interface EmailTemplate {
   id: string;

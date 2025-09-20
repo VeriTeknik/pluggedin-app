@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, Eye, MessageSquare, MoreHorizontal, Trash2 } from 'lucide-react';
+import { Clock, Download, Eye, MessageSquare, MoreHorizontal, Trash2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
@@ -20,17 +20,19 @@ export interface DocsGridProps {
   onDownload: (doc: Doc) => void;
   onDelete: (doc: Doc) => void;
   onPreview?: (doc: Doc) => void;
+  onViewVersions?: (doc: Doc) => void;
   formatFileSize: (bytes: number) => string;
   getMimeTypeIcon: (mimeType: string) => string;
 }
 
-export function DocsGrid({ 
-  docs, 
-  onDownload, 
-  onDelete, 
+export function DocsGrid({
+  docs,
+  onDownload,
+  onDelete,
   onPreview,
-  formatFileSize, 
-  getMimeTypeIcon 
+  onViewVersions,
+  formatFileSize,
+  getMimeTypeIcon
 }: DocsGridProps) {
   const { t } = useTranslation('library');
   if (docs.length === 0) {
@@ -106,7 +108,7 @@ export function DocsGrid({
                   onKeyDown={(e) => e.stopPropagation()}
                 >
                   {onPreview && (
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onClick={(e) => {
                         e.stopPropagation();
                         onPreview(doc);
@@ -117,7 +119,19 @@ export function DocsGrid({
                       {t('grid.preview')}
                     </DropdownMenuItem>
                   )}
-                  <DropdownMenuItem 
+                  {onViewVersions && (
+                    <DropdownMenuItem
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onViewVersions(doc);
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <Clock className="mr-2 h-4 w-4" />
+                      {t('grid.versions')}
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
                       onDownload(doc);
@@ -127,7 +141,7 @@ export function DocsGrid({
                     <Download className="mr-2 h-4 w-4" />
                     {t('grid.download')}
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
+                  <DropdownMenuItem
                     onClick={(e) => {
                       e.stopPropagation();
                       onDelete(doc);

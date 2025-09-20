@@ -6,11 +6,10 @@ import { useTranslation } from 'react-i18next';
 
 import { Footer } from '@/components/footer';
 import { LandingNavbar } from '@/components/landing-navbar';
-import { ErrorBoundary } from '@/components/ui/error-boundary';
-
 // Critical above-the-fold components loaded immediately
 import { LandingHeroEnterpriseSection } from '@/components/landing-sections/hero-enterprise';
 import { TrustIndicatorsSection } from '@/components/landing-sections/trust-indicators';
+import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 // Loading skeleton component
 const SectionLoader = ({ height = '400px' }: { height?: string }) => (

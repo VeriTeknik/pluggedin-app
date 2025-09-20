@@ -1,9 +1,10 @@
 'use server';
 
+import { desc, eq } from 'drizzle-orm';
 import { cookies } from 'next/headers';
+
 import { db } from '@/db';
 import { accounts } from '@/db/schema';
-import { desc, eq } from 'drizzle-orm';
 
 export interface LastUsedSSO {
   provider: string;

@@ -5,8 +5,6 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { z } from 'zod';
-import { trackAndSignIn } from './sso-tracker';
-import { LastUsedSSO } from './last-used-sso';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -19,6 +17,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
+
+import { LastUsedSSO } from './last-used-sso';
+import { trackAndSignIn } from './sso-tracker';
 
 // Type for the translation function that supports interpolation
 type TranslationFunction = (key: string, options?: { count?: number }) => string;

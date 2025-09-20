@@ -1,13 +1,13 @@
 'use client';
 
-import { AlertCircle, ChevronDown, ChevronUp, FileText, Loader2, Sparkles, Bot } from 'lucide-react';
+import { AlertCircle,ChevronDown, ChevronUp, FileText, Loader2, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 
 export interface AiSearchAnswerProps {

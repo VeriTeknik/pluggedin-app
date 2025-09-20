@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Mail, Users, Send, FileText, TrendingUp, Clock } from 'lucide-react';
+import { Clock,FileText, Mail, Send, TrendingUp, Users } from 'lucide-react';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { getEmailStats } from './actions';
 
 interface EmailStats {

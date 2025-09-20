@@ -1,9 +1,9 @@
 'use client';
 
-import { Suspense, lazy } from 'react';
+import { lazy,Suspense } from 'react';
 
-import { Skeleton } from '@/components/ui/skeleton';
 import { EditorErrorBoundary } from '@/components/editor-error-boundary';
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Lazy load Monaco Editor to reduce initial bundle size
 const MonacoEditor = lazy(() => 

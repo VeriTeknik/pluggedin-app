@@ -4,10 +4,10 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { passwordResetTokens } from '@/db/schema';
+import { notifyAdminsOfSecurityEvent } from '@/lib/admin-notifications';
 import { createErrorResponse } from '@/lib/api-errors';
 import { generatePasswordResetEmail, sendEmail } from '@/lib/email';
 import { RateLimiters } from '@/lib/rate-limiter';
-import { notifyAdminsOfSecurityEvent } from '@/lib/admin-notifications';
 
 const forgotPasswordSchema = z.object({
   email: z.string().email(),

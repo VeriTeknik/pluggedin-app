@@ -1,7 +1,8 @@
 import crypto from 'crypto';
+import { and, eq, gte, isNull } from 'drizzle-orm';
+
 import { db } from '@/db';
-import { unsubscribeTokensTable, users } from '@/db/schema';
-import { eq, and, gte, isNull } from 'drizzle-orm';
+import { unsubscribeTokensTable } from '@/db/schema';
 
 // Secret for HMAC - should be in environment variable
 const UNSUBSCRIBE_SECRET = process.env.UNSUBSCRIBE_TOKEN_SECRET ||

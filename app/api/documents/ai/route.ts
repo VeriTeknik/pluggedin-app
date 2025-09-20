@@ -8,8 +8,8 @@ import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable, notificationsTable } from '@/db/schema';
 import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
-import { isPathWithinDirectory, isValidFilename, sanitizeUserIdForFileSystem } from '@/lib/security';
 import { sanitizeModerate } from '@/lib/sanitization';
+import { isPathWithinDirectory, isValidFilename, sanitizeUserIdForFileSystem } from '@/lib/security';
 
 // Validation schema for AI document creation
 const createAIDocumentSchema = z.object({

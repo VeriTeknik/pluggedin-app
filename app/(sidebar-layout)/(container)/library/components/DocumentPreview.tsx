@@ -16,8 +16,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useReducer, useMemo, useState, memo, lazy, Suspense } from 'react';
+import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
@@ -31,11 +30,12 @@ import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { useProjects } from '@/hooks/use-projects';
 import { useDocxContent } from '@/hooks/useDocxContent';
 import { getFileLanguage, isDocxFile, isImageFile, isMarkdownFile, isPDFFile, isTextFile, isTextFileByExtension, isValidTextMimeType, ZOOM_LIMITS } from '@/lib/file-utils';
-import { Doc } from '@/types/library';
 import type { DocumentVersion } from '@/types/document-versioning';
+import { Doc } from '@/types/library';
 
 import { AIMetadataPanel } from './AIMetadataPanel';
 import { DocumentVersionHistory } from './DocumentVersionHistory';
+import { UploadMetadataPanel } from './UploadMetadataPanel';
 
 // Lazy load heavy components
 const ReactMarkdown = lazy(() => import('react-markdown'));
@@ -690,17 +690,20 @@ export const DocumentPreview = memo(function DocumentPreview({
               )}
 
               {/* AI Metadata Button */}
-              {doc.source === 'ai_generated' && doc.ai_metadata && (
+              {((doc.source === 'ai_generated' && doc.ai_metadata) ||
+                (doc.source === 'upload' && doc.upload_metadata)) && (
                 <>
                   <Button
                     variant={state.ui.showMetadataPanel ? "secondary" : "ghost"}
                     size="sm"
                     onClick={() => dispatch({ type: 'TOGGLE_METADATA_PANEL' })}
-                    aria-label={state.ui.showMetadataPanel ? "Hide AI metadata" : "Show AI metadata"}
+                    aria-label={state.ui.showMetadataPanel ? "Hide metadata" : "Show metadata"}
                     aria-expanded={state.ui.showMetadataPanel}
                   >
                     <Info className="h-4 w-4" />
-                    <span className="ml-2 text-xs">AI Info</span>
+                    <span className="ml-2 text-xs">
+                      {doc.source === 'ai_generated' ? 'AI Info' : 'Upload Info'}
+                    </span>
                   </Button>
                   <Separator orientation="vertical" className="h-6" />
                 </>
@@ -771,17 +774,21 @@ export const DocumentPreview = memo(function DocumentPreview({
               </ErrorBoundary>
             </div>
 
-            {/* AI Metadata Panel */}
-            {state.ui.showMetadataPanel && doc.source === 'ai_generated' && doc.ai_metadata && (
+            {/* Metadata Panel (AI or Upload) */}
+            {state.ui.showMetadataPanel && (
               <div className="w-96 border-l bg-muted/10 overflow-hidden flex flex-col flex-shrink-0">
                 <ScrollArea className="flex-1">
                   <div className="p-4">
-                    <AIMetadataPanel
-                      metadata={doc.ai_metadata}
-                      documentName={doc.name}
-                      source={doc.source}
-                      version={doc.version}
-                    />
+                    {doc.source === 'ai_generated' && doc.ai_metadata ? (
+                      <AIMetadataPanel
+                        metadata={doc.ai_metadata}
+                        documentName={doc.name}
+                        source={doc.source}
+                        version={doc.version}
+                      />
+                    ) : doc.source === 'upload' && doc.upload_metadata ? (
+                      <UploadMetadataPanel doc={doc} />
+                    ) : null}
                   </div>
                 </ScrollArea>
               </div>

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { sanitizeToPlainText } from '@/lib/sanitization';
 import { z } from 'zod';
 
 import { logAuditEvent } from '@/app/actions/audit-logger';
 import { authenticateApiKey } from '@/app/api/auth';
 import { ragService } from '@/lib/rag-service';
+import { sanitizeToPlainText } from '@/lib/sanitization';
 
 // Input validation schema with security limits
 const RagQuerySchema = z.object({

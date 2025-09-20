@@ -17,15 +17,15 @@ import {
 import Script from 'next/script'; // Import the Script component
 import { Toaster as SonnerToaster } from 'sonner';
 
+import { AnalyticsProvider } from '@/components/analytics/analytics-provider';
+import { WebVitalsReporter } from '@/components/analytics/web-vitals';
 import { I18nProviderWrapper } from '@/components/providers/i18n-provider-wrapper';
 import { NotificationProvider } from '@/components/providers/notification-provider';
 import { SessionProvider } from '@/components/providers/session-provider';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { StructuredData } from '@/components/seo/structured-data';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Toaster } from '@/components/ui/toaster';
-import { WebVitalsReporter } from '@/components/analytics/web-vitals';
-import { StructuredData } from '@/components/seo/structured-data';
-import { AnalyticsProvider } from '@/components/analytics/analytics-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',

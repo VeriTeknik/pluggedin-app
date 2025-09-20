@@ -10,24 +10,22 @@ import {
   Clock,
   Database,
   FileText,
-  Key,
+  Layers,
   Lock,
   Package,
-  Search,
+  Rocket,  Search,
   Settings,
   Share2,
   Shield,
   TrendingUp,
-  Wrench,
-  Layers,
-  Zap,
   Users,
-  Rocket} from 'lucide-react';
+  Wrench,
+  Zap} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnimatedMetric } from '@/components/ui/animated-metric';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 // Define feature data structure

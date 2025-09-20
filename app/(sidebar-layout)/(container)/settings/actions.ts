@@ -4,7 +4,7 @@ import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
 import { db } from '@/db';
-import { accounts, users, userEmailPreferencesTable } from '@/db/schema';
+import { accounts, userEmailPreferencesTable,users } from '@/db/schema';
 
 export interface ConnectedAccount {
   provider: string;

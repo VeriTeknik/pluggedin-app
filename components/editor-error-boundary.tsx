@@ -1,9 +1,9 @@
 'use client';
 
+import { AlertCircle } from 'lucide-react';
 import React, { Component, ReactNode } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
 
 interface Props {
   children: ReactNode;

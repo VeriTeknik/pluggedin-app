@@ -400,6 +400,20 @@
       "when": 1758148695266,
       "tag": "0056_futuristic_wolfsbane",
       "breakpoints": true
+    },
+    {
+      "idx": 57,
+      "version": "7",
+      "when": 1758319044344,
+      "tag": "0057_loud_beyonder",
+      "breakpoints": true
+    },
+    {
+      "idx": 58,
+      "version": "7",
+      "when": 1758382405111,
+      "tag": "0058_minor_shocker",
+      "breakpoints": true
     }
   ]
 }

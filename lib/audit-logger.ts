@@ -2,9 +2,10 @@
  * Audit logging utility for tracking sensitive operations
  */
 
+import { headers } from 'next/headers';
+
 import { db } from '@/db';
 import { auditLogsTable } from '@/db/schema';
-import { headers } from 'next/headers';
 
 export interface AuditLogEntry {
   profileUuid: string;

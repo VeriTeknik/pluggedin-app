@@ -1,6 +1,6 @@
 import { LRUCache } from 'lru-cache';
 
-import { debugLog, debugError } from './debug-log';
+import { debugError,debugLog } from './debug-log';
 
 interface MemoryManagerConfig {
   staleEntryThresholdMs?: number;

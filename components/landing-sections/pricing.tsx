@@ -1,14 +1,13 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, Check, Gift, Heart, Zap, TrendingUp, Users, Layers } from 'lucide-react';
+import { ArrowRight, Check, Heart, Layers,TrendingUp, Users, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { cn } from '@/lib/utils';
 
 const containerVariants = {
   hidden: { opacity: 0 },

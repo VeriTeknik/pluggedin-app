@@ -1,7 +1,7 @@
 'use client';
 
 import debounce from 'lodash/debounce';
-import { use, useCallback, useEffect, useMemo, useState } from 'react';
+import { use, useEffect, useMemo, useState } from 'react';
 import useSWR from 'swr';
 
 import { getCode, updateCode } from '@/app/actions/code';

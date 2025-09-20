@@ -1,4 +1,5 @@
 import Script from 'next/script';
+
 import { PLATFORM_METRICS } from '@/lib/constants/metrics';
 
 interface StructuredDataProps {
