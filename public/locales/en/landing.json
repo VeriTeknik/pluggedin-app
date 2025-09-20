@@ -226,6 +226,22 @@
       "description": "Plugged.in uses the Langchain abstraction layer so you can test your MCP servers with Claude, GPT, Llama, and more—all from a single interface. Instantly compare models, future-proof your workflow, and experience true model-agnostic AI."
     }
   },
+  "opensource": {
+    "title": "Proudly Open Source",
+    "subtitle": "Built by the community, for the community. Contribute and shape the future of MCP.",
+    "badge": "Open Source",
+    "viewOnGithub": "View on GitHub",
+    "followOrg": "Follow VeriTeknik",
+    "contribute": "Join our open-source community and help us build the future of AI integration",
+    "repos": {
+      "app": {
+        "description": "The main application - Next.js web platform for MCP management"
+      },
+      "proxy": {
+        "description": "Universal proxy server for Model Context Protocol"
+      }
+    }
+  },
   "community": {
     "title": "Join the Global MCP Community",
     "subtitle": "Connect with thousands of developers building the future of AI",

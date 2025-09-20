@@ -278,6 +278,22 @@
     "hierarchyPlaceholder": "Koleksiyon hiyerarşisinin görsel temsili",
     "imagePlaceholder": "Resim: Koleksiyon/Çalışma Alanı Mockup"
   },
+  "opensource": {
+    "title": "Gururla Açık Kaynak",
+    "subtitle": "Topluluk tarafından, topluluk için geliştirildi. Katkıda bulunun ve MCP'nin geleceğini şekillendirin.",
+    "badge": "Açık Kaynak",
+    "viewOnGithub": "GitHub'da Görüntüle",
+    "followOrg": "VeriTeknik'i Takip Et",
+    "contribute": "Açık kaynak topluluğumuza katılın ve AI entegrasyonunun geleceğini birlikte inşa edelim",
+    "repos": {
+      "app": {
+        "description": "Ana uygulama - MCP yönetimi için Next.js web platformu"
+      },
+      "proxy": {
+        "description": "Model Bağlam Protokolü için evrensel proxy sunucusu"
+      }
+    }
+  },
   "sharing": {
     "title": "Topluluk Paylaşımı",
     "subtitle": "Başkalarıyla paylaşın",

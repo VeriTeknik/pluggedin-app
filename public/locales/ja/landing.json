@@ -222,6 +222,22 @@
     "compliance": "定期的なセキュリティ監査を伴うSOC2 Type II準拠インフラストラクチャ",
     "action": "セキュリティ詳細を表示"
   },
+  "opensource": {
+    "title": "誇り高きオープンソース",
+    "subtitle": "コミュニティにより、コミュニティのために構築。貢献してMCPの未来を形作りましょう。",
+    "badge": "オープンソース",
+    "viewOnGithub": "GitHubで表示",
+    "followOrg": "VeriTeknikをフォロー",
+    "contribute": "オープンソースコミュニティに参加し、AI統合の未来を一緒に構築しましょう",
+    "repos": {
+      "app": {
+        "description": "メインアプリケーション - MCP管理用Next.js Webプラットフォーム"
+      },
+      "proxy": {
+        "description": "モデルコンテキストプロトコル用ユニバーサルプロキシサーバー"
+      }
+    }
+  },
   "developers": {
     "title": "開発者のために構築",
     "subtitle": "AI機能を拡張する強力なツールとAPI",

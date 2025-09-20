@@ -22,6 +22,14 @@ const SectionLoader = ({ height = '400px' }: { height?: string }) => (
 );
 
 // Dynamically imported sections with code splitting
+const LandingOpenSourceSection = dynamic(
+  () => import('@/components/landing-sections/opensource').then(mod => ({ default: mod.LandingOpenSourceSection })),
+  {
+    loading: () => <SectionLoader />,
+    ssr: true
+  }
+);
+
 const LandingWhyPluggedin = dynamic(
   () => import('@/components/landing-sections/why-pluggedin').then(mod => ({ default: mod.LandingWhyPluggedin })),
   {
@@ -150,6 +158,13 @@ export default function Home() {
         <ErrorBoundary sectionName="Trust Indicators">
           <TrustIndicatorsSection />
         </ErrorBoundary>
+
+        {/* Open Source Section */}
+        <Suspense fallback={<SectionLoader />}>
+          <ErrorBoundary sectionName="Open Source">
+            <LandingOpenSourceSection />
+          </ErrorBoundary>
+        </Suspense>
 
         {/* Progressively loaded sections */}
         <Suspense fallback={<SectionLoader />}>

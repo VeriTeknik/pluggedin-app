@@ -220,6 +220,22 @@
     "imagePlaceholder": "图像：演练场/调试模型",
     "langchainCallout": "<0>测试任何模型：</0> 感谢我们的 <1>Langchain 抽象</1>，您可以在单一演练场中使用 Claude、GPT、Llama 等测试您的 MCP 服务器。即时比较模型，体验真正的模型无关 AI。"
   },
+  "opensource": {
+    "title": "自豪地开源",
+    "subtitle": "由社区构建，为社区服务。贡献并塑造 MCP 的未来。",
+    "badge": "开源",
+    "viewOnGithub": "在 GitHub 上查看",
+    "followOrg": "关注 VeriTeknik",
+    "contribute": "加入我们的开源社区，共同构建 AI 集成的未来",
+    "repos": {
+      "app": {
+        "description": "主应用程序 - 用于 MCP 管理的 Next.js Web 平台"
+      },
+      "proxy": {
+        "description": "模型上下文协议的通用代理服务器"
+      }
+    }
+  },
   "collections": {
     "title": "智能集合和版本控制",
     "subtitle": "即将推出：组织、版本化和共享您的 MCP 服务器集合",

@@ -221,6 +221,22 @@
     "description": "Deel uw MCP-servers en tools met de community.",
     "action": "Begin met delen"
   },
+  "opensource": {
+    "title": "Met Trots Open Source",
+    "subtitle": "Gebouwd door de gemeenschap, voor de gemeenschap. Draag bij en vorm de toekomst van MCP.",
+    "badge": "Open Source",
+    "viewOnGithub": "Bekijk op GitHub",
+    "followOrg": "Volg VeriTeknik",
+    "contribute": "Sluit je aan bij onze open-source gemeenschap en help ons de toekomst van AI-integratie te bouwen",
+    "repos": {
+      "app": {
+        "description": "De hoofdapplicatie - Next.js webplatform voor MCP-beheer"
+      },
+      "proxy": {
+        "description": "Universele proxyserver voor Model Context Protocol"
+      }
+    }
+  },
   "security": {
     "title": "Enterprise-grade beveiliging",
     "subtitle": "Uw AI-infrastructuur, beschermd op elke laag",
