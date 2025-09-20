@@ -574,6 +574,7 @@ export async function listDocumentVersions(
   return versions.map(v => ({
     versionNumber: v.version_number,
     filePath: v.file_path || '',
+    fileWritten: !!v.file_path, // File is considered written if path exists
     ragDocumentId: v.rag_document_id || undefined,
     createdAt: v.created_at,
     createdByModel: v.created_by_model as any,
@@ -761,9 +762,10 @@ export async function migrateExistingVersions(userId: string): Promise<{
   migrated: number;
   failed: number;
 }> {
+  // Pre-validate inputs outside try for error handling
+  const validatedUserId = validateUserId(userId);
+
   try {
-    // Pre-validate inputs
-    const validatedUserId = validateUserId(userId);
     // Get all versions that don't have file_path
     const versionsToMigrate = await db
       .select()
