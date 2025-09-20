@@ -655,37 +655,50 @@ export async function getEmailTemplate(id: string) {
   try {
     await checkAdminAuth();
 
-    const template = await db.query.emailTemplatesTable.findFirst({
-      where: and(
-        eq(emailTemplatesTable.id, id),
-        eq(emailTemplatesTable.isActive, true)
-      ),
-      with: {
-        createdBy: {
-          columns: {
-            email: true,
-          },
-        },
-        updatedBy: {
-          columns: {
-            email: true,
-          },
-        },
-      },
-    });
+    // Direct query without joins to avoid any potential issues
+    const templates = await db
+      .select()
+      .from(emailTemplatesTable)
+      .where(
+        and(
+          eq(emailTemplatesTable.id, id),
+          eq(emailTemplatesTable.isActive, true)
+        )
+      )
+      .limit(1);
 
-    if (!template) {
+    if (!templates || templates.length === 0) {
       return {
         success: false,
         error: 'Template not found',
       };
     }
 
+    const template = templates[0];
+
+    // Get user email separately if needed
+    let createdByEmail = null;
+    if (template.createdBy) {
+      const creator = await db.query.users.findFirst({
+        where: eq(users.id, template.createdBy),
+        columns: { email: true },
+      });
+      createdByEmail = creator?.email;
+    }
+
+    // Format the response to match expected structure
+    const formattedTemplate = {
+      ...template,
+      createdBy: createdByEmail ? { email: createdByEmail } : undefined,
+      updatedBy: createdByEmail ? { email: createdByEmail } : undefined,
+    };
+
     return {
       success: true,
-      data: template,
+      data: formattedTemplate,
     };
   } catch (error) {
+    console.error('getEmailTemplate error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch template',
@@ -764,23 +777,27 @@ export async function getEmailTemplates() {
   try {
     await checkAdminAuth();
 
-    // Get all active templates from database
-    const templates = await db.query.emailTemplatesTable.findMany({
-      where: eq(emailTemplatesTable.isActive, true),
-      orderBy: [desc(emailTemplatesTable.createdAt)],
-      with: {
-        createdBy: {
-          columns: {
-            email: true,
-          },
-        },
-        updatedBy: {
-          columns: {
-            email: true,
-          },
-        },
-      },
-    });
+    // Use a simpler query without relations to avoid loading issues
+    const templates = await db
+      .select({
+        id: emailTemplatesTable.id,
+        name: emailTemplatesTable.name,
+        subject: emailTemplatesTable.subject,
+        content: emailTemplatesTable.content,
+        category: emailTemplatesTable.category,
+        variables: emailTemplatesTable.variables,
+        isActive: emailTemplatesTable.isActive,
+        version: emailTemplatesTable.version,
+        parentId: emailTemplatesTable.parentId,
+        metadata: emailTemplatesTable.metadata,
+        createdAt: emailTemplatesTable.createdAt,
+        updatedAt: emailTemplatesTable.updatedAt,
+        createdBy: emailTemplatesTable.createdBy,
+        updatedBy: emailTemplatesTable.updatedBy,
+      })
+      .from(emailTemplatesTable)
+      .where(eq(emailTemplatesTable.isActive, true))
+      .orderBy(desc(emailTemplatesTable.createdAt));
 
     return {
       success: true,
@@ -799,27 +816,24 @@ export async function getTemplateVersions(templateId: string) {
   try {
     await checkAdminAuth();
 
-    // Get all versions of a template
-    const versions = await db.query.emailTemplatesTable.findMany({
-      where: or(
-        eq(emailTemplatesTable.id, templateId),
-        eq(emailTemplatesTable.parentId, templateId)
-      ),
-      orderBy: [desc(emailTemplatesTable.version)],
-      with: {
-        updatedBy: {
-          columns: {
-            email: true,
-          },
-        },
-      },
-    });
+    // Simple query without joins
+    const versions = await db
+      .select()
+      .from(emailTemplatesTable)
+      .where(
+        or(
+          eq(emailTemplatesTable.id, templateId),
+          eq(emailTemplatesTable.parentId, templateId)
+        )
+      )
+      .orderBy(desc(emailTemplatesTable.version));
 
     return {
       success: true,
       data: versions,
     };
   } catch (error) {
+    console.error('getTemplateVersions error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch template versions',

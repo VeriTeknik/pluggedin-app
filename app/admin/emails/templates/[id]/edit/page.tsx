@@ -15,7 +15,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
 
-import { LazyMonacoEditor } from '@/components/lazy-monaco-editor';
+// import { LazyMonacoEditor } from '@/components/lazy-monaco-editor';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -91,17 +91,12 @@ export default function EmailTemplateEditPage() {
     username: 'johndoe',
   });
 
-  useEffect(() => {
-    if (templateId && templateId !== 'new') {
-      loadTemplate();
-    } else {
-      setLoading(false);
-    }
-  }, [templateId]);
-
-  const loadTemplate = async () => {
+  const loadTemplate = useCallback(async () => {
+    console.log('Loading template:', templateId);
     try {
       const result = await getEmailTemplate(templateId);
+      console.log('Template result:', result);
+
       if (result.success && result.data) {
         setTemplate(result.data as unknown as EmailTemplate);
         setName(result.data.name);
@@ -109,23 +104,34 @@ export default function EmailTemplateEditPage() {
         setContent(result.data.content);
         setCategory(result.data.category);
       } else {
+        console.error('Failed to load template:', result.error);
         toast.error(result.error || 'Failed to load template');
         router.push('/admin/emails/templates');
       }
 
       // Load version history
       const versionsResult = await getTemplateVersions(templateId);
+      console.log('Versions result:', versionsResult);
+
       if (versionsResult.success && versionsResult.data) {
         setVersions(versionsResult.data as unknown as TemplateVersion[]);
       }
     } catch (error) {
-      console.error('Failed to load template:', error);
+      console.error('Failed to load template - caught error:', error);
       toast.error('Failed to load template');
       router.push('/admin/emails/templates');
     } finally {
       setLoading(false);
     }
-  };
+  }, [templateId, router]);
+
+  useEffect(() => {
+    if (templateId && templateId !== 'new') {
+      loadTemplate();
+    } else {
+      setLoading(false);
+    }
+  }, [templateId, loadTemplate]);
 
   const extractVariables = useCallback((text: string): string[] => {
     const regex = /\{\{(\w+)\}\}/g;
@@ -402,19 +408,11 @@ export default function EmailTemplateEditPage() {
         <CardContent>
           {previewMode === 'edit' ? (
             <div className="min-h-[400px]">
-              <LazyMonacoEditor
+              <textarea
                 value={content}
-                onChange={(value) => setContent(value || '')}
-                language="markdown"
-                theme="vs-dark"
-                height="400px"
-                options={{
-                  minimap: { enabled: false },
-                  fontSize: 14,
-                  lineNumbers: 'on',
-                  wordWrap: 'on',
-                  automaticLayout: true,
-                }}
+                onChange={(e) => setContent(e.target.value)}
+                className="w-full h-[400px] p-4 font-mono text-sm bg-background border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Enter your email content in Markdown format..."
               />
             </div>
           ) : (
