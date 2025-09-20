@@ -1,20 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { ragService } from '@/lib/rag-service';
+import { getAuthSession } from '@/lib/auth';
+import { authenticateApiKey } from '@/app/api/auth';
+import { ErrorResponses } from '@/lib/api-errors';
 
 export async function GET(request: NextRequest) {
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('user_id');
+    // Check authentication - support both session and API key
+    let authenticatedUserId: string;
 
-    if (!userId) {
+    // First try API key authentication
+    const authHeader = request.headers.get('authorization');
+    if (authHeader?.startsWith('Bearer ')) {
+      const apiKeyResult = await authenticateApiKey(request);
+      if (apiKeyResult.error) {
+        // If API key auth fails, try session auth
+        const session = await getAuthSession();
+        if (!session?.user?.id) {
+          return ErrorResponses.unauthorized();
+        }
+        authenticatedUserId = session.user.id;
+      } else {
+        authenticatedUserId = apiKeyResult.user.id;
+      }
+    } else {
+      // No API key, try session auth
+      const session = await getAuthSession();
+      if (!session?.user?.id) {
+        return ErrorResponses.unauthorized();
+      }
+      authenticatedUserId = session.user.id;
+    }
+
+    const searchParams = request.nextUrl.searchParams;
+    const requestedUserId = searchParams.get('user_id');
+
+    if (!requestedUserId) {
       return NextResponse.json(
         { error: 'user_id parameter is required' },
         { status: 400 }
       );
     }
 
-    // For now, we'll proxy to the backend RAG server if available,
+    // CRITICAL: Verify that the authenticated user can only access their own stats
+    if (requestedUserId !== authenticatedUserId) {
+      return ErrorResponses.forbidden();
+    }
+
+    const userId = authenticatedUserId; // Use authenticated user ID
+
+    // Proxy to the backend RAG server if available,
     // or return estimated stats based on document count
     const ragApiUrl = process.env.RAG_API_URL;
 

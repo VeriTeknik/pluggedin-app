@@ -1,11 +1,12 @@
 import { compare, hash } from 'bcrypt';
 import { eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { RateLimiters } from '@/lib/rate-limiter';
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(8),
@@ -16,7 +17,17 @@ const passwordSchema = z.object({
   path: ['confirmPassword'],
 });
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
+  // Apply rate limiting to prevent brute force attacks
+  const rateLimitResult = await RateLimiters.sensitive(req);
+  if (!rateLimitResult.allowed) {
+    return new NextResponse('Too many password change attempts. Please try again later.', {
+      status: 429,
+      headers: {
+        'Retry-After': String(Math.ceil((rateLimitResult.reset - Date.now()) / 1000)),
+      },
+    });
+  }
   try {
     const session = await getAuthSession();
     if (!session?.user) {
@@ -35,14 +46,22 @@ export async function POST(req: Request) {
       return new NextResponse('Password change not allowed for this account type', { status: 400 });
     }
 
-    // Verify current password
+    // Verify current password with timing-safe comparison
     const isValid = await compare(currentPassword, user.password);
     if (!isValid) {
+      // Add delay to prevent timing attacks
+      await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
       return new NextResponse('Current password is incorrect', { status: 400 });
     }
 
-    // Hash new password
-    const hashedPassword = await hash(newPassword, 12);
+    // Check if new password is same as current
+    const isSamePassword = await compare(newPassword, user.password);
+    if (isSamePassword) {
+      return new NextResponse('New password must be different from current password', { status: 400 });
+    }
+
+    // Hash new password with stronger cost factor
+    const hashedPassword = await hash(newPassword, 14); // Increased from 12 to 14 for better security
 
     // Update password
     await db

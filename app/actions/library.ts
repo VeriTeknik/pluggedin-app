@@ -461,10 +461,10 @@ async function validateProjectStorageLimit(
     throw new Error(storageResult.error || 'Failed to check workspace storage');
   }
 
-  const newTotalSize = storageResult.usage + newFileSize;
-  
+  const newTotalSize = storageResult.totalUsage + newFileSize;
+
   if (newTotalSize > WORKSPACE_STORAGE_LIMIT) {
-    const usedMB = Math.round(storageResult.usage / (1024 * 1024) * 100) / 100;
+    const usedMB = Math.round(storageResult.totalUsage / (1024 * 1024) * 100) / 100;
     const limitMB = Math.round(WORKSPACE_STORAGE_LIMIT / (1024 * 1024));
     const fileMB = Math.round(newFileSize / (1024 * 1024) * 100) / 100;
     
