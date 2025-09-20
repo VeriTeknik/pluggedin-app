@@ -44,6 +44,17 @@ export interface UploadStatusResponse {
   error?: string;
 }
 
+export interface RagStorageStatsResponse {
+  success: boolean;
+  documentsCount?: number;
+  totalChunks?: number;
+  estimatedStorageMb?: number;
+  vectorsCount?: number;
+  embeddingDimension?: number;
+  error?: string;
+  isEstimate?: boolean;
+}
+
 export interface RAGDocumentRequest {
   id: string;
   title: string;
@@ -60,6 +71,8 @@ export interface RAGDocumentRequest {
 
 class RagService {
   private readonly ragApiUrl: string;
+  private storageStatsCache: Map<string, { data: RagStorageStatsResponse; expiry: number }>;
+  private readonly CACHE_TTL = 60000; // 1 minute cache
 
   constructor() {
     const ragUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
@@ -75,6 +88,9 @@ class RagService {
       // Use the default if validation fails
       this.ragApiUrl = 'https://api.plugged.in';
     }
+
+    // Initialize cache
+    this.storageStatsCache = new Map();
   }
 
   private isConfigured(): boolean {
@@ -561,6 +577,104 @@ class RagService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to check upload status',
+      };
+    }
+  }
+
+  /**
+   * Get storage statistics for RAG documents with caching
+   */
+  async getStorageStats(ragIdentifier: string): Promise<RagStorageStatsResponse> {
+    try {
+      if (!this.isConfigured()) {
+        return {
+          success: false,
+          error: 'RAG_API_URL not configured',
+        };
+      }
+
+      // Check cache first
+      const cacheKey = `storage-stats-${ragIdentifier}`;
+      const cached = this.storageStatsCache.get(cacheKey);
+
+      if (cached && Date.now() < cached.expiry) {
+        return cached.data;
+      }
+
+      // Try to fetch from the backend storage-stats endpoint
+      try {
+        const response = await fetch(`${this.ragApiUrl}/rag/storage-stats?user_id=${ragIdentifier}`, {
+          method: 'GET',
+          headers: {
+            'accept': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          const result = {
+            success: true,
+            documentsCount: data.documents_count || 0,
+            totalChunks: data.total_chunks || 0,
+            estimatedStorageMb: data.estimated_storage_mb || 0,
+            vectorsCount: data.vectors_count || 0,
+            embeddingDimension: data.embedding_dimension || 1536,
+            isEstimate: false,
+          };
+
+          // Cache successful result
+          this.storageStatsCache.set(cacheKey, {
+            data: result,
+            expiry: Date.now() + this.CACHE_TTL
+          });
+
+          return result;
+        }
+
+        console.log('Backend storage-stats endpoint returned:', response.status);
+      } catch (error) {
+        console.log('Failed to fetch from backend, using fallback:', error);
+      }
+
+      // Fallback: try to get document count as a simple approach
+      const docsResponse = await this.getDocuments(ragIdentifier);
+      if (docsResponse.success && docsResponse.documents) {
+        const documentsCount = docsResponse.documents.length;
+
+        if (documentsCount > 0) {
+          // Estimate storage based on average document size
+          const avgChunksPerDoc = 25; // Average chunks per document
+          const avgBytesPerVector = 1536 * 4; // 1536 dimensions * 4 bytes per float32
+          const estimatedStorageMb = (documentsCount * avgChunksPerDoc * avgBytesPerVector) / (1024 * 1024);
+
+          return {
+            success: true,
+            documentsCount,
+            totalChunks: documentsCount * avgChunksPerDoc,
+            estimatedStorageMb: Math.round(estimatedStorageMb * 10) / 10,
+            vectorsCount: documentsCount * avgChunksPerDoc,
+            embeddingDimension: 1536,
+            isEstimate: true,
+          };
+        }
+      }
+
+      // No documents found
+      return {
+        success: true,
+        documentsCount: 0,
+        totalChunks: 0,
+        estimatedStorageMb: 0,
+        vectorsCount: 0,
+        embeddingDimension: 1536,
+        isEstimate: true,
+      };
+    } catch (error) {
+      console.error('Error getting storage stats:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get storage statistics',
       };
     }
   }

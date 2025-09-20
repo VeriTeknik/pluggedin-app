@@ -52,7 +52,7 @@ const columnHelper = createColumnHelper<Doc>();
 
 export default function LibraryContent() {
   const { t } = useTranslation('library');
-  const { docs, isLoading, storageUsage, uploadDoc, removeDoc, downloadDoc } = useLibrary();
+  const { docs, isLoading, storageUsage, fileStorage, ragStorage, uploadDoc, removeDoc, downloadDoc } = useLibrary();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
@@ -519,6 +519,8 @@ export default function LibraryContent() {
         <DocsStats
           totalDocs={docs.length}
           totalSize={totalSize}
+          fileStorage={fileStorage}
+          ragStorage={ragStorage}
           recentUploads={recentUploads}
           formatFileSize={formatFileSize}
         />

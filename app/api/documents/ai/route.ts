@@ -260,6 +260,10 @@ export async function POST(request: NextRequest) {
         ai_metadata: {
           model: validatedData.metadata.model,
           context: validatedData.metadata.context,
+          prompt: validatedData.metadata.prompt,
+          conversationContext: validatedData.metadata.conversationContext,
+          sourceDocuments: validatedData.metadata.sourceDocuments,
+          generationParams: validatedData.metadata.generationParams,
           timestamp: timestamp.toISOString(),
           sessionId: request.headers.get('x-session-id') || undefined,
         },
