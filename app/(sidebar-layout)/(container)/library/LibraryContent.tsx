@@ -91,15 +91,24 @@ export default function LibraryContent() {
   } = useKnowledgeBaseSearch();
 
   // Upload form state
-  const [uploadForm, setUploadForm] = useState({
+  const [uploadForm, setUploadForm] = useState<{
+    name: string;
+    description: string;
+    tags: string;
+    file: File | null;
+    purpose?: string;
+    relatedTo?: string;
+    notes?: string;
+    uploadMethod?: 'drag-drop' | 'file-picker';
+  }>({
     name: '',
     description: '',
     tags: '',
-    file: null as File | null,
+    file: null,
     purpose: '',
     relatedTo: '',
     notes: '',
-    uploadMethod: undefined as 'drag-drop' | 'file-picker' | undefined,
+    uploadMethod: undefined,
   });
 
   const formatFileSize = useCallback((bytes: number) => {
