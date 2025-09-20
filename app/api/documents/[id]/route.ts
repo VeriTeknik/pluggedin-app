@@ -528,7 +528,7 @@ export async function PATCH(
         operation: validatedData.operation,
         newVersion: versionInfo.versionNumber,
         fileWritten: versionInfo.fileWritten,
-        ragUpdated: newRagDocumentId !== existingDoc.rag_document_id,
+        ragUpdated: versionInfo.ragDocumentId !== existingDoc.rag_document_id,
       }
     });
 
