@@ -1,131 +1,252 @@
-# plugged.in App
+# plugged.in 🔌
 
 <div align="center">
-  <img src="https://plugged.in/_next/image?url=%2Fpluggedin-wl.png&w=256&q=75" alt="plugged.in Logo" width="256" height="75">
-  <h3>The Crossroads for AI Data Exchanges</h3>
-  <p>A unified management interface for all your MCP servers with RAG capabilities</p>
 
-  [![Version](https://img.shields.io/badge/version-2.12.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
-  [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
-  [![License](https://img.shields.io/github/license/VeriTeknik/pluggedin-app?style=for-the-badge)](LICENSE)
-  [![Next.js](https://img.shields.io/badge/Next.js-15+-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
-  [![MCP](https://img.shields.io/badge/MCP-Compatible-green?style=for-the-badge)](https://modelcontextprotocol.io/)
+![plugged.in Logo](https://plugged.in/_next/image?url=%2Fpluggedin-wl.png&w=256&q=75)
+
+**Turn your AI conversations into permanent organizational memory**
+
+[![Version](https://img.shields.io/badge/version-2.12.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+[![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
+[![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://ghcr.io/veriteknik/pluggedin-app)
+
+[🚀 Get Started](#-quick-start) • [📚 Documentation](#-documentation) • [🌟 Features](#-key-features) • [💬 Community](#-community--support)
+
 </div>
 
-## 📋 Overview
+---
 
-The plugged.in App is a comprehensive web application for managing Model Context Protocol (MCP) servers with integrated RAG (Retrieval-Augmented Generation) capabilities. It works in conjunction with the [plugged.in MCP Proxy](https://github.com/VeriTeknik/pluggedin-mcp) to provide a unified interface for discovering, configuring, and utilizing AI tools across multiple MCP servers while leveraging your own documents as context.
+## 🎯 The Problem We Solve
 
-This application enables seamless integration with any MCP client (Claude, Cline, Cursor, etc.) while providing advanced management capabilities, document-based knowledge augmentation, and real-time notifications through an intuitive web interface.
+Every day, you have brilliant conversations with AI - strategy sessions with GPT-4, code reviews with Claude, analysis with Gemini. But when you close that chat window, all that knowledge vanishes. **This is the "AI knowledge evaporation" problem.**
 
-> ⭐ **If you find this project useful, please consider giving it a star on GitHub!** It helps us reach more developers and motivates us to keep improving.
+## 💡 The Solution
 
-## ✨ Key Features
+**plugged.in is the world's first AI Content Management System (AI-CMS)** - a platform that transforms ephemeral AI interactions into persistent, versioned, and searchable organizational knowledge.
 
-### 🛡️ New in v2.12.0 - Enhanced Security & Performance
-- **Redis-Based Rate Limiting**: Advanced rate limiting with Redis and intelligent in-memory fallback for improved DDoS protection
-- **LRU Cache Implementation**: Efficient memory-managed caching with automatic eviction of least recently used items
-- **Enhanced Password Security**: Bcrypt cost factor 14 for stronger password hashing (16,384 iterations)
-- **Dynamic CSP Nonces**: Cryptographically secure Content Security Policy nonces for XSS prevention
-- **Dual Storage Display**: Library page now shows both file storage and RAG vector storage usage
-- **Security Headers**: Comprehensive security headers including HSTS, X-Frame-Options, and X-Content-Type-Options
-- **Memory Optimization**: Configurable cache TTL and automatic cleanup to prevent memory leaks
-- **Build Performance**: Replaced dynamic imports with static imports for faster build times
+Think of it as **"Git for AI-generated content"** meets **"WordPress for AI interactions"**.
 
-### 🎯 New in v2.7.0 (Registry v2)
-- **MCP Registry Integration**: Modified fork of the official [MCP Registry](https://github.com/modelcontextprotocol/registry) - users can now claim MCP servers with GitHub credentials
-- **Completely Rewritten Discovery Process**: Enhanced server detection and management with improved performance and reliability
-- **Full Streamable HTTP Support**: Complete implementation of Streamable HTTP transport protocol
-- **OAuth for MCP Servers**: OAuth authentication handled by plugged.in with state-of-the-art encryption - no client-side authentication needed anymore
-- **Trending Servers with Analytics**: Every MCP tool call via pluggedin-mcp is tracked and displayed in trending servers
-- **Bidirectional Notifications**: MCP proxy can now send, receive, mark as read, and delete notifications
-- **Smart Server Wizard**: Multi-step wizard with GitHub verification, environment detection, and registry submission
-- **Enhanced Security**: Comprehensive input validation with Zod schemas and XSS/SSRF protection
-- **Automatic Tool Name Prefixing**: Slug-based tool prefixing prevents name collisions in MCP clients like Claude Code
+---
 
-### 🚀 Core Capabilities
-- **Multi-Workspace Support**: Switch between different sets of MCP configurations to prevent context pollution
-- **Interactive Playground**: Test and experiment with your MCP tools directly in the browser
-- **Tool Management**: Discover, organize, and manage AI tools from multiple sources
-- **Resource & Template Discovery**: View available resources and resource templates for connected MCP servers
-- **Custom Instructions**: Add server-specific instructions that can be used as MCP prompts
-- **Prompt Management**: Discover and manage prompts from connected MCP servers
+## ✨ What Makes plugged.in Special
 
-### 🔐 New in v2.2.0
-- **End-to-End Encryption**: All sensitive MCP server configuration data (commands, arguments, environment variables, URLs) is now encrypted at rest using AES-256-GCM
-- **Per-Profile Encryption**: Each profile has its own derived encryption key, ensuring complete isolation between workspaces
-- **Secure Server Sharing**: Shared servers use sanitized templates that don't expose sensitive credentials
-- **Transparent Operation**: Encryption and decryption happen automatically without affecting the user experience
+### 🧠 **AI Memory That Persists**
+Your AI conversations become permanent assets. Every document is versioned, attributed, and searchable.
 
-### 🤖 New in v2.8.0 - AI Document Exchange (RAG v2)
-- **AI-Generated Documents**: MCP servers can create and manage documents in your library with full attribution
-- **Document Preview Modal**: View PDFs, images, and text files directly in the browser with zoom controls
-- **Enhanced Document Viewer**: Navigate between documents, fullscreen mode, and metadata display
-- **Multi-Format Support**: Native rendering for PDFs, images, markdown, and various code file formats
-- **Model Attribution Tracking**: Complete history of which AI models created or updated each document
-- **Advanced Document Search**: Semantic search with filtering by AI model, date, tags, and source type
-- **Document Versioning**: Track changes and maintain version history for AI-generated content
-- **Multi-Source Support**: Documents from uploads, AI generation, or API integrations
+### 🤝 **Multi-Model Collaboration**
+Claude writes v1, GPT-4 adds technical specs in v2, Gemini refines in v3 - all tracked and attributed.
 
-### 📚 Features from v2.1.0
-- **Document Library with RAG**: Upload and manage documents that serve as knowledge context for AI interactions
-- **Real-Time Notifications**: Get instant notifications for MCP activities with optional email delivery
-- **Progressive Server Initialization**: Faster startup with resilient server connections
-- **Enhanced Security**: Industry-standard sanitization and secure environment variable handling
-- **Improved UI/UX**: Redesigned playground, better responsive design, and theme customization
+### 🔌 **Universal MCP Integration**
+Works with 1,500+ MCP servers. Connect any tool, any AI, any workflow - all through one interface.
 
-### 🔧 Advanced Features
-- **Server Notes**: Add custom notes to each configured MCP server
-- **Extensive Logging**: Detailed logging capabilities for MCP interactions in the Playground
-- **Expanded Discovery**: Search for MCP servers across GitHub, Smithery, and npmjs.com
-- **Email Verification**: Secure account registration with email verification
-- **Self-Hostable**: Run your own instance with full control over your data
+### 🔒 **Enterprise-Grade Security**
+End-to-end encryption, OAuth 2.1, rate limiting, and sandboxed execution for your peace of mind.
 
-## 🚀 Quick Start with Docker
+---
 
-The easiest way to get started with the plugged.in App is using Docker Compose:
+## 📊 Real Platform Statistics
+
+```yaml
+Documents Managed: 90+ (72% AI-generated)
+Integrated MCP Servers: 1,568
+Active Versioning: Documents with up to 4 iterations
+Model Attributions: 17 different AI models tracked
+Search Performance: Sub-second RAG queries
+Security: AES-256-GCM encryption, Redis rate limiting
+```
+
+---
+
+## 🚀 Quick Start
+
+### Docker (Recommended - 2 minutes)
 
 ```bash
-# Clone the repository
+# Clone and setup
 git clone https://github.com/VeriTeknik/pluggedin-app.git
 cd pluggedin-app
-
-# Set up environment variables
 cp .env.example .env
-# Edit .env with your specific configuration
 
-# Start the application with Docker Compose
+# Start with Docker
 docker compose up --build -d
+
+# Visit http://localhost:12005
 ```
 
-Then open http://localhost:12005 in your browser to access the plugged.in App.
+### Cloud Version
 
-### 🔄 Upgrading to Latest Version
+Visit [plugged.in](https://plugged.in) for instant access - no installation required.
 
-For existing installations upgrading to v2.12.0:
+---
+
+## 🌟 Key Features
+
+### 📚 Document Management & Versioning
+- **Version Control**: Track every change with Git-style history
+- **Model Attribution**: Know which AI contributed what
+- **Smart Search**: Semantic search across all documents
+- **Multiple Formats**: PDF, Markdown, Code, Images, and more
+- **Dual Storage Display**: View both file and RAG vector storage usage
+
+### 🔧 MCP Server Hub
+- **1,500+ Integrations**: Connect to any MCP-compatible tool
+- **Auto-Discovery**: Find and configure servers from GitHub, npm, Smithery
+- **Registry Integration**: Claim and manage servers with GitHub credentials
+- **Unified Interface**: One API key, all your tools
+- **Tool Prefixing**: Automatic namespace management prevents conflicts
+- **OAuth Support**: Server-side OAuth handling for MCP servers
+
+### 🎮 Interactive Playground
+- **Test Any Model**: Claude, GPT-4, Gemini, and more
+- **Live Debugging**: See real-time MCP interactions
+- **RAG Integration**: Use your documents as context
+- **Custom Instructions**: Per-server configuration
+- **Extensive Logging**: Detailed debugging capabilities
+
+### 🔔 Real-Time Intelligence
+- **Activity Tracking**: Monitor all MCP operations
+- **Email Notifications**: Stay informed about important events
+- **Trending Analytics**: See what tools are popular
+- **Audit Logs**: Complete activity history
+- **Bidirectional Notifications**: Send, receive, mark as read
+
+### 🔐 Security First
+- **End-to-End Encryption**: AES-256-GCM for all sensitive data
+- **Per-Profile Encryption**: Isolated encryption keys per workspace
+- **OAuth 2.1**: Modern authentication flows
+- **Sandboxed Execution**: Firejail isolation on Linux
+- **Redis Rate Limiting**: Advanced DDoS protection with fallback
+- **LRU Cache**: Memory-efficient caching with automatic eviction
+- **Enhanced Password Security**: Bcrypt cost factor 14 (16,384 iterations)
+- **Dynamic CSP Nonces**: Cryptographically secure Content Security Policy
+- **Security Headers**: HSTS, X-Frame-Options, X-Content-Type-Options
+
+---
+
+## 🏗️ Architecture
+
+```mermaid
+graph TB
+    subgraph "AI Clients"
+        C1[Claude Desktop]
+        C2[Cursor IDE]
+        C3[Cline]
+    end
+
+    subgraph "plugged.in Platform"
+        PROXY[MCP Proxy]
+        APP[Web Interface]
+        DB[(PostgreSQL)]
+        REDIS[(Redis Cache)]
+        RAG[RAG Engine]
+        DOC[Document Store]
+    end
+
+    subgraph "MCP Servers (1,500+)"
+        S1[GitHub]
+        S2[Slack]
+        S3[Files]
+        S4[Custom Tools]
+    end
+
+    C1 & C2 & C3 --> PROXY
+    PROXY <--> APP
+    APP <--> DB
+    APP <--> REDIS
+    APP <--> RAG
+    RAG <--> DOC
+    PROXY <--> S1 & S2 & S3 & S4
+```
+
+---
+
+## 📚 Documentation
+
+Visit our comprehensive documentation at [docs.plugged.in](https://docs.plugged.in)
+
+### For Users
+- [Getting Started](https://docs.plugged.in/introduction) - Platform overview and quick start
+- [Installation Guide](https://docs.plugged.in/quickstart/installation) - Step-by-step setup instructions
+- [Document Library](https://docs.plugged.in/platform/document-library) - Managing your AI knowledge base
+- [RAG Knowledge Base](https://docs.plugged.in/tutorials/rag-knowledge-base) - Setting up RAG for AI context
+- [Team Collaboration](https://docs.plugged.in/tutorials/team-collaboration) - Working with your team
+
+### For Developers
+- [API Reference](https://docs.plugged.in/api/reference) - Complete API documentation
+- [API Authentication](https://docs.plugged.in/api/authentication) - API key and authentication guide
+- [Self-Hosting Guide](https://docs.plugged.in/tutorials/self-hosting) - Deploy your own instance
+- [Docker Deployment](https://docs.plugged.in/deployment/docker) - Container-based deployment
+- [Security Overview](https://docs.plugged.in/security/overview) - Security best practices
+
+### MCP Integration
+- [MCP Proxy Overview](https://docs.plugged.in/mcp-proxy/overview) - Understanding the proxy architecture
+- [MCP Proxy Installation](https://docs.plugged.in/mcp-proxy/installation) - Setting up the proxy
+- [Custom MCP Servers](https://docs.plugged.in/tutorials/custom-mcp-server) - Building your own servers
+
+---
+
+## 🛠️ Installation Options
+
+### Requirements
+- Node.js 18+ (20+ recommended)
+- PostgreSQL 15+
+- Redis (optional, for rate limiting)
+- Docker & Docker Compose (for containerized deployment)
+
+### Environment Variables
+
+Create a `.env` file with:
 
 ```bash
-# Quick upgrade for Docker users
-docker pull ghcr.io/veriteknik/pluggedin-app:v2.12.0
-docker-compose down && docker-compose up -d
+# Core (Required)
+DATABASE_URL=postgresql://user:pass@localhost:5432/pluggedin
+NEXTAUTH_URL=http://localhost:12005
+NEXTAUTH_SECRET=your-secret-key # Generate: openssl rand -base64 32
 
-# The encryption will be applied automatically to existing servers
+# Security (Required)
+NEXT_SERVER_ACTIONS_ENCRYPTION_KEY= # Generate: openssl rand -base64 32
+
+# Features (Optional)
+ENABLE_RAG=true
+ENABLE_NOTIFICATIONS=true
+ENABLE_EMAIL_VERIFICATION=true
+REDIS_URL=redis://localhost:6379  # For Redis rate limiting
+
+# Email (For notifications)
+EMAIL_SERVER_HOST=smtp.example.com
+EMAIL_SERVER_PORT=587
+EMAIL_FROM=noreply@example.com
+
+# Performance (Optional)
+RAG_CACHE_TTL_MS=60000  # Cache TTL in milliseconds
 ```
 
-**Note**: Ensure you have the `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` environment variable set. If not present, generate one:
+### Manual Installation
+
 ```bash
-pnpm generate-encryption-key
+# Install dependencies
+pnpm install
+
+# Setup database
+pnpm db:migrate:auth
+pnpm db:generate
+pnpm db:migrate
+
+# Build for production
+NODE_ENV=production pnpm build
+
+# Start the server
+pnpm start
 ```
 
-## 🔌 Connecting MCP Clients
+---
 
-### Prerequisites
+## 🔌 MCP Proxy Integration
 
-- The plugged.in App running (either self-hosted or at https://plugged.in)
-- An API key from the plugged.in App (available in the API Keys page)
-- The plugged.in MCP Proxy installed
+Connect your AI clients to plugged.in:
 
-### Claude Desktop Configuration
+### Claude Desktop
 
 ```json
 {
@@ -134,689 +255,106 @@ pnpm generate-encryption-key
       "command": "npx",
       "args": ["-y", "@pluggedin/pluggedin-mcp-proxy@latest"],
       "env": {
-        "PLUGGEDIN_API_KEY": "YOUR_API_KEY",
-        "PLUGGEDIN_API_BASE_URL": "http://localhost:12005" // For self-hosted instances
+        "PLUGGEDIN_API_KEY": "YOUR_API_KEY"
       }
     }
   }
 }
 ```
 
-### Cursor Configuration
-
-For Cursor, you can use command-line arguments:
+### Cursor IDE
 
 ```bash
-npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key YOUR_API_KEY --pluggedin-api-base-url http://localhost:12005
+npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key YOUR_API_KEY
 ```
 
-## 🏗️ System Architecture
+---
 
-The plugged.in ecosystem consists of integrated components working together to provide a comprehensive MCP management solution with RAG capabilities:
+## 🎯 Use Cases
 
-```mermaid
-sequenceDiagram
-    participant MCPClient as MCP Client (e.g., Claude Desktop)
-    participant PluggedinMCP as plugged.in MCP Proxy
-    participant PluggedinApp as plugged.in App
-    participant MCPServers as Installed MCP Servers
+### For Developers
+- **Code Review Memory**: Keep AI code reviews across sessions
+- **Documentation Generation**: Auto-generate and version technical docs
+- **Bug Analysis Archive**: Store AI debugging sessions for future reference
 
-    MCPClient ->> PluggedinMCP: Request list tools/resources/prompts
-    PluggedinMCP ->> PluggedinApp: Get capabilities via API
-    PluggedinApp ->> PluggedinMCP: Return capabilities (prefixed)
+### For Teams
+- **Knowledge Base**: Build institutional memory from AI interactions
+- **Meeting Summaries**: AI-generated summaries with full attribution
+- **Strategy Documents**: Collaborative AI-assisted planning with version control
 
-    MCPClient ->> PluggedinMCP: Call tool/read resource/get prompt
-    alt Standard capability
-        PluggedinMCP ->> PluggedinApp: Resolve capability to server
-        PluggedinApp ->> PluggedinMCP: Return server details
-        PluggedinMCP ->> MCPServers: Forward request to target server
-        MCPServers ->> PluggedinMCP: Return response
-    else Custom instruction
-        PluggedinMCP ->> PluggedinApp: Get custom instruction
-        PluggedinApp ->> PluggedinMCP: Return formatted messages
-    end
-    PluggedinMCP ->> MCPClient: Return response
+### For Enterprises
+- **Compliance Tracking**: Full audit trail of AI-generated content
+- **Multi-Model Workflows**: Orchestrate different AIs for complex tasks
+- **Secure Deployment**: Self-host with complete data control
 
-    alt Discovery tool
-        MCPClient ->> PluggedinMCP: Call pluggedin_discover_tools
-        PluggedinMCP ->> PluggedinApp: Trigger discovery action
-        PluggedinApp ->> MCPServers: Connect and discover capabilities
-        MCPServers ->> PluggedinApp: Return capabilities
-        PluggedinApp ->> PluggedinMCP: Confirm discovery complete
-        PluggedinMCP ->> MCPClient: Return discovery result
-    end
-```
+---
 
-## ⚙️ Configuration
+## 📊 Why Teams Choose plugged.in
 
-### Environment Variables
+| Feature | plugged.in | Traditional AI Chat | MCP Clients Alone |
+|---------|------------|-------------------|-------------------|
+| Persistent Memory | ✅ Full versioning | ❌ Session only | ❌ No storage |
+| Multi-Model Support | ✅ All models | ⚠️ Single vendor | ✅ Multiple |
+| Document Management | ✅ Complete CMS | ❌ None | ❌ None |
+| Attribution Tracking | ✅ Full audit trail | ❌ None | ❌ None |
+| Team Collaboration | ✅ Built-in | ❌ None | ❌ Limited |
+| Self-Hostable | ✅ Yes | ⚠️ Varies | ✅ Yes |
+| RAG Integration | ✅ Native | ⚠️ Limited | ❌ None |
 
-The plugged.in App supports various configuration options through environment variables:
+---
+
+## 🤝 Community & Support
+
+- **GitHub Discussions**: [Join the conversation](https://github.com/orgs/VeriTeknik/discussions)
+- **GitHub Issues**: [Bug reports and feature requests](https://github.com/VeriTeknik/pluggedin-app/issues)
+- **Reddit**: [r/plugged_in](https://www.reddit.com/r/plugged_in/)
+- **Twitter/X**: [@PluggedIntoAI](https://x.com/PluggedIntoAI)
+- **Email**: team@plugged.in
+
+### Contributing
+
+We love contributions! See our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ```bash
-# Core Configuration
-DATABASE_URL=postgresql://user:password@localhost:5432/pluggedin
-NEXTAUTH_URL=http://localhost:12005
-NEXTAUTH_SECRET=your-secret-key
-
-# Security Configuration (REQUIRED)
-NEXT_SERVER_ACTIONS_ENCRYPTION_KEY=  # Generate with: openssl rand -base64 32
-
-# Feature Flags (New in v2.1.0)
-ENABLE_RAG=true                    # Enable RAG features
-ENABLE_NOTIFICATIONS=true          # Enable notification system
-ENABLE_EMAIL_VERIFICATION=true     # Enable email verification
-
-# Email Configuration (for notifications)
-EMAIL_SERVER_HOST=smtp.example.com
-EMAIL_SERVER_PORT=587
-EMAIL_SERVER_USER=your-email@example.com
-EMAIL_SERVER_PASSWORD=your-password
-EMAIL_FROM=noreply@example.com
-
-# RAG Configuration (optional)
-RAG_API_URL=http://localhost:8000  # Your RAG service endpoint
-RAG_CHUNK_SIZE=1000               # Document chunk size
-RAG_CHUNK_OVERLAP=200             # Chunk overlap for context
-
-# MCP Server Sandboxing (Linux)
-FIREJAIL_USER_HOME=/home/pluggedin
-FIREJAIL_LOCAL_BIN=/home/pluggedin/.local/bin
-FIREJAIL_APP_PATH=/home/pluggedin/pluggedin-app
-FIREJAIL_MCP_WORKSPACE=/home/pluggedin/mcp-workspace
-
-# Tool Prefixing (for MCP clients like Claude Code)
-PLUGGEDIN_UUID_TOOL_PREFIXING=true  # Enable automatic tool name prefixing to prevent collisions
-
-# Rate Limiting Configuration (Optional - defaults are usually sufficient)
-RATE_LIMIT_SERVER_MOD_WINDOW_MS=60000    # Server modification window (default: 1 minute)
-RATE_LIMIT_SERVER_MOD_MAX=10             # Max server modifications per window (default: 10)
-RATE_LIMIT_SERVER_READ_WINDOW_MS=60000   # Server read window (default: 1 minute)
-RATE_LIMIT_SERVER_READ_MAX=60            # Max server reads per window (default: 60)
-RATE_LIMIT_SENSITIVE_WINDOW_MS=3600000   # Sensitive operations window (default: 1 hour)
-RATE_LIMIT_SENSITIVE_MAX=10              # Max sensitive operations per window (default: 10)
-RATE_LIMIT_DISCOVERY_WINDOW_MS=60000     # Discovery operations window (default: 1 minute)
-RATE_LIMIT_DISCOVERY_MAX=5                # Max discovery operations per window (default: 5)
+# Fork the repo, then:
+git clone https://github.com/YOUR_USERNAME/pluggedin-app.git
+cd pluggedin-app
+pnpm install
+pnpm dev
 ```
 
-### Security Features
+---
 
-#### Encryption
-All sensitive MCP server configuration data is encrypted at rest using AES-256-GCM encryption:
-- **Required**: Set `NEXT_SERVER_ACTIONS_ENCRYPTION_KEY` environment variable
-- **Generate key**: Run `openssl rand -base64 32` to generate a secure key
-- **Automatic**: Encryption/decryption happens transparently during operations
-- **Isolated**: Each profile has its own derived encryption key
+## 📜 License
 
-#### Rate Limiting
-Built-in rate limiting protects against abuse:
-- **Server modifications**: 10 operations per minute (configurable)
-- **Server reads**: 60 operations per minute (configurable)
-- **Sensitive operations**: 10 operations per hour (configurable)
-- **Discovery operations**: 5 operations per minute (configurable)
+MIT License - see [LICENSE](LICENSE) for details.
 
-#### Audit Logging
-All sensitive operations are logged for security and compliance:
-- **Automatic**: Security-critical operations are logged automatically
-- **Sanitized**: Sensitive headers and credentials are redacted from logs
-- **Non-blocking**: Logging failures don't affect main operations
+---
 
-### Feature Configuration
+## 🙏 Acknowledgments
 
-#### Document Library & RAG v2
-The plugged.in platform now features advanced RAG v2 capabilities with AI document exchange:
+Built on top of these amazing projects:
+- [Model Context Protocol](https://modelcontextprotocol.io/) by Anthropic
+- [Next.js](https://nextjs.org/) for the web framework
+- [PostgreSQL](https://www.postgresql.org/) for reliable data storage
+- All the MCP server creators in our community
 
-**Core RAG Features:**
-1. Enable RAG in playground settings
-2. Upload documents through the Library page
-3. Documents are automatically indexed for context retrieval
-4. Supported formats: PDF, TXT, MD, DOCX, JSON, HTML, and more
+---
 
-**New RAG v2 Features:**
-1. **AI Document Generation**: MCP servers can create documents directly in your library
-   - Full model attribution tracking (which AI created/updated the document)
-   - Version history with change tracking
-   - Content deduplication via SHA-256 hashing
-   
-2. **Advanced Document Sources**:
-   - `upload`: Traditional file uploads
-   - `ai_generated`: Documents created by AI models via MCP
-   - `api`: Documents created via API integrations
-   
-3. **Smart Document Search**:
-   - Semantic search with relevance scoring
-   - Filter by AI model, provider, date range, tags, and source
-   - Automatic snippet generation with keyword highlighting
-   
-4. **Document Management**:
-   - Visibility levels: private, workspace, or public
-   - Parent-child relationships for document versions
-   - Profile-based organization alongside project-based scoping
+## 📝 Release Notes
 
-**Example: AI Creating a Document via MCP**
-```json
-POST /api/documents/ai
-{
-  "title": "Analysis Report",
-  "content": "# Market Analysis\n\nDetailed findings...",
-  "format": "md",
-  "tags": ["analysis", "market"],
-  "category": "report",
-  "metadata": {
-    "model": {
-      "name": "Claude",
-      "provider": "Anthropic",
-      "version": "3"
-    },
-    "visibility": "workspace"
-  }
-}
-```
+**Latest Release: v2.12.0** - Enhanced Security & Performance
 
-#### Tool Prefixing (Automatic Collision Resolution)
-1. **Automatic Tool Name Prefixing**: Prevents name collisions in MCP clients like Claude Code
-2. **Human-Readable Prefixes**: Uses server slugs instead of confusing UUIDs (e.g., `filesystem-server__read_file`)
-3. **Backward Compatibility**: Existing integrations continue working without changes
-4. **Configurable**: Enable/disable via `PLUGGEDIN_UUID_TOOL_PREFIXING` environment variable
-5. **Database Integration**: Requires slug generation for existing servers
+View the full changelog and release notes at [docs.plugged.in/releases](https://docs.plugged.in/releases/changelog)
 
-**How it works:**
-- When enabled, tools from different servers get prefixed with their server slug
-- Example: `read_file` from "filesystem-server" becomes `filesystem-server__read_file`
-- MCP proxy automatically handles both prefixed and non-prefixed tool calls
-- Prevents the "tool names must be unique" error in Claude Code
+---
 
-**Setup:**
-```bash
-# Enable tool prefixing
-PLUGGEDIN_UUID_TOOL_PREFIXING=true
+<div align="center">
 
-# Generate slugs for existing servers (one-time setup)
-pnpm tsx scripts/generate-slugs-for-existing-servers.ts
-```
+**Ready to give your AI permanent memory?**
 
-#### Notifications
-1. Real-time notifications for MCP activities
-2. Optional email delivery for important alerts
-3. Configurable notification preferences per profile
-4. Activity logging for debugging and monitoring
+[🚀 **Start Now**](https://plugged.in) • [⭐ **Star on GitHub**](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 
-### API Examples for RAG v2
+*If you find plugged.in useful, please star the repo - it helps others discover the project!*
 
-#### Creating AI-Generated Documents
-
-```bash
-# AI model creates a document
-curl -X POST https://your-domain.com/api/documents/ai \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Technical Analysis Report",
-    "content": "# Technical Analysis\n\n## Summary\n\nThis document contains...",
-    "format": "md",
-    "tags": ["technical", "analysis", "ai-generated"],
-    "category": "report",
-    "metadata": {
-      "model": {
-        "name": "Claude 3 Opus",
-        "provider": "Anthropic",
-        "version": "20240229"
-      },
-      "context": "User requested technical analysis of system architecture",
-      "visibility": "private"
-    }
-  }'
-
-# Response
-{
-  "success": true,
-  "documentId": "550e8400-e29b-41d4-a716-446655440000",
-  "message": "Document successfully created",
-  "url": "/library/550e8400-e29b-41d4-a716-446655440000"
-}
-```
-
-#### Searching Documents with AI Filters
-
-```bash
-# Search for documents created by specific AI models
-curl -X POST https://your-domain.com/api/documents/search \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "system architecture",
-    "filters": {
-      "modelName": "Claude 3 Opus",
-      "modelProvider": "Anthropic",
-      "source": "ai_generated",
-      "dateFrom": "2024-01-01T00:00:00Z",
-      "tags": ["technical"]
-    },
-    "limit": 10,
-    "offset": 0
-  }'
-
-# Response
-{
-  "results": [
-    {
-      "id": "550e8400-e29b-41d4-a716-446655440000",
-      "title": "Technical Analysis Report",
-      "description": "AI-generated report by Claude 3 Opus",
-      "snippet": "...system architecture analysis shows that...",
-      "relevanceScore": 0.85,
-      "source": "ai_generated",
-      "aiMetadata": {
-        "model": {
-          "name": "Claude 3 Opus",
-          "provider": "Anthropic",
-          "version": "20240229"
-        }
-      },
-      "tags": ["technical", "analysis", "ai-generated"],
-      "modelAttributions": [
-        {
-          "model_name": "Claude 3 Opus",
-          "model_provider": "Anthropic",
-          "contribution_type": "created"
-        }
-      ]
-    }
-  ],
-  "total": 1,
-  "limit": 10,
-  "offset": 0,
-  "hasMore": false
-}
-```
-
-#### Document Upload Progress Tracking
-
-When uploading large documents, track the RAG processing progress:
-
-```bash
-# Check upload status
-curl -X GET https://your-domain.com/api/documents/upload-status/UPLOAD_ID \
-  -H "Authorization: Bearer YOUR_API_KEY"
-
-# Response
-{
-  "success": true,
-  "progress": {
-    "status": "processing",
-    "progress": {
-      "step": "embeddings",
-      "current": 45,
-      "total": 100,
-      "step_progress": {
-        "chunks_processed": 45,
-        "total_chunks": 100,
-        "percentage": 45,
-        "estimated_remaining_time": "2m 30s"
-      }
-    },
-    "message": "Generating embeddings for document chunks..."
-  }
-}
-```
-
-## 💻 Production Deployment
-
-### System Requirements
-
-- Node.js v18+ (recommended v20+)
-- PostgreSQL 15+
-- PNPM package manager
-- Nginx web server (for production deployments)
-- Systemd (for service management)
-
-### Production Setup
-
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/VeriTeknik/pluggedin-app.git /home/pluggedin/pluggedin-app
-   cd /home/pluggedin/pluggedin-app
-   ```
-
-2. Install dependencies:
-   ```bash
-   pnpm install
-   ```
-
-3. Set up environment variables:
-   ```bash
-   cp .env.example .env
-   # Edit .env with your specific configuration
-   ```
-
-4. Run database migrations:
-   ```bash
-   pnpm db:migrate:auth
-   pnpm db:generate
-   pnpm db:migrate
-   ```
-
-5. **Update MCP server slugs (for tool prefixing)**:
-   ```bash
-   # Generate slugs for existing MCP servers (required for automatic tool name collision resolution)
-   pnpm tsx scripts/generate-slugs-for-existing-servers.ts
-
-   # This script will:
-   # - Generate URL-friendly slugs from server names (e.g., "Sequential Thinking" → "sequential-thinking")
-   # - Handle duplicate names by adding suffixes (e.g., "filesystem-1", "filesystem-2")
-   # - Update all existing servers with their new slugs
-   # - Enable automatic tool prefixing to prevent name collisions in MCP clients like Claude Code
-   ```
-
-5. Build the application for production:
-   ```bash
-   NODE_ENV=production pnpm build
-   ```
-
-6. Create a systemd service file at `/etc/systemd/system/pluggedin.service`:
-   ```ini
-   [Unit]
-   Description=plugged.in Application Service
-   After=network.target postgresql.service
-   Wants=postgresql.service
-
-   [Service]
-   User=pluggedin
-   Group=pluggedin
-   WorkingDirectory=/home/pluggedin/pluggedin-app
-   ExecStart=/usr/bin/pnpm start
-   Restart=always
-   RestartSec=10
-   StandardOutput=append:/var/log/pluggedin/pluggedin_app.log
-   StandardError=append:/var/log/pluggedin/pluggedin_app.log
-   Environment=PATH=/usr/bin:/usr/local/bin
-   Environment=NODE_ENV=production
-   Environment=PORT=12005
-
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-7. Set up Nginx as a reverse proxy:
-   ```nginx
-   # HTTPS Server
-   server {
-       listen 443 ssl;
-       server_name your-domain.com;
-
-       # SSL configuration
-       ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
-       ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
-
-       # Next.js static files
-       location /_next/static/ {
-           alias /home/pluggedin/pluggedin-app/.next/static/;
-           expires 365d;
-           add_header Cache-Control "public, max-age=31536000, immutable";
-       }
-
-       # Proxy settings for Node.js application
-       location / {
-           proxy_pass http://localhost:12005;
-           proxy_http_version 1.1;
-           proxy_set_header Upgrade $http_upgrade;
-           proxy_set_header Connection 'upgrade';
-           proxy_set_header Host $host;
-           proxy_cache_bypass $http_upgrade;
-       }
-   }
-
-   # HTTP redirect to HTTPS
-   server {
-       listen 80;
-       server_name your-domain.com;
-       return 301 https://$host$request_uri;
-   }
-   ```
-
-8. Enable and start the service:
-   ```bash
-   sudo systemctl daemon-reload
-   sudo systemctl enable pluggedin.service
-   sudo systemctl start pluggedin.service
-   ```
-
-### Security Considerations
-
-**Enhanced Security Features**
-
-The plugged.in App implements comprehensive security measures to protect your data and prevent common vulnerabilities:
-
-1. **Input Validation & Sanitization**
-   - **URL Validation**: SSRF protection blocks private IPs, localhost, and dangerous ports
-   - **Command Allowlisting**: Only approved commands (node, npx, python, python3, uv, uvx, uvenv)
-   - **Header Validation**: RFC 7230 compliant with injection prevention
-   - **HTML Sanitization**: All user inputs sanitized with `sanitize-html`
-   - **Environment Variables**: Secure parsing with proper quote handling
-
-2. **MCP Server Security**
-   - **Sandboxing (Linux/Ubuntu)**: STDIO servers wrapped with `firejail --quiet`
-   - **Transport Validation**: Security checks for STDIO, SSE, and Streamable HTTP
-   - **Session Management**: Secure session handling for Streamable HTTP
-   - **Error Sanitization**: Prevents information disclosure
-
-3. **API Security**
-   - **Rate Limiting**: Tiered limits for different endpoint types
-   - **Authentication**: JWT-based with 30-day session expiry
-   - **CORS Protection**: Properly configured for all endpoints
-   - **Audit Logging**: Comprehensive activity tracking
-
-4. **Data Protection**
-   - **Encryption at Rest**: AES-256-GCM for sensitive server data
-   - **Per-Profile Keys**: Isolated encryption per workspace
-   - **Secure Sharing**: Sanitized templates without credentials
-   - **HTTPS Enforcement**: Required in production
-
-To enable sandboxing, install Firejail:
-
-```bash
-sudo apt update && sudo apt install firejail
-```
-
-### 🔒 Security Migration Guide (v2.9.1)
-
-#### Important: Encryption Upgrade Required
-
-Starting with v2.9.1, we've upgraded our encryption system from using predictable salts to cryptographically secure random salts. This significantly improves the security of your encrypted data.
-
-#### Why This Migration Is Needed
-
-- **Legacy encryption (v1)**: Used predictable salts derived from profile UUIDs (less secure)
-- **New encryption (v2)**: Uses cryptographically secure random salts (highly secure)
-- **Compliance**: Addresses security warnings from GitHub CodeQL and other security scanners
-- **Best Practices**: Aligns with current cryptographic standards
-
-#### Migration Steps
-
-1. **Backup Your Database** (Critical!)
-   ```bash
-   pg_dump $DATABASE_URL > backup_before_migration.sql
-   ```
-
-2. **Update to v2.9.1**
-   ```bash
-   git pull
-   pnpm install
-   ```
-
-3. **Configure Security Environment Variables**
-   Add these to your `.env` file:
-   ```bash
-   # Enable SSL for database connections
-   DATABASE_SSL=true
-   DATABASE_SSL_REJECT_UNAUTHORIZED=false
-   
-   # Generate a secure API key encryption secret
-   API_KEY_ENCRYPTION_SECRET=$(openssl rand -base64 32)
-   ```
-
-4. **Run Database Migrations**
-   ```bash
-   pnpm db:migrate
-   ```
-
-5. **Test Migration (Dry Run)**
-   ```bash
-   pnpm migrate:encryption:dry
-   ```
-   This shows what will be migrated without making changes.
-
-6. **Execute Migration**
-   ```bash
-   pnpm migrate:encryption
-   ```
-   The script will:
-   - Find all records using legacy encryption
-   - Decrypt data using the old method
-   - Re-encrypt with secure random salts
-   - Update encryption_version to 2
-   - Show progress and any errors
-
-7. **Verify Success**
-   The migration script will report the number of successfully migrated records.
-   Check your application logs for any decryption errors after migration.
-
-#### Troubleshooting
-
-- **Migration fails**: Restore from backup and check error logs
-- **Decryption errors after migration**: Ensure NEXT_SERVER_ACTIONS_ENCRYPTION_KEY hasn't changed
-- **Performance issues**: The migration processes records in batches; large datasets may take time
-
-#### Timeline for Legacy Code Removal
-
-- **v2.9.1**: Migration tools provided, legacy decryption still supported
-- **v2.9.2-v2.9.x**: Grace period for migration
-- **v3.0.0**: Legacy encryption functions will be removed entirely
-
-⚠️ **After v3.0.0, data encrypted with legacy methods will not be readable without migration!**
-
-## 🔄 Cloud vs. Self-Hosted
-
-| Feature | Self-Hosted | Cloud (plugged.in) |
-|---------|------------|-------------------|
-| Cost | Free | Free tier available |
-| Data Privacy | Full control | Server-side encryption |
-| Authentication | Optional | Built-in |
-| Session Context | Basic | Enhanced |
-| Hosting | Your infrastructure | Managed service |
-| Updates | Manual | Automatic |
-| Latency | Depends on your setup | Optimized global CDN |
-
-## 🧩 Integration with plugged.in MCP Proxy
-
-The plugged.in App is designed to work seamlessly with the [plugged.in MCP Proxy](https://github.com/VeriTeknik/pluggedin-mcp), which provides:
-
-- A unified interface for all MCP clients
-- Tool discovery and reporting
-- Request routing to the appropriate MCP servers
-- Support for the latest MCP specification including Streamable HTTP transport
-- Compatible with STDIO, SSE, and Streamable HTTP server types
-
-## 📚 Related Resources
-
-- [plugged.in MCP Proxy Repository](https://github.com/VeriTeknik/pluggedin-mcp)
-- [Model Context Protocol (MCP) Specification](https://modelcontextprotocol.io/)
-- [Claude Desktop Documentation](https://docs.anthropic.com/claude/docs/claude-desktop)
-- [Cline Documentation](https://docs.cline.bot/)
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🔮 Roadmap
-
-The plugged.in project is actively developing several exciting features:
-
-- **Testing Infrastructure**: Comprehensive test coverage for core functionality
-- **Playground Optimizations**: Improved performance for log handling
-- **Embedded Chat (Phase 2)**: Generate revenue through embeddable AI chat interfaces
-- **AI Assistant Platform (Phase 3)**: Create a social network of specialized AI assistants
-- **Privacy-Focused Infrastructure (Phase 4)**: Dedicated RAG servers and distributed GPU services
-- **Retrieval-Augmented Generation (RAG)**: Integration with vector databases like Milvus
-- **Collaboration & Sharing**: Multi-user sessions and embeddable chat widgets
-
-## 📝 Recent Updates
-
-### Version 2.9.0 (Septembr 2025) - Database & Security Improvements
-
-#### 🗄️ Database Schema Enhancements
-- **Profile-Scoped Slug Uniqueness**: Fixed MCP server slug constraints to be profile-scoped instead of globally unique
-- **Improved Data Integrity**: Enhanced database constraints for better multi-tenant isolation
-- **Migration Updates**: Added migration `0052_fix_slug_profile_uniqueness.sql` for existing installations
-
-#### 🔒 Complementary Security Updates
-- **Enhanced Input Validation**: Improved validation for slug generation and MCP server management
-- **Database Security**: Strengthened constraints and validation rules
-- **Multi-Tenant Security**: Better isolation between user profiles and projects
-
-### Latest Development
-
-#### 🚀 Streamable HTTP Transport Support
-
-- **Full MCP Streamable HTTP Support**: Added support for the new MCP Streamable HTTP transport protocol
-- **OAuth 2.1 Integration**: Support for OAuth-based authentication flows
-- **Enhanced Configuration**: Custom headers and session management for Streamable HTTP servers
-- **Multi-Language Support**: Updated translations for all supported languages
-
-See [CHANGELOG.md](./CHANGELOG.md) for the latest updates.
-
-### Version 2.1.0 (June 2025)
-
-#### 🎯 Major Features
-
-- **Document Library with RAG Integration**: Upload and manage documents that enhance AI context
-- **Real-Time Notification System**: Get instant updates on MCP activities with email support
-- **Progressive Server Initialization**: Faster, more resilient MCP server connections
-- **Enhanced Playground UI**: Redesigned layout with better responsiveness and streaming indicators
-
-#### 🔒 Security Enhancements
-
-- **Improved RAG Query Security**: Replaced custom sanitization with `sanitize-html` library for robust XSS protection
-- **Secure Environment Variable Parsing**: Implemented `dotenv` library for proper handling of quotes, multiline values, and special characters
-- **Enhanced Input Validation**: Added comprehensive validation for all user inputs across the application
-- **Strengthened API Security**: Implemented rate limiting and improved authentication checks
-
-#### 🐛 Bug Fixes
-
-- Fixed JSON-RPC protocol interference in MCP proxy
-- Resolved memory leaks in long-running playground sessions
-- Corrected streaming message handling
-- Fixed localhost URL validation for development environments
-
-See [Release Notes](./RELEASE_NOTES_v2.1.0.md) for complete details.
-
-## Discovery Performance Optimizations
-
-### Smart Discovery Throttling
-The app now includes intelligent throttling mechanisms to prevent redundant discovery calls:
-
-- **Tools API (`/api/tools`)**: Implements 5-minute throttling to avoid repeated discovery attempts
-- **Discovery API (`/api/discover`)**: Uses 2-minute throttling for explicit discovery requests
-- **In-memory caching**: Tracks recent discovery attempts to prevent duplicate calls
-- **Failure recovery**: Clears throttle cache on discovery failures to allow faster retries
-
-### Optimized Database Queries
-- **Single query optimization**: Fetches server data and tool counts in one query using LEFT JOIN
-- **Reduced database load**: Eliminates redundant tool count queries
-- **Indexed lookups**: Uses existing database indexes for faster server and tool queries
-
-### Background Processing
-- **Asynchronous discovery**: All discovery processes run in background without blocking API responses
-- **Error handling**: Comprehensive error handling with automatic retry mechanisms
-- **Status tracking**: Provides clear feedback on discovery progress and throttling status
-
-### Performance Benefits
-- **Reduced API latency**: Faster response times for tools API calls
-- **Lower database load**: Fewer redundant queries and optimized data fetching
-- **Better user experience**: Prevents duplicate work and provides instant feedback
-- **Scalable architecture**: Can handle multiple concurrent discovery requests efficiently
-
+</div>
