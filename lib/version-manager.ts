@@ -207,7 +207,6 @@ export async function saveDocumentVersion(
 
       // Use Buffer instead of File API for server-side operations
       const contentBuffer = Buffer.from(content, 'utf-8');
-      const _blob = new Blob([contentBuffer], { type: transactionResult.document.mime_type });
 
       // Create a File-like object for RAG service
       const fileData = {
@@ -339,6 +338,8 @@ export async function getVersionContent(
 
     // Check if file exists using async method
     try {
+      // Security: fullPath is validated by validateStoredPath above
+      // nosemgrep: javascript.lang.security.audit.detect-non-literal-fs-filename
       await access(fullPath, constants.F_OK);
       return await readFile(fullPath, 'utf-8');
     } catch {

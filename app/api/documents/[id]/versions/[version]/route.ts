@@ -64,9 +64,9 @@ export async function GET(
     const documentId = resolvedParams.id;
     const versionNumber = parseInt(resolvedParams.version);
 
-    if (isNaN(versionNumber)) {
+    if (isNaN(versionNumber) || versionNumber <= 0) {
       return NextResponse.json(
-        { error: 'Invalid version number' },
+        { error: 'Version number must be a positive integer' },
         { status: 400 }
       );
     }
@@ -199,9 +199,9 @@ export async function POST(
     const documentId = resolvedParams.id;
     const versionNumber = parseInt(resolvedParams.version);
 
-    if (isNaN(versionNumber)) {
+    if (isNaN(versionNumber) || versionNumber <= 0) {
       return NextResponse.json(
-        { error: 'Invalid version number' },
+        { error: 'Version number must be a positive integer' },
         { status: 400 }
       );
     }
@@ -209,6 +209,20 @@ export async function POST(
     // Parse request body
     const body = await request.json();
     const restoredByModel = body.restoredByModel;
+
+    // Validate restoredByModel structure
+    if (restoredByModel && (
+      typeof restoredByModel !== 'object' ||
+      !restoredByModel.name ||
+      typeof restoredByModel.name !== 'string' ||
+      !restoredByModel.provider ||
+      typeof restoredByModel.provider !== 'string'
+    )) {
+      return NextResponse.json(
+        { error: 'Invalid restoredByModel structure. Must include name and provider as strings.' },
+        { status: 400 }
+      );
+    }
 
     // Verify the user has access to this document
     const [document] = await db

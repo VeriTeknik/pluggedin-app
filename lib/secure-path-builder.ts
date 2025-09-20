@@ -69,6 +69,8 @@ export function buildSecurePath(baseDir: string, ...components: string[]): strin
   }
 
   // Normalize base directory
+  // Security: baseDir is validated as absolute path above, preventing traversal
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
   const normalizedBase = resolve(normalize(baseDir));
 
   // Validate each component BEFORE joining
@@ -81,9 +83,13 @@ export function buildSecurePath(baseDir: string, ...components: string[]): strin
   });
 
   // Join the validated components
+  // Security: All components are validated by validatePathComponent before joining
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
   const joinedPath = join(normalizedBase, ...validatedComponents);
 
   // Normalize the final path to remove any remaining traversal attempts
+  // Security: Final normalization and boundary check ensure path safety
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
   const finalPath = resolve(normalize(joinedPath));
 
   // Final security check: ensure the path is within the base directory
@@ -131,6 +137,8 @@ export function buildSecureVersionFilePath(
   }
 
   // Join and validate
+  // Security: filename is validated above to not contain path separators
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
   const filePath = join(versionDir, filename);
 
   // Ensure file is within version directory
@@ -156,11 +164,15 @@ export function validateStoredPath(storedPath: string, baseDir: string): string 
   }
 
   // Build the full path
+  // Security: storedPath is checked for traversal sequences above
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
   const fullPath = isAbsolute(storedPath)
     ? storedPath
     : join(baseDir, storedPath);
 
   // Normalize and resolve
+  // Security: Path is validated against base directory boundary below
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
   const normalizedPath = resolve(normalize(fullPath));
 
   // Validate it's within base directory
@@ -182,6 +194,8 @@ export function extractRelativePath(fullPath: string, baseDir: string): string {
   }
 
   // Normalize both paths
+  // Security: Both paths are absolute and will be compared for containment
+  // nosemgrep: javascript.lang.security.audit.path-traversal.path-join-resolve-traversal
   const normalizedFull = resolve(normalize(fullPath));
   const normalizedBase = resolve(normalize(baseDir));
 
