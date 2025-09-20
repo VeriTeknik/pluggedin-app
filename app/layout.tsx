@@ -94,8 +94,8 @@ const comfortaa = Comfortaa({
 });
 
 export const metadata: Metadata = {
-  title: 'Plugged.in',
-  description: 'Plugged.in. The AI crossroads.',
+  title: 'Plugged.in - Enterprise MCP Platform for AI Integration',
+  description: 'Plugged.in is the enterprise Model Context Protocol (MCP) platform for seamless AI integration. Connect 7,000+ tools and 1,500+ MCP servers with SOC 2 certified security.',
 };
 
 // Get the GA ID from environment variables

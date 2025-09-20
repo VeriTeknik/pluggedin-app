@@ -36,6 +36,7 @@ export function useLibrary() {
   // Fetch storage usage data separately
   const {
     data: storageResponse,
+    error: storageError,
     mutate: mutateStorage,
   } = useSWR(
     session?.user?.id ? ['storage', session.user.id, currentProject?.uuid] : null,
@@ -48,8 +49,15 @@ export function useLibrary() {
   );
 
   const docs: Doc[] = docsResponse?.success ? docsResponse.docs || [] : [];
-  const storageUsage = storageResponse?.success ? storageResponse.usage : 0;
+  const fileStorage = storageResponse?.success ? storageResponse.fileStorage : 0;
+  const ragStorage = storageResponse?.success ? storageResponse.ragStorage : 0;
+  const totalStorage = storageResponse?.success ? storageResponse.totalUsage : 0;
   const storageLimit = storageResponse?.success ? storageResponse.limit : 100 * 1024 * 1024;
+
+  // Extract storage warnings and errors
+  const storageWarnings = storageResponse?.warnings || [];
+  const ragStorageAvailable = storageResponse?.ragStorageAvailable ?? false;
+  const effectiveStorageError = storageError || (storageResponse && !storageResponse.success ? storageResponse.error : null);
 
   const uploadDoc = useCallback(
     async (data: {
@@ -214,8 +222,14 @@ export function useLibrary() {
     docs,
     isLoading,
     error: error || (docsResponse && !docsResponse.success ? docsResponse.error : null),
-    storageUsage,
+    storageUsage: totalStorage, // Keep for backward compatibility
+    fileStorage,
+    ragStorage,
+    totalStorage,
     storageLimit,
+    storageError: effectiveStorageError,
+    storageWarnings,
+    ragStorageAvailable,
     uploadDoc,
     removeDoc,
     downloadDoc,

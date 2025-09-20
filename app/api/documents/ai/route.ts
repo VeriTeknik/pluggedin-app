@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
         source: 'ai_generated',
         ai_metadata: {
           model: validatedData.metadata.model,
-          context: validatedData.metadata.context,
+          context: validatedData.metadata.context || validatedData.metadata.prompt,
           timestamp: timestamp.toISOString(),
           sessionId: request.headers.get('x-session-id') || undefined,
         },

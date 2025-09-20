@@ -11,8 +11,8 @@ import { Separator } from '@/components/ui/separator';
 export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
-  title: 'Shared Server',
-  description: 'View details of a shared MCP server',
+  title: 'Shared MCP Server - Plugged.in',
+  description: 'Explore and install community-shared MCP servers. View configuration details, available tools, and resources. Join the Plugged.in community to share your own servers.',
 };
 
 type PageProps = {

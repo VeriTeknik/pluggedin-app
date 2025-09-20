@@ -105,7 +105,7 @@ export function LandingOpenSourceSection() {
           animate={inView ? 'visible' : 'hidden'}
         >
           {repositories.map((repository) => {
-            const stars = starsMap[repository.repo];
+            const stars = starsMap[repository.repo as keyof typeof starsMap];
 
             return (
               <motion.div

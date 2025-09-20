@@ -14,7 +14,7 @@ export function StructuredData({ type = 'Organization', data }: StructuredDataPr
     name: 'Plugged.in',
     url: 'https://plugged.in',
     logo: 'https://plugged.in/logo.png',
-    description: 'Enterprise Model Context Protocol (MCP) platform for AI integration',
+    description: 'Plugged.in is the enterprise Model Context Protocol (MCP) platform for seamless AI integration. Connect 7,000+ tools and 1,500+ MCP servers with SOC 2 certified security.',
     foundingDate: '2024',
     address: {
       '@type': 'PostalAddress',
@@ -66,14 +66,14 @@ export function StructuredData({ type = 'Organization', data }: StructuredDataPr
         price: '0',
         priceCurrency: 'USD',
         name: 'Free Plan',
-        description: 'Basic MCP integration features'
+        description: 'Start with essential MCP integration features including 100+ tools, basic server connections, and community support for individual developers.'
       },
       {
         '@type': 'Offer',
         price: '12',
         priceCurrency: 'USD',
         name: 'Pro Plan',
-        description: 'Advanced features for professionals',
+        description: 'Advanced features for professionals including unlimited tools, priority support, custom configurations, and enhanced security features.',
         priceValidUntil: '2025-12-31'
       },
       {
@@ -81,7 +81,7 @@ export function StructuredData({ type = 'Organization', data }: StructuredDataPr
         price: '49',
         priceCurrency: 'USD',
         name: 'Enterprise Plan',
-        description: 'Full-featured enterprise solution'
+        description: 'Complete enterprise solution with dedicated support, SOC 2 compliance, custom integrations, SSO, and unlimited team members.'
       }
     ],
     aggregateRating: {
@@ -158,7 +158,7 @@ export function StructuredData({ type = 'Organization', data }: StructuredDataPr
     '@context': 'https://schema.org',
     '@type': 'Dataset',
     name: 'Plugged.in Platform Metrics',
-    description: 'Real-time platform performance and usage metrics',
+    description: 'Real-time platform performance and usage metrics for Plugged.in MCP platform, tracking tool availability, server connections, developer activity, and system reliability.',
     creator: {
       '@type': 'Organization',
       name: 'Plugged.in'

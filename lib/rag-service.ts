@@ -4,6 +4,8 @@
  */
 
 import { validateExternalUrl } from './url-validator';
+import { estimateStorageFromDocumentCount } from './rag-storage-utils';
+import { LRUCache } from './lru-cache';
 
 export interface RagQueryResponse {
   success: boolean;
@@ -44,6 +46,17 @@ export interface UploadStatusResponse {
   error?: string;
 }
 
+export interface RagStorageStatsResponse {
+  success: boolean;
+  documentsCount?: number;
+  totalChunks?: number;
+  estimatedStorageMb?: number;
+  vectorsCount?: number;
+  embeddingDimension?: number;
+  error?: string;
+  isEstimate?: boolean;
+}
+
 export interface RAGDocumentRequest {
   id: string;
   title: string;
@@ -60,8 +73,13 @@ export interface RAGDocumentRequest {
 
 class RagService {
   private readonly ragApiUrl: string;
+  private storageStatsCache: LRUCache<RagStorageStatsResponse>;
+  private readonly CACHE_TTL: number;
+  private readonly MAX_CACHE_SIZE = 1000; // Maximum number of cache entries
 
   constructor() {
+    // Make cache TTL configurable via environment variable (default: 1 minute)
+    this.CACHE_TTL = parseInt(process.env.RAG_CACHE_TTL_MS || '60000', 10);
     const ragUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
     // Validate URL to prevent SSRF attacks
     try {
@@ -75,6 +93,12 @@ class RagService {
       // Use the default if validation fails
       this.ragApiUrl = 'https://api.plugged.in';
     }
+
+    // Initialize LRU cache with configurable size and TTL
+    this.storageStatsCache = new LRUCache<RagStorageStatsResponse>(
+      this.MAX_CACHE_SIZE,
+      this.CACHE_TTL
+    );
   }
 
   private isConfigured(): boolean {
@@ -563,6 +587,111 @@ class RagService {
         error: error instanceof Error ? error.message : 'Failed to check upload status',
       };
     }
+  }
+
+  /**
+   * Get storage statistics for RAG documents with caching
+   */
+  async getStorageStats(ragIdentifier: string): Promise<RagStorageStatsResponse> {
+    try {
+      if (!this.isConfigured()) {
+        return {
+          success: false,
+          error: 'RAG_API_URL not configured',
+        };
+      }
+
+      // Check cache first (LRU cache handles expiry internally)
+      const cacheKey = `storage-stats-${ragIdentifier}`;
+      const cached = this.storageStatsCache.get(cacheKey);
+
+      if (cached) {
+        return cached;
+      }
+
+      // Try to fetch from the backend storage-stats endpoint
+      try {
+        const response = await fetch(`${this.ragApiUrl}/rag/storage-stats?user_id=${ragIdentifier}`, {
+          method: 'GET',
+          headers: {
+            'accept': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+
+          const result = {
+            success: true,
+            documentsCount: data.documents_count || 0,
+            totalChunks: data.total_chunks || 0,
+            estimatedStorageMb: data.estimated_storage_mb || 0,
+            vectorsCount: data.vectors_count || 0,
+            embeddingDimension: data.embedding_dimension || 1536,
+            isEstimate: false,
+          };
+
+          // Cache successful result (LRU cache handles eviction automatically)
+          this.storageStatsCache.set(cacheKey, result);
+
+          return result;
+        }
+
+        console.log('Backend storage-stats endpoint returned:', response.status);
+      } catch (error) {
+        console.log('Failed to fetch from backend, using fallback:', error);
+      }
+
+      // Fallback: try to get document count as a simple approach
+      const docsResponse = await this.getDocuments(ragIdentifier);
+      if (docsResponse.success && docsResponse.documents) {
+        const documentsCount = docsResponse.documents.length;
+
+        if (documentsCount > 0) {
+          // Use shared utility for consistent storage estimation
+          const estimation = estimateStorageFromDocumentCount(documentsCount);
+          return {
+            success: true,
+            ...estimation,
+          };
+        }
+      }
+
+      // No documents found - return empty stats
+      const emptyEstimation = estimateStorageFromDocumentCount(0);
+      return {
+        success: true,
+        ...emptyEstimation,
+      };
+    } catch (error) {
+      console.error('Error getting storage stats:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to get storage statistics',
+      };
+    }
+  }
+
+  /**
+   * Invalidate storage stats cache for a specific identifier
+   */
+  invalidateStorageCache(ragIdentifier: string): void {
+    const cacheKey = `storage-stats-${ragIdentifier}`;
+    this.storageStatsCache.delete(cacheKey);
+  }
+
+  /**
+   * Clear entire storage stats cache
+   */
+  clearStorageCache(): void {
+    this.storageStatsCache.clear();
+  }
+
+  /**
+   * Destroy the service and clean up resources (useful for testing or shutdown)
+   */
+  destroy(): void {
+    this.storageStatsCache.destroy();
   }
 }
 

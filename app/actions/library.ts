@@ -163,8 +163,6 @@ export async function getDocs(userId: string, projectUuid?: string): Promise<Doc
 
 export async function getDocByUuid(userId: string, docUuid: string, projectUuid?: string): Promise<Doc | null> {
   try {
-    console.log('[getDocByUuid] Input:', { userId, docUuid, projectUuid });
-    
     // Check if user owns the document directly OR if it's a project-level document
     let doc;
     
@@ -188,14 +186,6 @@ export async function getDocByUuid(userId: string, docUuid: string, projectUuid?
         ),
       });
     }
-
-    console.log('[getDocByUuid] Query result:', doc ? 'Document found' : 'Document not found');
-    console.log('[getDocByUuid] Document details:', doc ? { 
-      uuid: doc.uuid, 
-      user_id: doc.user_id,
-      project_uuid: doc.project_uuid,
-      profile_uuid: doc.profile_uuid 
-    } : null);
 
     if (!doc) {
       return null;
@@ -257,30 +247,75 @@ export async function getDocumentVersions(userId: string, documentId: string, pr
 export async function getProjectStorageUsage(
   userId: string,
   projectUuid?: string
-): Promise<{ success: boolean; usage: number; limit: number; error?: string }> {
+): Promise<{
+  success: boolean;
+  fileStorage: number;
+  ragStorage: number;
+  totalUsage: number;
+  limit: number;
+  ragStorageAvailable?: boolean;
+  warnings?: string[];
+  error?: string
+}> {
   try {
     // Calculate total file size for the project
+    // Build condition explicitly for better query optimization
+    const condition = projectUuid
+      ? and(
+          eq(docsTable.project_uuid, projectUuid),
+          eq(docsTable.user_id, userId)
+        )
+      : eq(docsTable.user_id, userId);
+
     const result = await db
       .select({ totalSize: sum(docsTable.file_size) })
       .from(docsTable)
-      .where(
-        projectUuid 
-          ? eq(docsTable.project_uuid, projectUuid)
-          : eq(docsTable.user_id, userId)
-      );
+      .where(condition);
 
-    const usage = Number(result[0]?.totalSize) || 0;
+    const fileStorage = Number(result[0]?.totalSize) || 0;
+
+    // Get RAG storage if RAG is enabled
+    let ragStorage = 0;
+    let ragStorageAvailable = false;
+    const warnings: string[] = [];
+
+    if (process.env.ENABLE_RAG === 'true' && projectUuid) {
+      try {
+        // Use just the projectUuid for RAG storage stats
+        const ragStats = await ragService.getStorageStats(projectUuid);
+
+        if (ragStats.success && ragStats.estimatedStorageMb) {
+          // Convert MB to bytes
+          ragStorage = Math.round(ragStats.estimatedStorageMb * 1024 * 1024);
+          ragStorageAvailable = true;
+        } else {
+          warnings.push('RAG storage statistics unavailable');
+        }
+      } catch (error) {
+        console.warn('Failed to fetch RAG storage stats:', error);
+        warnings.push('Unable to retrieve RAG storage data');
+        // Continue with file storage only if RAG stats fail
+      }
+    }
+
+    const totalUsage = fileStorage + ragStorage;
 
     return {
       success: true,
-      usage,
+      fileStorage,
+      ragStorage,
+      totalUsage,
       limit: WORKSPACE_STORAGE_LIMIT,
+      ragStorageAvailable,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
   } catch (error) {
     console.error('Error calculating project storage usage:', error);
     return {
       success: false,
-      usage: 0,
+      fileStorage: 0,
+      ragStorage: 0,
+      totalUsage: 0,
       limit: WORKSPACE_STORAGE_LIMIT,
       error: error instanceof Error ? error.message : 'Failed to calculate storage usage',
     };
@@ -426,10 +461,10 @@ async function validateProjectStorageLimit(
     throw new Error(storageResult.error || 'Failed to check workspace storage');
   }
 
-  const newTotalSize = storageResult.usage + newFileSize;
-  
+  const newTotalSize = storageResult.totalUsage + newFileSize;
+
   if (newTotalSize > WORKSPACE_STORAGE_LIMIT) {
-    const usedMB = Math.round(storageResult.usage / (1024 * 1024) * 100) / 100;
+    const usedMB = Math.round(storageResult.totalUsage / (1024 * 1024) * 100) / 100;
     const limitMB = Math.round(WORKSPACE_STORAGE_LIMIT / (1024 * 1024));
     const fileMB = Math.round(newFileSize / (1024 * 1024) * 100) / 100;
     
@@ -456,8 +491,10 @@ async function processRagUpload(
     const ragIdentifier = projectUuid || userId;
     
     const result = await ragService.uploadDocument(file, ragIdentifier);
-    
+
     if (result.success) {
+      // Invalidate storage cache after uploading document
+      ragService.invalidateStorageCache(ragIdentifier);
       return { ragProcessed: true, ragError: undefined, upload_id: result.upload_id };
     } else {
       throw new Error(result.error || 'RAG upload failed');
@@ -647,6 +684,9 @@ export async function deleteDoc(
       ragService.removeDocument(doc.rag_document_id, ragIdentifier).catch(error => {
         console.error('Failed to remove document from RAG API:', error);
       });
+
+      // Invalidate storage cache after removing document
+      ragService.invalidateStorageCache(ragIdentifier);
     }
 
     return {

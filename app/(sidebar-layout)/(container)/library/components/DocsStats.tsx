@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, FileText, HardDrive, Upload } from 'lucide-react';
+import { AlertTriangle, Database, FileText, HardDrive, Upload } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,21 +13,28 @@ const STORAGE_LIMIT = 100 * 1024 * 1024; // 100 MB in bytes
 export interface DocsStatsProps {
   totalDocs: number;
   totalSize: number;
+  fileStorage?: number;
+  ragStorage?: number;
   recentUploads: number;
   formatFileSize: (bytes: number) => string;
 }
 
-export function DocsStats({ 
-  totalDocs, 
-  totalSize, 
-  recentUploads, 
-  formatFileSize 
+export function DocsStats({
+  totalDocs,
+  totalSize,
+  fileStorage,
+  ragStorage,
+  recentUploads,
+  formatFileSize
 }: DocsStatsProps) {
   const { t } = useTranslation('library');
   // Calculate storage usage percentage
   const storagePercentage = Math.min((totalSize / STORAGE_LIMIT) * 100, 100);
   const isNearLimit = storagePercentage >= 80;
   const isOverLimit = storagePercentage >= 95;
+
+  // Show breakdown if we have separate storage values
+  const showStorageBreakdown = fileStorage !== undefined && ragStorage !== undefined;
 
   const stats = [
     {
@@ -40,7 +47,12 @@ export function DocsStats({
       title: t('stats.storageUsed'),
       value: formatFileSize(totalSize),
       icon: HardDrive,
-      description: t('stats.storageLimit', { limit: formatFileSize(STORAGE_LIMIT) }),
+      description: showStorageBreakdown
+        ? t('stats.storageBreakdown', {
+            files: formatFileSize(fileStorage || 0),
+            rag: formatFileSize(ragStorage || 0),
+          })
+        : t('stats.storageLimit', { limit: formatFileSize(STORAGE_LIMIT) }),
       isStorage: true,
     },
     {
@@ -78,9 +90,9 @@ export function DocsStats({
               {stat.description}
             </p>
             {stat.isStorage && (
-              <div className="mt-2 space-y-1">
-                <Progress 
-                  value={storagePercentage} 
+              <div className="mt-2 space-y-2">
+                <Progress
+                  value={storagePercentage}
                   className="h-2"
                 />
                 <div className="flex justify-between text-xs">
@@ -100,6 +112,24 @@ export function DocsStats({
                     </span>
                   )}
                 </div>
+                {showStorageBreakdown && (
+                  <div className="space-y-1 pt-1 border-t">
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <HardDrive className="h-3 w-3" />
+                        {t('stats.fileStorage')}
+                      </span>
+                      <span>{formatFileSize(fileStorage || 0)}</span>
+                    </div>
+                    <div className="flex justify-between text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Database className="h-3 w-3" />
+                        {t('stats.ragStorage')}
+                      </span>
+                      <span>{formatFileSize(ragStorage || 0)}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

@@ -11,6 +11,6 @@ export default function ToLayout({
 }
 
 export const metadata = {
-  title: 'Profiles - Plugged.in',
-  description: 'Discover and connect with other Plugged.in users',
+  title: 'User Profiles - Plugged.in Community',
+  description: 'Discover and connect with developers, AI enthusiasts, and MCP server creators in the Plugged.in community. Share tools, collaborate on projects, and build together.',
 }; 
