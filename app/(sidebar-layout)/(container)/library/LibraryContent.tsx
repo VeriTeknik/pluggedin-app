@@ -9,7 +9,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
+import { Clock, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -17,12 +17,19 @@ import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { PageContainer } from '@/components/ui/page-container';
 import { Tabs, TabsContent } from '@/components/ui/tabs';
 // Internal hooks and types
 import { useKnowledgeBaseSearch } from '@/hooks/use-knowledge-base-search';
 import { useLibrary } from '@/hooks/use-library';
 import type { Doc } from '@/types/library';
+import { useRestoreVersion } from '@/lib/hooks/use-document-versions';
 
 import { AiSearchAnswer } from './components/AiSearchAnswer';
 import { DocsControls } from './components/DocsControls';
@@ -34,6 +41,12 @@ import { DocumentPreview } from './components/DocumentPreview';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { UploadDialog } from './components/UploadDialog';
 import { UploadProgress } from './components/UploadProgress';
+
+// Version management components
+import { VersionHistory } from '@/components/documents/version-history';
+import { VersionViewerModal } from '@/components/documents/version-viewer-modal';
+import { VersionDiffViewer } from '@/components/documents/version-diff-viewer';
+import { RestoreConfirmationDialog } from '@/components/documents/restore-confirmation-dialog';
 
 const columnHelper = createColumnHelper<Doc>();
 
@@ -51,6 +64,17 @@ export default function LibraryContent() {
   const [sourceFilter, setSourceFilter] = useState<'all' | 'upload' | 'ai_generated' | 'api'>('all');
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // Version management state
+  const [versionHistoryDoc, setVersionHistoryDoc] = useState<Doc | null>(null);
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [versionViewerOpen, setVersionViewerOpen] = useState(false);
+  const [viewingVersionNumber, setViewingVersionNumber] = useState<number>(0);
+  const [versionDiffOpen, setVersionDiffOpen] = useState(false);
+  const [compareVersions, setCompareVersions] = useState<[number, number]>([0, 0]);
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [restoringVersionNumber, setRestoringVersionNumber] = useState<number>(0);
+  const { restoreVersion, isRestoring } = useRestoreVersion();
 
   // AI Search state
   const [aiSearchEnabled, setAiSearchEnabled] = useState(false);
@@ -160,6 +184,40 @@ export default function LibraryContent() {
   const handlePreview = useCallback((doc: Doc) => {
     setPreviewDoc(doc);
     setPreviewOpen(true);
+  }, []);
+
+  const handleViewVersions = useCallback((doc: Doc) => {
+    setVersionHistoryDoc(doc);
+    setVersionHistoryOpen(true);
+  }, []);
+
+  const handleViewVersion = useCallback((versionNumber: number) => {
+    setViewingVersionNumber(versionNumber);
+    setVersionViewerOpen(true);
+  }, []);
+
+  const handleRestoreVersion = useCallback((versionNumber: number) => {
+    setRestoringVersionNumber(versionNumber);
+    setRestoreDialogOpen(true);
+  }, []);
+
+  const confirmRestore = useCallback(async () => {
+    if (versionHistoryDoc && restoringVersionNumber) {
+      try {
+        await restoreVersion(versionHistoryDoc.uuid, restoringVersionNumber);
+        setRestoreDialogOpen(false);
+        setVersionHistoryOpen(false);
+        // Refresh the document list
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to restore version:', error);
+      }
+    }
+  }, [versionHistoryDoc, restoringVersionNumber, restoreVersion]);
+
+  const handleCompareVersions = useCallback((v1: number, v2: number) => {
+    setCompareVersions([v1, v2]);
+    setVersionDiffOpen(true);
   }, []);
 
   const handleDocumentIdClick = useCallback((documentId: string) => {
@@ -320,13 +378,23 @@ export default function LibraryContent() {
             variant="ghost"
             size="sm"
             onClick={() => handlePreview(info.row.original)}
+            title="Preview"
           >
             <Eye className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
+            onClick={() => handleViewVersions(info.row.original)}
+            title="Version History"
+          >
+            <Clock className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => handleDownload(info.row.original)}
+            title="Download"
           >
             <Download className="h-4 w-4" />
           </Button>
@@ -334,6 +402,7 @@ export default function LibraryContent() {
             variant="ghost"
             size="sm"
             onClick={() => handleDelete(info.row.original)}
+            title="Delete"
           >
             <Trash2 className="h-4 w-4 text-destructive" />
           </Button>
@@ -341,7 +410,7 @@ export default function LibraryContent() {
       ),
       header: t('page.tableHeaders.actions'),
     }),
-  ], [t, handleDownload, handleDelete, handlePreview, formatFileSize, getMimeTypeIcon]);
+  ], [t, handleDownload, handleDelete, handlePreview, handleViewVersions, formatFileSize, getMimeTypeIcon]);
 
   // Filter docs based on source
   const filteredDocs = useMemo(() => docs.filter(doc => {
@@ -466,6 +535,7 @@ export default function LibraryContent() {
               onDownload={handleDownload}
               onDelete={handleDelete}
               onPreview={handlePreview}
+              onViewVersions={handleViewVersions}
               formatFileSize={formatFileSize}
               getMimeTypeIcon={getMimeTypeIcon}
             />
@@ -502,6 +572,61 @@ export default function LibraryContent() {
           isLoading={isDeleting}
           variant="destructive"
         />
+
+        {/* Version History Dialog */}
+        {versionHistoryDoc && (
+          <Dialog open={versionHistoryOpen} onOpenChange={setVersionHistoryOpen}>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Version History: {versionHistoryDoc.name}</DialogTitle>
+              </DialogHeader>
+              <VersionHistory
+                documentId={versionHistoryDoc.uuid}
+                documentName={versionHistoryDoc.name}
+                currentVersion={versionHistoryDoc.version || 1}
+                onViewVersion={handleViewVersion}
+                onRestoreVersion={handleRestoreVersion}
+                onCompareVersions={handleCompareVersions}
+              />
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Version Viewer Modal */}
+        {versionHistoryDoc && (
+          <VersionViewerModal
+            isOpen={versionViewerOpen}
+            onClose={() => setVersionViewerOpen(false)}
+            documentId={versionHistoryDoc.uuid}
+            documentName={versionHistoryDoc.name}
+            versionNumber={viewingVersionNumber}
+            onRestore={handleRestoreVersion}
+          />
+        )}
+
+        {/* Version Diff Viewer */}
+        {versionHistoryDoc && (
+          <VersionDiffViewer
+            isOpen={versionDiffOpen}
+            onClose={() => setVersionDiffOpen(false)}
+            documentId={versionHistoryDoc.uuid}
+            documentName={versionHistoryDoc.name}
+            version1={compareVersions[0]}
+            version2={compareVersions[1]}
+          />
+        )}
+
+        {/* Restore Confirmation Dialog */}
+        {versionHistoryDoc && (
+          <RestoreConfirmationDialog
+            isOpen={restoreDialogOpen}
+            onClose={() => setRestoreDialogOpen(false)}
+            onConfirm={confirmRestore}
+            documentName={versionHistoryDoc.name}
+            versionNumber={restoringVersionNumber}
+            currentVersion={versionHistoryDoc.version || 1}
+          />
+        )}
       </div>
     </PageContainer>
   );
