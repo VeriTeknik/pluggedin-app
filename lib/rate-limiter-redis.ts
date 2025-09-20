@@ -7,7 +7,14 @@ let redisClient: Redis | null = null;
 // Initialize Redis client
 function getRedisClient(): Redis | null {
   if (!process.env.REDIS_URL) {
-    console.warn('REDIS_URL not configured - falling back to in-memory rate limiting');
+    const isProduction = process.env.NODE_ENV === 'production';
+    if (isProduction) {
+      console.error('[CRITICAL] REDIS_URL not configured in production - rate limiting will be inconsistent across instances!');
+      // Consider failing closed in production for security
+      // throw new Error('Redis is required for rate limiting in production');
+    } else {
+      console.warn('REDIS_URL not configured - falling back to in-memory rate limiting');
+    }
     return null;
   }
 

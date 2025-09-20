@@ -24,7 +24,7 @@ export function generateNonce(): string {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
-export function getSecurityHeaders(isDevelopment: boolean = false, nonce?: string) {
+export function getSecurityHeaders(isDevelopment: boolean = false, nonce?: string, isHttps: boolean = true) {
   const baseHeaders = {
     // Prevent clickjacking attacks
     'X-Frame-Options': 'DENY',
@@ -68,16 +68,18 @@ export function getSecurityHeaders(isDevelopment: boolean = false, nonce?: strin
   };
 
   // Production-specific headers
-  const productionHeaders = {
-    // Force HTTPS
-    'Strict-Transport-Security': 'max-age=63072000; includeSubDomains; preload',
-
+  const productionHeaders: Record<string, string> = {
     // Certificate Transparency
     'Expect-CT': 'enforce, max-age=86400',
 
     // Content Security Policy with dynamic nonce support
     'Content-Security-Policy': generateCSP(false, nonce || generateNonce()),
   };
+
+  // Only add HSTS header when serving over HTTPS
+  if (isHttps && !isDevelopment) {
+    productionHeaders['Strict-Transport-Security'] = 'max-age=63072000; includeSubDomains; preload';
+  }
 
   // Development-specific headers
   const developmentHeaders = {
@@ -99,11 +101,12 @@ function generateCSP(isDevelopment: boolean, nonce: string): string {
     'script-src': [
       "'self'",
       isDevelopment ? "'unsafe-inline'" : `'nonce-${nonce}'`,
-      "'unsafe-eval'", // Required for Next.js, consider removing in production
+      // Only allow 'unsafe-eval' in development for Next.js HMR
+      isDevelopment ? "'unsafe-eval'" : '',
       'https://js.stripe.com',
       'https://www.googletagmanager.com',
       'https://www.google-analytics.com',
-    ],
+    ].filter(Boolean),
     'style-src': [
       "'self'",
       "'unsafe-inline'", // Required for styled-components/emotion

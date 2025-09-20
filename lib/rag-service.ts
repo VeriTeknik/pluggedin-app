@@ -4,6 +4,7 @@
  */
 
 import { validateExternalUrl } from './url-validator';
+import { estimateStorageFromDocumentCount } from './rag-storage-utils';
 
 export interface RagQueryResponse {
   success: boolean;
@@ -72,9 +73,12 @@ export interface RAGDocumentRequest {
 class RagService {
   private readonly ragApiUrl: string;
   private storageStatsCache: Map<string, { data: RagStorageStatsResponse; expiry: number }>;
-  private readonly CACHE_TTL = 60000; // 1 minute cache
+  private readonly CACHE_TTL: number;
+  private readonly MAX_CACHE_SIZE = 1000; // Maximum number of cache entries
 
   constructor() {
+    // Make cache TTL configurable via environment variable (default: 1 minute)
+    this.CACHE_TTL = parseInt(process.env.RAG_CACHE_TTL_MS || '60000', 10);
     const ragUrl = process.env.RAG_API_URL || 'http://127.0.0.1:8000';
     // Validate URL to prevent SSRF attacks
     try {
@@ -623,11 +627,8 @@ class RagService {
             isEstimate: false,
           };
 
-          // Cache successful result
-          this.storageStatsCache.set(cacheKey, {
-            data: result,
-            expiry: Date.now() + this.CACHE_TTL
-          });
+          // Cache successful result with eviction if needed
+          this.setCacheWithEviction(cacheKey, result);
 
           return result;
         }
@@ -643,32 +644,20 @@ class RagService {
         const documentsCount = docsResponse.documents.length;
 
         if (documentsCount > 0) {
-          // Estimate storage based on average document size
-          const avgChunksPerDoc = 25; // Average chunks per document
-          const avgBytesPerVector = 1536 * 4; // 1536 dimensions * 4 bytes per float32
-          const estimatedStorageMb = (documentsCount * avgChunksPerDoc * avgBytesPerVector) / (1024 * 1024);
-
+          // Use shared utility for consistent storage estimation
+          const estimation = estimateStorageFromDocumentCount(documentsCount);
           return {
             success: true,
-            documentsCount,
-            totalChunks: documentsCount * avgChunksPerDoc,
-            estimatedStorageMb: Math.round(estimatedStorageMb * 10) / 10,
-            vectorsCount: documentsCount * avgChunksPerDoc,
-            embeddingDimension: 1536,
-            isEstimate: true,
+            ...estimation,
           };
         }
       }
 
-      // No documents found
+      // No documents found - return empty stats
+      const emptyEstimation = estimateStorageFromDocumentCount(0);
       return {
         success: true,
-        documentsCount: 0,
-        totalChunks: 0,
-        estimatedStorageMb: 0,
-        vectorsCount: 0,
-        embeddingDimension: 1536,
-        isEstimate: true,
+        ...emptyEstimation,
       };
     } catch (error) {
       console.error('Error getting storage stats:', error);
@@ -677,6 +666,32 @@ class RagService {
         error: error instanceof Error ? error.message : 'Failed to get storage statistics',
       };
     }
+  }
+
+  /**
+   * Set cache with eviction strategy to prevent unbounded growth
+   */
+  private setCacheWithEviction(key: string, data: RagStorageStatsResponse): void {
+    // Evict expired entries if cache is getting full
+    if (this.storageStatsCache.size >= this.MAX_CACHE_SIZE) {
+      const now = Date.now();
+      for (const [k, v] of this.storageStatsCache) {
+        if (v.expiry <= now) {
+          this.storageStatsCache.delete(k);
+        }
+      }
+
+      // If still full, remove oldest entries
+      if (this.storageStatsCache.size >= this.MAX_CACHE_SIZE) {
+        const keysToDelete = Array.from(this.storageStatsCache.keys()).slice(0, Math.floor(this.MAX_CACHE_SIZE / 4));
+        keysToDelete.forEach(k => this.storageStatsCache.delete(k));
+      }
+    }
+
+    this.storageStatsCache.set(key, {
+      data,
+      expiry: Date.now() + this.CACHE_TTL
+    });
   }
 
   /**
