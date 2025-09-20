@@ -96,6 +96,10 @@ export default function LibraryContent() {
     description: '',
     tags: '',
     file: null as File | null,
+    purpose: '',
+    relatedTo: '',
+    notes: '',
+    uploadMethod: undefined as 'drag-drop' | 'file-picker' | undefined,
   });
 
   const formatFileSize = useCallback((bytes: number) => {
@@ -139,13 +143,26 @@ export default function LibraryContent() {
         file: uploadForm.file,
         name: uploadForm.name,
         description: uploadForm.description || undefined,
-        tags: uploadForm.tags 
+        tags: uploadForm.tags
           ? uploadForm.tags.split(',').map(tag => tag.trim()).filter(Boolean)
           : undefined,
+        purpose: uploadForm.purpose || undefined,
+        relatedTo: uploadForm.relatedTo || undefined,
+        notes: uploadForm.notes || undefined,
+        uploadMethod: uploadForm.uploadMethod,
       });
-      
+
       setUploadDialogOpen(false);
-      setUploadForm({ name: '', description: '', tags: '', file: null });
+      setUploadForm({
+        name: '',
+        description: '',
+        tags: '',
+        file: null,
+        purpose: '',
+        relatedTo: '',
+        notes: '',
+        uploadMethod: undefined
+      });
     } catch (error) {
       console.error('Upload failed:', error);
     } finally {

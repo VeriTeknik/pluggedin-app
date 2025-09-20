@@ -5,15 +5,16 @@ import { realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import * as path from 'path';
 import { join, resolve } from 'path';
+import { z } from 'zod';
 
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
 import { ragService } from '@/lib/rag-service';
 import { sanitizeToPlainText } from '@/lib/sanitization';
-import type { 
-  Doc, 
-  DocDeleteResponse, 
-  DocListResponse, 
+import type {
+  Doc,
+  DocDeleteResponse,
+  DocListResponse,
   DocUploadResponse
 } from '@/types/library';
 
@@ -286,25 +287,32 @@ export async function getProjectStorageUsage(
   }
 }
 
+// Zod schema for upload metadata validation
+const uploadMetadataSchema = z.object({
+  purpose: z.string().max(500).optional().transform(val => val || undefined),
+  relatedTo: z.string().max(200).optional().transform(val => val || undefined),
+  notes: z.string().max(1000).optional().transform(val => val || undefined),
+});
+
 // Helper function: Parse and validate form data
 async function parseAndValidateFormData(formData: FormData) {
   const fileEntry = formData.get('file');
   const name = formData.get('name') as string;
   const description = formData.get('description') as string || null;
   const tagsString = formData.get('tags') as string;
-  
+
   // Validate file entry is actually a File object
   if (!fileEntry || typeof fileEntry === 'string') {
     throw new Error('Valid file is required');
   }
-  
+
   // Additional validation to ensure it's a proper File/Blob with required properties
   if (!('size' in fileEntry) || !('type' in fileEntry) || !('name' in fileEntry)) {
     throw new Error('Invalid file object');
   }
-  
+
   const file = fileEntry as File;
-  
+
   if (!name) {
     throw new Error('File name is required');
   }
@@ -316,11 +324,30 @@ async function parseAndValidateFormData(formData: FormData) {
   }
 
   // Parse tags
-  const tags = tagsString 
+  const tags = tagsString
     ? tagsString.split(',').map(tag => tag.trim()).filter(Boolean)
     : [];
 
-  return { file, name, description, tags };
+  // Extract upload method
+  const uploadMethod = formData.get('uploadMethod') as 'drag-drop' | 'file-picker' | undefined;
+
+  // Validate and sanitize metadata fields
+  const metadataInput = {
+    purpose: formData.get('purpose') as string || undefined,
+    relatedTo: formData.get('relatedTo') as string || undefined,
+    notes: formData.get('notes') as string || undefined,
+  };
+
+  try {
+    const validatedMetadata = uploadMetadataSchema.parse(metadataInput);
+    return { file, name, description, tags, ...validatedMetadata, uploadMethod };
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const fieldErrors = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+      throw new Error(`Invalid metadata: ${fieldErrors}`);
+    }
+    throw error;
+  }
 }
 
 // Helper function: Save file to disk in user-specific directory (outside public)
@@ -351,8 +378,23 @@ async function insertDocRecord(
   description: string | null,
   file: File,
   relativePath: string,
-  tags: string[]
+  tags: string[],
+  purpose?: string,
+  relatedTo?: string,
+  notes?: string,
+  uploadMethod?: 'drag-drop' | 'file-picker'
 ) {
+  // Build upload metadata if any context fields are provided or upload method is specified
+  const uploadMetadata = (purpose || relatedTo || notes || uploadMethod) ? {
+    purpose,
+    relatedTo,
+    notes,
+    uploadMethod: uploadMethod || 'file-picker',
+    uploadedAt: new Date().toISOString(),
+    originalFileName: file.name,
+    fileLastModified: file.lastModified ? new Date(file.lastModified).toISOString() : undefined,
+  } : undefined;
+
   const [docRecord] = await db
     .insert(docsTable)
     .values({
@@ -365,9 +407,10 @@ async function insertDocRecord(
       mime_type: file.type,
       file_path: relativePath,
       tags,
+      upload_metadata: uploadMetadata,
     })
     .returning();
-  
+
   return docRecord;
 }
 
@@ -486,7 +529,7 @@ export async function createDoc(
 ): Promise<DocUploadResponse> {
   try {
     // Step 1: Parse and validate form data
-    const { file, name, description, tags } = await parseAndValidateFormData(formData);
+    const { file, name, description, tags, purpose, relatedTo, notes, uploadMethod } = await parseAndValidateFormData(formData);
 
     // Step 2: Validate project storage limit
     await validateProjectStorageLimit(userId, projectUuid, file.size);
@@ -495,7 +538,7 @@ export async function createDoc(
     const { relativePath } = await saveFileToDisk(file, userId);
     
     // Step 4: Insert document record into database
-    const docRecord = await insertDocRecord(userId, projectUuid, name, description, file, relativePath, tags);
+    const docRecord = await insertDocRecord(userId, projectUuid, name, description, file, relativePath, tags, purpose, relatedTo, notes, uploadMethod);
     
     // Step 5 & 6: Process RAG upload only for supported file types
     let ragProcessed = false;

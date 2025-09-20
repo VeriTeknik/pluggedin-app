@@ -20,6 +20,16 @@ export interface Doc {
   tags?: string[] | null;
   rag_document_id?: string | null;
   source: 'upload' | 'ai_generated' | 'api';
+  upload_metadata?: {
+    purpose?: string;
+    relatedTo?: string;
+    notes?: string;
+    uploadMethod?: 'drag-drop' | 'file-picker' | 'api' | 'paste';
+    userAgent?: string;
+    uploadedAt?: string;
+    originalFileName?: string;
+    fileLastModified?: string;
+  } | null;
   ai_metadata?: {
     model?: {
       name: string;

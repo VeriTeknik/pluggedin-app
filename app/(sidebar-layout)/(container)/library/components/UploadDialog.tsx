@@ -28,17 +28,25 @@ const STORAGE_LIMIT = 100 * 1024 * 1024;
 export interface UploadDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  form: { 
-    name: string; 
-    description: string; 
-    tags: string; 
+  form: {
+    name: string;
+    description: string;
+    tags: string;
     file: File | null;
+    purpose?: string;
+    relatedTo?: string;
+    notes?: string;
+    uploadMethod?: 'drag-drop' | 'file-picker';
   };
   setForm: React.Dispatch<React.SetStateAction<{
-    name: string; 
-    description: string; 
-    tags: string; 
+    name: string;
+    description: string;
+    tags: string;
     file: File | null;
+    purpose?: string;
+    relatedTo?: string;
+    notes?: string;
+    uploadMethod?: 'drag-drop' | 'file-picker';
   }>>;
   isUploading: boolean;
   onUpload: () => Promise<void>;
@@ -86,6 +94,7 @@ export function UploadDialog({
         ...prev,
         file,
         name: prev.name || file.name.split('.')[0],
+        uploadMethod: 'drag-drop',
       }));
     }
   }, [setForm]);
@@ -157,7 +166,15 @@ export function UploadDialog({
               storageInfo.wouldExceedLimit && 'border-destructive bg-destructive/5'
             )}
           >
-            <input {...getInputProps()} />
+            <input {...getInputProps()} onChange={(e) => {
+              const inputProps = getInputProps();
+              if (inputProps.onChange) {
+                inputProps.onChange(e);
+              }
+              if (!isDragActive && e.target.files?.[0]) {
+                setForm(prev => ({ ...prev, uploadMethod: 'file-picker' }));
+              }
+            }} />
             <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
             {form.file ? (
               <div>
@@ -212,6 +229,41 @@ export function UploadDialog({
                 onChange={(e) => setForm(prev => ({ ...prev, tags: e.target.value }))}
                 placeholder={t('uploadDialog.tagsPlaceholder')}
               />
+            </div>
+
+            {/* Upload Context Fields */}
+            <div className="space-y-3 pt-3 border-t">
+              <h4 className="text-sm font-medium text-muted-foreground">
+                {t('uploadDialog.contextInformation')}
+              </h4>
+              <div>
+                <Label htmlFor="purpose">{t('uploadDialog.purpose')}</Label>
+                <Input
+                  id="purpose"
+                  value={form.purpose || ''}
+                  onChange={(e) => setForm(prev => ({ ...prev, purpose: e.target.value }))}
+                  placeholder={t('uploadDialog.purposePlaceholder')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="relatedTo">{t('uploadDialog.relatedTo')}</Label>
+                <Input
+                  id="relatedTo"
+                  value={form.relatedTo || ''}
+                  onChange={(e) => setForm(prev => ({ ...prev, relatedTo: e.target.value }))}
+                  placeholder={t('uploadDialog.relatedToPlaceholder')}
+                />
+              </div>
+              <div>
+                <Label htmlFor="notes">{t('uploadDialog.notes')}</Label>
+                <Textarea
+                  id="notes"
+                  value={form.notes || ''}
+                  onChange={(e) => setForm(prev => ({ ...prev, notes: e.target.value }))}
+                  placeholder={t('uploadDialog.notesPlaceholder')}
+                  rows={2}
+                />
+              </div>
             </div>
           </div>
         </div>

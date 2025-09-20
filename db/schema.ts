@@ -895,6 +895,17 @@ export const docsTable = pgTable(
         timestamp?: string;
         sessionId?: string;
       }>(),
+    upload_metadata: jsonb('upload_metadata')
+      .$type<{
+        purpose?: string;
+        relatedTo?: string;
+        notes?: string;
+        uploadMethod?: 'drag-drop' | 'file-picker' | 'api' | 'paste';
+        userAgent?: string;
+        uploadedAt?: string;
+        originalFileName?: string;
+        fileLastModified?: string;
+      }>(),
     content_hash: text('content_hash'), // For deduplication
     visibility: text('visibility').notNull().default('private'), // 'private', 'workspace', 'public'
     version: integer('version').notNull().default(1),

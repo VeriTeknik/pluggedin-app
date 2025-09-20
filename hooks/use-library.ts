@@ -57,6 +57,10 @@ export function useLibrary() {
       name: string;
       description?: string;
       tags?: string[];
+      purpose?: string;
+      relatedTo?: string;
+      notes?: string;
+      uploadMethod?: 'drag-drop' | 'file-picker';
     }) => {
       if (!session?.user?.id) {
         throw new Error('Not authenticated');
@@ -70,6 +74,18 @@ export function useLibrary() {
       }
       if (data.tags && data.tags.length > 0) {
         formData.append('tags', data.tags.join(','));
+      }
+      if (data.purpose) {
+        formData.append('purpose', data.purpose);
+      }
+      if (data.relatedTo) {
+        formData.append('relatedTo', data.relatedTo);
+      }
+      if (data.notes) {
+        formData.append('notes', data.notes);
+      }
+      if (data.uploadMethod) {
+        formData.append('uploadMethod', data.uploadMethod);
       }
 
       const result = await createDoc(session.user.id, currentProject?.uuid, formData);

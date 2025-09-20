@@ -19,7 +19,14 @@
     "tagsPlaceholder": "Enter tags separated by commas",
     "cancel": "Cancel",
     "startingUpload": "Starting Upload...",
-    "uploadButton": "Upload Document"
+    "uploadButton": "Upload Document",
+    "contextInformation": "Upload Context (Optional)",
+    "purpose": "Purpose",
+    "purposePlaceholder": "Why are you uploading this document?",
+    "relatedTo": "Related To",
+    "relatedToPlaceholder": "What project or topic is this related to?",
+    "notes": "Notes",
+    "notesPlaceholder": "Any additional notes or context about this document"
   },
   "stats": {
     "totalDocuments": "Total Documents",
@@ -189,5 +196,20 @@
       "embeddings": "Converting text to vector representations",
       "databaseInsertion": "Saving processed data to database"
     }
+  },
+  "uploadMetadata": {
+    "title": "Upload Information",
+    "uploadMethod": "Upload Method",
+    "dragDrop": "Drag and Drop",
+    "filePicker": "File Picker",
+    "api": "API Upload",
+    "paste": "Paste",
+    "purpose": "Purpose",
+    "relatedTo": "Related To",
+    "notes": "Notes",
+    "fileInfo": "File Information",
+    "uploadedAt": "Uploaded",
+    "originalFileName": "Original File Name",
+    "fileLastModified": "File Modified"
   }
 } 
