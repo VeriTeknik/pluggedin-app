@@ -1,8 +1,9 @@
+import crypto from 'crypto';
+import { eq } from 'drizzle-orm';
+
 import { db } from '@/db';
 import { emailTrackingTable, scheduledEmailsTable, users } from '@/db/schema';
 import { sendEmail } from '@/lib/email';
-import { eq } from 'drizzle-orm';
-import crypto from 'crypto';
 
 export type UserSegment = 'general' | 'developer' | 'security_focused' | 'enterprise';
 

@@ -3,9 +3,9 @@ import { z } from 'zod';
 
 import { createNotification } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
+import { notifyAdmins } from '@/lib/admin-notifications';
 import { sendEmail as sendEmailHelper } from '@/lib/email';
 import type { NotificationMetadata } from '@/lib/types/notifications';
-import { notifyAdmins } from '@/lib/admin-notifications';
 
 const customNotificationSchema = z.object({
   title: z.string().optional(),

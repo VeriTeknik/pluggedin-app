@@ -1,4 +1,3 @@
-import { z } from 'zod';
 
 export const supportedLanguages = ['en', 'tr', 'zh', 'hi', 'ja', 'nl'] as const;
 export type SupportedLanguage = typeof supportedLanguages[number];

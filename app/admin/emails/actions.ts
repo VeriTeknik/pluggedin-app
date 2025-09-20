@@ -1,19 +1,20 @@
 'use server';
 
-import { db } from '@/db';
-import { users, userEmailPreferencesTable, emailTrackingTable, adminAuditLogTable, emailTemplatesTable } from '@/db/schema';
-import { getAuthSession } from '@/lib/auth';
-import { getAdminEmails } from '@/lib/admin-notifications';
-import { sendEmail } from '@/lib/email';
-import { generateUnsubscribeUrl } from '@/lib/unsubscribe-tokens';
-import { checkAdminRateLimit } from '@/lib/admin-rate-limiter';
-import { translateToAllLanguages, supportedLanguages, type SupportedLanguage, type EmailTranslations } from '@/lib/email-translation-service';
-import { sanitizeStrict, sanitizeEmailSubject } from '@/lib/sanitization';
-import { isEmailConfigured, isTranslationAvailable, getAvailableAIProviders } from '@/lib/env-validation';
-import { eq, and, gte, lte, sql, desc, asc, or, ne } from 'drizzle-orm';
+import { and, desc, eq, gte,or, sql } from 'drizzle-orm';
 import { marked } from 'marked';
-import { z } from 'zod';
 import { headers } from 'next/headers';
+import { z } from 'zod';
+
+import { db } from '@/db';
+import { adminAuditLogTable, emailTemplatesTable,emailTrackingTable, userEmailPreferencesTable, users } from '@/db/schema';
+import { getAdminEmails } from '@/lib/admin-notifications';
+import { checkAdminRateLimit } from '@/lib/admin-rate-limiter';
+import { getAuthSession } from '@/lib/auth';
+import { sendEmail } from '@/lib/email';
+import { type EmailTranslations,type SupportedLanguage, translateToAllLanguages } from '@/lib/email-translation-service';
+import { getAvailableAIProviders,isEmailConfigured, isTranslationAvailable } from '@/lib/env-validation';
+import { sanitizeEmailSubject,sanitizeStrict } from '@/lib/sanitization';
+import { generateUnsubscribeUrl } from '@/lib/unsubscribe-tokens';
 
 // Check if current user is admin with database check
 async function checkAdminAuth() {
@@ -213,7 +214,7 @@ export async function getEmailRecipients(options: {
       );
 
     // Filter by segment if needed (you can add segment logic based on user metadata)
-    let recipients = eligibleUsers;
+    const recipients = eligibleUsers;
 
     return {
       success: true,
@@ -558,7 +559,7 @@ export async function updateEmailTemplate(id: string, input: Partial<z.infer<typ
 
     // Create a new version if content or subject changes
     let newVersion = existing.version;
-    let parentId = existing.parentId || existing.id;
+    const parentId = existing.parentId || existing.id;
 
     if (input.content !== existing.content || input.subject !== existing.subject) {
       newVersion = existing.version + 1;

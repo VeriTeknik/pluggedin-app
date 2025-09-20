@@ -1,11 +1,11 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Shield, Lock, Award, CheckCircle2, Star } from 'lucide-react';
-import { useInView } from 'react-intersection-observer';
+import { Award, CheckCircle2, Lock, Shield } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useInView } from 'react-intersection-observer';
+
 import { AnimatedMetric } from '@/components/ui/animated-metric';
-import { cn } from '@/lib/utils';
 
 const certifications = [
   { icon: Shield, key: 'soc2' },

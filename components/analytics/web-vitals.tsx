@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { onCLS, onFCP, onLCP, onTTFB, onINP, CLSMetric, FCPMetric, LCPMetric, TTFBMetric, INPMetric } from 'web-vitals';
+import { CLSMetric, FCPMetric, INPMetric,LCPMetric, onCLS, onFCP, onINP, onLCP, onTTFB, TTFBMetric } from 'web-vitals';
 
 type MetricType = CLSMetric | FCPMetric | LCPMetric | TTFBMetric | INPMetric;
 

@@ -1,37 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { LazyMonacoEditor } from '@/components/lazy-monaco-editor';
 import {
-  getEmailTemplate,
-  updateEmailTemplate,
-  deleteEmailTemplate,
-  getTemplateVersions
-} from '../../../actions';
-import {
-  Save,
-  Eye,
-  Trash2,
-  ArrowLeft,
-  History,
   AlertCircle,
+  ArrowLeft,
   Code,
+  Eye,
   FileText,
-  CheckCircle
-} from 'lucide-react';
+  History,
+  Save,
+  Trash2} from 'lucide-react';
+import { useParams,useRouter } from 'next/navigation';
+import { useCallback,useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { toast } from 'sonner';
+
+import { LazyMonacoEditor } from '@/components/lazy-monaco-editor';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +27,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+import {
+  deleteEmailTemplate,
+  getEmailTemplate,
+  getTemplateVersions,
+  updateEmailTemplate} from '../../../actions';
 
 interface EmailTemplate {
   id: string;

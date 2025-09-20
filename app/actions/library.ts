@@ -7,9 +7,9 @@ import * as path from 'path';
 import { join, resolve } from 'path';
 
 import { db } from '@/db';
-import { sanitizeToPlainText } from '@/lib/sanitization';
 import { docsTable, documentVersionsTable } from '@/db/schema';
 import { ragService } from '@/lib/rag-service';
+import { sanitizeToPlainText } from '@/lib/sanitization';
 import type { 
   Doc, 
   DocDeleteResponse, 
@@ -686,7 +686,7 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
             );
 
           // Get RAG document list for filename-based fallback matching
-          let ragDocumentMap: Map<string, string> = new Map();
+          const ragDocumentMap: Map<string, string> = new Map();
           try {
             const ragDocsResult = await ragService.getDocuments(ragIdentifier);
             if (ragDocsResult.success && ragDocsResult.documents) {

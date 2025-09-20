@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { processScheduledEmails } from '@/lib/welcome-emails';
 
 // This endpoint should be called by a cron job (e.g., every hour)

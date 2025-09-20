@@ -193,7 +193,7 @@ export default function CustomMCPServersPage() {
     setIsSubmitting(true);
     try {
       const additionalArgs = values.additionalArgs.trim().split(/\s+/).filter(Boolean);
-      let env: Record<string, string> = {};
+      const env: Record<string, string> = {};
       try {
         // Simple client-side parsing of environment variables
         const lines = (values.env || '').split('\n');

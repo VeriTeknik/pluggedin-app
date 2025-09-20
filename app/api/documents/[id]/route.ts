@@ -2,7 +2,6 @@ import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import { readFile, writeFile } from 'fs/promises';
 import { NextRequest, NextResponse } from 'next/server';
 import { join, resolve } from 'path';
-import { sanitizeModerate } from '@/lib/sanitization';
 import { z } from 'zod';
 
 import { logAuditEvent } from '@/app/actions/audit-logger';
@@ -11,6 +10,7 @@ import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable,documentVersionsTable } from '@/db/schema';
 import {rateLimit } from '@/lib/api-rate-limit';
 import { ragService } from '@/lib/rag-service';
+import { sanitizeModerate } from '@/lib/sanitization';
 import { isPathWithinDirectory } from '@/lib/security';
 import { saveDocumentVersion } from '@/lib/version-manager';
 

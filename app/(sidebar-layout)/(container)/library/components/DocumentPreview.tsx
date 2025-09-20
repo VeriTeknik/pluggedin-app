@@ -16,8 +16,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import dynamic from 'next/dynamic';
-import { useCallback, useEffect, useReducer, useMemo, useState, memo, lazy, Suspense } from 'react';
+import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
@@ -31,8 +30,8 @@ import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { useProjects } from '@/hooks/use-projects';
 import { useDocxContent } from '@/hooks/useDocxContent';
 import { getFileLanguage, isDocxFile, isImageFile, isMarkdownFile, isPDFFile, isTextFile, isTextFileByExtension, isValidTextMimeType, ZOOM_LIMITS } from '@/lib/file-utils';
-import { Doc } from '@/types/library';
 import type { DocumentVersion } from '@/types/document-versioning';
+import { Doc } from '@/types/library';
 
 import { AIMetadataPanel } from './AIMetadataPanel';
 import { DocumentVersionHistory } from './DocumentVersionHistory';

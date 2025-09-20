@@ -5,10 +5,10 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { users, verificationTokens } from '@/db/schema';
+import { notifyAdminsOfNewUser } from '@/lib/admin-notifications';
 import { createErrorResponse, ErrorResponses } from '@/lib/api-errors';
 import { generateVerificationEmail, sendEmail } from '@/lib/email';
 import { RateLimiters } from '@/lib/rate-limiter';
-import { notifyAdminsOfNewUser } from '@/lib/admin-notifications';
 import { sendWelcomeEmail } from '@/lib/welcome-emails';
 
 const registerSchema = z.object({

@@ -1,11 +1,10 @@
-import { redirect } from 'next/navigation';
-import { db } from '@/db';
-import { users, userEmailPreferencesTable } from '@/db/schema';
-import { eq } from 'drizzle-orm';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { AlertCircle,Mail } from 'lucide-react';
 import Link from 'next/link';
-import { Mail, AlertCircle } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { db } from '@/db';
+import { userEmailPreferencesTable } from '@/db/schema';
 import { verifyUnsubscribeToken } from '@/lib/unsubscribe-tokens';
 
 interface UnsubscribePageProps {

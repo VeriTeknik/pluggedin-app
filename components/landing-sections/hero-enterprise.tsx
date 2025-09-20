@@ -1,19 +1,19 @@
 'use client';
 
-import { ArrowRight, CheckCircle, Shield, Zap, Globe } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { ArrowRight, Globe,Shield, Zap } from 'lucide-react';
 import Link from 'next/link';
 import { useTranslation } from 'react-i18next';
-import { motion } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 
+import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Button } from '@/components/ui/button';
 import { GlowCard } from '@/components/ui/glow-card';
-import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { GrowthBadge } from '@/components/ui/growth-badge';
-import { ParticleBackground } from './particle-background';
 import { useMounted } from '@/hooks/use-mounted';
-import { cn } from '@/lib/utils';
-import { PLATFORM_METRICS, METRIC_STRINGS } from '@/lib/constants/metrics';
+import {PLATFORM_METRICS } from '@/lib/constants/metrics';
+
+import { ParticleBackground } from './particle-background';
 
 const metrics = [
   PLATFORM_METRICS.TOOLS,

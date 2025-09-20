@@ -1,14 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getEmailHistory } from '../actions';
-import { Clock, Send, Users, ChevronLeft, ChevronRight, Mail } from 'lucide-react';
 import { format } from 'date-fns';
+import { ChevronLeft, ChevronRight, Clock, Mail,Send, Users } from 'lucide-react';
+import { useEffect,useState } from 'react';
 import { toast } from 'sonner';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+
+import { getEmailHistory } from '../actions';
 
 interface EmailHistoryItem {
   id: string;

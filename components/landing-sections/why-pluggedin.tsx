@@ -1,12 +1,12 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { ArrowRight, Brain, Cloud, Database, Lock, TrendingUp, Users, Layers, Zap, CheckCircle } from 'lucide-react';
+import { ArrowRight, Brain, CheckCircle,Cloud, Database, Layers, Lock, TrendingUp, Users, Zap } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
-import { Card, CardContent } from '@/components/ui/card';
 import { AnimatedMetric } from '@/components/ui/animated-metric';
+import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 
 const containerVariants = {

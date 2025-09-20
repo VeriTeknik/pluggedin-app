@@ -1,9 +1,10 @@
 'use client';
 
+import { Bell, Mail, Megaphone, Shield,TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Mail, Bell, TrendingUp, Megaphone, Shield } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import {
   Card,
   CardContent,
@@ -13,8 +14,8 @@ import {
 } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+
 import { updateEmailPreferences } from '../actions';
 
 interface EmailPreferencesProps {

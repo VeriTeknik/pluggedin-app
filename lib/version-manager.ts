@@ -3,15 +3,16 @@
  * Handles creation, storage, and retrieval of document versions
  */
 
-import { mkdir, writeFile, readFile, unlink, rename, access, constants } from 'fs/promises';
-import { join, extname, basename, dirname } from 'path';
-import { existsSync } from 'fs';
+import { and, desc,eq } from 'drizzle-orm';
+import { access, constants, mkdir, readFile, unlink, writeFile } from 'fs/promises';
+import { basename,extname, join } from 'path';
+
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
-import { eq, and, desc } from 'drizzle-orm';
-import { isPathWithinDirectory, sanitizeUserIdForFileSystem } from './security';
-import { validateDocumentId, validateUserId, validateVersionNumber, validateFilename } from './path-validation';
+
+import { validateDocumentId, validateFilename,validateUserId, validateVersionNumber } from './path-validation';
 import { ragService } from './rag-service';
+import { isPathWithinDirectory, sanitizeUserIdForFileSystem } from './security';
 
 export interface VersionInfo {
   versionNumber: number;
@@ -93,12 +94,15 @@ export async function saveDocumentVersion(
     previousContent
   } = options;
 
-  // Pre-validate all inputs
+  // Pre-validate all inputs BEFORE any operations
   const validatedDocumentId = validateDocumentId(documentId);
   const validatedUserId = validateUserId(userId);
 
-  // Use transaction to ensure atomic version increment
-  const versionResult = await db.transaction(async (tx) => {
+  // Calculate content diff early
+  const contentDiff = calculateContentDiff(previousContent || '', content, operation);
+
+  // ALL database operations MUST be in ONE ATOMIC transaction
+  const transactionResult = await db.transaction(async (tx) => {
     // Get the document with row lock
     const [document] = await tx
       .select()
@@ -110,85 +114,105 @@ export async function saveDocumentVersion(
       throw new Error('Document not found');
     }
 
-    // Determine base upload directory
-    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
-    const versionDir = getVersionDirectory(baseUploadDir, validatedUserId, validatedDocumentId);
-
-    // Create version directory if it doesn't exist (use async method)
-    try {
-      await access(versionDir, constants.F_OK);
-    } catch {
-      await mkdir(versionDir, { recursive: true });
-    }
-
-    // Get the current version number - fail if not set
+    // Verify version is initialized
     if (!document.version) {
-      throw new Error('Document version not initialized. Document must have an initial version.');
+      throw new Error('Document version not initialized');
     }
-    const currentVersionNumber = document.version;
-    const newVersionNumber = currentVersionNumber + 1;
 
-    // Update the document version immediately to claim this version number
+    // Calculate new version number
+    const newVersionNumber = document.version + 1;
+
+    // Update document version number to claim it
     await tx
       .update(docsTable)
       .set({ version: newVersionNumber })
       .where(eq(docsTable.uuid, validatedDocumentId));
 
-    return { document, newVersionNumber, versionDir, baseUploadDir };
+    // Prepare file paths
+    const baseUploadDir = process.env.UPLOADS_DIR || getDefaultUploadsDir();
+    const versionDir = getVersionDirectory(baseUploadDir, validatedUserId, validatedDocumentId);
+    const versionFilename = generateVersionFilename(document.file_name, newVersionNumber);
+    const versionFilePath = join(versionDir, versionFilename);
+    const relativeVersionPath = `${sanitizeUserIdForFileSystem(validatedUserId)}/versions/${validatedDocumentId}/${versionFilename}`;
+
+    // Validate path security BEFORE proceeding
+    if (!isPathWithinDirectory(versionFilePath, baseUploadDir)) {
+      throw new Error('Security violation: Path traversal detected');
+    }
+
+    // Update all existing versions to not be current
+    await tx
+      .update(documentVersionsTable)
+      .set({ is_current: false })
+      .where(eq(documentVersionsTable.document_id, validatedDocumentId));
+
+    // Create new version record IN THE SAME TRANSACTION
+    const [versionRecord] = await tx
+      .insert(documentVersionsTable)
+      .values({
+        document_id: validatedDocumentId,
+        version_number: newVersionNumber,
+        content: content, // Store in DB for reliability
+        file_path: relativeVersionPath,
+        is_current: true,
+        rag_document_id: null, // Will update later if RAG succeeds
+        created_by_model: createdByModel,
+        change_summary: changeSummary || `${operation} operation by ${createdByModel.name}`,
+        content_diff: contentDiff
+      })
+      .returning();
+
+    // Return all necessary data for post-transaction operations
+    return {
+      versionRecord,
+      versionFilePath,
+      versionDir,
+      baseUploadDir,
+      document,
+      newVersionNumber
+    };
   });
 
-  const { document, newVersionNumber, versionDir, baseUploadDir } = versionResult;
-
-  // Generate version filename
-  const versionFilename = generateVersionFilename(
-    document.file_name,
-    newVersionNumber
-  );
-  const versionFilePath = join(versionDir, versionFilename);
-
-  // Validate the path is within allowed directory
-  if (!isPathWithinDirectory(versionFilePath, baseUploadDir)) {
-    console.error('Path traversal attempt in version creation:', versionFilePath);
-    throw new Error('Invalid version file path');
-  }
-
-  // Additional validation to ensure filename is safe
-  if (versionFilename.includes('../') || versionFilename.includes('..\\')) {
-    console.error('Suspicious filename pattern:', versionFilename);
-    throw new Error('Invalid version filename');
-  }
-
-  // Track if file was written for cleanup on failure
+  // STEP 2: Write file AFTER successful transaction (non-critical)
+  // Database is already consistent, file write is best-effort
   let fileWritten = false;
-
   try {
+    // Create directory if needed
+    try {
+      await access(transactionResult.versionDir, constants.F_OK);
+    } catch {
+      await mkdir(transactionResult.versionDir, { recursive: true });
+    }
+
     // Write the version file
-    await writeFile(versionFilePath, content, 'utf-8');
+    await writeFile(transactionResult.versionFilePath, content, 'utf-8');
     fileWritten = true;
-  } catch (writeError) {
-    console.error('Failed to write version file:', writeError);
-    throw new Error('Failed to save version file');
+  } catch (fileError) {
+    console.error('[Version Manager] Failed to write version file (non-critical)', {
+      error: fileError instanceof Error ? fileError.message : String(fileError),
+      documentId: validatedDocumentId,
+      versionNumber: transactionResult.newVersionNumber,
+      filePath: transactionResult.versionFilePath,
+      fallback: 'Version content stored in database'
+    });
+    // Continue - we have the content in the database
   }
 
-  // Calculate content diff
-  const contentDiff = calculateContentDiff(previousContent || '', content, operation);
-
-  // Store the relative path for database
-  const relativeVersionPath = `${sanitizeUserIdForFileSystem(validatedUserId)}/versions/${validatedDocumentId}/${versionFilename}`;
-
-  // Upload to RAG if enabled
+  // STEP 3: Upload to RAG if enabled (non-critical, async)
   let ragDocumentId: string | null = null;
-  if (process.env.ENABLE_RAG === 'true') {
+  if (process.env.ENABLE_RAG === 'true' && fileWritten) {
     try {
-      const ragIdentifier = projectUuid || userId;
+      const ragIdentifier = projectUuid || validatedUserId;
+      const versionFilename = basename(transactionResult.versionFilePath);
+
       // Use Buffer instead of File API for server-side operations
       const contentBuffer = Buffer.from(content, 'utf-8');
-      const blob = new Blob([contentBuffer], { type: document.mime_type });
+      const _blob = new Blob([contentBuffer], { type: transactionResult.document.mime_type });
 
       // Create a File-like object for RAG service
       const fileData = {
         name: versionFilename,
-        type: document.mime_type,
+        type: transactionResult.document.mime_type,
         arrayBuffer: async () => contentBuffer.buffer.slice(
           contentBuffer.byteOffset,
           contentBuffer.byteOffset + contentBuffer.byteLength
@@ -199,12 +223,19 @@ export async function saveDocumentVersion(
       const uploadResult = await ragService.uploadDocument(fileData, ragIdentifier);
 
       if (uploadResult.success && uploadResult.upload_id) {
-        // Poll for completion with configurable parameters
+        // Poll for completion with exponential backoff
         const maxAttempts = parseInt(process.env.RAG_POLL_MAX_ATTEMPTS || '30');
-        const pollInterval = parseInt(process.env.RAG_POLL_INTERVAL_MS || '1000');
+        const initialInterval = parseInt(process.env.RAG_POLL_INITIAL_INTERVAL_MS || '1000');
+        const maxInterval = parseInt(process.env.RAG_POLL_MAX_INTERVAL_MS || '30000');
+        const backoffMultiplier = parseFloat(process.env.RAG_POLL_BACKOFF_MULTIPLIER || '1.5');
 
         for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          // Calculate exponential backoff with jitter
+          const baseDelay = Math.min(initialInterval * Math.pow(backoffMultiplier, attempt), maxInterval);
+          const jitter = Math.random() * 0.3 * baseDelay; // Add 0-30% jitter
+          const delay = Math.floor(baseDelay + jitter);
+
+          await new Promise(resolve => setTimeout(resolve, delay));
 
           const statusResult = await ragService.getUploadStatus(
             uploadResult.upload_id,
@@ -213,64 +244,57 @@ export async function saveDocumentVersion(
 
           if (statusResult.progress?.status === 'completed' && statusResult.progress?.document_id) {
             ragDocumentId = statusResult.progress.document_id;
+            console.log(`RAG upload completed after ${attempt + 1} attempts`);
             break;
           } else if (statusResult.progress?.status === 'failed') {
             console.error('RAG upload failed for version');
             break;
           }
+
+          // Log progress for monitoring
+          if (attempt > 0 && attempt % 5 === 0) {
+            console.log(`RAG upload still processing, attempt ${attempt + 1}/${maxAttempts}, next delay: ${delay}ms`);
+          }
         }
       }
     } catch (ragError) {
-      console.error('Failed to upload version to RAG:', ragError);
+      console.error('[Version Manager] Failed to upload version to RAG', {
+        error: ragError instanceof Error ? ragError.message : String(ragError),
+        documentId: validatedDocumentId,
+        versionNumber: newVersionNumber,
+        fallback: 'Version created without RAG integration'
+      });
       // Continue without RAG - don't block version creation
     }
   }
 
-  // Perform database operations with cleanup on failure
-  try {
-    // Update all existing versions to not be current
-    await db
-      .update(documentVersionsTable)
-      .set({ is_current: false })
-      .where(eq(documentVersionsTable.document_id, validatedDocumentId));
-
-    // Create version record in database
-    const [versionRecord] = await db
-      .insert(documentVersionsTable)
-      .values({
-        document_id: validatedDocumentId,
-        version_number: newVersionNumber,
-        content: content,
-        file_path: relativeVersionPath,
-        is_current: true,
-        rag_document_id: ragDocumentId,
-        created_by_model: createdByModel,
-        change_summary: changeSummary || `${operation} operation by ${createdByModel.name}`,
-        content_diff: contentDiff
-      })
-      .returning();
-
-    return {
-      versionNumber: versionRecord.version_number,
-      filePath: versionRecord.file_path!,
-      ragDocumentId: versionRecord.rag_document_id || undefined,
-      createdAt: versionRecord.created_at,
-      createdByModel: versionRecord.created_by_model as any,
-      changeSummary: versionRecord.change_summary || undefined,
-      isCurrent: versionRecord.is_current!
-    };
-  } catch (dbError) {
-    // Clean up the file if database operations fail
-    if (fileWritten) {
-      try {
-        await unlink(versionFilePath);
-        console.log(`Cleaned up version file after database error: ${versionFilePath}`);
-      } catch (cleanupError) {
-        console.error('Failed to cleanup version file:', cleanupError);
-      }
+  // Update RAG document ID if successful (non-critical)
+  if (ragDocumentId) {
+    try {
+      await db
+        .update(documentVersionsTable)
+        .set({ rag_document_id: ragDocumentId })
+        .where(
+          and(
+            eq(documentVersionsTable.document_id, validatedDocumentId),
+            eq(documentVersionsTable.version_number, transactionResult.newVersionNumber)
+          )
+        );
+    } catch (updateError) {
+      console.error('Failed to update RAG document ID:', updateError);
     }
-    throw dbError;
   }
+
+  // Return the version info
+  return {
+    versionNumber: transactionResult.versionRecord.version_number,
+    filePath: transactionResult.versionRecord.file_path || '',
+    ragDocumentId: ragDocumentId || undefined,
+    createdAt: transactionResult.versionRecord.created_at,
+    createdByModel: transactionResult.versionRecord.created_by_model as any,
+    changeSummary: transactionResult.versionRecord.change_summary || undefined,
+    isCurrent: true
+  };
 }
 
 /**
@@ -284,7 +308,7 @@ export async function getVersionContent(
   try {
     // Pre-validate inputs
     const validatedDocumentId = validateDocumentId(documentId);
-    const validatedUserId = validateUserId(userId);
+    const _validatedUserId = validateUserId(userId);
     const validatedVersion = validateVersionNumber(versionNumber);
     // Get version record from database
     const [version] = await db
@@ -328,10 +352,20 @@ export async function getVersionContent(
     }
 
     // Fallback to database content if file doesn't exist
-    console.log(`Version file not found, falling back to database content for version ${versionNumber} of document ${documentId}`);
+    console.log('[Version Manager] Version file not found, using database fallback', {
+      documentId: validatedDocumentId,
+      versionNumber: validatedVersion,
+      fallbackSource: 'database',
+      reason: 'File not accessible or does not exist'
+    });
     return version.content;
   } catch (error) {
-    console.error('Error retrieving version content:', error);
+    console.error('[Version Manager] Error retrieving version content', {
+      error: error instanceof Error ? error.message : String(error),
+      documentId: validatedDocumentId,
+      versionNumber: validatedVersion,
+      fallback: 'Returning null - version unavailable'
+    });
     return null;
   }
 }
@@ -385,47 +419,88 @@ export async function restoreVersion(
       currentContent = await readFile(mainFilePath, 'utf-8');
     } catch {
       // If main file doesn't exist, try to get the last version's content
-      const lastVersion = await getVersionContent(userId, documentId, document.version || 0);
+      const lastVersion = await getVersionContent(validatedUserId, validatedDocumentId, document.version || 0);
       currentContent = lastVersion || '';
-      console.log(`Main file not found for document ${documentId}, using last version content for backup`);
+      console.log('[Version Manager] Main file not found, using version history for backup', {
+        documentId: validatedDocumentId,
+        lastKnownVersion: document.version || 0,
+        fallbackSource: 'version_history',
+        operation: 'restore_backup'
+      });
     }
 
     // Create a backup version of the current state
+    let backupVersion: VersionInfo | null = null;
     if (currentContent) {
-      await saveDocumentVersion({
+      try {
+        backupVersion = await saveDocumentVersion({
+          documentId: validatedDocumentId,
+          content: currentContent,
+          userId: validatedUserId,
+          projectUuid: document.project_uuid || undefined,
+          createdByModel: {
+            name: 'System',
+            provider: 'internal',
+            version: '1.0'
+          },
+          changeSummary: `Backup before restoring version ${validatedVersion}`,
+          operation: 'replace',
+          previousContent: currentContent
+        });
+        console.log(`Created backup version ${backupVersion.versionNumber} before restore`);
+      } catch (backupError) {
+        console.error('[Version Manager] Failed to create backup version', {
+          error: backupError instanceof Error ? backupError.message : String(backupError),
+          documentId: validatedDocumentId,
+          targetVersion: validatedVersion,
+          fallback: process.env.ALLOW_RESTORE_WITHOUT_BACKUP === 'true' ? 'Continuing without backup' : 'Aborting restore operation'
+        });
+        // Optionally continue without backup if explicitly configured
+        if (process.env.ALLOW_RESTORE_WITHOUT_BACKUP !== 'true') {
+          throw new Error('Failed to create backup before restore - operation aborted for safety');
+        }
+      }
+    }
+
+    // Create a new version with the restored content
+    let restoredVersion: VersionInfo;
+    try {
+      restoredVersion = await saveDocumentVersion({
         documentId: validatedDocumentId,
-        content: currentContent,
+        content: versionContent,
         userId: validatedUserId,
         projectUuid: document.project_uuid || undefined,
-        createdByModel: {
+        createdByModel: restoredByModel || {
           name: 'System',
           provider: 'internal',
           version: '1.0'
         },
-        changeSummary: `Backup before restoring version ${validatedVersion}`,
+        changeSummary: `Restored from version ${validatedVersion}`,
         operation: 'replace',
         previousContent: currentContent
       });
+      console.log(`Created restored version ${restoredVersion.versionNumber} from version ${validatedVersion}`);
+    } catch (restoreError) {
+      console.error('Failed to create restored version:', restoreError);
+      throw new Error(`Failed to restore version: ${restoreError instanceof Error ? restoreError.message : 'Unknown error'}`);
     }
 
-    // Create a new version with the restored content
-    const restoredVersion = await saveDocumentVersion({
-      documentId: validatedDocumentId,
-      content: versionContent,
-      userId: validatedUserId,
-      projectUuid: document.project_uuid || undefined,
-      createdByModel: restoredByModel || {
-        name: 'System',
-        provider: 'internal',
-        version: '1.0'
-      },
-      changeSummary: `Restored from version ${validatedVersion}`,
-      operation: 'replace',
-      previousContent: currentContent
-    });
-
-    // Update the main document file
-    await writeFile(mainFilePath, versionContent, 'utf-8');
+    // Update the main document file with rollback capability
+    try {
+      await writeFile(mainFilePath, versionContent, 'utf-8');
+    } catch (writeError) {
+      console.error('Failed to write restored content to main file:', writeError);
+      // Attempt to rollback to the backup if it exists
+      if (backupVersion && currentContent) {
+        try {
+          await writeFile(mainFilePath, currentContent, 'utf-8');
+          console.log('Rolled back main file to backup content after write failure');
+        } catch (rollbackError) {
+          console.error('Failed to rollback main file:', rollbackError);
+        }
+      }
+      throw new Error('Failed to write restored content to file');
+    }
 
     // Update document record
     await db
@@ -553,7 +628,13 @@ export async function deleteVersion(
         const ragIdentifier = document?.project_uuid || validatedUserId;
         await ragService.removeDocument(version.rag_document_id, ragIdentifier);
       } catch (ragError) {
-        console.error('Failed to remove version from RAG:', ragError);
+        console.error('[Version Manager] Failed to remove version from RAG', {
+          error: ragError instanceof Error ? ragError.message : String(ragError),
+          documentId: validatedDocumentId,
+          versionNumber: validatedVersion,
+          ragDocumentId: version.rag_document_id,
+          fallback: 'Version deleted from database but may remain in RAG'
+        });
       }
     }
 
@@ -569,7 +650,12 @@ export async function deleteVersion(
 
     return true;
   } catch (error) {
-    console.error('Error deleting version:', error);
+    console.error('[Version Manager] Error deleting version', {
+      error: error instanceof Error ? error.message : String(error),
+      documentId,
+      versionNumber,
+      fallback: 'Version deletion failed - data remains intact'
+    });
     return false;
   }
 }
@@ -686,7 +772,7 @@ export async function migrateExistingVersions(userId: string): Promise<{
         await writeFile(versionFilePath, version.content, 'utf-8');
 
         // Update database with file path
-        const relativeVersionPath = `${sanitizeUserIdForFileSystem(userId)}/versions/${version.document_id}/${versionFilename}`;
+        const relativeVersionPath = `${sanitizeUserIdForFileSystem(validatedUserId)}/versions/${version.document_id}/${versionFilename}`;
 
         await db
           .update(documentVersionsTable)
@@ -695,7 +781,12 @@ export async function migrateExistingVersions(userId: string): Promise<{
 
         migrated++;
       } catch (error) {
-        console.error(`Failed to migrate version ${version.id}:`, error);
+        console.error('[Version Manager] Failed to migrate version', {
+          error: error instanceof Error ? error.message : String(error),
+          versionId: version.id,
+          documentId: version.document_id,
+          fallback: 'Version remains in database without file backup'
+        });
         failed++;
       }
     }
@@ -706,7 +797,11 @@ export async function migrateExistingVersions(userId: string): Promise<{
       failed
     };
   } catch (error) {
-    console.error('Error migrating versions:', error);
+    console.error('[Version Manager] Error migrating versions', {
+      error: error instanceof Error ? error.message : String(error),
+      userId: validatedUserId,
+      fallback: 'Migration aborted - existing data unchanged'
+    });
     return {
       success: false,
       migrated: 0,

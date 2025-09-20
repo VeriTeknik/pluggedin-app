@@ -7,20 +7,16 @@ import {
   Github,
   Globe,
   Package,
+  Search,
   Star,
   Users,
-  Zap,
-  Layers,
-  TrendingUp,
-  Search
-} from 'lucide-react';
+  Zap} from 'lucide-react';
 import Image from 'next/image';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
-import { Card, CardContent } from '@/components/ui/card';
 import { AnimatedMetric } from '@/components/ui/animated-metric';
-import { cn } from '@/lib/utils';
+import { Card, CardContent } from '@/components/ui/card';
 
 // TODO: Integrate MagicUI components when available:
 // - Safari component

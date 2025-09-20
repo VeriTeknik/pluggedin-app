@@ -1,11 +1,11 @@
+import { and,eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
+
+import { logAuditEvent } from '@/app/actions/audit-logger';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 import { getVersionContent, restoreVersion } from '@/lib/version-manager';
-import { logAuditEvent } from '@/app/actions/audit-logger';
 
 /**
  * @swagger

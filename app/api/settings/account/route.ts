@@ -4,9 +4,9 @@ import { NextResponse } from 'next/server';
 import { join } from 'path';
 
 import { db } from '@/db';
-import { accounts, apiKeysTable, customMcpServersTable,mcpServersTable, profilesTable, projectsTable, sessions, users } from '@/db/schema';
-import { getAuthSession } from '@/lib/auth';
+import { sessions, users } from '@/db/schema';
 import { notifyAdmins } from '@/lib/admin-notifications';
+import { getAuthSession } from '@/lib/auth';
 
 export async function DELETE(_req: Request) {
   try {

@@ -7,18 +7,17 @@ import {
   Github,
   MessageSquare,
   Puzzle,
-  Terminal,
-  Users,
   Rocket,
+  Star,
+  Terminal,
   TrendingUp,
-  Star
-} from 'lucide-react';
+  Users} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 
+import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AnimatedMetric } from '@/components/ui/animated-metric';
 import { cn } from '@/lib/utils';
 
 interface DeveloperFeature {

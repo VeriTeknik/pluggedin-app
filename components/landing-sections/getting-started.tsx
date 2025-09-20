@@ -3,17 +3,16 @@
 import { motion } from 'framer-motion';
 import {
   BookOpen,
+  Clock,
   FileText,
   Key,
   Package,
   PlayCircle,
   Plug,
-  Terminal,
-  UserPlus,
   Rocket,
+  Terminal,
   TrendingUp,
-  Clock
-} from 'lucide-react';
+  UserPlus} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useInView } from 'react-intersection-observer';
 

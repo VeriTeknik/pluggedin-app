@@ -10,14 +10,13 @@ import EmailProvider from 'next-auth/providers/email';
 import GithubProvider from 'next-auth/providers/github';
 import GoogleProvider from 'next-auth/providers/google';
 import TwitterProvider from 'next-auth/providers/twitter';
-import { cookies } from 'next/headers';
 
+import { notifyAdminsOfNewUser } from './admin-notifications';
 import { 
   clearFailedLoginAttempts, 
   isAccountLocked, 
   recordFailedLoginAttempt} from './auth-security';
 import log from './logger';
-import { notifyAdminsOfNewUser } from './admin-notifications';
 import { sendWelcomeEmail } from './welcome-emails';
 
 // Extend the User type to include emailVerified
