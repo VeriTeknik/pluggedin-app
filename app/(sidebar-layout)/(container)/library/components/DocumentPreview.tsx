@@ -19,6 +19,7 @@ import {
 import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { VersionViewerModal } from '@/components/documents/version-viewer-modal';
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,8 @@ interface DocumentPreviewState {
     currentDocIndex: number;
     showVersionHistory: boolean;
     showMetadataPanel: boolean;
+    showVersionModal: boolean;
+    selectedVersionNumber: number | null;
   };
   content: {
     textContent: string | null;
@@ -92,7 +95,9 @@ type DocumentPreviewAction =
   | { type: 'SET_VERSION_CONTENT'; payload: string | null }
   | { type: 'SET_VERSION_CONTENT_LOADING'; payload: boolean }
   | { type: 'RESET_DOCUMENT_STATE' }
-  | { type: 'RESET_VERSION_STATE' };
+  | { type: 'RESET_VERSION_STATE' }
+  | { type: 'OPEN_VERSION_MODAL'; payload: number }
+  | { type: 'CLOSE_VERSION_MODAL' };
 
 // Reducer function
 const documentPreviewReducer = (state: DocumentPreviewState, action: DocumentPreviewAction): DocumentPreviewState => {
@@ -142,7 +147,7 @@ const documentPreviewReducer = (state: DocumentPreviewState, action: DocumentPre
     case 'RESET_DOCUMENT_STATE':
       return {
         ...state,
-        ui: { ...state.ui, imageZoom: 1, showVersionHistory: false, showMetadataPanel: false },
+        ui: { ...state.ui, imageZoom: 1, showVersionHistory: false, showMetadataPanel: false, showVersionModal: false, selectedVersionNumber: null },
         content: { textContent: null, isLoadingText: false, textError: null },
         versions: {
           list: [],
@@ -165,6 +170,16 @@ const documentPreviewReducer = (state: DocumentPreviewState, action: DocumentPre
           isLoadingVersionContent: false,
         },
       };
+    case 'OPEN_VERSION_MODAL':
+      return {
+        ...state,
+        ui: { ...state.ui, showVersionModal: true, selectedVersionNumber: action.payload },
+      };
+    case 'CLOSE_VERSION_MODAL':
+      return {
+        ...state,
+        ui: { ...state.ui, showVersionModal: false, selectedVersionNumber: null },
+      };
     default:
       return state;
   }
@@ -178,6 +193,8 @@ const initialState: DocumentPreviewState = {
     currentDocIndex: 0,
     showVersionHistory: false,
     showMetadataPanel: false,
+    showVersionModal: false,
+    selectedVersionNumber: null,
   },
   content: {
     textContent: null,
@@ -421,14 +438,8 @@ export const DocumentPreview = memo(function DocumentPreview({
   }), [state.ui.imageZoom]);
 
   const handleVersionSelect = useCallback((version: DocumentVersion) => {
-    dispatch({ type: 'SET_SELECTED_VERSION', payload: version });
-    dispatch({ type: 'SET_VERSION_CONTENT_LOADING', payload: true });
-
-    if (version.content) {
-      dispatch({ type: 'SET_VERSION_CONTENT', payload: version.content });
-    } else {
-      dispatch({ type: 'SET_VERSION_CONTENT', payload: null });
-    }
+    // Open the version viewer modal instead of loading content in sidebar
+    dispatch({ type: 'OPEN_VERSION_MODAL', payload: version.version_number });
   }, []);
 
   const handleCompareVersions = useCallback((v1: DocumentVersion, v2: DocumentVersion) => {
@@ -796,7 +807,7 @@ export const DocumentPreview = memo(function DocumentPreview({
 
             {/* Version History Panel */}
             {state.ui.showVersionHistory && doc.source === 'ai_generated' && (
-              <div className="w-80 border-l bg-muted/10 overflow-hidden flex flex-col flex-shrink-0">
+              <div className="w-80 border-l bg-muted/10 flex flex-col flex-shrink-0">
                 <div className="p-4 border-b bg-background">
                   <div className="flex items-center justify-between">
                     <h3 className="font-medium flex items-center gap-2">
@@ -810,52 +821,41 @@ export const DocumentPreview = memo(function DocumentPreview({
                     )}
                   </div>
                 </div>
-                <ScrollArea className="flex-1 h-0">
-                  <div className="p-4">
-                    {state.versions.isLoading ? (
-                      <div className="flex items-center justify-center py-8">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-                      </div>
-                    ) : (
-                      <DocumentVersionHistory
-                        documentId={doc.uuid}
-                        versions={state.versions.list}
-                        currentVersion={doc.version || 1}
-                        onVersionSelect={handleVersionSelect}
-                        onCompareVersions={handleCompareVersions}
-                      />
-                    )}
-                  </div>
-                </ScrollArea>
-
-                {/* Version Content Display */}
-                {state.versions.selectedVersion && (
-                  <div className="border-t p-4 bg-background">
-                    <h4 className="font-medium text-sm mb-2">
-                      Version {state.versions.selectedVersion.version_number} Content
-                    </h4>
-                    {state.versions.isLoadingVersionContent ? (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      </div>
-                    ) : state.versions.versionContent ? (
-                      <ScrollArea className="h-48">
-                        <pre className="text-xs text-muted-foreground whitespace-pre-wrap">
-                          {state.versions.versionContent}
-                        </pre>
-                      </ScrollArea>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">
-                        Content not available for this version
-                      </p>
-                    )}
-                  </div>
-                )}
+                <div className="flex-1 overflow-hidden">
+                  <ScrollArea className="h-full">
+                    <div className="p-4">
+                      {state.versions.isLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                        </div>
+                      ) : (
+                        <DocumentVersionHistory
+                          documentId={doc.uuid}
+                          versions={state.versions.list}
+                          currentVersion={doc.version || 1}
+                          onVersionSelect={handleVersionSelect}
+                          onCompareVersions={handleCompareVersions}
+                        />
+                      )}
+                    </div>
+                  </ScrollArea>
+                </div>
               </div>
             )}
           </div>
         </div>
       </DialogContent>
+
+      {/* Version Viewer Modal */}
+      {doc && state.ui.showVersionModal && state.ui.selectedVersionNumber !== null && (
+        <VersionViewerModal
+          isOpen={state.ui.showVersionModal}
+          onClose={() => dispatch({ type: 'CLOSE_VERSION_MODAL' })}
+          documentId={doc.uuid}
+          documentName={doc.name}
+          versionNumber={state.ui.selectedVersionNumber}
+        />
+      )}
     </Dialog>
   );
 });
