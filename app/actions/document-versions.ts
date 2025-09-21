@@ -1,11 +1,12 @@
 'use server';
 
-import { z } from 'zod';
 import { getServerSession } from 'next-auth';
+import { z } from 'zod';
+
+import { ensureDocumentAccess } from '@/lib/access/document-access';
 import { authOptions } from '@/lib/auth';
 import { rateLimiter } from '@/lib/rate-limiter';
 import { getVersionContent } from '@/lib/version-manager';
-import { ensureDocumentAccess } from '@/lib/access/document-access';
 
 // Type for the return value
 type DocumentVersionContentResult = {

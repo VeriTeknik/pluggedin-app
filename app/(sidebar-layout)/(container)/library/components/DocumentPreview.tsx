@@ -418,7 +418,7 @@ export const DocumentPreview = memo(function DocumentPreview({
       abortController.abort();
       clearTimeout(timeoutId);
     };
-  }, [doc?.uuid, doc?.name, open, currentProject?.uuid, fileTypeInfo?.isText]);
+  }, [doc?.uuid, doc?.name, open, currentProject?.uuid, fileTypeInfo?.isText, state.ui.viewingVersion]);
 
   // Memoized navigation callbacks
   const navigateToDoc = useCallback((direction: 'prev' | 'next') => {
