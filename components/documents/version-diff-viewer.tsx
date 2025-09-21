@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight, FileText, Bot, Copy, Check } from 'lucide-react';
+import { Change,diffLines, diffWords } from 'diff';
+import { ArrowRight, Check,Copy, FileText } from 'lucide-react';
+import { useState } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,14 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useVersionComparison } from '@/lib/hooks/use-document-versions';
 import { cn } from '@/lib/utils';
-import { diffLines, diffWords, Change } from 'diff';
 
 interface VersionDiffViewerProps {
   isOpen: boolean;
@@ -76,26 +76,52 @@ function DiffLine({ change, lineNumbers }: { change: Change; lineNumbers: { left
   );
 }
 
-function SideBySideView({ content1, content2 }: { content1: string; content2: string }) {
-  const lines1 = content1.split('\n');
-  const lines2 = content2.split('\n');
-  const maxLines = Math.max(lines1.length, lines2.length);
+// Constants for performance optimization
+const MAX_DIFF_SIZE = 5 * 1024 * 1024; // 5MB limit for diff calculation
+const MAX_LINES = 10000; // Maximum lines to process
 
-  const changes = diffWords(content1, content2);
+function SideBySideView({ content1, content2 }: { content1: string; content2: string }) {
+  // Check size limits to prevent memory issues
+  if (content1.length > MAX_DIFF_SIZE || content2.length > MAX_DIFF_SIZE) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <p className="text-muted-foreground">
+            Files too large for side-by-side comparison (max 5MB)
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Please use unified diff view instead
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const lines1 = content1.split('\n').slice(0, MAX_LINES);
+  const lines2 = content2.split('\n').slice(0, MAX_LINES);
+
+  // Use more efficient line-based diff for large content
+  const useLineDiff = lines1.length > 1000 || lines2.length > 1000;
+  const changes = useLineDiff ?
+    diffLines(content1, content2) :
+    diffWords(content1, content2);
+
   const changedLines = new Set<number>();
 
-  let pos1 = 0;
   let line1 = 0;
   for (const change of changes) {
     const lines = change.value.split('\n').length - 1;
     if (change.removed) {
-      for (let i = 0; i < lines; i++) {
+      for (let i = 0; i < lines && line1 + i < MAX_LINES; i++) {
         changedLines.add(line1 + i);
       }
       line1 += lines;
     } else if (!change.added) {
       line1 += lines;
     }
+
+    // Prevent excessive memory usage
+    if (line1 > MAX_LINES) break;
   }
 
   return (

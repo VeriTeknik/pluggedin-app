@@ -16,10 +16,10 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer } from 'react';
+import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-// Removed VersionViewerModal - will display in main pane instead
+import { getDocumentVersionContent } from '@/app/actions/document-versions';
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/components/ui/use-toast';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { useProjects } from '@/hooks/use-projects';
 import { useDocxContent } from '@/hooks/useDocxContent';
@@ -234,6 +235,7 @@ export const DocumentPreview = memo(function DocumentPreview({
   formatFileSize,
 }: DocumentPreviewProps) {
   const { t } = useTranslation('library');
+  const { toast } = useToast();
   const { currentProject } = useProjects();
 
   // Use reducer for consolidated state management
@@ -341,7 +343,8 @@ export const DocumentPreview = memo(function DocumentPreview({
 
   // Fetch text content with timeout and streaming support
   useEffect(() => {
-    if (!doc || !open || !fileTypeInfo?.isText) {
+    // Skip fetching text content when viewing a specific version
+    if (!doc || !open || !fileTypeInfo?.isText || state.versions.viewingVersion) {
       dispatch({ type: 'SET_TEXT_CONTENT', payload: { content: null } });
       return;
     }
@@ -438,32 +441,77 @@ export const DocumentPreview = memo(function DocumentPreview({
     resetZoom: () => dispatch({ type: 'SET_IMAGE_ZOOM', payload: 1 }),
   }), [state.ui.imageZoom]);
 
+  // Track pending version request for cancellation
+  const versionLoadingRef = useRef<{ abort: () => void } | null>(null);
+  const versionDebounceRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleVersionSelect = useCallback(async (version: DocumentVersion) => {
-    // Load version content to display in main pane
-    dispatch({ type: 'VIEW_VERSION', payload: version.version_number });
-    dispatch({ type: 'SET_VERSION_CONTENT_LOADING', payload: true });
-
-    try {
-      const response = await fetch(`/api/documents/${doc?.uuid}/versions/${version.version_number}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('pluggedin_api_key') || ''}`,
-        },
+    if (!doc?.uuid) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Document ID is not available. Please refresh the page and try again.',
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to load version content');
-      }
-
-      const data = await response.json();
-      dispatch({ type: 'SET_VERSION_CONTENT', payload: data.content || '' });
-    } catch (error) {
-      console.error('Error loading version content:', error);
-      dispatch({ type: 'SET_VERSION_CONTENT', payload: null });
+      return;
     }
-  }, [doc?.uuid]);
+
+    // Cancel any pending debounced request
+    if (versionDebounceRef.current) {
+      clearTimeout(versionDebounceRef.current);
+    }
+
+    // Cancel any in-flight request
+    if (versionLoadingRef.current) {
+      versionLoadingRef.current.abort();
+    }
+
+    // Debounce the version loading by 300ms to prevent rapid switches
+    versionDebounceRef.current = setTimeout(async () => {
+      // Load version content to display in main pane
+      dispatch({ type: 'VIEW_VERSION', payload: version.version_number });
+      dispatch({ type: 'SET_VERSION_CONTENT_LOADING', payload: true });
+
+      // Create abort controller for this request
+      const abortController = new AbortController();
+      versionLoadingRef.current = abortController;
+
+      try {
+        // Use server action with session authentication
+        const result = await getDocumentVersionContent(
+          doc.uuid,
+          version.version_number
+        );
+
+        // Check if request was aborted
+        if (abortController.signal.aborted) return;
+
+        if (!result.success) {
+          throw new Error(result.error);
+        }
+
+        dispatch({ type: 'SET_VERSION_CONTENT', payload: result.content || '' });
+      } catch (error) {
+        // Don't handle errors for aborted requests
+        if (abortController.signal.aborted) return;
+
+        dispatch({ type: 'SET_VERSION_CONTENT', payload: null });
+        toast({
+          variant: 'destructive',
+          title: 'Error loading version',
+          description: error instanceof Error ? error.message : 'Failed to load version content',
+        });
+      } finally {
+        // Clear ref if this was the current request
+        if (versionLoadingRef.current === abortController) {
+          versionLoadingRef.current = null;
+        }
+      }
+    }, 300);
+  }, [doc?.uuid, toast]);
 
   const handleCompareVersions = useCallback((v1: DocumentVersion, v2: DocumentVersion) => {
-    console.log('Comparing versions:', v1.version_number, 'and', v2.version_number);
+    // Version comparison functionality - to be implemented
+    // This will open a diff viewer comparing the two versions
   }, []);
 
   // Render helpers remain the same but use state from reducer

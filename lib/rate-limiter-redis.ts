@@ -1,5 +1,6 @@
-import { NextRequest } from 'next/server';
 import Redis from 'ioredis';
+import { NextRequest } from 'next/server';
+
 import { createRateLimiter as createInMemoryRateLimiter } from './rate-limiter';
 
 // Redis client singleton
@@ -57,13 +58,21 @@ interface RateLimitConfig {
   keyGenerator?: (req: NextRequest) => string | Promise<string>;
   skipSuccessfulRequests?: boolean;
   skipFailedRequests?: boolean;
+  failClosed?: boolean;  // If true, deny all requests when Redis fails (secure default)
+  fallbackMultiplier?: number;  // Reduce limits during fallback (default 0.5 = 50% of normal)
 }
 
 /**
  * Enhanced rate limiter with Redis support
  */
 export function createRedisRateLimiter(config: RateLimitConfig) {
-  const { windowMs, max, keyGenerator = defaultKeyGenerator } = config;
+  const {
+    windowMs,
+    max,
+    keyGenerator = defaultKeyGenerator,
+    failClosed = process.env.NODE_ENV === 'production',
+    fallbackMultiplier = 0.5
+  } = config;
 
   return async function rateLimit(req: NextRequest): Promise<{
     allowed: boolean;
@@ -76,7 +85,24 @@ export function createRedisRateLimiter(config: RateLimitConfig) {
 
     // Fallback to in-memory if Redis is not available
     if (!redis) {
-      const fallbackLimiter = createInMemoryRateLimiter(config);
+      // In production, consider failing closed for security
+      if (failClosed) {
+        console.error('[SECURITY] Redis unavailable - failing closed to prevent abuse');
+        return {
+          allowed: false,
+          limit: max,
+          remaining: 0,
+          reset: Date.now() + windowMs,
+          retryAfter: Math.ceil(windowMs / 1000)
+        };
+      }
+
+      // Use stricter limits during fallback
+      const fallbackConfig = {
+        ...config,
+        max: Math.floor(max * fallbackMultiplier)
+      };
+      const fallbackLimiter = createInMemoryRateLimiter(fallbackConfig);
       return fallbackLimiter(req);
     }
 
@@ -110,32 +136,45 @@ export function createRedisRateLimiter(config: RateLimitConfig) {
         retryAfter: allowed ? undefined : Math.ceil((reset - now) / 1000),
       };
     } catch (error) {
-      console.error('Redis rate limit error, using in-memory fallback:', error);
+      console.error('Redis rate limit error:', error);
 
-      // Use in-memory fallback during Redis failures
+      // Fail closed in production for security
+      if (failClosed) {
+        console.error('[SECURITY] Redis error - failing closed to prevent abuse');
+        return {
+          allowed: false,
+          limit: max,
+          remaining: 0,
+          reset: windowStart + windowMs,
+          retryAfter: Math.ceil(windowMs / 1000)
+        };
+      }
+
+      // Use stricter in-memory fallback during Redis failures
+      const fallbackMax = Math.floor(max * fallbackMultiplier);
       const fallbackKey = `fallback:${key}:${windowStart}`;
       const fallbackEntry = inMemoryFallback.get(fallbackKey);
       const resetTime = windowStart + windowMs;
 
       if (!fallbackEntry || fallbackEntry.resetTime <= now) {
-        // New window
+        // New window with stricter limits
         inMemoryFallback.set(fallbackKey, { count: 1, resetTime });
         return {
           allowed: true,
-          limit: max,
-          remaining: max - 1,
+          limit: fallbackMax,
+          remaining: fallbackMax - 1,
           reset: resetTime,
         };
       }
 
-      // Increment count
+      // Increment count with stricter limits
       fallbackEntry.count++;
-      const allowed = fallbackEntry.count <= max;
-      const remaining = Math.max(0, max - fallbackEntry.count);
+      const allowed = fallbackEntry.count <= fallbackMax;
+      const remaining = Math.max(0, fallbackMax - fallbackEntry.count);
 
       return {
         allowed,
-        limit: max,
+        limit: fallbackMax,
         remaining,
         reset: resetTime,
         retryAfter: allowed ? undefined : Math.ceil((resetTime - now) / 1000),
