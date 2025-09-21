@@ -341,7 +341,8 @@ export const DocumentPreview = memo(function DocumentPreview({
 
   // Fetch text content with timeout and streaming support
   useEffect(() => {
-    if (!doc || !open || !fileTypeInfo?.isText) {
+    // Skip fetching text content when viewing a specific version
+    if (!doc || !open || !fileTypeInfo?.isText || state.ui.viewingVersion) {
       dispatch({ type: 'SET_TEXT_CONTENT', payload: { content: null } });
       return;
     }

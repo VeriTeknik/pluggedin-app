@@ -113,3 +113,32 @@ export const RateLimiters = {
     max: 10, // 10 OAuth attempts per 15 minutes
   }),
 };
+
+/**
+ * Simple rate limiter for server actions
+ * Uses in-memory store (should use Redis in production)
+ */
+export const rateLimiter = {
+  check: async (key: string, max: number, windowSeconds: number) => {
+    const now = Date.now();
+    const windowMs = windowSeconds * 1000;
+    const resetTime = now + windowMs;
+
+    if (!store[key] || store[key].resetTime < now) {
+      // New window
+      store[key] = { count: 1, resetTime };
+      return { success: true, remaining: max - 1, reset: Math.floor(windowSeconds) };
+    }
+
+    // Increment count
+    store[key].count++;
+    const allowed = store[key].count <= max;
+    const remaining = Math.max(0, max - store[key].count);
+
+    return {
+      success: allowed,
+      remaining,
+      reset: Math.ceil((store[key].resetTime - now) / 1000),
+    };
+  }
+};
