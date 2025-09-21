@@ -19,7 +19,7 @@ import {
 import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { VersionViewerModal } from '@/components/documents/version-viewer-modal';
+// Removed VersionViewerModal - will display in main pane instead
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -60,7 +60,7 @@ interface DocumentPreviewState {
     currentDocIndex: number;
     showVersionHistory: boolean;
     showMetadataPanel: boolean;
-    showVersionModal: boolean;
+    viewingVersion: boolean;
     selectedVersionNumber: number | null;
   };
   content: {
@@ -96,8 +96,8 @@ type DocumentPreviewAction =
   | { type: 'SET_VERSION_CONTENT_LOADING'; payload: boolean }
   | { type: 'RESET_DOCUMENT_STATE' }
   | { type: 'RESET_VERSION_STATE' }
-  | { type: 'OPEN_VERSION_MODAL'; payload: number }
-  | { type: 'CLOSE_VERSION_MODAL' };
+  | { type: 'VIEW_VERSION'; payload: number }
+  | { type: 'VIEW_CURRENT_DOCUMENT' };
 
 // Reducer function
 const documentPreviewReducer = (state: DocumentPreviewState, action: DocumentPreviewAction): DocumentPreviewState => {
@@ -147,7 +147,7 @@ const documentPreviewReducer = (state: DocumentPreviewState, action: DocumentPre
     case 'RESET_DOCUMENT_STATE':
       return {
         ...state,
-        ui: { ...state.ui, imageZoom: 1, showVersionHistory: false, showMetadataPanel: false, showVersionModal: false, selectedVersionNumber: null },
+        ui: { ...state.ui, imageZoom: 1, showVersionHistory: false, showMetadataPanel: false, viewingVersion: false, selectedVersionNumber: null },
         content: { textContent: null, isLoadingText: false, textError: null },
         versions: {
           list: [],
@@ -170,15 +170,16 @@ const documentPreviewReducer = (state: DocumentPreviewState, action: DocumentPre
           isLoadingVersionContent: false,
         },
       };
-    case 'OPEN_VERSION_MODAL':
+    case 'VIEW_VERSION':
       return {
         ...state,
-        ui: { ...state.ui, showVersionModal: true, selectedVersionNumber: action.payload },
+        ui: { ...state.ui, viewingVersion: true, selectedVersionNumber: action.payload },
       };
-    case 'CLOSE_VERSION_MODAL':
+    case 'VIEW_CURRENT_DOCUMENT':
       return {
         ...state,
-        ui: { ...state.ui, showVersionModal: false, selectedVersionNumber: null },
+        ui: { ...state.ui, viewingVersion: false, selectedVersionNumber: null },
+        versions: { ...state.versions, versionContent: null },
       };
     default:
       return state;
@@ -193,7 +194,7 @@ const initialState: DocumentPreviewState = {
     currentDocIndex: 0,
     showVersionHistory: false,
     showMetadataPanel: false,
-    showVersionModal: false,
+    viewingVersion: false,
     selectedVersionNumber: null,
   },
   content: {
@@ -437,10 +438,29 @@ export const DocumentPreview = memo(function DocumentPreview({
     resetZoom: () => dispatch({ type: 'SET_IMAGE_ZOOM', payload: 1 }),
   }), [state.ui.imageZoom]);
 
-  const handleVersionSelect = useCallback((version: DocumentVersion) => {
-    // Open the version viewer modal instead of loading content in sidebar
-    dispatch({ type: 'OPEN_VERSION_MODAL', payload: version.version_number });
-  }, []);
+  const handleVersionSelect = useCallback(async (version: DocumentVersion) => {
+    // Load version content to display in main pane
+    dispatch({ type: 'VIEW_VERSION', payload: version.version_number });
+    dispatch({ type: 'SET_VERSION_CONTENT_LOADING', payload: true });
+
+    try {
+      const response = await fetch(`/api/documents/${doc?.uuid}/versions/${version.version_number}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('pluggedin_api_key') || ''}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load version content');
+      }
+
+      const data = await response.json();
+      dispatch({ type: 'SET_VERSION_CONTENT', payload: data.content || '' });
+    } catch (error) {
+      console.error('Error loading version content:', error);
+      dispatch({ type: 'SET_VERSION_CONTENT', payload: null });
+    }
+  }, [doc?.uuid]);
 
   const handleCompareVersions = useCallback((v1: DocumentVersion, v2: DocumentVersion) => {
     console.log('Comparing versions:', v1.version_number, 'and', v2.version_number);
@@ -449,6 +469,74 @@ export const DocumentPreview = memo(function DocumentPreview({
   // Render helpers remain the same but use state from reducer
   const renderContent = () => {
     if (!doc || !fileTypeInfo) return null;
+
+    // If viewing a version, show version content
+    if (state.ui.viewingVersion) {
+      if (state.versions.isLoadingVersionContent) {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-muted-foreground" />
+              <p className="text-muted-foreground">Loading version {state.ui.selectedVersionNumber}...</p>
+            </div>
+          </div>
+        );
+      }
+
+      if (!state.versions.versionContent) {
+        return (
+          <div className="flex items-center justify-center h-full">
+            <div className="text-center text-muted-foreground">
+              <FileText className="h-16 w-16 mx-auto mb-4 opacity-50" />
+              <h3 className="text-lg font-medium mb-2">Version content not available</h3>
+              <Button
+                variant="outline"
+                onClick={() => dispatch({ type: 'VIEW_CURRENT_DOCUMENT' })}
+                className="mt-4"
+              >
+                Back to Current Version
+              </Button>
+            </div>
+          </div>
+        );
+      }
+
+      // Display version content as text
+      return (
+        <div className="flex flex-col h-full">
+          <div className="flex items-center justify-between p-4 border-b bg-muted/50">
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">Version {state.ui.selectedVersionNumber}</Badge>
+              <span className="text-sm text-muted-foreground">Viewing historical version</span>
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => dispatch({ type: 'VIEW_CURRENT_DOCUMENT' })}
+            >
+              Back to Current
+            </Button>
+          </div>
+          <ScrollArea className="flex-1">
+            <div className="p-6">
+              {fileTypeInfo.isMarkdown ? (
+                <Suspense fallback={<div>Loading...</div>}>
+                  <div className="prose dark:prose-invert max-w-none">
+                    <ReactMarkdown>
+                      {state.versions.versionContent}
+                    </ReactMarkdown>
+                  </div>
+                </Suspense>
+              ) : (
+                <pre className="whitespace-pre-wrap font-mono text-sm">
+                  {state.versions.versionContent}
+                </pre>
+              )}
+            </div>
+          </ScrollArea>
+        </div>
+      );
+    }
 
     // Image rendering
     if (fileTypeInfo.isImage) {
@@ -846,16 +934,7 @@ export const DocumentPreview = memo(function DocumentPreview({
         </div>
       </DialogContent>
 
-      {/* Version Viewer Modal */}
-      {doc && state.ui.showVersionModal && state.ui.selectedVersionNumber !== null && (
-        <VersionViewerModal
-          isOpen={state.ui.showVersionModal}
-          onClose={() => dispatch({ type: 'CLOSE_VERSION_MODAL' })}
-          documentId={doc.uuid}
-          documentName={doc.name}
-          versionNumber={state.ui.selectedVersionNumber}
-        />
-      )}
+      {/* Removed Version Viewer Modal - content now displays in main pane */}
     </Dialog>
   );
 });
