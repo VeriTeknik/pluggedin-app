@@ -27,6 +27,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { useToast } from '@/components/ui/use-toast';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { useProjects } from '@/hooks/use-projects';
 import { useDocxContent } from '@/hooks/useDocxContent';
@@ -234,6 +235,7 @@ export const DocumentPreview = memo(function DocumentPreview({
   formatFileSize,
 }: DocumentPreviewProps) {
   const { t } = useTranslation('library');
+  const { toast } = useToast();
   const { currentProject } = useProjects();
 
   // Use reducer for consolidated state management
@@ -439,7 +441,14 @@ export const DocumentPreview = memo(function DocumentPreview({
   }), [state.ui.imageZoom]);
 
   const handleVersionSelect = useCallback(async (version: DocumentVersion) => {
-    if (!doc?.uuid) return;
+    if (!doc?.uuid) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Document ID is not available. Please refresh the page and try again.',
+      });
+      return;
+    }
 
     // Load version content to display in main pane
     dispatch({ type: 'VIEW_VERSION', payload: version.version_number });
@@ -460,8 +469,13 @@ export const DocumentPreview = memo(function DocumentPreview({
     } catch (error) {
       console.error('Error loading version content:', error);
       dispatch({ type: 'SET_VERSION_CONTENT', payload: null });
+      toast({
+        variant: 'destructive',
+        title: 'Error loading version',
+        description: error instanceof Error ? error.message : 'Failed to load version content',
+      });
     }
-  }, [doc?.uuid]);
+  }, [doc?.uuid, toast]);
 
   const handleCompareVersions = useCallback((v1: DocumentVersion, v2: DocumentVersion) => {
     console.log('Comparing versions:', v1.version_number, 'and', v2.version_number);

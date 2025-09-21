@@ -1,19 +1,11 @@
 'use server';
 
-import { and, eq } from 'drizzle-orm';
-import { getServerSession } from 'next-auth';
 import { z } from 'zod';
 
-import { db } from '@/db';
-import { docsTable, profilesTable,projectsTable } from '@/db/schema';
-import { authOptions } from '@/lib/auth';
+import { ensureDocumentAccess } from '@/lib/access/document-access';
+import { requireUserId } from '@/lib/auth/server-helpers';
+import { validateGetDocumentVersionRequest } from '@/lib/validators/document-versions';
 import { getVersionContent } from '@/lib/version-manager';
-
-// Input validation schema
-const getDocumentVersionContentSchema = z.object({
-  documentId: z.string().uuid('Invalid document ID format'),
-  versionNumber: z.number().int().positive('Version number must be positive')
-});
 
 // Type for the return value
 type DocumentVersionContentResult = {
@@ -35,71 +27,52 @@ export async function getDocumentVersionContent(
 ): Promise<DocumentVersionContentResult> {
   try {
     // Validate inputs
-    const validatedInput = getDocumentVersionContentSchema.parse({
-      documentId,
-      versionNumber
-    });
+    const { documentId: validatedDocId, versionNumber: validatedVersion } =
+      validateGetDocumentVersionRequest({ documentId, versionNumber });
 
-    const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return { success: false, error: 'Unauthorized' };
-    }
+    // Require authenticated user
+    const userId = await requireUserId();
 
-    // Optimized query: Join documents with profiles and projects to verify access in one query
-    const result = await db
-      .select({
-        document: docsTable,
-        profile: profilesTable,
-        project: projectsTable
-      })
-      .from(docsTable)
-      .innerJoin(profilesTable, eq(docsTable.profile_uuid, profilesTable.uuid))
-      .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
-      .where(
-        and(
-          eq(docsTable.uuid, validatedInput.documentId),
-          eq(projectsTable.user_id, session.user.id)
-        )
-      )
-      .limit(1);
-
-    if (result.length === 0) {
-      return { success: false, error: 'Document not found or access denied' };
-    }
-
-    const { document, profile, project } = result[0];
+    // Ensure user has access to the document
+    await ensureDocumentAccess(validatedDocId, userId);
 
     // Get version content
     const content = await getVersionContent(
-      session.user.id,
-      validatedInput.documentId,
-      validatedInput.versionNumber
+      userId,
+      validatedDocId,
+      validatedVersion
     );
 
-    if (!content) {
-      return { success: false, error: `Version ${validatedInput.versionNumber} not found` };
+    if (content === undefined || content === null) {
+      return { success: false, error: `Version ${validatedVersion} not found` };
     }
 
     return {
       success: true,
       content,
-      versionNumber: validatedInput.versionNumber
+      versionNumber: validatedVersion
     };
   } catch (error) {
     // Enhanced error logging with context
-    console.error('Error fetching version content:', {
-      error,
+    console.error('getDocumentVersionContent failed:', error, {
       documentId,
       versionNumber,
-      errorMessage: error instanceof Error ? error.message : 'Unknown error'
     });
 
-    // Handle Zod validation errors specifically
+    // Handle specific error types
     if (error instanceof z.ZodError) {
       return {
         success: false,
         error: error.errors[0]?.message || 'Invalid input'
       };
+    }
+
+    if ((error as Error).message === 'UNAUTHORIZED') {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    if ((error as Error).message === 'ACCESS_DENIED') {
+      return { success: false, error: 'Document not found or access denied' };
     }
 
     return {

@@ -79,12 +79,10 @@ function DiffLine({ change, lineNumbers }: { change: Change; lineNumbers: { left
 function SideBySideView({ content1, content2 }: { content1: string; content2: string }) {
   const lines1 = content1.split('\n');
   const lines2 = content2.split('\n');
-  const maxLines = Math.max(lines1.length, lines2.length);
 
   const changes = diffWords(content1, content2);
   const changedLines = new Set<number>();
 
-  const pos1 = 0;
   let line1 = 0;
   for (const change of changes) {
     const lines = change.value.split('\n').length - 1;
