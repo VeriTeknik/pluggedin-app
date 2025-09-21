@@ -1,37 +1,34 @@
 'use client';
 
-import { useState } from 'react';
 import { format } from 'date-fns';
 import {
-  Clock,
-  Download,
-  Eye,
-  RotateCcw,
-  FileText,
-  Check,
   AlertCircle,
+  Bot,
+  Check,
   ChevronDown,
   ChevronUp,
-  User,
-  Bot
-} from 'lucide-react';
+  Eye,
+  FileText,
+  RotateCcw} from 'lucide-react';
+import { useState } from 'react';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { useDocumentVersions, type DocumentVersion } from '@/lib/hooks/use-document-versions';
+import { type DocumentVersion,useDocumentVersions } from '@/lib/hooks/use-document-versions';
 import { cn } from '@/lib/utils';
 
 interface VersionHistoryProps {

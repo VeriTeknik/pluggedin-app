@@ -3,9 +3,9 @@
  * Consolidates RAG API interactions to avoid duplication across modules
  */
 
-import { validateExternalUrl } from './url-validator';
-import { estimateStorageFromDocumentCount } from './rag-storage-utils';
 import { LRUCache } from './lru-cache';
+import { estimateStorageFromDocumentCount } from './rag-storage-utils';
+import { validateExternalUrl } from './url-validator';
 
 export interface RagQueryResponse {
   success: boolean;

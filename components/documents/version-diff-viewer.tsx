@@ -1,8 +1,11 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight, FileText, Bot, Copy, Check } from 'lucide-react';
+import { Change,diffLines, diffWords } from 'diff';
+import { ArrowRight, Check,Copy, FileText } from 'lucide-react';
+import { useState } from 'react';
+
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,14 +13,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useVersionComparison } from '@/lib/hooks/use-document-versions';
 import { cn } from '@/lib/utils';
-import { diffLines, diffWords, Change } from 'diff';
 
 interface VersionDiffViewerProps {
   isOpen: boolean;
@@ -84,7 +84,7 @@ function SideBySideView({ content1, content2 }: { content1: string; content2: st
   const changes = diffWords(content1, content2);
   const changedLines = new Set<number>();
 
-  let pos1 = 0;
+  const pos1 = 0;
   let line1 = 0;
   for (const change of changes) {
     const lines = change.value.split('\n').length - 1;

@@ -1,5 +1,6 @@
-import { NextRequest } from 'next/server';
 import Redis from 'ioredis';
+import { NextRequest } from 'next/server';
+
 import { createRateLimiter as createInMemoryRateLimiter } from './rate-limiter';
 
 // Redis client singleton

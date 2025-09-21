@@ -1,25 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { format } from 'date-fns';
-import { X, Download, Copy, Check, FileText, Bot } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useVersionContent } from '@/lib/hooks/use-document-versions';
-import { cn } from '@/lib/utils';
-import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
-
 // Import common languages
 import 'prismjs/components/prism-javascript';
 import 'prismjs/components/prism-typescript';
@@ -38,6 +19,24 @@ import 'prismjs/components/prism-sql';
 import 'prismjs/components/prism-yaml';
 import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-shell-session';
+
+import { format } from 'date-fns';
+import { Bot,Check, Copy, Download, FileText, X } from 'lucide-react';
+import Prism from 'prismjs';
+import { useEffect, useState } from 'react';
+
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useVersionContent } from '@/lib/hooks/use-document-versions';
 
 interface VersionViewerModalProps {
   isOpen: boolean;

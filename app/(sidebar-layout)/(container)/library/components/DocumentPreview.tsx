@@ -19,7 +19,7 @@ import {
 import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer } from 'react';
 import { useTranslation } from 'react-i18next';
 
-// Removed VersionViewerModal - will display in main pane instead
+import { getDocumentVersionContent } from '@/app/actions/document-versions';
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -439,23 +439,24 @@ export const DocumentPreview = memo(function DocumentPreview({
   }), [state.ui.imageZoom]);
 
   const handleVersionSelect = useCallback(async (version: DocumentVersion) => {
+    if (!doc?.uuid) return;
+
     // Load version content to display in main pane
     dispatch({ type: 'VIEW_VERSION', payload: version.version_number });
     dispatch({ type: 'SET_VERSION_CONTENT_LOADING', payload: true });
 
     try {
-      const response = await fetch(`/api/documents/${doc?.uuid}/versions/${version.version_number}`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('pluggedin_api_key') || ''}`,
-        },
-      });
+      // Use server action with session authentication
+      const result = await getDocumentVersionContent(
+        doc.uuid,
+        version.version_number
+      );
 
-      if (!response.ok) {
-        throw new Error('Failed to load version content');
+      if (!result.success) {
+        throw new Error(result.error);
       }
 
-      const data = await response.json();
-      dispatch({ type: 'SET_VERSION_CONTENT', payload: data.content || '' });
+      dispatch({ type: 'SET_VERSION_CONTENT', payload: result.content || '' });
     } catch (error) {
       console.error('Error loading version content:', error);
       dispatch({ type: 'SET_VERSION_CONTENT', payload: null });
