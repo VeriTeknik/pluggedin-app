@@ -1,5 +1,7 @@
 'use client';
 
+import { AlertTriangle, FileText } from 'lucide-react';
+
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,7 +12,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertTriangle, FileText } from 'lucide-react';
 
 interface RestoreConfirmationDialogProps {
   isOpen: boolean;

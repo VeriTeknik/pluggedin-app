@@ -9,7 +9,6 @@ import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable,documentVersionsTable } from '@/db/schema';
 import {rateLimit } from '@/lib/api-rate-limit';
-import { ragService } from '@/lib/rag-service';
 import { sanitizeModerate } from '@/lib/sanitization';
 import { isPathWithinDirectory } from '@/lib/security';
 import { saveDocumentVersion } from '@/lib/version-manager';

@@ -99,3 +99,24 @@ export function sanitizeEmailSubject(subject: string): string {
   // Remove any HTML and limit length
   return sanitizeToPlainText(subject).substring(0, 200);
 }
+
+/**
+ * Sanitize HTML for syntax highlighting output
+ * Only allows spans with class attributes for Prism.js
+ */
+export function sanitizeSyntaxHighlightedCode(html: string): string {
+  return sanitizeHtml(html, {
+    allowedTags: ['span'],
+    allowedAttributes: {
+      span: ['class']
+    },
+    allowedClasses: {
+      // Only allow Prism.js token classes
+      span: ['token', 'keyword', 'operator', 'string', 'number', 'function',
+             'comment', 'punctuation', 'boolean', 'regex', 'important',
+             'variable', 'constant', 'symbol', 'selector', 'attr-name',
+             'attr-value', 'property', 'tag', 'class-name', 'builtin',
+             'script', 'language-*', 'line-numbers', 'line-numbers-rows']
+    }
+  });
+}

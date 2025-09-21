@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { ragService } from '@/lib/rag-service';
-import { getAuthSession } from '@/lib/auth';
 import { authenticateApiKey } from '@/app/api/auth';
 import { ErrorResponses } from '@/lib/api-errors';
+import { getAuthSession } from '@/lib/auth';
+import { ragService } from '@/lib/rag-service';
 
 export async function GET(request: NextRequest) {
   try {

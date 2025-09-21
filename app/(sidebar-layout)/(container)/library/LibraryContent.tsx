@@ -13,6 +13,11 @@ import { Clock, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { RestoreConfirmationDialog } from '@/components/documents/restore-confirmation-dialog';
+import { VersionDiffViewer } from '@/components/documents/version-diff-viewer';
+// Version management components
+import { VersionHistory } from '@/components/documents/version-history';
+import { VersionViewerModal } from '@/components/documents/version-viewer-modal';
 // Internal components
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -28,8 +33,8 @@ import { Tabs, TabsContent } from '@/components/ui/tabs';
 // Internal hooks and types
 import { useKnowledgeBaseSearch } from '@/hooks/use-knowledge-base-search';
 import { useLibrary } from '@/hooks/use-library';
-import type { Doc } from '@/types/library';
 import { useRestoreVersion } from '@/lib/hooks/use-document-versions';
+import type { Doc } from '@/types/library';
 
 import { AiSearchAnswer } from './components/AiSearchAnswer';
 import { DocsControls } from './components/DocsControls';
@@ -41,12 +46,6 @@ import { DocumentPreview } from './components/DocumentPreview';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { UploadDialog } from './components/UploadDialog';
 import { UploadProgress } from './components/UploadProgress';
-
-// Version management components
-import { VersionHistory } from '@/components/documents/version-history';
-import { VersionViewerModal } from '@/components/documents/version-viewer-modal';
-import { VersionDiffViewer } from '@/components/documents/version-diff-viewer';
-import { RestoreConfirmationDialog } from '@/components/documents/restore-confirmation-dialog';
 
 const columnHelper = createColumnHelper<Doc>();
 
