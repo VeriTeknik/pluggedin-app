@@ -205,19 +205,15 @@ export async function saveDocumentVersion(
       const ragIdentifier = projectUuid || validatedUserId;
       const versionFilename = basename(transactionResult.versionFilePath);
 
-      // Use Buffer instead of File API for server-side operations
+      // Create a proper Blob/File object for Node.js environment
       const contentBuffer = Buffer.from(content, 'utf-8');
+      const blob = new Blob([contentBuffer], { type: transactionResult.document.mime_type });
 
-      // Create a File-like object for RAG service
-      const fileData = {
-        name: versionFilename,
+      // Convert Blob to File with proper name
+      const fileData = new File([blob], versionFilename, {
         type: transactionResult.document.mime_type,
-        arrayBuffer: async () => contentBuffer.buffer.slice(
-          contentBuffer.byteOffset,
-          contentBuffer.byteOffset + contentBuffer.byteLength
-        ),
-        size: contentBuffer.length
-      } as File;
+        lastModified: Date.now()
+      });
 
       const uploadResult = await ragService.uploadDocument(fileData, ragIdentifier);
 
