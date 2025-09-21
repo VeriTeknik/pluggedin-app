@@ -4,6 +4,8 @@ import { z } from 'zod';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { rateLimiter } from '@/lib/rate-limiter';
+import { getVersionContent } from '@/lib/version-manager';
+import { ensureDocumentAccess } from '@/lib/access/document-access';
 
 // Type for the return value
 type DocumentVersionContentResult = {
@@ -17,8 +19,7 @@ type DocumentVersionContentResult = {
 
 /**
  * Server action to get version content for a document
- * Uses session authentication instead of API key
- * Note: This is a minimal implementation for production hotfix
+ * Uses session authentication and validates document access
  */
 export async function getDocumentVersionContent(
   documentId: string,
@@ -54,19 +55,36 @@ export async function getDocumentVersionContent(
       };
     }
 
-    // For now, return a placeholder since version system isn't fully deployed
-    // This prevents build errors while maintaining the interface
+    // Ensure user has access to the document
+    await ensureDocumentAccess(validatedDocId, userId);
+
+    // Get version content
+    const content = await getVersionContent(
+      userId,
+      validatedDocId,
+      validatedVersion
+    );
+
+    if (content === undefined || content === null) {
+      return { success: false, error: `Version ${validatedVersion} not found` };
+    }
+
     return {
-      success: false,
-      error: 'Version history is temporarily unavailable. Please try again later.'
+      success: true,
+      content,
+      versionNumber: validatedVersion
     };
   } catch (error) {
-    // Handle validation errors
+    // Handle specific error types
     if (error instanceof z.ZodError) {
       return {
         success: false,
         error: error.errors[0]?.message || 'Invalid input'
       };
+    }
+
+    if (error instanceof Error && error.message === 'ACCESS_DENIED') {
+      return { success: false, error: 'Document not found or access denied' };
     }
 
     return {
