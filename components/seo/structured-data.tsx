@@ -16,6 +16,7 @@ export function StructuredData({ type = 'Organization', data }: StructuredDataPr
     logo: 'https://plugged.in/logo.png',
     description: 'Plugged.in is the enterprise Model Context Protocol (MCP) platform for seamless AI integration. Connect 7,000+ tools and 1,500+ MCP servers with SOC 2 certified security.',
     foundingDate: '2024',
+    license: 'https://plugged.in/terms',
     address: {
       '@type': 'PostalAddress',
       addressCountry: 'US'
@@ -44,6 +45,7 @@ export function StructuredData({ type = 'Organization', data }: StructuredDataPr
     '@type': 'WebSite',
     name: 'Plugged.in',
     url: 'https://plugged.in',
+    license: 'https://plugged.in/terms',
     potentialAction: {
       '@type': 'SearchAction',
       target: {
@@ -60,6 +62,7 @@ export function StructuredData({ type = 'Organization', data }: StructuredDataPr
     name: 'Plugged.in MCP Platform',
     operatingSystem: 'Web',
     applicationCategory: 'DeveloperApplication',
+    license: 'https://plugged.in/terms',
     offers: [
       {
         '@type': 'Offer',
@@ -159,6 +162,7 @@ export function StructuredData({ type = 'Organization', data }: StructuredDataPr
     '@type': 'Dataset',
     name: 'Plugged.in Platform Metrics',
     description: 'Real-time platform performance and usage metrics for Plugged.in MCP platform, tracking tool availability, server connections, developer activity, and system reliability.',
+    license: 'https://plugged.in/terms',
     creator: {
       '@type': 'Organization',
       name: 'Plugged.in'

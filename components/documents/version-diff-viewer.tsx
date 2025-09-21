@@ -76,24 +76,52 @@ function DiffLine({ change, lineNumbers }: { change: Change; lineNumbers: { left
   );
 }
 
-function SideBySideView({ content1, content2 }: { content1: string; content2: string }) {
-  const lines1 = content1.split('\n');
-  const lines2 = content2.split('\n');
+// Constants for performance optimization
+const MAX_DIFF_SIZE = 5 * 1024 * 1024; // 5MB limit for diff calculation
+const MAX_LINES = 10000; // Maximum lines to process
 
-  const changes = diffWords(content1, content2);
+function SideBySideView({ content1, content2 }: { content1: string; content2: string }) {
+  // Check size limits to prevent memory issues
+  if (content1.length > MAX_DIFF_SIZE || content2.length > MAX_DIFF_SIZE) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-center">
+          <p className="text-muted-foreground">
+            Files too large for side-by-side comparison (max 5MB)
+          </p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Please use unified diff view instead
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const lines1 = content1.split('\n').slice(0, MAX_LINES);
+  const lines2 = content2.split('\n').slice(0, MAX_LINES);
+
+  // Use more efficient line-based diff for large content
+  const useLineDiff = lines1.length > 1000 || lines2.length > 1000;
+  const changes = useLineDiff ?
+    diffLines(content1, content2) :
+    diffWords(content1, content2);
+
   const changedLines = new Set<number>();
 
   let line1 = 0;
   for (const change of changes) {
     const lines = change.value.split('\n').length - 1;
     if (change.removed) {
-      for (let i = 0; i < lines; i++) {
+      for (let i = 0; i < lines && line1 + i < MAX_LINES; i++) {
         changedLines.add(line1 + i);
       }
       line1 += lines;
     } else if (!change.added) {
       line1 += lines;
     }
+
+    // Prevent excessive memory usage
+    if (line1 > MAX_LINES) break;
   }
 
   return (

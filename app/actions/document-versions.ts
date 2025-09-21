@@ -6,6 +6,7 @@ import { ensureDocumentAccess } from '@/lib/access/document-access';
 import { requireUserId } from '@/lib/auth/server-helpers';
 import { validateGetDocumentVersionRequest } from '@/lib/validators/document-versions';
 import { getVersionContent } from '@/lib/version-manager';
+import { rateLimiter } from '@/lib/rate-limiter';
 
 // Type for the return value
 type DocumentVersionContentResult = {
@@ -32,6 +33,20 @@ export async function getDocumentVersionContent(
 
     // Require authenticated user
     const userId = await requireUserId();
+
+    // Apply rate limiting - 30 requests per minute per user
+    const rateLimitResult = await rateLimiter.check(
+      `version-content:${userId}`,
+      30,
+      60
+    );
+
+    if (!rateLimitResult.success) {
+      return {
+        success: false,
+        error: `Rate limit exceeded. Please wait ${rateLimitResult.reset} seconds before trying again.`
+      };
+    }
 
     // Ensure user has access to the document
     await ensureDocumentAccess(validatedDocId, userId);

@@ -25,6 +25,8 @@ import 'prismjs/components/prism-yaml';
 import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-shell-session';
 
+import { sanitizeSyntaxHighlightedCode } from '@/lib/sanitization';
+
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -98,10 +100,16 @@ export function VersionViewerModal({
           Prism.languages[language] || Prism.languages.plain,
           language
         );
-        setHighlightedContent(highlighted);
+        // Sanitize the highlighted HTML to prevent XSS
+        const sanitized = sanitizeSyntaxHighlightedCode(highlighted);
+        setHighlightedContent(sanitized);
       } catch (err) {
-        // Fallback to plain text if highlighting fails
-        setHighlightedContent(content);
+        // Fallback to escaped plain text if highlighting fails
+        const escaped = content
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+        setHighlightedContent(escaped);
       }
     }
   }, [content, documentName]);
