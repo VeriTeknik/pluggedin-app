@@ -158,14 +158,25 @@ export async function POST(req: NextRequest) {
       id: userId,
       source: 'email',
     });
-    
-    // Send welcome email to the user
-    await sendWelcomeEmail({
-      name: data.name,
-      email: data.email,
-      signupSource: 'email',
-      userId,
-    });
+
+    // Send welcome email to the user and schedule follow-ups
+    // Note: We schedule follow-ups regardless of welcome email success
+    // to ensure users always get the follow-up emails
+    try {
+      const welcomeEmailSent = await sendWelcomeEmail({
+        name: data.name,
+        email: data.email,
+        signupSource: 'email',
+        userId,
+      });
+
+      if (!welcomeEmailSent) {
+        console.warn(`Welcome email failed to send for user ${userId} (${data.email})`);
+      }
+    } catch (error) {
+      console.error(`Error sending welcome email for user ${userId}:`, error);
+      // Don't fail registration if welcome email fails
+    }
     
     // Store the verification token
     await db.insert(verificationTokens).values({

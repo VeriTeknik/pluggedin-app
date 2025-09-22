@@ -273,6 +273,7 @@ export const authOptions: NextAuthOptions = {
                 name: newUser.name || 'User',
                 email: newUser.email,
                 signupSource: account?.provider,
+                userId: newUser.id,
               });
             }
           }, 1000); // Wait 1 second for user creation to complete

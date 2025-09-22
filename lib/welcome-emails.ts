@@ -577,7 +577,7 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
     
     if (result) {
       console.log(`Welcome email sent successfully to ${email} (segment: ${segment})`);
-      
+
       // Track email sending in database if userId is provided
       if (userId) {
         try {
@@ -591,14 +591,27 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
               signupSource,
             },
           });
-          
-          // Schedule follow-up emails
-          await scheduleFollowUpEmails(userId, email, segment);
         } catch (trackingError) {
-          console.error('Failed to track email or schedule follow-ups:', trackingError);
+          console.error('Failed to track welcome email:', trackingError);
           // Don't fail the whole operation if tracking fails
         }
       }
+    }
+
+    // Always schedule follow-up emails if userId is provided
+    // This ensures users get follow-up emails even if the welcome email fails
+    console.log(`[sendWelcomeEmail] Checking if userId is provided for scheduling: userId=${userId}`);
+    if (userId) {
+      console.log(`[sendWelcomeEmail] userId is provided, attempting to schedule follow-up emails`);
+      try {
+        await scheduleFollowUpEmails(userId, email, segment);
+        console.log(`[sendWelcomeEmail] Follow-up emails scheduled successfully for user ${userId} (${email})`);
+      } catch (schedulingError) {
+        console.error(`[sendWelcomeEmail] CRITICAL: Failed to schedule follow-up emails for user ${userId}:`, schedulingError);
+        // Log this critical error but don't fail the welcome email operation
+      }
+    } else {
+      console.log(`[sendWelcomeEmail] WARNING: userId not provided, skipping follow-up email scheduling`);
     }
     
     return result;
@@ -612,12 +625,21 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
  * Schedule follow-up emails
  */
 export async function scheduleFollowUpEmails(userId: string, email: string, segment: UserSegment) {
+  console.log(`[scheduleFollowUpEmails] Starting to schedule for user ${userId}, email: ${email}, segment: ${segment}`);
+
   try {
     // Schedule Day 3 follow-up
     const day3Date = new Date();
     day3Date.setDate(day3Date.getDate() + 3);
-    
-    await db.insert(scheduledEmailsTable).values({
+
+    console.log(`[scheduleFollowUpEmails] Attempting to insert Day 3 email:`, {
+      userId,
+      emailType: 'day3',
+      scheduledFor: day3Date,
+      metadata: { segment, email },
+    });
+
+    const day3Result = await db.insert(scheduledEmailsTable).values({
       userId,
       emailType: 'day3',
       scheduledFor: day3Date,
@@ -625,13 +647,22 @@ export async function scheduleFollowUpEmails(userId: string, email: string, segm
         segment,
         email,
       },
-    });
-    
+    }).returning();
+
+    console.log(`[scheduleFollowUpEmails] Day 3 email inserted successfully:`, day3Result);
+
     // Schedule Day 7 follow-up
     const day7Date = new Date();
     day7Date.setDate(day7Date.getDate() + 7);
-    
-    await db.insert(scheduledEmailsTable).values({
+
+    console.log(`[scheduleFollowUpEmails] Attempting to insert Day 7 email:`, {
+      userId,
+      emailType: 'day7',
+      scheduledFor: day7Date,
+      metadata: { segment, email },
+    });
+
+    const day7Result = await db.insert(scheduledEmailsTable).values({
       userId,
       emailType: 'day7',
       scheduledFor: day7Date,
@@ -639,15 +670,26 @@ export async function scheduleFollowUpEmails(userId: string, email: string, segm
         segment,
         email,
       },
-    });
-    
-    console.log(`Follow-up emails scheduled for user ${userId}:`, {
+    }).returning();
+
+    console.log(`[scheduleFollowUpEmails] Day 7 email inserted successfully:`, day7Result);
+
+    console.log(`[scheduleFollowUpEmails] SUCCESS - Follow-up emails scheduled for user ${userId}:`, {
       day3: day3Date,
       day7: day7Date,
       segment,
     });
   } catch (error) {
-    console.error('Failed to schedule follow-up emails:', error);
+    console.error('[scheduleFollowUpEmails] ERROR - Failed to schedule follow-up emails:', error);
+    console.error('[scheduleFollowUpEmails] Error details:', {
+      userId,
+      email,
+      segment,
+      errorName: error instanceof Error ? error.name : 'Unknown',
+      errorMessage: error instanceof Error ? error.message : String(error),
+      errorStack: error instanceof Error ? error.stack : 'No stack',
+    });
+    throw error; // Re-throw to be caught by the caller
   }
 }
 
