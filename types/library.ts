@@ -40,22 +40,27 @@ export interface Doc {
     timestamp?: string;
     sessionId?: string;
     prompt?: string;
+    updateReason?: string;
+    changesFromPrompt?: string;
+    changeSummary?: string;
     conversationContext?: Array<{
       role: string;
       content: string;
-    }>;
+    }> | string[];
     sourceDocuments?: string[];
     generationParams?: {
       temperature?: number;
       maxTokens?: number;
       topP?: number;
     };
+    visibility?: string;
     lastUpdatedBy?: {
       name: string;
       provider: string;
       version?: string;
     };
     lastUpdateTimestamp?: string;
+    [key: string]: any; // Allow any additional fields
   } | null;
   content_hash?: string | null;
   visibility: 'private' | 'workspace' | 'public';

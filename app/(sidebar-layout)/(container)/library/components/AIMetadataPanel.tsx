@@ -41,22 +41,27 @@ interface AIMetadata {
   timestamp?: string;
   sessionId?: string;
   prompt?: string;
+  updateReason?: string;
+  changesFromPrompt?: string;
+  changeSummary?: string;
   conversationContext?: Array<{
     role: string;
     content: string;
-  }>;
+  }> | string[];
   sourceDocuments?: string[];
   generationParams?: {
     temperature?: number;
     maxTokens?: number;
     topP?: number;
   };
+  visibility?: string;
   lastUpdatedBy?: {
     name: string;
     provider: string;
     version?: string;
   };
   lastUpdateTimestamp?: string;
+  [key: string]: any; // Allow any additional fields
 }
 
 interface AIMetadataPanelProps {
@@ -144,7 +149,7 @@ function AIMetadataPanelBase({
         <Separator />
 
         {/* Generation Context */}
-        {(metadata.prompt || metadata.context) && (
+        {(metadata.prompt || metadata.context || metadata.updateReason || metadata.changesFromPrompt || metadata.changeSummary) && (
           <>
             <div className="space-y-3">
               <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -168,6 +173,22 @@ function AIMetadataPanelBase({
                 </div>
               )}
 
+              {metadata.changesFromPrompt && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Type className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t('metadata.changesFromPrompt', 'Changes From Prompt')}
+                    </span>
+                  </div>
+                  <ScrollArea className="h-24 w-full rounded-md border p-2">
+                    <p className="text-sm whitespace-pre-wrap">
+                      {metadata.changesFromPrompt}
+                    </p>
+                  </ScrollArea>
+                </div>
+              )}
+
               {metadata.context && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
@@ -178,6 +199,34 @@ function AIMetadataPanelBase({
                   </div>
                   <p className="text-sm text-muted-foreground bg-muted/50 rounded-md p-2">
                     {metadata.context}
+                  </p>
+                </div>
+              )}
+
+              {metadata.updateReason && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t('metadata.updateReason', 'Update Reason')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground bg-muted/50 rounded-md p-2">
+                    {metadata.updateReason}
+                  </p>
+                </div>
+              )}
+
+              {metadata.changeSummary && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Info className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t('metadata.changeSummary', 'Change Summary')}
+                    </span>
+                  </div>
+                  <p className="text-sm text-muted-foreground bg-muted/50 rounded-md p-2">
+                    {metadata.changeSummary}
                   </p>
                 </div>
               )}
@@ -199,26 +248,32 @@ function AIMetadataPanelBase({
               </h3>
               <ScrollArea className="h-32 w-full rounded-md border">
                 <div className="p-3 space-y-2">
-                  {metadata.conversationContext.map((message, idx) => (
-                    <div
-                      key={idx}
-                      className={cn(
-                        "text-sm p-2 rounded-md",
-                        message.role === 'user' ? "bg-blue-50 dark:bg-blue-950/30" :
-                        message.role === 'assistant' ? "bg-muted/50" : "bg-muted/30"
-                      )}
-                    >
-                      <div className="flex items-start gap-2">
-                        <span className="text-xs font-medium text-muted-foreground capitalize">
-                          {message.role || 'system'}:
-                        </span>
-                        <span className="flex-1">
-                          {message.content.substring(0, 150)}
-                          {message.content.length > 150 && '...'}
-                        </span>
+                  {metadata.conversationContext.map((message, idx) => {
+                    const isString = typeof message === 'string';
+                    const content = isString ? message : message.content;
+                    const role = isString ? 'message' : (message.role || 'system');
+
+                    return (
+                      <div
+                        key={idx}
+                        className={cn(
+                          "text-sm p-2 rounded-md",
+                          role === 'user' ? "bg-blue-50 dark:bg-blue-950/30" :
+                          role === 'assistant' ? "bg-muted/50" : "bg-muted/30"
+                        )}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs font-medium text-muted-foreground capitalize">
+                            {role}:
+                          </span>
+                          <span className="flex-1">
+                            {content.substring(0, 150)}
+                            {content.length > 150 && '...'}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </ScrollArea>
             </div>

@@ -894,6 +894,19 @@ export const docsTable = pgTable(
         context?: string;
         timestamp?: string;
         sessionId?: string;
+        prompt?: string;
+        updateReason?: string;
+        changesFromPrompt?: string;
+        changeSummary?: string;
+        conversationContext?: Array<{ role: string; content: string }> | string[];
+        sourceDocuments?: string[];
+        generationParams?: {
+          temperature?: number;
+          maxTokens?: number;
+          topP?: number;
+        };
+        visibility?: string;
+        [key: string]: any; // Allow any additional fields
       }>(),
     upload_metadata: jsonb('upload_metadata')
       .$type<{

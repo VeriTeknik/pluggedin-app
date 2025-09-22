@@ -491,11 +491,10 @@ export async function PATCH(
           version: versionInfo.versionNumber,
           rag_document_id: versionInfo.ragDocumentId || existingDoc.rag_document_id,
           updated_at: new Date(),
-          ai_metadata: validatedData.metadata?.model ? {
+          ai_metadata: validatedData.metadata ? {
             ...existingDoc.ai_metadata,
-            model: validatedData.metadata.model,
+            ...validatedData.metadata, // Spread ALL metadata fields
             timestamp: new Date().toISOString(),
-            context: validatedData.metadata?.changeSummary || existingDoc.ai_metadata?.context,
           } : existingDoc.ai_metadata,
           tags: validatedData.metadata?.tags || existingDoc.tags,
         })
