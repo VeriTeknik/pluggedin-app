@@ -57,7 +57,7 @@ End-to-end encryption, OAuth 2.1, rate limiting, and sandboxed execution for you
 
 ```yaml
 Users: 725 (100% organic growth in 5 months)
-Documents Managed: 103 (76% AI-generated)
+Documents Managed: 100+ (76% AI-generated)
 Tool Calls Last Month: 16,328
 Available Tools: 7,350+
 Document Versions: Up to 9 iterations
@@ -572,9 +572,10 @@ err = client.Uploads.UploadFile(ctx, "document.pdf", metadata, func(progress flo
 ## 🤝 Community & Support
 
 - **GitHub Issues**: [Bug reports and feature requests](https://github.com/VeriTeknik/pluggedin-app/issues)
-- **Discord**: [Join our community](https://discord.gg/pluggedin)
-- **Twitter**: [@pluggedin](https://twitter.com/pluggedin)
-- **Email**: support@plugged.in
+- **Discussions**: [Join our community](https://github.com/orgs/VeriTeknik/discussions)
+- **Reddit**: [r/plugged_in](https://www.reddit.com/r/plugged_in/)
+- **Twitter**: [@pluggedintoai](https://twitter.com/pluggedIntoAI)
+- **Email**: team@plugged.in
 
 ### Contributing
 
@@ -631,18 +632,6 @@ Built on the shoulders of giants:
 
 ---
 
-## 🏆 Success Stories
-
-> "We went from losing AI insights daily to building a 103-document knowledge base with 9 versions on our most critical docs. Our entire team now references AI-generated strategies that evolve through multiple model iterations."
-> — *Engineering Lead, Tech Startup*
-
-> "The multi-model collaboration is game-changing. We tracked 14 different AI models contributing to our documents. Claude for creativity, GPT-4 for analysis, Gemini for synthesis - all with full attribution and version history."
-> — *AI Research Team*
-
-> "16,328 tool calls last month, 725 users gained organically in 5 months with zero marketing. The platform sells itself because it solves a real problem - AI amnesia."
-> — *Cem Karaca, Founder*
-
----
 
 <div align="center">
 
