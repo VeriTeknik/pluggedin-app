@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  postgres-v3:
+    image: postgres:15-alpine
+    container_name: pluggedin-postgres-v3
+    environment:
+      POSTGRES_DB: pluggedin_v3
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    volumes:
+      - postgres-v3-data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    networks:
+      - pluggedin-v3-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app-v3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner
+    container_name: pluggedin-app-v3
+    env_file:
+      - .env
+    environment:
+      # Override only the database URL to use local test database
+      DATABASE_URL: postgresql://postgres:postgres123@postgres-v3:5432/pluggedin_v3
+      # Disable SSL for local database
+      DATABASE_SSL: "false"
+      DATABASE_SSL_REJECT_UNAUTHORIZED: "false"
+      # Keep the URLs as configured in .env for OAuth to work
+      NEXTAUTH_URL: http://localhost:12005
+      NEXT_PUBLIC_APP_URL: http://localhost:12005
+    ports:
+      - "12005:3000"
+    depends_on:
+      postgres-v3:
+        condition: service_healthy
+      migrate-v3:
+        condition: service_completed_successfully
+    networks:
+      - pluggedin-v3-network
+
+  migrate-v3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: migrator
+    container_name: pluggedin-migrate-v3
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres123@postgres-v3:5432/pluggedin_v3
+    depends_on:
+      postgres-v3:
+        condition: service_healthy
+    networks:
+      - pluggedin-v3-network
+    command: sh -c "pnpm db:migrate"
+
+volumes:
+  postgres-v3-data:
+
+networks:
+  pluggedin-v3-network:
+    driver: bridge

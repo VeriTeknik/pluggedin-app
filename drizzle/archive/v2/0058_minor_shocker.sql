@@ -1,0 +1,1 @@
+ALTER TABLE "docs" ADD COLUMN "upload_metadata" jsonb;

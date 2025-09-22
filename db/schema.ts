@@ -253,7 +253,7 @@ export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
   // serverRatings: many(serverRatingsTable), // Removed relation
   auditLogs: many(auditLogsTable),
   notifications: many(notificationsTable),
-  logRetentionPolicies: many(logRetentionPoliciesTable),
+  // logRetentionPolicies: many(logRetentionPoliciesTable), // Removed in v3.0
   // Removed followers/following relations from profiles
   sharedMcpServers: many(sharedMcpServersTable),
   sharedCollections: many(sharedCollectionsTable),
@@ -667,38 +667,8 @@ export const notificationsRelations = relations(notificationsTable, ({ one }) =>
   }),
 }));
 
-export const systemLogsTable = pgTable("system_logs", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  level: text("level").notNull(),
-  source: text("source").notNull(),
-  message: text("message").notNull(),
-  details: jsonb("details"),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-},
-(table) => ({ // Use object syntax for indexes
-  systemLogsLevelIdx: index('system_logs_level_idx').on(table.level),
-  systemLogsSourceIdx: index('system_logs_source_idx').on(table.source),
-  systemLogsCreatedAtIdx: index('system_logs_created_at_idx').on(table.created_at),
-}));
-
-export const logRetentionPoliciesTable = pgTable("log_retention_policies", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  profile_uuid: uuid("profile_uuid").references(() => profilesTable.uuid, { onDelete: "cascade" }),
-  retention_days: integer("retention_days").default(7).notNull(),
-  is_active: boolean("is_active").default(true).notNull(),
-  created_at: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updated_at: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-},
-(table) => ({ // Use object syntax for indexes
-  logRetentionPoliciesProfileUuidIdx: index('log_retention_policies_profile_uuid_idx').on(table.profile_uuid),
-}));
-
-export const logRetentionPoliciesRelations = relations(logRetentionPoliciesTable, ({ one }) => ({
-  profile: one(profilesTable, {
-    fields: [logRetentionPoliciesTable.profile_uuid],
-    references: [profilesTable.uuid],
-  }),
-}));
+// Removed unused tables: systemLogsTable and logRetentionPoliciesTable
+// These tables were not used anywhere in the codebase and have been removed in v3.0
 
 export const toolsTable = pgTable(
   'tools',

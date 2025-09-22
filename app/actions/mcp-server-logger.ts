@@ -1,7 +1,7 @@
 'use server';
 
 import { db } from '@/db';
-import { systemLogsTable } from '@/db/schema';
+// import { systemLogsTable } from '@/db/schema'; // Removed in v3.0
 
 import { logAuditEvent } from './audit-logger';
 import { ensureLogDirectories, getMcpServerLogDir } from './log-retention';
@@ -91,24 +91,27 @@ export async function createEnhancedMcpLogger(
        // This version skips ensureInitialized
        try {
         // Store log in database (Consider awaiting if critical)
-        db.insert(systemLogsTable).values({
+        // db.insert(systemLogsTable) // Removed in v3.0
+       /* db.insert(systemLogsTable).values({
           level,
           source: 'MCP_SERVER',
           message,
           details: serverName ? { serverName } : undefined,
           created_at: new Date(),
-        }).then().catch(err => {
+        }) */
+       /* .then().catch(err => {
           console.error('Failed to store log in database:', err);
           // If source column is missing, try without it as a fallback
           if (err.code === '42703' && err.message?.includes('source')) {
-            db.insert(systemLogsTable).values({
+            // db.insert(systemLogsTable) // Removed in v3.0
+       db.insert(systemLogsTable).values({
               level,
               message,
               context: serverName ? { serverName } : undefined,
               timestamp: new Date(),
             } as any).catch(fallbackErr => console.error('Fallback log storage also failed:', fallbackErr));
           }
-        });
+        }); */
 
         // Log to console
         const colors = { debug: '\x1b[36m', info: '\x1b[32m', warn: '\x1b[33m', error: '\x1b[31m', reset: '\x1b[0m' };
@@ -137,24 +140,27 @@ export async function createEnhancedMcpLogger(
         await this.ensureInitialized();
 
         // Store log in database (Consider awaiting if critical)
-        db.insert(systemLogsTable).values({
+        // db.insert(systemLogsTable) // Removed in v3.0
+       /* db.insert(systemLogsTable).values({
           level,
           source: 'MCP_SERVER',
           message,
           details: serverName ? { serverName } : undefined,
           created_at: new Date(),
-        }).then().catch(err => {
+        }) */
+       /* .then().catch(err => {
           console.error('Failed to store log in database:', err);
           // If source column is missing, try without it as a fallback
           if (err.code === '42703' && err.message?.includes('source')) {
-            db.insert(systemLogsTable).values({
+            // db.insert(systemLogsTable) // Removed in v3.0
+       db.insert(systemLogsTable).values({
               level,
               message,
               context: serverName ? { serverName } : undefined,
               timestamp: new Date(),
             } as any).catch(fallbackErr => console.error('Fallback log storage also failed:', fallbackErr));
           }
-        });
+        }); */
 
         // Log to console in development
         if (process.env.NODE_ENV === 'development') {

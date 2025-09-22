@@ -1,0 +1,1 @@
+ALTER TABLE "projects" ADD COLUMN "active_profile_uuid" uuid;

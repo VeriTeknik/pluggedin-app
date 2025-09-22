@@ -5,7 +5,8 @@ import fs from 'fs/promises'; // Use fs.promises
 import path from 'path';
 
 import { db } from '@/db';
-import { auditLogsTable, logRetentionPoliciesTable } from '@/db/schema';
+import { auditLogsTable } from '@/db/schema';
+// logRetentionPoliciesTable removed in v3.0 - table was unused
 
 // Define paths as private constants
 const LOG_DIR_PATH = process.env.MCP_LOG_DIR || path.join(process.cwd(), 'logs');
@@ -35,93 +36,21 @@ export async function ensureLogDirectories() {
 }
 
 // Log retention politikası güncelle
-export async function updateLogRetentionPolicy(
-  profileUuid: string, 
-  retentionDays: number
-  // maxLogSizeMb: number // Removed unused parameter
-) {
-  try {
-    // Validate retentionDays
-    if (typeof retentionDays !== 'number' || retentionDays <= 0 || !Number.isInteger(retentionDays)) {
-      throw new Error('Invalid retentionDays value. Must be a positive integer.');
-    }
-
-    const existingPolicy = await db.query.logRetentionPoliciesTable.findFirst({
-      where: eq(logRetentionPoliciesTable.profile_uuid, profileUuid)
-    });
-
-    if (existingPolicy) {
-      await db.update(logRetentionPoliciesTable)
-        .set({
-          retention_days: retentionDays,
-          // max_log_size_mb: maxLogSizeMb, // Removed unused field
-          updated_at: new Date()
-        })
-        .where(eq(logRetentionPoliciesTable.profile_uuid, profileUuid));
-    } else {
-      await db.insert(logRetentionPoliciesTable).values({
-        profile_uuid: profileUuid,
-        retention_days: retentionDays,
-        // max_log_size_mb: maxLogSizeMb // Removed unused field
-        // is_active and other defaults will be applied by the DB
-      });
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Update log retention policy error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
-}
+// REMOVED in v3.0 - logRetentionPoliciesTable no longer exists
+// export async function updateLogRetentionPolicy(
+//   profileUuid: string,
+//   retentionDays: number
+// ) {
+//   // Function removed - logRetentionPoliciesTable was unused
+//   return { success: false, error: 'Function removed in v3.0' };
+// }
 
 // Eski logları temizle (CRON job olarak çalıştırılabilir)
-export async function cleanupOldLogs() {
-  try {
-    // Tüm retention politikalarını al
-    const policies = await db.query.logRetentionPoliciesTable.findMany({
-      where: eq(logRetentionPoliciesTable.is_active, true)
-    });
-
-    for (const policy of policies) {
-      if (!policy.profile_uuid) continue; // Skip if profile_uuid is null
-
-      const cutoffDate = new Date();
-      cutoffDate.setDate(cutoffDate.getDate() - policy.retention_days);
-
-      // Bu profil için eski audit logları sil
-      await db.delete(auditLogsTable)
-        .where(
-          and(
-            isNotNull(auditLogsTable.profile_uuid),
-            eq(auditLogsTable.profile_uuid, policy.profile_uuid),
-            lt(auditLogsTable.created_at, cutoffDate)
-          )
-        );
-
-      // NOTE: System logs are not tied to profile retention policies.
-      // Removed deletion of systemLogsTable from this loop.
-      // Implement separate cleanup logic for system logs if required.
-      // await db.delete(systemLogsTable)
-      //   .where(lt(systemLogsTable.created_at, cutoffDate));
-
-      // Eski log dosyalarını temizle
-      if (policy.profile_uuid) {
-        await cleanupMcpServerLogs(policy.profile_uuid, policy.retention_days);
-      }
-    }
-
-    return { success: true };
-  } catch (error) {
-    console.error('Cleanup old logs error:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    };
-  }
-}
+// REMOVED in v3.0 - logRetentionPoliciesTable no longer exists
+// export async function cleanupOldLogs() {
+//   // Function removed - logRetentionPoliciesTable was unused
+//   return { success: false, error: 'Function removed in v3.0' };
+// }
 
 // MCP sunucu log dosyalarını temizle (Asynchronous version)
 export async function cleanupMcpServerLogs(profileUuid: string, maxAgeDays = 7) {
