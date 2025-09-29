@@ -4,6 +4,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { emailTrackingTable, scheduledEmailsTable, users } from '@/db/schema';
 import { sendEmail } from '@/lib/email';
+import { generateUnsubscribeUrl } from '@/lib/unsubscribe-tokens';
 
 export type UserSegment = 'general' | 'developer' | 'security_focused' | 'enterprise';
 
@@ -87,8 +88,8 @@ function getWelcomeSubject(segment: UserSegment, abVariant: 'A' | 'B' = 'A'): st
 /**
  * Generate welcome email HTML based on user segment
  */
-function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegment }): string {
-  const { name, email, segment } = options;
+function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegment; unsubscribeUrl: string }): string {
+  const { name, segment, unsubscribeUrl } = options;
   const firstName = name.split(' ')[0];
   const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
   
@@ -170,7 +171,7 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
           
           <div class="footer">
             <p>P.S. We ship updates weekly! Check out <a href="${appUrl}/release-notes">what's new</a> — latest: end-to-end encryption for all MCP configs. 🔒</p>
-            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> |
+            <p><a href="${unsubscribeUrl}">Unsubscribe</a> |
             <a href="${appUrl}/settings">Email Preferences</a> |
             <a href="https://docs.plugged.in">Documentation</a></p>
           </div>
@@ -240,7 +241,7 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
 
           <div class="footer">
             <p>P.S. Track our progress: <a href="${appUrl}/release-notes">Release Notes</a> | <a href="https://github.com/VeriTeknik">GitHub</a> — watch us ship in real time! 🚀</p>
-            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> |
+            <p><a href="${unsubscribeUrl}">Unsubscribe</a> |
             <a href="${appUrl}/settings">Email Preferences</a> |
             <a href="https://docs.plugged.in">Documentation</a></p>
           </div>
@@ -305,7 +306,7 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
           
           <div class="footer">
             <p>P.S. We're GDPR compliant and working on SOC2. Your data sovereignty matters.</p>
-            <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> |
+            <p><a href="${unsubscribeUrl}">Unsubscribe</a> |
             <a href="${appUrl}/settings">Email Preferences</a> |
             <a href="https://docs.plugged.in">Documentation</a></p>
           </div>
@@ -368,7 +369,7 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
         
         <div class="footer">
           <p>VeriTeknik B.V. | Amsterdam, Netherlands | Enterprise Support Available 24/7</p>
-          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a> |
+          <p><a href="${unsubscribeUrl}">Unsubscribe</a> |
           <a href="${appUrl}/settings">Email Preferences</a></p>
         </div>
       </div>
@@ -380,7 +381,7 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
 /**
  * Generate Day 3 follow-up email HTML
  */
-function generateDay3Html(name: string, email: string, metrics: UserMetrics, _segment: UserSegment): string {
+function generateDay3Html(name: string, metrics: UserMetrics, _segment: UserSegment, unsubscribeUrl: string): string {
   const firstName = name.split(' ')[0];
   const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
   
@@ -415,9 +416,9 @@ function generateDay3Html(name: string, email: string, metrics: UserMetrics, _se
         
         <p>Keep shipping,<br>
         Cem 🐾</p>
-        
+
         <div class="footer">
-          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a></p>
+          <p><a href="${unsubscribeUrl}">Unsubscribe</a></p>
         </div>
       </div>
     </body>
@@ -428,7 +429,7 @@ function generateDay3Html(name: string, email: string, metrics: UserMetrics, _se
 /**
  * Generate Day 7 follow-up email HTML (Active users)
  */
-function generateDay7ActiveHtml(name: string, email: string, metrics: UserMetrics): string {
+function generateDay7ActiveHtml(name: string, metrics: UserMetrics, unsubscribeUrl: string): string {
   const firstName = name.split(' ')[0];
   const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
   const timeSaved = Math.round(metrics.queryCount * 0.5); // Estimate 30 min saved per query
@@ -477,9 +478,9 @@ function generateDay7ActiveHtml(name: string, email: string, metrics: UserMetric
         
         <p>Thanks for trusting us with your AI workspace,<br>
         Cem 🐾</p>
-        
+
         <div class="footer">
-          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a></p>
+          <p><a href="${unsubscribeUrl}">Unsubscribe</a></p>
         </div>
       </div>
     </body>
@@ -490,7 +491,7 @@ function generateDay7ActiveHtml(name: string, email: string, metrics: UserMetric
 /**
  * Generate Day 7 follow-up email HTML (Inactive users)
  */
-function generateDay7InactiveHtml(name: string, email: string): string {
+function generateDay7InactiveHtml(name: string, unsubscribeUrl: string): string {
   const firstName = name.split(' ')[0];
   const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
   
@@ -530,11 +531,11 @@ function generateDay7InactiveHtml(name: string, email: string): string {
         <p>No pressure — here whenever you're ready!</p>
         
         <p>Cem 🐾</p>
-        
+
         <div class="footer">
           <p>P.S. If Plugged.in isn't what you need right now, no worries at all.<br>
           Just let me know — always appreciate the feedback!</p>
-          <p><a href="${appUrl}/unsubscribe?token=${Buffer.from(email).toString('base64')}">Unsubscribe</a></p>
+          <p><a href="${unsubscribeUrl}">Unsubscribe</a></p>
         </div>
       </div>
     </body>
@@ -547,23 +548,28 @@ function generateDay7InactiveHtml(name: string, email: string): string {
  */
 export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?: string }): Promise<boolean> {
   const { email, signupSource, userId } = options;
-  
+
   // Check if welcome emails are enabled
   if (process.env.ENABLE_WELCOME_EMAILS === 'false') {
     console.log('Welcome emails are disabled');
     return false;
   }
-  
+
   // Determine user segment
   const segment = options.segment || determineUserSegment(email, signupSource);
-  
+
   // Get subject line (could implement A/B testing here)
   // Use crypto.randomInt for secure random selection
   const abVariant = crypto.randomInt(2) === 0 ? 'A' : 'B';
   const subject = getWelcomeSubject(segment, abVariant as 'A' | 'B');
-  
+
+  // Generate secure unsubscribe URL if userId is available
+  const unsubscribeUrl = userId
+    ? await generateUnsubscribeUrl(userId)
+    : `${process.env.NEXTAUTH_URL || 'https://app.plugged.in'}/settings`;
+
   // Generate HTML content
-  const html = generateWelcomeHtml({ ...options, segment });
+  const html = generateWelcomeHtml({ ...options, segment, unsubscribeUrl });
   
   try {
     const result = await sendEmail({
@@ -727,7 +733,8 @@ export async function getUserMetrics(userId: string): Promise<UserMetrics> {
 export async function sendDay3Email(userId: string, email: string, name: string, segment: UserSegment): Promise<boolean> {
   try {
     const metrics = await getUserMetrics(userId);
-    const html = generateDay3Html(name, email, metrics, segment);
+    const unsubscribeUrl = await generateUnsubscribeUrl(userId);
+    const html = generateDay3Html(name, metrics, segment, unsubscribeUrl);
     
     const result = await sendEmail({
       to: email,
@@ -763,14 +770,16 @@ export async function sendDay7Email(userId: string, email: string, name: string,
   try {
     const metrics = await getUserMetrics(userId);
     const isActive = metrics.documentCount > 0 || metrics.queryCount > 0;
-    
-    const subject = isActive 
+
+    const subject = isActive
       ? "You've been with us a week — here's what's next"
       : 'Need a hand getting started?';
-    
+
+    const unsubscribeUrl = await generateUnsubscribeUrl(userId);
+
     const html = isActive
-      ? generateDay7ActiveHtml(name, email, metrics)
-      : generateDay7InactiveHtml(name, email);
+      ? generateDay7ActiveHtml(name, metrics, unsubscribeUrl)
+      : generateDay7InactiveHtml(name, unsubscribeUrl);
     
     const result = await sendEmail({
       to: email,
