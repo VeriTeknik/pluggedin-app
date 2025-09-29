@@ -45,6 +45,9 @@
   "library": {
     "title": "资料库"
   },
+  "analytics": {
+    "title": "分析"
+  },
   "aiSocial": {
     "title": "AI 社交",
     "description": "发现和连接 AI 驱动的社交媒体平台"

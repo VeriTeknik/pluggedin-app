@@ -606,13 +606,13 @@ export async function getProductivityMetrics(
     const [docStats] = await db
       .select({
         count: count(),
-        weeks: sql<number>`EXTRACT(WEEK FROM AGE(CURRENT_DATE, MIN(${docsTable.created_at})))`,
+        days: sql<number>`EXTRACT(EPOCH FROM AGE(CURRENT_DATE, MIN(${docsTable.created_at}))) / 86400`,
       })
       .from(docsTable)
       .where(eq(docsTable.profile_uuid, profileUuid));
 
-    const avgDocumentsPerWeek = docStats?.weeks
-      ? docStats.count / Number(docStats.weeks)
+    const avgDocumentsPerWeek = docStats?.days && Number(docStats.days) > 0
+      ? (docStats.count / (Number(docStats.days) / 7))
       : 0;
 
     // Define achievements

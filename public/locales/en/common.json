@@ -47,6 +47,9 @@
   "library": {
     "title": "Library"
   },
+  "analytics": {
+    "title": "Analytics"
+  },
     "aiSocial": {
       "title": "AI Social",
       "description": "Discover and connect with AI-powered social media platforms"

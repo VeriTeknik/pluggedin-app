@@ -35,7 +35,7 @@ const periods: { value: TimePeriod; label: string }[] = [
 ];
 
 export default function AnalyticsPage() {
-  const { t } = useTranslation('analytics');
+  const { t } = useTranslation(['analytics', 'common']);
   const { activeProfile } = useProfiles();
   const [period, setPeriod] = useState<TimePeriod>('7d');
 
