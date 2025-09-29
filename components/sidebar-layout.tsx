@@ -3,6 +3,7 @@
 // React imports
 // External library imports
 import {
+  BarChart3,
   Bell,
   Blocks,
   Code2,
@@ -258,7 +259,16 @@ export default function SidebarLayout({
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                  
+
+                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('analytics.title')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/analytics'>
+                        <BarChart3 className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('analytics.title')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+
                   {/* <SidebarMenuItem>
                     <SidebarMenuButton asChild>
                       <Link href='/inspector-guide'>

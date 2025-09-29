@@ -1,0 +1,91 @@
+{
+  "title": "Analitik",
+  "description": "MCP kullanımınızı, RAG aramalarınızı ve üretkenlik desenlerinizi görselleştirin",
+  "tabs": {
+    "overview": "Genel Bakış",
+    "tools": "Araçlar ve Sunucular",
+    "library": "Kütüphane ve RAG",
+    "productivity": "Üretkenlik"
+  },
+  "period": {
+    "7d": "Son 7 gün",
+    "30d": "Son 30 gün",
+    "90d": "Son 90 gün",
+    "all": "Tüm zamanlar"
+  },
+  "overview": {
+    "title": "Genel Bakış",
+    "totalToolCalls": "Toplam Araç Çağrıları",
+    "totalDocuments": "Belgeler",
+    "totalRagSearches": "RAG Aramaları",
+    "mostUsedServer": "En Çok Kullanılan Sunucu",
+    "storageUsed": "Kullanılan Depolama",
+    "activityTimeline": "Etkinlik Zaman Çizelgesi",
+    "toolCallsLabel": "Araç Çağrıları",
+    "ragSearchesLabel": "RAG Aramaları",
+    "trend": {
+      "up": "%{{percent}} artış",
+      "down": "%{{percent}} azalma",
+      "neutral": "Değişiklik yok"
+    }
+  },
+  "tools": {
+    "title": "Araçlar ve Sunucular",
+    "topTools": "En İyi Araçlar",
+    "serverActivity": "Sunucu Etkinliği",
+    "hourlyDistribution": "Saatlik Dağılım",
+    "activityHeatmap": "Etkinlik Isı Haritası",
+    "toolName": "Araç Adı",
+    "serverName": "Sunucu Adı",
+    "callCount": "Çağrılar",
+    "successRate": "Başarı Oranı",
+    "toolCalls": "Araç Çağrıları",
+    "resourceReads": "Kaynak Okumaları",
+    "promptGets": "Prompt Alımları",
+    "totalActivity": "Toplam Etkinlik",
+    "hour": "Saat",
+    "count": "Sayı",
+    "noData": "Etkinlik verisi yok",
+    "filterByServer": "Sunucuya göre filtrele"
+  },
+  "library": {
+    "title": "Kütüphane ve RAG",
+    "documentStats": "Belge İstatistikleri",
+    "totalDocuments": "Toplam Belgeler",
+    "aiGenerated": "AI Tarafından Oluşturulan",
+    "uploaded": "Yüklenen",
+    "storageBreakdown": "Depolama Dağılımı",
+    "files": "Dosyalar",
+    "ragVectors": "RAG Vektörleri",
+    "documentsByModel": "AI Modeline Göre Belgeler",
+    "ragSearchFrequency": "RAG Arama Sıklığı",
+    "mostAccessedDocs": "En Çok Erişilen Belgeler",
+    "model": "Model",
+    "accessCount": "Erişim Sayısı",
+    "searches": "Aramalar",
+    "noDocuments": "Henüz belge yok"
+  },
+  "productivity": {
+    "title": "Üretkenlik",
+    "activeStreak": "Aktif Seri",
+    "streakDays": "{{count}} gün",
+    "streakDays_plural": "{{count}} gün",
+    "mostProductiveHour": "En Üretken Saat",
+    "mostProductiveDay": "En Üretken Gün",
+    "avgToolCallsPerDay": "Günlük Ort. Araç Çağrıları",
+    "avgDocumentsPerWeek": "Haftalık Ort. Belgeler",
+    "achievements": "Başarımlar",
+    "achievementProgress": "%{{percent}} tamamlandı",
+    "achievementUnlocked": "Kilidi Açıldı!",
+    "achievementLocked": "Kilitli",
+    "workPatterns": "Çalışma Desenleri",
+    "hourlyActivity": "Saatlik Etkinlik",
+    "dailyActivity": "Günlük Etkinlik"
+  },
+  "errors": {
+    "loadFailed": "Analitik verileri yüklenemedi",
+    "unauthorized": "Analitikleri görüntülemek için giriş yapmalısınız",
+    "retry": "Tekrar Dene"
+  },
+  "loading": "Analitikler yükleniyor..."
+}

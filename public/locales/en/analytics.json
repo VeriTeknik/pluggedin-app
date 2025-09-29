@@ -1,0 +1,91 @@
+{
+  "title": "Analytics",
+  "description": "Visualize your MCP usage, RAG searches, and productivity patterns",
+  "tabs": {
+    "overview": "Overview",
+    "tools": "Tools & Servers",
+    "library": "Library & RAG",
+    "productivity": "Productivity"
+  },
+  "period": {
+    "7d": "Last 7 days",
+    "30d": "Last 30 days",
+    "90d": "Last 90 days",
+    "all": "All time"
+  },
+  "overview": {
+    "title": "Overview",
+    "totalToolCalls": "Total Tool Calls",
+    "totalDocuments": "Documents",
+    "totalRagSearches": "RAG Searches",
+    "mostUsedServer": "Most Used Server",
+    "storageUsed": "Storage Used",
+    "activityTimeline": "Activity Timeline",
+    "toolCallsLabel": "Tool Calls",
+    "ragSearchesLabel": "RAG Searches",
+    "trend": {
+      "up": "{{percent}}% increase",
+      "down": "{{percent}}% decrease",
+      "neutral": "No change"
+    }
+  },
+  "tools": {
+    "title": "Tools & Servers",
+    "topTools": "Top Tools",
+    "serverActivity": "Server Activity",
+    "hourlyDistribution": "Hourly Distribution",
+    "activityHeatmap": "Activity Heatmap",
+    "toolName": "Tool Name",
+    "serverName": "Server Name",
+    "callCount": "Calls",
+    "successRate": "Success Rate",
+    "toolCalls": "Tool Calls",
+    "resourceReads": "Resource Reads",
+    "promptGets": "Prompt Gets",
+    "totalActivity": "Total Activity",
+    "hour": "Hour",
+    "count": "Count",
+    "noData": "No activity data available",
+    "filterByServer": "Filter by server"
+  },
+  "library": {
+    "title": "Library & RAG",
+    "documentStats": "Document Statistics",
+    "totalDocuments": "Total Documents",
+    "aiGenerated": "AI Generated",
+    "uploaded": "Uploaded",
+    "storageBreakdown": "Storage Breakdown",
+    "files": "Files",
+    "ragVectors": "RAG Vectors",
+    "documentsByModel": "Documents by AI Model",
+    "ragSearchFrequency": "RAG Search Frequency",
+    "mostAccessedDocs": "Most Accessed Documents",
+    "model": "Model",
+    "accessCount": "Access Count",
+    "searches": "Searches",
+    "noDocuments": "No documents yet"
+  },
+  "productivity": {
+    "title": "Productivity",
+    "activeStreak": "Active Streak",
+    "streakDays": "{{count}} day",
+    "streakDays_plural": "{{count}} days",
+    "mostProductiveHour": "Most Productive Hour",
+    "mostProductiveDay": "Most Productive Day",
+    "avgToolCallsPerDay": "Avg Tool Calls/Day",
+    "avgDocumentsPerWeek": "Avg Documents/Week",
+    "achievements": "Achievements",
+    "achievementProgress": "{{percent}}% complete",
+    "achievementUnlocked": "Unlocked!",
+    "achievementLocked": "Locked",
+    "workPatterns": "Work Patterns",
+    "hourlyActivity": "Hourly Activity",
+    "dailyActivity": "Daily Activity"
+  },
+  "errors": {
+    "loadFailed": "Failed to load analytics data",
+    "unauthorized": "You must be logged in to view analytics",
+    "retry": "Retry"
+  },
+  "loading": "Loading analytics..."
+}

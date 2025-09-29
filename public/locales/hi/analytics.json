@@ -1,0 +1,91 @@
+{
+  "title": "विश्लेषण",
+  "description": "अपने MCP उपयोग, RAG खोज और उत्पादकता पैटर्न को विज़ुअलाइज़ करें",
+  "tabs": {
+    "overview": "अवलोकन",
+    "tools": "उपकरण और सर्वर",
+    "library": "पुस्तकालय और RAG",
+    "productivity": "उत्पादकता"
+  },
+  "period": {
+    "7d": "पिछले 7 दिन",
+    "30d": "पिछले 30 दिन",
+    "90d": "पिछले 90 दिन",
+    "all": "सभी समय"
+  },
+  "overview": {
+    "title": "अवलोकन",
+    "totalToolCalls": "कुल टूल कॉल",
+    "totalDocuments": "दस्तावेज़",
+    "totalRagSearches": "RAG खोजें",
+    "mostUsedServer": "सबसे अधिक उपयोग किया गया सर्वर",
+    "storageUsed": "उपयोग किया गया स्टोरेज",
+    "activityTimeline": "गतिविधि समयरेखा",
+    "toolCallsLabel": "टूल कॉल",
+    "ragSearchesLabel": "RAG खोजें",
+    "trend": {
+      "up": "{{percent}}% वृद्धि",
+      "down": "{{percent}}% कमी",
+      "neutral": "कोई परिवर्तन नहीं"
+    }
+  },
+  "tools": {
+    "title": "उपकरण और सर्वर",
+    "topTools": "शीर्ष उपकरण",
+    "serverActivity": "सर्वर गतिविधि",
+    "hourlyDistribution": "प्रति घंटा वितरण",
+    "activityHeatmap": "गतिविधि हीटमैप",
+    "toolName": "उपकरण का नाम",
+    "serverName": "सर्वर का नाम",
+    "callCount": "कॉल",
+    "successRate": "सफलता दर",
+    "toolCalls": "टूल कॉल",
+    "resourceReads": "संसाधन पढ़ें",
+    "promptGets": "प्रॉम्प्ट प्राप्त करें",
+    "totalActivity": "कुल गतिविधि",
+    "hour": "घंटा",
+    "count": "गणना",
+    "noData": "कोई गतिविधि डेटा उपलब्ध नहीं",
+    "filterByServer": "सर्वर द्वारा फ़िल्टर करें"
+  },
+  "library": {
+    "title": "पुस्तकालय और RAG",
+    "documentStats": "दस्तावेज़ सांख्यिकी",
+    "totalDocuments": "कुल दस्तावेज़",
+    "aiGenerated": "AI द्वारा जनरेट किया गया",
+    "uploaded": "अपलोड किया गया",
+    "storageBreakdown": "स्टोरेज विभाजन",
+    "files": "फ़ाइलें",
+    "ragVectors": "RAG वेक्टर",
+    "documentsByModel": "AI मॉडल द्वारा दस्तावेज़",
+    "ragSearchFrequency": "RAG खोज आवृत्ति",
+    "mostAccessedDocs": "सबसे अधिक एक्सेस किए गए दस्तावेज़",
+    "model": "मॉडल",
+    "accessCount": "एक्सेस गणना",
+    "searches": "खोजें",
+    "noDocuments": "अभी तक कोई दस्तावेज़ नहीं"
+  },
+  "productivity": {
+    "title": "उत्पादकता",
+    "activeStreak": "सक्रिय स्ट्रीक",
+    "streakDays": "{{count}} दिन",
+    "streakDays_plural": "{{count}} दिन",
+    "mostProductiveHour": "सबसे उत्पादक घंटा",
+    "mostProductiveDay": "सबसे उत्पादक दिन",
+    "avgToolCallsPerDay": "औसत टूल कॉल/दिन",
+    "avgDocumentsPerWeek": "औसत दस्तावेज़/सप्ताह",
+    "achievements": "उपलब्धियां",
+    "achievementProgress": "{{percent}}% पूर्ण",
+    "achievementUnlocked": "अनलॉक किया गया!",
+    "achievementLocked": "लॉक",
+    "workPatterns": "कार्य पैटर्न",
+    "hourlyActivity": "प्रति घंटा गतिविधि",
+    "dailyActivity": "दैनिक गतिविधि"
+  },
+  "errors": {
+    "loadFailed": "विश्लेषण डेटा लोड करने में विफल",
+    "unauthorized": "विश्लेषण देखने के लिए आपको लॉग इन होना चाहिए",
+    "retry": "फिर से प्रयास करें"
+  },
+  "loading": "विश्लेषण लोड हो रहा है..."
+}

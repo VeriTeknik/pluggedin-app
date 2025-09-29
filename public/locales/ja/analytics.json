@@ -1,0 +1,91 @@
+{
+  "title": "分析",
+  "description": "MCP使用状況、RAG検索、生産性パターンを可視化",
+  "tabs": {
+    "overview": "概要",
+    "tools": "ツールとサーバー",
+    "library": "ライブラリとRAG",
+    "productivity": "生産性"
+  },
+  "period": {
+    "7d": "過去7日間",
+    "30d": "過去30日間",
+    "90d": "過去90日間",
+    "all": "全期間"
+  },
+  "overview": {
+    "title": "概要",
+    "totalToolCalls": "合計ツール呼び出し",
+    "totalDocuments": "ドキュメント",
+    "totalRagSearches": "RAG検索",
+    "mostUsedServer": "最も使用されたサーバー",
+    "storageUsed": "使用ストレージ",
+    "activityTimeline": "アクティビティタイムライン",
+    "toolCallsLabel": "ツール呼び出し",
+    "ragSearchesLabel": "RAG検索",
+    "trend": {
+      "up": "{{percent}}%増加",
+      "down": "{{percent}}%減少",
+      "neutral": "変化なし"
+    }
+  },
+  "tools": {
+    "title": "ツールとサーバー",
+    "topTools": "トップツール",
+    "serverActivity": "サーバーアクティビティ",
+    "hourlyDistribution": "時間別分布",
+    "activityHeatmap": "アクティビティヒートマップ",
+    "toolName": "ツール名",
+    "serverName": "サーバー名",
+    "callCount": "呼び出し回数",
+    "successRate": "成功率",
+    "toolCalls": "ツール呼び出し",
+    "resourceReads": "リソース読み取り",
+    "promptGets": "プロンプト取得",
+    "totalActivity": "総アクティビティ",
+    "hour": "時",
+    "count": "カウント",
+    "noData": "アクティビティデータがありません",
+    "filterByServer": "サーバーでフィルター"
+  },
+  "library": {
+    "title": "ライブラリとRAG",
+    "documentStats": "ドキュメント統計",
+    "totalDocuments": "総ドキュメント数",
+    "aiGenerated": "AI生成",
+    "uploaded": "アップロード済み",
+    "storageBreakdown": "ストレージ内訳",
+    "files": "ファイル",
+    "ragVectors": "RAGベクトル",
+    "documentsByModel": "AIモデル別ドキュメント",
+    "ragSearchFrequency": "RAG検索頻度",
+    "mostAccessedDocs": "最もアクセスされたドキュメント",
+    "model": "モデル",
+    "accessCount": "アクセス数",
+    "searches": "検索",
+    "noDocuments": "ドキュメントがありません"
+  },
+  "productivity": {
+    "title": "生産性",
+    "activeStreak": "アクティブストリーク",
+    "streakDays": "{{count}}日",
+    "streakDays_plural": "{{count}}日",
+    "mostProductiveHour": "最も生産的な時間",
+    "mostProductiveDay": "最も生産的な日",
+    "avgToolCallsPerDay": "1日あたり平均ツール呼び出し",
+    "avgDocumentsPerWeek": "週あたり平均ドキュメント",
+    "achievements": "実績",
+    "achievementProgress": "{{percent}}%完了",
+    "achievementUnlocked": "アンロック！",
+    "achievementLocked": "ロック中",
+    "workPatterns": "作業パターン",
+    "hourlyActivity": "時間別アクティビティ",
+    "dailyActivity": "日別アクティビティ"
+  },
+  "errors": {
+    "loadFailed": "分析データの読み込みに失敗しました",
+    "unauthorized": "分析を表示するにはログインが必要です",
+    "retry": "再試行"
+  },
+  "loading": "分析を読み込んでいます..."
+}
