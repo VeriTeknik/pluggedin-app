@@ -3,6 +3,7 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 import { initReactI18next } from 'react-i18next';
 
 // Import English chunks
+import enAnalytics from '../public/locales/en/analytics.json';
 import enApiKeys from '../public/locales/en/apiKeys.json';
 import enAuth from '../public/locales/en/auth.json';
 import enCollections from '../public/locales/en/collections.json';
@@ -24,6 +25,7 @@ import enSetupGuide from '../public/locales/en/setupGuide.json';
 import enSidebar from '../public/locales/en/sidebar.json';
 import enWhatsNew from '../public/locales/en/whatsNew.json';
 // Import Hindi chunks
+import hiAnalytics from '../public/locales/hi/analytics.json';
 import hiApiKeys from '../public/locales/hi/apiKeys.json';
 import hiAuth from '../public/locales/hi/auth.json';
 import hiCollections from '../public/locales/hi/collections.json';
@@ -45,6 +47,7 @@ import hiSetupGuide from '../public/locales/hi/setupGuide.json';
 import hiSidebar from '../public/locales/hi/sidebar.json';
 import hiWhatsNew from '../public/locales/hi/whatsNew.json';
 // Import Japanese chunks
+import jaAnalytics from '../public/locales/ja/analytics.json';
 import jaApiKeys from '../public/locales/ja/apiKeys.json';
 import jaAuth from '../public/locales/ja/auth.json';
 import jaCollections from '../public/locales/ja/collections.json';
@@ -66,6 +69,7 @@ import jaSetupGuide from '../public/locales/ja/setupGuide.json';
 import jaSidebar from '../public/locales/ja/sidebar.json';
 import jaWhatsNew from '../public/locales/ja/whatsNew.json';
 // Import Dutch chunks
+import nlAnalytics from '../public/locales/nl/analytics.json';
 import nlApiKeys from '../public/locales/nl/apiKeys.json';
 import nlAuth from '../public/locales/nl/auth.json';
 import nlCollections from '../public/locales/nl/collections.json';
@@ -87,6 +91,7 @@ import nlSetupGuide from '../public/locales/nl/setupGuide.json';
 import nlSidebar from '../public/locales/nl/sidebar.json';
 import nlWhatsNew from '../public/locales/nl/whatsNew.json';
 // Import Turkish chunks
+import trAnalytics from '../public/locales/tr/analytics.json';
 import trApiKeys from '../public/locales/tr/apiKeys.json';
 import trAuth from '../public/locales/tr/auth.json';
 import trCollections from '../public/locales/tr/collections.json';
@@ -108,6 +113,7 @@ import trSetupGuide from '../public/locales/tr/setupGuide.json';
 import trSidebar from '../public/locales/tr/sidebar.json';
 import trWhatsNew from '../public/locales/tr/whatsNew.json';
 // Import Chinese chunks
+import zhAnalytics from '../public/locales/zh/analytics.json';
 import zhApiKeys from '../public/locales/zh/apiKeys.json';
 import zhAuth from '../public/locales/zh/auth.json';
 import zhCollections from '../public/locales/zh/collections.json';
@@ -150,6 +156,7 @@ const resources = {
       ...enNotifications,
       ...enWhatsNew
     },
+    analytics: enAnalytics,
     apiKeys: enApiKeys,
     auth: enAuth,
     collections: enCollections,
@@ -189,6 +196,7 @@ const resources = {
       ...hiNotifications,
       ...hiWhatsNew
     },
+    analytics: hiAnalytics,
     apiKeys: hiApiKeys,
     auth: hiAuth,
     collections: hiCollections,
@@ -228,6 +236,7 @@ const resources = {
       ...jaNotifications,
       ...jaWhatsNew
     },
+    analytics: jaAnalytics,
     apiKeys: jaApiKeys,
     auth: jaAuth,
     collections: jaCollections,
@@ -267,6 +276,7 @@ const resources = {
       ...nlNotifications,
       ...nlWhatsNew
     },
+    analytics: nlAnalytics,
     apiKeys: nlApiKeys,
     auth: nlAuth,
     collections: nlCollections,
@@ -306,6 +316,7 @@ const resources = {
       ...trNotifications,
       ...trWhatsNew
     },
+    analytics: trAnalytics,
     apiKeys: trApiKeys,
     auth: trAuth,
     collections: trCollections,
@@ -345,6 +356,7 @@ const resources = {
       ...zhNotifications,
       ...zhWhatsNew
     },
+    analytics: zhAnalytics,
     apiKeys: zhApiKeys,
     auth: zhAuth,
     collections: zhCollections,
