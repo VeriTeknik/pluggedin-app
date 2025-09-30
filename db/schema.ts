@@ -548,6 +548,16 @@ export const mcpActivityTable = pgTable(
         table.action,
         table.created_at
       ),
+      // Analytics query optimization indexes
+      profileCreatedIdx: index('idx_profile_created').on(
+        table.profile_uuid,
+        table.created_at
+      ),
+      profileActionCreatedIdx: index('idx_profile_action_created').on(
+        table.profile_uuid,
+        table.action,
+        table.created_at
+      ),
     };
   }
 );

@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -27,8 +28,10 @@ export function ActivityHeatmap({
   title,
   description,
   data,
-  days = 30,
+  days = 90,
 }: ActivityHeatmapProps) {
+  const { t } = useTranslation('analytics');
+
   // Generate last N days
   const dateRange = useMemo(() => {
     const dates: string[] = [];
@@ -64,26 +67,43 @@ export function ActivityHeatmap({
     ][intensity - 1] || 'bg-green-200 dark:bg-green-900';
   };
 
-  // Group dates by week
-  const weeks = useMemo(() => {
-    const weekGroups: string[][] = [];
-    let currentWeek: string[] = [];
+  // Transpose dates into rows by day of week (for horizontal display)
+  const dayRows = useMemo(() => {
+    const firstDate = new Date(dateRange[0]);
+    const dayOfWeek = firstDate.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-    dateRange.forEach((date, index) => {
-      currentWeek.push(date);
-      if ((index + 1) % 7 === 0 || index === dateRange.length - 1) {
-        weekGroups.push([...currentWeek]);
-        currentWeek = [];
+    // Adjust to start from Monday (0 = Monday, 6 = Sunday)
+    const startOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+
+    // Fill in empty days at the beginning
+    const paddedDates = Array(startOffset).fill(null).concat(dateRange);
+
+    // Group into weeks
+    const weeks: (string | null)[][] = [];
+    for (let i = 0; i < paddedDates.length; i += 7) {
+      weeks.push(paddedDates.slice(i, i + 7));
+    }
+
+    // Transpose: convert from weeks[week][day] to rows[day][week]
+    const rows: (string | null)[][] = [];
+    for (let dayIndex = 0; dayIndex < 7; dayIndex++) {
+      const row: (string | null)[] = [];
+      for (let weekIndex = 0; weekIndex < weeks.length; weekIndex++) {
+        row.push(weeks[weekIndex][dayIndex] || null);
       }
-    });
+      rows.push(row);
+    }
 
-    return weekGroups;
+    return rows;
   }, [dateRange]);
 
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
+
+  // Day labels for the left side
+  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   return (
     <Card>
@@ -92,36 +112,52 @@ export function ActivityHeatmap({
         {description && <CardDescription>{description}</CardDescription>}
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
+        <div className="space-y-2 overflow-x-auto">
           <TooltipProvider>
-            <div className="flex gap-1 flex-wrap">
-              {weeks.map((week, weekIndex) => (
-                <div key={weekIndex} className="flex flex-col gap-1">
-                  {week.map((date) => {
-                    const count = countMap.get(date) || 0;
-                    return (
-                      <Tooltip key={date}>
-                        <TooltipTrigger asChild>
-                          <div
-                            className={cn(
-                              'w-3 h-3 rounded-sm cursor-pointer transition-transform hover:scale-125',
-                              getColorIntensity(count)
-                            )}
-                          />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <div className="text-xs">
-                            <p className="font-medium">{formatDate(date)}</p>
-                            <p className="text-muted-foreground">
-                              {count} {count === 1 ? 'activity' : 'activities'}
-                            </p>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    );
-                  })}
-                </div>
-              ))}
+            <div className="flex gap-2 min-w-fit">
+              {/* Day labels */}
+              <div className="flex flex-col gap-1 pr-2 text-xs text-muted-foreground">
+                {dayLabels.map((label, index) => (
+                  <div key={label} className="h-3 flex items-center justify-end">
+                    <span className={index % 2 === 1 ? '' : 'hidden sm:inline'}>{label}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Heatmap grid */}
+              <div className="flex flex-col gap-1">
+                {dayRows.map((row, rowIndex) => (
+                  <div key={rowIndex} className="flex gap-1">
+                    {row.map((date, colIndex) => {
+                      if (!date) {
+                        // Empty placeholder for days before the start
+                        return <div key={`empty-${rowIndex}-${colIndex}`} className="w-3 h-3" />;
+                      }
+                      const count = countMap.get(date) || 0;
+                      return (
+                        <Tooltip key={date}>
+                          <TooltipTrigger asChild>
+                            <div
+                              className={cn(
+                                'w-3 h-3 rounded-sm cursor-pointer transition-transform hover:scale-125',
+                                getColorIntensity(count)
+                              )}
+                            />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <div className="text-xs">
+                              <p className="font-medium">{formatDate(date)}</p>
+                              <p className="text-muted-foreground">
+                                {t('tools.activity', { count })}
+                              </p>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </TooltipProvider>
 

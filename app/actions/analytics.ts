@@ -5,9 +5,12 @@ import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import {
   mcpActivityTable,
+  mcpServersTable,
   docsTable,
   documentVersionsTable,
-  documentModelAttributionsTable
+  documentModelAttributionsTable,
+  profilesTable,
+  projectsTable
 } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
@@ -72,6 +75,21 @@ interface ProductivityMetrics {
   }>;
 }
 
+// Helper to verify profile ownership
+async function verifyProfileOwnership(
+  profileUuid: string,
+  userId: string
+): Promise<boolean> {
+  const profile = await db
+    .select({ uuid: profilesTable.uuid })
+    .from(profilesTable)
+    .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
+    .where(and(eq(profilesTable.uuid, profileUuid), eq(projectsTable.user_id, userId)))
+    .limit(1);
+
+  return profile.length > 0;
+}
+
 // Helper to get date cutoff based on period
 function getDateCutoff(period: TimePeriod): Date | null {
   if (period === 'all') return null;
@@ -122,6 +140,12 @@ export async function getOverviewMetrics(
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify profile ownership
+    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    if (!hasAccess) {
+      return { success: false, error: 'Profile not found or unauthorized' };
     }
 
     const cutoff = getDateCutoff(period);
@@ -212,19 +236,20 @@ export async function getOverviewMetrics(
     // Get most used server
     const serverActivity = await db
       .select({
-        externalId: mcpActivityTable.external_id,
+        serverName: mcpServersTable.name,
         serverUuid: mcpActivityTable.server_uuid,
         count: count(),
       })
       .from(mcpActivityTable)
+      .leftJoin(mcpServersTable, eq(mcpActivityTable.server_uuid, mcpServersTable.uuid))
       .where(and(...currentConditions))
-      .groupBy(mcpActivityTable.external_id, mcpActivityTable.server_uuid)
+      .groupBy(mcpServersTable.name, mcpActivityTable.server_uuid)
       .orderBy(desc(count()))
       .limit(1);
 
     const mostUsedServer = serverActivity[0]
       ? {
-          name: serverActivity[0].externalId || serverActivity[0].serverUuid || 'Unknown',
+          name: serverActivity[0].serverName || serverActivity[0].serverUuid || 'Unknown',
           count: serverActivity[0].count,
         }
       : null;
@@ -277,6 +302,12 @@ export async function getToolAnalytics(
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify profile ownership
+    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    if (!hasAccess) {
+      return { success: false, error: 'Profile not found or unauthorized' };
     }
 
     const cutoff = getDateCutoff(period);
@@ -355,9 +386,9 @@ export async function getToolAnalytics(
       count: h.count,
     }));
 
-    // Get activity heatmap (last 30 days)
+    // Get activity heatmap (last 90 days)
     const heatmapCutoff = new Date();
-    heatmapCutoff.setDate(heatmapCutoff.getDate() - 30);
+    heatmapCutoff.setDate(heatmapCutoff.getDate() - 90);
 
     const heatmapData = await db
       .select({
@@ -405,6 +436,12 @@ export async function getRagAnalytics(
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify profile ownership
+    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    if (!hasAccess) {
+      return { success: false, error: 'Profile not found or unauthorized' };
     }
 
     const cutoff = getDateCutoff(period);
@@ -519,6 +556,12 @@ export async function getProductivityMetrics(
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify profile ownership
+    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    if (!hasAccess) {
+      return { success: false, error: 'Profile not found or unauthorized' };
     }
 
     // Calculate active streak (consecutive days with activity)
@@ -660,6 +703,78 @@ export async function getProductivityMetrics(
     };
   } catch (error) {
     console.error('Error fetching productivity metrics:', error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
+  }
+}
+
+interface ToolCallLogEntry {
+  id: number;
+  timestamp: Date;
+  action: string;
+  tool_name: string | null;
+  server_name: string | null;
+  server_uuid: string | null;
+  external_id: string | null;
+}
+
+export async function getRecentToolCalls(
+  profileUuid: string,
+  limit: number = 50
+): Promise<{ success: boolean; data?: ToolCallLogEntry[]; error?: string }> {
+  try {
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    // Verify profile ownership
+    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    if (!hasAccess) {
+      return { success: false, error: 'Profile not found or unauthorized' };
+    }
+
+    // Validate and cap limit parameter
+    const validatedLimit = Math.min(Math.max(1, limit), 100);
+
+    // Get recent tool call activity
+    const recentCalls = await db
+      .select({
+        id: mcpActivityTable.id,
+        timestamp: mcpActivityTable.created_at,
+        action: mcpActivityTable.action,
+        tool_name: mcpActivityTable.item_name,
+        server_name: mcpServersTable.name,
+        server_uuid: mcpActivityTable.server_uuid,
+        external_id: mcpActivityTable.external_id,
+      })
+      .from(mcpActivityTable)
+      .leftJoin(mcpServersTable, eq(mcpActivityTable.server_uuid, mcpServersTable.uuid))
+      .where(
+        and(
+          eq(mcpActivityTable.profile_uuid, profileUuid),
+          eq(mcpActivityTable.action, 'tool_call')
+        )
+      )
+      .orderBy(desc(mcpActivityTable.created_at))
+      .limit(validatedLimit);
+
+    return {
+      success: true,
+      data: recentCalls.map(call => ({
+        id: call.id,
+        timestamp: call.timestamp,
+        action: call.action,
+        tool_name: call.tool_name,
+        server_name: call.server_name,
+        server_uuid: call.server_uuid,
+        external_id: call.external_id,
+      })),
+    };
+  } catch (error) {
+    console.error('Error fetching recent tool calls:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

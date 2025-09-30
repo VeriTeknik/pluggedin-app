@@ -35,6 +35,8 @@
     "serverActivity": "सर्वर गतिविधि",
     "hourlyDistribution": "प्रति घंटा वितरण",
     "activityHeatmap": "गतिविधि हीटमैप",
+    "activity": "{{count}} गतिविधि",
+    "activity_plural": "{{count}} गतिविधियाँ",
     "toolName": "उपकरण का नाम",
     "serverName": "सर्वर का नाम",
     "callCount": "कॉल",
@@ -47,6 +49,30 @@
     "count": "गणना",
     "noData": "कोई गतिविधि डेटा उपलब्ध नहीं",
     "filterByServer": "सर्वर द्वारा फ़िल्टर करें"
+  },
+  "toolCallLog": {
+    "title": "हाल की टूल कॉल",
+    "description": "आपके सबसे हालिया MCP टूल निष्पादन की गतिविधि लॉग",
+    "searchPlaceholder": "टूल या सर्वर नाम से खोजें...",
+    "columns": {
+      "timestamp": "समय",
+      "toolName": "उपकरण",
+      "serverName": "सर्वर"
+    },
+    "noResults": "आपकी खोज से मेल खाने वाली कोई टूल कॉल नहीं मिली",
+    "noData": "कोई हाल की टूल कॉल नहीं",
+    "resultsCount": "{{count}} परिणाम दिखाया जा रहा है",
+    "resultsCount_plural": "{{count}} परिणाम दिखाए जा रहे हैं",
+    "timeAgo": {
+      "days": "{{count}} दिन पहले",
+      "days_plural": "{{count}} दिन पहले",
+      "hours": "{{count}} घंटे पहले",
+      "hours_plural": "{{count}} घंटे पहले",
+      "minutes": "{{count}} मिनट पहले",
+      "minutes_plural": "{{count}} मिनट पहले",
+      "seconds": "{{count}} सेकंड पहले",
+      "seconds_plural": "{{count}} सेकंड पहले"
+    }
   },
   "library": {
     "title": "पुस्तकालय और RAG",

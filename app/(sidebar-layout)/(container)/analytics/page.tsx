@@ -1,7 +1,7 @@
 'use client';
 
 import { BarChart3, Library, TrendingUp, Wrench } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -9,14 +9,15 @@ import {
   getOverviewMetrics,
   getProductivityMetrics,
   getRagAnalytics,
+  getRecentToolCalls,
   getToolAnalytics,
   type TimePeriod,
 } from '@/app/actions/analytics';
+import { AchievementBadge } from '@/components/analytics/achievement-badge';
 import { ActivityChart } from '@/components/analytics/activity-chart';
 import { ActivityHeatmap } from '@/components/analytics/activity-heatmap';
-import { AchievementBadge } from '@/components/analytics/achievement-badge';
 import { MetricCard } from '@/components/analytics/metric-card';
-import { Button } from '@/components/ui/button';
+import { ToolCallLog } from '@/components/analytics/tool-call-log';
 import {
   Select,
   SelectContent,
@@ -61,6 +62,12 @@ export default function AnalyticsPage() {
   const { data: productivityData, isLoading: productivityLoading } = useSWR(
     activeProfile?.uuid ? ['productivity', activeProfile.uuid, period] : null,
     () => getProductivityMetrics(activeProfile!.uuid, period),
+    { refreshInterval: 60000 }
+  );
+
+  const { data: toolCallLogData, isLoading: toolCallLogLoading } = useSWR(
+    activeProfile?.uuid ? ['toolCallLog', activeProfile.uuid] : null,
+    () => getRecentToolCalls(activeProfile!.uuid, 50),
     { refreshInterval: 60000 }
   );
 
@@ -252,8 +259,13 @@ export default function AnalyticsPage() {
                 <ActivityHeatmap
                   title={t('tools.activityHeatmap')}
                   data={toolData.data.activityHeatmap}
-                  days={30}
+                  days={90}
                 />
+              )}
+
+              {/* Tool Call Log */}
+              {!toolCallLogLoading && toolCallLogData?.success && toolCallLogData.data && (
+                <ToolCallLog data={toolCallLogData.data} />
               )}
             </>
           ) : (

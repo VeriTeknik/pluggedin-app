@@ -35,6 +35,8 @@
     "serverActivity": "Sunucu Etkinliği",
     "hourlyDistribution": "Saatlik Dağılım",
     "activityHeatmap": "Etkinlik Isı Haritası",
+    "activity": "{{count}} etkinlik",
+    "activity_plural": "{{count}} etkinlik",
     "toolName": "Araç Adı",
     "serverName": "Sunucu Adı",
     "callCount": "Çağrılar",
@@ -47,6 +49,30 @@
     "count": "Sayı",
     "noData": "Etkinlik verisi yok",
     "filterByServer": "Sunucuya göre filtrele"
+  },
+  "toolCallLog": {
+    "title": "Son Araç Çağrıları",
+    "description": "En son MCP araç yürütmelerinizin etkinlik günlüğü",
+    "searchPlaceholder": "Araç veya sunucu adına göre ara...",
+    "columns": {
+      "timestamp": "Zaman",
+      "toolName": "Araç",
+      "serverName": "Sunucu"
+    },
+    "noResults": "Aramanızla eşleşen araç çağrısı bulunamadı",
+    "noData": "Son araç çağrısı yok",
+    "resultsCount": "{{count}} sonuç gösteriliyor",
+    "resultsCount_plural": "{{count}} sonuç gösteriliyor",
+    "timeAgo": {
+      "days": "{{count}} gün önce",
+      "days_plural": "{{count}} gün önce",
+      "hours": "{{count}} saat önce",
+      "hours_plural": "{{count}} saat önce",
+      "minutes": "{{count}} dakika önce",
+      "minutes_plural": "{{count}} dakika önce",
+      "seconds": "{{count}} saniye önce",
+      "seconds_plural": "{{count}} saniye önce"
+    }
   },
   "library": {
     "title": "Kütüphane ve RAG",

@@ -35,6 +35,8 @@
     "serverActivity": "サーバーアクティビティ",
     "hourlyDistribution": "時間別分布",
     "activityHeatmap": "アクティビティヒートマップ",
+    "activity": "{{count}}件のアクティビティ",
+    "activity_plural": "{{count}}件のアクティビティ",
     "toolName": "ツール名",
     "serverName": "サーバー名",
     "callCount": "呼び出し回数",
@@ -47,6 +49,30 @@
     "count": "カウント",
     "noData": "アクティビティデータがありません",
     "filterByServer": "サーバーでフィルター"
+  },
+  "toolCallLog": {
+    "title": "最近のツール呼び出し",
+    "description": "最近のMCPツール実行のアクティビティログ",
+    "searchPlaceholder": "ツール名またはサーバー名で検索...",
+    "columns": {
+      "timestamp": "時刻",
+      "toolName": "ツール",
+      "serverName": "サーバー"
+    },
+    "noResults": "検索に一致するツール呼び出しが見つかりません",
+    "noData": "最近のツール呼び出しがありません",
+    "resultsCount": "{{count}}件の結果を表示中",
+    "resultsCount_plural": "{{count}}件の結果を表示中",
+    "timeAgo": {
+      "days": "{{count}}日前",
+      "days_plural": "{{count}}日前",
+      "hours": "{{count}}時間前",
+      "hours_plural": "{{count}}時間前",
+      "minutes": "{{count}}分前",
+      "minutes_plural": "{{count}}分前",
+      "seconds": "{{count}}秒前",
+      "seconds_plural": "{{count}}秒前"
+    }
   },
   "library": {
     "title": "ライブラリとRAG",

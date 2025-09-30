@@ -35,6 +35,8 @@
     "serverActivity": "Server Activity",
     "hourlyDistribution": "Hourly Distribution",
     "activityHeatmap": "Activity Heatmap",
+    "activity": "{{count}} activity",
+    "activity_plural": "{{count}} activities",
     "toolName": "Tool Name",
     "serverName": "Server Name",
     "callCount": "Calls",
@@ -47,6 +49,30 @@
     "count": "Count",
     "noData": "No activity data available",
     "filterByServer": "Filter by server"
+  },
+  "toolCallLog": {
+    "title": "Recent Tool Calls",
+    "description": "Activity log of your most recent MCP tool executions",
+    "searchPlaceholder": "Search by tool or server name...",
+    "columns": {
+      "timestamp": "Time",
+      "toolName": "Tool",
+      "serverName": "Server"
+    },
+    "noResults": "No tool calls found matching your search",
+    "noData": "No recent tool calls",
+    "resultsCount": "Showing {{count}} result",
+    "resultsCount_plural": "Showing {{count}} results",
+    "timeAgo": {
+      "days": "{{count}} day ago",
+      "days_plural": "{{count}} days ago",
+      "hours": "{{count}} hour ago",
+      "hours_plural": "{{count}} hours ago",
+      "minutes": "{{count}} minute ago",
+      "minutes_plural": "{{count}} minutes ago",
+      "seconds": "{{count}} second ago",
+      "seconds_plural": "{{count}} seconds ago"
+    }
   },
   "library": {
     "title": "Library & RAG",

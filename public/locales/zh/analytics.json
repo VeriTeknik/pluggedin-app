@@ -35,6 +35,8 @@
     "serverActivity": "服务器活动",
     "hourlyDistribution": "每小时分布",
     "activityHeatmap": "活动热力图",
+    "activity": "{{count}} 次活动",
+    "activity_plural": "{{count}} 次活动",
     "toolName": "工具名称",
     "serverName": "服务器名称",
     "callCount": "调用次数",
@@ -47,6 +49,30 @@
     "count": "计数",
     "noData": "无活动数据",
     "filterByServer": "按服务器筛选"
+  },
+  "toolCallLog": {
+    "title": "最近的工具调用",
+    "description": "您最近的 MCP 工具执行活动日志",
+    "searchPlaceholder": "按工具或服务器名称搜索...",
+    "columns": {
+      "timestamp": "时间",
+      "toolName": "工具",
+      "serverName": "服务器"
+    },
+    "noResults": "未找到匹配搜索的工具调用",
+    "noData": "无最近的工具调用",
+    "resultsCount": "显示 {{count}} 条结果",
+    "resultsCount_plural": "显示 {{count}} 条结果",
+    "timeAgo": {
+      "days": "{{count}} 天前",
+      "days_plural": "{{count}} 天前",
+      "hours": "{{count}} 小时前",
+      "hours_plural": "{{count}} 小时前",
+      "minutes": "{{count}} 分钟前",
+      "minutes_plural": "{{count}} 分钟前",
+      "seconds": "{{count}} 秒前",
+      "seconds_plural": "{{count}} 秒前"
+    }
   },
   "library": {
     "title": "文档库和 RAG",

@@ -35,6 +35,8 @@
     "serverActivity": "Server Activiteit",
     "hourlyDistribution": "Uurlijkse Verdeling",
     "activityHeatmap": "Activiteiten Heatmap",
+    "activity": "{{count}} activiteit",
+    "activity_plural": "{{count}} activiteiten",
     "toolName": "Tool Naam",
     "serverName": "Server Naam",
     "callCount": "Oproepen",
@@ -47,6 +49,30 @@
     "count": "Aantal",
     "noData": "Geen activiteitsgegevens beschikbaar",
     "filterByServer": "Filteren op server"
+  },
+  "toolCallLog": {
+    "title": "Recente Tool Oproepen",
+    "description": "Activiteitenlog van uw meest recente MCP tool uitvoeringen",
+    "searchPlaceholder": "Zoek op tool- of servernaam...",
+    "columns": {
+      "timestamp": "Tijd",
+      "toolName": "Tool",
+      "serverName": "Server"
+    },
+    "noResults": "Geen tool oproepen gevonden die overeenkomen met uw zoekopdracht",
+    "noData": "Geen recente tool oproepen",
+    "resultsCount": "{{count}} resultaat wordt weergegeven",
+    "resultsCount_plural": "{{count}} resultaten worden weergegeven",
+    "timeAgo": {
+      "days": "{{count}} dag geleden",
+      "days_plural": "{{count}} dagen geleden",
+      "hours": "{{count}} uur geleden",
+      "hours_plural": "{{count}} uur geleden",
+      "minutes": "{{count}} minuut geleden",
+      "minutes_plural": "{{count}} minuten geleden",
+      "seconds": "{{count}} seconde geleden",
+      "seconds_plural": "{{count}} seconden geleden"
+    }
   },
   "library": {
     "title": "Bibliotheek en RAG",
