@@ -414,6 +414,13 @@
       "when": 1758382405111,
       "tag": "0058_minor_shocker",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1759270768389,
+      "tag": "0059_fantastic_spectrum",
+      "breakpoints": true
     }
   ]
 }

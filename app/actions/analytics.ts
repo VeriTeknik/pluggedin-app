@@ -1,6 +1,7 @@
 'use server';
 
 import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
+import { z } from 'zod';
 
 import { db } from '@/db';
 import {
@@ -13,8 +14,15 @@ import {
   projectsTable
 } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { rateLimiter } from '@/lib/rate-limiter';
 
 export type TimePeriod = '7d' | '30d' | '90d' | 'all';
+
+// Zod validation schemas
+const uuidSchema = z.string().uuid('Invalid profile UUID');
+const periodSchema = z.enum(['7d', '30d', '90d', 'all']);
+const limitSchema = z.number().int().min(1).max(100);
+const serverUuidSchema = z.string().uuid('Invalid server UUID').optional();
 
 interface OverviewMetrics {
   totalToolCalls: number;
@@ -137,22 +145,33 @@ export async function getOverviewMetrics(
   period: TimePeriod = '7d'
 ): Promise<{ success: boolean; data?: OverviewMetrics; error?: string }> {
   try {
+    // Validate inputs
+    const validatedUuid = uuidSchema.parse(profileUuid);
+    const validatedPeriod = periodSchema.parse(period);
+
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Rate limiting - 30 requests per minute per user
+    const rateLimitKey = `analytics:overview:${session.user.id}`;
+    const rateLimit = await rateLimiter.check(rateLimitKey, 30, 60);
+    if (!rateLimit.success) {
+      return { success: false, error: 'Rate limit exceeded. Please try again later.' };
+    }
+
     // Verify profile ownership
-    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    const hasAccess = await verifyProfileOwnership(validatedUuid, session.user.id);
     if (!hasAccess) {
       return { success: false, error: 'Profile not found or unauthorized' };
     }
 
-    const cutoff = getDateCutoff(period);
-    const comparisonPeriod = getComparisonCutoff(period);
+    const cutoff = getDateCutoff(validatedPeriod);
+    const comparisonPeriod = getComparisonCutoff(validatedPeriod);
 
     // Get current period metrics
-    const currentConditions = [eq(mcpActivityTable.profile_uuid, profileUuid)];
+    const currentConditions = [eq(mcpActivityTable.profile_uuid, validatedUuid)];
     if (cutoff) {
       currentConditions.push(gte(mcpActivityTable.created_at, cutoff));
     }
@@ -197,7 +216,7 @@ export async function getOverviewMetrics(
       : 0;
 
     // Get document counts
-    const docConditions = [eq(docsTable.profile_uuid, profileUuid)];
+    const docConditions = [eq(docsTable.profile_uuid, validatedUuid)];
     if (cutoff) {
       docConditions.push(gte(docsTable.created_at, cutoff));
     }
@@ -221,7 +240,7 @@ export async function getOverviewMetrics(
         .from(docsTable)
         .where(
           and(
-            eq(docsTable.profile_uuid, profileUuid),
+            eq(docsTable.profile_uuid, validatedUuid),
             gte(docsTable.created_at, comparisonPeriod.start),
             sql`${docsTable.created_at} < ${comparisonPeriod.end}`
           )
@@ -285,10 +304,20 @@ export async function getOverviewMetrics(
       },
     };
   } catch (error) {
+    // Log detailed error server-side
     console.error('Error fetching overview metrics:', error);
+
+    // Return generic error to client, specific error for validation
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Invalid input: ${error.errors[0].message}`,
+      };
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Failed to fetch analytics data. Please try again later.',
     };
   }
 }
@@ -299,18 +328,30 @@ export async function getToolAnalytics(
   serverUuid?: string
 ): Promise<{ success: boolean; data?: ToolAnalytics; error?: string }> {
   try {
+    // Validate inputs
+    const validatedUuid = uuidSchema.parse(profileUuid);
+    const validatedPeriod = periodSchema.parse(period);
+    const validatedServerUuid = serverUuid ? serverUuidSchema.parse(serverUuid) : undefined;
+
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Rate limiting - 30 requests per minute per user
+    const rateLimitKey = `analytics:tools:${session.user.id}`;
+    const rateLimit = await rateLimiter.check(rateLimitKey, 30, 60);
+    if (!rateLimit.success) {
+      return { success: false, error: 'Rate limit exceeded. Please try again later.' };
+    }
+
     // Verify profile ownership
-    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    const hasAccess = await verifyProfileOwnership(validatedUuid, session.user.id);
     if (!hasAccess) {
       return { success: false, error: 'Profile not found or unauthorized' };
     }
 
-    const cutoff = getDateCutoff(period);
+    const cutoff = getDateCutoff(validatedPeriod);
     const conditions = [eq(mcpActivityTable.profile_uuid, profileUuid)];
 
     if (cutoff) {
