@@ -197,7 +197,7 @@ export async function getOverviewMetrics(
         .from(mcpActivityTable)
         .where(
           and(
-            eq(mcpActivityTable.profile_uuid, profileUuid),
+            eq(mcpActivityTable.profile_uuid, validatedUuid),
             gte(mcpActivityTable.created_at, comparisonPeriod.start),
             sql`${mcpActivityTable.created_at} < ${comparisonPeriod.end}`
           )
@@ -352,14 +352,14 @@ export async function getToolAnalytics(
     }
 
     const cutoff = getDateCutoff(validatedPeriod);
-    const conditions = [eq(mcpActivityTable.profile_uuid, profileUuid)];
+    const conditions = [eq(mcpActivityTable.profile_uuid, validatedUuid)];
 
     if (cutoff) {
       conditions.push(gte(mcpActivityTable.created_at, cutoff));
     }
 
-    if (serverUuid) {
-      conditions.push(eq(mcpActivityTable.server_uuid, serverUuid));
+    if (validatedServerUuid) {
+      conditions.push(eq(mcpActivityTable.server_uuid, validatedServerUuid));
     }
 
     // Get top tools
@@ -439,7 +439,7 @@ export async function getToolAnalytics(
       .from(mcpActivityTable)
       .where(
         and(
-          eq(mcpActivityTable.profile_uuid, profileUuid),
+          eq(mcpActivityTable.profile_uuid, validatedUuid),
           gte(mcpActivityTable.created_at, heatmapCutoff)
         )
       )
@@ -461,10 +461,20 @@ export async function getToolAnalytics(
       },
     };
   } catch (error) {
+    // Log detailed error server-side
     console.error('Error fetching tool analytics:', error);
+
+    // Return generic error to client, specific error for validation
+    if (error instanceof z.ZodError) {
+      return {
+        success: false,
+        error: `Invalid input: ${error.errors[0].message}`,
+      };
+    }
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: 'Failed to fetch analytics data. Please try again later.',
     };
   }
 }
@@ -474,19 +484,30 @@ export async function getRagAnalytics(
   period: TimePeriod = '7d'
 ): Promise<{ success: boolean; data?: RagAnalytics; error?: string }> {
   try {
+    // Validate inputs
+    const validatedUuid = uuidSchema.parse(profileUuid);
+    const validatedPeriod = periodSchema.parse(period);
+
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Rate limiting - 30 requests per minute per user
+    const rateLimitKey = `analytics:rag:${session.user.id}`;
+    const rateLimit = await rateLimiter.check(rateLimitKey, 30, 60);
+    if (!rateLimit.success) {
+      return { success: false, error: 'Rate limit exceeded. Please try again later.' };
+    }
+
     // Verify profile ownership
-    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    const hasAccess = await verifyProfileOwnership(validatedUuid, session.user.id);
     if (!hasAccess) {
       return { success: false, error: 'Profile not found or unauthorized' };
     }
 
-    const cutoff = getDateCutoff(period);
-    const docConditions = [eq(docsTable.profile_uuid, profileUuid)];
+    const cutoff = getDateCutoff(validatedPeriod);
+    const docConditions = [eq(docsTable.profile_uuid, validatedUuid)];
 
     if (cutoff) {
       docConditions.push(gte(docsTable.created_at, cutoff));
@@ -537,7 +558,7 @@ export async function getRagAnalytics(
       .from(mcpActivityTable)
       .where(
         and(
-          eq(mcpActivityTable.profile_uuid, profileUuid),
+          eq(mcpActivityTable.profile_uuid, validatedUuid),
           eq(mcpActivityTable.action, 'resource_read'),
           sql`${mcpActivityTable.item_name} LIKE '%rag%' OR ${mcpActivityTable.item_name} LIKE '%search%'`,
           cutoff ? gte(mcpActivityTable.created_at, cutoff) : sql`true`
@@ -582,10 +603,10 @@ export async function getRagAnalytics(
     };
   } catch (error) {
     console.error('Error fetching RAG analytics:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    if (error instanceof z.ZodError) {
+      return { success: false, error: `Invalid input: ${error.errors[0].message}` };
+    }
+    return { success: false, error: 'Failed to fetch analytics data. Please try again later.' };
   }
 }
 
@@ -594,13 +615,24 @@ export async function getProductivityMetrics(
   period: TimePeriod = '30d'
 ): Promise<{ success: boolean; data?: ProductivityMetrics; error?: string }> {
   try {
+    // Validate inputs
+    const validatedUuid = uuidSchema.parse(profileUuid);
+    const validatedPeriod = periodSchema.parse(period);
+
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Rate limiting - 30 requests per minute per user
+    const rateLimitKey = `analytics:productivity:${session.user.id}`;
+    const rateLimit = await rateLimiter.check(rateLimitKey, 30, 60);
+    if (!rateLimit.success) {
+      return { success: false, error: 'Rate limit exceeded. Please try again later.' };
+    }
+
     // Verify profile ownership
-    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    const hasAccess = await verifyProfileOwnership(validatedUuid, session.user.id);
     if (!hasAccess) {
       return { success: false, error: 'Profile not found or unauthorized' };
     }
@@ -617,7 +649,7 @@ export async function getProductivityMetrics(
       .from(mcpActivityTable)
       .where(
         and(
-          eq(mcpActivityTable.profile_uuid, profileUuid),
+          eq(mcpActivityTable.profile_uuid, validatedUuid),
           gte(mcpActivityTable.created_at, last30Days)
         )
       )
@@ -646,7 +678,7 @@ export async function getProductivityMetrics(
         count: count(),
       })
       .from(mcpActivityTable)
-      .where(eq(mcpActivityTable.profile_uuid, profileUuid))
+      .where(eq(mcpActivityTable.profile_uuid, validatedUuid))
       .groupBy(sql`EXTRACT(HOUR FROM ${mcpActivityTable.created_at})`)
       .orderBy(desc(count()))
       .limit(1);
@@ -660,7 +692,7 @@ export async function getProductivityMetrics(
         count: count(),
       })
       .from(mcpActivityTable)
-      .where(eq(mcpActivityTable.profile_uuid, profileUuid))
+      .where(eq(mcpActivityTable.profile_uuid, validatedUuid))
       .groupBy(sql`TO_CHAR(${mcpActivityTable.created_at}, 'Day')`)
       .orderBy(desc(count()))
       .limit(1);
@@ -668,8 +700,8 @@ export async function getProductivityMetrics(
     const mostProductiveDay = dayData?.day?.trim() || 'Monday';
 
     // Calculate averages
-    const cutoff = getDateCutoff(period);
-    const conditions = [eq(mcpActivityTable.profile_uuid, profileUuid)];
+    const cutoff = getDateCutoff(validatedPeriod);
+    const conditions = [eq(mcpActivityTable.profile_uuid, validatedUuid)];
     if (cutoff) {
       conditions.push(gte(mcpActivityTable.created_at, cutoff));
     }
@@ -693,7 +725,7 @@ export async function getProductivityMetrics(
         days: sql<number>`EXTRACT(EPOCH FROM AGE(CURRENT_DATE, MIN(${docsTable.created_at}))) / 86400`,
       })
       .from(docsTable)
-      .where(eq(docsTable.profile_uuid, profileUuid));
+      .where(eq(docsTable.profile_uuid, validatedUuid));
 
     const avgDocumentsPerWeek = docStats?.days && Number(docStats.days) > 0
       ? (docStats.count / (Number(docStats.days) / 7))
@@ -744,10 +776,10 @@ export async function getProductivityMetrics(
     };
   } catch (error) {
     console.error('Error fetching productivity metrics:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    if (error instanceof z.ZodError) {
+      return { success: false, error: `Invalid input: ${error.errors[0].message}` };
+    }
+    return { success: false, error: 'Failed to fetch analytics data. Please try again later.' };
   }
 }
 
@@ -766,19 +798,27 @@ export async function getRecentToolCalls(
   limit: number = 50
 ): Promise<{ success: boolean; data?: ToolCallLogEntry[]; error?: string }> {
   try {
+    // Validate inputs
+    const validatedUuid = uuidSchema.parse(profileUuid);
+    const validatedLimit = limitSchema.parse(limit);
+
     const session = await getAuthSession();
     if (!session?.user?.id) {
       return { success: false, error: 'Unauthorized' };
     }
 
+    // Rate limiting - 30 requests per minute per user
+    const rateLimitKey = `analytics:toolCalls:${session.user.id}`;
+    const rateLimit = await rateLimiter.check(rateLimitKey, 30, 60);
+    if (!rateLimit.success) {
+      return { success: false, error: 'Rate limit exceeded. Please try again later.' };
+    }
+
     // Verify profile ownership
-    const hasAccess = await verifyProfileOwnership(profileUuid, session.user.id);
+    const hasAccess = await verifyProfileOwnership(validatedUuid, session.user.id);
     if (!hasAccess) {
       return { success: false, error: 'Profile not found or unauthorized' };
     }
-
-    // Validate and cap limit parameter
-    const validatedLimit = Math.min(Math.max(1, limit), 100);
 
     // Get recent tool call activity
     const recentCalls = await db
@@ -795,7 +835,7 @@ export async function getRecentToolCalls(
       .leftJoin(mcpServersTable, eq(mcpActivityTable.server_uuid, mcpServersTable.uuid))
       .where(
         and(
-          eq(mcpActivityTable.profile_uuid, profileUuid),
+          eq(mcpActivityTable.profile_uuid, validatedUuid),
           eq(mcpActivityTable.action, 'tool_call')
         )
       )
@@ -816,9 +856,9 @@ export async function getRecentToolCalls(
     };
   } catch (error) {
     console.error('Error fetching recent tool calls:', error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    };
+    if (error instanceof z.ZodError) {
+      return { success: false, error: `Invalid input: ${error.errors[0].message}` };
+    }
+    return { success: false, error: 'Failed to fetch analytics data. Please try again later.' };
   }
 }
