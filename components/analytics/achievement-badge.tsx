@@ -1,6 +1,7 @@
 'use client';
 
 import { Award, Lock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -19,6 +20,8 @@ export function AchievementBadge({
   achieved,
   progress,
 }: AchievementBadgeProps) {
+  const { t } = useTranslation('analytics');
+
   return (
     <Card
       className={cn(
@@ -45,7 +48,7 @@ export function AchievementBadge({
               <h4 className="font-semibold text-sm">{title}</h4>
               {achieved && (
                 <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                  Unlocked!
+                  {t('productivity.achievementUnlocked')}
                 </span>
               )}
             </div>
@@ -54,7 +57,7 @@ export function AchievementBadge({
               <div className="space-y-1 pt-2">
                 <Progress value={progress} className="h-1.5" />
                 <p className="text-xs text-muted-foreground">
-                  {Math.round(progress)}% complete
+                  {t('productivity.achievementProgress', { percent: Math.round(progress) })}
                 </p>
               </div>
             )}

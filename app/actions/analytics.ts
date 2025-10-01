@@ -1,6 +1,6 @@
 'use server';
 
-import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, like, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
@@ -351,6 +351,24 @@ export async function getToolAnalytics(
       return { success: false, error: 'Profile not found or unauthorized' };
     }
 
+    // Verify server ownership if serverUuid is provided
+    if (validatedServerUuid) {
+      const serverOwnership = await db
+        .select({ uuid: mcpServersTable.uuid })
+        .from(mcpServersTable)
+        .where(
+          and(
+            eq(mcpServersTable.uuid, validatedServerUuid),
+            eq(mcpServersTable.profile_uuid, validatedUuid)
+          )
+        )
+        .limit(1);
+
+      if (serverOwnership.length === 0) {
+        return { success: false, error: 'Server not found or unauthorized' };
+      }
+    }
+
     const cutoff = getDateCutoff(validatedPeriod);
     const conditions = [eq(mcpActivityTable.profile_uuid, validatedUuid)];
 
@@ -560,7 +578,10 @@ export async function getRagAnalytics(
         and(
           eq(mcpActivityTable.profile_uuid, validatedUuid),
           eq(mcpActivityTable.action, 'resource_read'),
-          sql`${mcpActivityTable.item_name} LIKE '%rag%' OR ${mcpActivityTable.item_name} LIKE '%search%'`,
+          or(
+            like(mcpActivityTable.item_name, '%rag%'),
+            like(mcpActivityTable.item_name, '%search%')
+          ),
           cutoff ? gte(mcpActivityTable.created_at, cutoff) : sql`true`
         )
       )
