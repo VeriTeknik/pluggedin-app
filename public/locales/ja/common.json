@@ -45,6 +45,9 @@
   "library": {
     "title": "ライブラリ"
   },
+  "dashboard": {
+    "title": "ダッシュボード"
+  },
   "analytics": {
     "title": "分析"
   },

@@ -45,6 +45,9 @@
   "library": {
     "title": "Kütüphane"
   },
+  "dashboard": {
+    "title": "Gösterge Paneli"
+  },
   "analytics": {
     "title": "Analitik"
   },

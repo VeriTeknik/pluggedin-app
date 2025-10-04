@@ -528,8 +528,10 @@ export const mcpActivityTable = pgTable(
     server_uuid: uuid('server_uuid'), // For local servers
     external_id: text('external_id'), // For registry servers
     source: text('source').notNull(), // 'REGISTRY' or 'COMMUNITY'
-    action: text('action').notNull(), // 'install', 'uninstall', 'tool_call', 'resource_read', 'prompt_get'
+    action: text('action').notNull(), // 'install', 'uninstall', 'tool_call', 'resource_read', 'prompt_get', 'document_view', 'document_rag_query', 'document_download'
     item_name: text('item_name'), // Name of tool/resource/prompt
+    status: text('status').default('success'), // 'success', 'error', or 'timeout'
+    error_message: text('error_message'), // Error message for failed activities
     created_at: timestamp('created_at').defaultNow().notNull(),
   },
   (table) => {
@@ -557,6 +559,12 @@ export const mcpActivityTable = pgTable(
         table.profile_uuid,
         table.action,
         table.created_at
+      ),
+      // Index for success/failure rate analytics
+      profileActionStatusIdx: index('idx_profile_action_status').on(
+        table.profile_uuid,
+        table.action,
+        table.status
       ),
     };
   }

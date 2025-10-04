@@ -45,6 +45,9 @@
   "library": {
     "title": "资料库"
   },
+  "dashboard": {
+    "title": "仪表板"
+  },
   "analytics": {
     "title": "分析"
   },

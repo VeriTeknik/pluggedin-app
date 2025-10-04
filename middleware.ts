@@ -80,8 +80,9 @@ export async function middleware(request: NextRequest) {
 
   // Define routes that require authentication
   const protectedRoutes = [
-    '/search', 
-    '/mcp-servers', 
+    '/analytics',
+    '/search',
+    '/mcp-servers',
     '/mcp-playground',
     '/custom-mcp-servers',
     '/settings',
@@ -174,7 +175,7 @@ export async function middleware(request: NextRequest) {
 
   // Redirect authenticated users away from auth routes
   if (isAuthRoute && isAuthenticated) {
-    const response = NextResponse.redirect(new URL('/mcp-servers', request.url));
+    const response = NextResponse.redirect(new URL('/analytics', request.url));
     // Apply security headers to redirect responses
     Object.entries(securityHeaders).forEach(([key, value]) => {
       if (value) {

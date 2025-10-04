@@ -165,7 +165,7 @@ export async function getDocByUuid(userId: string, docUuid: string, projectUuid?
   try {
     // Check if user owns the document directly OR if it's a project-level document
     let doc;
-    
+
     if (projectUuid) {
       // If projectUuid is provided, look for documents that either:
       // 1. Belong to the user directly in this project
@@ -201,6 +201,37 @@ export async function getDocByUuid(userId: string, docUuid: string, projectUuid?
   } catch (error) {
     console.error('Error fetching doc:', error);
     return null;
+  }
+}
+
+// Track document view - separate action for UI components to call
+export async function trackDocumentView(profileUuid: string, docUuid: string) {
+  'use server';
+  try {
+    // Validate UUID formats
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (!profileUuid || !uuidRegex.test(profileUuid)) {
+      return { success: false, error: 'Invalid profile UUID format' };
+    }
+
+    if (!docUuid || !uuidRegex.test(docUuid)) {
+      return { success: false, error: 'Invalid document UUID format' };
+    }
+
+    const { mcpActivityTable } = await import('@/db/schema');
+    await db.insert(mcpActivityTable).values({
+      profile_uuid: profileUuid,
+      server_uuid: null,
+      external_id: null,
+      source: 'PLUGGEDIN',
+      action: 'document_view',
+      item_name: docUuid,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to track document view:', error);
+    return { success: false, error: 'Failed to track document view' };
   }
 }
 
@@ -878,6 +909,50 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
         } catch (dbError) {
           console.error('Error fetching document names:', dbError);
           // Continue without document names if DB query fails
+        }
+      }
+
+      // Track RAG document retrievals
+      if (projectUuid && result.documentIds && result.documentIds.length > 0) {
+        try {
+          // Get the active profile for this project
+          const { projectsTable, profilesTable, mcpActivityTable } = await import('@/db/schema');
+          const project = await db.query.projectsTable.findFirst({
+            where: eq(projectsTable.uuid, projectUuid),
+            with: {
+              activeProfile: true
+            }
+          });
+
+          if (project?.activeProfile?.uuid) {
+            const profileUuid = project.activeProfile.uuid;
+            // Track each document retrieval via RAG with error aggregation
+            let failedTracking = 0;
+            const trackingPromises = documents.map(async (doc) => {
+              try {
+                await db.insert(mcpActivityTable).values({
+                  profile_uuid: profileUuid,
+                  server_uuid: null,
+                  external_id: null,
+                  source: 'PLUGGEDIN',
+                  action: 'document_rag_query',
+                  item_name: doc.id,
+                });
+              } catch (err) {
+                failedTracking++;
+                console.error(`Failed to track RAG access for ${doc.id}:`, err);
+              }
+            });
+            await Promise.all(trackingPromises);
+
+            // Log aggregate failures for monitoring
+            if (failedTracking > 0) {
+              console.warn(`Analytics tracking: ${failedTracking}/${documents.length} RAG document access events failed to track`);
+            }
+          }
+        } catch (trackingError) {
+          console.error('Failed to track RAG document access:', trackingError);
+          // Continue even if tracking fails
         }
       }
 

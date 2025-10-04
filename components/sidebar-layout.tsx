@@ -206,6 +206,14 @@ export default function SidebarLayout({
                 <SidebarMenu>
                   
                 <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip={t('dashboard.title')} className="group-data-[collapsible=icon]:justify-center">
+                      <Link href='/analytics'>
+                        <BarChart3 className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
+                        <span className="group-data-[collapsible=icon]:hidden">{t('dashboard.title')}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
                     <SidebarMenuButton asChild tooltip={t('playground.title')} className="group-data-[collapsible=icon]:justify-center">
                       <Link href='/mcp-playground'>
                         <FlaskConical className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
@@ -256,15 +264,6 @@ export default function SidebarLayout({
                       <Link href='/library'>
                         <FileText className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
                         <span className="group-data-[collapsible=icon]:hidden">{t('library.title')}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip={t('analytics.title')} className="group-data-[collapsible=icon]:justify-center">
-                      <Link href='/analytics'>
-                        <BarChart3 className='mr-2 h-4 w-4 group-data-[collapsible=icon]:mr-0' />
-                        <span className="group-data-[collapsible=icon]:hidden">{t('analytics.title')}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

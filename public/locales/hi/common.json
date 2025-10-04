@@ -45,6 +45,9 @@
   "library": {
     "title": "पुस्तकालय"
   },
+  "dashboard": {
+    "title": "डैशबोर्ड"
+  },
   "analytics": {
     "title": "विश्लेषण"
   },

@@ -47,6 +47,9 @@
   "library": {
     "title": "Library"
   },
+  "dashboard": {
+    "title": "Dashboard"
+  },
   "analytics": {
     "title": "Analytics"
   },

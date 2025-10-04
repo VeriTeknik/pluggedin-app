@@ -102,8 +102,12 @@ export function ActivityHeatmap({
     return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   };
 
-  // Day labels for the left side
-  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  // Day labels for the left side - localized based on user's locale
+  const dayLabels = Array.from({ length: 7 }, (_, i) => {
+    // 2024-06-03 is a Monday; add i days to get each weekday
+    const date = new Date(2024, 5, 3 + i);
+    return date.toLocaleDateString(undefined, { weekday: 'short' });
+  });
 
   return (
     <Card>
