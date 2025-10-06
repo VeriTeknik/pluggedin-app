@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useToolMetrics, useToolCallLog } from '@/hooks/use-analytics';
+import { useToolCallLog,useToolMetrics } from '@/hooks/use-analytics';
 
 interface ToolsTabProps {
   profileUuid: string;
@@ -26,7 +26,7 @@ export function ToolsTab({ profileUuid, period }: ToolsTabProps) {
     return <ToolsTabSkeleton />;
   }
 
-  if (toolError || !toolData?.success) {
+  if (toolError || !toolData?.success || !toolData?.data) {
     return (
       <Alert variant="destructive">
         <AlertDescription>{t('errors.loadFailed')}</AlertDescription>
@@ -34,7 +34,15 @@ export function ToolsTab({ profileUuid, period }: ToolsTabProps) {
     );
   }
 
-  const metrics = toolData.data!;
+  const metrics = toolData.data;
+
+  // Ensure all required fields exist with defaults
+  const safeMetrics = {
+    topTools: metrics.topTools || [],
+    serverActivity: metrics.serverActivity || [],
+    hourlyDistribution: metrics.hourlyDistribution || [],
+    activityHeatmap: metrics.activityHeatmap || [],
+  };
 
   return (
     <>
@@ -46,7 +54,7 @@ export function ToolsTab({ profileUuid, period }: ToolsTabProps) {
             <CardDescription>{t('tools.toolName')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {metrics.topTools.map((tool: any, index: number) => (
+            {safeMetrics.topTools.map((tool: any, index: number) => (
               <div key={index} className="flex items-center justify-between">
                 <div>
                   <p className="font-medium">{tool.name}</p>
@@ -58,7 +66,7 @@ export function ToolsTab({ profileUuid, period }: ToolsTabProps) {
                 </div>
               </div>
             ))}
-            {metrics.topTools.length === 0 && (
+            {safeMetrics.topTools.length === 0 && (
               <p className="text-muted-foreground">{t('tools.noData')}</p>
             )}
           </CardContent>
@@ -71,7 +79,7 @@ export function ToolsTab({ profileUuid, period }: ToolsTabProps) {
             <CardDescription>{t('tools.totalActivity')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {metrics.serverActivity.map((server: any, index: number) => (
+            {safeMetrics.serverActivity.map((server: any, index: number) => (
               <div key={index} className="space-y-1">
                 <p className="font-medium">{server.serverName}</p>
                 <div className="flex gap-2 text-xs text-muted-foreground">
@@ -81,7 +89,7 @@ export function ToolsTab({ profileUuid, period }: ToolsTabProps) {
                 </div>
               </div>
             ))}
-            {metrics.serverActivity.length === 0 && (
+            {safeMetrics.serverActivity.length === 0 && (
               <p className="text-muted-foreground">{t('tools.noData')}</p>
             )}
           </CardContent>
@@ -89,10 +97,10 @@ export function ToolsTab({ profileUuid, period }: ToolsTabProps) {
       </div>
 
       {/* Hourly Distribution */}
-      {metrics.hourlyDistribution.length > 0 && (
+      {safeMetrics.hourlyDistribution.length > 0 && (
         <ActivityChart
           title={t('tools.hourlyDistribution')}
-          data={metrics.hourlyDistribution.map((h: any) => ({
+          data={safeMetrics.hourlyDistribution.map((h: any) => ({
             date: `${h.hour}:00`,
             count: h.count,
           }))}
@@ -106,7 +114,7 @@ export function ToolsTab({ profileUuid, period }: ToolsTabProps) {
       {/* Activity Heatmap */}
       <ActivityHeatmap
         title={t('tools.activityHeatmap')}
-        data={metrics.activityHeatmap}
+        data={safeMetrics.activityHeatmap}
         days={90}
       />
 

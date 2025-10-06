@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { profilesTable, projectsTable } from '@/db/schema';
+import { analyticsCache, getCacheKey } from '@/lib/analytics-cache';
 import { getAuthSession } from '@/lib/auth';
 import { rateLimiter } from '@/lib/rate-limiter';
 
@@ -37,7 +38,7 @@ export async function verifyProfileOwnership(
 }
 
 /**
- * Creates an analytics endpoint with built-in auth, rate limiting, and error handling
+ * Creates an analytics endpoint with built-in auth, rate limiting, caching, and error handling
  *
  * @param parse - Function to parse and validate input parameters
  * @param rateKey - Function to generate rate limit key based on user ID
@@ -51,6 +52,11 @@ export function withAnalytics<Args extends any[], P, R>(
   options: {
     skipProfileOwnership?: boolean;
     rateLimit?: { requests: number; window: number };
+    cache?: {
+      enabled: boolean;
+      ttl?: number;
+      keyGenerator?: (params: P) => string;
+    };
   } = {}
 ) {
   return async (...args: Args): Promise<AnalyticsResult<R>> => {
@@ -65,7 +71,7 @@ export function withAnalytics<Args extends any[], P, R>(
       }
       const userId = session.user.id;
 
-      // 3. Apply rate limiting
+      // 3. Apply rate limiting first (before expensive operations)
       const { requests = 30, window = 60 } = options.rateLimit || {};
       const rateLimitKey = rateKey(userId);
       const rateLimit = await rateLimiter.check(rateLimitKey, requests, window);
@@ -73,13 +79,14 @@ export function withAnalytics<Args extends any[], P, R>(
         return { success: false, error: 'Rate limit exceeded. Please try again later.' };
       }
 
-      // 4. Verify profile ownership (unless skipped)
+      // 4. Verify profile ownership (unless skipped) - MUST happen before cache check
+      let profileUuid: string | undefined;
       if (!options.skipProfileOwnership) {
         // Type-safe profile UUID extraction
         if (!params || typeof params !== 'object' || !('profileUuid' in params)) {
           return { success: false, error: 'Profile UUID is required' };
         }
-        const profileUuid = (params as { profileUuid: string }).profileUuid;
+        profileUuid = (params as { profileUuid: string }).profileUuid;
         if (!profileUuid || typeof profileUuid !== 'string') {
           return { success: false, error: 'Invalid profile UUID format' };
         }
@@ -89,8 +96,40 @@ export function withAnalytics<Args extends any[], P, R>(
         }
       }
 
-      // 5. Execute the handler
+      // 5. Check cache if enabled (AFTER ownership verification for security)
+      let cacheKey: string | undefined;
+      if (options.cache?.enabled) {
+        if (options.cache.keyGenerator) {
+          cacheKey = options.cache.keyGenerator(params);
+        } else {
+          // Default cache key generation - includes userId for tenant isolation
+          const paramsObj = params as any;
+          if (paramsObj.profileUuid && paramsObj.period) {
+            cacheKey = getCacheKey(
+              handler.name || 'analytics',
+              userId,  // Include userId for security - ensures cache isolation per user
+              paramsObj.profileUuid,
+              paramsObj.period
+            );
+          }
+        }
+
+        if (cacheKey) {
+          const cachedData = analyticsCache.get<R>(cacheKey);
+          if (cachedData !== null) {
+            return { success: true, data: cachedData };
+          }
+        }
+      }
+
+      // 6. Execute the handler
       const data = await handler(params, userId);
+
+      // 7. Store in cache if enabled
+      if (options.cache?.enabled && cacheKey) {
+        analyticsCache.set(cacheKey, data, options.cache.ttl);
+      }
+
       return { success: true, data };
 
     } catch (error) {

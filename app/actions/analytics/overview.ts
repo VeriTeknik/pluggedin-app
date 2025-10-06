@@ -2,12 +2,13 @@ import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import {
+  docsTable,
   mcpActivityTable,
   mcpServersTable,
-  docsTable,
 } from '@/db/schema';
-import { withAnalytics, analyticsSchemas, type TimePeriod } from '../analytics-hof';
-import { getDateCutoff, getComparisonCutoff, calculateTrend } from './shared';
+
+import { analyticsSchemas, type TimePeriod,withAnalytics } from '../analytics-hof';
+import { calculateTrend,getComparisonCutoff, getDateCutoff } from './shared';
 
 export interface OverviewMetrics {
   totalToolCalls: number;
@@ -144,7 +145,8 @@ export const getOverviewMetrics = withAnalytics(
 
     const mostUsedServer = serverActivity[0]?.serverName || null;
 
-    // Get daily activity for chart
+    // Get daily activity for chart (with appropriate limits to prevent memory issues)
+    const maxDays = period === '7d' ? 7 : period === '30d' ? 30 : period === '90d' ? 90 : 365;
     const dailyActivityData = await db
       .select({
         date: sql<string>`DATE(${mcpActivityTable.created_at})`,
@@ -154,16 +156,21 @@ export const getOverviewMetrics = withAnalytics(
       .from(mcpActivityTable)
       .where(and(...currentConditions))
       .groupBy(sql`DATE(${mcpActivityTable.created_at})`)
-      .orderBy(sql`DATE(${mcpActivityTable.created_at})`);
+      .orderBy(sql`DATE(${mcpActivityTable.created_at}) DESC`)
+      .limit(maxDays);
 
-    const dailyActivity = dailyActivityData.map(d => ({
-      date: d.date,
-      toolCalls: Number(d.toolCalls),
-      ragSearches: Number(d.ragSearches),
-    }));
+    // Sort in ascending order for chart display
+    const dailyActivity = dailyActivityData
+      .map(d => ({
+        date: d.date,
+        toolCalls: Number(d.toolCalls),
+        ragSearches: Number(d.ragSearches),
+      }))
+      .reverse();
 
     // Get activity heatmap (always shows last 90 days for consistency)
     // This is independent of the selected time period filter to provide a consistent view
+    // PERFORMANCE: Limited to 90 days max to prevent memory issues
     const heatmapCutoff = new Date();
     heatmapCutoff.setDate(heatmapCutoff.getDate() - 90);
 
@@ -180,12 +187,15 @@ export const getOverviewMetrics = withAnalytics(
         )
       )
       .groupBy(sql`DATE(${mcpActivityTable.created_at})`)
-      .orderBy(sql`DATE(${mcpActivityTable.created_at})`);
+      .orderBy(sql`DATE(${mcpActivityTable.created_at}) DESC`)
+      .limit(90);  // Explicit limit for safety
 
-    const activityHeatmap = heatmapData.map(d => ({
-      date: d.date,
-      count: d.count,
-    }));
+    const activityHeatmap = heatmapData
+      .map(d => ({
+        date: d.date,
+        count: d.count,
+      }))
+      .reverse();  // Sort ascending for heatmap display
 
     // Calculate trends
     const toolCallsTrend = calculateTrend(totalToolCalls, previousToolCalls);
@@ -204,5 +214,13 @@ export const getOverviewMetrics = withAnalytics(
       dailyActivity,
       activityHeatmap,
     };
+  },
+
+  // Enable caching with 5-minute TTL for performance
+  {
+    cache: {
+      enabled: true,
+      ttl: 5 * 60 * 1000, // 5 minutes
+    },
   }
 );

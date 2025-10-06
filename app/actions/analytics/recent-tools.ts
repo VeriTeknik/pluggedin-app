@@ -2,7 +2,8 @@ import { and, desc, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { mcpActivityTable, mcpServersTable } from '@/db/schema';
-import { withAnalytics, analyticsSchemas } from '../analytics-hof';
+
+import { analyticsSchemas,withAnalytics } from '../analytics-hof';
 
 export interface ToolCallLogEntry {
   id: number;

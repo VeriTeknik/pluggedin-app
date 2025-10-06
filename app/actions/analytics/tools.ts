@@ -2,7 +2,8 @@ import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { mcpActivityTable, mcpServersTable } from '@/db/schema';
-import { withAnalytics, analyticsSchemas, type TimePeriod } from '../analytics-hof';
+
+import { analyticsSchemas, type TimePeriod,withAnalytics } from '../analytics-hof';
 import { getDateCutoff } from './shared';
 
 export interface ToolAnalytics {
@@ -196,5 +197,13 @@ export const getToolAnalytics = withAnalytics(
       hourlyDistribution,
       activityHeatmap,
     };
+  },
+
+  // Enable caching with 5-minute TTL for performance
+  {
+    cache: {
+      enabled: true,
+      ttl: 5 * 60 * 1000, // 5 minutes
+    },
   }
 );

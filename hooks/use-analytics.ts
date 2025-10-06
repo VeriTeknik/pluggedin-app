@@ -15,7 +15,11 @@ import {
 } from '@/app/actions/analytics';
 
 // SWR options for all analytics hooks
-const SWR_OPTIONS = { refreshInterval: 60000 }; // Refresh every minute
+// Aligned with cache TTL (5 minutes) to reduce unnecessary API calls
+const SWR_OPTIONS = {
+  refreshInterval: 5 * 60 * 1000, // Refresh every 5 minutes (matches cache TTL)
+  revalidateOnFocus: false,        // Reduce unnecessary requests on focus
+};
 
 /**
  * Hook for fetching overview metrics

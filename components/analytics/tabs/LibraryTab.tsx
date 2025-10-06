@@ -4,8 +4,8 @@ import { FileText, HardDrive } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { type TimePeriod } from '@/app/actions/analytics';
-import { MetricCard } from '@/components/analytics/metric-card';
 import { ActivityChart } from '@/components/analytics/activity-chart';
+import { MetricCard } from '@/components/analytics/metric-card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,7 +24,7 @@ export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
     return <LibraryTabSkeleton />;
   }
 
-  if (error || !data?.success) {
+  if (error || !data?.success || !data?.data) {
     return (
       <Alert variant="destructive">
         <AlertDescription>{t('errors.loadFailed')}</AlertDescription>
@@ -32,7 +32,18 @@ export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
     );
   }
 
-  const metrics = data.data!;
+  const metrics = data.data;
+
+  // Ensure all required fields exist with defaults
+  const safeMetrics = {
+    totalDocuments: metrics.totalDocuments || 0,
+    aiGeneratedCount: metrics.aiGeneratedCount || 0,
+    uploadedCount: metrics.uploadedCount || 0,
+    storageBreakdown: metrics.storageBreakdown || { files: 0, ragVectors: 0 },
+    documentsByModel: metrics.documentsByModel || [],
+    ragSearchFrequency: metrics.ragSearchFrequency || [],
+    mostAccessedDocs: metrics.mostAccessedDocs || [],
+  };
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
@@ -48,20 +59,20 @@ export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title={t('library.totalDocuments')}
-          value={metrics.totalDocuments}
+          value={safeMetrics.totalDocuments}
           icon={FileText}
         />
         <MetricCard
           title={t('library.aiGenerated')}
-          value={metrics.aiGeneratedCount}
+          value={safeMetrics.aiGeneratedCount}
         />
         <MetricCard
           title={t('library.uploaded')}
-          value={metrics.uploadedCount}
+          value={safeMetrics.uploadedCount}
         />
         <MetricCard
           title={t('library.storageBreakdown')}
-          value={formatBytes(metrics.storageBreakdown.files)}
+          value={formatBytes(safeMetrics.storageBreakdown.files)}
           icon={HardDrive}
         />
       </div>
@@ -74,13 +85,13 @@ export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
             <CardDescription>{t('library.model')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {metrics.documentsByModel.map((model: { model: string; count: number }, index: number) => (
+            {safeMetrics.documentsByModel.map((model: { model: string; count: number }, index: number) => (
               <div key={index} className="flex justify-between">
                 <span>{model.model}</span>
                 <span className="font-semibold">{model.count}</span>
               </div>
             ))}
-            {metrics.documentsByModel.length === 0 && (
+            {safeMetrics.documentsByModel.length === 0 && (
               <p className="text-muted-foreground">{t('library.noDocuments')}</p>
             )}
           </CardContent>
@@ -96,11 +107,11 @@ export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span>{t('library.files')}</span>
-                <span className="font-semibold">{formatBytes(metrics.storageBreakdown.files)}</span>
+                <span className="font-semibold">{formatBytes(safeMetrics.storageBreakdown.files)}</span>
               </div>
               <div className="flex justify-between">
                 <span>{t('library.ragVectors')}</span>
-                <span className="font-semibold">{metrics.storageBreakdown.ragVectors}</span>
+                <span className="font-semibold">{safeMetrics.storageBreakdown.ragVectors}</span>
               </div>
             </div>
           </CardContent>
@@ -108,10 +119,10 @@ export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
       </div>
 
       {/* RAG Search Frequency */}
-      {metrics.ragSearchFrequency.length > 0 && (
+      {safeMetrics.ragSearchFrequency.length > 0 && (
         <ActivityChart
           title={t('library.ragSearchFrequency')}
-          data={metrics.ragSearchFrequency}
+          data={safeMetrics.ragSearchFrequency}
           xAxisKey="date"
           dataKeys={[
             { key: 'count', name: t('library.searches'), color: 'hsl(var(--primary))' },
@@ -126,13 +137,13 @@ export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
           <CardDescription>{t('library.documentsRankedByAccess')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-2">
-          {metrics.mostAccessedDocs.map((doc: any, index: number) => (
+          {safeMetrics.mostAccessedDocs.map((doc: any, index: number) => (
             <div key={index} className="flex justify-between">
               <span className="truncate">{doc.name}</span>
               <span className="font-semibold">{doc.accessCount}</span>
             </div>
           ))}
-          {metrics.mostAccessedDocs.length === 0 && (
+          {safeMetrics.mostAccessedDocs.length === 0 && (
             <p className="text-muted-foreground">{t('library.noDocuments')}</p>
           )}
         </CardContent>

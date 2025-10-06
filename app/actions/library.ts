@@ -220,6 +220,8 @@ export async function trackDocumentView(profileUuid: string, docUuid: string) {
     }
 
     const { mcpActivityTable } = await import('@/db/schema');
+    const { analyticsCache } = await import('@/lib/analytics-cache');
+
     await db.insert(mcpActivityTable).values({
       profile_uuid: profileUuid,
       server_uuid: null,
@@ -228,6 +230,10 @@ export async function trackDocumentView(profileUuid: string, docUuid: string) {
       action: 'document_view',
       item_name: docUuid,
     });
+
+    // Invalidate analytics cache for this profile
+    analyticsCache.invalidateProfile(profileUuid);
+
     return { success: true };
   } catch (error) {
     console.error('Failed to track document view:', error);
@@ -949,6 +955,10 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
             if (failedTracking > 0) {
               console.warn(`Analytics tracking: ${failedTracking}/${documents.length} RAG document access events failed to track`);
             }
+
+            // Invalidate analytics cache for this profile after tracking all documents
+            const { analyticsCache } = await import('@/lib/analytics-cache');
+            analyticsCache.invalidateProfile(profileUuid);
           }
         } catch (trackingError) {
           console.error('Failed to track RAG document access:', trackingError);

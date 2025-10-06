@@ -2,12 +2,12 @@ import { and, count, desc, eq, gte, like, or, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import {
-  mcpActivityTable,
   docsTable,
-  documentVersionsTable,
+  mcpActivityTable,
 } from '@/db/schema';
 import { ragService } from '@/lib/rag-service';
-import { withAnalytics, analyticsSchemas, type TimePeriod } from '../analytics-hof';
+
+import { analyticsSchemas, type TimePeriod,withAnalytics } from '../analytics-hof';
 import { getDateCutoff } from './shared';
 
 export interface RagAnalytics {
@@ -166,5 +166,13 @@ export const getRagAnalytics = withAnalytics(
       ragSearchFrequency,
       mostAccessedDocs,
     };
+  },
+
+  // Enable caching with 5-minute TTL for performance
+  {
+    cache: {
+      enabled: true,
+      ttl: 5 * 60 * 1000, // 5 minutes
+    },
   }
 );
