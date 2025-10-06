@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
-import { type ComponentType } from 'react';
+import { memo, type ComponentType } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -18,7 +18,7 @@ interface MetricCardProps {
   className?: string;
 }
 
-export function MetricCard({
+export const MetricCard = memo(function MetricCard({
   title,
   value,
   description,
@@ -60,4 +60,4 @@ export function MetricCard({
       </CardContent>
     </Card>
   );
-}
+});

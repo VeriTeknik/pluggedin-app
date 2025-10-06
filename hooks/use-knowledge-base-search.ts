@@ -47,7 +47,6 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
   }>>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
 
   const searchKnowledgeBase = useCallback(async (searchQuery: string) => {
     if (!session?.user?.id) {
@@ -100,29 +99,23 @@ export function useKnowledgeBaseSearch(): UseKnowledgeBaseSearchReturn {
 
   // Debounce search
   useEffect(() => {
-    if (debounceTimer) {
-      clearTimeout(debounceTimer);
-    }
-
-    if (query.trim()) {
-      const timer = setTimeout(() => {
-        searchKnowledgeBase(query);
-      }, 500); // 500ms debounce
-      setDebounceTimer(timer);
-    } else {
+    if (!query.trim()) {
       setAnswer(null);
       setSources([]);
       setDocumentIds([]);
       setDocuments([]);
       setError(null);
+      return;
     }
 
+    const timer = setTimeout(() => {
+      searchKnowledgeBase(query);
+    }, 500); // 500ms debounce
+
     return () => {
-      if (debounceTimer) {
-        clearTimeout(debounceTimer);
-      }
+      clearTimeout(timer);
     };
-  }, [query]);
+  }, [query, searchKnowledgeBase]);
 
   const clearAnswer = useCallback(() => {
     setAnswer(null);

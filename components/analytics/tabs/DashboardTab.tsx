@@ -2,7 +2,7 @@
 
 import { Library, Search, Sparkles, TrendingUp, Wrench } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type TimePeriod } from '@/app/actions/analytics';
@@ -83,6 +83,28 @@ export function DashboardTab({ profileUuid, period }: DashboardTabProps) {
     router.push('/analytics?tab=tools');
   }, [router]);
 
+  // Memoize metrics with defaults - must be called before conditional returns
+  const metrics = data?.data;
+  const safeMetrics = useMemo(() => ({
+    totalToolCalls: metrics?.totalToolCalls || 0,
+    totalDocuments: metrics?.totalDocuments || 0,
+    totalRagSearches: metrics?.totalRagSearches || 0,
+    mostUsedServer: metrics?.mostUsedServer || null,
+    storageUsed: metrics?.storageUsed || 0,
+    toolCallsTrend: metrics?.toolCallsTrend || 0,
+    documentsTrend: metrics?.documentsTrend || 0,
+    ragSearchesTrend: metrics?.ragSearchesTrend || 0,
+    dailyActivity: metrics?.dailyActivity || [],
+    activityHeatmap: metrics?.activityHeatmap || [],
+  }), [metrics]);
+
+  const formatTrend = useCallback((value: number) => {
+    if (value === 0) return t('overview.trend.neutral');
+    return value > 0
+      ? t('overview.trend.up', { percent: Math.abs(value) })
+      : t('overview.trend.down', { percent: Math.abs(value) });
+  }, [t]);
+
   if (isLoading) {
     return <DashboardTabSkeleton />;
   }
@@ -94,29 +116,6 @@ export function DashboardTab({ profileUuid, period }: DashboardTabProps) {
       </Alert>
     );
   }
-
-  const metrics = data.data;
-
-  // Ensure all required fields exist with defaults
-  const safeMetrics = {
-    totalToolCalls: metrics.totalToolCalls || 0,
-    totalDocuments: metrics.totalDocuments || 0,
-    totalRagSearches: metrics.totalRagSearches || 0,
-    mostUsedServer: metrics.mostUsedServer || null,
-    storageUsed: metrics.storageUsed || 0,
-    toolCallsTrend: metrics.toolCallsTrend || 0,
-    documentsTrend: metrics.documentsTrend || 0,
-    ragSearchesTrend: metrics.ragSearchesTrend || 0,
-    dailyActivity: metrics.dailyActivity || [],
-    activityHeatmap: metrics.activityHeatmap || [],
-  };
-
-  const formatTrend = (value: number) => {
-    if (value === 0) return t('overview.trend.neutral');
-    return value > 0
-      ? t('overview.trend.up', { percent: Math.abs(value) })
-      : t('overview.trend.down', { percent: Math.abs(value) });
-  };
 
   return (
     <>

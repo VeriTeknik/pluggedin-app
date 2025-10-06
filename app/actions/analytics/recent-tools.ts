@@ -58,5 +58,13 @@ export const getRecentToolCalls = withAnalytics(
       server_uuid: call.server_uuid,
       external_id: call.external_id,
     }));
+  },
+
+  // Enable caching with 5-minute TTL for performance
+  {
+    cache: {
+      enabled: true,
+      ttl: 5 * 60 * 1000, // 5 minutes
+    },
   }
 );

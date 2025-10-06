@@ -1,5 +1,6 @@
 'use client';
 
+import { memo, useMemo } from 'react';
 import {
   Area,
   AreaChart,
@@ -37,7 +38,7 @@ interface ActivityChartProps {
   height?: number;
 }
 
-export function ActivityChart({
+export const ActivityChart = memo(function ActivityChart({
   title,
   description,
   data,
@@ -46,7 +47,7 @@ export function ActivityChart({
   xAxisKey,
   height = 300,
 }: ActivityChartProps) {
-  const renderChart = () => {
+  const renderChart = useMemo(() => () => {
     const commonProps = {
       data,
       margin: { top: 5, right: 30, left: 20, bottom: 5 },
@@ -149,7 +150,7 @@ export function ActivityChart({
           </LineChart>
         );
     }
-  };
+  }, [data, type, dataKeys, xAxisKey]);
 
   return (
     <Card>
@@ -164,4 +165,4 @@ export function ActivityChart({
       </CardContent>
     </Card>
   );
-}
+});

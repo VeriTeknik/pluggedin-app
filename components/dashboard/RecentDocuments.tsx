@@ -1,9 +1,11 @@
 'use client';
 
+import DOMPurify from 'dompurify';
 import { formatDistanceToNow } from 'date-fns';
 import { Bot, ChevronRight, FileText, Upload } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { RecentDocument } from '@/app/actions/analytics';
@@ -12,13 +14,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// Constants
+const DASHBOARD_DOCUMENTS_LIMIT = 10;
+
 interface RecentDocumentsProps {
   documents: RecentDocument[] | undefined;
   isLoading: boolean;
   onDocumentClick?: (documentId: string) => void;
 }
 
-export function RecentDocuments({ documents, isLoading, onDocumentClick }: RecentDocumentsProps) {
+export const RecentDocuments = memo(function RecentDocuments({ documents, isLoading, onDocumentClick }: RecentDocumentsProps) {
   const { t } = useTranslation('analytics');
   const router = useRouter();
 
@@ -31,7 +36,7 @@ export function RecentDocuments({ documents, isLoading, onDocumentClick }: Recen
     }
   };
 
-  const getSourceBadge = (source: string) => {
+  const getSourceBadge = useMemo(() => (source: string) => {
     switch (source) {
       case 'ai_generated':
         return (
@@ -54,7 +59,7 @@ export function RecentDocuments({ documents, isLoading, onDocumentClick }: Recen
           </Badge>
         );
     }
-  };
+  }, []);
 
   if (isLoading) {
     return (
@@ -135,18 +140,21 @@ export function RecentDocuments({ documents, isLoading, onDocumentClick }: Recen
           </div>
         ) : (
           <div className="space-y-2">
-            {documents.slice(0, 10).map((doc) => (
+            {documents.slice(0, DASHBOARD_DOCUMENTS_LIMIT).map((doc) => (
               <div
                 key={doc.uuid}
-                className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group"
+                role="listitem"
+                tabIndex={0}
+                className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary/50"
                 onClick={() => handleDocumentClick(doc.uuid)}
+                onKeyPress={(e) => e.key === 'Enter' && handleDocumentClick(doc.uuid)}
               >
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium truncate">
-                        {doc.name}
+                        {DOMPurify.sanitize(doc.name, { ALLOWED_TAGS: [] })}
                       </p>
                       {doc.version > 1 && (
                         <Badge variant="secondary" className="text-xs">
@@ -175,4 +183,4 @@ export function RecentDocuments({ documents, isLoading, onDocumentClick }: Recen
       </CardContent>
     </Card>
   );
-}
+});

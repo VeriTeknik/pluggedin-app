@@ -1,8 +1,10 @@
 'use client';
 
+import DOMPurify from 'dompurify';
 import { formatDistanceToNow } from 'date-fns';
 import { Activity, ChevronRight, Wrench } from 'lucide-react';
 import Link from 'next/link';
+import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { ToolCallLogEntry } from '@/app/actions/analytics';
@@ -11,13 +13,16 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 
+// Constants
+const DASHBOARD_TOOL_CALLS_LIMIT = 10;
+
 interface RecentToolCallsProps {
   toolCalls: ToolCallLogEntry[] | undefined;
   isLoading: boolean;
   onToolClick?: () => void;
 }
 
-export function RecentToolCalls({ toolCalls, isLoading, onToolClick }: RecentToolCallsProps) {
+export const RecentToolCalls = memo(function RecentToolCalls({ toolCalls, isLoading, onToolClick }: RecentToolCallsProps) {
   const { t } = useTranslation('analytics');
 
   const handleToolClick = () => {
@@ -95,30 +100,34 @@ export function RecentToolCalls({ toolCalls, isLoading, onToolClick }: RecentToo
             </div>
           </div>
         ) : (
-          <div className="space-y-2">
-            {toolCalls.slice(0, 10).map((call) => (
+          <div className="space-y-2" role="list">
+            {toolCalls.slice(0, DASHBOARD_TOOL_CALLS_LIMIT).map((call) => (
               <Link
                 key={call.id}
                 href="/analytics?tab=tools"
                 onClick={handleToolClick}
               >
-                <div className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group">
+                <div
+                  role="listitem"
+                  tabIndex={0}
+                  className="flex items-center justify-between p-3 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  onKeyPress={(e) => e.key === 'Enter' && handleToolClick()}>
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <Wrench className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-medium truncate">
-                          {call.tool_name || 'Unknown tool'}
+                          {DOMPurify.sanitize(call.tool_name || 'Unknown tool', { ALLOWED_TAGS: [] })}
                         </p>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         {call.server_name ? (
                           <Badge variant="outline" className="text-xs">
-                            {call.server_name}
+                            {DOMPurify.sanitize(call.server_name, { ALLOWED_TAGS: [] })}
                           </Badge>
                         ) : call.external_id ? (
                           <Badge variant="outline" className="text-xs">
-                            {call.external_id}
+                            {DOMPurify.sanitize(call.external_id, { ALLOWED_TAGS: [] })}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-xs">
@@ -140,4 +149,4 @@ export function RecentToolCalls({ toolCalls, isLoading, onToolClick }: RecentToo
       </CardContent>
     </Card>
   );
-}
+});
