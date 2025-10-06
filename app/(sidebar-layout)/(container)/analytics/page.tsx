@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type TimePeriod } from '@/app/actions/analytics';
+import { DashboardTab } from '@/components/analytics/tabs/DashboardTab';
 import { LibraryTab } from '@/components/analytics/tabs/LibraryTab';
-import { OverviewTab } from '@/components/analytics/tabs/OverviewTab';
 import { ProductivityTab } from '@/components/analytics/tabs/ProductivityTab';
 import { ToolsTab } from '@/components/analytics/tabs/ToolsTab';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -47,8 +47,8 @@ export default function AnalyticsPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{t('title')}</h1>
-          <p className="text-muted-foreground">{t('description')}</p>
+          <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
+          <p className="text-muted-foreground">{t('dashboard.description')}</p>
         </div>
         <Select value={period} onValueChange={(value: TimePeriod) => setPeriod(value)}>
           <SelectTrigger className="w-32">
@@ -69,7 +69,7 @@ export default function AnalyticsPage() {
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">{t('tabs.overview')}</span>
+            <span className="hidden sm:inline">{t('tabs.dashboard')}</span>
           </TabsTrigger>
           <TabsTrigger value="tools" className="flex items-center gap-2">
             <Wrench className="h-4 w-4" />
@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <OverviewTab profileUuid={activeProfile.uuid} period={period} />
+          <DashboardTab profileUuid={activeProfile.uuid} period={period} />
         </TabsContent>
 
         <TabsContent value="tools" className="space-y-4">

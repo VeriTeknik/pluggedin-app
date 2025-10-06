@@ -1,8 +1,33 @@
 {
   "title": "Analytics",
   "description": "Visualize your MCP usage, RAG searches, and productivity patterns",
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "Your AI workspace at a glance",
+    "recentDocuments": "Recent Documents",
+    "recentDocumentsDescription": "Latest additions to your knowledge base",
+    "recentActivity": "Recent Activity",
+    "recentActivityDescription": "Latest tool calls and server interactions",
+    "viewAll": "View All",
+    "searchPlaceholder": "Search your knowledge base...",
+    "aiSearchPlaceholder": "Ask a question about your documents...",
+    "aiSearch": "AI Search",
+    "emptyDocs": {
+      "title": "Start Building Your Knowledge Base",
+      "description": "Add documents to enable AI-powered search and insights",
+      "uploadAction": "Upload Documents",
+      "mcpAction": "Install MCP Proxy",
+      "sdkAction": "Use SDK Libraries"
+    },
+    "emptyTools": {
+      "title": "Connect Your First MCP Server",
+      "description": "Set up MCP servers to enable AI tool interactions",
+      "configureAction": "Configure Servers",
+      "setupAction": "View Setup Guide"
+    }
+  },
   "tabs": {
-    "overview": "Overview",
+    "dashboard": "Dashboard",
     "tools": "Tools & Servers",
     "library": "Library & RAG",
     "productivity": "Productivity"

@@ -1,8 +1,33 @@
 {
   "title": "Analitik",
   "description": "MCP kullanımınızı, RAG aramalarınızı ve üretkenlik desenlerinizi görselleştirin",
+  "dashboard": {
+    "title": "Gösterge Paneli",
+    "description": "AI çalışma alanınıza bir bakış",
+    "recentDocuments": "Son Belgeler",
+    "recentDocumentsDescription": "Bilgi tabanınıza en son eklenenler",
+    "recentActivity": "Son Aktivite",
+    "recentActivityDescription": "En son araç çağrıları ve sunucu etkileşimleri",
+    "viewAll": "Tümünü Görüntüle",
+    "searchPlaceholder": "Bilgi tabanınızda arayın...",
+    "aiSearchPlaceholder": "Belgeleriniz hakkında bir soru sorun...",
+    "aiSearch": "AI Arama",
+    "emptyDocs": {
+      "title": "Bilgi Tabanınızı Oluşturmaya Başlayın",
+      "description": "AI destekli arama ve içgörüler için belgeler ekleyin",
+      "uploadAction": "Belge Yükle",
+      "mcpAction": "MCP Proxy Yükle",
+      "sdkAction": "SDK Kütüphanelerini Kullan"
+    },
+    "emptyTools": {
+      "title": "İlk MCP Sunucunuzu Bağlayın",
+      "description": "AI araç etkileşimlerini etkinleştirmek için MCP sunucularını kurun",
+      "configureAction": "Sunucuları Yapılandır",
+      "setupAction": "Kurulum Kılavuzunu Görüntüle"
+    }
+  },
   "tabs": {
-    "overview": "Genel Bakış",
+    "dashboard": "Gösterge Paneli",
     "tools": "Araçlar ve Sunucular",
     "library": "Kütüphane ve RAG",
     "productivity": "Üretkenlik"

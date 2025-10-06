@@ -5,7 +5,8 @@
     "overview": "Overzicht",
     "tools": "Tools en Servers",
     "library": "Bibliotheek en RAG",
-    "productivity": "Productiviteit"
+    "productivity": "Productiviteit",
+    "dashboard": "Dashboard"
   },
   "period": {
     "7d": "Laatste 7 dagen",
@@ -113,5 +114,30 @@
     "unauthorized": "U moet ingelogd zijn om analyses te bekijken",
     "retry": "Opnieuw proberen"
   },
-  "loading": "Analyses laden..."
+  "loading": "Analyses laden...",
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "Uw AI-werkruimte in één oogopslag",
+    "recentDocuments": "Recente Documenten",
+    "recentDocumentsDescription": "Laatste toevoegingen aan uw kennisbank",
+    "recentActivity": "Recente Activiteit",
+    "recentActivityDescription": "Laatste tool-aanroepen en serverinteracties",
+    "viewAll": "Alles Bekijken",
+    "searchPlaceholder": "Zoek in uw kennisbank...",
+    "aiSearchPlaceholder": "Stel een vraag over uw documenten...",
+    "aiSearch": "AI Zoeken",
+    "emptyDocs": {
+      "title": "Begin Met Het Opbouwen Van Uw Kennisbank",
+      "description": "Voeg documenten toe voor AI-aangedreven zoeken en inzichten",
+      "uploadAction": "Documenten Uploaden",
+      "mcpAction": "MCP Proxy Installeren",
+      "sdkAction": "SDK-bibliotheken Gebruiken"
+    },
+    "emptyTools": {
+      "title": "Verbind Uw Eerste MCP-server",
+      "description": "Stel MCP-servers in om AI-toolinteracties mogelijk te maken",
+      "configureAction": "Servers Configureren",
+      "setupAction": "Installatiehandleiding Bekijken"
+    }
+  }
 }

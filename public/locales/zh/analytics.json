@@ -5,7 +5,8 @@
     "overview": "概览",
     "tools": "工具和服务器",
     "library": "文档库和 RAG",
-    "productivity": "生产力"
+    "productivity": "生产力",
+    "dashboard": "仪表板"
   },
   "period": {
     "7d": "最近 7 天",
@@ -113,5 +114,30 @@
     "unauthorized": "您必须登录才能查看分析",
     "retry": "重试"
   },
-  "loading": "加载分析中..."
+  "loading": "加载分析中...",
+  "dashboard": {
+    "title": "仪表板",
+    "description": "一览您的 AI 工作空间",
+    "recentDocuments": "最近文档",
+    "recentDocumentsDescription": "知识库中的最新添加",
+    "recentActivity": "最近活动",
+    "recentActivityDescription": "最新的工具调用和服务器交互",
+    "viewAll": "查看全部",
+    "searchPlaceholder": "搜索您的知识库...",
+    "aiSearchPlaceholder": "询问有关您文档的问题...",
+    "aiSearch": "AI 搜索",
+    "emptyDocs": {
+      "title": "开始构建您的知识库",
+      "description": "添加文档以启用 AI 驱动的搜索和洞察",
+      "uploadAction": "上传文档",
+      "mcpAction": "安装 MCP 代理",
+      "sdkAction": "使用 SDK 库"
+    },
+    "emptyTools": {
+      "title": "连接您的第一个 MCP 服务器",
+      "description": "设置 MCP 服务器以启用 AI 工具交互",
+      "configureAction": "配置服务器",
+      "setupAction": "查看设置指南"
+    }
+  }
 }

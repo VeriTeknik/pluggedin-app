@@ -10,6 +10,7 @@ import {
   getToolAnalytics,
   getRagAnalytics,
   getProductivityMetrics,
+  getRecentDocuments,
   getRecentToolCalls,
   type TimePeriod,
 } from '@/app/actions/analytics';
@@ -71,6 +72,28 @@ export function useProductivityMetrics(profileUuid: string | undefined, period: 
 export function useToolCallLog(profileUuid: string | undefined, limit: number = 100) {
   return useSWR(
     profileUuid ? ['tool-call-log', profileUuid, limit] : null,
+    () => getRecentToolCalls(profileUuid!, limit),
+    SWR_OPTIONS
+  );
+}
+
+/**
+ * Hook for fetching recent documents
+ */
+export function useRecentDocuments(profileUuid: string | undefined, limit: number = 10) {
+  return useSWR(
+    profileUuid ? ['recent-documents', profileUuid, limit] : null,
+    () => getRecentDocuments(profileUuid!, limit),
+    SWR_OPTIONS
+  );
+}
+
+/**
+ * Hook for fetching recent tool calls (dashboard version)
+ */
+export function useRecentToolCalls(profileUuid: string | undefined, limit: number = 10) {
+  return useSWR(
+    profileUuid ? ['recent-tool-calls', profileUuid, limit] : null,
     () => getRecentToolCalls(profileUuid!, limit),
     SWR_OPTIONS
   );

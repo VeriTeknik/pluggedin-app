@@ -18,11 +18,13 @@ import {
   getOverviewMetrics as _getOverviewMetrics,
   getProductivityMetrics as _getProductivityMetrics,
   getRagAnalytics as _getRagAnalytics,
+  getRecentDocuments as _getRecentDocuments,
   getRecentToolCalls as _getRecentToolCalls,
   getToolAnalytics as _getToolAnalytics,
   type OverviewMetrics,
   type ProductivityMetrics,
   type RagAnalytics,
+  type RecentDocument,
   type TimePeriod,
   type ToolAnalytics,
   type ToolCallLogEntry,
@@ -34,6 +36,7 @@ export type {
   ToolAnalytics,
   RagAnalytics,
   ProductivityMetrics,
+  RecentDocument,
   ToolCallLogEntry,
   TimePeriod,
 };
@@ -57,4 +60,8 @@ export async function getProductivityMetrics(profileUuid: string, period: TimePe
 
 export async function getRecentToolCalls(profileUuid: string, limit: number = 50) {
   return _getRecentToolCalls(profileUuid, limit);
+}
+
+export async function getRecentDocuments(profileUuid: string, limit: number = 10) {
+  return _getRecentDocuments(profileUuid, limit);
 }

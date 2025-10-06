@@ -9,6 +9,7 @@ export { getOverviewMetrics, type OverviewMetrics } from './overview';
 export { getToolAnalytics, type ToolAnalytics } from './tools';
 export { getRagAnalytics, type RagAnalytics } from './rag';
 export { getProductivityMetrics, type ProductivityMetrics } from './productivity';
+export { getRecentDocuments, type RecentDocument } from './recent-documents';
 export { getRecentToolCalls, type ToolCallLogEntry } from './recent-tools';
 
 // Re-export common types
