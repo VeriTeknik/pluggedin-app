@@ -35,10 +35,10 @@ export interface RagAnalytics {
 
 export const getRagAnalytics = withAnalytics(
   // Parse and validate inputs
-  (profileUuid: string, period: TimePeriod = '7d', projectUuid?: string) => ({
+  (profileUuid: string, period: TimePeriod = '7d', projectUuid?: string | undefined) => ({
     profileUuid: analyticsSchemas.profileUuid.parse(profileUuid),
     period: analyticsSchemas.period.parse(period),
-    projectUuid: projectUuid,
+    projectUuid,
   }),
 
   // Rate limit key

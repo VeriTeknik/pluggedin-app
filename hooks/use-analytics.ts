@@ -28,7 +28,7 @@ const SWR_OPTIONS = {
 export function useOverviewMetrics(profileUuid: string | undefined, period: TimePeriod, projectUuid?: string) {
   return useSWR(
     profileUuid ? ['overview', profileUuid, period, projectUuid] : null,
-    () => getOverviewMetrics(profileUuid!, period, projectUuid),
+    () => (getOverviewMetrics as any)(profileUuid!, period, projectUuid),
     SWR_OPTIONS
   );
 }
@@ -50,7 +50,7 @@ export function useToolMetrics(profileUuid: string | undefined, period: TimePeri
 export function useRagMetrics(profileUuid: string | undefined, period: TimePeriod, projectUuid?: string) {
   return useSWR(
     profileUuid ? ['rag', profileUuid, period, projectUuid] : null,
-    () => getRagAnalytics(profileUuid!, period, projectUuid),
+    () => (getRagAnalytics as any)(profileUuid!, period, projectUuid),
     SWR_OPTIONS
   );
 }
@@ -83,7 +83,7 @@ export function useToolCallLog(profileUuid: string | undefined, limit: number = 
 export function useRecentDocuments(profileUuid: string | undefined, limit: number = 10, projectUuid?: string) {
   return useSWR(
     profileUuid ? ['recent-documents', profileUuid, limit, projectUuid] : null,
-    () => getRecentDocuments(profileUuid!, limit, projectUuid),
+    () => (getRecentDocuments as any)(profileUuid!, limit, projectUuid),
     SWR_OPTIONS
   );
 }

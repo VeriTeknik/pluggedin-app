@@ -23,10 +23,10 @@ export interface RecentDocument {
 
 export const getRecentDocuments = withAnalytics(
   // Parse and validate inputs
-  (profileUuid: string, limit: number = 10, projectUuid?: string) => ({
+  (profileUuid: string, limit: number = 10, projectUuid?: string | undefined) => ({
     profileUuid: analyticsSchemas.profileUuid.parse(profileUuid),
     limit: analyticsSchemas.limit.parse(limit),
-    projectUuid: projectUuid,
+    projectUuid,
   }),
 
   // Rate limit key
