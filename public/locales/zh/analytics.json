@@ -1,0 +1,143 @@
+{
+  "title": "分析",
+  "description": "可视化您的 MCP 使用情况、RAG 搜索和生产力模式",
+  "tabs": {
+    "overview": "概览",
+    "tools": "工具和服务器",
+    "library": "文档库和 RAG",
+    "productivity": "生产力",
+    "dashboard": "仪表板"
+  },
+  "period": {
+    "7d": "最近 7 天",
+    "30d": "最近 30 天",
+    "90d": "最近 90 天",
+    "all": "全部时间"
+  },
+  "overview": {
+    "title": "概览",
+    "totalToolCalls": "工具调用总数",
+    "totalDocuments": "文档",
+    "totalRagSearches": "RAG 搜索",
+    "mostUsedServer": "最常用服务器",
+    "storageUsed": "已用存储",
+    "activityTimeline": "活动时间线",
+    "toolCallsLabel": "工具调用",
+    "ragSearchesLabel": "RAG 搜索",
+    "trend": {
+      "up": "增长 {{percent}}%",
+      "down": "减少 {{percent}}%",
+      "neutral": "无变化"
+    }
+  },
+  "tools": {
+    "title": "工具和服务器",
+    "topTools": "热门工具",
+    "serverActivity": "服务器活动",
+    "hourlyDistribution": "每小时分布",
+    "activityHeatmap": "活动热力图",
+    "activity": "{{count}} 次活动",
+    "activity_plural": "{{count}} 次活动",
+    "toolName": "工具名称",
+    "serverName": "服务器名称",
+    "callCount": "调用次数",
+    "successRate": "成功率",
+    "toolCalls": "工具调用",
+    "resourceReads": "资源读取",
+    "promptGets": "提示获取",
+    "totalActivity": "总活动",
+    "hour": "小时",
+    "count": "计数",
+    "noData": "无活动数据",
+    "filterByServer": "按服务器筛选"
+  },
+  "toolCallLog": {
+    "title": "最近的工具调用",
+    "description": "您最近的 MCP 工具执行活动日志",
+    "searchPlaceholder": "按工具或服务器名称搜索...",
+    "columns": {
+      "timestamp": "时间",
+      "toolName": "工具",
+      "serverName": "服务器"
+    },
+    "noResults": "未找到匹配搜索的工具调用",
+    "noData": "无最近的工具调用",
+    "resultsCount": "显示 {{count}} 条结果",
+    "resultsCount_plural": "显示 {{count}} 条结果",
+    "timeAgo": {
+      "days": "{{count}} 天前",
+      "days_plural": "{{count}} 天前",
+      "hours": "{{count}} 小时前",
+      "hours_plural": "{{count}} 小时前",
+      "minutes": "{{count}} 分钟前",
+      "minutes_plural": "{{count}} 分钟前",
+      "seconds": "{{count}} 秒前",
+      "seconds_plural": "{{count}} 秒前"
+    }
+  },
+  "library": {
+    "title": "文档库和 RAG",
+    "documentStats": "文档统计",
+    "totalDocuments": "文档总数",
+    "aiGenerated": "AI 生成",
+    "uploaded": "已上传",
+    "storageBreakdown": "存储分解",
+    "files": "文件",
+    "ragVectors": "RAG 向量",
+    "documentsByModel": "按 AI 模型分类的文档",
+    "ragSearchFrequency": "RAG 搜索频率",
+    "mostAccessedDocs": "最常访问的文档",
+    "model": "模型",
+    "accessCount": "访问次数",
+    "searches": "搜索",
+    "noDocuments": "暂无文档"
+  },
+  "productivity": {
+    "title": "生产力",
+    "activeStreak": "活跃连续天数",
+    "streakDays": "{{count}} 天",
+    "streakDays_plural": "{{count}} 天",
+    "mostProductiveHour": "最高效时段",
+    "mostProductiveDay": "最高效日期",
+    "avgToolCallsPerDay": "每日平均工具调用",
+    "avgDocumentsPerWeek": "每周平均文档",
+    "achievements": "成就",
+    "achievementProgress": "完成 {{percent}}%",
+    "achievementUnlocked": "已解锁！",
+    "achievementLocked": "已锁定",
+    "workPatterns": "工作模式",
+    "hourlyActivity": "每小时活动",
+    "dailyActivity": "每日活动"
+  },
+  "errors": {
+    "loadFailed": "加载分析数据失败",
+    "unauthorized": "您必须登录才能查看分析",
+    "retry": "重试"
+  },
+  "loading": "加载分析中...",
+  "dashboard": {
+    "title": "仪表板",
+    "description": "一览您的 AI 工作空间",
+    "recentDocuments": "最近文档",
+    "recentDocumentsDescription": "知识库中的最新添加",
+    "recentActivity": "最近活动",
+    "recentActivityDescription": "最新的工具调用和服务器交互",
+    "viewAll": "查看全部",
+    "searchPlaceholder": "搜索您的知识库...",
+    "aiSearchPlaceholder": "询问有关您文档的问题...",
+    "aiSearch": "AI 搜索",
+    "emptyDocs": {
+      "title": "开始构建您的知识库",
+      "description": "添加文档以启用 AI 驱动的搜索和洞察",
+      "uploadAction": "上传文档",
+      "mcpAction": "安装 MCP 代理",
+      "sdkAction": "使用 SDK 库"
+    },
+    "emptyTools": {
+      "title": "连接您的第一个 MCP 服务器",
+      "description": "设置 MCP 服务器以启用 AI 工具交互",
+      "configureAction": "配置服务器",
+      "setupAction": "查看设置指南"
+    }
+  }
+}

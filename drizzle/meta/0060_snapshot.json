@@ -1,6 +1,6 @@
 {
-  "id": "5a775018-6af0-4aff-9770-ec69ebccd554",
-  "prevId": "03efdc81-a730-4e7b-aab6-6501cf38169b",
+  "id": "099a2c4b-f134-4011-90d2-f23bf9ad7699",
+  "prevId": "5a775018-6af0-4aff-9770-ec69ebccd554",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2072,6 +2072,19 @@
           "primaryKey": false,
           "notNull": false
         },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'success'"
+        },
+        "error_message": {
+          "name": "error_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2194,6 +2207,33 @@
             },
             {
               "expression": "created_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_profile_action_status": {
+          "name": "idx_profile_action_status",
+          "columns": [
+            {
+              "expression": "profile_uuid",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "action",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

@@ -1,0 +1,2 @@
+CREATE INDEX "idx_profile_created" ON "mcp_activity" USING btree ("profile_uuid","created_at");--> statement-breakpoint
+CREATE INDEX "idx_profile_action_created" ON "mcp_activity" USING btree ("profile_uuid","action","created_at");

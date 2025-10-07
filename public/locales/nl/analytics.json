@@ -1,0 +1,143 @@
+{
+  "title": "Analytics",
+  "description": "Visualiseer uw MCP-gebruik, RAG-zoekopdrachten en productiviteitspatronen",
+  "tabs": {
+    "overview": "Overzicht",
+    "tools": "Tools en Servers",
+    "library": "Bibliotheek en RAG",
+    "productivity": "Productiviteit",
+    "dashboard": "Dashboard"
+  },
+  "period": {
+    "7d": "Laatste 7 dagen",
+    "30d": "Laatste 30 dagen",
+    "90d": "Laatste 90 dagen",
+    "all": "Alle tijd"
+  },
+  "overview": {
+    "title": "Overzicht",
+    "totalToolCalls": "Totaal Tool Oproepen",
+    "totalDocuments": "Documenten",
+    "totalRagSearches": "RAG Zoekopdrachten",
+    "mostUsedServer": "Meest Gebruikte Server",
+    "storageUsed": "Gebruikte Opslag",
+    "activityTimeline": "Activiteiten Tijdlijn",
+    "toolCallsLabel": "Tool Oproepen",
+    "ragSearchesLabel": "RAG Zoekopdrachten",
+    "trend": {
+      "up": "{{percent}}% toename",
+      "down": "{{percent}}% afname",
+      "neutral": "Geen verandering"
+    }
+  },
+  "tools": {
+    "title": "Tools en Servers",
+    "topTools": "Top Tools",
+    "serverActivity": "Server Activiteit",
+    "hourlyDistribution": "Uurlijkse Verdeling",
+    "activityHeatmap": "Activiteiten Heatmap",
+    "activity": "{{count}} activiteit",
+    "activity_plural": "{{count}} activiteiten",
+    "toolName": "Tool Naam",
+    "serverName": "Server Naam",
+    "callCount": "Oproepen",
+    "successRate": "Succespercentage",
+    "toolCalls": "Tool Oproepen",
+    "resourceReads": "Resource Lezen",
+    "promptGets": "Prompt Ophalen",
+    "totalActivity": "Totale Activiteit",
+    "hour": "Uur",
+    "count": "Aantal",
+    "noData": "Geen activiteitsgegevens beschikbaar",
+    "filterByServer": "Filteren op server"
+  },
+  "toolCallLog": {
+    "title": "Recente Tool Oproepen",
+    "description": "Activiteitenlog van uw meest recente MCP tool uitvoeringen",
+    "searchPlaceholder": "Zoek op tool- of servernaam...",
+    "columns": {
+      "timestamp": "Tijd",
+      "toolName": "Tool",
+      "serverName": "Server"
+    },
+    "noResults": "Geen tool oproepen gevonden die overeenkomen met uw zoekopdracht",
+    "noData": "Geen recente tool oproepen",
+    "resultsCount": "{{count}} resultaat wordt weergegeven",
+    "resultsCount_plural": "{{count}} resultaten worden weergegeven",
+    "timeAgo": {
+      "days": "{{count}} dag geleden",
+      "days_plural": "{{count}} dagen geleden",
+      "hours": "{{count}} uur geleden",
+      "hours_plural": "{{count}} uur geleden",
+      "minutes": "{{count}} minuut geleden",
+      "minutes_plural": "{{count}} minuten geleden",
+      "seconds": "{{count}} seconde geleden",
+      "seconds_plural": "{{count}} seconden geleden"
+    }
+  },
+  "library": {
+    "title": "Bibliotheek en RAG",
+    "documentStats": "Document Statistieken",
+    "totalDocuments": "Totaal Documenten",
+    "aiGenerated": "AI Gegenereerd",
+    "uploaded": "Geüpload",
+    "storageBreakdown": "Opslag Uitsplitsing",
+    "files": "Bestanden",
+    "ragVectors": "RAG Vectoren",
+    "documentsByModel": "Documenten per AI Model",
+    "ragSearchFrequency": "RAG Zoekfrequentie",
+    "mostAccessedDocs": "Meest Geopende Documenten",
+    "model": "Model",
+    "accessCount": "Toegang Aantal",
+    "searches": "Zoekopdrachten",
+    "noDocuments": "Nog geen documenten"
+  },
+  "productivity": {
+    "title": "Productiviteit",
+    "activeStreak": "Actieve Reeks",
+    "streakDays": "{{count}} dag",
+    "streakDays_plural": "{{count}} dagen",
+    "mostProductiveHour": "Meest Productieve Uur",
+    "mostProductiveDay": "Meest Productieve Dag",
+    "avgToolCallsPerDay": "Gem. Tool Oproepen/Dag",
+    "avgDocumentsPerWeek": "Gem. Documenten/Week",
+    "achievements": "Prestaties",
+    "achievementProgress": "{{percent}}% voltooid",
+    "achievementUnlocked": "Ontgrendeld!",
+    "achievementLocked": "Vergrendeld",
+    "workPatterns": "Werkpatronen",
+    "hourlyActivity": "Uurlijkse Activiteit",
+    "dailyActivity": "Dagelijkse Activiteit"
+  },
+  "errors": {
+    "loadFailed": "Kan analysegegevens niet laden",
+    "unauthorized": "U moet ingelogd zijn om analyses te bekijken",
+    "retry": "Opnieuw proberen"
+  },
+  "loading": "Analyses laden...",
+  "dashboard": {
+    "title": "Dashboard",
+    "description": "Uw AI-werkruimte in één oogopslag",
+    "recentDocuments": "Recente Documenten",
+    "recentDocumentsDescription": "Laatste toevoegingen aan uw kennisbank",
+    "recentActivity": "Recente Activiteit",
+    "recentActivityDescription": "Laatste tool-aanroepen en serverinteracties",
+    "viewAll": "Alles Bekijken",
+    "searchPlaceholder": "Zoek in uw kennisbank...",
+    "aiSearchPlaceholder": "Stel een vraag over uw documenten...",
+    "aiSearch": "AI Zoeken",
+    "emptyDocs": {
+      "title": "Begin Met Het Opbouwen Van Uw Kennisbank",
+      "description": "Voeg documenten toe voor AI-aangedreven zoeken en inzichten",
+      "uploadAction": "Documenten Uploaden",
+      "mcpAction": "MCP Proxy Installeren",
+      "sdkAction": "SDK-bibliotheken Gebruiken"
+    },
+    "emptyTools": {
+      "title": "Verbind Uw Eerste MCP-server",
+      "description": "Stel MCP-servers in om AI-toolinteracties mogelijk te maken",
+      "configureAction": "Servers Configureren",
+      "setupAction": "Installatiehandleiding Bekijken"
+    }
+  }
+}

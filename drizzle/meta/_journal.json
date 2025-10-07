@@ -418,8 +418,15 @@
     {
       "idx": 59,
       "version": "7",
-      "when": 1758475200000,
-      "tag": "0059_add_document_version_columns",
+      "when": 1759270768389,
+      "tag": "0059_fantastic_spectrum",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1759430731784,
+      "tag": "0060_acoustic_tarantula",
       "breakpoints": true
     }
   ]

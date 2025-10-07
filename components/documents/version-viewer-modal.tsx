@@ -1,10 +1,5 @@
 'use client';
 
-import { format } from 'date-fns';
-import { Bot,Check, Copy, Download, FileText, X } from 'lucide-react';
-import { useEffect, useState } from 'react';
-// Import Prism first
-import Prism from 'prismjs';
 import 'prismjs/themes/prism-tomorrow.css';
 // Import common languages after Prism
 import 'prismjs/components/prism-javascript';
@@ -25,7 +20,11 @@ import 'prismjs/components/prism-yaml';
 import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-shell-session';
 
-import { sanitizeSyntaxHighlightedCode } from '@/lib/sanitization';
+import { format } from 'date-fns';
+import { Bot,Check, Copy, Download, FileText, X } from 'lucide-react';
+// Import Prism first
+import Prism from 'prismjs';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -39,6 +38,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useVersionContent } from '@/lib/hooks/use-document-versions';
+import { sanitizeSyntaxHighlightedCode } from '@/lib/sanitization';
 
 interface VersionViewerModalProps {
   isOpen: boolean;

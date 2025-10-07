@@ -17,10 +17,12 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { Highlight, themes } from 'prism-react-renderer';
 import { useTranslation } from 'react-i18next';
 
 import { getDocumentVersionContent } from '@/app/actions/document-versions';
 import { ModelAttributionBadge } from '@/components/library/ModelAttributionBadge';
+import { useTheme } from '@/components/providers/theme-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -237,6 +239,7 @@ export const DocumentPreview = memo(function DocumentPreview({
   const { t } = useTranslation('library');
   const { toast } = useToast();
   const { currentProject } = useProjects();
+  const { theme } = useTheme();
 
   // Use reducer for consolidated state management
   const [state, dispatch] = useReducer(documentPreviewReducer, initialState);
@@ -727,11 +730,23 @@ export const DocumentPreview = memo(function DocumentPreview({
         return (
           <div className="absolute inset-0 overflow-y-auto overflow-x-hidden">
             <div className="p-6">
-              <pre className="text-sm overflow-x-auto">
-                <code className={`language-${fileTypeInfo.language}`}>
-                  {state.content.textContent}
-                </code>
-              </pre>
+              <Highlight
+                theme={theme === 'dark' ? themes.vsDark : themes.github}
+                code={state.content.textContent}
+                language={fileTypeInfo.language || 'text'}
+              >
+                {({ tokens, getLineProps, getTokenProps }) => (
+                  <pre className="text-sm overflow-x-auto bg-muted/50 p-4 rounded-md">
+                    {tokens.map((line, i) => (
+                      <div key={i} {...getLineProps({ line })}>
+                        {line.map((token, key) => (
+                          <span key={key} {...getTokenProps({ token })} />
+                        ))}
+                      </div>
+                    ))}
+                  </pre>
+                )}
+              </Highlight>
             </div>
           </div>
         );

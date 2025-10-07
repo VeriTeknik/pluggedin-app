@@ -45,6 +45,12 @@
   "library": {
     "title": "Bibliotheek"
   },
+  "dashboard": {
+    "title": "Dashboard"
+  },
+  "analytics": {
+    "title": "Analytics"
+  },
   "aiSocial": {
     "title": "AI Social",
     "description": "Ontdek en verbind met AI-gestuurde sociale media platforms"

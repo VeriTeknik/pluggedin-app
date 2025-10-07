@@ -5,6 +5,7 @@ import { createNotification } from '@/app/actions/notifications';
 import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { mcpActivityTable, McpServerSource } from '@/db/schema';
+import { analyticsCache } from '@/lib/analytics-cache';
 import type { NotificationMetadata } from '@/lib/types/notifications';
 
 const mcpActivitySchema = z.object({
@@ -144,6 +145,10 @@ export async function POST(request: Request) {
               action,
               item_name: itemName || null,
             });
+
+            // Invalidate analytics cache for this profile
+            analyticsCache.invalidateProfile(auth.activeProfile.uuid);
+
             return NextResponse.json({ success: true });
           }
         }
@@ -157,6 +162,9 @@ export async function POST(request: Request) {
         action,
         item_name: itemName || null,
       });
+
+      // Invalidate analytics cache for this profile
+      analyticsCache.invalidateProfile(auth.activeProfile.uuid);
     } catch (dbError) {
       // Log but don't fail the request if activity tracking fails
       console.error('Failed to store MCP activity:', dbError);

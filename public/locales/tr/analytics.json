@@ -1,0 +1,142 @@
+{
+  "title": "Analitik",
+  "description": "MCP kullanımınızı, RAG aramalarınızı ve üretkenlik desenlerinizi görselleştirin",
+  "dashboard": {
+    "title": "Gösterge Paneli",
+    "description": "AI çalışma alanınıza bir bakış",
+    "recentDocuments": "Son Belgeler",
+    "recentDocumentsDescription": "Bilgi tabanınıza en son eklenenler",
+    "recentActivity": "Son Aktivite",
+    "recentActivityDescription": "En son araç çağrıları ve sunucu etkileşimleri",
+    "viewAll": "Tümünü Görüntüle",
+    "searchPlaceholder": "Bilgi tabanınızda arayın...",
+    "aiSearchPlaceholder": "Belgeleriniz hakkında bir soru sorun...",
+    "aiSearch": "AI Arama",
+    "emptyDocs": {
+      "title": "Bilgi Tabanınızı Oluşturmaya Başlayın",
+      "description": "AI destekli arama ve içgörüler için belgeler ekleyin",
+      "uploadAction": "Belge Yükle",
+      "mcpAction": "MCP Proxy Yükle",
+      "sdkAction": "SDK Kütüphanelerini Kullan"
+    },
+    "emptyTools": {
+      "title": "İlk MCP Sunucunuzu Bağlayın",
+      "description": "AI araç etkileşimlerini etkinleştirmek için MCP sunucularını kurun",
+      "configureAction": "Sunucuları Yapılandır",
+      "setupAction": "Kurulum Kılavuzunu Görüntüle"
+    }
+  },
+  "tabs": {
+    "dashboard": "Gösterge Paneli",
+    "tools": "Araçlar ve Sunucular",
+    "library": "Kütüphane ve RAG",
+    "productivity": "Üretkenlik"
+  },
+  "period": {
+    "7d": "Son 7 gün",
+    "30d": "Son 30 gün",
+    "90d": "Son 90 gün",
+    "all": "Tüm zamanlar"
+  },
+  "overview": {
+    "title": "Genel Bakış",
+    "totalToolCalls": "Toplam Araç Çağrıları",
+    "totalDocuments": "Belgeler",
+    "totalRagSearches": "RAG Aramaları",
+    "mostUsedServer": "En Çok Kullanılan Sunucu",
+    "storageUsed": "Kullanılan Depolama",
+    "activityTimeline": "Etkinlik Zaman Çizelgesi",
+    "toolCallsLabel": "Araç Çağrıları",
+    "ragSearchesLabel": "RAG Aramaları",
+    "trend": {
+      "up": "%{{percent}} artış",
+      "down": "%{{percent}} azalma",
+      "neutral": "Değişiklik yok"
+    }
+  },
+  "tools": {
+    "title": "Araçlar ve Sunucular",
+    "topTools": "En İyi Araçlar",
+    "serverActivity": "Sunucu Etkinliği",
+    "hourlyDistribution": "Saatlik Dağılım",
+    "activityHeatmap": "Etkinlik Isı Haritası",
+    "activity": "{{count}} etkinlik",
+    "activity_plural": "{{count}} etkinlik",
+    "toolName": "Araç Adı",
+    "serverName": "Sunucu Adı",
+    "callCount": "Çağrılar",
+    "successRate": "Başarı Oranı",
+    "toolCalls": "Araç Çağrıları",
+    "resourceReads": "Kaynak Okumaları",
+    "promptGets": "Prompt Alımları",
+    "totalActivity": "Toplam Etkinlik",
+    "hour": "Saat",
+    "count": "Sayı",
+    "noData": "Etkinlik verisi yok",
+    "filterByServer": "Sunucuya göre filtrele"
+  },
+  "toolCallLog": {
+    "title": "Son Araç Çağrıları",
+    "description": "En son MCP araç yürütmelerinizin etkinlik günlüğü",
+    "searchPlaceholder": "Araç veya sunucu adına göre ara...",
+    "columns": {
+      "timestamp": "Zaman",
+      "toolName": "Araç",
+      "serverName": "Sunucu"
+    },
+    "noResults": "Aramanızla eşleşen araç çağrısı bulunamadı",
+    "noData": "Son araç çağrısı yok",
+    "resultsCount": "{{count}} sonuç gösteriliyor",
+    "resultsCount_plural": "{{count}} sonuç gösteriliyor",
+    "timeAgo": {
+      "days": "{{count}} gün önce",
+      "days_plural": "{{count}} gün önce",
+      "hours": "{{count}} saat önce",
+      "hours_plural": "{{count}} saat önce",
+      "minutes": "{{count}} dakika önce",
+      "minutes_plural": "{{count}} dakika önce",
+      "seconds": "{{count}} saniye önce",
+      "seconds_plural": "{{count}} saniye önce"
+    }
+  },
+  "library": {
+    "title": "Kütüphane ve RAG",
+    "documentStats": "Belge İstatistikleri",
+    "totalDocuments": "Toplam Belgeler",
+    "aiGenerated": "AI Tarafından Oluşturulan",
+    "uploaded": "Yüklenen",
+    "storageBreakdown": "Depolama Dağılımı",
+    "files": "Dosyalar",
+    "ragVectors": "RAG Vektörleri",
+    "documentsByModel": "AI Modeline Göre Belgeler",
+    "ragSearchFrequency": "RAG Arama Sıklığı",
+    "mostAccessedDocs": "En Çok Erişilen Belgeler",
+    "model": "Model",
+    "accessCount": "Erişim Sayısı",
+    "searches": "Aramalar",
+    "noDocuments": "Henüz belge yok"
+  },
+  "productivity": {
+    "title": "Üretkenlik",
+    "activeStreak": "Aktif Seri",
+    "streakDays": "{{count}} gün",
+    "streakDays_plural": "{{count}} gün",
+    "mostProductiveHour": "En Üretken Saat",
+    "mostProductiveDay": "En Üretken Gün",
+    "avgToolCallsPerDay": "Günlük Ort. Araç Çağrıları",
+    "avgDocumentsPerWeek": "Haftalık Ort. Belgeler",
+    "achievements": "Başarımlar",
+    "achievementProgress": "%{{percent}} tamamlandı",
+    "achievementUnlocked": "Kilidi Açıldı!",
+    "achievementLocked": "Kilitli",
+    "workPatterns": "Çalışma Desenleri",
+    "hourlyActivity": "Saatlik Etkinlik",
+    "dailyActivity": "Günlük Etkinlik"
+  },
+  "errors": {
+    "loadFailed": "Analitik verileri yüklenemedi",
+    "unauthorized": "Analitikleri görüntülemek için giriş yapmalısınız",
+    "retry": "Tekrar Dene"
+  },
+  "loading": "Analitikler yükleniyor..."
+}

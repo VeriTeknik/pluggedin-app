@@ -13,11 +13,21 @@ import { Clock, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import dynamic from 'next/dynamic';
+
 import { RestoreConfirmationDialog } from '@/components/documents/restore-confirmation-dialog';
 import { VersionDiffViewer } from '@/components/documents/version-diff-viewer';
 // Version management components
 import { VersionHistory } from '@/components/documents/version-history';
-import { VersionViewerModal } from '@/components/documents/version-viewer-modal';
+
+// Dynamically import VersionViewerModal to prevent Prism loading conflicts on page load
+const VersionViewerModal = dynamic(
+  () => import('@/components/documents/version-viewer-modal').then(mod => ({ default: mod.VersionViewerModal })),
+  {
+    loading: () => null,
+    ssr: false,
+  }
+);
 // Internal components
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
