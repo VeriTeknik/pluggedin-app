@@ -467,11 +467,12 @@ export function AuthForm({ type, defaultValues, onSuccess }: AuthFormProps) {
             />
           )}
 
-          <Button 
-            type="submit" 
+          <Button
+            type="submit"
             className="w-full"
+            disabled={form.formState.isSubmitting}
           >
-            {buttonText}
+            {form.formState.isSubmitting ? t('common.loading') : buttonText}
           </Button>
         </form>
       </Form>
