@@ -23,17 +23,24 @@ export interface RecentDocument {
 
 export const getRecentDocuments = withAnalytics(
   // Parse and validate inputs
-  (profileUuid: string, limit: number = 10) => ({
+  (profileUuid: string, limit: number = 10, projectUuid?: string) => ({
     profileUuid: analyticsSchemas.profileUuid.parse(profileUuid),
     limit: analyticsSchemas.limit.parse(limit),
+    projectUuid: projectUuid,
   }),
 
   // Rate limit key
   (userId) => `analytics:recentDocs:${userId}`,
 
   // Handler with business logic
-  async ({ profileUuid, limit }) => {
+  async ({ profileUuid, limit, projectUuid }) => {
     // Get recent documents
+    // Use projectUuid for filtering if available (documents are stored with project_uuid)
+    // Fall back to profile_uuid for backwards compatibility
+    const whereCondition = projectUuid
+      ? eq(docsTable.project_uuid, projectUuid)
+      : eq(docsTable.profile_uuid, profileUuid);
+
     const recentDocs = await db
       .select({
         uuid: docsTable.uuid,
@@ -45,7 +52,7 @@ export const getRecentDocuments = withAnalytics(
         ai_metadata: docsTable.ai_metadata,
       })
       .from(docsTable)
-      .where(eq(docsTable.profile_uuid, profileUuid))
+      .where(whereCondition)
       .orderBy(desc(docsTable.created_at))
       .limit(limit);
 

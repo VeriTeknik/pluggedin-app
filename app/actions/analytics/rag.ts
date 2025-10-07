@@ -35,18 +35,23 @@ export interface RagAnalytics {
 
 export const getRagAnalytics = withAnalytics(
   // Parse and validate inputs
-  (profileUuid: string, period: TimePeriod = '7d') => ({
+  (profileUuid: string, period: TimePeriod = '7d', projectUuid?: string) => ({
     profileUuid: analyticsSchemas.profileUuid.parse(profileUuid),
     period: analyticsSchemas.period.parse(period),
+    projectUuid: projectUuid,
   }),
 
   // Rate limit key
   (userId) => `analytics:rag:${userId}`,
 
   // Handler with business logic
-  async ({ profileUuid, period }) => {
+  async ({ profileUuid, period, projectUuid }) => {
     const cutoff = getDateCutoff(period);
-    const docConditions = [eq(docsTable.profile_uuid, profileUuid)];
+    // Use projectUuid for filtering if available (documents are stored with project_uuid)
+    // Fall back to profile_uuid for backwards compatibility
+    const docConditions = projectUuid
+      ? [eq(docsTable.project_uuid, projectUuid)]
+      : [eq(docsTable.profile_uuid, profileUuid)];
 
     if (cutoff) {
       docConditions.push(gte(docsTable.created_at, cutoff));
@@ -63,15 +68,18 @@ export const getRagAnalytics = withAnalytics(
       .from(docsTable)
       .where(and(...docConditions));
 
-    // Get RAG vector count from the service
-    let ragVectors = 0;
+    // Get RAG storage from the service
+    let ragStorage = 0;
     try {
-      const ragStats = await ragService.getStorageStats(profileUuid);
-      if (ragStats.success && ragStats.vectorsCount !== undefined) {
-        ragVectors = ragStats.vectorsCount;
+      // Use projectUuid if available, otherwise fall back to profileUuid for compatibility
+      const ragIdentifier = projectUuid || profileUuid;
+      const ragStats = await ragService.getStorageStats(ragIdentifier);
+      if (ragStats.success && ragStats.estimatedStorageMb !== undefined) {
+        // Convert MB to bytes to match file storage units
+        ragStorage = Math.round(ragStats.estimatedStorageMb * 1024 * 1024);
       }
     } catch (error) {
-      console.error('Error fetching RAG vector count:', error);
+      console.error('Error fetching RAG storage:', error);
       // Continue without failing the entire request
     }
 
@@ -160,7 +168,7 @@ export const getRagAnalytics = withAnalytics(
       uploadedCount: Number(docStats?.uploaded || 0),
       storageBreakdown: {
         files: Number(docStats?.totalSize || 0),
-        ragVectors, // Now fetching from RAG service
+        ragVectors: ragStorage, // Storage in bytes from RAG service
       },
       documentsByModel,
       ragSearchFrequency,

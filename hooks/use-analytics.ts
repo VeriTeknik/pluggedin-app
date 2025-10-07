@@ -25,10 +25,10 @@ const SWR_OPTIONS = {
 /**
  * Hook for fetching overview metrics
  */
-export function useOverviewMetrics(profileUuid: string | undefined, period: TimePeriod) {
+export function useOverviewMetrics(profileUuid: string | undefined, period: TimePeriod, projectUuid?: string) {
   return useSWR(
-    profileUuid ? ['overview', profileUuid, period] : null,
-    () => getOverviewMetrics(profileUuid!, period),
+    profileUuid ? ['overview', profileUuid, period, projectUuid] : null,
+    () => getOverviewMetrics(profileUuid!, period, projectUuid),
     SWR_OPTIONS
   );
 }
@@ -47,10 +47,10 @@ export function useToolMetrics(profileUuid: string | undefined, period: TimePeri
 /**
  * Hook for fetching RAG analytics
  */
-export function useRagMetrics(profileUuid: string | undefined, period: TimePeriod) {
+export function useRagMetrics(profileUuid: string | undefined, period: TimePeriod, projectUuid?: string) {
   return useSWR(
-    profileUuid ? ['rag', profileUuid, period] : null,
-    () => getRagAnalytics(profileUuid!, period),
+    profileUuid ? ['rag', profileUuid, period, projectUuid] : null,
+    () => getRagAnalytics(profileUuid!, period, projectUuid),
     SWR_OPTIONS
   );
 }
@@ -80,10 +80,10 @@ export function useToolCallLog(profileUuid: string | undefined, limit: number = 
 /**
  * Hook for fetching recent documents
  */
-export function useRecentDocuments(profileUuid: string | undefined, limit: number = 10) {
+export function useRecentDocuments(profileUuid: string | undefined, limit: number = 10, projectUuid?: string) {
   return useSWR(
-    profileUuid ? ['recent-documents', profileUuid, limit] : null,
-    () => getRecentDocuments(profileUuid!, limit),
+    profileUuid ? ['recent-documents', profileUuid, limit, projectUuid] : null,
+    () => getRecentDocuments(profileUuid!, limit, projectUuid),
     SWR_OPTIONS
   );
 }

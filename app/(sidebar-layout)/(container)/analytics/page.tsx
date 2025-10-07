@@ -86,7 +86,7 @@ export default function AnalyticsPage() {
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
-          <DashboardTab profileUuid={activeProfile.uuid} period={period} />
+          <DashboardTab profileUuid={activeProfile.uuid} projectUuid={activeProfile.project_uuid} period={period} />
         </TabsContent>
 
         <TabsContent value="tools" className="space-y-4">
@@ -94,7 +94,7 @@ export default function AnalyticsPage() {
         </TabsContent>
 
         <TabsContent value="library" className="space-y-4">
-          <LibraryTab profileUuid={activeProfile.uuid} period={period} />
+          <LibraryTab profileUuid={activeProfile.uuid} projectUuid={activeProfile.project_uuid} period={period} />
         </TabsContent>
 
         <TabsContent value="productivity" className="space-y-4">

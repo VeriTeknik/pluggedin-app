@@ -13,12 +13,13 @@ import { useRagMetrics } from '@/hooks/use-analytics';
 
 interface LibraryTabProps {
   profileUuid: string;
+  projectUuid: string;
   period: TimePeriod;
 }
 
-export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
+export function LibraryTab({ profileUuid, projectUuid, period }: LibraryTabProps) {
   const { t } = useTranslation('analytics');
-  const { data, isLoading, error } = useRagMetrics(profileUuid, period);
+  const { data, isLoading, error } = useRagMetrics(profileUuid, period, projectUuid);
 
   if (isLoading) {
     return <LibraryTabSkeleton />;
@@ -48,7 +49,7 @@ export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const sizes = ['B', 'kB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
   };
@@ -111,7 +112,7 @@ export function LibraryTab({ profileUuid, period }: LibraryTabProps) {
               </div>
               <div className="flex justify-between">
                 <span>{t('library.ragVectors')}</span>
-                <span className="font-semibold">{safeMetrics.storageBreakdown.ragVectors}</span>
+                <span className="font-semibold">{formatBytes(safeMetrics.storageBreakdown.ragVectors)}</span>
               </div>
             </div>
           </CardContent>

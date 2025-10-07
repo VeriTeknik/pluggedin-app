@@ -32,16 +32,17 @@ export interface OverviewMetrics {
 
 export const getOverviewMetrics = withAnalytics(
   // Parse and validate inputs
-  (profileUuid: string, period: TimePeriod = '7d') => ({
+  (profileUuid: string, period: TimePeriod = '7d', projectUuid?: string) => ({
     profileUuid: analyticsSchemas.profileUuid.parse(profileUuid),
     period: analyticsSchemas.period.parse(period),
+    projectUuid: projectUuid,
   }),
 
   // Rate limit key
   (userId) => `analytics:overview:${userId}`,
 
   // Handler with business logic
-  async ({ profileUuid, period }) => {
+  async ({ profileUuid, period, projectUuid }) => {
     const cutoff = getDateCutoff(period);
     const comparisonPeriod = getComparisonCutoff(period);
 
@@ -87,7 +88,11 @@ export const getOverviewMetrics = withAnalytics(
     }
 
     // Get document stats
-    const docConditions = [eq(docsTable.profile_uuid, profileUuid)];
+    // Use projectUuid for filtering if available (documents are stored with project_uuid)
+    // Fall back to profile_uuid for backwards compatibility
+    const docConditions = projectUuid
+      ? [eq(docsTable.project_uuid, projectUuid)]
+      : [eq(docsTable.profile_uuid, profileUuid)];
     if (cutoff) {
       docConditions.push(gte(docsTable.created_at, cutoff));
     }
@@ -106,12 +111,16 @@ export const getOverviewMetrics = withAnalytics(
     // Get previous document count for trend
     let previousDocuments = 0;
     if (period !== 'all') {
+      const prevDocConditions = projectUuid
+        ? eq(docsTable.project_uuid, projectUuid)
+        : eq(docsTable.profile_uuid, profileUuid);
+
       const [prevDocStats] = await db
         .select({ total: count() })
         .from(docsTable)
         .where(
           and(
-            eq(docsTable.profile_uuid, profileUuid),
+            prevDocConditions,
             gte(docsTable.created_at, comparisonPeriod.start),
             sql`${docsTable.created_at} < ${comparisonPeriod.end}`
           )

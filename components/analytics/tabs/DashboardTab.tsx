@@ -30,16 +30,17 @@ import dynamic from 'next/dynamic';
 
 interface DashboardTabProps {
   profileUuid: string;
+  projectUuid: string;
   period: TimePeriod;
 }
 
-export function DashboardTab({ profileUuid, period }: DashboardTabProps) {
+export function DashboardTab({ profileUuid, projectUuid, period }: DashboardTabProps) {
   const { t } = useTranslation('analytics');
   const router = useRouter();
 
   // Dashboard metrics
-  const { data, isLoading, error } = useOverviewMetrics(profileUuid, period);
-  const { data: recentDocs, isLoading: docsLoading } = useRecentDocuments(profileUuid);
+  const { data, isLoading, error } = useOverviewMetrics(profileUuid, period, projectUuid);
+  const { data: recentDocs, isLoading: docsLoading } = useRecentDocuments(profileUuid, 10, projectUuid);
   const { data: recentCalls, isLoading: callsLoading } = useRecentToolCalls(profileUuid);
 
   // AI Search state
@@ -62,6 +63,7 @@ export function DashboardTab({ profileUuid, period }: DashboardTabProps) {
     if (aiSearchEnabled) {
       setAiQuery(value);
     }
+    // When AI search is disabled, the search will filter the displayed data
   }, [aiSearchEnabled, setAiQuery]);
 
   // Handle AI search toggle
@@ -97,6 +99,33 @@ export function DashboardTab({ profileUuid, period }: DashboardTabProps) {
     dailyActivity: metrics?.dailyActivity || [],
     activityHeatmap: metrics?.activityHeatmap || [],
   }), [metrics]);
+
+  // Filter recent documents and tool calls based on search query when AI search is disabled
+  const filteredRecentDocs = useMemo(() => {
+    if (!recentDocs?.data || aiSearchEnabled || !searchQuery) {
+      return recentDocs?.data || [];
+    }
+
+    const query = searchQuery.toLowerCase();
+    return recentDocs.data.filter((doc: any) =>
+      doc.name?.toLowerCase().includes(query) ||
+      doc.description?.toLowerCase().includes(query) ||
+      doc.tags?.toLowerCase().includes(query)
+    );
+  }, [recentDocs?.data, searchQuery, aiSearchEnabled]);
+
+  const filteredRecentCalls = useMemo(() => {
+    if (!recentCalls?.data || aiSearchEnabled || !searchQuery) {
+      return recentCalls?.data || [];
+    }
+
+    const query = searchQuery.toLowerCase();
+    return recentCalls.data.filter((call: any) =>
+      call.tool_name?.toLowerCase().includes(query) ||
+      call.server_name?.toLowerCase().includes(query) ||
+      call.arguments?.toLowerCase().includes(query)
+    );
+  }, [recentCalls?.data, searchQuery, aiSearchEnabled]);
 
   const formatTrend = useCallback((value: number) => {
     if (value === 0) return t('overview.trend.neutral');
@@ -197,12 +226,12 @@ export function DashboardTab({ profileUuid, period }: DashboardTabProps) {
       {/* Recent Documents and Tool Calls */}
       <div className="grid gap-4 md:grid-cols-2">
         <RecentDocuments
-          documents={recentDocs?.data}
+          documents={filteredRecentDocs}
           isLoading={docsLoading}
           onDocumentClick={handleDocumentClick}
         />
         <RecentToolCalls
-          toolCalls={recentCalls?.data}
+          toolCalls={filteredRecentCalls}
           isLoading={callsLoading}
           onToolClick={handleToolClick}
         />

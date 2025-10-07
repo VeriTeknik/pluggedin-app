@@ -12,6 +12,7 @@ import {
 import { Clock, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 import dynamic from 'next/dynamic';
 
@@ -61,6 +62,8 @@ const columnHelper = createColumnHelper<Doc>();
 
 export default function LibraryContent() {
   const { t } = useTranslation('library');
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const { docs, isLoading, storageUsage, fileStorage, ragStorage, uploadDoc, removeDoc, downloadDoc } = useLibrary();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -301,6 +304,30 @@ export default function LibraryContent() {
       setGlobalFilter('');
     }
   }, [clearAiAnswer]);
+
+  // Handle doc query parameter from URL (e.g., from analytics page)
+  useEffect(() => {
+    const docId = searchParams.get('doc');
+    if (docId && docs.length > 0 && !isLoading) {
+      // Try to find the document by UUID, rag_document_id, or partial match
+      const targetDoc = docs.find(d =>
+        d.uuid === docId ||
+        d.rag_document_id === docId ||
+        d.rag_document_id?.includes(docId) ||
+        d.uuid?.includes(docId)
+      );
+
+      if (targetDoc) {
+        // Open the document preview
+        setPreviewDoc(targetDoc);
+        setPreviewOpen(true);
+
+        // Clear the URL parameter to avoid re-opening on navigation
+        const newUrl = window.location.pathname;
+        router.replace(newUrl, { scroll: false });
+      }
+    }
+  }, [docs, isLoading, searchParams, router]);
 
   // Update effect to sync search states
   useEffect(() => {
