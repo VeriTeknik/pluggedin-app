@@ -16,8 +16,8 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { Highlight, themes } from 'prism-react-renderer';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getDocumentVersionContent } from '@/app/actions/document-versions';
@@ -53,29 +53,55 @@ const SAFELINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
 const sanitizeMarkdownUri = (rawUri?: string) => {
   if (!rawUri) return '';
 
-  const uri = rawUri.trim();
+  let uri = rawUri.trim();
   if (uri === '') {
     return '';
   }
 
+  // CRITICAL SECURITY FIX: Decode URI to catch encoded schemes
+  // This prevents bypasses like javascript%3Aalert(1) or javasc%72ipt:alert()
+  let decodedUri = uri;
+  try {
+    decodedUri = decodeURIComponent(uri);
+  } catch (_e) {
+    // If decoding fails, the URI is malformed - block it
+    console.warn('Blocked malformed URI:', uri);
+    return '';
+  }
+
+  // Allow relative paths and anchors (check on original URI)
   if (uri.startsWith('#') || uri.startsWith('/') || uri.startsWith('./') || uri.startsWith('../')) {
-    return uri;
+    return rawUri; // Return original for relative paths
   }
 
+  // Restrict protocol-relative URLs - only allow https (check on original URI)
   if (uri.startsWith('//')) {
-    return uri;
+    // Convert to explicit https to prevent protocol manipulation
+    return `https:${uri}`;
   }
 
-  const protocolMatch = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.exec(uri);
+  // Check for explicit protocol on DECODED URI to catch encoded schemes
+  const protocolMatch = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.exec(decodedUri);
   if (!protocolMatch) {
-    return uri;
+    // No protocol found - treat as relative path
+    return rawUri; // Return original
   }
 
   const protocol = protocolMatch[0].toLowerCase();
-  if (SAFELINK_PROTOCOLS.has(protocol)) {
-    return uri;
+
+  // Block dangerous protocols (javascript:, data:, vbscript:)
+  if (protocol.includes('javascript') || protocol.includes('data') || protocol.includes('vbscript')) {
+    console.warn('Blocked dangerous protocol:', protocol);
+    return '';
   }
 
+  // Allow safe protocols
+  if (SAFELINK_PROTOCOLS.has(protocol)) {
+    return rawUri; // Return original if safe
+  }
+
+  // Block any other unsafe protocols
+  console.warn('Blocked unsafe protocol:', protocol);
   return '';
 };
 

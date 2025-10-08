@@ -12,10 +12,11 @@ import GoogleProvider from 'next-auth/providers/google';
 import TwitterProvider from 'next-auth/providers/twitter';
 
 import { notifyAdminsOfNewUser } from './admin-notifications';
-import { 
-  clearFailedLoginAttempts, 
-  isAccountLocked, 
+import {
+  clearFailedLoginAttempts,
+  isAccountLocked,
   recordFailedLoginAttempt} from './auth-security';
+import { createDefaultProject } from './default-project-creation';
 import log from './logger';
 import { sendWelcomeEmail } from './welcome-emails';
 
@@ -262,39 +263,17 @@ export const authOptions: NextAuthOptions = {
             if (newUser) {
               // Create default project and workspace for new user
               try {
-                const defaultProject = await db.transaction(async (tx) => {
-                  // Create the project
-                  const [project] = await tx
-                    .insert(projectsTable)
-                    .values({
-                      name: 'Default Hub',
-                      user_id: newUser.id,
-                      active_profile_uuid: null, // Will be updated after creating profile
-                    })
-                    .returning();
-
-                  // Create the default workspace/profile
-                  const [profile] = await tx
-                    .insert(profilesTable)
-                    .values({
-                      name: 'Default Workspace',
-                      project_uuid: project.uuid,
-                    })
-                    .returning();
-
-                  // Update project with the active profile UUID
-                  const [updatedProject] = await tx
-                    .update(projectsTable)
-                    .set({ active_profile_uuid: profile.uuid })
-                    .where(eq(projectsTable.uuid, project.uuid))
-                    .returning();
-
-                  return updatedProject;
+                const defaultProject = await createDefaultProject(newUser.id);
+                log.info('Created default project for new user', {
+                  email: newUser.email,
+                  projectUuid: defaultProject.uuid,
+                  userId: newUser.id,
                 });
-
-                console.log(`Created default project for new user ${newUser.email}: ${defaultProject.uuid}`);
               } catch (error) {
-                console.error(`Failed to create default project for new user ${newUser.email}:`, error);
+                log.error('Failed to create default project for new user', error instanceof Error ? error : undefined, {
+                  email: newUser.email,
+                  userId: newUser.id,
+                });
                 // Don't fail the sign-in if project creation fails
               }
 

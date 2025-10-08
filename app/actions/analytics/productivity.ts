@@ -2,6 +2,7 @@ import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { docsTable,mcpActivityTable } from '@/db/schema';
+import log from '@/lib/logger';
 
 import { analyticsSchemas, type TimePeriod,withAnalytics } from '../analytics-hof';
 import { getDateCutoff } from './shared';
@@ -252,7 +253,10 @@ async function getToolCombinations(
         return { tool1, tool2, count };
       });
   } catch (error) {
-    console.error('Tool combinations error:', error);
+    log.error('Failed to calculate tool combinations', error instanceof Error ? error : undefined, {
+      profileUuid,
+      period,
+    });
     return [];
   }
 }
