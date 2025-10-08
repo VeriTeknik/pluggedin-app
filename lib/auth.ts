@@ -12,10 +12,11 @@ import GoogleProvider from 'next-auth/providers/google';
 import TwitterProvider from 'next-auth/providers/twitter';
 
 import { notifyAdminsOfNewUser } from './admin-notifications';
-import { 
-  clearFailedLoginAttempts, 
-  isAccountLocked, 
+import {
+  clearFailedLoginAttempts,
+  isAccountLocked,
   recordFailedLoginAttempt} from './auth-security';
+import { createDefaultProject } from './default-project-creation';
 import log from './logger';
 import { sendWelcomeEmail } from './welcome-emails';
 
@@ -27,7 +28,7 @@ declare module 'next-auth' {
 }
 
 import { db } from '@/db';
-import { accounts, sessions, users, verificationTokens } from '@/db/schema';
+import { accounts, sessions, users, verificationTokens, projectsTable, profilesTable } from '@/db/schema';
 
 // Custom adapter that extends DrizzleAdapter to ensure IDs are properly generated
 const createCustomAdapter = () => {
@@ -260,6 +261,22 @@ export const authOptions: NextAuthOptions = {
             });
             
             if (newUser) {
+              // Create default project and workspace for new user
+              try {
+                const defaultProject = await createDefaultProject(newUser.id);
+                log.info('Created default project for new user', {
+                  email: newUser.email,
+                  projectUuid: defaultProject.uuid,
+                  userId: newUser.id,
+                });
+              } catch (error) {
+                log.error('Failed to create default project for new user', error instanceof Error ? error : undefined, {
+                  email: newUser.email,
+                  userId: newUser.id,
+                });
+                // Don't fail the sign-in if project creation fails
+              }
+
               // Notify admins about new OAuth signup
               await notifyAdminsOfNewUser({
                 name: newUser.name || 'Unknown',
@@ -267,7 +284,7 @@ export const authOptions: NextAuthOptions = {
                 id: newUser.id,
                 source: account?.provider as 'google' | 'github' | 'twitter',
               });
-              
+
               // Send welcome email to new OAuth user
               await sendWelcomeEmail({
                 name: newUser.name || 'User',

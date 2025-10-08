@@ -5,12 +5,25 @@ import { db } from '@/db';
 import { profilesTable, projectsTable } from '@/db/schema';
 import { analyticsCache, getCacheKey } from '@/lib/analytics-cache';
 import { getAuthSession } from '@/lib/auth';
+import log from '@/lib/logger';
 import { rateLimiter } from '@/lib/rate-limiter';
 
 /**
  * Higher-order function for analytics endpoints
  * Centralizes authentication, rate limiting, validation, and error handling
  */
+
+// Stable serialization for cache keys to prevent collisions with complex objects
+function stableStringify(obj: unknown): string {
+  if (obj === null) return 'null';
+  if (obj === undefined) return 'undefined';
+  if (typeof obj !== 'object') return String(obj);
+  if (Array.isArray(obj)) {
+    return '[' + obj.map(item => stableStringify(item)).join(',') + ']';
+  }
+  const keys = Object.keys(obj as object).sort();
+  return '{' + keys.map(key => `"${key}":${stableStringify((obj as any)[key])}`).join(',') + '}';
+}
 
 // Type definitions
 type ParamsParser<Args extends any[], P> = (...args: Args) => P;
@@ -60,6 +73,7 @@ export function withAnalytics<Args extends any[], P, R>(
   } = {}
 ) {
   return async (...args: Args): Promise<AnalyticsResult<R>> => {
+    let userId: string | undefined;
     try {
       // 1. Parse and validate inputs
       const params = parse(...args);
@@ -69,7 +83,7 @@ export function withAnalytics<Args extends any[], P, R>(
       if (!session?.user?.id) {
         return { success: false, error: 'Unauthorized' };
       }
-      const userId = session.user.id;
+      userId = session.user.id;
 
       // 3. Apply rate limiting first (before expensive operations)
       const { requests = 30, window = 60 } = options.rateLimit || {};
@@ -101,15 +115,32 @@ export function withAnalytics<Args extends any[], P, R>(
       if (options.cache?.enabled) {
         if (options.cache.keyGenerator) {
           cacheKey = options.cache.keyGenerator(params);
-        } else {
-          // Default cache key generation - includes userId for tenant isolation
-          const paramsObj = params as any;
-          if (paramsObj.profileUuid && paramsObj.period) {
+        } else if (params && typeof params === 'object') {
+          const paramsObj = params as Record<string, unknown>;
+          const profileUuidValue = typeof paramsObj.profileUuid === 'string' ? paramsObj.profileUuid : undefined;
+
+          if (profileUuidValue) {
+            const serializedParams = Object.entries(paramsObj)
+              .filter(([key]) => key !== 'profileUuid')
+              .filter(([, value]) => value !== undefined)
+              .map(([key, value]) => {
+                if (value === null) {
+                  return `${key}=null`;
+                }
+                if (typeof value === 'object') {
+                  // Use stable serialization for objects to prevent cache collisions
+                  return `${key}=${encodeURIComponent(stableStringify(value))}`;
+                }
+                return `${key}=${encodeURIComponent(String(value))}`;
+              })
+              .sort()
+              .join('&') || 'default';
+
             cacheKey = getCacheKey(
               handler.name || 'analytics',
-              userId,  // Include userId for security - ensures cache isolation per user
-              paramsObj.profileUuid,
-              paramsObj.period
+              userId,
+              profileUuidValue,
+              serializedParams
             );
           }
         }
@@ -134,7 +165,10 @@ export function withAnalytics<Args extends any[], P, R>(
 
     } catch (error) {
       // 6. Handle errors uniformly
-      console.error('Analytics error:', error);
+      log.error('Analytics error occurred', error instanceof Error ? error : undefined, {
+        handler: handler.name || 'unknown',
+        userId,
+      });
 
       if (error instanceof z.ZodError) {
         return {

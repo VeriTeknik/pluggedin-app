@@ -28,6 +28,27 @@ const AiSearchAnswer = dynamic(
 
 import dynamic from 'next/dynamic';
 
+// Define proper types for recent documents and tool calls
+interface RecentDocument {
+  uuid: string;
+  name: string;
+  description?: string;
+  tags?: string[] | string; // Can be array or comma-separated string
+  created_at: string;
+  size?: number;
+  source?: string;
+}
+
+interface RecentToolCall {
+  id: string;
+  tool_name: string;
+  server_name: string;
+  arguments?: string;
+  created_at: string;
+  status?: string;
+  duration?: number;
+}
+
 interface DashboardTabProps {
   profileUuid: string;
   projectUuid: string;
@@ -100,18 +121,38 @@ export function DashboardTab({ profileUuid, projectUuid, period }: DashboardTabP
     activityHeatmap: metrics?.activityHeatmap || [],
   }), [metrics]);
 
+  // Helper function to sanitize search query
+  const sanitizeSearchQuery = (query: string): string => {
+    // Basic sanitization - remove special characters that could cause issues
+    return query.replace(/[<>\"']/g, '').substring(0, 200);
+  };
+
   // Filter recent documents and tool calls based on search query when AI search is disabled
   const filteredRecentDocs = useMemo(() => {
     if (!recentDocs?.data || aiSearchEnabled || !searchQuery) {
       return recentDocs?.data || [];
     }
 
-    const query = searchQuery.toLowerCase();
-    return recentDocs.data.filter((doc: any) =>
-      doc.name?.toLowerCase().includes(query) ||
-      doc.description?.toLowerCase().includes(query) ||
-      doc.tags?.toLowerCase().includes(query)
-    );
+    const query = sanitizeSearchQuery(searchQuery).toLowerCase();
+    return (recentDocs.data as RecentDocument[]).filter((doc) => {
+      // Check name
+      const matchesName = doc.name?.toLowerCase().includes(query);
+
+      // Check description
+      const matchesDescription = doc.description?.toLowerCase().includes(query);
+
+      // Check tags - handle both array and string formats
+      let matchesTags = false;
+      if (doc.tags) {
+        if (Array.isArray(doc.tags)) {
+          matchesTags = doc.tags.some(tag => tag.toLowerCase().includes(query));
+        } else if (typeof doc.tags === 'string') {
+          matchesTags = doc.tags.toLowerCase().includes(query);
+        }
+      }
+
+      return matchesName || matchesDescription || matchesTags;
+    });
   }, [recentDocs?.data, searchQuery, aiSearchEnabled]);
 
   const filteredRecentCalls = useMemo(() => {
@@ -119,8 +160,8 @@ export function DashboardTab({ profileUuid, projectUuid, period }: DashboardTabP
       return recentCalls?.data || [];
     }
 
-    const query = searchQuery.toLowerCase();
-    return recentCalls.data.filter((call: any) =>
+    const query = sanitizeSearchQuery(searchQuery).toLowerCase();
+    return (recentCalls.data as RecentToolCall[]).filter((call) =>
       call.tool_name?.toLowerCase().includes(query) ||
       call.server_name?.toLowerCase().includes(query) ||
       call.arguments?.toLowerCase().includes(query)

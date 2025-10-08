@@ -4,10 +4,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { users, verificationTokens } from '@/db/schema';
+import { users, verificationTokens, projectsTable, profilesTable } from '@/db/schema';
+import { eq } from 'drizzle-orm';
 import { notifyAdminsOfNewUser } from '@/lib/admin-notifications';
 import { createErrorResponse, ErrorResponses } from '@/lib/api-errors';
+import { createDefaultProject } from '@/lib/default-project-creation';
 import { generateVerificationEmail, sendEmail } from '@/lib/email';
+import log from '@/lib/logger';
 import { RateLimiters } from '@/lib/rate-limiter';
 import { sendWelcomeEmail } from '@/lib/welcome-emails';
 
@@ -150,7 +153,23 @@ export async function POST(req: NextRequest) {
       created_at: new Date(),
       updated_at: new Date(),
     });
-    
+
+    // Create default project and workspace for new user
+    try {
+      const defaultProject = await createDefaultProject(userId);
+      log.info('Created default project for new user', {
+        email: data.email,
+        projectUuid: defaultProject.uuid,
+        userId,
+      });
+    } catch (error) {
+      log.error('Failed to create default project for new user', error instanceof Error ? error : undefined, {
+        email: data.email,
+        userId,
+      });
+      // Don't fail the registration if project creation fails
+    }
+
     // Send admin notification using the new centralized service
     await notifyAdminsOfNewUser({
       name: data.name,

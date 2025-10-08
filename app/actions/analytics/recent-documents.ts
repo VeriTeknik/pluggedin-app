@@ -1,9 +1,10 @@
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, desc } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { docsTable } from '@/db/schema';
 
 import { analyticsSchemas, withAnalytics } from '../analytics-hof';
+import { buildDocFilterWithProjectLookup } from './shared-helpers';
 
 export interface RecentDocument {
   uuid: string;
@@ -34,12 +35,11 @@ export const getRecentDocuments = withAnalytics(
 
   // Handler with business logic
   async ({ profileUuid, limit, projectUuid }) => {
-    // Get recent documents
-    // Use projectUuid for filtering if available (documents are stored with project_uuid)
-    // Fall back to profile_uuid for backwards compatibility
-    const whereCondition = projectUuid
-      ? eq(docsTable.project_uuid, projectUuid)
-      : eq(docsTable.profile_uuid, profileUuid);
+    // Use shared helper to build document filter conditions
+    const { conditions } = await buildDocFilterWithProjectLookup({
+      projectUuid,
+      profileUuid,
+    });
 
     const recentDocs = await db
       .select({
@@ -52,7 +52,7 @@ export const getRecentDocuments = withAnalytics(
         ai_metadata: docsTable.ai_metadata,
       })
       .from(docsTable)
-      .where(whereCondition)
+      .where(and(...conditions))
       .orderBy(desc(docsTable.created_at))
       .limit(limit);
 

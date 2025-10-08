@@ -5,15 +5,18 @@ import {
   docsTable,
   mcpActivityTable,
 } from '@/db/schema';
+import log from '@/lib/logger';
 import { ragService } from '@/lib/rag-service';
 
 import { analyticsSchemas, type TimePeriod,withAnalytics } from '../analytics-hof';
 import { getDateCutoff } from './shared';
+import { buildDocFilterWithProjectLookup } from './shared-helpers';
 
 export interface RagAnalytics {
   totalDocuments: number;
   aiGeneratedCount: number;
   uploadedCount: number;
+  apiOriginatedCount: number;
   storageBreakdown: {
     files: number;
     ragVectors: number;
@@ -39,6 +42,7 @@ export const getRagAnalytics = withAnalytics(
     profileUuid: analyticsSchemas.profileUuid.parse(profileUuid),
     period: analyticsSchemas.period.parse(period),
     projectUuid,
+    cacheVersion: 'rag-upload-stats-v2',
   }),
 
   // Rate limit key
@@ -47,39 +51,65 @@ export const getRagAnalytics = withAnalytics(
   // Handler with business logic
   async ({ profileUuid, period, projectUuid }) => {
     const cutoff = getDateCutoff(period);
-    // Use projectUuid for filtering if available (documents are stored with project_uuid)
-    // Fall back to profile_uuid for backwards compatibility
-    const docConditions = projectUuid
-      ? [eq(docsTable.project_uuid, projectUuid)]
-      : [eq(docsTable.profile_uuid, profileUuid)];
 
-    if (cutoff) {
-      docConditions.push(gte(docsTable.created_at, cutoff));
-    }
+    // Use shared helper to build document filter conditions
+    const { conditions: docConditions } = await buildDocFilterWithProjectLookup({
+      projectUuid,
+      profileUuid,
+      cutoff: cutoff ?? undefined,
+    });
 
-    // Get document counts by source
-    const [docStats] = await db
+    // Use aggregated SQL query instead of fetching all rows and reducing in JS
+    const [documentStats] = await db
       .select({
-        total: count(),
-        aiGenerated: sql<number>`COUNT(CASE WHEN ${docsTable.source} = 'ai_generated' THEN 1 END)`,
-        uploaded: sql<number>`COUNT(CASE WHEN ${docsTable.source} = 'upload' THEN 1 END)`,
+        totalDocuments: count(),
+        aiGeneratedCount: sql<number>`
+          COUNT(
+            CASE WHEN COALESCE(LOWER(${docsTable.source}), 'upload') = 'ai_generated'
+            THEN 1 END
+          )
+        `,
+        uploadedCount: sql<number>`
+          COUNT(
+            CASE WHEN COALESCE(LOWER(${docsTable.source}), 'upload') IN ('upload', 'api')
+            THEN 1 END
+          )
+        `,
+        apiOriginatedCount: sql<number>`
+          COUNT(
+            CASE WHEN LOWER(${docsTable.source}) = 'api'
+            THEN 1 END
+          )
+        `,
         totalSize: sql<number>`COALESCE(SUM(${docsTable.file_size}), 0)`,
       })
       .from(docsTable)
       .where(and(...docConditions));
 
+    const normalizedStats = {
+      totalDocuments: Number(documentStats?.totalDocuments || 0),
+      aiGeneratedCount: Number(documentStats?.aiGeneratedCount || 0),
+      uploadedCount: Number(documentStats?.uploadedCount || 0),
+      apiOriginatedCount: Number(documentStats?.apiOriginatedCount || 0),
+      totalSize: Number(documentStats?.totalSize || 0),
+    };
+
     // Get RAG storage from the service
     let ragStorage = 0;
+    // Use projectUuid if available, otherwise fall back to profileUuid for compatibility
+    const ragIdentifier = projectUuid || profileUuid;
     try {
-      // Use projectUuid if available, otherwise fall back to profileUuid for compatibility
-      const ragIdentifier = projectUuid || profileUuid;
       const ragStats = await ragService.getStorageStats(ragIdentifier);
       if (ragStats.success && ragStats.estimatedStorageMb !== undefined) {
         // Convert MB to bytes to match file storage units
         ragStorage = Math.round(ragStats.estimatedStorageMb * 1024 * 1024);
       }
     } catch (error) {
-      console.error('Error fetching RAG storage:', error);
+      log.error('Failed to fetch RAG storage stats', error instanceof Error ? error : undefined, {
+        ragIdentifier,
+        profileUuid,
+        projectUuid,
+      });
       // Continue without failing the entire request
     }
 
@@ -163,11 +193,12 @@ export const getRagAnalytics = withAnalytics(
     }));
 
     return {
-      totalDocuments: docStats?.total || 0,
-      aiGeneratedCount: Number(docStats?.aiGenerated || 0),
-      uploadedCount: Number(docStats?.uploaded || 0),
+      totalDocuments: normalizedStats.totalDocuments,
+      aiGeneratedCount: normalizedStats.aiGeneratedCount,
+      uploadedCount: normalizedStats.uploadedCount,
+      apiOriginatedCount: normalizedStats.apiOriginatedCount,
       storageBreakdown: {
-        files: Number(docStats?.totalSize || 0),
+        files: normalizedStats.totalSize,
         ragVectors: ragStorage, // Storage in bytes from RAG service
       },
       documentsByModel,

@@ -16,8 +16,8 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { Highlight, themes } from 'prism-react-renderer';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getDocumentVersionContent } from '@/app/actions/document-versions';
@@ -47,6 +47,65 @@ const PDFViewer = lazy(() => import('./PDFViewer'));
 
 // Module-level cache for dynamic imports
 const importCache: Record<string, any> = {};
+
+const SAFELINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
+
+const sanitizeMarkdownUri = (rawUri?: string) => {
+  if (!rawUri) return '';
+
+  let uri = rawUri.trim();
+  if (uri === '') {
+    return '';
+  }
+
+  // CRITICAL SECURITY FIX: Decode URI to catch encoded schemes
+  // This prevents bypasses like javascript%3Aalert(1) or javasc%72ipt:alert()
+  let decodedUri = uri;
+  try {
+    decodedUri = decodeURIComponent(uri);
+  } catch (_e) {
+    // If decoding fails, the URI is malformed - block it
+    console.warn('Blocked malformed URI:', uri);
+    return '';
+  }
+
+  // Allow relative paths and anchors (check on original URI)
+  if (uri.startsWith('#') || uri.startsWith('/') || uri.startsWith('./') || uri.startsWith('../')) {
+    return rawUri; // Return original for relative paths
+  }
+
+  // Restrict protocol-relative URLs - only allow https (check on original URI)
+  if (uri.startsWith('//')) {
+    // Convert to explicit https to prevent protocol manipulation
+    return `https:${uri}`;
+  }
+
+  // Check for explicit protocol on DECODED URI to catch encoded schemes
+  const protocolMatch = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.exec(decodedUri);
+  if (!protocolMatch) {
+    // No protocol found - treat as relative path
+    return rawUri; // Return original
+  }
+
+  const protocol = protocolMatch[0].toLowerCase();
+
+  // Block dangerous protocols (javascript:, data:, vbscript:)
+  if (protocol.includes('javascript') || protocol.includes('data') || protocol.includes('vbscript')) {
+    console.warn('Blocked dangerous protocol:', protocol);
+    return '';
+  }
+
+  // Allow safe protocols
+  if (SAFELINK_PROTOCOLS.has(protocol)) {
+    return rawUri; // Return original if safe
+  }
+
+  // Block any other unsafe protocols
+  console.warn('Blocked unsafe protocol:', protocol);
+  return '';
+};
+
+const markdownUriTransformer = (uri: string) => sanitizeMarkdownUri(uri);
 
 const getDynamicImport = async (key: string, importFn: () => Promise<any>) => {
   if (!importCache[key]) {
@@ -573,7 +632,9 @@ export const DocumentPreview = memo(function DocumentPreview({
               {fileTypeInfo.isMarkdown ? (
                 <Suspense fallback={<div>Loading...</div>}>
                   <div className="prose dark:prose-invert max-w-none">
-                    <ReactMarkdown>
+                    <ReactMarkdown
+                      urlTransform={markdownUriTransformer}
+                    >
                       {state.versions.versionContent}
                     </ReactMarkdown>
                   </div>
@@ -719,7 +780,11 @@ export const DocumentPreview = memo(function DocumentPreview({
               <div className="p-6">
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   <Suspense fallback={<div>Loading...</div>}>
-                    <ReactMarkdown>{state.content.textContent}</ReactMarkdown>
+                    <ReactMarkdown
+                      urlTransform={markdownUriTransformer}
+                    >
+                      {state.content.textContent}
+                    </ReactMarkdown>
                   </Suspense>
                 </div>
               </div>

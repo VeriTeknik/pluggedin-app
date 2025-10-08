@@ -9,6 +9,7 @@ import {
 
 import { analyticsSchemas, type TimePeriod,withAnalytics } from '../analytics-hof';
 import { calculateTrend,getComparisonCutoff, getDateCutoff } from './shared';
+import { buildDocFilterWithProjectLookup } from './shared-helpers';
 
 export interface OverviewMetrics {
   totalToolCalls: number;
@@ -46,7 +47,7 @@ export const getOverviewMetrics = withAnalytics(
     const cutoff = getDateCutoff(period);
     const comparisonPeriod = getComparisonCutoff(period);
 
-    // Build conditions
+    // Build conditions for activity tracking
     const currentConditions = [eq(mcpActivityTable.profile_uuid, profileUuid)];
     if (cutoff) {
       currentConditions.push(gte(mcpActivityTable.created_at, cutoff));
@@ -87,15 +88,12 @@ export const getOverviewMetrics = withAnalytics(
       previousRagSearches = Number(previousMetrics?.ragSearches || 0);
     }
 
-    // Get document stats
-    // Use projectUuid for filtering if available (documents are stored with project_uuid)
-    // Fall back to profile_uuid for backwards compatibility
-    const docConditions = projectUuid
-      ? [eq(docsTable.project_uuid, projectUuid)]
-      : [eq(docsTable.profile_uuid, profileUuid)];
-    if (cutoff) {
-      docConditions.push(gte(docsTable.created_at, cutoff));
-    }
+    // Get document stats using shared helper
+    const { projectUserId, conditions: docConditions } = await buildDocFilterWithProjectLookup({
+      projectUuid,
+      profileUuid,
+      cutoff: cutoff ?? undefined,
+    });
 
     const [docStats] = await db
       .select({
@@ -111,20 +109,20 @@ export const getOverviewMetrics = withAnalytics(
     // Get previous document count for trend
     let previousDocuments = 0;
     if (period !== 'all') {
-      const prevDocConditions = projectUuid
-        ? eq(docsTable.project_uuid, projectUuid)
-        : eq(docsTable.profile_uuid, profileUuid);
+      const { conditions: prevDocConditions } = await buildDocFilterWithProjectLookup({
+        projectUuid,
+        profileUuid,
+        cutoff: comparisonPeriod.start,
+      });
+
+      // Add upper bound for comparison period
+      prevDocConditions.push(sql`${docsTable.created_at} < ${comparisonPeriod.end}`);
 
       const [prevDocStats] = await db
         .select({ total: count() })
         .from(docsTable)
-        .where(
-          and(
-            prevDocConditions,
-            gte(docsTable.created_at, comparisonPeriod.start),
-            sql`${docsTable.created_at} < ${comparisonPeriod.end}`
-          )
-        );
+        .where(and(...prevDocConditions));
+
       previousDocuments = prevDocStats?.total || 0;
     }
 
