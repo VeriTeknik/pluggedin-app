@@ -1,9 +1,10 @@
-import { and, desc, eq, gte, or, isNull } from 'drizzle-orm';
+import { and, desc } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { docsTable, projectsTable } from '@/db/schema';
+import { docsTable } from '@/db/schema';
 
 import { analyticsSchemas, withAnalytics } from '../analytics-hof';
+import { buildDocFilterWithProjectLookup } from './shared-helpers';
 
 export interface RecentDocument {
   uuid: string;
@@ -34,35 +35,11 @@ export const getRecentDocuments = withAnalytics(
 
   // Handler with business logic
   async ({ profileUuid, limit, projectUuid }) => {
-    // Get user_id from project if projectUuid is provided (for legacy document support)
-    let projectUserId: string | null = null;
-    if (projectUuid) {
-      const [project] = await db
-        .select({ user_id: projectsTable.user_id })
-        .from(projectsTable)
-        .where(eq(projectsTable.uuid, projectUuid));
-      projectUserId = project?.user_id || null;
-    }
-
-    // Build where condition to include legacy documents with NULL project_uuid
-    let whereCondition: any;
-
-    if (projectUuid && projectUserId) {
-      // Include documents with the project_uuid OR legacy documents (NULL project_uuid) for this user
-      whereCondition = or(
-        eq(docsTable.project_uuid, projectUuid),
-        and(
-          isNull(docsTable.project_uuid),
-          eq(docsTable.user_id, projectUserId)
-        )
-      );
-    } else if (projectUuid) {
-      // Fallback if project not found (shouldn't happen with valid projectUuid)
-      whereCondition = eq(docsTable.project_uuid, projectUuid);
-    } else {
-      // Fall back to profile_uuid for backwards compatibility
-      whereCondition = eq(docsTable.profile_uuid, profileUuid);
-    }
+    // Use shared helper to build document filter conditions
+    const { conditions } = await buildDocFilterWithProjectLookup({
+      projectUuid,
+      profileUuid,
+    });
 
     const recentDocs = await db
       .select({
@@ -75,7 +52,7 @@ export const getRecentDocuments = withAnalytics(
         ai_metadata: docsTable.ai_metadata,
       })
       .from(docsTable)
-      .where(whereCondition)
+      .where(and(...conditions))
       .orderBy(desc(docsTable.created_at))
       .limit(limit);
 

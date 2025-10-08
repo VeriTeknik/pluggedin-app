@@ -1,15 +1,15 @@
-import { and, count, desc, eq, gte, sql, or, isNull } from 'drizzle-orm';
+import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import {
   docsTable,
   mcpActivityTable,
   mcpServersTable,
-  projectsTable,
 } from '@/db/schema';
 
 import { analyticsSchemas, type TimePeriod,withAnalytics } from '../analytics-hof';
 import { calculateTrend,getComparisonCutoff, getDateCutoff } from './shared';
+import { buildDocFilterWithProjectLookup } from './shared-helpers';
 
 export interface OverviewMetrics {
   totalToolCalls: number;
@@ -47,17 +47,7 @@ export const getOverviewMetrics = withAnalytics(
     const cutoff = getDateCutoff(period);
     const comparisonPeriod = getComparisonCutoff(period);
 
-    // Get user_id from project if projectUuid is provided (for legacy document support)
-    let projectUserId: string | null = null;
-    if (projectUuid) {
-      const [project] = await db
-        .select({ user_id: projectsTable.user_id })
-        .from(projectsTable)
-        .where(eq(projectsTable.uuid, projectUuid));
-      projectUserId = project?.user_id || null;
-    }
-
-    // Build conditions
+    // Build conditions for activity tracking
     const currentConditions = [eq(mcpActivityTable.profile_uuid, profileUuid)];
     if (cutoff) {
       currentConditions.push(gte(mcpActivityTable.created_at, cutoff));
@@ -98,32 +88,12 @@ export const getOverviewMetrics = withAnalytics(
       previousRagSearches = Number(previousMetrics?.ragSearches || 0);
     }
 
-    // Get document stats
-    // Build document conditions to include legacy documents with NULL project_uuid
-    let docConditions: any[] = [];
-
-    if (projectUuid && projectUserId) {
-      // Include documents with the project_uuid OR legacy documents (NULL project_uuid) for this user
-      docConditions.push(
-        or(
-          eq(docsTable.project_uuid, projectUuid),
-          and(
-            isNull(docsTable.project_uuid),
-            eq(docsTable.user_id, projectUserId)
-          )
-        )
-      );
-    } else if (projectUuid) {
-      // Fallback if project not found (shouldn't happen with valid projectUuid)
-      docConditions.push(eq(docsTable.project_uuid, projectUuid));
-    } else {
-      // Fall back to profile_uuid for backwards compatibility
-      docConditions.push(eq(docsTable.profile_uuid, profileUuid));
-    }
-
-    if (cutoff) {
-      docConditions.push(gte(docsTable.created_at, cutoff));
-    }
+    // Get document stats using shared helper
+    const { projectUserId, conditions: docConditions } = await buildDocFilterWithProjectLookup({
+      projectUuid,
+      profileUuid,
+      cutoff: cutoff ?? undefined,
+    });
 
     const [docStats] = await db
       .select({
@@ -139,32 +109,20 @@ export const getOverviewMetrics = withAnalytics(
     // Get previous document count for trend
     let previousDocuments = 0;
     if (period !== 'all') {
-      let prevDocConditions: any;
+      const { conditions: prevDocConditions } = await buildDocFilterWithProjectLookup({
+        projectUuid,
+        profileUuid,
+        cutoff: comparisonPeriod.start,
+      });
 
-      if (projectUuid && projectUserId) {
-        prevDocConditions = or(
-          eq(docsTable.project_uuid, projectUuid),
-          and(
-            isNull(docsTable.project_uuid),
-            eq(docsTable.user_id, projectUserId)
-          )
-        );
-      } else if (projectUuid) {
-        prevDocConditions = eq(docsTable.project_uuid, projectUuid);
-      } else {
-        prevDocConditions = eq(docsTable.profile_uuid, profileUuid);
-      }
+      // Add upper bound for comparison period
+      prevDocConditions.push(sql`${docsTable.created_at} < ${comparisonPeriod.end}`);
 
       const [prevDocStats] = await db
         .select({ total: count() })
         .from(docsTable)
-        .where(
-          and(
-            prevDocConditions,
-            gte(docsTable.created_at, comparisonPeriod.start),
-            sql`${docsTable.created_at} < ${comparisonPeriod.end}`
-          )
-        );
+        .where(and(...prevDocConditions));
+
       previousDocuments = prevDocStats?.total || 0;
     }
 

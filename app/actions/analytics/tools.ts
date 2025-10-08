@@ -168,6 +168,7 @@ export const getToolAnalytics = withAnalytics(
     }));
 
     // Get activity heatmap (last 12 months)
+    // PERFORMANCE: Limited to 365 days max to prevent memory issues
     const heatmapCutoff = new Date();
     heatmapCutoff.setMonth(heatmapCutoff.getMonth() - 12);
 
@@ -184,7 +185,8 @@ export const getToolAnalytics = withAnalytics(
         )
       )
       .groupBy(sql`DATE(${mcpActivityTable.created_at})`)
-      .orderBy(sql`DATE(${mcpActivityTable.created_at})`);
+      .orderBy(sql`DATE(${mcpActivityTable.created_at})`)
+      .limit(365);  // Explicit limit for safety
 
     const activityHeatmap = heatmapData.map(d => ({
       date: d.date,

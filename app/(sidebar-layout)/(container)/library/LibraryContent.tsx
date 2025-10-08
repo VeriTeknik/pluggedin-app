@@ -10,11 +10,10 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import { Clock, Download, Eye, Loader2, Trash2, Upload } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useSearchParams, useRouter } from 'next/navigation';
-
 import dynamic from 'next/dynamic';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { RestoreConfirmationDialog } from '@/components/documents/restore-confirmation-dialog';
 import { VersionDiffViewer } from '@/components/documents/version-diff-viewer';
@@ -86,7 +85,7 @@ export default function LibraryContent() {
   const [compareVersions, setCompareVersions] = useState<[number, number]>([0, 0]);
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
   const [restoringVersionNumber, setRestoringVersionNumber] = useState<number>(0);
-  const { restoreVersion, isRestoring } = useRestoreVersion();
+  const { restoreVersion, isRestoring: _isRestoring } = useRestoreVersion();
 
   // AI Search state
   const [aiSearchEnabled, setAiSearchEnabled] = useState(false);
@@ -258,29 +257,52 @@ export default function LibraryContent() {
     setVersionDiffOpen(true);
   }, []);
 
+  // PERFORMANCE OPTIMIZATION: Create O(1) lookup maps for documents
+  const docLookupMaps = useMemo(() => {
+    const uuidMap = new Map<string, Doc>();
+    const ragIdMap = new Map<string, Doc>();
+
+    docs.forEach(doc => {
+      if (doc.uuid) {
+        uuidMap.set(doc.uuid, doc);
+      }
+      if (doc.rag_document_id) {
+        ragIdMap.set(doc.rag_document_id, doc);
+      }
+    });
+
+    return { uuidMap, ragIdMap };
+  }, [docs]);
+
   const handleDocumentIdClick = useCallback((documentId: string) => {
-    // First try to find by exact UUID (from documents array)
-    const doc = docs.find(d => d.uuid === documentId);
+    // SECURITY FIX: Validate document ID format
+    if (!documentId || typeof documentId !== 'string') {
+      console.warn('Invalid document ID provided');
+      return;
+    }
+
+    // UUID format validation (standard UUID v4)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const isValidUuid = uuidRegex.test(documentId);
+
+    // If not a valid UUID, check if it's a valid alphanumeric ID (for RAG IDs)
+    const isValidRagId = /^[a-zA-Z0-9_-]+$/.test(documentId);
+
+    if (!isValidUuid && !isValidRagId) {
+      console.warn('Document ID contains invalid characters:', documentId);
+      return;
+    }
+
+    // PERFORMANCE: Use O(1) Map lookup instead of O(n) array search
+    const doc = docLookupMaps.uuidMap.get(documentId) ||
+                docLookupMaps.ragIdMap.get(documentId);
+
     if (doc) {
       handlePreview(doc);
     } else {
-      // If not found by UUID, try by RAG document ID
-      const ragDoc = docs.find(d => d.rag_document_id === documentId);
-      if (ragDoc) {
-        handlePreview(ragDoc);
-      } else {
-        // If not found by rag_document_id, try to match by partial ID
-        // This handles cases where the documentId is a Milvus document_id
-        const matchingDoc = docs.find(d =>
-          d.rag_document_id?.includes(documentId) ||
-          d.uuid?.includes(documentId)
-        );
-        if (matchingDoc) {
-          handlePreview(matchingDoc);
-        }
-      }
+      console.warn('Document not found for ID:', documentId);
     }
-  }, [docs, handlePreview]);
+  }, [docLookupMaps, handlePreview]);
 
   // Handle search input based on AI mode
   const handleSearchChange = useCallback((value: string) => {
@@ -305,39 +327,51 @@ export default function LibraryContent() {
     }
   }, [clearAiAnswer]);
 
+  // Track processed document IDs to prevent duplicate processing
+  const processedDocIds = useRef<Set<string>>(new Set());
+
   // Handle doc query parameter from URL (e.g., from analytics page)
   useEffect(() => {
     const docId = searchParams.get('doc');
-    if (docId && docs.length > 0 && !isLoading) {
-      // Try to find the document by UUID, rag_document_id, or partial match
-      const targetDoc = docs.find(d =>
-        d.uuid === docId ||
-        d.rag_document_id === docId ||
-        d.rag_document_id?.includes(docId) ||
-        d.uuid?.includes(docId)
-      );
+    if (!docId || docs.length === 0 || isLoading) return;
 
-      if (targetDoc) {
-        // Open the document preview
-        setPreviewDoc(targetDoc);
-        setPreviewOpen(true);
+    // Skip if already processed
+    if (processedDocIds.current.has(docId)) return;
 
-        // Clear the URL parameter to avoid re-opening on navigation
-        const newUrl = window.location.pathname;
-        router.replace(newUrl, { scroll: false });
-      }
+    // SECURITY FIX: Validate document ID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const isValidUuid = uuidRegex.test(docId);
+    const isValidRagId = /^[a-zA-Z0-9_-]+$/.test(docId);
+
+    if (!isValidUuid && !isValidRagId) {
+      console.warn('Invalid document ID in URL:', docId);
+      // Clear invalid parameter
+      router.replace(window.location.pathname, { scroll: false });
+      return;
     }
-  }, [docs, isLoading, searchParams, router]);
 
-  // Update effect to sync search states
-  useEffect(() => {
-    if (aiSearchEnabled) {
-      setGlobalFilter('');
+    // PERFORMANCE: Use O(1) Map lookup instead of O(n) array search
+    const targetDoc = docLookupMaps.uuidMap.get(docId) ||
+                      docLookupMaps.ragIdMap.get(docId);
+
+    if (targetDoc) {
+      // Mark as processed
+      processedDocIds.current.add(docId);
+
+      // Open the document preview
+      setPreviewDoc(targetDoc);
+      setPreviewOpen(true);
+
+      // Clear the URL parameter to avoid re-opening on navigation
+      router.replace(window.location.pathname, { scroll: false });
     } else {
-      setAiSearchQuery('');
-      clearAiAnswer();
+      console.warn('Document not found for URL parameter:', docId);
+      // Clear invalid parameter
+      router.replace(window.location.pathname, { scroll: false });
     }
-  }, [aiSearchEnabled, clearAiAnswer]);
+  }, [docs, isLoading, searchParams, router, docLookupMaps]);
+
+  // Note: Search state sync is handled in handleAiSearchToggle, no need for additional effect
 
   // Table columns configuration
   const columns = useMemo(() => [

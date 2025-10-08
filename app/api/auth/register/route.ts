@@ -8,7 +8,9 @@ import { users, verificationTokens, projectsTable, profilesTable } from '@/db/sc
 import { eq } from 'drizzle-orm';
 import { notifyAdminsOfNewUser } from '@/lib/admin-notifications';
 import { createErrorResponse, ErrorResponses } from '@/lib/api-errors';
+import { createDefaultProject } from '@/lib/default-project-creation';
 import { generateVerificationEmail, sendEmail } from '@/lib/email';
+import log from '@/lib/logger';
 import { RateLimiters } from '@/lib/rate-limiter';
 import { sendWelcomeEmail } from '@/lib/welcome-emails';
 
@@ -154,39 +156,17 @@ export async function POST(req: NextRequest) {
 
     // Create default project and workspace for new user
     try {
-      const defaultProject = await db.transaction(async (tx) => {
-        // Create the project
-        const [project] = await tx
-          .insert(projectsTable)
-          .values({
-            name: 'Default Hub',
-            user_id: userId,
-            active_profile_uuid: null, // Will be updated after creating profile
-          })
-          .returning();
-
-        // Create the default workspace/profile
-        const [profile] = await tx
-          .insert(profilesTable)
-          .values({
-            name: 'Default Workspace',
-            project_uuid: project.uuid,
-          })
-          .returning();
-
-        // Update project with the active profile UUID
-        const [updatedProject] = await tx
-          .update(projectsTable)
-          .set({ active_profile_uuid: profile.uuid })
-          .where(eq(projectsTable.uuid, project.uuid))
-          .returning();
-
-        return updatedProject;
+      const defaultProject = await createDefaultProject(userId);
+      log.info('Created default project for new user', {
+        email: data.email,
+        projectUuid: defaultProject.uuid,
+        userId,
       });
-
-      console.log(`Created default project for new user ${data.email}: ${defaultProject.uuid}`);
     } catch (error) {
-      console.error(`Failed to create default project for new user ${data.email}:`, error);
+      log.error('Failed to create default project for new user', error instanceof Error ? error : undefined, {
+        email: data.email,
+        userId,
+      });
       // Don't fail the registration if project creation fails
     }
 
