@@ -1,9 +1,10 @@
-import { and, count, desc, eq, gte, like, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, like, or, sql, isNull } from 'drizzle-orm';
 
 import { db } from '@/db';
 import {
   docsTable,
   mcpActivityTable,
+  projectsTable,
 } from '@/db/schema';
 import { ragService } from '@/lib/rag-service';
 
@@ -39,6 +40,7 @@ export const getRagAnalytics = withAnalytics(
     profileUuid: analyticsSchemas.profileUuid.parse(profileUuid),
     period: analyticsSchemas.period.parse(period),
     projectUuid,
+    cacheVersion: 'rag-upload-stats-v2',
   }),
 
   // Rate limit key
@@ -47,26 +49,74 @@ export const getRagAnalytics = withAnalytics(
   // Handler with business logic
   async ({ profileUuid, period, projectUuid }) => {
     const cutoff = getDateCutoff(period);
-    // Use projectUuid for filtering if available (documents are stored with project_uuid)
-    // Fall back to profile_uuid for backwards compatibility
-    const docConditions = projectUuid
-      ? [eq(docsTable.project_uuid, projectUuid)]
-      : [eq(docsTable.profile_uuid, profileUuid)];
+
+    // Get user_id from project if projectUuid is provided (for legacy document support)
+    let projectUserId: string | null = null;
+    if (projectUuid) {
+      const [project] = await db
+        .select({ user_id: projectsTable.user_id })
+        .from(projectsTable)
+        .where(eq(projectsTable.uuid, projectUuid));
+      projectUserId = project?.user_id || null;
+    }
+
+    // Build document conditions to include legacy documents with NULL project_uuid
+    let docConditions: any[] = [];
+
+    if (projectUuid && projectUserId) {
+      // Include documents with the project_uuid OR legacy documents (NULL project_uuid) for this user
+      docConditions.push(
+        or(
+          eq(docsTable.project_uuid, projectUuid),
+          and(
+            isNull(docsTable.project_uuid),
+            eq(docsTable.user_id, projectUserId)
+          )
+        )
+      );
+    } else if (projectUuid) {
+      // Fallback if project not found (shouldn't happen with valid projectUuid)
+      docConditions.push(eq(docsTable.project_uuid, projectUuid));
+    } else {
+      // Fall back to profile_uuid for backwards compatibility
+      docConditions.push(eq(docsTable.profile_uuid, profileUuid));
+    }
 
     if (cutoff) {
       docConditions.push(gte(docsTable.created_at, cutoff));
     }
 
-    // Get document counts by source
-    const [docStats] = await db
+    // Get documents for aggregation (handle legacy rows with NULL source)
+    const documentStats = await db
       .select({
-        total: count(),
-        aiGenerated: sql<number>`COUNT(CASE WHEN ${docsTable.source} = 'ai_generated' THEN 1 END)`,
-        uploaded: sql<number>`COUNT(CASE WHEN ${docsTable.source} = 'upload' THEN 1 END)`,
-        totalSize: sql<number>`COALESCE(SUM(${docsTable.file_size}), 0)`,
+        source: docsTable.source,
+        fileSize: docsTable.file_size,
       })
       .from(docsTable)
       .where(and(...docConditions));
+
+    const normalizedStats = documentStats.reduce(
+      (acc, doc) => {
+        const normalizedSource = doc.source ? doc.source.toLowerCase() : 'upload';
+
+        acc.totalDocuments += 1;
+        acc.totalSize += doc.fileSize || 0;
+
+        if (normalizedSource === 'ai_generated') {
+          acc.aiGeneratedCount += 1;
+        } else {
+          acc.uploadedCount += 1;
+        }
+
+        return acc;
+      },
+      {
+        totalDocuments: 0,
+        aiGeneratedCount: 0,
+        uploadedCount: 0,
+        totalSize: 0,
+      }
+    );
 
     // Get RAG storage from the service
     let ragStorage = 0;
@@ -163,11 +213,11 @@ export const getRagAnalytics = withAnalytics(
     }));
 
     return {
-      totalDocuments: docStats?.total || 0,
-      aiGeneratedCount: Number(docStats?.aiGenerated || 0),
-      uploadedCount: Number(docStats?.uploaded || 0),
+      totalDocuments: normalizedStats.totalDocuments,
+      aiGeneratedCount: normalizedStats.aiGeneratedCount,
+      uploadedCount: normalizedStats.uploadedCount,
       storageBreakdown: {
-        files: Number(docStats?.totalSize || 0),
+        files: normalizedStats.totalSize,
         ragVectors: ragStorage, // Storage in bytes from RAG service
       },
       documentsByModel,

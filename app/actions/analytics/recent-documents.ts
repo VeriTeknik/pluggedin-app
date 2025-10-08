@@ -1,7 +1,7 @@
-import { and, desc, eq, gte } from 'drizzle-orm';
+import { and, desc, eq, gte, or, isNull } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { docsTable } from '@/db/schema';
+import { docsTable, projectsTable } from '@/db/schema';
 
 import { analyticsSchemas, withAnalytics } from '../analytics-hof';
 
@@ -34,12 +34,35 @@ export const getRecentDocuments = withAnalytics(
 
   // Handler with business logic
   async ({ profileUuid, limit, projectUuid }) => {
-    // Get recent documents
-    // Use projectUuid for filtering if available (documents are stored with project_uuid)
-    // Fall back to profile_uuid for backwards compatibility
-    const whereCondition = projectUuid
-      ? eq(docsTable.project_uuid, projectUuid)
-      : eq(docsTable.profile_uuid, profileUuid);
+    // Get user_id from project if projectUuid is provided (for legacy document support)
+    let projectUserId: string | null = null;
+    if (projectUuid) {
+      const [project] = await db
+        .select({ user_id: projectsTable.user_id })
+        .from(projectsTable)
+        .where(eq(projectsTable.uuid, projectUuid));
+      projectUserId = project?.user_id || null;
+    }
+
+    // Build where condition to include legacy documents with NULL project_uuid
+    let whereCondition: any;
+
+    if (projectUuid && projectUserId) {
+      // Include documents with the project_uuid OR legacy documents (NULL project_uuid) for this user
+      whereCondition = or(
+        eq(docsTable.project_uuid, projectUuid),
+        and(
+          isNull(docsTable.project_uuid),
+          eq(docsTable.user_id, projectUserId)
+        )
+      );
+    } else if (projectUuid) {
+      // Fallback if project not found (shouldn't happen with valid projectUuid)
+      whereCondition = eq(docsTable.project_uuid, projectUuid);
+    } else {
+      // Fall back to profile_uuid for backwards compatibility
+      whereCondition = eq(docsTable.profile_uuid, profileUuid);
+    }
 
     const recentDocs = await db
       .select({

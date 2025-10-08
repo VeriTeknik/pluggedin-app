@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 
 import { createDoc, deleteDoc, getDocs, getProjectStorageUsage } from '@/app/actions/library';
 import { useUploadProgress } from '@/contexts/UploadProgressContext';
@@ -17,6 +17,7 @@ export function useLibrary() {
   const { currentProject } = useProjects();
   const { currentProfile } = useProfiles();
   const { addUpload } = useUploadProgress();
+  const { mutate: globalMutate } = useSWRConfig();
 
   const {
     data: docsResponse,
@@ -74,6 +75,10 @@ export function useLibrary() {
         throw new Error('Not authenticated');
       }
 
+      if (!currentProject) {
+        throw new Error('No active project selected. Please select or create a project first.');
+      }
+
       const formData = new FormData();
       formData.append('file', data.file);
       formData.append('name', data.name);
@@ -96,12 +101,29 @@ export function useLibrary() {
         formData.append('uploadMethod', data.uploadMethod);
       }
 
-      const result = await createDoc(session.user.id, currentProject?.uuid, formData);
+      const result = await createDoc(session.user.id, currentProject.uuid, formData);
 
       if (result.success) {
         // Optimistically update both caches
         await Promise.all([mutate(), mutateStorage()]);
-        
+
+        // Invalidate analytics cache to update dashboard immediately
+        if (currentProfile?.uuid) {
+          // Invalidate all analytics-related SWR keys for this profile
+          globalMutate(
+            (key: unknown) => {
+              if (Array.isArray(key)) {
+                // Check if this is an analytics key for the current profile
+                return (key[0] === 'overview' || key[0] === 'recent-documents' || key[0] === 'rag') &&
+                       key[1] === currentProfile.uuid;
+              }
+              return false;
+            },
+            undefined,
+            { revalidate: true }
+          );
+        }
+
         // Add to progress tracking if we have an upload_id
         if (result.upload_id && result.doc) {
           addUpload({
@@ -159,7 +181,7 @@ export function useLibrary() {
         throw new Error(result.error || 'Failed to upload document');
       }
     },
-    [session?.user?.id, currentProject?.uuid, currentProfile?.uuid, mutate, mutateStorage, toast, addUpload]
+    [session?.user?.id, currentProject?.uuid, currentProfile?.uuid, mutate, mutateStorage, toast, addUpload, globalMutate]
   );
 
   const removeDoc = useCallback(
@@ -173,6 +195,24 @@ export function useLibrary() {
       if (result.success) {
         // Optimistically update both caches
         await Promise.all([mutate(), mutateStorage()]);
+
+        // Invalidate analytics cache to update dashboard immediately
+        if (currentProfile?.uuid) {
+          // Invalidate all analytics-related SWR keys for this profile
+          globalMutate(
+            (key: unknown) => {
+              if (Array.isArray(key)) {
+                // Check if this is an analytics key for the current profile
+                return (key[0] === 'overview' || key[0] === 'recent-documents' || key[0] === 'rag') &&
+                       key[1] === currentProfile.uuid;
+              }
+              return false;
+            },
+            undefined,
+            { revalidate: true }
+          );
+        }
+
         toast({
           title: 'Success',
           description: 'Document deleted successfully',
@@ -195,7 +235,7 @@ export function useLibrary() {
         throw new Error(result.error || 'Failed to delete document');
       }
     },
-    [session?.user?.id, currentProject?.uuid, currentProfile?.uuid, mutate, mutateStorage, toast]
+    [session?.user?.id, currentProject?.uuid, currentProfile?.uuid, mutate, mutateStorage, toast, globalMutate]
   );
 
   const downloadDoc = useCallback(

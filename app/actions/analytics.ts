@@ -42,16 +42,16 @@ export type {
 };
 
 // Re-export functions as server actions
-export async function getOverviewMetrics(profileUuid: string, period: TimePeriod = '7d') {
-  return _getOverviewMetrics(profileUuid, period);
+export async function getOverviewMetrics(profileUuid: string, period: TimePeriod = '7d', projectUuid?: string) {
+  return _getOverviewMetrics(profileUuid, period, projectUuid);
 }
 
 export async function getToolAnalytics(profileUuid: string, period: TimePeriod = '7d', serverUuid?: string) {
   return _getToolAnalytics(profileUuid, period, serverUuid);
 }
 
-export async function getRagAnalytics(profileUuid: string, period: TimePeriod = '7d') {
-  return _getRagAnalytics(profileUuid, period);
+export async function getRagAnalytics(profileUuid: string, period: TimePeriod = '7d', projectUuid?: string) {
+  return _getRagAnalytics(profileUuid, period, projectUuid);
 }
 
 export async function getProductivityMetrics(profileUuid: string, period: TimePeriod = '30d') {
@@ -62,6 +62,6 @@ export async function getRecentToolCalls(profileUuid: string, limit: number = 50
   return _getRecentToolCalls(profileUuid, limit);
 }
 
-export async function getRecentDocuments(profileUuid: string, limit: number = 10) {
-  return _getRecentDocuments(profileUuid, limit);
+export async function getRecentDocuments(profileUuid: string, limit: number = 10, projectUuid?: string) {
+  return _getRecentDocuments(profileUuid, limit, projectUuid);
 }

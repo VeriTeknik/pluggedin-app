@@ -1,10 +1,11 @@
-import { and, count, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, count, desc, eq, gte, sql, or, isNull } from 'drizzle-orm';
 
 import { db } from '@/db';
 import {
   docsTable,
   mcpActivityTable,
   mcpServersTable,
+  projectsTable,
 } from '@/db/schema';
 
 import { analyticsSchemas, type TimePeriod,withAnalytics } from '../analytics-hof';
@@ -45,6 +46,16 @@ export const getOverviewMetrics = withAnalytics(
   async ({ profileUuid, period, projectUuid }) => {
     const cutoff = getDateCutoff(period);
     const comparisonPeriod = getComparisonCutoff(period);
+
+    // Get user_id from project if projectUuid is provided (for legacy document support)
+    let projectUserId: string | null = null;
+    if (projectUuid) {
+      const [project] = await db
+        .select({ user_id: projectsTable.user_id })
+        .from(projectsTable)
+        .where(eq(projectsTable.uuid, projectUuid));
+      projectUserId = project?.user_id || null;
+    }
 
     // Build conditions
     const currentConditions = [eq(mcpActivityTable.profile_uuid, profileUuid)];
@@ -88,11 +99,28 @@ export const getOverviewMetrics = withAnalytics(
     }
 
     // Get document stats
-    // Use projectUuid for filtering if available (documents are stored with project_uuid)
-    // Fall back to profile_uuid for backwards compatibility
-    const docConditions = projectUuid
-      ? [eq(docsTable.project_uuid, projectUuid)]
-      : [eq(docsTable.profile_uuid, profileUuid)];
+    // Build document conditions to include legacy documents with NULL project_uuid
+    let docConditions: any[] = [];
+
+    if (projectUuid && projectUserId) {
+      // Include documents with the project_uuid OR legacy documents (NULL project_uuid) for this user
+      docConditions.push(
+        or(
+          eq(docsTable.project_uuid, projectUuid),
+          and(
+            isNull(docsTable.project_uuid),
+            eq(docsTable.user_id, projectUserId)
+          )
+        )
+      );
+    } else if (projectUuid) {
+      // Fallback if project not found (shouldn't happen with valid projectUuid)
+      docConditions.push(eq(docsTable.project_uuid, projectUuid));
+    } else {
+      // Fall back to profile_uuid for backwards compatibility
+      docConditions.push(eq(docsTable.profile_uuid, profileUuid));
+    }
+
     if (cutoff) {
       docConditions.push(gte(docsTable.created_at, cutoff));
     }
@@ -111,9 +139,21 @@ export const getOverviewMetrics = withAnalytics(
     // Get previous document count for trend
     let previousDocuments = 0;
     if (period !== 'all') {
-      const prevDocConditions = projectUuid
-        ? eq(docsTable.project_uuid, projectUuid)
-        : eq(docsTable.profile_uuid, profileUuid);
+      let prevDocConditions: any;
+
+      if (projectUuid && projectUserId) {
+        prevDocConditions = or(
+          eq(docsTable.project_uuid, projectUuid),
+          and(
+            isNull(docsTable.project_uuid),
+            eq(docsTable.user_id, projectUserId)
+          )
+        );
+      } else if (projectUuid) {
+        prevDocConditions = eq(docsTable.project_uuid, projectUuid);
+      } else {
+        prevDocConditions = eq(docsTable.profile_uuid, profileUuid);
+      }
 
       const [prevDocStats] = await db
         .select({ total: count() })

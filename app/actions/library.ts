@@ -602,6 +602,11 @@ export async function createDoc(
   formData: FormData
 ): Promise<DocUploadResponse> {
   try {
+    // Validate that projectUuid is provided
+    if (!projectUuid) {
+      throw new Error('No active project selected. Please select or create a project first.');
+    }
+
     // Step 1: Parse and validate form data
     const { file, name, description, tags, purpose, relatedTo, notes, uploadMethod } = await parseAndValidateFormData(formData);
 
@@ -664,6 +669,34 @@ export async function createDoc(
       updated_at: new Date(docRecord.updated_at),
     };
 
+    // Invalidate analytics cache after successful document upload
+    // This ensures the dashboard updates immediately
+    if (projectUuid) {
+      try {
+        const { projectsTable } = await import('@/db/schema');
+        const { analyticsCache } = await import('@/lib/analytics-cache');
+
+        // Get the active profile for this project to invalidate the correct cache
+        const project = await db.query.projectsTable.findFirst({
+          where: eq(projectsTable.uuid, projectUuid),
+          with: {
+            activeProfile: true
+          }
+        });
+
+        if (project?.activeProfile?.uuid) {
+          console.log(`[CACHE] Invalidating analytics cache for profile: ${project.activeProfile.uuid}`);
+          analyticsCache.invalidateProfile(project.activeProfile.uuid);
+          console.log('[CACHE] Analytics cache invalidated successfully');
+        } else {
+          console.warn('[CACHE] No active profile found for project:', projectUuid);
+        }
+      } catch (cacheError) {
+        // Don't fail the upload if cache invalidation fails
+        console.error('Failed to invalidate analytics cache:', cacheError);
+      }
+    }
+
     return {
       success: true,
       doc,
@@ -717,13 +750,37 @@ export async function deleteDoc(
     // Remove from RAG API using the stored rag_document_id (if it exists)
     if (doc.rag_document_id) {
       const ragIdentifier = projectUuid || userId;
-      
+
       ragService.removeDocument(doc.rag_document_id, ragIdentifier).catch(error => {
         console.error('Failed to remove document from RAG API:', error);
       });
 
       // Invalidate storage cache after removing document
       ragService.invalidateStorageCache(ragIdentifier);
+    }
+
+    // Invalidate analytics cache after successful document deletion
+    // This ensures the dashboard updates immediately
+    if (projectUuid) {
+      try {
+        const { projectsTable } = await import('@/db/schema');
+        const { analyticsCache } = await import('@/lib/analytics-cache');
+
+        // Get the active profile for this project to invalidate the correct cache
+        const project = await db.query.projectsTable.findFirst({
+          where: eq(projectsTable.uuid, projectUuid),
+          with: {
+            activeProfile: true
+          }
+        });
+
+        if (project?.activeProfile?.uuid) {
+          analyticsCache.invalidateProfile(project.activeProfile.uuid);
+        }
+      } catch (cacheError) {
+        // Don't fail the deletion if cache invalidation fails
+        console.error('Failed to invalidate analytics cache:', cacheError);
+      }
     }
 
     return {
@@ -922,7 +979,7 @@ export async function askKnowledgeBase(userId: string, query: string, projectUui
       if (projectUuid && result.documentIds && result.documentIds.length > 0) {
         try {
           // Get the active profile for this project
-          const { projectsTable, profilesTable, mcpActivityTable } = await import('@/db/schema');
+          const { projectsTable, mcpActivityTable } = await import('@/db/schema');
           const project = await db.query.projectsTable.findFirst({
             where: eq(projectsTable.uuid, projectUuid),
             with: {

@@ -101,15 +101,31 @@ export function withAnalytics<Args extends any[], P, R>(
       if (options.cache?.enabled) {
         if (options.cache.keyGenerator) {
           cacheKey = options.cache.keyGenerator(params);
-        } else {
-          // Default cache key generation - includes userId for tenant isolation
-          const paramsObj = params as any;
-          if (paramsObj.profileUuid && paramsObj.period) {
+        } else if (params && typeof params === 'object') {
+          const paramsObj = params as Record<string, unknown>;
+          const profileUuidValue = typeof paramsObj.profileUuid === 'string' ? paramsObj.profileUuid : undefined;
+
+          if (profileUuidValue) {
+            const serializedParams = Object.entries(paramsObj)
+              .filter(([key]) => key !== 'profileUuid')
+              .filter(([, value]) => value !== undefined)
+              .map(([key, value]) => {
+                if (value === null) {
+                  return `${key}=null`;
+                }
+                if (typeof value === 'object') {
+                  return `${key}=${encodeURIComponent(JSON.stringify(value))}`;
+                }
+                return `${key}=${encodeURIComponent(String(value))}`;
+              })
+              .sort()
+              .join('&') || 'default';
+
             cacheKey = getCacheKey(
               handler.name || 'analytics',
-              userId,  // Include userId for security - ensures cache isolation per user
-              paramsObj.profileUuid,
-              paramsObj.period
+              userId,
+              profileUuidValue,
+              serializedParams
             );
           }
         }

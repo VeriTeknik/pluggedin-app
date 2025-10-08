@@ -16,7 +16,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
-import { lazy, memo, Suspense,useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { Highlight, themes } from 'prism-react-renderer';
 import { useTranslation } from 'react-i18next';
 
@@ -47,6 +47,39 @@ const PDFViewer = lazy(() => import('./PDFViewer'));
 
 // Module-level cache for dynamic imports
 const importCache: Record<string, any> = {};
+
+const SAFELINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
+
+const sanitizeMarkdownUri = (rawUri?: string) => {
+  if (!rawUri) return '';
+
+  const uri = rawUri.trim();
+  if (uri === '') {
+    return '';
+  }
+
+  if (uri.startsWith('#') || uri.startsWith('/') || uri.startsWith('./') || uri.startsWith('../')) {
+    return uri;
+  }
+
+  if (uri.startsWith('//')) {
+    return uri;
+  }
+
+  const protocolMatch = /^[a-zA-Z][a-zA-Z0-9+.-]*:/.exec(uri);
+  if (!protocolMatch) {
+    return uri;
+  }
+
+  const protocol = protocolMatch[0].toLowerCase();
+  if (SAFELINK_PROTOCOLS.has(protocol)) {
+    return uri;
+  }
+
+  return '';
+};
+
+const markdownUriTransformer = (uri: string) => sanitizeMarkdownUri(uri);
 
 const getDynamicImport = async (key: string, importFn: () => Promise<any>) => {
   if (!importCache[key]) {
@@ -573,7 +606,9 @@ export const DocumentPreview = memo(function DocumentPreview({
               {fileTypeInfo.isMarkdown ? (
                 <Suspense fallback={<div>Loading...</div>}>
                   <div className="prose dark:prose-invert max-w-none">
-                    <ReactMarkdown>
+                    <ReactMarkdown
+                      urlTransform={markdownUriTransformer}
+                    >
                       {state.versions.versionContent}
                     </ReactMarkdown>
                   </div>
@@ -719,7 +754,11 @@ export const DocumentPreview = memo(function DocumentPreview({
               <div className="p-6">
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   <Suspense fallback={<div>Loading...</div>}>
-                    <ReactMarkdown>{state.content.textContent}</ReactMarkdown>
+                    <ReactMarkdown
+                      urlTransform={markdownUriTransformer}
+                    >
+                      {state.content.textContent}
+                    </ReactMarkdown>
                   </Suspense>
                 </div>
               </div>

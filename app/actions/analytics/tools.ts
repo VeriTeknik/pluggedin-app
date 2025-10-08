@@ -167,9 +167,9 @@ export const getToolAnalytics = withAnalytics(
       count: h.count,
     }));
 
-    // Get activity heatmap (last 90 days)
+    // Get activity heatmap (last 12 months)
     const heatmapCutoff = new Date();
-    heatmapCutoff.setDate(heatmapCutoff.getDate() - 90);
+    heatmapCutoff.setMonth(heatmapCutoff.getMonth() - 12);
 
     const heatmapData = await db
       .select({

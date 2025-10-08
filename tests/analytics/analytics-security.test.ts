@@ -14,16 +14,37 @@ vi.mock('@/lib/rate-limiter', () => ({
   },
 }));
 
+const cacheStore = new Map<string, unknown>();
+
 describe('Analytics Security Tests', () => {
   beforeEach(() => {
-    // Clear cache before each test
-    analyticsCache.clear();
     vi.clearAllMocks();
+    cacheStore.clear();
+
+    const mockedCache = vi.mocked(analyticsCache, true);
+    mockedCache.get.mockImplementation((key: string) => {
+      return cacheStore.has(key) ? (cacheStore.get(key) as unknown) : null;
+    });
+    mockedCache.set.mockImplementation(<T>(key: string, value: T) => {
+      cacheStore.set(key, value);
+    });
+    mockedCache.clear.mockImplementation(() => {
+      cacheStore.clear();
+    });
+    mockedCache.invalidate.mockImplementation((key: string) => {
+      cacheStore.delete(key);
+    });
+    mockedCache.invalidateProfile.mockImplementation((profileUuid: string) => {
+      for (const existingKey of Array.from(cacheStore.keys())) {
+        if (existingKey.includes(profileUuid)) {
+          cacheStore.delete(existingKey);
+        }
+      }
+    });
   });
 
   afterEach(() => {
-    // Clean up after each test
-    analyticsCache.clear();
+    cacheStore.clear();
   });
 
   describe('Cache Isolation Between Users', () => {
@@ -210,6 +231,46 @@ describe('Analytics Security Tests', () => {
       // Should filter out undefined/null but keep other falsy values like empty string
       const key = getCacheKey('test', 'user1', '', '7d', undefined, null, '0');
       expect(key).toBe('analytics:test:user1::7d:0');
+    });
+
+    it('should create distinct cache entries for different parameter combinations', async () => {
+      const mockGetAuthSession = vi.mocked(getAuthSession);
+      mockGetAuthSession.mockResolvedValue({
+        user: { id: 'user1', email: 'user1@test.com' },
+      } as any);
+
+      const handler = vi.fn(async ({ limit }: { profileUuid: string; limit: number }) => {
+        return { limit };
+      });
+
+      const analyticsFn = withAnalytics(
+        (profileUuid: string, limit: number) => ({ profileUuid, limit }),
+        (userId) => `analytics:recentDocs:${userId}`,
+        handler,
+        {
+          cache: {
+            enabled: true,
+            ttl: 60000,
+          },
+          skipProfileOwnership: true,
+        }
+      );
+
+      const first = await analyticsFn('profile-1', 5);
+      expect(first.success).toBe(true);
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      const cached = await analyticsFn('profile-1', 5);
+      expect(cached.success).toBe(true);
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      const differentParams = await analyticsFn('profile-1', 10);
+      expect(differentParams.success).toBe(true);
+      expect(handler).toHaveBeenCalledTimes(2);
+
+      const cachedDifferentParams = await analyticsFn('profile-1', 10);
+      expect(cachedDifferentParams.success).toBe(true);
+      expect(handler).toHaveBeenCalledTimes(2);
     });
   });
 

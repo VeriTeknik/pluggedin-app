@@ -27,7 +27,7 @@ declare module 'next-auth' {
 }
 
 import { db } from '@/db';
-import { accounts, sessions, users, verificationTokens } from '@/db/schema';
+import { accounts, sessions, users, verificationTokens, projectsTable, profilesTable } from '@/db/schema';
 
 // Custom adapter that extends DrizzleAdapter to ensure IDs are properly generated
 const createCustomAdapter = () => {
@@ -260,6 +260,44 @@ export const authOptions: NextAuthOptions = {
             });
             
             if (newUser) {
+              // Create default project and workspace for new user
+              try {
+                const defaultProject = await db.transaction(async (tx) => {
+                  // Create the project
+                  const [project] = await tx
+                    .insert(projectsTable)
+                    .values({
+                      name: 'Default Hub',
+                      user_id: newUser.id,
+                      active_profile_uuid: null, // Will be updated after creating profile
+                    })
+                    .returning();
+
+                  // Create the default workspace/profile
+                  const [profile] = await tx
+                    .insert(profilesTable)
+                    .values({
+                      name: 'Default Workspace',
+                      project_uuid: project.uuid,
+                    })
+                    .returning();
+
+                  // Update project with the active profile UUID
+                  const [updatedProject] = await tx
+                    .update(projectsTable)
+                    .set({ active_profile_uuid: profile.uuid })
+                    .where(eq(projectsTable.uuid, project.uuid))
+                    .returning();
+
+                  return updatedProject;
+                });
+
+                console.log(`Created default project for new user ${newUser.email}: ${defaultProject.uuid}`);
+              } catch (error) {
+                console.error(`Failed to create default project for new user ${newUser.email}:`, error);
+                // Don't fail the sign-in if project creation fails
+              }
+
               // Notify admins about new OAuth signup
               await notifyAdminsOfNewUser({
                 name: newUser.name || 'Unknown',
@@ -267,7 +305,7 @@ export const authOptions: NextAuthOptions = {
                 id: newUser.id,
                 source: account?.provider as 'google' | 'github' | 'twitter',
               });
-              
+
               // Send welcome email to new OAuth user
               await sendWelcomeEmail({
                 name: newUser.name || 'User',
