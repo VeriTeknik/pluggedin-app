@@ -45,10 +45,26 @@ export function CreateFeatureDialog({ onFeatureCreated }: CreateFeatureDialogPro
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Validate title is not empty or whitespace
+    const trimmedTitle = formData.title.trim();
+    if (!trimmedTitle) {
+      toast({
+        title: t('errors.titleRequired'),
+        description: t('errors.titleCannotBeEmpty'),
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const result = await createFeatureRequest(formData);
+      const result = await createFeatureRequest({
+        ...formData,
+        title: trimmedTitle,
+        description: formData.description.trim(),
+      });
 
       if (result.success) {
         toast({

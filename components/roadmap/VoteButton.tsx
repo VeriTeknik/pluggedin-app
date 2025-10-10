@@ -28,6 +28,9 @@ export function VoteButton({
   const [isVoting, setIsVoting] = useState(false);
 
   const handleVote = async (vote: VoteType) => {
+    // Prevent concurrent voting actions
+    if (isVoting) return;
+
     setIsVoting(true);
     try {
       const result = await voteOnFeature({

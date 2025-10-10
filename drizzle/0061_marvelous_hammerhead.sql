@@ -45,4 +45,66 @@ CREATE INDEX "feature_requests_pending_votes_idx" ON "feature_requests" USING bt
 CREATE INDEX "feature_requests_roadmap_idx" ON "feature_requests" USING btree ("status","roadmap_priority") WHERE "feature_requests"."status" IN ('accepted', 'in_progress', 'completed');--> statement-breakpoint
 CREATE INDEX "feature_votes_feature_idx" ON "feature_votes" USING btree ("feature_request_uuid");--> statement-breakpoint
 CREATE INDEX "feature_votes_user_idx" ON "feature_votes" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "feature_votes_created_at_idx" ON "feature_votes" USING btree ("created_at");
+CREATE INDEX "feature_votes_created_at_idx" ON "feature_votes" USING btree ("created_at");--> statement-breakpoint
+
+-- PostgreSQL triggers for automatic vote count updates
+CREATE OR REPLACE FUNCTION refresh_feature_vote_stats()
+RETURNS TRIGGER AS $$
+DECLARE
+  feature_uuid UUID;
+  yes_count INTEGER;
+  no_count INTEGER;
+  yes_weight INTEGER;
+  no_weight INTEGER;
+BEGIN
+  -- Determine which feature request to update
+  IF (TG_OP = 'DELETE') THEN
+    feature_uuid := OLD.feature_request_uuid;
+  ELSE
+    feature_uuid := NEW.feature_request_uuid;
+  END IF;
+
+  -- Calculate aggregated vote statistics
+  SELECT
+    COUNT(*) FILTER (WHERE vote = 'YES'),
+    COUNT(*) FILTER (WHERE vote = 'NO'),
+    COALESCE(SUM(vote_weight) FILTER (WHERE vote = 'YES'), 0),
+    COALESCE(SUM(vote_weight) FILTER (WHERE vote = 'NO'), 0)
+  INTO yes_count, no_count, yes_weight, no_weight
+  FROM "feature_votes"
+  WHERE feature_request_uuid = feature_uuid;
+
+  -- Update feature_requests table
+  UPDATE "feature_requests"
+  SET
+    votes_yes_count = yes_count,
+    votes_no_count = no_count,
+    votes_yes_weight = yes_weight,
+    votes_no_weight = no_weight,
+    updated_at = NOW()
+  WHERE uuid = feature_uuid;
+
+  -- Return appropriate record
+  IF (TG_OP = 'DELETE') THEN
+    RETURN OLD;
+  ELSE
+    RETURN NEW;
+  END IF;
+END;
+$$ LANGUAGE plpgsql;--> statement-breakpoint
+
+CREATE TRIGGER trigger_feature_vote_insert
+  AFTER INSERT ON "feature_votes"
+  FOR EACH ROW
+  EXECUTE FUNCTION refresh_feature_vote_stats();--> statement-breakpoint
+
+CREATE TRIGGER trigger_feature_vote_update
+  AFTER UPDATE ON "feature_votes"
+  FOR EACH ROW
+  WHEN (OLD.vote IS DISTINCT FROM NEW.vote OR OLD.vote_weight IS DISTINCT FROM NEW.vote_weight)
+  EXECUTE FUNCTION refresh_feature_vote_stats();--> statement-breakpoint
+
+CREATE TRIGGER trigger_feature_vote_delete
+  AFTER DELETE ON "feature_votes"
+  FOR EACH ROW
+  EXECUTE FUNCTION refresh_feature_vote_stats();

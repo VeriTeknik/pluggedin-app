@@ -158,6 +158,9 @@
     "adminOnly": "Yönetici erişimi gerekli",
     "titleTooShort": "Başlık en az 5 karakter olmalı",
     "titleTooLong": "Başlık 100 karakterden az olmalı",
-    "descriptionTooLong": "Açıklama 2000 karakterden az olmalı"
+    "descriptionTooLong": "Açıklama 2000 karakterden az olmalı",
+    "titleRequired": "Başlık gerekli",
+    "titleCannotBeEmpty": "Başlık boş olamaz veya yalnızca boşluk içeremez",
+    "unknownError": "Beklenmeyen bir hata oluştu"
   }
 }

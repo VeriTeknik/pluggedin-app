@@ -67,9 +67,23 @@ export function FeatureRequestsTable({
       if (result.success && result.data) {
         setFeatures(result.data);
         setCurrentUserVotes(result.currentUserVotes || {});
+      } else {
+        // Show error to user
+        toast({
+          title: t('errors.loadFailed'),
+          description: result.error || t('errors.unknownError'),
+          variant: 'destructive',
+        });
+        setFeatures([]);
       }
     } catch (error) {
       console.error('Error loading features:', error);
+      toast({
+        title: t('errors.loadFailed'),
+        description: t('errors.unknownError'),
+        variant: 'destructive',
+      });
+      setFeatures([]);
     } finally {
       setIsLoading(false);
     }

@@ -158,6 +158,9 @@
     "adminOnly": "管理者アクセスが必要です",
     "titleTooShort": "タイトルは5文字以上である必要があります",
     "titleTooLong": "タイトルは100文字未満である必要があります",
-    "descriptionTooLong": "説明は2000文字未満である必要があります"
+    "descriptionTooLong": "説明は2000文字未満である必要があります",
+    "titleRequired": "タイトルは必須です",
+    "titleCannotBeEmpty": "タイトルを空にしたり、空白のみを含めることはできません",
+    "unknownError": "予期しないエラーが発生しました"
   }
 }

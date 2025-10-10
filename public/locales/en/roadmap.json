@@ -158,6 +158,9 @@
     "adminOnly": "Admin access required",
     "titleTooShort": "Title must be at least 5 characters",
     "titleTooLong": "Title must be less than 100 characters",
-    "descriptionTooLong": "Description must be less than 2000 characters"
+    "descriptionTooLong": "Description must be less than 2000 characters",
+    "titleRequired": "Title is required",
+    "titleCannotBeEmpty": "Title cannot be empty or contain only whitespace",
+    "unknownError": "An unexpected error occurred"
   }
 }

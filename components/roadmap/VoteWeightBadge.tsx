@@ -92,7 +92,7 @@ export function VoteWeightBadge({
           <p className="text-xs text-muted-foreground">
             {t('tier.progress', {
               count: nextTierAt - achievementsUnlocked,
-              nextTier: ['Silver', 'Gold', 'Platinum', 'Diamond'][nextTierAt - 1],
+              nextTier: ['Silver', 'Gold', 'Platinum', 'Diamond'][Math.min(nextTierAt - 1, 3)] || 'Diamond',
             })}
           </p>
         ) : (

@@ -158,6 +158,9 @@
     "adminOnly": "需要管理员权限",
     "titleTooShort": "标题至少需要 5 个字符",
     "titleTooLong": "标题必须少于 100 个字符",
-    "descriptionTooLong": "描述必须少于 2000 个字符"
+    "descriptionTooLong": "描述必须少于 2000 个字符",
+    "titleRequired": "标题为必填项",
+    "titleCannotBeEmpty": "标题不能为空或仅包含空格",
+    "unknownError": "发生意外错误"
   }
 }

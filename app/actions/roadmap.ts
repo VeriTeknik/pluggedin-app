@@ -465,6 +465,25 @@ export async function getFeatureRequests(
 }> {
   try {
     const session = await getServerSession(authOptions);
+
+    // Rate limiting: 60 requests per minute per user/IP
+    const rateLimitKey = session?.user?.id
+      ? `roadmap-list:${session.user.id}`
+      : 'roadmap-list:anonymous';
+
+    const rateLimitCheck = await rateLimiter.check(
+      rateLimitKey,
+      60,
+      60 // 1 minute
+    );
+
+    if (!rateLimitCheck.success) {
+      return {
+        success: false,
+        error: `Rate limit exceeded. Please wait ${rateLimitCheck.reset} seconds before trying again.`,
+      };
+    }
+
     const validated = getFeatureRequestsSchema.parse(params || {});
 
     // Build where conditions
@@ -723,6 +742,15 @@ export async function updateFeatureStatus(
 
     // Validate input
     const validated = updateFeatureStatusSchema.parse(data);
+
+    // Check if feature request exists
+    const existingFeature = await db.query.featureRequestsTable.findFirst({
+      where: eq(featureRequestsTable.uuid, validated.featureRequestUuid),
+    });
+
+    if (!existingFeature) {
+      return { success: false, error: 'Feature request not found' };
+    }
 
     // Prepare update data with proper typing
     const updateData: Partial<FeatureUpdateData> = {

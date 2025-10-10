@@ -95,7 +95,7 @@ export default function AnalyticsPage() {
 
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="inline-flex h-10 w-full items-center justify-start overflow-x-auto rounded-md bg-muted p-1 text-muted-foreground sm:grid sm:grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">{t('tabs.dashboard')}</span>
