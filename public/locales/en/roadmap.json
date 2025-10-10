@@ -1,0 +1,163 @@
+{
+  "title": "Community Roadmap",
+  "subtitle": "Feature Requests",
+  "description": "Vote on features and help shape the future of Plugged.in",
+  "descriptionShort": "Vote on community suggestions and help prioritize our roadmap",
+  "createFeature": "Suggest Feature",
+  "createFeatureButton": "New Feature Request",
+
+  "filters": {
+    "all": "All",
+    "status": "Status",
+    "category": "Category",
+    "sortBy": "Sort by"
+  },
+
+  "sortOptions": {
+    "trending": "Trending",
+    "recent": "Most Recent",
+    "controversial": "Controversial",
+    "top": "Top Voted"
+  },
+
+  "status": {
+    "pending": "Pending Review",
+    "accepted": "Accepted",
+    "declined": "Declined",
+    "completed": "Completed",
+    "in_progress": "In Progress"
+  },
+
+  "categories": {
+    "mcp_servers": "MCP Servers",
+    "ui_ux": "UI/UX",
+    "performance": "Performance",
+    "api": "API",
+    "social": "Social",
+    "library": "Library",
+    "analytics": "Analytics",
+    "security": "Security",
+    "mobile": "Mobile",
+    "other": "Other"
+  },
+
+  "voting": {
+    "voteYes": "Vote YES",
+    "voteNo": "Vote NO",
+    "voted": "You voted",
+    "yourVoteWeight": "Your voting power: {{weight}}×",
+    "voteWeightTooltip": "Vote weight based on your achievements",
+    "changeVote": "Change vote",
+    "voteCounts": "{{yes}} YES / {{no}} NO",
+    "weightedVotes": "{{weight}} weighted votes",
+    "fromUsers": "from {{count}} users"
+  },
+
+  "tier": {
+    "current": "Current tier: {{tier}}",
+    "bronze": "Bronze",
+    "silver": "Silver",
+    "gold": "Gold",
+    "platinum": "Platinum",
+    "diamond": "Diamond",
+    "progress": "Unlock {{count}} more achievement(s) for {{nextTier}} tier",
+    "maxTier": "You've reached maximum voting power!",
+    "unlockMore": "Unlock more voting power by completing achievements",
+    "viewAchievements": "View Achievements",
+    "helpText": "Complete achievements in the Productivity tab to increase your voting power up to 5×"
+  },
+
+  "form": {
+    "title": "Feature Title",
+    "titlePlaceholder": "Brief, descriptive title for your feature request",
+    "description": "Description",
+    "descriptionPlaceholder": "Describe the feature, its benefits, and use cases...",
+    "category": "Category",
+    "selectCategory": "Select a category",
+    "submit": "Submit Feature Request",
+    "cancel": "Cancel",
+    "updating": "Submitting..."
+  },
+
+  "table": {
+    "feature": "Feature",
+    "status": "Status",
+    "category": "Category",
+    "votes": "Votes",
+    "createdBy": "Requested by",
+    "createdAt": "Created",
+    "action": "Your Vote",
+    "manage": "Manage",
+    "delete": "Remove",
+    "anonymousUser": "Anonymous user",
+    "noFeatures": "No feature requests yet",
+    "noFeaturesDescription": "Be the first to suggest a feature!",
+    "loadMore": "Load More"
+  },
+
+  "details": {
+    "requestedBy": "Requested by {{name}}",
+    "acceptedBy": "Accepted by {{name}}",
+    "declinedReason": "Declined reason",
+    "priority": "Priority",
+    "voteBreakdown": "Vote Weight Distribution",
+    "tierDistribution": "Tier Distribution"
+  },
+
+  "admin": {
+    "pendingQueue": "Pending Features",
+    "accept": "Accept",
+    "decline": "Decline",
+    "markCompleted": "Mark Completed",
+    "markInProgress": "Mark In Progress",
+    "setPriority": "Set Priority",
+    "priority": {
+      "1": "Critical",
+      "2": "High",
+      "3": "Medium",
+      "4": "Low",
+      "5": "Very Low"
+    },
+    "declineReason": "Reason for declining (optional)",
+    "bulkActions": "Bulk Actions",
+    "selectAll": "Select All",
+    "acceptSelected": "Accept Selected",
+    "declineSelected": "Decline Selected",
+    "featureDeleted": "Feature request removed",
+    "confirmDelete": "Are you sure you want to delete this feature request? This action cannot be undone.",
+    "updateStatus": "Update Feature Status",
+    "updateStatusDescription": "Change the status of \"{{title}}\"",
+    "statusLabel": "Status",
+    "priorityLabel": "Priority",
+    "priorityValue": "Priority {{priority}}",
+    "priorityHelp": "Higher priority features will be implemented sooner",
+    "declinedReasonLabel": "Reason for Declining",
+    "declinedReasonPlaceholder": "Explain why this feature request is being declined...",
+    "declinedReasonHelp": "Optional, but helps users understand the decision",
+    "updateButton": "Update Status",
+    "updateStatusButton": "Update Status",
+    "statusUpdated": "Status updated successfully",
+    "statusUpdatedDescription": "The status of \"{{title}}\" has been updated"
+  },
+
+  "notifications": {
+    "featureCreated": "Feature request created successfully",
+    "voteRecorded": "Your vote has been recorded",
+    "voteUpdated": "Your vote has been updated",
+    "featureAccepted": "Your feature request was accepted!",
+    "featureDeclined": "Your feature request was declined",
+    "statusUpdated": "Feature status updated"
+  },
+
+  "errors": {
+    "loadFailed": "Failed to load feature requests",
+    "createFailed": "Failed to create feature request",
+    "voteFailed": "Failed to record vote",
+    "updateFailed": "Failed to update feature",
+    "unauthorized": "You must be signed in to vote",
+    "adminOnly": "Admin access required",
+    "titleTooShort": "Title must be at least 5 characters",
+    "titleTooLong": "Title must be less than 100 characters",
+    "descriptionTooLong": "Description must be less than 2000 characters"
+  }
+}

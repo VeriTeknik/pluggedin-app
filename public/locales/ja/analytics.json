@@ -6,7 +6,8 @@
     "tools": "ツールとサーバー",
     "library": "ライブラリとRAG",
     "productivity": "生産性",
-    "dashboard": "ダッシュボード"
+    "dashboard": "ダッシュボード",
+    "roadmap": "ロードマップ"
   },
   "period": {
     "7d": "過去7日間",

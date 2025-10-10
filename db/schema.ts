@@ -86,6 +86,45 @@ export const profileCapabilityEnum = pgEnum(
   enumToPgEnum(ProfileCapability)
 );
 
+// Feature request enums for roadmap
+export enum FeatureRequestStatus {
+  PENDING = 'pending',
+  ACCEPTED = 'accepted',
+  DECLINED = 'declined',
+  COMPLETED = 'completed',
+  IN_PROGRESS = 'in_progress',
+}
+export const featureRequestStatusEnum = pgEnum(
+  'feature_request_status',
+  enumToPgEnum(FeatureRequestStatus)
+);
+
+export enum FeatureRequestCategory {
+  MCP_SERVERS = 'mcp_servers',
+  UI_UX = 'ui_ux',
+  PERFORMANCE = 'performance',
+  API = 'api',
+  SOCIAL = 'social',
+  LIBRARY = 'library',
+  ANALYTICS = 'analytics',
+  SECURITY = 'security',
+  MOBILE = 'mobile',
+  OTHER = 'other',
+}
+export const featureRequestCategoryEnum = pgEnum(
+  'feature_request_category',
+  enumToPgEnum(FeatureRequestCategory)
+);
+
+export enum VoteType {
+  YES = 'YES',
+  NO = 'NO',
+}
+export const voteTypeEnum = pgEnum(
+  'vote_type',
+  enumToPgEnum(VoteType)
+);
+
 
 // Auth.js / NextAuth.js schema
 export const users = pgTable('users', {
@@ -1077,8 +1116,12 @@ export const usersRelations = relations(users, ({ many }) => ({
   codes: many(codesTable),
   docs: many(docsTable),
   // Add followers/following relations to users
-  followers: many(followersTable, { relationName: 'followers' }), 
-  following: many(followersTable, { relationName: 'following' }), 
+  followers: many(followersTable, { relationName: 'followers' }),
+  following: many(followersTable, { relationName: 'following' }),
+  // Feature requests and votes
+  featureRequestsCreated: many(featureRequestsTable, { relationName: 'featureRequestsCreated' }),
+  featureRequestsAccepted: many(featureRequestsTable, { relationName: 'featureRequestsAccepted' }),
+  featureVotes: many(featureVotesTable),
 }));
 
 export const mcpServersPromptsRelations = relations(mcpServersTable, ({ one, many }) => ({
@@ -1687,6 +1730,108 @@ export const unsubscribeTokensRelations = relations(unsubscribeTokensTable, ({ o
 export const adminAuditLogRelations = relations(adminAuditLogTable, ({ one }) => ({
   admin: one(users, {
     fields: [adminAuditLogTable.adminId],
+    references: [users.id],
+  }),
+}));
+
+// ===== Community Roadmap Tables =====
+
+export const featureRequestsTable = pgTable(
+  'feature_requests',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    title: text('title').notNull(),
+    description: text('description'),
+    category: featureRequestCategoryEnum('category').notNull().default(FeatureRequestCategory.OTHER),
+    status: featureRequestStatusEnum('status').notNull().default(FeatureRequestStatus.PENDING),
+    created_by_user_id: text('created_by_user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    accepted_at: timestamp('accepted_at', { withTimezone: true }),
+    accepted_by_admin_id: text('accepted_by_admin_id')
+      .references(() => users.id, { onDelete: 'set null' }),
+    declined_at: timestamp('declined_at', { withTimezone: true }),
+    declined_reason: text('declined_reason'),
+    roadmap_priority: integer('roadmap_priority'), // 1-5 for accepted items (1 = highest)
+    votes_yes_count: integer('votes_yes_count').notNull().default(0),
+    votes_no_count: integer('votes_no_count').notNull().default(0),
+    votes_yes_weight: integer('votes_yes_weight').notNull().default(0),
+    votes_no_weight: integer('votes_no_weight').notNull().default(0),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    featureRequestsStatusIdx: index('feature_requests_status_idx').on(table.status),
+    featureRequestsCreatedByIdx: index('feature_requests_created_by_idx').on(table.created_by_user_id),
+    featureRequestsCategoryIdx: index('feature_requests_category_idx').on(table.category),
+    featureRequestsCreatedAtIdx: index('feature_requests_created_at_idx').on(table.created_at),
+    featureRequestsStatusCreatedIdx: index('feature_requests_status_created_idx').on(table.status, table.created_at),
+    featureRequestsPendingVotesIdx: index('feature_requests_pending_votes_idx')
+      .on(table.status, table.votes_yes_weight)
+      .where(sql`${table.status} = 'pending'`),
+    featureRequestsRoadmapIdx: index('feature_requests_roadmap_idx')
+      .on(table.status, table.roadmap_priority)
+      .where(sql`${table.status} IN ('accepted', 'in_progress', 'completed')`),
+  })
+);
+
+export const featureVotesTable = pgTable(
+  'feature_votes',
+  {
+    uuid: uuid('uuid').primaryKey().defaultRandom(),
+    feature_request_uuid: uuid('feature_request_uuid')
+      .notNull()
+      .references(() => featureRequestsTable.uuid, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    vote: voteTypeEnum('vote').notNull(),
+    vote_weight: integer('vote_weight').notNull(),
+    created_at: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => ({
+    featureVotesFeatureIdx: index('feature_votes_feature_idx').on(table.feature_request_uuid),
+    featureVotesUserIdx: index('feature_votes_user_idx').on(table.user_id),
+    featureVotesCreatedAtIdx: index('feature_votes_created_at_idx').on(table.created_at),
+    featureVotesUniqueUserFeature: unique('feature_votes_unique_user_feature').on(
+      table.feature_request_uuid,
+      table.user_id
+    ),
+  })
+);
+
+// Relations for feature requests
+export const featureRequestsRelations = relations(featureRequestsTable, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [featureRequestsTable.created_by_user_id],
+    references: [users.id],
+    relationName: 'featureRequestsCreated',
+  }),
+  acceptedBy: one(users, {
+    fields: [featureRequestsTable.accepted_by_admin_id],
+    references: [users.id],
+    relationName: 'featureRequestsAccepted',
+  }),
+  votes: many(featureVotesTable),
+}));
+
+// Relations for feature votes
+export const featureVotesRelations = relations(featureVotesTable, ({ one }) => ({
+  featureRequest: one(featureRequestsTable, {
+    fields: [featureVotesTable.feature_request_uuid],
+    references: [featureRequestsTable.uuid],
+  }),
+  user: one(users, {
+    fields: [featureVotesTable.user_id],
     references: [users.id],
   }),
 }));

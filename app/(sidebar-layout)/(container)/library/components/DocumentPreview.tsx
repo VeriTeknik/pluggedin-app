@@ -53,7 +53,7 @@ const SAFELINK_PROTOCOLS = new Set(['http:', 'https:', 'mailto:', 'tel:']);
 const sanitizeMarkdownUri = (rawUri?: string) => {
   if (!rawUri) return '';
 
-  let uri = rawUri.trim();
+  const uri = rawUri.trim();
   if (uri === '') {
     return '';
   }

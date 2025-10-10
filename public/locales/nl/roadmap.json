@@ -1,0 +1,163 @@
+{
+  "title": "Community Roadmap",
+  "subtitle": "Functieverzoeken",
+  "description": "Stem op functies en help de toekomst van Plugged.in vorm te geven",
+  "descriptionShort": "Stem op gemeenschapssuggesties en help onze roadmap prioriteren",
+  "createFeature": "Functie Voorstellen",
+  "createFeatureButton": "Nieuw Functieverzoek",
+
+  "filters": {
+    "all": "Alles",
+    "status": "Status",
+    "category": "Categorie",
+    "sortBy": "Sorteren op"
+  },
+
+  "sortOptions": {
+    "trending": "Trending",
+    "recent": "Meest Recent",
+    "controversial": "Controversieel",
+    "top": "Meest Gestemd"
+  },
+
+  "status": {
+    "pending": "In Afwachting van Beoordeling",
+    "accepted": "Geaccepteerd",
+    "declined": "Afgewezen",
+    "completed": "Voltooid",
+    "in_progress": "In Uitvoering"
+  },
+
+  "categories": {
+    "mcp_servers": "MCP Servers",
+    "ui_ux": "UI/UX",
+    "performance": "Prestaties",
+    "api": "API",
+    "social": "Sociaal",
+    "library": "Bibliotheek",
+    "analytics": "Analyse",
+    "security": "Beveiliging",
+    "mobile": "Mobiel",
+    "other": "Overig"
+  },
+
+  "voting": {
+    "voteYes": "Stem JA",
+    "voteNo": "Stem NEE",
+    "voted": "U heeft gestemd",
+    "yourVoteWeight": "Uw stemkracht: {{weight}}×",
+    "voteWeightTooltip": "Stemgewicht op basis van uw prestaties",
+    "changeVote": "Stem wijzigen",
+    "voteCounts": "{{yes}} JA / {{no}} NEE",
+    "weightedVotes": "{{weight}} gewogen stemmen",
+    "fromUsers": "van {{count}} gebruikers"
+  },
+
+  "tier": {
+    "current": "Huidige tier: {{tier}}",
+    "bronze": "Brons",
+    "silver": "Zilver",
+    "gold": "Goud",
+    "platinum": "Platina",
+    "diamond": "Diamant",
+    "progress": "Ontgrendel {{count}} prestatie(s) voor {{nextTier}} tier",
+    "maxTier": "U heeft de maximale stemkracht bereikt!",
+    "unlockMore": "Ontgrendel meer stemkracht door prestaties te voltooien",
+    "viewAchievements": "Prestaties Bekijken",
+    "helpText": "Voltooi prestaties in het Productiviteit-tabblad om uw stemkracht tot 5× te verhogen"
+  },
+
+  "form": {
+    "title": "Functietitel",
+    "titlePlaceholder": "Korte, beschrijvende titel voor uw functieverzoek",
+    "description": "Beschrijving",
+    "descriptionPlaceholder": "Beschrijf de functie, de voordelen en gebruikssituaties...",
+    "category": "Categorie",
+    "selectCategory": "Selecteer een categorie",
+    "submit": "Functieverzoek Indienen",
+    "cancel": "Annuleren",
+    "updating": "Verzenden..."
+  },
+
+  "table": {
+    "feature": "Functie",
+    "status": "Status",
+    "category": "Categorie",
+    "votes": "Stemmen",
+    "createdBy": "Aangevraagd door",
+    "createdAt": "Aangemaakt",
+    "action": "Uw Stem",
+    "manage": "Beheer",
+    "delete": "Verwijderen",
+    "anonymousUser": "Anonieme gebruiker",
+    "noFeatures": "Nog geen functieverzoeken",
+    "noFeaturesDescription": "Wees de eerste om een functie voor te stellen!",
+    "loadMore": "Meer Laden"
+  },
+
+  "details": {
+    "requestedBy": "Aangevraagd door {{name}}",
+    "acceptedBy": "Geaccepteerd door {{name}}",
+    "declinedReason": "Reden van afwijzing",
+    "priority": "Prioriteit",
+    "voteBreakdown": "Stemgewicht Verdeling",
+    "tierDistribution": "Tier Verdeling"
+  },
+
+  "admin": {
+    "pendingQueue": "In Afwachting van Functies",
+    "accept": "Accepteren",
+    "decline": "Afwijzen",
+    "markCompleted": "Markeren als Voltooid",
+    "markInProgress": "Markeren als In Uitvoering",
+    "setPriority": "Prioriteit Instellen",
+    "priority": {
+      "1": "Kritiek",
+      "2": "Hoog",
+      "3": "Gemiddeld",
+      "4": "Laag",
+      "5": "Zeer Laag"
+    },
+    "declineReason": "Reden voor afwijzing (optioneel)",
+    "bulkActions": "Bulkacties",
+    "selectAll": "Alles Selecteren",
+    "acceptSelected": "Geselecteerde Accepteren",
+    "declineSelected": "Geselecteerde Afwijzen",
+    "featureDeleted": "Functieverzoek verwijderd",
+    "confirmDelete": "Weet u zeker dat u dit functieverzoek wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+    "updateStatus": "Functiestatus Bijwerken",
+    "updateStatusDescription": "Wijzig de status van \"{{title}}\"",
+    "statusLabel": "Status",
+    "priorityLabel": "Prioriteit",
+    "priorityValue": "Prioriteit {{priority}}",
+    "priorityHelp": "Hogere prioriteit functies worden eerder geïmplementeerd",
+    "declinedReasonLabel": "Reden voor Afwijzing",
+    "declinedReasonPlaceholder": "Leg uit waarom dit functieverzoek wordt afgewezen...",
+    "declinedReasonHelp": "Optioneel, maar helpt gebruikers de beslissing te begrijpen",
+    "updateButton": "Status Bijwerken",
+    "updateStatusButton": "Status Bijwerken",
+    "statusUpdated": "Status succesvol bijgewerkt",
+    "statusUpdatedDescription": "De status van \"{{title}}\" is bijgewerkt"
+  },
+
+  "notifications": {
+    "featureCreated": "Functieverzoek succesvol aangemaakt",
+    "voteRecorded": "Uw stem is geregistreerd",
+    "voteUpdated": "Uw stem is bijgewerkt",
+    "featureAccepted": "Uw functieverzoek is geaccepteerd!",
+    "featureDeclined": "Uw functieverzoek is afgewezen",
+    "statusUpdated": "Functiestatus bijgewerkt"
+  },
+
+  "errors": {
+    "loadFailed": "Laden van functieverzoeken mislukt",
+    "createFailed": "Aanmaken van functieverzoek mislukt",
+    "voteFailed": "Registreren van stem mislukt",
+    "updateFailed": "Bijwerken van functie mislukt",
+    "unauthorized": "U moet ingelogd zijn om te stemmen",
+    "adminOnly": "Beheerderstoegang vereist",
+    "titleTooShort": "Titel moet minimaal 5 tekens bevatten",
+    "titleTooLong": "Titel moet minder dan 100 tekens bevatten",
+    "descriptionTooLong": "Beschrijving moet minder dan 2000 tekens bevatten"
+  }
+}

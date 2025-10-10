@@ -30,7 +30,8 @@
     "dashboard": "Dashboard",
     "tools": "Tools & Servers",
     "library": "Library & RAG",
-    "productivity": "Productivity"
+    "productivity": "Productivity",
+    "roadmap": "Roadmap"
   },
   "period": {
     "7d": "Last 7 days",

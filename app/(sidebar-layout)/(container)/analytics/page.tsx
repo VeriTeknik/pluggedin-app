@@ -1,13 +1,16 @@
 'use client';
 
-import { BarChart3, Library, TrendingUp, Wrench } from 'lucide-react';
-import { useState } from 'react';
+import { BarChart3, Library, Lightbulb, TrendingUp, Wrench } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type TimePeriod } from '@/app/actions/analytics';
 import { DashboardTab } from '@/components/analytics/tabs/DashboardTab';
 import { LibraryTab } from '@/components/analytics/tabs/LibraryTab';
 import { ProductivityTab } from '@/components/analytics/tabs/ProductivityTab';
+import { RoadmapTab } from '@/components/analytics/tabs/RoadmapTab';
 import { ToolsTab } from '@/components/analytics/tabs/ToolsTab';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
@@ -29,8 +32,34 @@ const periods: { value: TimePeriod; label: string }[] = [
 
 export default function AnalyticsPage() {
   const { t } = useTranslation(['analytics', 'common']);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { data: session } = useSession();
   const { activeProfile } = useProfiles();
   const [period, setPeriod] = useState<TimePeriod>('7d');
+  const activeTabFromQuery = searchParams?.get('tab') || 'overview';
+  const [activeTab, setActiveTab] = useState<string>(activeTabFromQuery);
+
+  // Get admin status from session
+  const isCurrentUserAdmin = session?.user?.is_admin ?? false;
+
+  useEffect(() => {
+    if (activeTabFromQuery !== activeTab) {
+      setActiveTab(activeTabFromQuery);
+    }
+  }, [activeTabFromQuery, activeTab]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParams?.toString());
+    if (value === 'overview') {
+      params.delete('tab');
+    } else {
+      params.set('tab', value);
+    }
+    const queryString = params.toString();
+    router.push(queryString ? `/analytics?${queryString}` : '/analytics');
+  };
 
   if (!activeProfile) {
     return (
@@ -65,8 +94,8 @@ export default function AnalyticsPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
             <span className="hidden sm:inline">{t('tabs.dashboard')}</span>
@@ -82,6 +111,10 @@ export default function AnalyticsPage() {
           <TabsTrigger value="productivity" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
             <span className="hidden sm:inline">{t('tabs.productivity')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="roadmap" className="flex items-center gap-2">
+            <Lightbulb className="h-4 w-4" />
+            <span className="hidden sm:inline">Roadmap</span>
           </TabsTrigger>
         </TabsList>
 
@@ -99,6 +132,10 @@ export default function AnalyticsPage() {
 
         <TabsContent value="productivity" className="space-y-4">
           <ProductivityTab profileUuid={activeProfile.uuid} period={period} />
+        </TabsContent>
+
+        <TabsContent value="roadmap" className="space-y-4">
+          <RoadmapTab profileUuid={activeProfile.uuid} isAdmin={isCurrentUserAdmin ?? false} />
         </TabsContent>
       </Tabs>
     </div>

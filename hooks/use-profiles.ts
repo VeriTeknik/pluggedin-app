@@ -38,6 +38,8 @@ export function useProfiles() {
   );
 
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
+  // Note: isCurrentUserAdmin should come from the user object, not profile
+  // const isCurrentUserAdmin = currentProfile?.userIsAdmin ?? false;
 
   // Load saved profile on mount if authenticated
   useEffect(() => {
@@ -89,5 +91,6 @@ export function useProfiles() {
     mutateProfiles,
     mutateActiveProfile,
     updateProfile,
+    // isCurrentUserAdmin removed - use session.user.is_admin instead
   };
 }

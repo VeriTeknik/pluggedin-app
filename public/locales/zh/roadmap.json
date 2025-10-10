@@ -1,0 +1,163 @@
+{
+  "title": "社区路线图",
+  "subtitle": "功能请求",
+  "description": "为功能投票，帮助塑造 Plugged.in 的未来",
+  "descriptionShort": "为社区建议投票并帮助确定我们的路线图优先级",
+  "createFeature": "建议功能",
+  "createFeatureButton": "新功能请求",
+
+  "filters": {
+    "all": "全部",
+    "status": "状态",
+    "category": "类别",
+    "sortBy": "排序方式"
+  },
+
+  "sortOptions": {
+    "trending": "热门",
+    "recent": "最新",
+    "controversial": "有争议",
+    "top": "最高票"
+  },
+
+  "status": {
+    "pending": "待审核",
+    "accepted": "已接受",
+    "declined": "已拒绝",
+    "completed": "已完成",
+    "in_progress": "进行中"
+  },
+
+  "categories": {
+    "mcp_servers": "MCP 服务器",
+    "ui_ux": "界面/体验",
+    "performance": "性能",
+    "api": "API",
+    "social": "社交",
+    "library": "库",
+    "analytics": "分析",
+    "security": "安全",
+    "mobile": "移动端",
+    "other": "其他"
+  },
+
+  "voting": {
+    "voteYes": "投赞成票",
+    "voteNo": "投反对票",
+    "voted": "您已投票",
+    "yourVoteWeight": "您的投票权重：{{weight}}×",
+    "voteWeightTooltip": "基于您的成就的投票权重",
+    "changeVote": "更改投票",
+    "voteCounts": "{{yes}} 赞成 / {{no}} 反对",
+    "weightedVotes": "{{weight}} 加权投票",
+    "fromUsers": "来自 {{count}} 位用户"
+  },
+
+  "tier": {
+    "current": "当前等级：{{tier}}",
+    "bronze": "青铜",
+    "silver": "白银",
+    "gold": "黄金",
+    "platinum": "铂金",
+    "diamond": "钻石",
+    "progress": "解锁 {{count}} 个成就以达到 {{nextTier}} 等级",
+    "maxTier": "您已达到最高投票权重！",
+    "unlockMore": "通过完成成就解锁更多投票权重",
+    "viewAchievements": "查看成就",
+    "helpText": "完成生产力标签中的成就，将您的投票权重提升至 5×"
+  },
+
+  "form": {
+    "title": "功能标题",
+    "titlePlaceholder": "为您的功能请求提供简短、描述性的标题",
+    "description": "描述",
+    "descriptionPlaceholder": "描述该功能、其优势和用例...",
+    "category": "类别",
+    "selectCategory": "选择类别",
+    "submit": "提交功能请求",
+    "cancel": "取消",
+    "updating": "提交中..."
+  },
+
+  "table": {
+    "feature": "功能",
+    "status": "状态",
+    "category": "类别",
+    "votes": "投票",
+    "createdBy": "请求者",
+    "createdAt": "创建时间",
+    "action": "您的投票",
+    "manage": "管理",
+    "delete": "删除",
+    "anonymousUser": "匿名用户",
+    "noFeatures": "暂无功能请求",
+    "noFeaturesDescription": "成为第一个建议功能的人！",
+    "loadMore": "加载更多"
+  },
+
+  "details": {
+    "requestedBy": "由 {{name}} 请求",
+    "acceptedBy": "由 {{name}} 接受",
+    "declinedReason": "拒绝原因",
+    "priority": "优先级",
+    "voteBreakdown": "投票权重分布",
+    "tierDistribution": "等级分布"
+  },
+
+  "admin": {
+    "pendingQueue": "待处理功能",
+    "accept": "接受",
+    "decline": "拒绝",
+    "markCompleted": "标记为已完成",
+    "markInProgress": "标记为进行中",
+    "setPriority": "设置优先级",
+    "priority": {
+      "1": "紧急",
+      "2": "高",
+      "3": "中",
+      "4": "低",
+      "5": "很低"
+    },
+    "declineReason": "拒绝原因（可选）",
+    "bulkActions": "批量操作",
+    "selectAll": "全选",
+    "acceptSelected": "接受选中项",
+    "declineSelected": "拒绝选中项",
+    "featureDeleted": "功能请求已删除",
+    "confirmDelete": "您确定要删除此功能请求吗？此操作无法撤销。",
+    "updateStatus": "更新功能状态",
+    "updateStatusDescription": "更改\"{{title}}\"的状态",
+    "statusLabel": "状态",
+    "priorityLabel": "优先级",
+    "priorityValue": "优先级 {{priority}}",
+    "priorityHelp": "优先级更高的功能将更快实现",
+    "declinedReasonLabel": "拒绝原因",
+    "declinedReasonPlaceholder": "解释为什么拒绝此功能请求...",
+    "declinedReasonHelp": "可选，但有助于用户理解决定",
+    "updateButton": "更新状态",
+    "updateStatusButton": "更新状态",
+    "statusUpdated": "状态更新成功",
+    "statusUpdatedDescription": "\"{{title}}\"的状态已更新"
+  },
+
+  "notifications": {
+    "featureCreated": "功能请求创建成功",
+    "voteRecorded": "您的投票已记录",
+    "voteUpdated": "您的投票已更新",
+    "featureAccepted": "您的功能请求已被接受！",
+    "featureDeclined": "您的功能请求已被拒绝",
+    "statusUpdated": "功能状态已更新"
+  },
+
+  "errors": {
+    "loadFailed": "加载功能请求失败",
+    "createFailed": "创建功能请求失败",
+    "voteFailed": "记录投票失败",
+    "updateFailed": "更新功能失败",
+    "unauthorized": "您必须登录才能投票",
+    "adminOnly": "需要管理员权限",
+    "titleTooShort": "标题至少需要 5 个字符",
+    "titleTooLong": "标题必须少于 100 个字符",
+    "descriptionTooLong": "描述必须少于 2000 个字符"
+  }
+}

@@ -63,10 +63,21 @@ const nextConfig: NextConfig = {
           fs: false,
           net: false,
           tls: false,
+          canvas: false, // Prevent canvas from being bundled on client
         },
       };
 
       // PDF.js worker is now served as static file from /public/pdf.worker.min.mjs
+    }
+
+    // Externalize canvas for server-side builds (used by jsdom/dompurify)
+    if (isServer) {
+      if (!config.externals) {
+        config.externals = [];
+      }
+      if (Array.isArray(config.externals)) {
+        config.externals.push('canvas');
+      }
     }
 
     // Suppress webpack cache warnings for large translation files

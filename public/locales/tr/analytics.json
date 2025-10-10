@@ -30,7 +30,8 @@
     "dashboard": "Gösterge Paneli",
     "tools": "Araçlar ve Sunucular",
     "library": "Kütüphane ve RAG",
-    "productivity": "Üretkenlik"
+    "productivity": "Üretkenlik",
+    "roadmap": "Yol Haritası"
   },
   "period": {
     "7d": "Son 7 gün",
