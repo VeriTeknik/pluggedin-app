@@ -33,6 +33,7 @@ import enMcpServers from '../public/locales/en/mcpServers.json';
 import enNotifications from '../public/locales/en/notifications.json';
 import enPlayground from '../public/locales/en/playground.json';
 import enRegistry from '../public/locales/en/registry.json';
+import enRoadmap from '../public/locales/en/roadmap.json';
 import enSearch from '../public/locales/en/search.json';
 import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
@@ -56,6 +57,7 @@ export const namespaces = [
   'notifications',
   'playground',
   'registry',
+  'roadmap',
   'search',
   'settings',
   'setupGuide',
@@ -83,6 +85,7 @@ type Messages = {
   notifications: typeof enNotifications;
   playground: typeof enPlayground;
   registry: typeof enRegistry;
+  roadmap: typeof enRoadmap;
   search: typeof enSearch;
   settings: typeof enSettings;
   setupGuide: typeof enSetupGuide;

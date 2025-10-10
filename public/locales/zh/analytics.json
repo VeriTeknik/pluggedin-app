@@ -6,7 +6,8 @@
     "tools": "工具和服务器",
     "library": "文档库和 RAG",
     "productivity": "生产力",
-    "dashboard": "仪表板"
+    "dashboard": "仪表板",
+    "roadmap": "路线图"
   },
   "period": {
     "7d": "最近 7 天",

@@ -357,17 +357,18 @@ export const authOptions: NextAuthOptions = {
       if (!session.user) {
         session.user = {} as any; // Initialize if it doesn't exist (shouldn't happen with JWT strategy)
       }
-      
+
       if (token) {
         // Explicitly assign ID from token, even if session object might already have it
-        session.user.id = token.id as string; 
-        
+        session.user.id = token.id as string;
+
         // Use nullish coalescing to ensure type compatibility (string | null)
-        session.user.name = token.name ?? null; 
+        session.user.name = token.name ?? null;
         session.user.email = token.email ?? null;
         session.user.image = token.picture ?? null;
         session.user.emailVerified = token.emailVerified; // This should be Date | null
         session.user.username = token.username ?? null;
+        session.user.is_admin = token.is_admin ?? false;
       } else {
          console.warn('Session callback: Token is missing!'); // Log if token is missing
       }
@@ -382,18 +383,20 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email ?? null;
         token.picture = user.image ?? null;
         token.emailVerified = user.emailVerified;
-        
-       // Fetch username from DB during initial sign-in
+
+       // Fetch username and is_admin from DB during initial sign-in
        try {
           const dbUser = await db.query.users.findFirst({
             where: eq(users.id, user.id),
-            columns: { username: true }
+            columns: { username: true, is_admin: true }
           });
           // Ensure null is assigned if dbUser or dbUser.username is null/undefined
           token.username = dbUser?.username ?? null;
+          token.is_admin = dbUser?.is_admin ?? false;
        } catch (error) {
           console.error('Error fetching username in JWT callback:', error);
           token.username = null; // Fallback to null on error
+          token.is_admin = false; // Fallback to false on error
        }
        }
        
@@ -404,18 +407,20 @@ export const authOptions: NextAuthOptions = {
           token.username = session.username ?? null; 
        }
        
-       // If token exists but username is missing (e.g., old token), try fetching it
-       if (token.id && token.username === undefined) { // Check specifically for undefined or null if needed
+       // If token exists but username or is_admin is missing (e.g., old token), try fetching it
+       if (token.id && (token.username === undefined || token.is_admin === undefined)) {
           try {
             const dbUser = await db.query.users.findFirst({
               where: eq(users.id, token.id as string),
-              columns: { username: true }
+              columns: { username: true, is_admin: true }
             });
             // Ensure null is assigned if dbUser or dbUser.username is null/undefined
             token.username = dbUser?.username ?? null;
+            token.is_admin = dbUser?.is_admin ?? false;
           } catch (error) {
             console.error('Error fetching username in JWT callback (fallback):', error);
             token.username = null; // Fallback to null on error
+            token.is_admin = false; // Fallback to false on error
           }
        }
 
@@ -460,6 +465,7 @@ declare module 'next-auth' {
       username: string | null; // Consistent type
       image?: string | null; // Match JWT type
       emailVerified?: Date | null;
+      is_admin?: boolean;
     };
   }
 }
@@ -472,5 +478,6 @@ declare module 'next-auth/jwt' {
     username: string | null; // Consistent type
     picture?: string | null;
     emailVerified?: Date | null;
+    is_admin?: boolean;
   }
 }

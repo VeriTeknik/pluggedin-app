@@ -62,7 +62,8 @@ export async function getProfiles(currentProjectUuid: string) {
         language: profilesTable.language,
         enabled_capabilities: profilesTable.enabled_capabilities,
         // Removed bio, is_public, avatar_url as they are on the users table now
-        username: users.username // username comes from the joined users table
+        username: users.username, // username comes from the joined users table
+        is_admin: users.is_admin,
       })
       .from(profilesTable)
       .innerJoin(projectsTable, eq(profilesTable.project_uuid, projectsTable.uuid))
@@ -115,6 +116,7 @@ export async function getProjectActiveProfile(currentProjectUuid: string) {
     userBio: users.bio,
     userAvatarUrl: users.avatar_url,
     userIsPublic: users.is_public,
+    userIsAdmin: users.is_admin,
   };
 
   // Try to get active profile if set, joining with users table

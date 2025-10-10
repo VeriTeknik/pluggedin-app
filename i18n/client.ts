@@ -19,6 +19,7 @@ import enMcpServers from '../public/locales/en/mcpServers.json';
 import enNotifications from '../public/locales/en/notifications.json';
 import enPlayground from '../public/locales/en/playground.json';
 import enRegistry from '../public/locales/en/registry.json';
+import enRoadmap from '../public/locales/en/roadmap.json';
 import enSearch from '../public/locales/en/search.json';
 import enSettings from '../public/locales/en/settings.json';
 import enSetupGuide from '../public/locales/en/setupGuide.json';
@@ -41,6 +42,7 @@ import hiMcpServers from '../public/locales/hi/mcpServers.json';
 import hiNotifications from '../public/locales/hi/notifications.json';
 import hiPlayground from '../public/locales/hi/playground.json';
 import hiRegistry from '../public/locales/hi/registry.json';
+import hiRoadmap from '../public/locales/hi/roadmap.json';
 import hiSearch from '../public/locales/hi/search.json';
 import hiSettings from '../public/locales/hi/settings.json';
 import hiSetupGuide from '../public/locales/hi/setupGuide.json';
@@ -63,6 +65,7 @@ import jaMcpServers from '../public/locales/ja/mcpServers.json';
 import jaNotifications from '../public/locales/ja/notifications.json';
 import jaPlayground from '../public/locales/ja/playground.json';
 import jaRegistry from '../public/locales/ja/registry.json';
+import jaRoadmap from '../public/locales/ja/roadmap.json';
 import jaSearch from '../public/locales/ja/search.json';
 import jaSettings from '../public/locales/ja/settings.json';
 import jaSetupGuide from '../public/locales/ja/setupGuide.json';
@@ -85,6 +88,7 @@ import nlMcpServers from '../public/locales/nl/mcpServers.json';
 import nlNotifications from '../public/locales/nl/notifications.json';
 import nlPlayground from '../public/locales/nl/playground.json';
 import nlRegistry from '../public/locales/nl/registry.json';
+import nlRoadmap from '../public/locales/nl/roadmap.json';
 import nlSearch from '../public/locales/nl/search.json';
 import nlSettings from '../public/locales/nl/settings.json';
 import nlSetupGuide from '../public/locales/nl/setupGuide.json';
@@ -107,6 +111,7 @@ import trMcpServers from '../public/locales/tr/mcpServers.json';
 import trNotifications from '../public/locales/tr/notifications.json';
 import trPlayground from '../public/locales/tr/playground.json';
 import trRegistry from '../public/locales/tr/registry.json';
+import trRoadmap from '../public/locales/tr/roadmap.json';
 import trSearch from '../public/locales/tr/search.json';
 import trSettings from '../public/locales/tr/settings.json';
 import trSetupGuide from '../public/locales/tr/setupGuide.json';
@@ -129,6 +134,7 @@ import zhMcpServers from '../public/locales/zh/mcpServers.json';
 import zhNotifications from '../public/locales/zh/notifications.json';
 import zhPlayground from '../public/locales/zh/playground.json';
 import zhRegistry from '../public/locales/zh/registry.json';
+import zhRoadmap from '../public/locales/zh/roadmap.json';
 import zhSearch from '../public/locales/zh/search.json';
 import zhSettings from '../public/locales/zh/settings.json';
 import zhSetupGuide from '../public/locales/zh/setupGuide.json';
@@ -172,6 +178,7 @@ const resources = {
     notifications: enNotifications,
     playground: enPlayground,
     registry: enRegistry,
+    roadmap: enRoadmap,
     search: enSearch,
     settings: enSettings,
     setupGuide: enSetupGuide,
@@ -212,6 +219,7 @@ const resources = {
     notifications: hiNotifications,
     playground: hiPlayground,
     registry: hiRegistry,
+    roadmap: hiRoadmap,
     search: hiSearch,
     settings: hiSettings,
     setupGuide: hiSetupGuide,
@@ -252,6 +260,7 @@ const resources = {
     notifications: jaNotifications,
     playground: jaPlayground,
     registry: jaRegistry,
+    roadmap: jaRoadmap,
     search: jaSearch,
     settings: jaSettings,
     setupGuide: jaSetupGuide,
@@ -292,6 +301,7 @@ const resources = {
     notifications: nlNotifications,
     playground: nlPlayground,
     registry: nlRegistry,
+    roadmap: nlRoadmap,
     search: nlSearch,
     settings: nlSettings,
     setupGuide: nlSetupGuide,
@@ -332,6 +342,7 @@ const resources = {
     notifications: trNotifications,
     playground: trPlayground,
     registry: trRegistry,
+    roadmap: trRoadmap,
     search: trSearch,
     settings: trSettings,
     setupGuide: trSetupGuide,
@@ -372,6 +383,7 @@ const resources = {
     notifications: zhNotifications,
     playground: zhPlayground,
     registry: zhRegistry,
+    roadmap: zhRoadmap,
     search: zhSearch,
     settings: zhSettings,
     setupGuide: zhSetupGuide,

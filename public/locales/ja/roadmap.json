@@ -1,0 +1,166 @@
+{
+  "title": "コミュニティロードマップ",
+  "subtitle": "機能リクエスト",
+  "description": "機能に投票して、Plugged.inの未来を形作りましょう",
+  "descriptionShort": "コミュニティの提案に投票して、ロードマップの優先順位付けにご協力ください",
+  "createFeature": "機能を提案",
+  "createFeatureButton": "新しい機能リクエスト",
+
+  "filters": {
+    "all": "すべて",
+    "status": "ステータス",
+    "category": "カテゴリ",
+    "sortBy": "並び替え"
+  },
+
+  "sortOptions": {
+    "trending": "トレンド",
+    "recent": "最新",
+    "controversial": "議論を呼ぶ",
+    "top": "最も投票された"
+  },
+
+  "status": {
+    "pending": "レビュー待ち",
+    "accepted": "承認済み",
+    "declined": "却下済み",
+    "completed": "完了",
+    "in_progress": "進行中"
+  },
+
+  "categories": {
+    "mcp_servers": "MCPサーバー",
+    "ui_ux": "UI/UX",
+    "performance": "パフォーマンス",
+    "api": "API",
+    "social": "ソーシャル",
+    "library": "ライブラリ",
+    "analytics": "分析",
+    "security": "セキュリティ",
+    "mobile": "モバイル",
+    "other": "その他"
+  },
+
+  "voting": {
+    "voteYes": "賛成票",
+    "voteNo": "反対票",
+    "voted": "投票済み",
+    "yourVoteWeight": "投票力：{{weight}}×",
+    "voteWeightTooltip": "実績に基づく投票の重み",
+    "changeVote": "投票を変更",
+    "voteCounts": "{{yes}} 賛成 / {{no}} 反対",
+    "weightedVotes": "{{weight}} 加重投票",
+    "fromUsers": "{{count}} ユーザーから"
+  },
+
+  "tier": {
+    "current": "現在のティア：{{tier}}",
+    "bronze": "ブロンズ",
+    "silver": "シルバー",
+    "gold": "ゴールド",
+    "platinum": "プラチナ",
+    "diamond": "ダイヤモンド",
+    "progress": "{{nextTier}}ティアのために{{count}}個の実績をアンロック",
+    "maxTier": "最大投票力に達しました！",
+    "unlockMore": "実績を達成してより多くの投票力をアンロック",
+    "viewAchievements": "実績を表示",
+    "helpText": "生産性タブで実績を達成して、投票力を最大5×まで増やしましょう"
+  },
+
+  "form": {
+    "title": "機能タイトル",
+    "titlePlaceholder": "機能リクエストの簡潔で説明的なタイトル",
+    "description": "説明",
+    "descriptionPlaceholder": "機能、その利点、使用例を説明してください...",
+    "category": "カテゴリ",
+    "selectCategory": "カテゴリを選択",
+    "submit": "機能リクエストを送信",
+    "cancel": "キャンセル",
+    "updating": "送信中..."
+  },
+
+  "table": {
+    "feature": "機能",
+    "status": "ステータス",
+    "category": "カテゴリ",
+    "votes": "投票",
+    "createdBy": "リクエスト者",
+    "createdAt": "作成日",
+    "action": "あなたの投票",
+    "manage": "管理",
+    "delete": "削除",
+    "anonymousUser": "匿名ユーザー",
+    "noFeatures": "まだ機能リクエストがありません",
+    "noFeaturesDescription": "最初に機能を提案しましょう！",
+    "loadMore": "さらに読み込む"
+  },
+
+  "details": {
+    "requestedBy": "{{name}}によってリクエスト",
+    "acceptedBy": "{{name}}によって承認",
+    "declinedReason": "却下理由",
+    "priority": "優先度",
+    "voteBreakdown": "投票重み分布",
+    "tierDistribution": "ティア分布"
+  },
+
+  "admin": {
+    "pendingQueue": "保留中の機能",
+    "accept": "承認",
+    "decline": "却下",
+    "markCompleted": "完了としてマーク",
+    "markInProgress": "進行中としてマーク",
+    "setPriority": "優先度を設定",
+    "priority": {
+      "1": "緊急",
+      "2": "高",
+      "3": "中",
+      "4": "低",
+      "5": "非常に低い"
+    },
+    "declineReason": "却下理由（任意）",
+    "bulkActions": "一括操作",
+    "selectAll": "すべて選択",
+    "acceptSelected": "選択項目を承認",
+    "declineSelected": "選択項目を却下",
+    "featureDeleted": "機能リクエストを削除しました",
+    "confirmDelete": "本当にこの機能リクエストを削除しますか？この操作は元に戻せません。",
+    "updateStatus": "機能ステータスを更新",
+    "updateStatusDescription": "「{{title}}」のステータスを変更",
+    "statusLabel": "ステータス",
+    "priorityLabel": "優先度",
+    "priorityValue": "優先度 {{priority}}",
+    "priorityHelp": "優先度の高い機能は早く実装されます",
+    "declinedReasonLabel": "却下理由",
+    "declinedReasonPlaceholder": "この機能リクエストが却下される理由を説明してください...",
+    "declinedReasonHelp": "任意ですが、ユーザーが決定を理解するのに役立ちます",
+    "updateButton": "ステータスを更新",
+    "updateStatusButton": "ステータスを更新",
+    "statusUpdated": "ステータスが正常に更新されました",
+    "statusUpdatedDescription": "「{{title}}」のステータスが更新されました"
+  },
+
+  "notifications": {
+    "featureCreated": "機能リクエストが正常に作成されました",
+    "voteRecorded": "投票が記録されました",
+    "voteUpdated": "投票が更新されました",
+    "featureAccepted": "機能リクエストが承認されました！",
+    "featureDeclined": "機能リクエストが却下されました",
+    "statusUpdated": "機能ステータスが更新されました"
+  },
+
+  "errors": {
+    "loadFailed": "機能リクエストの読み込みに失敗しました",
+    "createFailed": "機能リクエストの作成に失敗しました",
+    "voteFailed": "投票の記録に失敗しました",
+    "updateFailed": "機能の更新に失敗しました",
+    "unauthorized": "投票するにはサインインする必要があります",
+    "adminOnly": "管理者アクセスが必要です",
+    "titleTooShort": "タイトルは5文字以上である必要があります",
+    "titleTooLong": "タイトルは100文字未満である必要があります",
+    "descriptionTooLong": "説明は2000文字未満である必要があります",
+    "titleRequired": "タイトルは必須です",
+    "titleCannotBeEmpty": "タイトルを空にしたり、空白のみを含めることはできません",
+    "unknownError": "予期しないエラーが発生しました"
+  }
+}

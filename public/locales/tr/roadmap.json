@@ -1,0 +1,166 @@
+{
+  "title": "Topluluk Yol Haritası",
+  "subtitle": "Özellik İstekleri",
+  "description": "Özelliklere oy verin ve Plugged.in'in geleceğini şekillendirin",
+  "descriptionShort": "Topluluk önerilerine oy verin ve yol haritamızı önceliklendirmeye yardımcı olun",
+  "createFeature": "Özellik Öner",
+  "createFeatureButton": "Yeni Özellik İsteği",
+
+  "filters": {
+    "all": "Tümü",
+    "status": "Durum",
+    "category": "Kategori",
+    "sortBy": "Sırala"
+  },
+
+  "sortOptions": {
+    "trending": "Trend",
+    "recent": "En Yeni",
+    "controversial": "Tartışmalı",
+    "top": "En Çok Oylanan"
+  },
+
+  "status": {
+    "pending": "İnceleme Bekliyor",
+    "accepted": "Kabul Edildi",
+    "declined": "Reddedildi",
+    "completed": "Tamamlandı",
+    "in_progress": "Devam Ediyor"
+  },
+
+  "categories": {
+    "mcp_servers": "MCP Sunucuları",
+    "ui_ux": "Arayüz/Deneyim",
+    "performance": "Performans",
+    "api": "API",
+    "social": "Sosyal",
+    "library": "Kütüphane",
+    "analytics": "Analitik",
+    "security": "Güvenlik",
+    "mobile": "Mobil",
+    "other": "Diğer"
+  },
+
+  "voting": {
+    "voteYes": "EVET Oyla",
+    "voteNo": "HAYIR Oyla",
+    "voted": "Oy verdiniz",
+    "yourVoteWeight": "Oy gücünüz: {{weight}}×",
+    "voteWeightTooltip": "Başarılara göre oy ağırlığı",
+    "changeVote": "Oyu değiştir",
+    "voteCounts": "{{yes}} EVET / {{no}} HAYIR",
+    "weightedVotes": "{{weight}} ağırlıklı oy",
+    "fromUsers": "{{count}} kullanıcıdan"
+  },
+
+  "tier": {
+    "current": "Mevcut seviye: {{tier}}",
+    "bronze": "Bronz",
+    "silver": "Gümüş",
+    "gold": "Altın",
+    "platinum": "Platin",
+    "diamond": "Elmas",
+    "progress": "{{nextTier}} seviyesi için {{count}} başarı daha kilitle",
+    "maxTier": "Maksimum oy gücüne ulaştınız!",
+    "unlockMore": "Başarıları tamamlayarak daha fazla oy gücü kilidi açın",
+    "viewAchievements": "Başarıları Görüntüle",
+    "helpText": "Oy gücünüzü 5×'e kadar artırmak için Üretkenlik sekmesindeki başarıları tamamlayın"
+  },
+
+  "form": {
+    "title": "Özellik Başlığı",
+    "titlePlaceholder": "Özellik isteğiniz için kısa, açıklayıcı başlık",
+    "description": "Açıklama",
+    "descriptionPlaceholder": "Özelliği, faydalarını ve kullanım durumlarını açıklayın...",
+    "category": "Kategori",
+    "selectCategory": "Kategori seçin",
+    "submit": "Özellik İsteği Gönder",
+    "cancel": "İptal",
+    "updating": "Gönderiliyor..."
+  },
+
+  "table": {
+    "feature": "Özellik",
+    "status": "Durum",
+    "category": "Kategori",
+    "votes": "Oylar",
+    "createdBy": "İsteyen",
+    "createdAt": "Oluşturuldu",
+    "action": "Oyunuz",
+    "anonymousUser": "Anonim kullanıcı",
+    "manage": "Yönet",
+    "delete": "Sil",
+    "noFeatures": "Henüz özellik isteği yok",
+    "noFeaturesDescription": "İlk özelliği öneren siz olun!",
+    "loadMore": "Daha Fazla Yükle"
+  },
+
+  "details": {
+    "requestedBy": "{{name}} tarafından istendi",
+    "acceptedBy": "{{name}} tarafından kabul edildi",
+    "declinedReason": "Reddetme nedeni",
+    "priority": "Öncelik",
+    "voteBreakdown": "Oy Ağırlığı Dağılımı",
+    "tierDistribution": "Seviye Dağılımı"
+  },
+
+  "admin": {
+    "pendingQueue": "Bekleyen Özellikler",
+    "accept": "Kabul Et",
+    "decline": "Reddet",
+    "markCompleted": "Tamamlandı Olarak İşaretle",
+    "markInProgress": "Devam Ediyor Olarak İşaretle",
+    "setPriority": "Öncelik Belirle",
+    "priority": {
+      "1": "Kritik",
+      "2": "Yüksek",
+      "3": "Orta",
+      "4": "Düşük",
+      "5": "Çok Düşük"
+    },
+    "declineReason": "Reddetme nedeni (isteğe bağlı)",
+    "bulkActions": "Toplu İşlemler",
+    "selectAll": "Tümünü Seç",
+    "acceptSelected": "Seçilenleri Kabul Et",
+    "declineSelected": "Seçilenleri Reddet",
+    "featureDeleted": "Özellik isteği kaldırıldı",
+    "confirmDelete": "Bu özellik isteğini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
+    "updateStatus": "Özellik Durumunu Güncelle",
+    "updateStatusDescription": "\"{{title}}\" durumunu değiştir",
+    "statusLabel": "Durum",
+    "priorityLabel": "Öncelik",
+    "priorityValue": "Öncelik {{priority}}",
+    "priorityHelp": "Yüksek öncelikli özellikler daha önce uygulanacak",
+    "declinedReasonLabel": "Reddetme Nedeni",
+    "declinedReasonPlaceholder": "Bu özellik isteğinin neden reddedildiğini açıklayın...",
+    "declinedReasonHelp": "İsteğe bağlı, ancak kullanıcıların kararı anlamasına yardımcı olur",
+    "updateButton": "Durumu Güncelle",
+    "updateStatusButton": "Durumu Güncelle",
+    "statusUpdated": "Durum başarıyla güncellendi",
+    "statusUpdatedDescription": "\"{{title}}\" durumu güncellendi"
+  },
+
+  "notifications": {
+    "featureCreated": "Özellik isteği başarıyla oluşturuldu",
+    "voteRecorded": "Oyunuz kaydedildi",
+    "voteUpdated": "Oyunuz güncellendi",
+    "featureAccepted": "Özellik isteğiniz kabul edildi!",
+    "featureDeclined": "Özellik isteğiniz reddedildi",
+    "statusUpdated": "Özellik durumu güncellendi"
+  },
+
+  "errors": {
+    "loadFailed": "Özellik istekleri yüklenemedi",
+    "createFailed": "Özellik isteği oluşturulamadı",
+    "voteFailed": "Oy kaydedilemedi",
+    "updateFailed": "Özellik güncellenemedi",
+    "unauthorized": "Oy vermek için oturum açmalısınız",
+    "adminOnly": "Yönetici erişimi gerekli",
+    "titleTooShort": "Başlık en az 5 karakter olmalı",
+    "titleTooLong": "Başlık 100 karakterden az olmalı",
+    "descriptionTooLong": "Açıklama 2000 karakterden az olmalı",
+    "titleRequired": "Başlık gerekli",
+    "titleCannotBeEmpty": "Başlık boş olamaz veya yalnızca boşluk içeremez",
+    "unknownError": "Beklenmeyen bir hata oluştu"
+  }
+}

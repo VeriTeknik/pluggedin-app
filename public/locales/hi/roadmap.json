@@ -1,0 +1,166 @@
+{
+  "title": "सामुदायिक रोडमैप",
+  "subtitle": "सुविधा अनुरोध",
+  "description": "सुविधाओं पर वोट करें और Plugged.in के भविष्य को आकार दें",
+  "descriptionShort": "सामुदायिक सुझावों पर वोट करें और हमारे रोडमैप को प्राथमिकता देने में मदद करें",
+  "createFeature": "सुविधा सुझाएं",
+  "createFeatureButton": "नया सुविधा अनुरोध",
+
+  "filters": {
+    "all": "सभी",
+    "status": "स्थिति",
+    "category": "श्रेणी",
+    "sortBy": "क्रमबद्ध करें"
+  },
+
+  "sortOptions": {
+    "trending": "ट्रेंडिंग",
+    "recent": "नवीनतम",
+    "controversial": "विवादास्पद",
+    "top": "शीर्ष वोट"
+  },
+
+  "status": {
+    "pending": "समीक्षा लंबित",
+    "accepted": "स्वीकृत",
+    "declined": "अस्वीकृत",
+    "completed": "पूर्ण",
+    "in_progress": "प्रगति में"
+  },
+
+  "categories": {
+    "mcp_servers": "MCP सर्वर",
+    "ui_ux": "UI/UX",
+    "performance": "प्रदर्शन",
+    "api": "API",
+    "social": "सामाजिक",
+    "library": "लाइब्रेरी",
+    "analytics": "विश्लेषण",
+    "security": "सुरक्षा",
+    "mobile": "मोबाइल",
+    "other": "अन्य"
+  },
+
+  "voting": {
+    "voteYes": "हाँ वोट करें",
+    "voteNo": "नहीं वोट करें",
+    "voted": "आपने वोट किया",
+    "yourVoteWeight": "आपकी मतदान शक्ति: {{weight}}×",
+    "voteWeightTooltip": "उपलब्धियों के आधार पर वोट भार",
+    "changeVote": "वोट बदलें",
+    "voteCounts": "{{yes}} हाँ / {{no}} नहीं",
+    "weightedVotes": "{{weight}} भारित वोट",
+    "fromUsers": "{{count}} उपयोगकर्ताओं से"
+  },
+
+  "tier": {
+    "current": "वर्तमान स्तर: {{tier}}",
+    "bronze": "कांस्य",
+    "silver": "रजत",
+    "gold": "स्वर्ण",
+    "platinum": "प्लैटिनम",
+    "diamond": "हीरा",
+    "progress": "{{nextTier}} स्तर के लिए {{count}} उपलब्धि अनलॉक करें",
+    "maxTier": "आप अधिकतम मतदान शक्ति तक पहुंच गए हैं!",
+    "unlockMore": "उपलब्धियां पूरी करके अधिक मतदान शक्ति अनलॉक करें",
+    "viewAchievements": "उपलब्धियां देखें",
+    "helpText": "अपनी मतदान शक्ति को 5× तक बढ़ाने के लिए उत्पादकता टैब में उपलब्धियां पूरी करें"
+  },
+
+  "form": {
+    "title": "सुविधा शीर्षक",
+    "titlePlaceholder": "अपने सुविधा अनुरोध के लिए संक्षिप्त, वर्णनात्मक शीर्षक",
+    "description": "विवरण",
+    "descriptionPlaceholder": "सुविधा, इसके लाभों और उपयोग के मामलों का वर्णन करें...",
+    "category": "श्रेणी",
+    "selectCategory": "श्रेणी चुनें",
+    "submit": "सुविधा अनुरोध सबमिट करें",
+    "cancel": "रद्द करें",
+    "updating": "सबमिट हो रहा है..."
+  },
+
+  "table": {
+    "feature": "सुविधा",
+    "status": "स्थिति",
+    "category": "श्रेणी",
+    "votes": "वोट",
+    "createdBy": "अनुरोधकर्ता",
+    "createdAt": "बनाया गया",
+    "action": "आपका वोट",
+    "manage": "प्रबंधन",
+    "delete": "हटाएँ",
+    "anonymousUser": "गुमनाम उपयोगकर्ता",
+    "noFeatures": "अभी तक कोई सुविधा अनुरोध नहीं",
+    "noFeaturesDescription": "पहले सुविधा सुझाने वाले बनें!",
+    "loadMore": "अधिक लोड करें"
+  },
+
+  "details": {
+    "requestedBy": "{{name}} द्वारा अनुरोधित",
+    "acceptedBy": "{{name}} द्वारा स्वीकृत",
+    "declinedReason": "अस्वीकृति कारण",
+    "priority": "प्राथमिकता",
+    "voteBreakdown": "वोट भार वितरण",
+    "tierDistribution": "स्तर वितरण"
+  },
+
+  "admin": {
+    "pendingQueue": "लंबित सुविधाएं",
+    "accept": "स्वीकार करें",
+    "decline": "अस्वीकार करें",
+    "markCompleted": "पूर्ण के रूप में चिह्नित करें",
+    "markInProgress": "प्रगति में के रूप में चिह्नित करें",
+    "setPriority": "प्राथमिकता सेट करें",
+    "priority": {
+      "1": "महत्वपूर्ण",
+      "2": "उच्च",
+      "3": "मध्यम",
+      "4": "निम्न",
+      "5": "बहुत निम्न"
+    },
+    "declineReason": "अस्वीकृति का कारण (वैकल्पिक)",
+    "bulkActions": "थोक क्रियाएं",
+    "selectAll": "सभी चुनें",
+    "acceptSelected": "चयनित स्वीकार करें",
+    "declineSelected": "चयनित अस्वीकार करें",
+    "featureDeleted": "फ़ीचर अनुरोध हटाया गया",
+    "confirmDelete": "क्या आप वाकई इस सुविधा अनुरोध को हटाना चाहते हैं? यह कार्रवाई पूर्ववत नहीं की जा सकती।",
+    "updateStatus": "सुविधा स्थिति अपडेट करें",
+    "updateStatusDescription": "\"{{title}}\" की स्थिति बदलें",
+    "statusLabel": "स्थिति",
+    "priorityLabel": "प्राथमिकता",
+    "priorityValue": "प्राथमिकता {{priority}}",
+    "priorityHelp": "उच्च प्राथमिकता वाली सुविधाएं जल्द लागू की जाएंगी",
+    "declinedReasonLabel": "अस्वीकृति का कारण",
+    "declinedReasonPlaceholder": "बताएं कि इस सुविधा अनुरोध को क्यों अस्वीकार किया जा रहा है...",
+    "declinedReasonHelp": "वैकल्पिक, लेकिन उपयोगकर्ताओं को निर्णय समझने में मदद करता है",
+    "updateButton": "स्थिति अपडेट करें",
+    "updateStatusButton": "स्थिति अपडेट करें",
+    "statusUpdated": "स्थिति सफलतापूर्वक अपडेट की गई",
+    "statusUpdatedDescription": "\"{{title}}\" की स्थिति अपडेट कर दी गई है"
+  },
+
+  "notifications": {
+    "featureCreated": "सुविधा अनुरोध सफलतापूर्वक बनाया गया",
+    "voteRecorded": "आपका वोट रिकॉर्ड किया गया है",
+    "voteUpdated": "आपका वोट अपडेट किया गया है",
+    "featureAccepted": "आपका सुविधा अनुरोध स्वीकार किया गया!",
+    "featureDeclined": "आपका सुविधा अनुरोध अस्वीकार किया गया",
+    "statusUpdated": "सुविधा स्थिति अपडेट की गई"
+  },
+
+  "errors": {
+    "loadFailed": "सुविधा अनुरोध लोड करने में विफल",
+    "createFailed": "सुविधा अनुरोध बनाने में विफल",
+    "voteFailed": "वोट रिकॉर्ड करने में विफल",
+    "updateFailed": "सुविधा अपडेट करने में विफल",
+    "unauthorized": "वोट करने के लिए साइन इन करना होगा",
+    "adminOnly": "व्यवस्थापक पहुंच आवश्यक",
+    "titleTooShort": "शीर्षक कम से कम 5 वर्ण का होना चाहिए",
+    "titleTooLong": "शीर्षक 100 वर्णों से कम होना चाहिए",
+    "descriptionTooLong": "विवरण 2000 वर्णों से कम होना चाहिए",
+    "titleRequired": "शीर्षक आवश्यक है",
+    "titleCannotBeEmpty": "शीर्षक खाली नहीं हो सकता या केवल रिक्त स्थान शामिल नहीं हो सकता",
+    "unknownError": "एक अप्रत्याशित त्रुटि हुई"
+  }
+}
