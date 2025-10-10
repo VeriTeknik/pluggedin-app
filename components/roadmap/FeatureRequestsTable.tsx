@@ -24,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { FeatureRequestCategory, FeatureRequestStatus, VoteType } from '@/db/schema';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -121,213 +122,226 @@ export function FeatureRequestsTable({
   }
 
   return (
-    <div className="space-y-4">
-      {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <Filter className="h-4 w-4 text-muted-foreground" />
+    <TooltipProvider delayDuration={200}>
+      <div className="space-y-4">
+        {/* Filters */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <Filter className="h-4 w-4 text-muted-foreground" />
 
-        <Select
-          value={filters.sortBy}
-          onValueChange={(value: any) => setFilters({ ...filters, sortBy: value })}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="trending">{t('sortOptions.trending')}</SelectItem>
-            <SelectItem value="recent">{t('sortOptions.recent')}</SelectItem>
-            <SelectItem value="top">{t('sortOptions.top')}</SelectItem>
-            <SelectItem value="controversial">{t('sortOptions.controversial')}</SelectItem>
-          </SelectContent>
-        </Select>
+          <Select
+            value={filters.sortBy}
+            onValueChange={(value: any) => setFilters({ ...filters, sortBy: value })}
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="trending">{t('sortOptions.trending')}</SelectItem>
+              <SelectItem value="recent">{t('sortOptions.recent')}</SelectItem>
+              <SelectItem value="top">{t('sortOptions.top')}</SelectItem>
+              <SelectItem value="controversial">{t('sortOptions.controversial')}</SelectItem>
+            </SelectContent>
+          </Select>
 
-        <Select
-          value={filters.status || 'all'}
-          onValueChange={(value) =>
-            setFilters({
-              ...filters,
-              status: value === 'all' ? undefined : (value as FeatureRequestStatus),
-            })
-          }
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder={t('filters.status')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('filters.all')}</SelectItem>
-            {Object.values(FeatureRequestStatus).map((status) => (
-              <SelectItem key={status} value={status}>
-                {t(`status.${status}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <Select
+            value={filters.status || 'all'}
+            onValueChange={(value) =>
+              setFilters({
+                ...filters,
+                status: value === 'all' ? undefined : (value as FeatureRequestStatus),
+              })
+            }
+          >
+            <SelectTrigger className="w-[160px]">
+              <SelectValue placeholder={t('filters.status')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filters.all')}</SelectItem>
+              {Object.values(FeatureRequestStatus).map((status) => (
+                <SelectItem key={status} value={status}>
+                  {t(`status.${status}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-        <Select
-          value={filters.category || 'all'}
-          onValueChange={(value) =>
-            setFilters({
-              ...filters,
-              category: value === 'all' ? undefined : (value as FeatureRequestCategory),
-            })
-          }
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder={t('filters.category')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t('filters.all')}</SelectItem>
-            {Object.values(FeatureRequestCategory).map((category) => (
-              <SelectItem key={category} value={category}>
-                {t(`categories.${category}`)}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Table */}
-      {features.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">{t('table.noFeatures')}</p>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t('table.noFeaturesDescription')}
-          </p>
+          <Select
+            value={filters.category || 'all'}
+            onValueChange={(value) =>
+              setFilters({
+                ...filters,
+                category: value === 'all' ? undefined : (value as FeatureRequestCategory),
+              })
+            }
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder={t('filters.category')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filters.all')}</SelectItem>
+              {Object.values(FeatureRequestCategory).map((category) => (
+                <SelectItem key={category} value={category}>
+                  {t(`categories.${category}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-[40%]">{t('table.feature')}</TableHead>
-                <TableHead>{t('table.status')}</TableHead>
-                <TableHead>{t('table.category')}</TableHead>
-                <TableHead className="text-right">{t('table.votes')}</TableHead>
-                <TableHead className="text-right">{t('table.action')}</TableHead>
-                {isAdmin && <TableHead className="text-right">{t('table.manage')}</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {features.map((feature) => (
-                <TableRow key={feature.uuid}>
-                  <TableCell>
-                    <div>
-                      <p className="font-medium">{feature.title}</p>
-                      {feature.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5">
-                          {feature.description}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {t('table.createdBy')}{' '}
-                        {feature.createdBy?.displayName || t('table.anonymousUser')} •{' '}
-                        {formatDistanceToNow(new Date(feature.created_at), { addSuffix: true })}
-                      </p>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={cn('text-xs', getStatusColor(feature.status))}>
-                      {t(`status.${feature.status}`)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <span className="text-sm text-muted-foreground">
-                      {t(`categories.${feature.category}`)}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex flex-col items-end gap-0.5">
-                      <span className="text-sm font-medium text-green-600 dark:text-green-400">
-                        ✓ {feature.votes_yes_weight}
-                      </span>
-                      <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                        ✗ {feature.votes_no_weight}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        ({feature.votes_yes_count + feature.votes_no_count} votes)
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <VoteButton
-                      featureRequestUuid={feature.uuid}
-                      currentVote={currentUserVotes[feature.uuid]}
-                      onVoteSuccess={loadFeatures}
-                      profileUuid={profileUuid}
-                    />
-                  </TableCell>
-                  {isAdmin && (
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            setEditingFeature({
-                              uuid: feature.uuid,
-                              title: feature.title,
-                              status: feature.status,
-                            });
-                          }}
-                        >
-                          {t('admin.updateStatusButton')}
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          onClick={async () => {
-                            // Add confirmation dialog before deletion
-                            if (!window.confirm(t('admin.confirmDelete'))) {
-                              return;
-                            }
 
-                            try {
-                              const result = await deleteFeatureRequest({ featureRequestUuid: feature.uuid });
-                              if (result.success) {
-                                toast({
-                                  title: t('admin.featureDeleted'),
-                                });
-                                loadFeatures();
-                              } else {
+        {/* Table */}
+        {features.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">{t('table.noFeatures')}</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              {t('table.noFeaturesDescription')}
+            </p>
+          </div>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[40%]">{t('table.feature')}</TableHead>
+                  <TableHead>{t('table.status')}</TableHead>
+                  <TableHead>{t('table.category')}</TableHead>
+                  <TableHead className="text-right">{t('table.votes')}</TableHead>
+                  <TableHead className="text-right">{t('table.action')}</TableHead>
+                  {isAdmin && <TableHead className="text-right">{t('table.manage')}</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {features.map((feature) => (
+                  <TableRow key={feature.uuid}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium">{feature.title}</p>
+                        {feature.description && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <p className="text-sm text-muted-foreground line-clamp-1 mt-0.5 cursor-help">
+                                {feature.description}
+                              </p>
+                            </TooltipTrigger>
+                            <TooltipContent
+                              side="bottom"
+                              align="start"
+                              className="max-w-md whitespace-pre-line text-sm leading-relaxed"
+                            >
+                              {feature.description}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {t('table.createdBy')}{' '}
+                          {feature.createdBy?.displayName || t('table.anonymousUser')} •{' '}
+                          {formatDistanceToNow(new Date(feature.created_at), { addSuffix: true })}
+                        </p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={cn('text-xs', getStatusColor(feature.status))}>
+                        {t(`status.${feature.status}`)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {t(`categories.${feature.category}`)}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="text-sm font-medium text-green-600 dark:text-green-400">
+                          ✓ {feature.votes_yes_weight}
+                        </span>
+                        <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                          ✗ {feature.votes_no_weight}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({feature.votes_yes_count + feature.votes_no_count} votes)
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <VoteButton
+                        featureRequestUuid={feature.uuid}
+                        currentVote={currentUserVotes[feature.uuid]}
+                        onVoteSuccess={loadFeatures}
+                        profileUuid={profileUuid}
+                      />
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingFeature({
+                                uuid: feature.uuid,
+                                title: feature.title,
+                                status: feature.status,
+                              });
+                            }}
+                          >
+                            {t('admin.updateStatusButton')}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={async () => {
+                              // Add confirmation dialog before deletion
+                              if (!window.confirm(t('admin.confirmDelete'))) {
+                                return;
+                              }
+
+                              try {
+                                const result = await deleteFeatureRequest({ featureRequestUuid: feature.uuid });
+                                if (result.success) {
+                                  toast({
+                                    title: t('admin.featureDeleted'),
+                                  });
+                                  loadFeatures();
+                                } else {
+                                  toast({
+                                    title: t('errors.updateFailed'),
+                                    description: result.error,
+                                    variant: 'destructive',
+                                  });
+                                }
+                              } catch (err) {
+                                console.error('Error deleting feature request:', err);
                                 toast({
                                   title: t('errors.updateFailed'),
-                                  description: result.error,
+                                  description: t('errors.loadFailed'),
                                   variant: 'destructive',
                                 });
                               }
-                            } catch (err) {
-                              console.error('Error deleting feature request:', err);
-                              toast({
-                                title: t('errors.updateFailed'),
-                                description: t('errors.loadFailed'),
-                                variant: 'destructive',
-                              });
-                            }
-                          }}
-                        >
-                          {t('table.delete')}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
+                            }}
+                          >
+                            {t('table.delete')}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
 
-      {/* Update Status Dialog */}
-      {editingFeature && (
-        <UpdateFeatureStatusDialog
-          open={!!editingFeature}
-          onOpenChange={(open) => !open && setEditingFeature(null)}
-          featureRequestUuid={editingFeature.uuid}
-          currentStatus={editingFeature.status}
-          featureTitle={editingFeature.title}
-          onStatusUpdated={loadFeatures}
-        />
-      )}
-    </div>
+        {/* Update Status Dialog */}
+        {editingFeature && (
+          <UpdateFeatureStatusDialog
+            open={!!editingFeature}
+            onOpenChange={(open) => !open && setEditingFeature(null)}
+            featureRequestUuid={editingFeature.uuid}
+            currentStatus={editingFeature.status}
+            featureTitle={editingFeature.title}
+            onStatusUpdated={loadFeatures}
+          />
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
