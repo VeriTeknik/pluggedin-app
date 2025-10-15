@@ -1,0 +1,1 @@
+CREATE INDEX "users_show_workspace_ui_idx" ON "users" USING btree ("show_workspace_ui");

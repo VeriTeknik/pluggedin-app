@@ -157,10 +157,13 @@ export const users = pgTable('users', {
   requires_2fa: boolean('requires_2fa').default(false).notNull(),
   two_fa_secret: text('two_fa_secret'),
   two_fa_backup_codes: text('two_fa_backup_codes'),
+  // Workspace UI visibility flag for gradual deprecation
+  show_workspace_ui: boolean('show_workspace_ui').default(false).notNull(),
 },
 (table) => ({
   usersUsernameIdx: index('users_username_idx').on(table.username),
   usersEmailIdx: index('users_email_idx').on(table.email),
+  usersShowWorkspaceUiIdx: index('users_show_workspace_ui_idx').on(table.show_workspace_ui),
 }));
 
 
