@@ -8,7 +8,7 @@ import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
 import { type Locale } from '@/i18n/config';
 import { getAuthSession } from '@/lib/auth';
-import { withAuth, withProfileAuth,withProjectAuth } from '@/lib/auth-helpers';
+import { withAuth, withProfileAuth, withProjectAuth, requireWorkspaceUI } from '@/lib/auth-helpers';
 import { Profile } from '@/types/profile';
 
 // Validation schemas
@@ -20,18 +20,10 @@ export async function createProfile(currentProjectUuid: string, name: string) {
   const validatedProjectUuid = uuidSchema.parse(currentProjectUuid);
   const validatedName = nameSchema.parse(name);
 
+  // First check if workspace UI is enabled
+  await requireWorkspaceUI();
+
   return withProjectAuth(validatedProjectUuid, async (session, project) => {
-    // Check if user has workspace UI enabled
-    const user = await db
-      .select({ show_workspace_ui: users.show_workspace_ui })
-      .from(users)
-      .where(eq(users.id, session.user.id))
-      .limit(1);
-
-    if (!user[0]?.show_workspace_ui) {
-      throw new Error('Workspace management is not enabled for this account');
-    }
-
     const profile = await db
       .insert(profilesTable)
       .values({
@@ -224,22 +216,8 @@ export async function setProfileActive(
 }
 
 export async function updateProfileName(profileUuid: string, newName: string) {
-  // Get session to check workspace UI flag
-  const session = await getAuthSession();
-  if (!session) {
-    throw new Error('Unauthorized');
-  }
-
   // Check if user has workspace UI enabled
-  const user = await db
-    .select({ show_workspace_ui: users.show_workspace_ui })
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1);
-
-  if (!user[0]?.show_workspace_ui) {
-    throw new Error('Workspace management is not enabled for this account');
-  }
+  const session = await requireWorkspaceUI();
 
   const profile = await db
     .select()
@@ -277,22 +255,8 @@ export async function updateProfile(profileUuid: string, data: Partial<Profile>)
 }
 
 export async function deleteProfile(profileUuid: string) {
-  // Get session to check workspace UI flag
-  const session = await getAuthSession();
-  if (!session) {
-    throw new Error('Unauthorized');
-  }
-
   // Check if user has workspace UI enabled
-  const user = await db
-    .select({ show_workspace_ui: users.show_workspace_ui })
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1);
-
-  if (!user[0]?.show_workspace_ui) {
-    throw new Error('Workspace management is not enabled for this account');
-  }
+  const session = await requireWorkspaceUI();
 
   const profile = await db
     .select()

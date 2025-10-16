@@ -377,6 +377,9 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async jwt({ token, user, trigger, session }) {
+      // Define common user fields to fetch from database
+      const userFieldsToFetch = { username: true, is_admin: true, show_workspace_ui: true } as const;
+
       // Initial sign in or user object available
       if (user) {
         token.id = user.id;
@@ -389,7 +392,7 @@ export const authOptions: NextAuthOptions = {
        try {
           const dbUser = await db.query.users.findFirst({
             where: eq(users.id, user.id),
-            columns: { username: true, is_admin: true, show_workspace_ui: true }
+            columns: userFieldsToFetch
           });
           // Ensure null is assigned if dbUser or dbUser.username is null/undefined
           token.username = dbUser?.username ?? null;
@@ -402,7 +405,7 @@ export const authOptions: NextAuthOptions = {
           token.show_workspace_ui = false; // Fallback to false on error
        }
        }
-       
+
        // If update triggered (e.g., user updates profile), refresh fields
        // Note: This requires manually triggering an update session call from the frontend
        if (trigger === "update") {
@@ -414,13 +417,13 @@ export const authOptions: NextAuthOptions = {
             token.show_workspace_ui = session.show_workspace_ui ?? false;
           }
        }
-       
+
        // If token exists but username, is_admin, or show_workspace_ui is missing (e.g., old token), try fetching it
        if (token.id && (token.username === undefined || token.is_admin === undefined || token.show_workspace_ui === undefined)) {
           try {
             const dbUser = await db.query.users.findFirst({
               where: eq(users.id, token.id as string),
-              columns: { username: true, is_admin: true, show_workspace_ui: true }
+              columns: userFieldsToFetch
             });
             // Ensure null is assigned if dbUser or dbUser.username is null/undefined
             token.username = dbUser?.username ?? null;
