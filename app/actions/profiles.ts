@@ -8,7 +8,7 @@ import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
 import { type Locale } from '@/i18n/config';
 import { getAuthSession } from '@/lib/auth';
-import { withAuth, withProfileAuth,withProjectAuth } from '@/lib/auth-helpers';
+import { withAuth, withProfileAuth, withProjectAuth, requireWorkspaceUI } from '@/lib/auth-helpers';
 import { Profile } from '@/types/profile';
 
 // Validation schemas
@@ -19,7 +19,10 @@ export async function createProfile(currentProjectUuid: string, name: string) {
   // Validate inputs
   const validatedProjectUuid = uuidSchema.parse(currentProjectUuid);
   const validatedName = nameSchema.parse(name);
-  
+
+  // First check if workspace UI is enabled
+  await requireWorkspaceUI();
+
   return withProjectAuth(validatedProjectUuid, async (session, project) => {
     const profile = await db
       .insert(profilesTable)
@@ -213,6 +216,9 @@ export async function setProfileActive(
 }
 
 export async function updateProfileName(profileUuid: string, newName: string) {
+  // Check if user has workspace UI enabled
+  const session = await requireWorkspaceUI();
+
   const profile = await db
     .select()
     .from(profilesTable)
@@ -249,6 +255,9 @@ export async function updateProfile(profileUuid: string, data: Partial<Profile>)
 }
 
 export async function deleteProfile(profileUuid: string) {
+  // Check if user has workspace UI enabled
+  const session = await requireWorkspaceUI();
+
   const profile = await db
     .select()
     .from(profilesTable)

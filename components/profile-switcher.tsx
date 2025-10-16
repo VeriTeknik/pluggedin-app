@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import * as React from 'react';
 
 import { createProfile, setProfileActive } from '@/app/actions/profiles';
@@ -36,6 +37,7 @@ import { cn } from '@/lib/utils';
 import { Profile } from '@/types/profile';
 
 export function ProfileSwitcher() {
+  const { data: session } = useSession();
   const { currentProject, isAuthenticated } = useProjects();
   const {
     profiles,
@@ -52,8 +54,9 @@ export function ProfileSwitcher() {
   const [isCreating, setIsCreating] = React.useState(false);
   const [isActivating, setIsActivating] = React.useState(false);
 
-  // Don't render anything if not authenticated
-  if (!isAuthenticated) {
+  // Don't render anything if not authenticated or workspace UI is explicitly disabled
+  // Be explicit: only show when show_workspace_ui is explicitly true
+  if (!isAuthenticated || session?.user?.show_workspace_ui !== true) {
     return null;
   }
 

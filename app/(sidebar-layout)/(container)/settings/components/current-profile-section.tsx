@@ -1,6 +1,7 @@
 'use client';
 
 import { AlertTriangle, Pencil, Save, X } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,6 +20,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export function CurrentProfileSection() {
   const { t } = useTranslation();
+  const { data: session } = useSession();
   const { currentProfile, mutateProfiles, setCurrentProfile } = useProfiles();
   const [isEditing, setIsEditing] = useState(false);
   const [newName, setNewName] = useState(currentProfile?.name || '');
@@ -29,6 +31,12 @@ export function CurrentProfileSection() {
     if (!currentProfile) return;
     setNewName(currentProfile?.name);
   }, [currentProfile]);
+
+  // Don't render if workspace UI is disabled for this user
+  // Be explicit: only show when show_workspace_ui is explicitly true
+  if (session?.user?.show_workspace_ui !== true) {
+    return null;
+  }
 
   if (!currentProfile) {
     return <span>{t('settings.profile.loading', 'Loading Profile...')}</span>;
