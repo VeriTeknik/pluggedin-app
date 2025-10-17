@@ -399,6 +399,10 @@ export const apiKeysTable = pgTable(
       .on(table.user_id)
       .where(sql`user_id IS NULL`),
     apiKeysProjectUuidIdx: index('api_keys_project_uuid_idx').on(table.project_uuid),
+    // Compound index for user API key queries with filtering
+    apiKeysUserActiveIdx: index('api_keys_user_active_idx').on(table.user_id, table.is_active),
+    // Index for expiration cleanup queries
+    apiKeysExpiresAtIdx: index('api_keys_expires_at_idx').on(table.expires_at),
   })
 );
 

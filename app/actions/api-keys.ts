@@ -1,7 +1,7 @@
 'use server';
 
 import { and, eq, inArray } from 'drizzle-orm';
-import { customAlphabet } from 'nanoid';
+import { randomBytes } from 'crypto';
 import { z } from 'zod';
 
 import { db } from '@/db';
@@ -9,10 +9,21 @@ import { apiKeysTable, projectsTable } from '@/db/schema';
 import { withAuth } from '@/lib/auth-helpers';
 import { ApiKey } from '@/types/api-key';
 
-const nanoid = customAlphabet(
-  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
-  64
-);
+/**
+ * Generate a cryptographically secure API key
+ * Uses Node.js crypto.randomBytes for maximum entropy
+ */
+function generateApiKey(): string {
+  // Generate 48 random bytes (384 bits of entropy)
+  const bytes = randomBytes(48);
+  // Convert to base64url (URL-safe, no padding)
+  const base64url = bytes
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+  return `pg_in_${base64url}`;
+}
 
 // Validation schemas
 const uuidSchema = z.string().uuid('Invalid UUID format');
@@ -58,7 +69,7 @@ export async function createUserApiKey(options: {
       }
     }
 
-    const newApiKey = `pg_in_${nanoid(64)}`;
+    const newApiKey = generateApiKey();
 
     const apiKey = await db
       .insert(apiKeysTable)

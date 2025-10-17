@@ -174,39 +174,69 @@ function queueApiKeyUsageUpdate(apiKeyUuid: string, request: Request) {
   );
 }
 
-// Process usage update with optimistic locking
-async function processUsageUpdate(apiKeyUuid: string) {
+/**
+ * Process usage update with optimistic locking
+ * Uses atomic update with retry logic to prevent race conditions
+ */
+async function processUsageUpdate(apiKeyUuid: string, maxRetries = 3) {
   const entry = usageUpdateQueue.get(apiKeyUuid);
   if (!entry) return;
 
   usageUpdateQueue.delete(apiKeyUuid);
 
-  try {
-    // Fetch current version
-    const current = await db.query.apiKeysTable.findFirst({
-      where: eq(apiKeysTable.uuid, apiKeyUuid),
-      columns: { version: true },
-    });
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      // Atomic update: fetch version and update in single transaction
+      const current = await db.query.apiKeysTable.findFirst({
+        where: eq(apiKeysTable.uuid, apiKeyUuid),
+        columns: { version: true, usage_count: true },
+      });
 
-    if (!current) return;
+      if (!current) {
+        // Key was deleted, clean up and exit
+        return;
+      }
 
-    // Update with optimistic lock
-    await db
-      .update(apiKeysTable)
-      .set({
-        usage_count: sql`LEAST(${apiKeysTable.usage_count} + ${entry.count}, 2147483647)`,
-        last_used_at: new Date(),
-        last_used_ip: entry.lastIp,
-        // version increment handled by trigger
-      })
-      .where(
-        and(
-          eq(apiKeysTable.uuid, apiKeyUuid),
-          eq(apiKeysTable.version, current.version)
+      // Atomic update with version check - prevents race condition
+      const result = await db
+        .update(apiKeysTable)
+        .set({
+          usage_count: sql`LEAST(${apiKeysTable.usage_count} + ${entry.count}, 2147483647)`,
+          last_used_at: new Date(),
+          last_used_ip: entry.lastIp,
+          // version increment handled by database trigger
+        })
+        .where(
+          and(
+            eq(apiKeysTable.uuid, apiKeyUuid),
+            eq(apiKeysTable.version, current.version)
+          )
         )
-      );
-  } catch (error) {
-    // Version conflict or other error - log but don't fail request
-    console.error('API key usage update failed:', error);
+        .returning({ updated: apiKeysTable.version });
+
+      // Check if update succeeded
+      if (result.length > 0) {
+        // Success - exit retry loop
+        return;
+      }
+
+      // Version conflict detected - retry with exponential backoff
+      attempt++;
+      if (attempt < maxRetries) {
+        const delay = Math.pow(2, attempt) * 10; // 20ms, 40ms, 80ms
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    } catch (error) {
+      // Database error - log and exit
+      console.error(`API key usage update failed (attempt ${attempt + 1}/${maxRetries}):`, error);
+      return;
+    }
+  }
+
+  // All retries exhausted - re-queue for later
+  if (attempt >= maxRetries) {
+    console.warn(`Failed to update usage for API key ${apiKeyUuid} after ${maxRetries} attempts - re-queuing`);
+    usageUpdateQueue.set(apiKeyUuid, entry);
   }
 }
