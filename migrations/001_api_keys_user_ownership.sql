@@ -314,4 +314,30 @@ BEGIN
     END IF;
 END $$;
 
+-- Step 10: Create version increment trigger for optimistic locking
+DO $$
+BEGIN
+  -- Drop trigger and function if they exist
+  DROP TRIGGER IF EXISTS api_keys_version_increment ON api_keys;
+  DROP FUNCTION IF EXISTS increment_api_keys_version CASCADE;
+
+  -- Create function to increment version
+  CREATE FUNCTION increment_api_keys_version()
+  RETURNS TRIGGER AS $func$
+  BEGIN
+    NEW.version := OLD.version + 1;
+    NEW.updated_at := NOW();
+    RETURN NEW;
+  END;
+  $func$ LANGUAGE plpgsql;
+
+  -- Create trigger to run before each update
+  CREATE TRIGGER api_keys_version_increment
+  BEFORE UPDATE ON api_keys
+  FOR EACH ROW
+  EXECUTE FUNCTION increment_api_keys_version();
+
+  RAISE NOTICE 'Created version increment trigger for optimistic locking';
+END $$;
+
 COMMIT;
