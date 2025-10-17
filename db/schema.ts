@@ -341,21 +341,72 @@ export const apiKeysTable = pgTable(
   'api_keys',
   {
     uuid: uuid('uuid').primaryKey().defaultRandom(),
+
+    // User ownership (nullable for orphaned keys)
+    user_id: text('user_id')
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    // Project reference (nullable after project deletion)
     project_uuid: uuid('project_uuid')
-      .notNull()
-      .references(() => projectsTable.uuid, { onDelete: 'cascade' }),
+      .references(() => projectsTable.uuid, { onDelete: 'set null' }),
+
+    // Audit trail
+    original_project_uuid: uuid('original_project_uuid'),
+
     api_key: text('api_key').notNull().unique(),
     name: text('name').default('API Key'),
+    description: text('description'),
+
+    // Permissions
+    all_projects_access: boolean('all_projects_access')
+      .notNull()
+      .default(false),
+    project_permissions: uuid('project_permissions').array(),
+
+    // Status
+    is_active: boolean('is_active')
+      .notNull()
+      .default(true),
+    expires_at: timestamp('expires_at', { withTimezone: true }),
+
+    // Timestamps
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    updated_at: timestamp('updated_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    last_used_at: timestamp('last_used_at', { withTimezone: true }),
+
+    // Usage tracking
+    usage_count: integer('usage_count')
+      .notNull()
+      .default(0),
+    last_used_ip: text('last_used_ip'),
+
+    // Versioning for optimistic locking
+    version: integer('version')
+      .notNull()
+      .default(0),
   },
-  (table) => ({ // Use object syntax for indexes
+  (table) => ({
+    apiKeysUserIdIdx: index('api_keys_user_id_idx').on(table.user_id),
+    apiKeysApiKeyIdx: index('api_keys_api_key_idx').on(table.api_key),
+    apiKeysIsActiveIdx: index('api_keys_is_active_idx')
+      .on(table.is_active)
+      .where(sql`is_active = true`),
+    apiKeysOrphanedIdx: index('api_keys_orphaned_idx')
+      .on(table.user_id)
+      .where(sql`user_id IS NULL`),
     apiKeysProjectUuidIdx: index('api_keys_project_uuid_idx').on(table.project_uuid),
   })
 );
 
 export const apiKeysRelations = relations(apiKeysTable, ({ one }) => ({
+  user: one(users, {
+    fields: [apiKeysTable.user_id],
+    references: [users.id],
+  }),
   project: one(projectsTable, {
     fields: [apiKeysTable.project_uuid],
     references: [projectsTable.uuid],
@@ -1118,6 +1169,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   projects: many(projectsTable),
   codes: many(codesTable),
   docs: many(docsTable),
+  apiKeys: many(apiKeysTable), // User-owned API keys
   // Add followers/following relations to users
   followers: many(followersTable, { relationName: 'followers' }),
   following: many(followersTable, { relationName: 'following' }),
