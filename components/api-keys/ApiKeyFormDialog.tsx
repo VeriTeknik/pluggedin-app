@@ -100,7 +100,11 @@ export function ApiKeyFormDialog({
                 </Label>
               </div>
               <div className='flex items-center space-x-2'>
-                <RadioGroupItem value='specific_projects' id='specific_projects' />
+                <RadioGroupItem
+                  value='specific_projects'
+                  id='specific_projects'
+                  disabled={!projects || projects.length === 0}
+                />
                 <Label htmlFor='specific_projects'>
                   {t('apiKeys.dialog.create.specificProjectsLabel', 'Specific projects')}
                 </Label>
@@ -108,32 +112,43 @@ export function ApiKeyFormDialog({
             </RadioGroup>
           </div>
 
-          {formValues.scope === 'specific_projects' && projects && projects.length > 0 && (
-            <div className='space-y-2'>
-              <Label>{t('apiKeys.dialog.create.selectProjectsLabel', 'Select Projects')}</Label>
-              <div className='space-y-2 max-h-48 overflow-y-auto border rounded-lg p-4'>
-                {projects.map((project) => (
-                  <div key={project.uuid} className='flex items-center space-x-2'>
-                    <Checkbox
-                      id={project.uuid}
-                      checked={formValues.selectedProjects.includes(project.uuid)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          onChange('selectedProjects', [...formValues.selectedProjects, project.uuid]);
-                        } else {
-                          onChange('selectedProjects',
-                            formValues.selectedProjects.filter((id) => id !== project.uuid)
-                          );
-                        }
-                      }}
-                    />
-                    <Label htmlFor={project.uuid} className='font-normal cursor-pointer'>
-                      {project.name}
-                    </Label>
+          {formValues.scope === 'specific_projects' && (
+            <>
+              {projects && projects.length > 0 ? (
+                <div className='space-y-2'>
+                  <Label>{t('apiKeys.dialog.create.selectProjectsLabel', 'Select Projects')}</Label>
+                  <div className='space-y-2 max-h-48 overflow-y-auto border rounded-lg p-4'>
+                    {projects.map((project) => (
+                      <div key={project.uuid} className='flex items-center space-x-2'>
+                        <Checkbox
+                          id={project.uuid}
+                          checked={formValues.selectedProjects.includes(project.uuid)}
+                          onCheckedChange={(checked) => {
+                            if (checked) {
+                              onChange('selectedProjects', [...formValues.selectedProjects, project.uuid]);
+                            } else {
+                              onChange('selectedProjects',
+                                formValues.selectedProjects.filter((id) => id !== project.uuid)
+                              );
+                            }
+                          }}
+                        />
+                        <Label htmlFor={project.uuid} className='font-normal cursor-pointer'>
+                          {project.name}
+                        </Label>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
+                </div>
+              ) : (
+                <div className='space-y-2'>
+                  <Label>{t('apiKeys.dialog.create.selectProjectsLabel', 'Select Projects')}</Label>
+                  <div className='text-sm text-muted-foreground p-4 border rounded-lg'>
+                    {t('apiKeys.dialog.create.noProjectsAvailable', 'No projects available for selection.')}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
         <DialogFooter>

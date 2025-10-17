@@ -27,6 +27,14 @@ import { useProjects } from '@/hooks/use-projects';
 import { useToast } from '@/hooks/use-toast';
 import { ApiKey } from '@/types/api-key';
 
+// API Key Masking Policy
+// These constants define how API keys are displayed to users for security
+const API_KEY_MASKING = {
+  MIN_VISIBLE_PREFIX: 10,    // Characters shown at start of long keys
+  MIN_VISIBLE_SUFFIX: 4,     // Characters shown at end of long keys
+  FULL_MASK_THRESHOLD: 14,   // Keys shorter than this are fully masked
+} as const;
+
 export default function ApiKeysPage() {
   const { projects } = useProjects();
   const {
@@ -63,12 +71,17 @@ export default function ApiKeysPage() {
   };
 
   const maskApiKey = (key: string) => {
-    // For short keys, mask everything to prevent exposure
-    if (key.length < 20) {
+    const { MIN_VISIBLE_PREFIX, MIN_VISIBLE_SUFFIX, FULL_MASK_THRESHOLD } = API_KEY_MASKING;
+
+    // For keys shorter than threshold, mask everything to prevent exposure
+    if (key.length <= FULL_MASK_THRESHOLD) {
       return '•'.repeat(key.length);
     }
-    // For longer keys, show first 10 and last 4 characters
-    return `${key.slice(0, 10)}${'•'.repeat(Math.max(0, key.length - 14))}${key.slice(-4)}`;
+
+    // For longer keys, show first N and last M characters
+    const visibleChars = MIN_VISIBLE_PREFIX + MIN_VISIBLE_SUFFIX;
+    const maskedLength = Math.max(0, key.length - visibleChars);
+    return `${key.slice(0, MIN_VISIBLE_PREFIX)}${'•'.repeat(maskedLength)}${key.slice(-MIN_VISIBLE_SUFFIX)}`;
   };
 
   const handleCreateApiKey = async () => {

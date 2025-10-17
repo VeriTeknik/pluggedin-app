@@ -6,7 +6,22 @@ import { apiKeysTable, projectsTable, users } from '@/db/schema';
 
 import { getProjectActiveProfile } from '../actions/profiles';
 
-// Queue for batching usage updates (for serverless environments)
+/**
+ * Queue for batching usage updates
+ *
+ * IMPORTANT LIMITATION (Serverless Environments):
+ * This in-memory queue does NOT persist across serverless function invocations.
+ * Each invocation gets a fresh instance, so usage tracking may be incomplete in
+ * serverless deployments (Vercel, AWS Lambda, etc.).
+ *
+ * For production serverless environments, consider:
+ * 1. Direct database updates (may impact performance)
+ * 2. External job queue (Redis, SQS, etc.)
+ * 3. Edge function with longer lifecycle
+ * 4. Background job processor
+ *
+ * Current implementation prioritizes response latency over perfect usage accuracy.
+ */
 const usageUpdateQueue = new Map<string, { count: number; lastIp: string }>();
 
 export async function authenticateApiKey(request: Request) {
@@ -51,10 +66,16 @@ export async function authenticateApiKey(request: Request) {
   }
 
   // Check expiration
-  if (apiKeyRecord.expires_at && new Date() > apiKeyRecord.expires_at) {
-    return {
-      error: NextResponse.json({ error: 'API key expired' }, { status: 401 }),
-    };
+  if (apiKeyRecord.expires_at) {
+    const expiresAtDate =
+      apiKeyRecord.expires_at instanceof Date
+        ? apiKeyRecord.expires_at
+        : new Date(apiKeyRecord.expires_at);
+    if (new Date() > expiresAtDate) {
+      return {
+        error: NextResponse.json({ error: 'API key expired' }, { status: 401 }),
+      };
+    }
   }
 
   // Determine accessible projects

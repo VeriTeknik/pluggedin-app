@@ -6,9 +6,8 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { apiKeysTable, projectsTable } from '@/db/schema';
-import { withAuth, withProjectAuth } from '@/lib/auth-helpers';
+import { withAuth } from '@/lib/auth-helpers';
 import { ApiKey } from '@/types/api-key';
-import { getAuthSession } from '@/lib/auth';
 
 const nanoid = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
@@ -21,117 +20,9 @@ const apiKeyNameSchema = z.string().min(1).max(100).optional();
 const apiKeyScopeSchema = z.enum(['all_projects', 'specific_projects']);
 const projectUuidsSchema = z.array(z.string().uuid()).optional();
 
-export async function createApiKey(projectUuid: string, name?: string) {
-  // Validate inputs
-  const validatedProjectUuid = uuidSchema.parse(projectUuid);
-  const validatedName = apiKeyNameSchema.parse(name);
-
-  return withProjectAuth(validatedProjectUuid, async (session, project) => {
-    const newApiKey = `pg_in_${nanoid(64)}`;
-
-    const apiKey = await db
-      .insert(apiKeysTable)
-      .values({
-        // Include user_id from session for new schema
-        user_id: session.user.id,
-        project_uuid: validatedProjectUuid,
-        api_key: newApiKey,
-        name: validatedName || 'API Key',
-        // Set project-specific permissions for backward compatibility
-        project_permissions: [validatedProjectUuid],
-        all_projects_access: false,
-        is_active: true,
-      })
-      .returning();
-
-    return apiKey[0] as ApiKey;
-  });
-}
-
-export async function getFirstApiKey(projectUuid: string) {
-  if (!projectUuid) {
-    return null;
-  }
-
-  // Validate input
-  const validatedProjectUuid = uuidSchema.parse(projectUuid);
-
-  return withProjectAuth(validatedProjectUuid, async (session, project) => {
-    let apiKey = await db.query.apiKeysTable.findFirst({
-      where: eq(apiKeysTable.project_uuid, validatedProjectUuid),
-      with: {
-        project: true,
-        user: true,
-      },
-    });
-
-    if (!apiKey) {
-      const newApiKey = `pg_in_${nanoid(64)}`;
-      await db.insert(apiKeysTable).values({
-        // Include user_id from session for new schema
-        user_id: session.user.id,
-        project_uuid: validatedProjectUuid,
-        api_key: newApiKey,
-        name: 'Default API Key',
-        // Set project-specific permissions for backward compatibility
-        project_permissions: [validatedProjectUuid],
-        all_projects_access: false,
-        is_active: true,
-      });
-
-      apiKey = await db.query.apiKeysTable.findFirst({
-        where: eq(apiKeysTable.project_uuid, validatedProjectUuid),
-        with: {
-          project: true,
-          user: true,
-        },
-      });
-    }
-
-    return apiKey as ApiKey;
-  });
-}
-
-export async function getApiKeys(projectUuid: string) {
-  // Validate input
-  const validatedProjectUuid = uuidSchema.parse(projectUuid);
-
-  return withProjectAuth(validatedProjectUuid, async (session, project) => {
-    const apiKeys = await db.query.apiKeysTable.findMany({
-      where: eq(apiKeysTable.project_uuid, validatedProjectUuid),
-      with: {
-        project: true,
-        user: true,
-      },
-      orderBy: (keys, { desc }) => desc(keys.created_at),
-    });
-
-    return apiKeys as ApiKey[];
-  });
-}
-
-export async function deleteApiKey(apiKeyUuid: string, projectUuid: string) {
-  // Validate inputs
-  const validatedApiKeyUuid = uuidSchema.parse(apiKeyUuid);
-  const validatedProjectUuid = uuidSchema.parse(projectUuid);
-
-  return withProjectAuth(validatedProjectUuid, async (session, project) => {
-    // Delete the API key only if it belongs to the specified project
-    await db
-      .delete(apiKeysTable)
-      .where(
-        and(
-          eq(apiKeysTable.uuid, validatedApiKeyUuid),
-          eq(apiKeysTable.project_uuid, validatedProjectUuid)
-        )
-      );
-
-    return { success: true };
-  });
-}
-
 // ============================================================================
 // User-level API key management functions
+// All API keys are user-owned with optional project-level permissions
 // ============================================================================
 
 /**
