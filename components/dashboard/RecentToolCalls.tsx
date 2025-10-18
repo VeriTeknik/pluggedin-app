@@ -82,19 +82,14 @@ export const RecentToolCalls = memo(function RecentToolCalls({ toolCalls, isLoad
             <h3 className="text-lg font-medium mb-2">
               {t('dashboard.emptyTools.title')}
             </h3>
-            <p className="text-sm text-muted-foreground mb-6 max-w-sm">
+            <p className="text-sm text-muted-foreground mb-6 max-w-md">
               {t('dashboard.emptyTools.description')}
             </p>
-            <div className="flex flex-col gap-3 w-full max-w-xs">
+            <div className="flex flex-col gap-2 w-full max-w-xs">
               <Link href="/mcp-servers">
                 <Button className="w-full" size="sm">
                   <Wrench className="h-4 w-4 mr-2" />
                   {t('dashboard.emptyTools.configureAction')}
-                </Button>
-              </Link>
-              <Link href="/setup-guide">
-                <Button variant="outline" className="w-full" size="sm">
-                  {t('dashboard.emptyTools.setupAction')}
                 </Button>
               </Link>
             </div>

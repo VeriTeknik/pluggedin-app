@@ -1,7 +1,7 @@
 {
   "apiKeys": {
     "title": "APIキー",
-    "description": "APIキーは、Plugged.in APIへのリクエストを認証するために使用されます。安全に保管し、他人と共有しないでください。",
+    "description": "APIキーは、Plugged.in APIへのリクエストを認証するために使用されます。各キーは特定のハブに割り当てられており、編集ボタンを使用していつでもハブの割り当てを変更できます。キーは安全に保管し、他人と共有しないでください。",
     "empty": "まだAPIキーはありません。開始するには1つ作成してください。",
     "actions": {
       "create": "APIキーを作成",
@@ -11,7 +11,10 @@
       "show": "APIキーを表示",
       "hide": "APIキーを非表示",
       "copy": "APIキーをコピー",
-      "cancel": "キャンセル"
+      "cancel": "キャンセル",
+      "editHub": "ハブを編集",
+      "updating": "更新中...",
+      "selectHub": "ハブを選択"
     },
     "dialog": {
       "create": {
@@ -24,6 +27,12 @@
         "title": "APIキーを削除",
         "description": "このAPIキー{{name}}を削除してもよろしいですか？この操作は元に戻せません。",
         "namePrefix": " \""
+      },
+      "editHub": {
+        "title": "ハブ割り当ての編集",
+        "description": "このAPIキーがアクセスするハブを選択します。キーは選択したハブのサーバーとリソースのみにアクセスできます。",
+        "selectLabel": "ハブを選択",
+        "noProjects": "利用可能なハブがありません"
       }
     },
     "toast": {
@@ -39,11 +48,20 @@
         "title": "APIキーが削除されました",
         "description": "APIキーが正常に削除されました。"
       },
+      "hubUpdated": {
+        "title": "ハブが更新されました",
+        "description": "APIキーのハブ割り当てが正常に更新されました。"
+      },
       "error": {
         "title": "エラー",
         "createFailed": "APIキーの作成に失敗しました",
-        "deleteFailed": "APIキーの削除に失敗しました"
+        "deleteFailed": "APIキーの削除に失敗しました",
+        "updateHubFailed": "ハブ割り当ての更新に失敗しました"
       }
+    },
+    "display": {
+      "lastUsed": "最終使用: {{date}}",
+      "neverUsed": "未使用"
     }
   }
 }

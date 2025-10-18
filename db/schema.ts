@@ -349,9 +349,11 @@ export const apiKeysTable = pgTable(
     created_at: timestamp('created_at', { withTimezone: true })
       .notNull()
       .defaultNow(),
+    last_used_at: timestamp('last_used_at', { withTimezone: true }),
   },
   (table) => ({ // Use object syntax for indexes
     apiKeysProjectUuidIdx: index('api_keys_project_uuid_idx').on(table.project_uuid),
+    apiKeysLastUsedAtIdx: index('api_keys_last_used_at_idx').on(table.last_used_at),
   })
 );
 

@@ -42,6 +42,13 @@ export async function authenticateApiKey(request: Request) {
     };
   }
 
+  // Update last_used_at timestamp asynchronously (fire and forget)
+  db.update(apiKeysTable)
+    .set({ last_used_at: new Date() })
+    .where(eq(apiKeysTable.uuid, apiKeyRecord[0].uuid))
+    .execute()
+    .catch((err) => console.error('Failed to update API key last_used_at:', err));
+
   return {
     success: true,
     apiKey: apiKeyRecord[0],

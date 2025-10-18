@@ -1,7 +1,7 @@
 {
   "apiKeys": {
     "title": "API Anahtarları",
-    "description": "API anahtarlarınız Plugged.in API'sine yapılan isteklerin kimlik doğrulaması için kullanılır. Güvenli tutun ve başkalarıyla paylaşmayın.",
+    "description": "API anahtarlarınız Plugged.in API'sine yapılan isteklerin kimlik doğrulaması için kullanılır. Her anahtar belirli bir Hub'a atanır ve düzenle butonunu kullanarak Hub atamasını istediğiniz zaman değiştirebilirsiniz. Anahtarlarınızı güvenli tutun ve başkalarıyla paylaşmayın.",
     "empty": "Henüz API anahtarı yok. Başlamak için bir tane oluşturun.",
     "actions": {
       "create": "API Anahtarı Oluştur",
@@ -11,7 +11,10 @@
       "show": "API anahtarını göster",
       "hide": "API anahtarını gizle",
       "copy": "API anahtarını kopyala",
-      "cancel": "İptal"
+      "cancel": "İptal",
+      "editHub": "Hub'ı Düzenle",
+      "updating": "Güncelleniyor...",
+      "selectHub": "Hub Seç"
     },
     "dialog": {
       "create": {
@@ -24,6 +27,12 @@
         "title": "API Anahtarını Sil",
         "description": "Bu API anahtarını{{name}} silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
         "namePrefix": " \""
+      },
+      "editHub": {
+        "title": "Hub Atamasını Düzenle",
+        "description": "Bu API anahtarının hangi Hub'a erişeceğini seçin. Anahtar yalnızca seçilen Hub'ın sunucularına ve kaynaklarına erişebilir.",
+        "selectLabel": "Hub Seç",
+        "noProjects": "Kullanılabilir Hub yok"
       }
     },
     "toast": {
@@ -39,11 +48,20 @@
         "title": "API Anahtarı silindi",
         "description": "API anahtarınız başarıyla silindi."
       },
+      "hubUpdated": {
+        "title": "Hub Güncellendi",
+        "description": "API anahtarı Hub ataması başarıyla güncellendi."
+      },
       "error": {
         "title": "Hata",
         "createFailed": "API anahtarı oluşturulamadı",
-        "deleteFailed": "API anahtarı silinemedi"
+        "deleteFailed": "API anahtarı silinemedi",
+        "updateHubFailed": "Hub ataması güncellenemedi"
       }
+    },
+    "display": {
+      "lastUsed": "Son kullanım: {{date}}",
+      "neverUsed": "Hiç kullanılmadı"
     }
   }
 }

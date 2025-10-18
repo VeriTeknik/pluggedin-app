@@ -129,16 +129,40 @@
     "aiSearch": "AI खोज",
     "emptyDocs": {
       "title": "अपना ज्ञान आधार बनाना शुरू करें",
-      "description": "AI-संचालित खोज और अंतर्दृष्टि के लिए दस्तावेज़ जोड़ें",
-      "uploadAction": "दस्तावेज़ अपलोड करें",
-      "mcpAction": "MCP प्रॉक्सी इंस्टॉल करें",
-      "sdkAction": "SDK लाइब्रेरी का उपयोग करें"
+      "description": "AI-संचालित search और insights सक्षम करने के लिए दस्तावेज़ जोड़ें",
+      "uploadAction": "दस्तावेज़ अपलोड करें"
     },
     "emptyTools": {
-      "title": "अपना पहला MCP सर्वर कनेक्ट करें",
-      "description": "AI टूल इंटरैक्शन सक्षम करने के लिए MCP सर्वर सेट करें",
-      "configureAction": "सर्वर कॉन्फ़िगर करें",
-      "setupAction": "सेटअप गाइड देखें"
+      "title": "अपना पहला MCP Server कनेक्ट करें",
+      "description": "AI टूल इंटरैक्शन सक्षम करने के लिए MCP servers सेटअप करें",
+      "configureAction": "servers configure करें"
+    }
+  },
+  "whyConnect": {
+    "title": "Plugged.in से क्यों कनेक्ट करें?",
+    "description": "शक्तिशाली केंद्रीकृत सुविधाओं को अनलॉक करने के लिए अपने AI क्लाइंट को कनेक्ट करें",
+    "intro": "अपने सभी AI वर्कफ़्लो के लिए एक unified layer सक्षम करने हेतु Plugged.in MCP Proxy को अपने AI क्लाइंट (Claude Code, Claude Desktop, LM Studio, ChatGPT, आदि) से कनेक्ट करें:",
+    "features": {
+      "knowledge": {
+        "title": "केंद्रीकृत ज्ञान आधार",
+        "description": "RAG-संचालित semantic search के साथ किसी भी connected AI client से अपने दस्तावेज़ों तक पहुंचें और खोजें"
+      },
+      "tools": {
+        "title": "unified टूल एक्सेस",
+        "description": "MCP servers को एक बार configure करें और अपने सभी AI clients में समान टूल का उपयोग करें"
+      },
+      "memory": {
+        "title": "persistent मेमोरी",
+        "description": "सत्रों और विभिन्न AI clients के बीच संदर्भ और इतिहास बनाए रखें"
+      },
+      "workflows": {
+        "title": "सुरक्षित वर्कफ़्लो",
+        "description": "टीम के सदस्यों के साथ AI वर्कफ़्लो को सुरक्षित रूप से share और collaborate करें"
+      }
+    },
+    "actions": {
+      "setup": "MCP Proxy सेटअप करें",
+      "docs": "दस्तावेज़ देखें"
     }
   }
 }
