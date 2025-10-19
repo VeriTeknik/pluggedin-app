@@ -26,6 +26,97 @@ type PromptsArray = Awaited<ReturnType<typeof listPromptsFromServer>>;
 type InferredPrompt = PromptsArray[number];
 
 /**
+ * Helper: Validate UUIDs to prevent SQL injection
+ */
+function validateUuids(profileUuid: string, serverUuid: string) {
+  uuidSchema.parse(profileUuid);
+  uuidSchema.parse(serverUuid);
+}
+
+/**
+ * Helper: Fetch server record from database
+ */
+async function fetchServerRecord(profileUuid: string, serverUuid: string) {
+  const record = await db.query.mcpServersTable.findFirst({
+    where: and(
+      eq(mcpServersTable.uuid, serverUuid),
+      eq(mcpServersTable.profile_uuid, profileUuid)
+    ),
+  });
+
+  if (!record) {
+    throw new Error(`MCP Server with UUID ${serverUuid} not found for profile ${profileUuid}.`);
+  }
+
+  return record;
+}
+
+/**
+ * Helper: Transform database record to McpServer format
+ */
+function toMcpServer(record: any): McpServer {
+  const decrypted = decryptServerData(record);
+  return {
+    ...decrypted,
+    config: decrypted.config as Record<string, any> | null,
+    transport: decrypted.transport as 'streamable_http' | 'sse' | 'stdio' | undefined
+  };
+}
+
+/**
+ * Helper: Discover tools with timeout and save to database
+ */
+async function discoverAndSaveTools(
+  mcpServer: McpServer,
+  serverUuid: string
+): Promise<{ tools: any[]; error?: string }> {
+  let tools: any[] = [];
+  let error: string | undefined;
+
+  try {
+    // Discover tools with 15-second timeout
+    tools = await Promise.race([
+      listToolsFromServer(mcpServer),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Discovery timeout after 15 seconds')), 15000)
+      )
+    ]);
+
+    // Save to database in transaction
+    await db.transaction(async (tx) => {
+      await tx.delete(toolsTable).where(eq(toolsTable.mcp_server_uuid, serverUuid));
+
+      if (tools.length > 0) {
+        await tx.insert(toolsTable).values(
+          tools.map(tool => ({
+            mcp_server_uuid: serverUuid,
+            name: tool.name,
+            description: tool.description,
+            toolSchema: tool.inputSchema as any,
+            status: ToggleStatus.ACTIVE,
+          }))
+        );
+      }
+    });
+  } catch (err: any) {
+    const isAbortError = err?.code === 20 ||
+                        err?.name === 'AbortError' ||
+                        err?.message?.includes('abort');
+    const isTimeoutError = err?.message?.includes('timeout');
+
+    if (!isAbortError && !isTimeoutError) {
+      console.error('[Discovery] Failed to discover tools:', err);
+    } else if (isTimeoutError) {
+      console.warn('[Discovery] Timeout:', mcpServer.name);
+    }
+
+    error = isAbortError ? undefined : err.message;
+  }
+
+  return { tools, error };
+}
+
+/**
  * Internal discovery function (no auth required) for system-initiated discovery
  *
  * ⚠️ SECURITY WARNING:
@@ -44,93 +135,33 @@ export async function discoverSingleServerToolsInternal(
     profileUuid: string,
     serverUuid: string
 ): Promise<{ success: boolean; message: string; error?: string }> {
-  // Validate UUID format to prevent SQL injection and invalid queries
   try {
-    uuidSchema.parse(profileUuid);
-    uuidSchema.parse(serverUuid);
-  } catch (error) {
-    return { success: false, message: 'Invalid UUID format provided.', error: error instanceof Error ? error.message : 'Validation error' };
-  }
+    // Step 1: Validate inputs
+    validateUuids(profileUuid, serverUuid);
 
-  try {
-    // Fetch the specific MCP server configuration
-    const serverConfig = await db.query.mcpServersTable.findFirst({
-      where: and(
-        eq(mcpServersTable.uuid, serverUuid),
-        eq(mcpServersTable.profile_uuid, profileUuid)
-      ),
-    });
+    // Step 2: Fetch and transform server configuration
+    const serverRecord = await fetchServerRecord(profileUuid, serverUuid);
+    const mcpServer = toMcpServer(serverRecord);
 
-    if (!serverConfig) {
-      throw new Error(`MCP Server with UUID ${serverUuid} not found for profile ${profileUuid}.`);
-    }
+    // Step 3: Discover tools and save to database
+    const { tools, error } = await discoverAndSaveTools(mcpServer, serverUuid);
 
-    // Decrypt the server configuration
-    const decryptedServerConfig = decryptServerData(serverConfig);
-    const discoveryServerConfig: McpServer = {
-        ...decryptedServerConfig,
-        config: decryptedServerConfig.config as Record<string, any> | null,
-        transport: decryptedServerConfig.transport as 'streamable_http' | 'sse' | 'stdio' | undefined
-    };
-
-    let discoveredTools: Awaited<ReturnType<typeof listToolsFromServer>> = [];
-    let toolError: string | null = null;
-
-    // --- Discover Tools ---
-    try {
-        // Perform discovery (external MCP server call)
-        discoveredTools = await Promise.race([
-          listToolsFromServer(discoveryServerConfig),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error('Discovery timeout after 15 seconds')), 15000)
-          )
-        ]);
-
-        // Update database in a single transaction for atomicity and performance
-        await db.transaction(async (tx) => {
-          // Delete existing tools
-          await tx.delete(toolsTable).where(eq(toolsTable.mcp_server_uuid, serverUuid));
-
-          // Insert new tools if any were discovered
-          if (discoveredTools.length > 0) {
-            const toolsToInsert = discoveredTools.map(tool => ({
-              mcp_server_uuid: serverUuid,
-              name: tool.name,
-              description: tool.description,
-              toolSchema: tool.inputSchema as any,
-              status: ToggleStatus.ACTIVE,
-            }));
-            await tx.insert(toolsTable).values(toolsToInsert);
-          }
-        });
-    } catch (error: any) {
-        const isAbortError = error?.code === 20 ||
-                           error?.name === 'AbortError' ||
-                           error?.message?.includes('abort') ||
-                           error?.message?.includes('This operation was aborted');
-
-        const isTimeoutError = error?.message?.includes('timeout');
-
-        if (!isAbortError && !isTimeoutError) {
-            console.error('[Discovery Internal] Failed to discover tools:', error);
-        } else if (isTimeoutError) {
-            console.warn('[Discovery Internal] Discovery timeout:', serverConfig.name);
-        }
-
-        toolError = isAbortError ? null : error.message;
-    }
-
-    // Build success message
-    const success = toolError === null || discoveredTools.length > 0;
+    // Step 4: Build response
+    const success = !error || tools.length > 0;
     const message = success
-      ? `✅ Auto-discovery succeeded for ${serverConfig.name}: Successfully discovered ${discoveredTools.length} tools.`
-      : `⚠️ Auto-discovery completed with errors for ${serverConfig.name}.`;
+      ? `✅ Auto-discovery succeeded for ${serverRecord.name}: Successfully discovered ${tools.length} tools.`
+      : `⚠️ Auto-discovery completed with errors for ${serverRecord.name}.`;
 
-    return { success, message, error: success ? undefined : (toolError || 'Unknown discovery error') };
+    return { success, message, error: success ? undefined : error };
 
   } catch (error: any) {
-    console.error('[Discovery Internal] Failed to discover tools for server:', { serverUuid, error });
-    return { success: false, message: `Failed to discover tools for server ${serverUuid}.`, error: error.message };
+    const isValidationError = error instanceof z.ZodError;
+    const message = isValidationError
+      ? 'Invalid UUID format provided.'
+      : `Failed to discover tools for server ${serverUuid}.`;
+
+    console.error('[Discovery Internal] Error:', { serverUuid, error });
+    return { success: false, message, error: error.message };
   }
 }
 

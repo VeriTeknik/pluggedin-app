@@ -41,7 +41,8 @@ export const SAMPLE_MCP_SERVERS = [
 ];
 
 /**
- * Runs async tasks with concurrency limit
+ * Runs async tasks with concurrency limit using a worker pool pattern
+ * This ensures the concurrency limit is strictly maintained
  * @param tasks Array of async functions to execute
  * @param limit Maximum number of concurrent executions
  */
@@ -49,30 +50,29 @@ async function runWithConcurrencyLimit<T>(
   tasks: (() => Promise<T>)[],
   limit: number
 ): Promise<PromiseSettledResult<T>[]> {
-  const results: PromiseSettledResult<T>[] = [];
-  const executing: Promise<void>[] = [];
+  const results: PromiseSettledResult<T>[] = new Array(tasks.length);
+  let nextIndex = 0;
 
-  for (const task of tasks) {
-    const promise = task()
-      .then(value => {
-        results.push({ status: 'fulfilled', value });
-      })
-      .catch(reason => {
-        results.push({ status: 'rejected', reason });
-      });
+  // Worker function that processes tasks from the queue
+  async function worker() {
+    while (true) {
+      const currentIndex = nextIndex++;
+      if (currentIndex >= tasks.length) break;
 
-    executing.push(promise);
-
-    if (executing.length >= limit) {
-      await Promise.race(executing);
-      executing.splice(
-        executing.findIndex(p => p === promise),
-        1
-      );
+      try {
+        const value = await tasks[currentIndex]();
+        results[currentIndex] = { status: 'fulfilled', value };
+      } catch (reason) {
+        results[currentIndex] = { status: 'rejected', reason };
+      }
     }
   }
 
-  await Promise.all(executing);
+  // Start up to 'limit' workers in parallel
+  await Promise.all(
+    Array.from({ length: Math.min(limit, tasks.length) }, () => worker())
+  );
+
   return results;
 }
 
