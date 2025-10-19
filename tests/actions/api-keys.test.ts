@@ -14,15 +14,12 @@ import { db } from '@/db';
 import { apiKeysTable, projectsTable } from '@/db/schema';
 
 // Valid UUID constants for testing
-// Note: These are test UUIDs, not actual API keys (gitleaks ignore)
+// Note: These are test UUIDs, not actual API keys
 const UUID_PROJECT_1 = '123e4567-e89b-12d3-a456-426614174000';
 const UUID_PROJECT_2 = '123e4567-e89b-12d3-a456-426614174001';
-// gitleaks:allow
-const UUID_KEY_1 = '223e4567-e89b-12d3-a456-426614174000';
-// gitleaks:allow
-const UUID_KEY_2 = '223e4567-e89b-12d3-a456-426614174001';
-// gitleaks:allow
-const UUID_KEY_3 = '223e4567-e89b-12d3-a456-426614174002';
+const UUID_KEY_1 = '223e4567-e89b-12d3-a456-426614174000'; // gitleaks:allow
+const UUID_KEY_2 = '223e4567-e89b-12d3-a456-426614174001'; // gitleaks:allow
+const UUID_KEY_3 = '223e4567-e89b-12d3-a456-426614174002'; // gitleaks:allow
 const UUID_USER = '323e4567-e89b-12d3-a456-426614174000';
 
 // Mock dependencies
