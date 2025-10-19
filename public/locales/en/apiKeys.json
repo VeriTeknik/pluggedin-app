@@ -60,6 +60,8 @@
   },
   "display": {
     "lastUsed": "Last used: {{date}}",
-    "neverUsed": "Never used"
+    "neverUsed": "Never used",
+    "hub": "Hub",
+    "currentHub": "Current Hub"
   }
 }

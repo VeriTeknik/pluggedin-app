@@ -211,7 +211,7 @@ export default function ApiKeysPage() {
                       </div>
                     )}
                     <Badge variant='secondary' className='text-xs'>
-                      Hub: {DOMPurify.sanitize(apiKey.project_name, { ALLOWED_TAGS: [] })}
+                      {t('display.hub')}: {DOMPurify.sanitize(apiKey.project_name, { ALLOWED_TAGS: [] })}
                     </Badge>
                     <span className='text-xs text-muted-foreground'>
                       {apiKey.last_used_at
@@ -368,7 +368,7 @@ export default function ApiKeysPage() {
               </Select>
               {keyToEdit && (
                 <p className='text-xs text-muted-foreground'>
-                  Current Hub: {DOMPurify.sanitize(keyToEdit.project_name, { ALLOWED_TAGS: [] })}
+                  {t('display.currentHub')}: {DOMPurify.sanitize(keyToEdit.project_name, { ALLOWED_TAGS: [] })}
                 </p>
               )}
             </div>

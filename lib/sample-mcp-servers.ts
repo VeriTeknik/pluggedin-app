@@ -2,6 +2,8 @@
  * Sample MCP servers to be added for new users
  */
 
+import pLimit from 'p-limit';
+
 import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-tools';
 import { db } from '@/db';
 import { mcpServersTable, McpServerType } from '@/db/schema';
@@ -41,42 +43,6 @@ export const SAMPLE_MCP_SERVERS = [
 ];
 
 /**
- * Runs async tasks with concurrency limit using a worker pool pattern
- * This ensures the concurrency limit is strictly maintained
- * @param tasks Array of async functions to execute
- * @param limit Maximum number of concurrent executions
- */
-async function runWithConcurrencyLimit<T>(
-  tasks: (() => Promise<T>)[],
-  limit: number
-): Promise<PromiseSettledResult<T>[]> {
-  const results: PromiseSettledResult<T>[] = new Array(tasks.length);
-  let nextIndex = 0;
-
-  // Worker function that processes tasks from the queue
-  async function worker() {
-    while (true) {
-      const currentIndex = nextIndex++;
-      if (currentIndex >= tasks.length) break;
-
-      try {
-        const value = await tasks[currentIndex]();
-        results[currentIndex] = { status: 'fulfilled', value };
-      } catch (reason) {
-        results[currentIndex] = { status: 'rejected', reason };
-      }
-    }
-  }
-
-  // Start up to 'limit' workers in parallel
-  await Promise.all(
-    Array.from({ length: Math.min(limit, tasks.length) }, () => worker())
-  );
-
-  return results;
-}
-
-/**
  * Add sample MCP servers for a new user's profile and trigger discovery
  */
 export async function addSampleMcpServersForNewUser(profileUuid: string) {
@@ -102,19 +68,21 @@ export async function addSampleMcpServersForNewUser(profileUuid: string) {
 
     console.log(`✅ Added ${SAMPLE_MCP_SERVERS.length} sample MCP servers for profile ${profileUuid}`);
 
-    // Trigger discovery for each server with concurrency limit (fire-and-forget, don't block signup)
-    const discoveryTasks = insertedServers.map(server => () =>
-      discoverSingleServerToolsInternal(profileUuid, server.uuid)
-        .then(result => ({ server: server.name, ...result }))
-        .catch(err => ({
-          server: server.name,
-          success: false,
-          error: err.message
-        }))
+    // Use p-limit for concurrency control (limit: 2 simultaneous discoveries)
+    const limit = pLimit(2);
+    const discoveryPromises = insertedServers.map(server =>
+      limit(async () => {
+        try {
+          const result = await discoverSingleServerToolsInternal(profileUuid, server.uuid);
+          return { server: server.name, ...result };
+        } catch (err: any) {
+          return { server: server.name, success: false, error: err.message };
+        }
+      })
     );
 
-    // Run discoveries with concurrency limit of 2 to prevent overwhelming the system
-    runWithConcurrencyLimit(discoveryTasks, 2)
+    // Fire-and-forget pattern - don't block signup
+    Promise.allSettled(discoveryPromises)
       .then(results => {
         const failures = results.filter(
           r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)

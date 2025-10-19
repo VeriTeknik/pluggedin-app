@@ -60,6 +60,8 @@
   },
   "display": {
     "lastUsed": "Son kullanım: {{date}}",
-    "neverUsed": "Hiç kullanılmadı"
+    "neverUsed": "Hiç kullanılmadı",
+    "hub": "Hub",
+    "currentHub": "Current Hub"
   }
 }

@@ -60,6 +60,8 @@
   },
   "display": {
     "lastUsed": "Laatst gebruikt: {{date}}",
-    "neverUsed": "Nooit gebruikt"
+    "neverUsed": "Nooit gebruikt",
+    "hub": "Hub",
+    "currentHub": "Current Hub"
   }
 }
