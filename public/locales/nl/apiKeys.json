@@ -1,67 +1,65 @@
 {
-  "apiKeys": {
-    "title": "API-sleutels",
-    "description": "Uw API-sleutels worden gebruikt om verzoeken naar de Plugged.in API te authenticeren. Elke sleutel is toegewezen aan een specifieke Hub en u kunt de Hub-toewijzing op elk moment wijzigen met de bewerkingsknop. Bewaar uw sleutels veilig en deel ze niet met anderen.",
-    "empty": "Nog geen API-sleutels. Maak er een aan om te beginnen.",
-    "actions": {
-      "create": "API-sleutel aanmaken",
-      "creating": "Aanmaken...",
-      "delete": "API-sleutel verwijderen",
-      "deleting": "Verwijderen...",
-      "show": "API-sleutel tonen",
-      "hide": "API-sleutel verbergen",
-      "copy": "API-sleutel kopiëren",
-      "cancel": "Annuleren",
-      "editHub": "Hub bewerken",
-      "updating": "Bijwerken...",
-      "selectHub": "Hub selecteren"
+  "title": "API-sleutels",
+  "description": "Uw API-sleutels worden gebruikt om verzoeken naar de Plugged.in API te authenticeren. Elke sleutel is toegewezen aan een specifieke Hub en u kunt de Hub-toewijzing op elk moment wijzigen met de bewerkingsknop. Bewaar uw sleutels veilig en deel ze niet met anderen.",
+  "empty": "Nog geen API-sleutels. Maak er een aan om te beginnen.",
+  "actions": {
+    "create": "API-sleutel aanmaken",
+    "creating": "Aanmaken...",
+    "delete": "API-sleutel verwijderen",
+    "deleting": "Verwijderen...",
+    "show": "API-sleutel tonen",
+    "hide": "API-sleutel verbergen",
+    "copy": "API-sleutel kopiëren",
+    "cancel": "Annuleren",
+    "editHub": "Hub bewerken",
+    "updating": "Bijwerken...",
+    "selectHub": "Hub selecteren"
+  },
+  "dialog": {
+    "create": {
+      "title": "API-sleutel aanmaken",
+      "description": "Maak een nieuwe API-sleutel aan voor uw project. U kunt optioneel een naam geven om het doel ervan te helpen identificeren.",
+      "nameLabel": "API-sleutelnaam (optioneel)",
+      "namePlaceholder": "bijv. Productie API-sleutel"
     },
-    "dialog": {
-      "create": {
-        "title": "API-sleutel aanmaken",
-        "description": "Maak een nieuwe API-sleutel aan voor uw project. U kunt optioneel een naam geven om het doel ervan te helpen identificeren.",
-        "nameLabel": "API-sleutelnaam (optioneel)",
-        "namePlaceholder": "bijv. Productie API-sleutel"
-      },
-      "delete": {
-        "title": "API-sleutel verwijderen",
-        "description": "Weet u zeker dat u deze API-sleutel {{name}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
-        "namePrefix": " \""
-      },
-      "editHub": {
-        "title": "Hub-toewijzing bewerken",
-        "description": "Selecteer naar welke Hub deze API-sleutel toegang moet hebben. De sleutel heeft alleen toegang tot de servers en bronnen van de geselecteerde Hub.",
-        "selectLabel": "Hub selecteren",
-        "noProjects": "Geen Hubs beschikbaar"
-      }
+    "delete": {
+      "title": "API-sleutel verwijderen",
+      "description": "Weet u zeker dat u deze API-sleutel {{name}} wilt verwijderen? Deze actie kan niet ongedaan worden gemaakt.",
+      "namePrefix": " \""
     },
-    "toast": {
-      "copied": {
-        "title": "API-sleutel gekopieerd",
-        "description": "De API-sleutel is naar uw klembord gekopieerd."
-      },
-      "created": {
-        "title": "API-sleutel aangemaakt",
-        "description": "Uw nieuwe API-sleutel is succesvol aangemaakt."
-      },
-      "deleted": {
-        "title": "API-sleutel verwijderd",
-        "description": "Uw API-sleutel is succesvol verwijderd."
-      },
-      "hubUpdated": {
-        "title": "Hub bijgewerkt",
-        "description": "API-sleutel Hub-toewijzing is succesvol bijgewerkt."
-      },
-      "error": {
-        "title": "Fout",
-        "createFailed": "Aanmaken API-sleutel mislukt",
-        "deleteFailed": "Verwijderen API-sleutel mislukt",
-        "updateHubFailed": "Bijwerken Hub-toewijzing mislukt"
-      }
-    },
-    "display": {
-      "lastUsed": "Laatst gebruikt: {{date}}",
-      "neverUsed": "Nooit gebruikt"
+    "editHub": {
+      "title": "Hub-toewijzing bewerken",
+      "description": "Selecteer naar welke Hub deze API-sleutel toegang moet hebben. De sleutel heeft alleen toegang tot de servers en bronnen van de geselecteerde Hub.",
+      "selectLabel": "Hub selecteren",
+      "noProjects": "Geen Hubs beschikbaar"
     }
+  },
+  "toast": {
+    "copied": {
+      "title": "API-sleutel gekopieerd",
+      "description": "De API-sleutel is naar uw klembord gekopieerd."
+    },
+    "created": {
+      "title": "API-sleutel aangemaakt",
+      "description": "Uw nieuwe API-sleutel is succesvol aangemaakt."
+    },
+    "deleted": {
+      "title": "API-sleutel verwijderd",
+      "description": "Uw API-sleutel is succesvol verwijderd."
+    },
+    "hubUpdated": {
+      "title": "Hub bijgewerkt",
+      "description": "API-sleutel Hub-toewijzing is succesvol bijgewerkt."
+    },
+    "error": {
+      "title": "Fout",
+      "createFailed": "Aanmaken API-sleutel mislukt",
+      "deleteFailed": "Verwijderen API-sleutel mislukt",
+      "updateHubFailed": "Bijwerken Hub-toewijzing mislukt"
+    }
+  },
+  "display": {
+    "lastUsed": "Laatst gebruikt: {{date}}",
+    "neverUsed": "Nooit gebruikt"
   }
 }

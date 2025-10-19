@@ -2,6 +2,7 @@
  * Sample MCP servers to be added for new users
  */
 
+import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-tools';
 import { db } from '@/db';
 import { mcpServersTable, McpServerType } from '@/db/schema';
 
@@ -40,7 +41,43 @@ export const SAMPLE_MCP_SERVERS = [
 ];
 
 /**
- * Add sample MCP servers for a new user's profile
+ * Runs async tasks with concurrency limit
+ * @param tasks Array of async functions to execute
+ * @param limit Maximum number of concurrent executions
+ */
+async function runWithConcurrencyLimit<T>(
+  tasks: (() => Promise<T>)[],
+  limit: number
+): Promise<PromiseSettledResult<T>[]> {
+  const results: PromiseSettledResult<T>[] = [];
+  const executing: Promise<void>[] = [];
+
+  for (const task of tasks) {
+    const promise = task()
+      .then(value => {
+        results.push({ status: 'fulfilled', value });
+      })
+      .catch(reason => {
+        results.push({ status: 'rejected', reason });
+      });
+
+    executing.push(promise);
+
+    if (executing.length >= limit) {
+      await Promise.race(executing);
+      executing.splice(
+        executing.findIndex(p => p === promise),
+        1
+      );
+    }
+  }
+
+  await Promise.all(executing);
+  return results;
+}
+
+/**
+ * Add sample MCP servers for a new user's profile and trigger discovery
  */
 export async function addSampleMcpServersForNewUser(profileUuid: string) {
   try {
@@ -60,9 +97,42 @@ export async function addSampleMcpServersForNewUser(profileUuid: string) {
       updated_at: new Date()
     }));
 
-    await db.insert(mcpServersTable).values(serversToAdd);
+    // Insert servers and get the created UUIDs
+    const insertedServers = await db.insert(mcpServersTable).values(serversToAdd).returning();
 
     console.log(`✅ Added ${SAMPLE_MCP_SERVERS.length} sample MCP servers for profile ${profileUuid}`);
+
+    // Trigger discovery for each server with concurrency limit (fire-and-forget, don't block signup)
+    const discoveryTasks = insertedServers.map(server => () =>
+      discoverSingleServerToolsInternal(profileUuid, server.uuid)
+        .then(result => ({ server: server.name, ...result }))
+        .catch(err => ({
+          server: server.name,
+          success: false,
+          error: err.message
+        }))
+    );
+
+    // Run discoveries with concurrency limit of 2 to prevent overwhelming the system
+    runWithConcurrencyLimit(discoveryTasks, 2)
+      .then(results => {
+        const failures = results.filter(
+          r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
+        );
+
+        if (failures.length > 0) {
+          console.error(
+            `[Sample Servers] Discovery failed for ${failures.length}/${insertedServers.length} servers`,
+            failures
+          );
+        } else {
+          console.log(`[Sample Servers] Successfully discovered tools for all ${insertedServers.length} servers`);
+        }
+      })
+      .catch(err => {
+        console.error('[Sample Servers] Unexpected error during discovery:', err);
+      });
+
     return true;
   } catch (error) {
     console.error('Failed to add sample MCP servers:', error);

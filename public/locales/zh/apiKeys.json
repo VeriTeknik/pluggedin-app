@@ -1,67 +1,65 @@
 {
-  "apiKeys": {
-    "title": "API 密钥",
-    "description": "您的 API 密钥用于验证对 Plugged.in API 的请求。每个密钥分配给特定的 Hub，您可以随时使用编辑按钮更改 Hub 分配。请妥善保管密钥，不要与他人分享。",
-    "empty": "尚无 API 密钥。创建一个开始使用。",
-    "actions": {
-      "create": "创建 API 密钥",
-      "creating": "创建中...",
-      "delete": "删除 API 密钥",
-      "deleting": "删除中...",
-      "show": "显示 API 密钥",
-      "hide": "隐藏 API 密钥",
-      "copy": "复制 API 密钥",
-      "cancel": "取消",
-      "editHub": "编辑 Hub",
-      "updating": "更新中...",
-      "selectHub": "选择 Hub"
+  "title": "API 密钥",
+  "description": "您的 API 密钥用于验证对 Plugged.in API 的请求。每个密钥分配给特定的 Hub，您可以随时使用编辑按钮更改 Hub 分配。请妥善保管密钥，不要与他人分享。",
+  "empty": "尚无 API 密钥。创建一个开始使用。",
+  "actions": {
+    "create": "创建 API 密钥",
+    "creating": "创建中...",
+    "delete": "删除 API 密钥",
+    "deleting": "删除中...",
+    "show": "显示 API 密钥",
+    "hide": "隐藏 API 密钥",
+    "copy": "复制 API 密钥",
+    "cancel": "取消",
+    "editHub": "编辑 Hub",
+    "updating": "更新中...",
+    "selectHub": "选择 Hub"
+  },
+  "dialog": {
+    "create": {
+      "title": "创建 API 密钥",
+      "description": "为您的项目创建一个新的 API 密钥。您可以选择性地给它命名以帮助识别其用途。",
+      "nameLabel": "API 密钥名称（可选）",
+      "namePlaceholder": "例如，生产环境 API 密钥"
     },
-    "dialog": {
-      "create": {
-        "title": "创建 API 密钥",
-        "description": "为您的项目创建一个新的 API 密钥。您可以选择性地给它命名以帮助识别其用途。",
-        "nameLabel": "API 密钥名称（可选）",
-        "namePlaceholder": "例如，生产环境 API 密钥"
-      },
-      "delete": {
-        "title": "删除 API 密钥",
-        "description": "您确定要删除此 API 密钥 {{name}} 吗？此操作无法撤销。",
-        "namePrefix": " \""
-      },
-      "editHub": {
-        "title": "编辑 Hub 分配",
-        "description": "选择此 API 密钥应访问哪个 Hub。密钥仅能访问所选 Hub 的服务器和资源。",
-        "selectLabel": "选择 Hub",
-        "noProjects": "没有可用的 Hub"
-      }
+    "delete": {
+      "title": "删除 API 密钥",
+      "description": "您确定要删除此 API 密钥 {{name}} 吗？此操作无法撤销。",
+      "namePrefix": " \""
     },
-    "toast": {
-      "copied": {
-        "title": "API 密钥已复制",
-        "description": "API 密钥已复制到您的剪贴板。"
-      },
-      "created": {
-        "title": "API 密钥已创建",
-        "description": "您的新 API 密钥已成功创建。"
-      },
-      "deleted": {
-        "title": "API 密钥已删除",
-        "description": "您的 API 密钥已成功删除。"
-      },
-      "hubUpdated": {
-        "title": "Hub 已更新",
-        "description": "API 密钥 Hub 分配已成功更新。"
-      },
-      "error": {
-        "title": "错误",
-        "createFailed": "创建 API 密钥失败",
-        "deleteFailed": "删除 API 密钥失败",
-        "updateHubFailed": "更新 Hub 分配失败"
-      }
-    },
-    "display": {
-      "lastUsed": "最后使用：{{date}}",
-      "neverUsed": "从未使用"
+    "editHub": {
+      "title": "编辑 Hub 分配",
+      "description": "选择此 API 密钥应访问哪个 Hub。密钥仅能访问所选 Hub 的服务器和资源。",
+      "selectLabel": "选择 Hub",
+      "noProjects": "没有可用的 Hub"
     }
+  },
+  "toast": {
+    "copied": {
+      "title": "API 密钥已复制",
+      "description": "API 密钥已复制到您的剪贴板。"
+    },
+    "created": {
+      "title": "API 密钥已创建",
+      "description": "您的新 API 密钥已成功创建。"
+    },
+    "deleted": {
+      "title": "API 密钥已删除",
+      "description": "您的 API 密钥已成功删除。"
+    },
+    "hubUpdated": {
+      "title": "Hub 已更新",
+      "description": "API 密钥 Hub 分配已成功更新。"
+    },
+    "error": {
+      "title": "错误",
+      "createFailed": "创建 API 密钥失败",
+      "deleteFailed": "删除 API 密钥失败",
+      "updateHubFailed": "更新 Hub 分配失败"
+    }
+  },
+  "display": {
+    "lastUsed": "最后使用：{{date}}",
+    "neverUsed": "从未使用"
   }
 }

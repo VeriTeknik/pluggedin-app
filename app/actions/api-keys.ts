@@ -200,7 +200,7 @@ export async function updateApiKeyHub(apiKeyUuid: string, newProjectUuid: string
   return withAuth(async (session) => {
     // Single CTE query that:
     // 1. Verifies API key exists and user owns it
-    // 2. Verifies target project exists, user owns it, and it's active
+    // 2. Verifies target project exists and user owns it
     // 3. Updates the API key atomically
     const result = await db.execute(sql`
       WITH
@@ -216,8 +216,7 @@ export async function updateApiKeyHub(apiKeyUuid: string, newProjectUuid: string
         target_project_check AS (
           SELECT
             uuid,
-            user_id,
-            active
+            user_id
           FROM ${projectsTable}
           WHERE uuid = ${validatedNewProjectUuid}
         )
@@ -231,7 +230,6 @@ export async function updateApiKeyHub(apiKeyUuid: string, newProjectUuid: string
         AND EXISTS (
           SELECT 1 FROM target_project_check
           WHERE user_id = ${session.user.id}
-            AND active = true
         )
       RETURNING *
     `);
@@ -255,7 +253,7 @@ export async function updateApiKeyHub(apiKeyUuid: string, newProjectUuid: string
       }
 
       const targetCheck = await db.execute(sql`
-        SELECT user_id, active
+        SELECT user_id
         FROM ${projectsTable}
         WHERE uuid = ${validatedNewProjectUuid}
       `);
@@ -266,10 +264,6 @@ export async function updateApiKeyHub(apiKeyUuid: string, newProjectUuid: string
 
       if (targetCheck.rows[0].user_id !== session.user.id) {
         throw new Error('Unauthorized - you do not own the target Hub');
-      }
-
-      if (!targetCheck.rows[0].active) {
-        throw new Error('Target Hub is not active');
       }
 
       throw new Error('Failed to update API key Hub assignment');

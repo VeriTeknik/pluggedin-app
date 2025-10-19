@@ -1,67 +1,65 @@
 {
-  "apiKeys": {
-    "title": "APIキー",
-    "description": "APIキーは、Plugged.in APIへのリクエストを認証するために使用されます。各キーは特定のハブに割り当てられており、編集ボタンを使用していつでもハブの割り当てを変更できます。キーは安全に保管し、他人と共有しないでください。",
-    "empty": "まだAPIキーはありません。開始するには1つ作成してください。",
-    "actions": {
-      "create": "APIキーを作成",
-      "creating": "作成中...",
-      "delete": "APIキーを削除",
-      "deleting": "削除中...",
-      "show": "APIキーを表示",
-      "hide": "APIキーを非表示",
-      "copy": "APIキーをコピー",
-      "cancel": "キャンセル",
-      "editHub": "ハブを編集",
-      "updating": "更新中...",
-      "selectHub": "ハブを選択"
+  "title": "APIキー",
+  "description": "APIキーは、Plugged.in APIへのリクエストを認証するために使用されます。各キーは特定のハブに割り当てられており、編集ボタンを使用していつでもハブの割り当てを変更できます。キーは安全に保管し、他人と共有しないでください。",
+  "empty": "まだAPIキーはありません。開始するには1つ作成してください。",
+  "actions": {
+    "create": "APIキーを作成",
+    "creating": "作成中...",
+    "delete": "APIキーを削除",
+    "deleting": "削除中...",
+    "show": "APIキーを表示",
+    "hide": "APIキーを非表示",
+    "copy": "APIキーをコピー",
+    "cancel": "キャンセル",
+    "editHub": "ハブを編集",
+    "updating": "更新中...",
+    "selectHub": "ハブを選択"
+  },
+  "dialog": {
+    "create": {
+      "title": "APIキーを作成",
+      "description": "プロジェクト用に新しいAPIキーを作成します。オプションで、目的を識別しやすくするために名前を付けることができます。",
+      "nameLabel": "APIキー名（オプション）",
+      "namePlaceholder": "例：本番環境APIキー"
     },
-    "dialog": {
-      "create": {
-        "title": "APIキーを作成",
-        "description": "プロジェクト用に新しいAPIキーを作成します。オプションで、目的を識別しやすくするために名前を付けることができます。",
-        "nameLabel": "APIキー名（オプション）",
-        "namePlaceholder": "例：本番環境APIキー"
-      },
-      "delete": {
-        "title": "APIキーを削除",
-        "description": "このAPIキー{{name}}を削除してもよろしいですか？この操作は元に戻せません。",
-        "namePrefix": " \""
-      },
-      "editHub": {
-        "title": "ハブ割り当ての編集",
-        "description": "このAPIキーがアクセスするハブを選択します。キーは選択したハブのサーバーとリソースのみにアクセスできます。",
-        "selectLabel": "ハブを選択",
-        "noProjects": "利用可能なハブがありません"
-      }
+    "delete": {
+      "title": "APIキーを削除",
+      "description": "このAPIキー{{name}}を削除してもよろしいですか？この操作は元に戻せません。",
+      "namePrefix": " \""
     },
-    "toast": {
-      "copied": {
-        "title": "APIキーがコピーされました",
-        "description": "APIキーがクリップボードにコピーされました。"
-      },
-      "created": {
-        "title": "APIキーが作成されました",
-        "description": "新しいAPIキーが正常に作成されました。"
-      },
-      "deleted": {
-        "title": "APIキーが削除されました",
-        "description": "APIキーが正常に削除されました。"
-      },
-      "hubUpdated": {
-        "title": "ハブが更新されました",
-        "description": "APIキーのハブ割り当てが正常に更新されました。"
-      },
-      "error": {
-        "title": "エラー",
-        "createFailed": "APIキーの作成に失敗しました",
-        "deleteFailed": "APIキーの削除に失敗しました",
-        "updateHubFailed": "ハブ割り当ての更新に失敗しました"
-      }
-    },
-    "display": {
-      "lastUsed": "最終使用: {{date}}",
-      "neverUsed": "未使用"
+    "editHub": {
+      "title": "ハブ割り当ての編集",
+      "description": "このAPIキーがアクセスするハブを選択します。キーは選択したハブのサーバーとリソースのみにアクセスできます。",
+      "selectLabel": "ハブを選択",
+      "noProjects": "利用可能なハブがありません"
     }
+  },
+  "toast": {
+    "copied": {
+      "title": "APIキーがコピーされました",
+      "description": "APIキーがクリップボードにコピーされました。"
+    },
+    "created": {
+      "title": "APIキーが作成されました",
+      "description": "新しいAPIキーが正常に作成されました。"
+    },
+    "deleted": {
+      "title": "APIキーが削除されました",
+      "description": "APIキーが正常に削除されました。"
+    },
+    "hubUpdated": {
+      "title": "ハブが更新されました",
+      "description": "APIキーのハブ割り当てが正常に更新されました。"
+    },
+    "error": {
+      "title": "エラー",
+      "createFailed": "APIキーの作成に失敗しました",
+      "deleteFailed": "APIキーの削除に失敗しました",
+      "updateHubFailed": "ハブ割り当ての更新に失敗しました"
+    }
+  },
+  "display": {
+    "lastUsed": "最終使用: {{date}}",
+    "neverUsed": "未使用"
   }
 }
