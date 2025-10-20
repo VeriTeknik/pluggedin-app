@@ -7,9 +7,8 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { apiKeysTable, projectsTable } from '@/db/schema';
 import { withAuth, withProjectAuth } from '@/lib/auth-helpers';
-import { serializeApiKey } from '@/lib/serializers';
-import { ApiKey } from '@/types/api-key';
 import { sanitizeToPlainText } from '@/lib/sanitization';
+import { serializeApiKey } from '@/lib/serializers';
 
 const nanoid = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
@@ -85,14 +84,11 @@ export async function createApiKey(projectUuid: string, name?: string) {
   return withProjectAuth(validatedProjectUuid, async (session, project) => {
     const newApiKey = `pg_in_${nanoid(64)}`;
 
-    const values: Partial<typeof apiKeysTable.$inferInsert> = {
+    const values: typeof apiKeysTable.$inferInsert = {
       project_uuid: validatedProjectUuid,
       api_key: newApiKey,
+      name: sanitizedName,
     };
-
-    if (sanitizedName !== undefined) {
-      values.name = sanitizedName;
-    }
 
     const apiKey = await db
       .insert(apiKeysTable)

@@ -17,7 +17,7 @@ type ProjectsContextValue = {
   projects: Project[];
   currentProject: Project | null;
   setCurrentProject: (project: Project | null) => void;
-  mutate: ReturnType<typeof useSWR<Project[] | undefined>>['mutate'];
+  mutate: () => Promise<Project[] | undefined>;
   isLoading: boolean;
   error: Error | undefined;
   isAuthenticated: boolean;
@@ -47,7 +47,7 @@ export function ProjectsProvider({ children }: { children: React.ReactNode }) {
     mutate,
     error,
     isLoading,
-  } = useSWR<Project[] | undefined>(
+  } = useSWR(
     isAuthenticated ? 'projects' : null,
     getProjects,
     {
