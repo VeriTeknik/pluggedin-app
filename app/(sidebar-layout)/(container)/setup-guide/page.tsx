@@ -1,7 +1,6 @@
 'use client';
 
 import { Copy } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { Highlight, themes } from 'prism-react-renderer';
 import { useTranslation } from 'react-i18next';
@@ -22,9 +21,45 @@ export default function SetupGuidePage() {
   const { toast } = useToast();
   const { t } = useTranslation();
 
+  const resolvedApiKey = apiKey?.api_key ?? '<create an api key first>';
+
+  const copyToClipboard = (value: string, message: string) => {
+    navigator.clipboard.writeText(value);
+    toast({ description: message });
+  };
+
+  const claudeDesktopConfig = `{
+  "mcpServers": {
+    "PluggedinMCP": {
+      "command": "npx",
+      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy@latest"],
+      "env": {
+        "PLUGGEDIN_API_KEY": "${resolvedApiKey}"
+      }
+    }
+  }
+}`;
+
+  const claudeCodeCommand = `claude mcp add PluggedIn \\
+  npx @pluggedin/pluggedin-mcp-proxy@latest \\
+  -e PLUGGEDIN_API_KEY=${resolvedApiKey}`;
+
+  const cursorCommand = `npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key ${resolvedApiKey}`;
+
   return (
     <div className='max-w-4xl mx-auto py-8 px-4'>
       <h1 className='text-3xl font-bold mb-8'>{t('setupGuide.title')}</h1>
+      <p className='mb-6 text-sm text-muted-foreground'>
+        {t('setupGuide.moreInfo.prefix')}{' '}
+        <Link
+          href='https://docs.plugged.in/setup-guide'
+          className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline'
+          target='_blank'
+          rel='noopener noreferrer'>
+          {t('setupGuide.moreInfo.linkLabel')}
+        </Link>
+        .
+      </p>
 
       <section className='mb-8'>
         <h2 className='text-2xl font-semibold mb-4'>{t('setupGuide.proxyBenefits.title')}</h2>
@@ -38,107 +73,86 @@ export default function SetupGuidePage() {
         </div>
       </section>
 
-      <section className='mb-8'>
+      <section className='mb-12'>
         <h2 className='text-2xl font-semibold mb-4'>{t('setupGuide.installation.title')}</h2>
 
         <div className='space-y-6'>
-          <div className='p-4 bg-yellow-50 dark:bg-yellow-950 border-l-4 border-yellow-400 rounded-lg'>
-            <p className='font-medium'>
-              {t('setupGuide.installation.apiKeysNotice')}{' '}
-              <Link
-                href='/api-keys'
-                className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline'>
-                {t('apiKeys.title')}
-              </Link>
-            </p>
+          <div className='p-4 bg-blue-50 dark:bg-blue-950 border-l-4 border-blue-400 rounded-lg'>
+            <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+              <div>
+                <h3 className='text-lg font-semibold'>{t('setupGuide.installation.apiKeyCard.title')}</h3>
+                <p className='text-sm text-muted-foreground'>
+                  {t('setupGuide.installation.apiKeyCard.description')}{' '}
+                  <Link
+                    href='/api-keys'
+                    className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline'>
+                    {t('apiKeys.title')}
+                  </Link>
+                  .
+                </p>
+              </div>
+              <div className='flex items-center gap-2 w-full md:w-auto'>
+                <code className='bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-800 px-3 py-2 rounded-md text-sm font-mono break-all flex-1'>
+                  {resolvedApiKey}
+                </code>
+                <button
+                  onClick={() => copyToClipboard(resolvedApiKey, t('setupGuide.installation.apiKeyCard.copySuccess'))}
+                  className='inline-flex h-9 w-9 items-center justify-center rounded-md border border-blue-200 bg-white text-blue-600 transition-colors hover:bg-blue-600 hover:text-white dark:border-blue-800 dark:bg-gray-900 dark:text-blue-300 dark:hover:bg-blue-800'
+                  title={t('setupGuide.installation.apiKeyCard.copyLabel')}>
+                  <Copy className='w-5 h-5' />
+                </button>
+              </div>
+            </div>
           </div>
 
-          {/* Claude Desktop Configuration */}
-          <div className='p-4 bg-card dark:bg-muted rounded-lg'>
-            <h3 className='text-xl font-semibold mb-4'>{t('setupGuide.installation.claudeDesktop.title')}</h3>
-            
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeDesktop.step1.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeDesktop.step1.description')}</p>
-              <div className='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4'>
-                <Image
-                  src="/images/setup-guide/claude-desktop/step1-settings-menu.png"
-                  alt={t('setupGuide.installation.claudeDesktop.step1.imageAlt')}
-                  width={800}
-                  height={400}
-                  className="rounded-lg"
-                />
+          <div className='p-4 bg-card dark:bg-muted rounded-lg space-y-4'>
+            <h3 className='text-xl font-semibold'>{t('setupGuide.installation.claudeDesktop.title')}</h3>
+            <p className='text-sm text-muted-foreground'>{t('setupGuide.installation.claudeDesktop.intro')}</p>
+
+            <div>
+              <h4 className='font-medium'>{t('setupGuide.installation.claudeDesktop.step1.title')}</h4>
+              <p className='text-sm text-muted-foreground'>{t('setupGuide.installation.claudeDesktop.step1.description')}</p>
+            </div>
+
+            <div>
+              <h4 className='font-medium'>{t('setupGuide.installation.claudeDesktop.step2.title')}</h4>
+              <p className='text-sm text-muted-foreground mb-2'>{t('setupGuide.installation.claudeDesktop.step2.description')}</p>
+              <div className='rounded-md border border-dashed border-muted-foreground/30 bg-muted p-3 text-sm'>
+                <p className='font-semibold uppercase tracking-wide text-xs text-muted-foreground mb-2'>
+                  {t('setupGuide.installation.manualConfig.title')}
+                </p>
+                <ul className='list-disc list-inside space-y-1'>
+                  <li>
+                    <strong>{t('setupGuide.installation.manualConfig.paths.macos')}:</strong>{' '}
+                    <span className='font-mono break-all'>~/Library/Application Support/Claude/claude_desktop_config.json</span>
+                  </li>
+                  <li>
+                    <strong>{t('setupGuide.installation.manualConfig.paths.windows')}:</strong>{' '}
+                    <span className='font-mono break-all'>%APPDATA%\\Claude\\claude_desktop_config.json</span>
+                  </li>
+                </ul>
               </div>
             </div>
 
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeDesktop.step2.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeDesktop.step2.description')}</p>
-              <ul className='list-disc list-inside mb-4 space-y-1'>
-                <li>
-                  <strong>{t('setupGuide.installation.manualConfig.paths.macos')}:</strong>
-                  <pre className='inline'> ~/Library/Application Support/Claude/claude_desktop_config.json</pre>
-                </li>
-                <li>
-                  <strong>{t('setupGuide.installation.manualConfig.paths.windows')}:</strong>
-                  <pre className='inline'> %APPDATA%\Claude\claude_desktop_config.json</pre>
-                </li>
-              </ul>
-              <div className='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4'>
-                <Image
-                  src="/images/setup-guide/claude-desktop/step2-config-location.png"
-                  alt={t('setupGuide.installation.claudeDesktop.step2.imageAlt')}
-                  width={800}
-                  height={400}
-                  className="rounded-lg"
-                />
+            <div className='space-y-3'>
+              <div>
+                <h4 className='font-medium'>{t('setupGuide.installation.claudeDesktop.step3.title')}</h4>
+                <p className='text-sm text-muted-foreground'>{t('setupGuide.installation.claudeDesktop.step3.description')}</p>
               </div>
-            </div>
-
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeDesktop.step3.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeDesktop.step3.description')}</p>
+              <div className='p-3 bg-muted rounded-md font-mono text-sm'>
+                <span className='font-semibold text-foreground'>PLUGGEDIN_API_KEY=</span>
+                <span className='break-all'> {resolvedApiKey}</span>
+              </div>
               <div className='relative'>
                 <button
-                  onClick={() => {
-                    const jsonConfig = JSON.stringify(
-                      {
-                        mcpServers: {
-                          PluggedinMCP: {
-                            command: 'npx',
-                            args: ['-y', '@pluggedin/pluggedin-mcp-proxy@latest'],
-                            env: {
-                              PLUGGEDIN_API_KEY:
-                                apiKey?.api_key ?? '<create an api key first>',
-                            },
-                          },
-                        },
-                      },
-                      null,
-                      2
-                    );
-                    navigator.clipboard.writeText(jsonConfig);
-                    toast({
-                      description: 'Configuration JSON copied to clipboard',
-                    });
-                  }}
-                  className='absolute top-2 right-2 p-2 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
-                  title='Copy to clipboard'>
+                  onClick={() => copyToClipboard(claudeDesktopConfig, t('setupGuide.installation.claudeDesktop.copySuccess'))}
+                  className='absolute top-2 right-2 p-2 text-gray-500 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
+                  title={t('setupGuide.installation.shared.copyLabel')}>
                   <Copy className='w-5 h-5' />
                 </button>
                 <Highlight
                   theme={theme === 'dark' ? themes.vsDark : themes.github}
-                  code={`{
-  "mcpServers": {
-    "PluggedinMCP": {
-      "command": "npx",
-      "args": ["-y", "@pluggedin/pluggedin-mcp-proxy@latest"],
-      "env": {
-        "PLUGGEDIN_API_KEY": "${apiKey?.api_key ?? '<create an api key first>'}"
-      }
-    }
-  }
-}`}
+                  code={claudeDesktopConfig}
                   language='json'>
                   {({ tokens, getLineProps, getTokenProps }) => (
                     <pre className='bg-[#f6f8fa] dark:bg-[#1e1e1e] text-[#24292f] dark:text-[#d4d4d4] p-4 rounded-md overflow-x-auto'>
@@ -155,80 +169,51 @@ export default function SetupGuidePage() {
               </div>
             </div>
 
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeDesktop.step4.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeDesktop.step4.description')}</p>
-              <div className='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4'>
-                <Image
-                  src="/images/setup-guide/claude-desktop/step4-restart.png"
-                  alt={t('setupGuide.installation.claudeDesktop.step4.imageAlt')}
-                  width={800}
-                  height={400}
-                  className="rounded-lg"
-                />
-              </div>
+            <div>
+              <h4 className='font-medium'>{t('setupGuide.installation.claudeDesktop.step4.title')}</h4>
+              <p className='text-sm text-muted-foreground'>{t('setupGuide.installation.claudeDesktop.step4.description')}</p>
             </div>
 
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeDesktop.step5.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeDesktop.step5.description')}</p>
-              <div className='bg-gray-100 dark:bg-gray-800 p-4 rounded-lg mb-4'>
-                <Image
-                  src="/images/setup-guide/claude-desktop/step5-verification.png"
-                  alt={t('setupGuide.installation.claudeDesktop.step5.imageAlt')}
-                  width={800}
-                  height={400}
-                  className="rounded-lg"
-                />
-              </div>
+            <div>
+              <h4 className='font-medium'>{t('setupGuide.installation.claudeDesktop.step5.title')}</h4>
+              <p className='text-sm text-muted-foreground'>{t('setupGuide.installation.claudeDesktop.step5.description')}</p>
             </div>
           </div>
 
-          {/* Claude Code Configuration */}
-          <div className='p-4 bg-card dark:bg-muted rounded-lg'>
-            <h3 className='text-xl font-semibold mb-4'>{t('setupGuide.installation.claudeCode.title')}</h3>
-            
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeCode.step1.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeCode.step1.description')}</p>
-              <div className='bg-black text-green-400 p-4 rounded-lg font-mono text-sm mb-4'>
-                <div className='mb-2'>$ claude mcp --help</div>
-                <div className='text-gray-300'>Usage: claude mcp [command] [options]</div>
-                <div className='text-gray-300'>Commands:</div>
-                <div className='text-gray-300'>  add &lt;name&gt; &lt;command&gt;  Add a new MCP server</div>
-                <div className='text-gray-300'>  list                 List all MCP servers</div>
-                <div className='text-gray-300'>  remove &lt;name&gt;        Remove an MCP server</div>
-              </div>
+          <div className='p-4 bg-card dark:bg-muted rounded-lg space-y-4'>
+            <h3 className='text-xl font-semibold'>{t('setupGuide.installation.claudeCode.title')}</h3>
+
+            <div>
+              <h4 className='font-medium'>{t('setupGuide.installation.claudeCode.step1.title')}</h4>
+              <p className='text-sm text-muted-foreground'>{t('setupGuide.installation.claudeCode.step1.description')}</p>
             </div>
 
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeCode.step2.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeCode.step2.description')}</p>
-              <div className='bg-black text-green-400 p-4 rounded-lg font-mono text-sm mb-4'>
-                <div className='mb-2'>$ claude mcp list</div>
-                <div className='text-gray-300'>No MCP servers configured. Run `claude mcp add` to add servers.</div>
-              </div>
+            <div>
+              <h4 className='font-medium'>{t('setupGuide.installation.claudeCode.step2.title')}</h4>
+              <p className='text-sm text-muted-foreground'>{t('setupGuide.installation.claudeCode.step2.description')}</p>
             </div>
 
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeCode.step3.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeCode.step3.description')}</p>
-              <div className='relative mb-4'>
+            <div className='space-y-3'>
+              <div>
+                <h4 className='font-medium'>{t('setupGuide.installation.claudeCode.step3.title')}</h4>
+                <p className='text-sm text-muted-foreground'>
+                  {t('setupGuide.installation.claudeCode.step3.description')}
+                </p>
+              </div>
+              <div className='p-3 bg-muted rounded-md font-mono text-sm'>
+                <span className='font-semibold text-foreground'>PLUGGEDIN_API_KEY=</span>
+                <span className='break-all'> {resolvedApiKey}</span>
+              </div>
+              <div className='relative'>
                 <button
-                  onClick={() => {
-                    const command = `claude mcp add PluggedIn npx @pluggedin/pluggedin-mcp-proxy@latest -e PLUGGEDIN_API_KEY=${apiKey?.api_key ?? '<create an api key first>'}`;
-                    navigator.clipboard.writeText(command);
-                    toast({
-                      description: 'Claude Code command copied to clipboard',
-                    });
-                  }}
-                  className='absolute top-2 right-2 p-2 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
-                  title='Copy to clipboard'>
+                  onClick={() => copyToClipboard(claudeCodeCommand, t('setupGuide.installation.claudeCode.copySuccess'))}
+                  className='absolute top-2 right-2 p-2 text-gray-500 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
+                  title={t('setupGuide.installation.shared.copyLabel')}>
                   <Copy className='w-5 h-5' />
                 </button>
                 <Highlight
                   theme={theme === 'dark' ? themes.vsDark : themes.github}
-                  code={`claude mcp add PluggedIn npx @pluggedin/pluggedin-mcp-proxy@latest -e PLUGGEDIN_API_KEY=${apiKey?.api_key ?? '<create an api key first>'}`}
+                  code={claudeCodeCommand}
                   language='bash'>
                   {({ tokens, getLineProps, getTokenProps }) => (
                     <pre className='bg-[#f6f8fa] dark:bg-[#1e1e1e] text-[#24292f] dark:text-[#d4d4d4] p-4 rounded-md overflow-x-auto'>
@@ -243,135 +228,56 @@ export default function SetupGuidePage() {
                   )}
                 </Highlight>
               </div>
-              <div className='p-4 bg-blue-50 dark:bg-blue-950 border-l-4 border-blue-400 rounded-lg mb-4'>
-                <p className='text-sm'>
-                  <strong>Note:</strong> Run this command in your terminal where you have Claude Code installed. 
-                  You can verify the installation with <code className='bg-gray-200 dark:bg-gray-700 px-1 rounded'>claude mcp list</code>
+              <div className='rounded-md border border-dashed border-blue-400/40 bg-blue-50/60 p-3 text-sm dark:border-blue-500/40 dark:bg-blue-950/50'>
+                <strong className='block text-blue-800 dark:text-blue-200'>
+                  {t('setupGuide.installation.claudeCode.noteTitle')}
+                </strong>
+                <p className='text-muted-foreground dark:text-blue-100'>
+                  {t('setupGuide.installation.claudeCode.noteDescription')}{' '}
+                  <code className='bg-gray-200 dark:bg-gray-700 px-1 rounded'>claude mcp list</code>
+                  .
                 </p>
               </div>
             </div>
 
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeCode.step4.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeCode.step4.description')}</p>
-              <div className='bg-black text-green-400 p-4 rounded-lg font-mono text-sm mb-4'>
-                <div className='mb-2'>$ claude mcp add PluggedIn @pluggedin/pluggedin-mcp-proxy -e PLUGGEDIN_API_KEY=pg_in_...</div>
-                <div className='text-gray-300'>Added stdio MCP server PluggedIn with command: @pluggedin/pluggedin-mcp-proxy to local config</div>
-              </div>
+            <div>
+              <h4 className='font-medium'>{t('setupGuide.installation.claudeCode.step4.title')}</h4>
+              <p className='text-sm text-muted-foreground'>{t('setupGuide.installation.claudeCode.step4.description')}</p>
             </div>
 
-            <div className='mb-6'>
-              <h4 className='font-medium mb-2'>{t('setupGuide.installation.claudeCode.step5.title')}</h4>
-              <p className='mb-4'>{t('setupGuide.installation.claudeCode.step5.description')}</p>
-              <div className='bg-black text-green-400 p-4 rounded-lg font-mono text-sm mb-4'>
-                <div className='mb-2'>$ claude mcp list</div>
-                <div className='text-gray-300'>PluggedIn: @pluggedin/pluggedin-mcp-proxy</div>
-                <div className='mt-4 mb-2'>$ claude mcp get PluggedIn</div>
-                <div className='text-gray-300'>PluggedIn:</div>
-                <div className='text-gray-300'>  Scope: Local (private to you in this project)</div>
-                <div className='text-gray-300'>  Type: stdio</div>
-                <div className='text-gray-300'>  Command: @pluggedin/pluggedin-mcp-proxy</div>
-                <div className='text-gray-300'>  Environment:</div>
-                <div className='text-gray-300'>    PLUGGEDIN_API_KEY=pg_in_...</div>
-              </div>
+            <div>
+              <h4 className='font-medium'>{t('setupGuide.installation.claudeCode.step5.title')}</h4>
+              <p className='text-sm text-muted-foreground'>{t('setupGuide.installation.claudeCode.step5.description')}</p>
             </div>
           </div>
         </div>
-
       </section>
 
-      <section className='mb-8'>
-        <div className='p-4 bg-card dark:bg-muted rounded-lg'>
-          <h3 className='font-medium mb-2'>{t('setupGuide.installation.cursorConfig.title')}</h3>
-          <p className='mb-2'>
+      <section className='mb-12'>
+        <div className='p-4 bg-card dark:bg-muted rounded-lg space-y-4'>
+          <h3 className='text-xl font-semibold'>{t('setupGuide.installation.cursorConfig.title')}</h3>
+          <p className='text-sm text-muted-foreground'>
             {t('setupGuide.installation.cursorConfig.description')}
           </p>
-          <ol className='list-decimal list-inside mb-4 space-y-2'>
+          <ol className='list-decimal list-inside space-y-2 text-sm'>
             {(t('setupGuide.installation.cursorConfig.steps', { returnObjects: true }) as string[]).map((step: string, index: number) => (
               <li key={index}>{step}</li>
             ))}
           </ol>
-
-        <div className='relative'>
-          <button
-            onClick={() => {
-              const command = `npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`;
-              navigator.clipboard.writeText(command);
-              toast({
-                description: 'Cursor command copied to clipboard',
-              });
-            }}
-            className='absolute top-2 right-2 p-2 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
-            title='Copy to clipboard'>
-            <Copy className='w-5 h-5' />
-          </button>
-          <Highlight
-            theme={theme === 'dark' ? themes.vsDark : themes.github}
-            code={`npx -y @pluggedin/pluggedin-mcp-proxy@latest --pluggedin-api-key ${apiKey?.api_key ?? '<create an api key first>'}`}
-            language='bash'>
-            {({ tokens, getLineProps, getTokenProps }) => (
-              <pre className='bg-[#f6f8fa] dark:bg-[#1e1e1e] text-[#24292f] dark:text-[#d4d4d4] p-4 rounded-md overflow-x-auto'>
-                {tokens.map((line, i) => (
-                  <div key={i} {...getLineProps({ line })}>
-                    {line.map((token, key) => (
-                      <span key={key} {...getTokenProps({ token })} />
-                    ))}
-                  </div>
-                ))}
-              </pre>
-            )}
-          </Highlight>
-        </div>
-      </div></section>
-
-      <section className='mb-8'>
-        <h2 className='text-2xl font-semibold mb-4'>{t('setupGuide.smithery.title')}</h2>
-        <div className='p-4 bg-card dark:bg-muted rounded-lg'>
-          <p className='mb-4'>
-            {t('setupGuide.smithery.description')}{' '}
-            {t('setupGuide.smithery.setupLink')}{' '}
-            <Link 
-              href="https://smithery.ai/docs/smithery-cli" 
-              className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline' 
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              https://smithery.ai/docs/smithery-cli
-            </Link>
-          </p>
-
-          <p className='mb-4'>
-            {t('setupGuide.smithery.serverLink')}{' '}
-            <Link 
-              href="https://smithery.ai/server/@VeriTeknik/pluggedin-mcp" 
-              className='text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 underline' 
-              target="_blank" 
-              rel="noopener noreferrer"
-            >
-              https://smithery.ai/server/@VeriTeknik/pluggedin-mcp
-            </Link>
-          </p>
-
-          <p className='mb-4'>{t('setupGuide.smithery.windowsNote')}</p>
-
-          <p className='mb-4'>{t('setupGuide.smithery.terminalCommand')}</p>
-
-          <div className='relative mb-6'>
+          <div className='p-3 bg-muted rounded-md font-mono text-sm'>
+            <span className='font-semibold text-foreground'>PLUGGEDIN_API_KEY=</span>
+            <span className='break-all'> {resolvedApiKey}</span>
+          </div>
+          <div className='relative'>
             <button
-              onClick={() => {
-                const command = `smithery run @VeriTeknik/pluggedin-mcp --config '{"pluggedinApiKey":"${apiKey?.api_key ?? '<create an api key first>'}"}'`;
-                navigator.clipboard.writeText(command);
-                toast({
-                  description: 'Smithery command copied to clipboard',
-                });
-              }}
-              className='absolute top-2 right-2 p-2 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
-              title='Copy to clipboard'>
+              onClick={() => copyToClipboard(cursorCommand, t('setupGuide.installation.cursorConfig.copySuccess'))}
+              className='absolute top-2 right-2 p-2 text-gray-500 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
+              title={t('setupGuide.installation.shared.copyLabel')}>
               <Copy className='w-5 h-5' />
             </button>
             <Highlight
               theme={theme === 'dark' ? themes.vsDark : themes.github}
-              code={`smithery run @VeriTeknik/pluggedin-mcp --config '{"pluggedinApiKey":"${apiKey?.api_key ?? '<create an api key first>'}"}'`}
+              code={cursorCommand}
               language='bash'>
               {({ tokens, getLineProps, getTokenProps }) => (
                 <pre className='bg-[#f6f8fa] dark:bg-[#1e1e1e] text-[#24292f] dark:text-[#d4d4d4] p-4 rounded-md overflow-x-auto'>
@@ -386,53 +292,32 @@ export default function SetupGuidePage() {
               )}
             </Highlight>
           </div>
+        </div>
+      </section>
 
-          <p className='mb-4'>{t('setupGuide.smithery.desktopConfig')}</p>
-
+      <section className='mb-8'>
+        <div className='p-4 bg-card dark:bg-muted rounded-lg space-y-4'>
+          <h2 className='text-2xl font-semibold'>{t('setupGuide.lmStudio.title')}</h2>
+          <p className='text-sm text-muted-foreground'>{t('setupGuide.lmStudio.description')}</p>
+          <ol className='list-decimal list-inside space-y-2 text-sm'>
+            {(t('setupGuide.lmStudio.steps', { returnObjects: true }) as string[]).map((step: string, index: number) => (
+              <li key={index}>{step}</li>
+            ))}
+          </ol>
+          <div className='p-3 bg-muted rounded-md font-mono text-sm'>
+            <span className='font-semibold text-foreground'>PLUGGEDIN_API_KEY=</span>
+            <span className='break-all'> {resolvedApiKey}</span>
+          </div>
           <div className='relative'>
             <button
-              onClick={() => {
-                const jsonConfig = JSON.stringify(
-                  {
-                    mcpServers: {
-                      PluggedinMCP: {
-                        command: "smithery",
-                        args: [
-                          "run",
-                          "@VeriTeknik/pluggedin-mcp",
-                          "--config",
-                          `{\"pluggedinApiKey\":\"${apiKey?.api_key ?? '<create an api key first>'} \"}`
-                        ]
-                      }
-                    }
-                  },
-                  null,
-                  2
-                );
-                navigator.clipboard.writeText(jsonConfig);
-                toast({
-                  description: 'Smithery Windows configuration copied to clipboard',
-                });
-              }}
-              className='absolute top-2 right-2 p-2 text-gray-400 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
-              title='Copy to clipboard'>
+              onClick={() => copyToClipboard(claudeDesktopConfig, t('setupGuide.lmStudio.copySuccess'))}
+              className='absolute top-2 right-2 p-2 text-gray-500 hover:text-white rounded-md hover:bg-gray-700 transition-colors'
+              title={t('setupGuide.installation.shared.copyLabel')}>
               <Copy className='w-5 h-5' />
             </button>
             <Highlight
               theme={theme === 'dark' ? themes.vsDark : themes.github}
-              code={`{
-  "mcpServers": {
-    "PluggedinMCP": {
-      "command": "smithery",
-      "args": [
-        "run",
-        "@VeriTeknik/pluggedin-mcp",
-        "--config",
-        "{\\"pluggedinApiKey\\":\\"${apiKey?.api_key ?? '<create an api key first>'}\\"}"
-      ]
-    }
-  }
-}`}
+              code={claudeDesktopConfig}
               language='json'>
               {({ tokens, getLineProps, getTokenProps }) => (
                 <pre className='bg-[#f6f8fa] dark:bg-[#1e1e1e] text-[#24292f] dark:text-[#d4d4d4] p-4 rounded-md overflow-x-auto'>
@@ -447,6 +332,7 @@ export default function SetupGuidePage() {
               )}
             </Highlight>
           </div>
+          <p className='text-sm text-muted-foreground'>{t('setupGuide.lmStudio.saveNote')}</p>
         </div>
       </section>
     </div>

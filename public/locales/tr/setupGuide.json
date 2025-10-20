@@ -1,79 +1,87 @@
 {
   "setupGuide": {
     "title": "Kurulum Kılavuzu",
+    "moreInfo": {
+      "prefix": "Daha ayrıntılı bir yürütme mi gerekiyor? Tüm dokümantasyonu inceleyin",
+      "linkLabel": "docs.plugged.in/setup-guide"
+    },
     "proxyBenefits": {
       "title": "Plugged.in MCP'nin Faydaları",
-      "description": "Plugged.in MCP, tüm MCP sunucularınız için birleşik bir proxy olarak çalışır ve birçok avantaj sağlar:",
+      "description": "Plugged.in MCP tüm MCP sunucularınız için birleşik bir proxy görevi görür ve birçok avantaj sağlar:",
       "benefits": [
-        "Tek Yapılandırma Noktası - Tüm MCP sunucularınızı tek bir merkezi yapılandırma üzerinden yönetin",
-        "Otomatik Güncellemeler - En son özellikleri ve güvenlik güncellemelerini otomatik olarak alın",
-        "Basitleştirilmiş Kimlik Doğrulama - Tüm MCP sunucularınız için tek bir API anahtarı kullanın",
-        "Gelişmiş Güvenlik - Yerleşik güvenlik özellikleri ve en iyi uygulamalar",
-        "Çapraz Platform Uyumluluğu - Farklı işletim sistemlerinde sorunsuz çalışır"
+        "Tek yapılandırma noktası - Tüm MCP sunucularınızı merkezi bir yapılandırmadan yönetin",
+        "Otomatik güncellemeler - En yeni özellikleri ve güvenlik yamalarını otomatik alın",
+        "Basitleştirilmiş kimlik doğrulama - Tüm MCP sunucularınız için tek bir API anahtarı kullanın",
+        "Geliştirilmiş güvenlik - Yerleşik güvenlik özellikleri ve en iyi uygulamalar",
+        "Çapraz platform uyumluluğu - Farklı işletim sistemlerinde sorunsuz çalışır"
       ]
     },
     "installation": {
       "title": "Kurulum Yöntemleri",
-      "apiKeysNotice": "Not: API Anahtarlarınızı API Anahtarları Sayfasında yönetebilirsiniz",
+      "apiKeysNotice": "Not: API anahtarlarınızı API Anahtarları sayfasından yönetebilirsiniz",
+      "apiKeyCard": {
+        "title": "Plugged.in API Anahtarınız",
+        "description": "Herhangi bir yapılandırma PLUGGEDIN_API_KEY isterse bu değeri kullanın. Yeni anahtara mı ihtiyacınız var? Şuradan yönetin",
+        "copySuccess": "API anahtarı panoya kopyalandı",
+        "copyLabel": "Plugged.in API anahtarını kopyala"
+      },
+      "shared": {
+        "copyLabel": "Panoya kopyala"
+      },
       "claudeDesktop": {
         "title": "Claude Desktop Kurulumu",
+        "intro": "Claude Desktop bir JSON yapılandırma dosyası okur. Aşağıdaki parçayı ekleyin ve uygulamayı yeniden başlatın.",
         "step1": {
-          "title": "Adım 1: Claude Desktop Ayarlarını Açın",
-          "description": "Claude Desktop'ta yapılandırma menüsüne erişmek için ayarlar dişli simgesine tıklayın.",
-          "imagePlaceholder": "[Ekran görüntüsü: Claude Desktop ayarlar butonu]"
+          "title": "Ayarları açın",
+          "description": "Claude Desktop'ı açın ve Settings > MCP Servers yolunu izleyin."
         },
         "step2": {
-          "title": "Adım 2: Yapılandırma Dosyasını Bulun",
-          "description": "MCP yapılandırma bölümüne gidin. Yapılandırma dosyası şu konumda bulunur:",
-          "imagePlaceholder": "[Ekran görüntüsü: Claude Desktop MCP ayarları sayfası]"
+          "title": "Yapılandırmayı bulun",
+          "description": "Bilgisayarınızdaki yapılandırma dosyasını düzenleyin."
         },
         "step3": {
-          "title": "Adım 3: Plugged.in MCP Yapılandırmasını Ekleyin",
-          "description": "Aşağıdaki yapılandırmayı Claude Desktop yapılandırma dosyanıza kopyalayıp yapıştırın:",
-          "imagePlaceholder": "[Ekran görüntüsü: Plugged.in MCP ayarları ile yapılandırma dosyası]"
+          "title": "Plugged.in MCP yapılandırmasını ekleyin",
+          "description": "Aşağıdaki parçayı \"mcpServers\" nesnesine yapıştırın. API anahtarınız otomatik doldurulmuştur."
         },
         "step4": {
-          "title": "Adım 4: Kaydedin ve Yeniden Başlatın",
-          "description": "Yapılandırma dosyasını kaydedin ve değişikliklerin etkili olması için Claude Desktop'ı yeniden başlatın.",
-          "imagePlaceholder": "[Ekran görüntüsü: Kaydetme onay diyalogu]"
+          "title": "Uygulamayı yeniden başlatın",
+          "description": "Claude Desktop'ı yeniden başlatarak yeni MCP yapılandırmasını yükleyin."
         },
         "step5": {
-          "title": "Adım 5: Bağlantıyı Doğrulayın",
-          "description": "Claude Desktop'ta MCP göstergesini arayarak Plugged.in MCP'nin başarıyla bağlandığını kontrol edin.",
-          "imagePlaceholder": "[Ekran görüntüsü: MCP bağlı göstergesi ile Claude Desktop]"
-        }
+          "title": "Kurulumu doğrulayın",
+          "description": "Settings > MCP Servers ekranına dönerek PluggedinMCP girişinin göründüğünden ve geçerli anahtar gösterdiğinden emin olun."
+        },
+        "copySuccess": "Claude Desktop yapılandırması kopyalandı"
       },
       "claudeCode": {
         "title": "Claude Code Kurulumu",
         "step1": {
-          "title": "Adım 1: Claude Code Ayarlarını Açın",
-          "description": "Claude Code'da komut paletini (Cmd/Ctrl+Shift+P) kullanın ve 'MCP Settings' araması yapın.",
-          "imagePlaceholder": "[Ekran görüntüsü: MCP Ayarları ile Claude Code komut paleti]"
+          "title": "Adım 1: Claude Code Ayarlarını açın",
+          "description": "Claude Code'u açın ve komut paletinde (Cmd/Ctrl+Shift+P) \"MCP Settings\" arayın."
         },
         "step2": {
-          "title": "Adım 2: MCP Yapılandırmasına Erişin",
-          "description": "Claude Code ayarlarındaki MCP sunucuları yapılandırma bölümüne gidin.",
-          "imagePlaceholder": "[Ekran görüntüsü: Claude Code MCP ayarları paneli]"
+          "title": "Adım 2: MCP yapılandırmasına erişin",
+          "description": "Ayarlar modali içinde MCP Servers bölümünü açarak yerel yapılandırmaları yönetin."
         },
         "step3": {
-          "title": "Adım 3: Plugged.in MCP Sunucusu Ekleyin",
-          "description": "Aşağıdaki yapılandırma ile yeni bir MCP sunucusu ekleyin:",
-          "imagePlaceholder": "[Ekran görüntüsü: Claude Code MCP sunucu yapılandırma formu]"
+          "title": "Adım 3: Plugged.in MCP sunucusunu ekleyin",
+          "description": "Aşağıdaki komutu Claude Code'un kurulu olduğu terminalde çalıştırın. Komut, proxy'yi API anahtarınızla kaydeder."
         },
         "step4": {
-          "title": "Adım 4: Yapılandırmayı Uygulayın",
-          "description": "Yapılandırmayı kaydedin ve Plugged.in MCP sunucusunu etkinleştirmek için değişiklikleri uygulayın.",
-          "imagePlaceholder": "[Ekran görüntüsü: Claude Code yapılandırma kaydedildi onayı]"
+          "title": "Adım 4: Yapılandırmayı uygulayın",
+          "description": "Claude Code'da MCP Servers listesini yenileyerek yeni girişin yüklendiğini doğrulayın."
         },
         "step5": {
-          "title": "Adım 5: Bağlantıyı Test Edin",
-          "description": "Claude Code'daki MCP sunucu durumunu kontrol ederek bağlantıyı doğrulayın.",
-          "imagePlaceholder": "[Ekran görüntüsü: Bağlı olarak gösteren Claude Code MCP sunucu durumu]"
-        }
+          "title": "Adım 5: Bağlantıyı test edin",
+          "description": "`claude mcp list` komutunu çalıştırın veya Claude Code'u açarak Plugged.in sunucusunun göründüğünü doğrulayın."
+        },
+        "copySuccess": "Claude Code komutu kopyalandı",
+        "noteTitle": "Bu komutu nerede çalıştırmalı?",
+        "noteDescription": "Komutu Claude Code'un kurulu olduğu ortamda çalıştırın. Kurulumu doğrulamak için şu komutu kullanabilirsiniz"
       },
       "manualConfig": {
-        "title": "Manuel Yapılandırma",
-        "description": "Claude Desktop için, yapılandırma dosyasını şu konumda bulun:",
+        "title": "Yapılandırma dosya yolları",
+        "description": "Claude Desktop için yapılandırma dosyasını burada bulun:",
         "paths": {
           "macos": "macOS",
           "windows": "Windows"
@@ -81,23 +89,26 @@
       },
       "cursorConfig": {
         "title": "Cursor Yapılandırması",
-        "description": "Cursor için, Plugged.in MCP'yi doğrudan ayarlarda yapılandırabilirsiniz:",
+        "description": "Cursor, MCP sunucularını Integrations panelinden eklemenize izin verir.",
         "steps": [
-          "Cursor'u açın ve Cursor Ayarları'na gidin",
-          "Özellikler bölümüne gidin",
-          "'MCP Sunucuları'nı bulun ve 'Yeni MCP Sunucusu Ekle'ye tıklayın",
-          "Aşağıdaki komutu kullanın:"
-        ]
+          "Cursor'ı açın ve Integrations > MCP menüsünü seçin.",
+          "\"Edit mcp.json\" seçeneğiyle MCP yapılandırmanızı açın.",
+          "PluggedinMCP girişini ekleyin veya mevcut yapılandırmayla birleştirin.",
+          "Proxy'yi yerelde veya terminalde çalıştırmak için aşağıdaki komutu kullanın:"
+        ],
+        "copySuccess": "Cursor komutu kopyalandı"
       }
     },
-    "smithery": {
-      "title": "Smithery Windows Yapılandırması",
-      "description": "Maksimum uyumluluk için MCP'leri bulutta docker üzerinde çalıştırmak için Smithery'yi kullanmanızı öneririz.",
-      "setupLink": "Windows'ta Smithery CLI kurulumu için buraya bakın:",
-      "serverLink": "Plugged.in MCP sunucu listesini doğrudan Smithery'de ziyaret edin:",
-      "windowsNote": "Windows'ta Smithery için aşağıdaki yapılandırma seçeneklerini de kullanabilirsiniz:",
-      "terminalCommand": "Smithery komutunu doğrudan terminalinizde çalıştırabilirsiniz:",
-      "desktopConfig": "Veya Claude Desktop yapılandırma dosyanızda yapılandırın:"
+    "lmStudio": {
+      "title": "LM Studio Kurulumu",
+      "description": "LM Studio MCP sunucularını `mcp.json` dosyasından okur. Yapılandırma Claude Desktop örneğiyle aynıdır.",
+      "steps": [
+        "LM Studio'da Integrations > MCP menüsünü açın ve \"Edit mcp.json\" seçeneğini seçin.",
+        "Aşağıdaki parçayı `mcpServers` nesnesinin içine yapıştırın (yoksa oluşturun).",
+        "MCP sunucularını yeniden yüklemek için dosyayı kaydedin."
+      ],
+      "copySuccess": "LM Studio yapılandırması kopyalandı",
+      "saveNote": "Dosyayı kaydetmek, LM Studio'da MCP sunucularının otomatik olarak yeniden yüklenmesini sağlar."
     }
   }
 }

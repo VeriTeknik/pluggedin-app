@@ -1,103 +1,114 @@
 {
   "setupGuide": {
     "title": "セットアップガイド",
+    "moreInfo": {
+      "prefix": "さらに詳しい手順が必要ですか？ドキュメントを参照してください：",
+      "linkLabel": "docs.plugged.in/setup-guide"
+    },
     "proxyBenefits": {
-      "title": "Plugged.in MCPの利点",
-      "description": "Plugged.in MCPは、すべてのMCPサーバーの統一プロキシとして機能し、いくつかの利点を提供します:",
+      "title": "Plugged.in MCP の利点",
+      "description": "Plugged.in MCP はすべての MCP サーバーに対する統合プロキシとして機能し、次のメリットを提供します。",
       "benefits": [
-        "単一構成ポイント - すべてのMCPサーバーを1つの中央構成で管理",
-        "自動更新 - 最新の機能とセキュリティ更新を自動的に取得",
-        "簡略化された認証 - すべてのMCPサーバーに単一のAPIキーを使用",
-        "強化されたセキュリティ - 組み込みのセキュリティ機能とベストプラクティス",
-        "クロスプラットフォーム互換性 - 異なるオペレーティングシステム間でシームレスに動作"
+        "単一の設定場所 - すべての MCP サーバーを 1 つの設定で管理できます",
+        "自動アップデート - 最新の機能とセキュリティ更新を自動的に取得",
+        "認証の簡素化 - すべての MCP サーバーで 1 つの API キーを使用",
+        "セキュリティの強化 - 組み込みのセキュリティ機能とベストプラクティス",
+        "クロスプラットフォーム対応 - さまざまな OS でシームレスに動作"
       ]
     },
     "installation": {
       "title": "インストール方法",
-      "apiKeysNotice": "注意：APIキーはAPIキーページで管理できます",
+      "apiKeysNotice": "注意：API キーは API キーページで管理できます",
+      "apiKeyCard": {
+        "title": "Plugged.in API キー",
+        "description": "設定で PLUGGEDIN_API_KEY が求められた場合は、この値を使用してください。新しいキーが必要ですか？ 管理ページで作成できます",
+        "copySuccess": "API キーをクリップボードにコピーしました",
+        "copyLabel": "Plugged.in API キーをコピー"
+      },
+      "shared": {
+        "copyLabel": "クリップボードにコピー"
+      },
       "claudeDesktop": {
-        "title": "Claude Desktopセットアップ",
+        "title": "Claude Desktop 設定",
+        "intro": "Claude Desktop は JSON 形式の設定ファイルを読み込みます。以下のスニペットを追記し、アプリを再起動してください。",
         "step1": {
-          "title": "ステップ1：Claude Desktop設定を開く",
-          "description": "Claude Desktopの設定歯車アイコンをクリックして、構成メニューにアクセスします。",
-          "imagePlaceholder": "[スクリーンショット：Claude Desktop設定ボタン]"
+          "title": "設定を開く",
+          "description": "Claude Desktop を開き、Settings > MCP Servers に進みます。"
         },
         "step2": {
-          "title": "ステップ2：構成ファイルを見つける",
-          "description": "MCP構成セクションに移動します。構成ファイルは次の場所にあります：",
-          "imagePlaceholder": "[スクリーンショット：Claude Desktop MCP設定ページ]"
+          "title": "設定ファイルを探す",
+          "description": "マシン上の設定ファイルを開いて編集します。"
         },
         "step3": {
-          "title": "ステップ3：Plugged.in MCP構成を追加",
-          "description": "次の構成をClaude Desktop構成ファイルにコピーして貼り付けます：",
-          "imagePlaceholder": "[スクリーンショット：Plugged.in MCP設定を含む構成ファイル]"
+          "title": "Plugged.in MCP の設定を追加",
+          "description": "\"mcpServers\" オブジェクト内に以下のスニペットを貼り付けます。API キーは自動的に差し込まれています。"
         },
         "step4": {
-          "title": "ステップ4：保存して再起動",
-          "description": "構成ファイルを保存し、Claude Desktopを再起動して変更を有効にします。",
-          "imagePlaceholder": "[スクリーンショット：保存確認ダイアログ]"
+          "title": "アプリを再起動",
+          "description": "新しい MCP 設定を読み込むため、Claude Desktop を再起動します。"
         },
         "step5": {
-          "title": "ステップ5：接続を確認",
-          "description": "Claude DesktopのMCPインジケーターを確認して、Plugged.in MCPが正常に接続されているかチェックします。",
-          "imagePlaceholder": "[スクリーンショット：MCP接続インジケーター付きClaude Desktop]"
-        }
+          "title": "設定を確認",
+          "description": "Settings > MCP Servers に戻り、PluggedinMCP が表示され API キーが有効になっていることを確認します。"
+        },
+        "copySuccess": "Claude Desktop 設定をコピーしました"
       },
       "claudeCode": {
-        "title": "Claude Codeセットアップ",
+        "title": "Claude Code 設定",
         "step1": {
-          "title": "ステップ1：Claude Code設定を開く",
-          "description": "Claude Codeで、コマンドパレット（Cmd/Ctrl+Shift+P）を使用して「MCP Settings」を検索します。",
-          "imagePlaceholder": "[スクリーンショット：MCP設定付きClaude Codeコマンドパレット]"
+          "title": "ステップ 1: Claude Code の設定を開く",
+          "description": "Claude Code を開き、コマンドパレット（Cmd/Ctrl+Shift+P）で「MCP Settings」を検索します。"
         },
         "step2": {
-          "title": "ステップ2：MCP構成にアクセス",
-          "description": "Claude Code設定のMCPサーバー構成セクションに移動します。",
-          "imagePlaceholder": "[スクリーンショット：Claude Code MCP設定パネル]"
+          "title": "ステップ 2: MCP 設定に移動",
+          "description": "設定モーダルで MCP Servers セクションを開き、ローカル設定を管理します。"
         },
         "step3": {
-          "title": "ステップ3：Plugged.in MCPサーバーを追加",
-          "description": "次の構成で新しいMCPサーバーを追加します：",
-          "imagePlaceholder": "[スクリーンショット：Claude Code MCPサーバー構成フォーム]"
+          "title": "ステップ 3: Plugged.in MCP サーバーを追加",
+          "description": "Claude Code がインストールされているターミナルで以下のコマンドを実行します。API キー付きでプロキシが登録されます。"
         },
         "step4": {
-          "title": "ステップ4：構成を適用",
-          "description": "構成を保存し、変更を適用してPlugged.in MCPサーバーを有効化します。",
-          "imagePlaceholder": "[スクリーンショット：Claude Code構成保存確認]"
+          "title": "ステップ 4: 設定を反映",
+          "description": "Claude Code で MCP Servers の一覧を更新し、新しいエントリを読み込みます。"
         },
         "step5": {
-          "title": "ステップ5：接続をテスト",
-          "description": "Claude CodeのMCPサーバーステータスを確認して接続を検証します。",
-          "imagePlaceholder": "[スクリーンショット：接続済みを示すClaude Code MCPサーバーステータス]"
-        }
+          "title": "ステップ 5: 接続を確認",
+          "description": "`claude mcp list` を実行するか、Claude Code を開いて Plugged.in サーバーが利用可能になっていることを確認します。"
+        },
+        "copySuccess": "Claude Code コマンドをコピーしました",
+        "noteTitle": "コマンドの実行場所",
+        "noteDescription": "Claude Code がインストールされている環境で実行してください。インストールを確認するには次のコマンドを使います"
       },
       "manualConfig": {
-        "title": "手動構成",
-        "description": "Claude Desktopの場合、構成ファイルは次の場所にあります:",
+        "title": "設定ファイルの場所",
+        "description": "Claude Desktop の設定ファイルは以下にあります。",
         "paths": {
           "macos": "macOS",
           "windows": "Windows"
         }
       },
       "cursorConfig": {
-        "title": "Cursor構成",
-        "description": "Cursorの場合、設定で直接Plugged.in MCPを構成できます:",
+        "title": "Cursor 設定",
+        "description": "Cursor では Integrations パネルから MCP サーバーを登録できます。",
         "steps": [
-          "Cursorを開き、Cursor設定に移動します",
-          "機能セクションに移動します",
-          "'MCP Servers'を見つけて'Add new MCP Server'をクリックします",
-          "次のコマンドを使用します:"
-        ]
+          "Cursor を開き、Integrations > MCP を選択します。",
+          "\"Edit mcp.json\" を選んで MCP 設定ファイルを開きます。",
+          "PluggedinMCP エントリを追加する、または既存の設定とマージします。",
+          "プロキシをローカルまたはターミナルで動かすには、次のコマンドを使用します:"
+        ],
+        "copySuccess": "Cursor 用コマンドをコピーしました"
       }
     },
-    "smithery": {
-      "title": "Smithery Windows構成",
-      "description": "最大の互換性のために、クラウド上のDockerでMCPを実行するにはSmitheryを使用することをお勧めします。",
-      "setupLink": "WindowsでSmithery CLIをセットアップするには、こちらを確認してください:",
-      "serverLink": "Smitheryで直接Plugged.in MCPサーバーリストにアクセス:",
-      "windowsNote": "Windows上のSmitheryの場合、次の構成オプションも使用できます:",
-      "terminalCommand": "ターミナルで直接Smitheryコマンドを実行できます:",
-      "desktopConfig": "または、Claude Desktop構成ファイルで構成します:"
+    "lmStudio": {
+      "title": "LM Studio 設定",
+      "description": "LM Studio は `mcp.json` から MCP サーバーを読み込みます。設定内容は Claude Desktop の例と同じです。",
+      "steps": [
+        "LM Studio で Integrations > MCP を開き、「Edit mcp.json」を選択します。",
+        "`mcpServers` オブジェクト内に以下のスニペットを貼り付けます（存在しない場合は作成します）。",
+        "ファイルを保存し、MCP サーバーを再読み込みします。"
+      ],
+      "copySuccess": "LM Studio 設定をコピーしました",
+      "saveNote": "ファイルを保存すると、LM Studio で MCP サーバーが自動的に再読み込みされます。"
     }
   }
 }

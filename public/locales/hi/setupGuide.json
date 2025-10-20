@@ -1,79 +1,87 @@
 {
   "setupGuide": {
     "title": "सेटअप गाइड",
+    "moreInfo": {
+      "prefix": "और भी चरण-दर-चरण विवरण चाहिए? पूरी दस्तावेज़ीकरण देखें",
+      "linkLabel": "docs.plugged.in/setup-guide"
+    },
     "proxyBenefits": {
       "title": "Plugged.in MCP के लाभ",
-      "description": "Plugged.in MCP आपके सभी MCP सर्वर के लिए एक एकीकृत प्रॉक्सी के रूप में कार्य करता है, जो कई फायदे प्रदान करता है:",
+      "description": "Plugged.in MCP आपके सभी MCP सर्वर के लिए एकीकृत प्रॉक्सी की तरह काम करता है और कई फायदे देता है:",
       "benefits": [
-        "एकल कॉन्फ़िगरेशन बिंदु - अपने सभी MCP सर्वर को एक केंद्रीय कॉन्फ़िगरेशन के माध्यम से प्रबंधित करें",
-        "स्वचालित अपडेट - नवीनतम सुविधाएँ और सुरक्षा अपडेट स्वचालित रूप से प्राप्त करें",
-        "सरलीकृत प्रमाणीकरण - अपने सभी MCP सर्वर के लिए एक एकल API कुंजी का उपयोग करें",
+        "एकल कॉन्फ़िगरेशन बिंदु - अपने सभी MCP सर्वर को एक केंद्रीय कॉन्फ़िगरेशन से प्रबंधित करें",
+        "स्वचालित अपडेट - नवीनतम सुविधाएँ और सुरक्षा अपडेट स्वतः प्राप्त करें",
+        "सरलीकृत प्रमाणीकरण - सभी MCP सर्वर के लिए एक ही API कुंजी का उपयोग करें",
         "उन्नत सुरक्षा - अंतर्निहित सुरक्षा सुविधाएँ और सर्वोत्तम अभ्यास",
-        "क्रॉस-प्लेटफ़ॉर्म संगतता - विभिन्न ऑपरेटिंग सिस्टम पर निर्बाध रूप से काम करता है"
+        "क्रॉस-प्लेटफ़ॉर्म संगतता - अलग-अलग ऑपरेटिंग सिस्टम पर निर्बाध रूप से काम करता है"
       ]
     },
     "installation": {
       "title": "इंस्टॉलेशन विधियाँ",
       "apiKeysNotice": "सूचना: आप अपनी API कुंजियों को API कुंजी पृष्ठ में प्रबंधित कर सकते हैं",
+      "apiKeyCard": {
+        "title": "आपकी Plugged.in API कुंजी",
+        "description": "जहाँ भी कोई कॉन्फ़िगरेशन PLUGGEDIN_API_KEY माँगे, यह मान उपयोग करें। नई कुंजी चाहिए? उन्हें प्रबंधित करें",
+        "copySuccess": "API कुंजी क्लिपबोर्ड पर कॉपी की गई",
+        "copyLabel": "Plugged.in API कुंजी कॉपी करें"
+      },
+      "shared": {
+        "copyLabel": "क्लिपबोर्ड पर कॉपी करें"
+      },
       "claudeDesktop": {
         "title": "Claude Desktop सेटअप",
+        "intro": "Claude Desktop एक JSON कॉन्फ़िगरेशन फ़ाइल पढ़ता है। नीचे दिया गया स्निपेट जोड़ें और ऐप को पुनः प्रारंभ करें।",
         "step1": {
-          "title": "चरण 1: Claude Desktop सेटिंग्स खोलें",
-          "description": "कॉन्फ़िगरेशन मेनू तक पहुंचने के लिए Claude Desktop में सेटिंग्स गियर आइकन पर क्लिक करें।",
-          "imagePlaceholder": "[स्क्रीनशॉट: Claude Desktop सेटिंग्स बटन]"
+          "title": "सेटिंग्स खोलें",
+          "description": "Claude Desktop खोलें और Settings > MCP Servers पर जाएँ।"
         },
         "step2": {
-          "title": "चरण 2: कॉन्फ़िगरेशन फ़ाइल खोजें",
-          "description": "MCP कॉन्फ़िगरेशन अनुभाग पर नेविगेट करें। कॉन्फ़िगरेशन फ़ाइल यहाँ स्थित है:",
-          "imagePlaceholder": "[स्क्रीनशॉट: Claude Desktop MCP सेटिंग्स पृष्ठ]"
+          "title": "कॉन्फ़िगरेशन फ़ाइल ढूँढें",
+          "description": "अपने सिस्टम पर मौजूद कॉन्फ़िगरेशन फ़ाइल को संपादित करें।"
         },
         "step3": {
-          "title": "चरण 3: Plugged.in MCP कॉन्फ़िगरेशन जोड़ें",
-          "description": "निम्नलिखित कॉन्फ़िगरेशन को कॉपी करें और अपनी Claude Desktop कॉन्फ़िग फ़ाइल में पेस्ट करें:",
-          "imagePlaceholder": "[स्क्रीनशॉट: Plugged.in MCP सेटिंग्स के साथ कॉन्फ़िगरेशन फ़ाइल]"
+          "title": "Plugged.in MCP कॉन्फ़िगरेशन जोड़ें",
+          "description": "नीचे दिया स्निपेट \"mcpServers\" ऑब्जेक्ट में चिपकाएँ। इसमें आपकी API कुंजी पहले से भरी है।"
         },
         "step4": {
-          "title": "चरण 4: सेव करें और पुनः आरंभ करें",
-          "description": "कॉन्फ़िगरेशन फ़ाइल को सेव करें और परिवर्तनों को प्रभावी करने के लिए Claude Desktop को पुनः आरंभ करें।",
-          "imagePlaceholder": "[स्क्रीनशॉट: सेव पुष्टि डायलॉग]"
+          "title": "एप्लिकेशन पुनः प्रारंभ करें",
+          "description": "नई MCP कॉन्फ़िगरेशन लोड करने के लिए Claude Desktop को पुनः प्रारंभ करें।"
         },
         "step5": {
-          "title": "चरण 5: कनेक्शन सत्यापित करें",
-          "description": "Claude Desktop में MCP इंडिकेटर देखकर जांचें कि Plugged.in MCP सफलतापूर्वक कनेक्ट हो गया है।",
-          "imagePlaceholder": "[स्क्रीनशॉट: Claude Desktop MCP कनेक्ट इंडिकेटर के साथ]"
-        }
+          "title": "सेटअप सत्यापित करें",
+          "description": "Settings > MCP Servers में वापस जाएँ और सुनिश्चित करें कि PluggedinMCP सूची में दिखाई दे और मान्य कुंजी दिखाए।"
+        },
+        "copySuccess": "Claude Desktop कॉन्फ़िगरेशन कॉपी किया गया"
       },
       "claudeCode": {
         "title": "Claude Code सेटअप",
         "step1": {
           "title": "चरण 1: Claude Code सेटिंग्स खोलें",
-          "description": "Claude Code में, कमांड पैलेट (Cmd/Ctrl+Shift+P) का उपयोग करें और 'MCP Settings' खोजें।",
-          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code कमांड पैलेट MCP सेटिंग्स के साथ]"
+          "description": "Claude Code खोलें और कमांड पैलेट (Cmd/Ctrl+Shift+P) से \"MCP Settings\" खोजें।"
         },
         "step2": {
-          "title": "चरण 2: MCP कॉन्फ़िगरेशन तक पहुंचें",
-          "description": "Claude Code सेटिंग्स में MCP सर्वर कॉन्फ़िगरेशन अनुभाग पर नेविगेट करें।",
-          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code MCP सेटिंग्स पैनल]"
+          "title": "चरण 2: MCP कॉन्फ़िगरेशन तक पहुँचें",
+          "description": "Settings मोडल में MCP Servers अनुभाग खोलें और स्थानीय कॉन्फ़िगरेशन प्रबंधित करें।"
         },
         "step3": {
           "title": "चरण 3: Plugged.in MCP सर्वर जोड़ें",
-          "description": "निम्नलिखित कॉन्फ़िगरेशन के साथ एक नया MCP सर्वर जोड़ें:",
-          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code MCP सर्वर कॉन्फ़िगरेशन फॉर्म]"
+          "description": "नीचे दिया कमांड उसी टर्मिनल में चलाएँ जहाँ Claude Code इंस्टॉल है। यह आपकी API कुंजी के साथ प्रॉक्सी जोड़ता है।"
         },
         "step4": {
           "title": "चरण 4: कॉन्फ़िगरेशन लागू करें",
-          "description": "कॉन्फ़िगरेशन को सेव करें और Plugged.in MCP सर्वर को सक्षम करने के लिए परिवर्तन लागू करें।",
-          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code कॉन्फ़iगरेशन सेव पुष्टि]"
+          "description": "Claude Code में MCP Servers सूची को रिफ्रेश करें ताकि नया एंट्री लोड हो सके।"
         },
         "step5": {
-          "title": "चरण 5: कनेक्शन परीक्षण करें",
-          "description": "Claude Code में MCP सर्वर स्थिति जांचकर कनेक्शन सत्यापित करें।",
-          "imagePlaceholder": "[स्क्रीनशॉट: Claude Code MCP सर्वर स्थिति कनेक्ट दिखा रहा है]"
-        }
+          "title": "चरण 5: कनेक्शन जाँचें",
+          "description": "`claude mcp list` चलाएँ या Claude Code खोलें और सुनिश्चित करें कि Plugged.in सर्वर उपलब्ध है।"
+        },
+        "copySuccess": "Claude Code कमांड कॉपी किया गया",
+        "noteTitle": "कमांड कहाँ चलाएँ",
+        "noteDescription": "यह कमांड उसी वातावरण में चलाएँ जहाँ Claude Code इंस्टॉल है। इंस्टॉलेशन सत्यापित करने के लिए उपयोग करें"
       },
       "manualConfig": {
-        "title": "मैनुअल कॉन्फ़िगरेशन",
-        "description": "Claude Desktop के लिए, कॉन्फ़िगरेशन फ़ाइल यहाँ स्थित है:",
+        "title": "कॉन्फ़िगरेशन फ़ाइल पथ",
+        "description": "Claude Desktop के लिए कॉन्फ़िगरेशन फ़ाइल यहाँ पाएँ:",
         "paths": {
           "macos": "macOS",
           "windows": "Windows"
@@ -81,23 +89,26 @@
       },
       "cursorConfig": {
         "title": "Cursor कॉन्फ़िगरेशन",
-        "description": "Cursor के लिए, आप सीधे सेटिंग्स में Plugged.in MCP को कॉन्फ़िगर कर सकते हैं:",
+        "description": "Cursor Integrations पैनल से MCP सर्वर जोड़ने देता है।",
         "steps": [
-          "Cursor खोलें और Cursor सेटिंग्स पर जाएं",
-          "Features अनुभाग पर नेविगेट करें",
-          "'MCP Servers' खोजें और 'Add new MCP Server' पर क्लिक करें",
-          "निम्नलिखित कमांड का उपयोग करें:"
-        ]
+          "Cursor खोलें और Integrations > MCP चुनें।",
+          "\"Edit mcp.json\" चुनें ताकि MCP कॉन्फ़िगरेशन खुले।",
+          "PluggedinMCP एंट्री जोड़ें या मर्ज करें।",
+          "प्रॉक्सी को लोकल या टर्मिनल में चलाने के लिए नीचे दिया कमांड उपयोग करें:"
+        ],
+        "copySuccess": "Cursor कमांड कॉपी किया गया"
       }
     },
-    "smithery": {
-      "title": "Smithery विंडोज कॉन्फ़िगरेशन",
-      "description": "हम अधिकतम संगतता के लिए क्लाउड पर डॉकर में MCP चलाने के लिए Smithery का उपयोग करने की सलाह देते हैं।",
-      "setupLink": "विंडोज पर Smithery CLI सेटअप करने के लिए इसे देखें:",
-      "serverLink": "सीधे Smithery पर Plugged.in MCP सर्वर लिस्टिंग पर जाएँ:",
-      "windowsNote": "विंडोज पर Smithery के लिए, आप निम्नलिखित कॉन्फ़िगरेशन विकल्पों का भी उपयोग कर सकते हैं:",
-      "terminalCommand": "आप सीधे अपने टर्मिनल में Smithery कमांड चला सकते हैं:",
-      "desktopConfig": "या इसे अपनी Claude Desktop कॉन्फ़िगरेशन फ़ाइल में कॉन्फ़िगर करें:"
+    "lmStudio": {
+      "title": "LM Studio सेटअप",
+      "description": "LM Studio `mcp.json` से MCP सर्वर पढ़ता है। कॉन्फ़िगरेशन Claude Desktop उदाहरण जैसा ही है।",
+      "steps": [
+        "LM Studio में Integrations > MCP खोलें और \"Edit mcp.json\" चुनें।",
+        "`mcpServers` ऑब्जेक्ट के अंदर नीचे दिया स्निपेट पेस्ट करें (यदि मौजूद नहीं है तो बनाएं)।",
+        "फ़ाइल सेव करें ताकि MCP सर्वर दोबारा लोड हो जाएँ।"
+      ],
+      "copySuccess": "LM Studio कॉन्फ़िगरेशन कॉपी किया गया",
+      "saveNote": "फ़ाइल सेव करते ही LM Studio में MCP सर्वर स्वतः रीलोड हो जाते हैं।"
     }
   }
 }
