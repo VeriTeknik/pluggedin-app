@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { profilesTable, projectsTable } from '@/db/schema';
+
 import { addSampleMcpServersForNewUser } from './sample-mcp-servers';
 
 /**

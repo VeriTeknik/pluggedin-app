@@ -1,5 +1,5 @@
 import { Package } from 'lucide-react';
-import { useEffect, useMemo,useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { mutate } from 'swr';
@@ -53,9 +53,11 @@ export function InstallDialog({
 }: InstallDialogProps) {
   // Load 'discover' as the default namespace and 'common' for shared translations
   const { t } = useTranslation(['discover', 'common']);
-  const { currentProfile } = useProfiles();
+  const { currentProfile, activeProfile, isLoading: profilesLoading } = useProfiles();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const profileUuid = currentProfile?.uuid ?? activeProfile?.uuid;
+  const isProfileUnavailable = !profilesLoading && !profileUuid;
 
   // Parse environment variables to extract keys and descriptions
   const envInfo = useMemo(() => {
@@ -121,7 +123,12 @@ export function InstallDialog({
   }, [open, serverData, form, envKeys]);
 
   const onSubmit = async (values: any) => {
-    if (!currentProfile?.uuid) {
+    if (!profileUuid) {
+      toast({
+        title: t('common:error'),
+        description: t('install.profileUnavailable', 'We could not access your active workspace. Please select a workspace and try again.'),
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -140,7 +147,7 @@ export function InstallDialog({
 
       const result = await createMcpServer({
         name: values.name,
-        profileUuid: currentProfile.uuid,
+        profileUuid,
         description: values.description,
         command: values.command,
         args: values.args.trim().split(/\s+/).filter(Boolean),
@@ -168,7 +175,7 @@ export function InstallDialog({
             serverUuid: result.data.uuid,
             externalId: serverData.external_id,
             source: serverData.source,
-            profileUuid: currentProfile.uuid,
+            profileUuid,
           }).catch(trackError => {
             console.error("Failed to track installation:", trackError);
           });
@@ -177,14 +184,14 @@ export function InstallDialog({
             serverUuid: result.data.uuid,
             externalId: result.data.uuid,
             source: McpServerSource.PLUGGEDIN,
-            profileUuid: currentProfile.uuid,
+            profileUuid,
           }).catch(trackError => {
             console.error("Failed to track custom installation:", trackError);
           });
         }
 
         // Refresh the installed servers data
-        await mutate(`${currentProfile.uuid}/installed-mcp-servers`);
+        await mutate(`${profileUuid}/installed-mcp-servers`);
 
         onOpenChange(false);
       } else {
@@ -228,6 +235,13 @@ export function InstallDialog({
               <Package className="h-4 w-4" />
               <AlertDescription className="text-sm">
                 {t('install.registryNotice', 'This server is from the official Plugged.in Registry and has been verified for compatibility.')}
+              </AlertDescription>
+            </Alert>
+          )}
+          {isProfileUnavailable && (
+            <Alert variant="destructive" className="mb-3">
+              <AlertDescription className="text-sm">
+                {t('install.profileUnavailable', 'We could not access your active workspace. Please select or create a workspace before installing.')}
               </AlertDescription>
             </Alert>
           )}
@@ -354,7 +368,7 @@ export function InstallDialog({
             </Button>
             <Button 
               type="submit" 
-              disabled={isSubmitting}
+              disabled={isSubmitting || isProfileUnavailable}
               size="sm"
               onClick={form.handleSubmit(onSubmit)}
             >
