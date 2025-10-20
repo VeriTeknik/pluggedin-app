@@ -449,6 +449,20 @@
       "when": 1760513345865,
       "tag": "0063_modern_mother_askani",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1760760401936,
+      "tag": "0064_natural_wild_child",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1760767797493,
+      "tag": "0065_natural_moira_mactaggert",
+      "breakpoints": true
     }
   ]
 }

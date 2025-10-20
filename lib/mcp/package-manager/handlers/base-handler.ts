@@ -1,5 +1,10 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { z } from 'zod';
+
+import { PackageManagerConfig } from '../config';
+
+const serverUuidSchema = z.string().uuid('Invalid server UUID provided to package handler.');
 
 export interface PackageInfo {
   name: string;
@@ -60,8 +65,8 @@ export abstract class BasePackageHandler {
    * Get the install directory for a server
    */
   protected getServerInstallDir(serverUuid: string): string {
-    const { PACKAGE_STORE_DIR } = require('../config').PackageManagerConfig;
-    return path.join(PACKAGE_STORE_DIR, 'servers', serverUuid, this.packageManagerName);
+    const sanitizedServerUuid = serverUuidSchema.parse(serverUuid);
+    return path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', sanitizedServerUuid, this.packageManagerName);
   }
   
   /**

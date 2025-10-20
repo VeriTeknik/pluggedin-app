@@ -55,6 +55,23 @@
     "title": "एआई सोसियल",
     "description": "एआई सोसियल सोसियल मीडिया प्लेटफ़ॉर्म्स का खोज और जोड़ें"
   },
+  "projects": {
+    "loading": "Loading Projects...",
+    "loadingHubs": "Loading Hubs...",
+    "hubs": "Hubs",
+    "switchingHub": "Switching Hub...",
+    "searchHubs": "Search hubs...",
+    "noHubFound": "No hub found.",
+    "createHub": "Create Hub",
+    "createHubDialog": {
+      "title": "Create Hub",
+      "description": "Add a new hub to organize your work.",
+      "hubName": "Hub name",
+      "placeholder": "Enter hub name",
+      "creating": "Creating...",
+      "create": "Create"
+    }
+  },
   "releaseNotes": {
     "title": "रिलीज़ नोट्स",
     "description": "हमारे रिपॉजिटरी में नवीनतम अपडेट और परिवर्तनों को ट्रैक करें",

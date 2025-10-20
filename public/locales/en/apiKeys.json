@@ -1,49 +1,67 @@
 {
-  "apiKeys": {
-    "title": "API Keys",
-    "description": "Your API keys are used to authenticate requests to the Plugged.in API. Keep them secure and do not share them with others.",
-    "empty": "No API keys yet. Create one to get started.",
-    "actions": {
-      "create": "Create API Key",
-      "creating": "Creating...",
-      "delete": "Delete API Key",
-      "deleting": "Deleting...",
-      "show": "Show API key",
-      "hide": "Hide API key",
-      "copy": "Copy API key",
-      "cancel": "Cancel"
+  "title": "API Keys",
+  "description": "Your API keys are used to authenticate requests to the Plugged.in API. Each key is assigned to a specific Hub and you can change the Hub assignment anytime using the edit button. Keep your keys secure and do not share them with others.",
+  "empty": "No API keys yet. Create one to get started.",
+  "actions": {
+    "create": "Create API Key",
+    "creating": "Creating...",
+    "delete": "Delete API Key",
+    "deleting": "Deleting...",
+    "show": "Show API key",
+    "hide": "Hide API key",
+    "copy": "Copy API key",
+    "cancel": "Cancel",
+    "editHub": "Edit Hub",
+    "updating": "Updating...",
+    "selectHub": "Select Hub"
+  },
+  "dialog": {
+    "create": {
+      "title": "Create API Key",
+      "description": "Create a new API key for your project. You can optionally give it a name to help identify its purpose.",
+      "nameLabel": "API Key Name (Optional)",
+      "namePlaceholder": "e.g., Production API Key"
     },
-    "dialog": {
-      "create": {
-        "title": "Create API Key",
-        "description": "Create a new API key for your project. You can optionally give it a name to help identify its purpose.",
-        "nameLabel": "API Key Name (Optional)",
-        "namePlaceholder": "e.g., Production API Key"
-      },
-      "delete": {
-        "title": "Delete API Key",
-        "description": "Are you sure you want to delete this API key{{name}}? This action cannot be undone.",
-        "namePrefix": " \""
-      }
+    "delete": {
+      "title": "Delete API Key",
+      "description": "Are you sure you want to delete this API key{{name}}? This action cannot be undone.",
+      "namePrefix": " \""
     },
-    "toast": {
-      "copied": {
-        "title": "API Key copied",
-        "description": "The API key has been copied to your clipboard."
-      },
-      "created": {
-        "title": "API Key created",
-        "description": "Your new API key has been created successfully."
-      },
-      "deleted": {
-        "title": "API Key deleted",
-        "description": "Your API key has been deleted successfully."
-      },
-      "error": {
-        "title": "Error",
-        "createFailed": "Failed to create API key",
-        "deleteFailed": "Failed to delete API key"
-      }
+    "editHub": {
+      "title": "Edit Hub Assignment",
+      "description": "Select which Hub this API key should access. The key will only have access to the selected Hub's servers and resources.",
+      "selectLabel": "Select Hub",
+      "noProjects": "No Hubs available"
     }
+  },
+  "toast": {
+    "copied": {
+      "title": "API Key copied",
+      "description": "The API key has been copied to your clipboard."
+    },
+    "created": {
+      "title": "API Key created",
+      "description": "Your new API key has been created successfully."
+    },
+    "deleted": {
+      "title": "API Key deleted",
+      "description": "Your API key has been deleted successfully."
+    },
+    "hubUpdated": {
+      "title": "Hub Updated",
+      "description": "API key Hub assignment has been updated successfully."
+    },
+    "error": {
+      "title": "Error",
+      "createFailed": "Failed to create API key",
+      "deleteFailed": "Failed to delete API key",
+      "updateHubFailed": "Failed to update Hub assignment"
+    }
+  },
+  "display": {
+    "lastUsed": "Last used: {{date}}",
+    "neverUsed": "Never used",
+    "hub": "Hub",
+    "currentHub": "Current Hub"
   }
 }

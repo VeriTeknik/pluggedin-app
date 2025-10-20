@@ -11,6 +11,7 @@ import { ActivityHeatmap } from '@/components/analytics/activity-heatmap';
 import { MetricCard } from '@/components/analytics/metric-card';
 import { RecentDocuments } from '@/components/dashboard/RecentDocuments';
 import { RecentToolCalls } from '@/components/dashboard/RecentToolCalls';
+import { WhyConnectCard } from '@/components/dashboard/WhyConnectCard';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -263,6 +264,9 @@ export function DashboardTab({ profileUuid, projectUuid, period }: DashboardTabP
           value={safeMetrics.mostUsedServer || 'N/A'}
         />
       </div>
+
+      {/* Why Connect to Plugged.in */}
+      <WhyConnectCard />
 
       {/* Recent Documents and Tool Calls */}
       <div className="grid gap-4 md:grid-cols-2">

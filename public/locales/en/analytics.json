@@ -15,15 +15,39 @@
     "emptyDocs": {
       "title": "Start Building Your Knowledge Base",
       "description": "Add documents to enable AI-powered search and insights",
-      "uploadAction": "Upload Documents",
-      "mcpAction": "Install MCP Proxy",
-      "sdkAction": "Use SDK Libraries"
+      "uploadAction": "Upload Documents"
     },
     "emptyTools": {
       "title": "Connect Your First MCP Server",
       "description": "Set up MCP servers to enable AI tool interactions",
-      "configureAction": "Configure Servers",
-      "setupAction": "View Setup Guide"
+      "configureAction": "Configure Servers"
+    }
+  },
+  "whyConnect": {
+    "title": "Why Connect to Plugged.in?",
+    "description": "Connect your AI clients to unlock powerful centralized features",
+    "intro": "Connect the Plugged.in MCP Proxy to your AI clients (Claude Code, Claude Desktop, LM Studio, ChatGPT, etc.) to enable a unified layer for all your AI workflows:",
+    "features": {
+      "knowledge": {
+        "title": "Centralized Knowledge Base",
+        "description": "Access and search your documents from any connected AI client with RAG-powered semantic search"
+      },
+      "tools": {
+        "title": "Unified Tool Access",
+        "description": "Configure MCP servers once and use the same tools across all your AI clients"
+      },
+      "memory": {
+        "title": "Persistent Memory",
+        "description": "Maintain context and history across sessions and different AI clients"
+      },
+      "workflows": {
+        "title": "Secure Workflows",
+        "description": "Share and collaborate on AI workflows with team members securely"
+      }
+    },
+    "actions": {
+      "setup": "Setup MCP Proxy",
+      "docs": "View Documentation"
     }
   },
   "tabs": {

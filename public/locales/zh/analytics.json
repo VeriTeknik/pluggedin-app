@@ -130,15 +130,39 @@
     "emptyDocs": {
       "title": "开始构建您的知识库",
       "description": "添加文档以启用 AI 驱动的搜索和洞察",
-      "uploadAction": "上传文档",
-      "mcpAction": "安装 MCP 代理",
-      "sdkAction": "使用 SDK 库"
+      "uploadAction": "上传文档"
     },
     "emptyTools": {
       "title": "连接您的第一个 MCP 服务器",
       "description": "设置 MCP 服务器以启用 AI 工具交互",
-      "configureAction": "配置服务器",
-      "setupAction": "查看设置指南"
+      "configureAction": "配置服务器"
+    }
+  },
+  "whyConnect": {
+    "title": "为什么连接到 Plugged.in？",
+    "description": "连接您的 AI 客户端以解锁强大的集中式功能",
+    "intro": "将 Plugged.in MCP 代理连接到您的 AI 客户端（Claude Code、Claude Desktop、LM Studio、ChatGPT 等），为您的所有 AI 工作流程启用统一层：",
+    "features": {
+      "knowledge": {
+        "title": "集中式知识库",
+        "description": "使用 RAG 驱动的语义搜索从任何连接的 AI 客户端访问和搜索您的文档"
+      },
+      "tools": {
+        "title": "统一工具访问",
+        "description": "一次配置 MCP 服务器，在所有 AI 客户端中使用相同的工具"
+      },
+      "memory": {
+        "title": "持久化记忆",
+        "description": "在会话和不同 AI 客户端之间保持上下文和历史记录"
+      },
+      "workflows": {
+        "title": "安全工作流",
+        "description": "与团队成员安全地共享和协作 AI 工作流"
+      }
+    },
+    "actions": {
+      "setup": "设置 MCP 代理",
+      "docs": "查看文档"
     }
   }
 }

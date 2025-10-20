@@ -1,6 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
+import { trackApiKeyUsage } from '@/app/actions/api-keys';
 import { db } from '@/db';
 import { apiKeysTable } from '@/db/schema';
 
@@ -41,6 +42,12 @@ export async function authenticateApiKey(request: Request) {
       ),
     };
   }
+
+  // Update last_used_at timestamp asynchronously with batched updates
+  // This prevents race conditions and reduces database writes
+  trackApiKeyUsage(apiKeyRecord[0].uuid).catch((err) =>
+    console.error('Failed to track API key usage:', err)
+  );
 
   return {
     success: true,

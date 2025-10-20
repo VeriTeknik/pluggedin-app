@@ -760,7 +760,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             },
             // Disable Next.js fetch caching for MCP requests
             cache: 'no-store' as RequestCache,
-            // @ts-ignore - Next.js specific option to bypass fetch instrumentation
             next: { revalidate: 0 }
           };
         } else {
@@ -768,7 +767,6 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
             headers: defaultHeaders,
             // Disable Next.js fetch caching for MCP requests
             cache: 'no-store' as RequestCache,
-            // @ts-ignore - Next.js specific option to bypass fetch instrumentation
             next: { revalidate: 0 }
           };
         }

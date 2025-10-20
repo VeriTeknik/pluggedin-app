@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { getProfiles, getProjectActiveProfile, updateProfile as updateProfileAction } from '@/app/actions/profiles';
+import { getUUIDFromLocalStorage, removeFromLocalStorage, setUUIDInLocalStorage } from '@/lib/storage-utils';
 import { Profile } from '@/types/profile';
 
 import { useProjects } from './use-projects';
@@ -38,38 +39,81 @@ export function useProfiles() {
   );
 
   const [currentProfile, setCurrentProfile] = useState<Profile | null>(null);
+  const lastSetProfileUuidRef = useRef<string | null>(null);
+  const lastProjectUuidRef = useRef<string | null>(null);
+  const activeProfileRef = useRef<Profile | null>(null);
+
+  // Track activeProfile in a ref to avoid dependency loops
+  useEffect(() => {
+    activeProfileRef.current = activeProfile;
+  }, [activeProfile]);
+
   // Note: isCurrentUserAdmin should come from the user object, not profile
   // const isCurrentUserAdmin = currentProfile?.userIsAdmin ?? false;
 
   // Load saved profile on mount if authenticated
   useEffect(() => {
     if (!currentProject) {
-      setCurrentProfile(null);
+      if (lastSetProfileUuidRef.current !== null) {
+        setCurrentProfile(null);
+        lastSetProfileUuidRef.current = null;
+        lastProjectUuidRef.current = null;
+      }
       return;
     }
 
-    const savedProfileUuid = localStorage.getItem(CURRENT_PROFILE_KEY);
+    // Detect project change first
+    const isProjectChange = currentProject.uuid !== lastProjectUuidRef.current;
+    if (isProjectChange) {
+      // Update ref FIRST before any state changes
+      lastProjectUuidRef.current = currentProject.uuid;
+      lastSetProfileUuidRef.current = null;
+      // Don't clear profile state here - let it clear naturally when new profile loads
+      // Don't proceed with profile selection until profiles are loaded
+      return;
+    }
+
+    // Don't run profile selection until profiles are loaded and stable
+    // This prevents the effect from running 355+ times while SWR is fetching
+    if (profilesLoading || !profiles) {
+      return;
+    }
+
+    // Only proceed if we have profiles or loading is complete
+    const savedProfileUuid = getUUIDFromLocalStorage(CURRENT_PROFILE_KEY);
     if (profiles?.length) {
+      let profileToSet: Profile | null = null;
+
       if (savedProfileUuid) {
         const savedProfile = profiles.find((p: Profile) => p.uuid === savedProfileUuid);
         if (savedProfile) {
-          setCurrentProfile(savedProfile);
-          return;
+          profileToSet = savedProfile;
         }
       }
+
       // If no saved profile or saved profile not found, use active profile or first profile
-      setCurrentProfile(activeProfile || profiles[0]);
+      // Use ref instead of dependency to avoid infinite loop
+      if (!profileToSet) {
+        profileToSet = activeProfileRef.current || profiles[0];
+      }
+
+      // Only update if profile actually changed
+      if (profileToSet && profileToSet.uuid !== lastSetProfileUuidRef.current) {
+        setCurrentProfile(profileToSet);
+        lastSetProfileUuidRef.current = profileToSet.uuid;
+      }
     }
-  }, [profiles, activeProfile, currentProject]);
+  }, [profiles, currentProject, profilesLoading, activeProfile?.uuid]); // React when active profile changes
 
   // Persist profile selection
   const handleSetCurrentProfile = (profile: Profile | null) => {
     setCurrentProfile(profile);
+    lastSetProfileUuidRef.current = profile?.uuid || null;
 
     if (profile) {
-      localStorage.setItem(CURRENT_PROFILE_KEY, profile.uuid);
+      setUUIDInLocalStorage(CURRENT_PROFILE_KEY, profile.uuid);
     } else {
-      localStorage.removeItem(CURRENT_PROFILE_KEY);
+      removeFromLocalStorage(CURRENT_PROFILE_KEY);
     }
   };
 

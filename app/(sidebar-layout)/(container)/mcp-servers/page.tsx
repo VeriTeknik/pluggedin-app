@@ -126,6 +126,9 @@ export default function MCPServersPage() {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    // Disable auto-reset to prevent infinite loops during Hub switches
+    autoResetPageIndex: false,
+    autoResetExpanded: false,
   });
 
   const _handleCreateServer = async (data: any) => {

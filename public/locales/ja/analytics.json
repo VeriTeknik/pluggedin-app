@@ -129,16 +129,40 @@
     "aiSearch": "AI検索",
     "emptyDocs": {
       "title": "ナレッジベースの構築を開始",
-      "description": "AI駆動の検索と洞察のためにドキュメントを追加",
-      "uploadAction": "ドキュメントをアップロード",
-      "mcpAction": "MCPプロキシをインストール",
-      "sdkAction": "SDKライブラリを使用"
+      "description": "AI を利用した検索とインサイトを有効にするためにドキュメントを追加",
+      "uploadAction": "ドキュメントをアップロード"
     },
     "emptyTools": {
-      "title": "最初のMCPサーバーを接続",
-      "description": "AIツールのインタラクションを有効にするためにMCPサーバーを設定",
-      "configureAction": "サーバーを設定",
-      "setupAction": "セットアップガイドを表示"
+      "title": "最初の MCP サーバーを接続",
+      "description": "AI ツールインタラクションを有効にするために MCP サーバーをセットアップ",
+      "configureAction": "サーバーを設定"
+    }
+  },
+  "whyConnect": {
+    "title": "Plugged.in に接続する理由は？",
+    "description": "AI クライアントを接続して強力な集中機能をアンロック",
+    "intro": "Plugged.in MCP Proxy を AI クライアント（Claude Code、Claude Desktop、LM Studio、ChatGPT など）に接続して、すべての AI ワークフローに統合レイヤーを有効にします：",
+    "features": {
+      "knowledge": {
+        "title": "集中ナレッジベース",
+        "description": "RAG を利用したセマンティック検索により、接続された任意の AI クライアントからドキュメントにアクセスして検索"
+      },
+      "tools": {
+        "title": "統合ツールアクセス",
+        "description": "MCP サーバーを一度設定すれば、すべての AI クライアントで同じツールを使用可能"
+      },
+      "memory": {
+        "title": "永続的メモリ",
+        "description": "セッションと異なる AI クライアント間でコンテキストと履歴を維持"
+      },
+      "workflows": {
+        "title": "セキュアなワークフロー",
+        "description": "チームメンバーと AI ワークフローを安全に共有およびコラボレーション"
+      }
+    },
+    "actions": {
+      "setup": "MCP Proxy をセットアップ",
+      "docs": "ドキュメントを表示"
     }
   }
 }

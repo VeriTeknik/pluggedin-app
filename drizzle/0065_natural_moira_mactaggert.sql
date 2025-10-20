@@ -1,0 +1,1 @@
+CREATE INDEX "api_keys_last_used_at_idx" ON "api_keys" USING btree ("last_used_at");

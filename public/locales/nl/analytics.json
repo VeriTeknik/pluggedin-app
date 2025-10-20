@@ -128,17 +128,41 @@
     "aiSearchPlaceholder": "Stel een vraag over uw documenten...",
     "aiSearch": "AI Zoeken",
     "emptyDocs": {
-      "title": "Begin Met Het Opbouwen Van Uw Kennisbank",
-      "description": "Voeg documenten toe voor AI-aangedreven zoeken en inzichten",
-      "uploadAction": "Documenten Uploaden",
-      "mcpAction": "MCP Proxy Installeren",
-      "sdkAction": "SDK-bibliotheken Gebruiken"
+      "title": "Begin met het opbouwen van uw kennisbank",
+      "description": "Voeg documenten toe om AI-aangedreven zoeken en inzichten mogelijk te maken",
+      "uploadAction": "Documenten uploaden"
     },
     "emptyTools": {
-      "title": "Verbind Uw Eerste MCP-server",
-      "description": "Stel MCP-servers in om AI-toolinteracties mogelijk te maken",
-      "configureAction": "Servers Configureren",
-      "setupAction": "Installatiehandleiding Bekijken"
+      "title": "Verbind uw eerste MCP-server",
+      "description": "Stel MCP-servers in om AI-tool interacties mogelijk te maken",
+      "configureAction": "Servers configureren"
+    }
+  },
+  "whyConnect": {
+    "title": "Waarom verbinden met Plugged.in?",
+    "description": "Verbind uw AI-clients om krachtige gecentraliseerde functies te ontgrendelen",
+    "intro": "Verbind de Plugged.in MCP Proxy met uw AI-clients (Claude Code, Claude Desktop, LM Studio, ChatGPT, enz.) om een uniforme laag voor al uw AI-workflows mogelijk te maken:",
+    "features": {
+      "knowledge": {
+        "title": "Gecentraliseerde kennisbank",
+        "description": "Toegang tot en zoeken in uw documenten vanaf elke verbonden AI-client met RAG-aangedreven semantisch zoeken"
+      },
+      "tools": {
+        "title": "Uniforme tool toegang",
+        "description": "Configureer MCP-servers één keer en gebruik dezelfde tools in al uw AI-clients"
+      },
+      "memory": {
+        "title": "Persistent geheugen",
+        "description": "Behoud context en geschiedenis over sessies en verschillende AI-clients heen"
+      },
+      "workflows": {
+        "title": "Veilige workflows",
+        "description": "Deel en werk samen aan AI-workflows met teamleden op veilige wijze"
+      }
+    },
+    "actions": {
+      "setup": "MCP Proxy instellen",
+      "docs": "Documentatie bekijken"
     }
   }
 }

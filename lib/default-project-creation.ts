@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { projectsTable, profilesTable } from '@/db/schema';
+import { profilesTable, projectsTable } from '@/db/schema';
+import { addSampleMcpServersForNewUser } from './sample-mcp-servers';
 
 /**
  * Creates a default project and workspace for a new user
@@ -14,7 +15,7 @@ import { projectsTable, profilesTable } from '@/db/schema';
  * @returns The created project with active profile UUID
  */
 export async function createDefaultProject(userId: string) {
-  return await db.transaction(async (tx) => {
+  const result = await db.transaction(async (tx) => {
     // Create the project
     const [project] = await tx
       .insert(projectsTable)
@@ -41,6 +42,20 @@ export async function createDefaultProject(userId: string) {
       .where(eq(projectsTable.uuid, project.uuid))
       .returning();
 
-    return updatedProject;
+    return {
+      project: updatedProject,
+      profileUuid: profile.uuid
+    };
   });
+
+  // Add sample MCP servers for the new user (outside transaction)
+  // This allows the project creation to succeed even if server addition fails
+  try {
+    await addSampleMcpServersForNewUser(result.profileUuid);
+  } catch (error) {
+    console.error('Failed to add sample MCP servers for new user:', error);
+    // Don't fail the project creation if sample servers can't be added
+  }
+
+  return result.project;
 }

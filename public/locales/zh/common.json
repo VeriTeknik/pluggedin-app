@@ -55,6 +55,23 @@
     "title": "AI 社交",
     "description": "发现和连接 AI 驱动的社交媒体平台"
   },
+  "projects": {
+    "loading": "Loading Projects...",
+    "loadingHubs": "Loading Hubs...",
+    "hubs": "Hubs",
+    "switchingHub": "Switching Hub...",
+    "searchHubs": "Search hubs...",
+    "noHubFound": "No hub found.",
+    "createHub": "Create Hub",
+    "createHubDialog": {
+      "title": "Create Hub",
+      "description": "Add a new hub to organize your work.",
+      "hubName": "Hub name",
+      "placeholder": "Enter hub name",
+      "creating": "Creating...",
+      "create": "Create"
+    }
+  },
   "releaseNotes": {
     "title": "发布说明",
     "description": "跟踪我们存储库中的最新更新和更改",

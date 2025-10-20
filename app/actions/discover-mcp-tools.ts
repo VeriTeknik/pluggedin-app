@@ -1,6 +1,7 @@
 'use server';
 
 import { and, eq } from 'drizzle-orm';
+import { z } from 'zod';
 
 // import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
@@ -14,6 +15,9 @@ import { McpServer } from '@/types/mcp-server';
 // import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
 // Removed direct SDK type import
 
+// UUID validation schema
+const uuidSchema = z.string().uuid('Invalid UUID format');
+
 // Infer Resource type
 type ResourcesArray = Awaited<ReturnType<typeof listResourcesFromServer>>;
 type InferredResource = ResourcesArray[number];
@@ -22,7 +26,151 @@ type PromptsArray = Awaited<ReturnType<typeof listPromptsFromServer>>;
 type InferredPrompt = PromptsArray[number];
 
 /**
+ * Helper: Validate UUIDs to prevent SQL injection
+ */
+function validateUuids(profileUuid: string, serverUuid: string) {
+  uuidSchema.parse(profileUuid);
+  uuidSchema.parse(serverUuid);
+}
+
+/**
+ * Helper: Fetch server record from database
+ */
+async function fetchServerRecord(profileUuid: string, serverUuid: string) {
+  const record = await db.query.mcpServersTable.findFirst({
+    where: and(
+      eq(mcpServersTable.uuid, serverUuid),
+      eq(mcpServersTable.profile_uuid, profileUuid)
+    ),
+  });
+
+  if (!record) {
+    throw new Error(`MCP Server with UUID ${serverUuid} not found for profile ${profileUuid}.`);
+  }
+
+  return record;
+}
+
+/**
+ * Helper: Transform database record to McpServer format
+ */
+function toMcpServer(record: any): McpServer {
+  const decrypted = decryptServerData(record);
+  return {
+    ...decrypted,
+    config: decrypted.config as Record<string, any> | null,
+    transport: decrypted.transport as 'streamable_http' | 'sse' | 'stdio' | undefined
+  };
+}
+
+/**
+ * Helper: Discover tools with timeout and save to database
+ */
+async function discoverAndSaveTools(
+  mcpServer: McpServer,
+  serverUuid: string
+): Promise<{ tools: any[]; error?: string }> {
+  let tools: any[] = [];
+  let error: string | undefined;
+
+  try {
+    // Discover tools with 15-second timeout
+    tools = await Promise.race([
+      listToolsFromServer(mcpServer),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Discovery timeout after 15 seconds')), 15000)
+      )
+    ]);
+
+    // Save to database in transaction
+    await db.transaction(async (tx) => {
+      await tx.delete(toolsTable).where(eq(toolsTable.mcp_server_uuid, serverUuid));
+
+      if (tools.length > 0) {
+        await tx.insert(toolsTable).values(
+          tools.map(tool => ({
+            mcp_server_uuid: serverUuid,
+            name: tool.name,
+            description: tool.description,
+            toolSchema: tool.inputSchema as any,
+            status: ToggleStatus.ACTIVE,
+          }))
+        );
+      }
+    });
+  } catch (err: any) {
+    const isAbortError = err?.code === 20 ||
+                        err?.name === 'AbortError' ||
+                        err?.message?.includes('abort');
+    const isTimeoutError = err?.message?.includes('timeout');
+
+    if (isAbortError) {
+      console.warn(`[Tool Discovery][WARN] AbortError for ${mcpServer.name}: ${err?.message || err}`);
+      error = 'Discovery aborted';
+    } else if (isTimeoutError) {
+      console.error(`[Tool Discovery][ERROR] Timeout after 15s for ${mcpServer.name}: ${err?.message || err}`);
+      error = 'Discovery timeout';
+    } else {
+      console.error('[Tool Discovery][ERROR] Unknown failure during discovery:', err);
+      error = err?.message || 'Unknown error during tool discovery';
+    }
+  }
+
+  return { tools, error };
+}
+
+/**
+ * Internal discovery function (no auth required) for system-initiated discovery
+ *
+ * ⚠️ SECURITY WARNING:
+ * This function bypasses authentication and should ONLY be called from trusted
+ * internal contexts where the profileUuid is already validated (e.g., during
+ * user signup, system maintenance tasks).
+ *
+ * DO NOT expose this function to API routes or user-initiated actions.
+ * Use discoverSingleServerTools() for user-initiated discovery operations.
+ *
+ * @param profileUuid The UUID of the profile the server belongs to.
+ * @param serverUuid The UUID of the MCP server to discover tools for.
+ * @returns An object indicating success or failure with a message.
+ */
+export async function discoverSingleServerToolsInternal(
+    profileUuid: string,
+    serverUuid: string
+): Promise<{ success: boolean; message: string; error?: string }> {
+  try {
+    // Step 1: Validate inputs
+    validateUuids(profileUuid, serverUuid);
+
+    // Step 2: Fetch and transform server configuration
+    const serverRecord = await fetchServerRecord(profileUuid, serverUuid);
+    const mcpServer = toMcpServer(serverRecord);
+
+    // Step 3: Discover tools and save to database
+    const { tools, error } = await discoverAndSaveTools(mcpServer, serverUuid);
+
+    // Step 4: Build response
+    const success = !error || tools.length > 0;
+    const message = success
+      ? `✅ Auto-discovery succeeded for ${serverRecord.name}: Successfully discovered ${tools.length} tools.`
+      : `⚠️ Auto-discovery completed with errors for ${serverRecord.name}.`;
+
+    return { success, message, error: success ? undefined : error };
+
+  } catch (error: any) {
+    const isValidationError = error instanceof z.ZodError;
+    const message = isValidationError
+      ? 'Invalid UUID format provided.'
+      : `Failed to discover tools for server ${serverUuid}.`;
+
+    console.error('[Discovery Internal] Error:', { serverUuid, error });
+    return { success: false, message, error: error.message };
+  }
+}
+
+/**
  * Discovers tools for a single MCP server and updates the database.
+ * Requires authentication and verifies profile ownership.
  * @param profileUuid The UUID of the profile the server belongs to.
  * @param serverUuid The UUID of the MCP server to discover tools for.
  * @returns An object indicating success or failure with a message.

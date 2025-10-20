@@ -2,6 +2,9 @@
  * Sample MCP servers to be added for new users
  */
 
+import pLimit from 'p-limit';
+
+import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-tools';
 import { db } from '@/db';
 import { mcpServersTable, McpServerType } from '@/db/schema';
 
@@ -40,7 +43,7 @@ export const SAMPLE_MCP_SERVERS = [
 ];
 
 /**
- * Add sample MCP servers for a new user's profile
+ * Add sample MCP servers for a new user's profile and trigger discovery
  */
 export async function addSampleMcpServersForNewUser(profileUuid: string) {
   try {
@@ -60,9 +63,44 @@ export async function addSampleMcpServersForNewUser(profileUuid: string) {
       updated_at: new Date()
     }));
 
-    await db.insert(mcpServersTable).values(serversToAdd);
+    // Insert servers and get the created UUIDs
+    const insertedServers = await db.insert(mcpServersTable).values(serversToAdd).returning();
 
     console.log(`✅ Added ${SAMPLE_MCP_SERVERS.length} sample MCP servers for profile ${profileUuid}`);
+
+    // Use p-limit for concurrency control (limit: 2 simultaneous discoveries)
+    const limit = pLimit(2);
+    const discoveryPromises = insertedServers.map(server =>
+      limit(async () => {
+        try {
+          const result = await discoverSingleServerToolsInternal(profileUuid, server.uuid);
+          return { server: server.name, ...result };
+        } catch (err: any) {
+          return { server: server.name, success: false, error: err.message };
+        }
+      })
+    );
+
+    // Fire-and-forget pattern - don't block signup
+    Promise.allSettled(discoveryPromises)
+      .then(results => {
+        const failures = results.filter(
+          r => r.status === 'rejected' || (r.status === 'fulfilled' && !r.value.success)
+        );
+
+        if (failures.length > 0) {
+          console.error(
+            `[Sample Servers] Discovery failed for ${failures.length}/${insertedServers.length} servers`,
+            failures
+          );
+        } else {
+          console.log(`[Sample Servers] Successfully discovered tools for all ${insertedServers.length} servers`);
+        }
+      })
+      .catch(err => {
+        console.error('[Sample Servers] Unexpected error during discovery:', err);
+      });
+
     return true;
   } catch (error) {
     console.error('Failed to add sample MCP servers:', error);
