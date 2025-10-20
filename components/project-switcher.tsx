@@ -2,6 +2,7 @@
 
 import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
 import * as React from 'react';
+import { useTranslation } from 'react-i18next';
 
 import { createProject } from '@/app/actions/projects';
 import { Button } from '@/components/ui/button';
@@ -34,11 +35,23 @@ import { cn } from '@/lib/utils';
 import { Project } from '@/types/project';
 
 export function ProjectSwitcher() {
+  const { t } = useTranslation();
   const { projects, currentProject, setCurrentProject, mutate, isAuthenticated } = useProjects();
   const [open, setOpen] = React.useState(false);
   const [showNewProjectDialog, setShowNewProjectDialog] = React.useState(false);
   const [newProjectName, setNewProjectName] = React.useState('');
   const [isCreating, setIsCreating] = React.useState(false);
+  const [isSwitchingHub, setIsSwitchingHub] = React.useState(false);
+  const switchingHubTimerRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    return () => {
+      if (switchingHubTimerRef.current) {
+        clearTimeout(switchingHubTimerRef.current);
+        switchingHubTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Don't render anything if not authenticated
   if (!isAuthenticated) {
@@ -47,7 +60,7 @@ export function ProjectSwitcher() {
 
   // Ensure projects is an array
   if (!projects || !Array.isArray(projects)) {
-    return <span>Loading Projects...</span>;
+    return <span>{t('projects.loading')}</span>;
   }
 
   async function handleCreateProject() {
@@ -68,32 +81,43 @@ export function ProjectSwitcher() {
   return (
     <div className='flex flex-col gap-2 w-full p-2'>
       <div>
-        <p className='text-xs font-medium p-1'>Hubs</p>
+        <p className='text-xs font-medium p-1'>{t('projects.hubs')}</p>
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button
               variant='outline'
               role='combobox'
               aria-expanded={open}
-              aria-label='Select a hub'
-              className='w-full justify-between'>
-              {currentProject?.name ?? 'Loading Hubs...'}
+              aria-label={t('projects.hubs')}
+              className='w-full justify-between'
+              disabled={isSwitchingHub}>
+              {isSwitchingHub ? t('projects.switchingHub') : (currentProject?.name ?? t('projects.loadingHubs'))}
               <ChevronsUpDown className='ml-auto h-4 w-4 shrink-0 opacity-50' />
             </Button>
           </PopoverTrigger>
           <PopoverContent className='w-[--radix-popover-trigger-width] p-0'>
             <Command>
               <CommandList>
-                <CommandInput placeholder='Search hubs...' />
-                <CommandEmpty>No hub found.</CommandEmpty>
-                <CommandGroup heading='Hubs'>
+                <CommandInput placeholder={t('projects.searchHubs')} />
+                <CommandEmpty>{t('projects.noHubFound')}</CommandEmpty>
+                <CommandGroup heading={t('projects.hubs')}>
                   {(Array.isArray(projects) ? projects : []).map((project: Project) => (
                     <CommandItem
                       key={project.uuid}
                       onSelect={() => {
+                        if (isSwitchingHub) return; // Prevent multiple rapid clicks
+                        setIsSwitchingHub(true);
                         setCurrentProject(project);
                         setOpen(false);
+                        if (switchingHubTimerRef.current) {
+                          clearTimeout(switchingHubTimerRef.current);
+                        }
+                        switchingHubTimerRef.current = setTimeout(() => {
+                          setIsSwitchingHub(false);
+                          switchingHubTimerRef.current = null;
+                        }, 500);
                       }}
+                      disabled={isSwitchingHub}
                       className='text-sm'>
                       {project.name}
                       <Check
@@ -117,7 +141,7 @@ export function ProjectSwitcher() {
                       setShowNewProjectDialog(true);
                     }}>
                     <PlusCircle className='mr-2 h-4 w-4' />
-                    Create Hub
+                    {t('projects.createHub')}
                   </CommandItem>
                 </CommandGroup>
               </CommandList>
@@ -131,19 +155,19 @@ export function ProjectSwitcher() {
         onOpenChange={setShowNewProjectDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create Hub</DialogTitle>
+            <DialogTitle>{t('projects.createHubDialog.title')}</DialogTitle>
             <DialogDescription>
-              Add a new hub to organize your work.
+              {t('projects.createHubDialog.description')}
             </DialogDescription>
           </DialogHeader>
           <div className='grid gap-4 py-4'>
             <div className='grid gap-2'>
-              <Label htmlFor='name'>Hub name</Label>
+              <Label htmlFor='name'>{t('projects.createHubDialog.hubName')}</Label>
               <Input
                 id='name'
                 value={newProjectName}
                 onChange={(e) => setNewProjectName(e.target.value)}
-                placeholder='Enter hub name'
+                placeholder={t('projects.createHubDialog.placeholder')}
               />
             </div>
           </div>
@@ -151,12 +175,12 @@ export function ProjectSwitcher() {
             <Button
               variant='outline'
               onClick={() => setShowNewProjectDialog(false)}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={handleCreateProject}
               disabled={!newProjectName || isCreating}>
-              {isCreating ? 'Creating...' : 'Create'}
+              {isCreating ? t('projects.createHubDialog.creating') : t('projects.createHubDialog.create')}
             </Button>
           </DialogFooter>
         </DialogContent>

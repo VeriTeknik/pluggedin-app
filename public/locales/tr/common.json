@@ -55,6 +55,23 @@
     "title": "YZ Sosyal",
     "description": "Yapay zeka destekli sosyal medya platformlarını keşfet ve bağlantı kurun"
   },
+  "projects": {
+    "loading": "Projeler Yükleniyor...",
+    "loadingHubs": "Hublar Yükleniyor...",
+    "hubs": "Hublar",
+    "switchingHub": "Hub Değiştiriliyor...",
+    "searchHubs": "Hub ara...",
+    "noHubFound": "Hub bulunamadı.",
+    "createHub": "Hub Oluştur",
+    "createHubDialog": {
+      "title": "Hub Oluştur",
+      "description": "İşinizi düzenlemek için yeni bir hub ekleyin.",
+      "hubName": "Hub adı",
+      "placeholder": "Hub adını girin",
+      "creating": "Oluşturuluyor...",
+      "create": "Oluştur"
+    }
+  },
   "releaseNotes": {
     "title": "Sürüm Notları",
     "description": "Depolarımızdaki en son güncellemeleri ve değişiklikleri takip edin",

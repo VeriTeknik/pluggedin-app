@@ -55,6 +55,23 @@
     "title": "AI Social",
     "description": "Ontdek en verbind met AI-gestuurde sociale media platforms"
   },
+  "projects": {
+    "loading": "Loading Projects...",
+    "loadingHubs": "Loading Hubs...",
+    "hubs": "Hubs",
+    "switchingHub": "Switching Hub...",
+    "searchHubs": "Search hubs...",
+    "noHubFound": "No hub found.",
+    "createHub": "Create Hub",
+    "createHubDialog": {
+      "title": "Create Hub",
+      "description": "Add a new hub to organize your work.",
+      "hubName": "Hub name",
+      "placeholder": "Enter hub name",
+      "creating": "Creating...",
+      "create": "Create"
+    }
+  },
   "releaseNotes": {
     "title": "Release Notes",
     "description": "Volg de laatste updates en wijzigingen in onze repositories",

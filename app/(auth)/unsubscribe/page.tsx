@@ -120,14 +120,14 @@ export default async function UnsubscribePage({ searchParams }: UnsubscribePageP
           <div className="mx-auto mb-4 h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
             <Mail className="h-6 w-6 text-green-600" />
           </div>
-          <CardTitle>You've been unsubscribed</CardTitle>
+          <CardTitle>You&apos;ve been unsubscribed</CardTitle>
           <CardDescription>
             You will no longer receive emails from Plugged.in
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground text-center">
-            We're sorry to see you go. You've been successfully unsubscribed from all email communications.
+            We&apos;re sorry to see you go. You&apos;ve been successfully unsubscribed from all email communications.
           </p>
 
           <div className="flex flex-col gap-2">

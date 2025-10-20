@@ -1,6 +1,8 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 
+import { PackageManagerConfig } from '../config';
+
 export interface PackageInfo {
   name: string;
   version?: string;
@@ -60,8 +62,7 @@ export abstract class BasePackageHandler {
    * Get the install directory for a server
    */
   protected getServerInstallDir(serverUuid: string): string {
-    const { PACKAGE_STORE_DIR } = require('../config').PackageManagerConfig;
-    return path.join(PACKAGE_STORE_DIR, 'servers', serverUuid, this.packageManagerName);
+    return path.join(PackageManagerConfig.PACKAGE_STORE_DIR, 'servers', serverUuid, this.packageManagerName);
   }
   
   /**

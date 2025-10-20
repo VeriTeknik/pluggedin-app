@@ -1,3 +1,4 @@
+import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
@@ -24,7 +25,6 @@ export class PackageManagerConfig {
       // Linux and others: Use /var/mcp-packages if writable, otherwise ~/.cache
       try {
         // Check if we're running as a service with write access to /var
-        const fs = require('fs');
         fs.accessSync('/var', fs.constants.W_OK);
         return '/var/mcp-packages';
       } catch {

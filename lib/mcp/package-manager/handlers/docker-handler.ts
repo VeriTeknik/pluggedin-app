@@ -1,4 +1,5 @@
 import { exec } from 'child_process';
+import fs from 'fs';
 import path from 'path';
 import { promisify } from 'util';
 
@@ -168,11 +169,10 @@ exec docker run --rm \\
   "${containerTag}" \\
   "\$@"
 `;
-    
+
     // Write the wrapper script
-    const fs = require('fs');
     fs.writeFileSync(wrapperPath, wrapperContent, { mode: 0o755 });
-    
+
     return wrapperPath;
   }
 }

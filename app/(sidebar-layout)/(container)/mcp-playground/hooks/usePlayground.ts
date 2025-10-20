@@ -125,6 +125,9 @@ export function usePlayground() {
   // Mutex to prevent concurrent session operations
   const sessionOperationInProgress = useRef(false);
 
+  // Track previous profileUuid to detect Hub changes
+  const previousProfileUuidRef = useRef<string>('');
+
   // Fetch MCP servers
   const {
     data: mcpServersData,
@@ -759,8 +762,26 @@ export function usePlayground() {
   // Session restoration effect
   useEffect(() => {
     const restoreSession = async () => {
-      if (!profileUuid || sessionRestored || isLoading) {
+      if (!profileUuid || isLoading) {
         return;
+      }
+
+      // Only run restoration if profileUuid actually changed (Hub switch)
+      // This prevents unnecessary API calls on every render
+      const isProfileChange = profileUuid !== previousProfileUuidRef.current;
+      if (!isProfileChange && sessionRestored) {
+        return;
+      }
+
+      // Update the previous profileUuid ref
+      if (isProfileChange) {
+        previousProfileUuidRef.current = profileUuid;
+        setSessionRestored(false); // Reset restoration flag for new profile
+        // Clear session state when switching profiles
+        setIsSessionActive(false);
+        setMessages([]);
+        setServerLogs([]);
+        stopLogPolling();
       }
 
       // Prevent concurrent restoration attempts using a ref-based mutex

@@ -30,6 +30,8 @@ declare module 'next-auth' {
 import { db } from '@/db';
 import { accounts, sessions, users, verificationTokens, projectsTable, profilesTable } from '@/db/schema';
 
+const USER_REVALIDATE_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+
 // Custom adapter that extends DrizzleAdapter to ensure IDs are properly generated
 const createCustomAdapter = () => {
   const adapter = DrizzleAdapter(db, {
@@ -384,9 +386,9 @@ export const authOptions: NextAuthOptions = {
       if (user) {
         token.id = user.id;
         token.name = user.name ?? null;
-        token.email = user.email ?? null;
-        token.picture = user.image ?? null;
-        token.emailVerified = user.emailVerified;
+       token.email = user.email ?? null;
+       token.picture = user.image ?? null;
+       token.emailVerified = user.emailVerified;
 
        // Fetch username, is_admin, and show_workspace_ui from DB during initial sign-in
        try {
@@ -404,6 +406,8 @@ export const authOptions: NextAuthOptions = {
           token.is_admin = false; // Fallback to false on error
           token.show_workspace_ui = false; // Fallback to false on error
        }
+
+       token.userValidationTs = Date.now();
        }
 
        // If update triggered (e.g., user updates profile), refresh fields
@@ -429,6 +433,7 @@ export const authOptions: NextAuthOptions = {
             token.username = dbUser?.username ?? null;
             token.is_admin = dbUser?.is_admin ?? false;
             token.show_workspace_ui = dbUser?.show_workspace_ui ?? false;
+            token.userValidationTs = Date.now();
           } catch (error) {
             console.error('Error fetching user details in JWT callback (fallback):', error);
             token.username = null; // Fallback to null on error
@@ -437,25 +442,38 @@ export const authOptions: NextAuthOptions = {
           }
        }
 
-       // Invalidate token if referenced user no longer exists
+       // Periodically revalidate that the referenced user still exists
        if (token.id) {
-         try {
-           const exists = await db.query.users.findFirst({
-             where: eq(users.id, token.id as string),
-             columns: { id: true },
-           });
-           if (!exists) {
-             // Remove id and related fields so session callback treats this as unauthenticated
-             delete (token as any).id;
-             token.name = null;
-             token.email = null;
-             token.picture = null;
-             token.username = null;
-             token.emailVerified = null;
+         const now = Date.now();
+         const shouldRevalidateUser =
+           !token.userValidationTs ||
+           now - token.userValidationTs > USER_REVALIDATE_INTERVAL_MS;
+
+         if (shouldRevalidateUser) {
+           try {
+             const exists = await db.query.users.findFirst({
+               where: eq(users.id, token.id as string),
+               columns: { id: true },
+             });
+
+             if (!exists) {
+               // Remove id and related fields so session callback treats this as unauthenticated
+               delete (token as any).id;
+               token.name = null;
+               token.email = null;
+               token.picture = null;
+               token.username = null;
+               token.emailVerified = null;
+               delete (token as any).userValidationTs;
+             }
+           } catch (error) {
+             // If the check fails, do not break auth flow; keep token as is
+             console.error('JWT user existence check failed:', error);
+           } finally {
+             if (token.id) {
+               token.userValidationTs = now;
+             }
            }
-         } catch (error) {
-           // If the check fails, do not break auth flow; keep token as is
-           console.error('JWT user existence check failed:', error);
          }
        }
 
@@ -494,5 +512,6 @@ declare module 'next-auth/jwt' {
     emailVerified?: Date | null;
     is_admin?: boolean;
     show_workspace_ui?: boolean;
+    userValidationTs?: number;
   }
 }

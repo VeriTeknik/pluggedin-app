@@ -1,19 +1,81 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { getProjects } from '@/app/actions/projects';
 import { useToast } from '@/hooks/use-toast';
+import { getUUIDFromLocalStorage, removeFromLocalStorage, setUUIDInLocalStorage } from '@/lib/storage-utils';
 import { Project } from '@/types/project';
 
 import { useSafeSession } from './use-safe-session';
 
 const CURRENT_PROJECT_KEY = 'pluggedin-current-project';
 
+type ProjectsStore = {
+  currentProject: Project | null;
+  hasInitialized: boolean;
+};
+
+const initialStore: ProjectsStore = {
+  currentProject: null,
+  hasInitialized: false,
+};
+
+let projectsStore: ProjectsStore = initialStore;
+
+const subscribers = new Set<() => void>();
+
+const getSnapshot = () => projectsStore;
+const getServerSnapshot = () => projectsStore;
+
+const subscribe = (callback: () => void) => {
+  subscribers.add(callback);
+  return () => {
+    subscribers.delete(callback);
+  };
+};
+
+const updateStore = (partial: Partial<ProjectsStore>) => {
+  const next: ProjectsStore = { ...projectsStore, ...partial };
+  const projectChanged = projectsStore.currentProject !== next.currentProject;
+  const initializedChanged = projectsStore.hasInitialized !== next.hasInitialized;
+
+  if (!projectChanged && !initializedChanged) {
+    return;
+  }
+
+  projectsStore = next;
+  subscribers.forEach((listener) => listener());
+};
+
+const selectProject = (project: Project) => {
+  updateStore({
+    currentProject: project,
+    hasInitialized: true,
+  });
+};
+
+const clearProject = (resetInitialized: boolean) => {
+  const nextInitialized = resetInitialized ? false : projectsStore.hasInitialized;
+  updateStore({
+    currentProject: null,
+    hasInitialized: nextInitialized,
+  });
+};
+
+const syncProjectReference = (project: Project) => {
+  updateStore({
+    currentProject: project,
+  });
+};
+
 export const useProjects = () => {
   const { t } = useTranslation();
   const { toast } = useToast();
   const { status: sessionStatus } = useSafeSession();
+
+  // Track timer for cleanup to prevent memory leaks
+  const projectEventTimerRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   // Only fetch projects if authenticated
   const { data = [], mutate, isLoading, error } = useSWR(
@@ -33,12 +95,12 @@ export const useProjects = () => {
         });
         
         // For auth issues, clear the stored project
-        const isAuthIssue = 
+        const isAuthIssue =
           _error?.message?.toLowerCase().includes('unauthorized') ||
           _error?.message?.toLowerCase().includes('session expired');
-          
+
         if (isAuthIssue) {
-          localStorage.removeItem(CURRENT_PROJECT_KEY);
+          removeFromLocalStorage(CURRENT_PROJECT_KEY);
         }
       },
       // Add retry configuration
@@ -58,7 +120,16 @@ export const useProjects = () => {
     }
   );
 
-  const [currentProject, setCurrentProject] = useState<Project | null>(null);
+  const { currentProject, hasInitialized } = useSyncExternalStore(
+    subscribe,
+    getSnapshot,
+    getServerSnapshot
+  );
+
+  // Track previous session status to detect instability
+  const previousSessionStatusRef = useRef<string>('loading');
+  const wasAuthenticatedRef = useRef(false);
+  const sessionStatusStable = sessionStatus === previousSessionStatusRef.current;
 
   // Memoize projects array to prevent unnecessary re-renders
   // Ensure we always have an array, even if data is not an array
@@ -69,66 +140,132 @@ export const useProjects = () => {
     return [];
   }, [data]);
 
-  // Load saved project on mount only if authenticated
+  // Load saved project on mount only - runs ONCE when projects first load
   useEffect(() => {
+    const wasAuthenticated = wasAuthenticatedRef.current;
+    wasAuthenticatedRef.current = sessionStatus === 'authenticated';
+
+    // Update session status ref
+    previousSessionStatusRef.current = sessionStatus;
+
+    if (sessionStatus === 'unauthenticated') {
+      clearProject(true);
+      return;
+    }
+
+    if (sessionStatus === 'loading' && wasAuthenticated) {
+      return;
+    }
+
     if (sessionStatus !== 'authenticated') {
-      setCurrentProject(null);
+      return;
+    }
+
+    // Don't run if session status is unstable (prevents excessive re-renders)
+    if (!sessionStatusStable) {
+      return;
+    }
+
+    // Only initialize once when projects first load
+    if (hasInitialized || !memoizedProjects.length || isLoading) {
       return;
     }
 
     try {
-      const savedProjectUuid = localStorage.getItem(CURRENT_PROJECT_KEY);
-      if (memoizedProjects.length) {
-        if (savedProjectUuid) {
-          const savedProject = memoizedProjects.find((p: Project) => p.uuid === savedProjectUuid);
-          if (savedProject) {
-            setCurrentProject(savedProject);
-            return;
-          }
-        }
-        // If no saved project or saved project not found, use first project
-        setCurrentProject(memoizedProjects[0]);
-      } else {
-        setCurrentProject(null);
-      }
-    } catch (error) {
-      console.warn('Failed to load project:', error);
-      setCurrentProject(null);
-    }
-  }, [memoizedProjects, sessionStatus]);
+      const savedProjectUuid = getUUIDFromLocalStorage(CURRENT_PROJECT_KEY);
+      if (savedProjectUuid) {
+        const savedProject = memoizedProjects.find((p: Project) => p.uuid === savedProjectUuid);
+        if (savedProject) {
+           selectProject(savedProject);
+           return;
+         }
+       }
+       // If no saved project or saved project not found, use first project
+       if (memoizedProjects.length > 0) {
+         selectProject(memoizedProjects[0]);
+       }
+     } catch (error) {
+       console.warn('Failed to load project:', error);
+       clearProject(false);
+     }
+  }, [memoizedProjects, sessionStatus, isLoading, hasInitialized, sessionStatusStable]);
 
-  // Persist project selection with memoized callback
+  // Persist project selection with memoized callback and debouncing
   const handleSetCurrentProject = useCallback((project: Project | null) => {
-    setCurrentProject(project);
+    // Clear any pending timer to prevent memory leaks
+    if (projectEventTimerRef.current) {
+      clearTimeout(projectEventTimerRef.current);
+    }
 
     if (project) {
-      localStorage.setItem(CURRENT_PROJECT_KEY, project.uuid);
+      selectProject(project);
+      setUUIDInLocalStorage(CURRENT_PROJECT_KEY, project.uuid);
     } else {
-      localStorage.removeItem(CURRENT_PROJECT_KEY);
+      clearProject(false);
+      removeFromLocalStorage(CURRENT_PROJECT_KEY);
     }
 
-    // Instead of reloading, invalidate specific SWR caches
-    // This will trigger re-fetches for data that depends on the current project
-    if (project && sessionStatus === 'authenticated') {
-      // Trigger a mutation to refetch project-specific data
-      // Using the specific key 'projects' that matches our SWR key
-      mutate('projects');
-      
-      // Emit a custom event that other components can listen to
-      // This allows components to react to project changes without coupling
-      window.dispatchEvent(new CustomEvent('projectChanged', { 
-        detail: { project } 
-      }));
+    // Store timer reference for cleanup
+    projectEventTimerRef.current = setTimeout(() => {
+      if (project && sessionStatus === 'authenticated' && typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('projectChanged', {
+            detail: { project },
+          }),
+        );
+      }
+    }, 100);
+  }, [sessionStatus]);
+
+  // Debounced SWR mutation to prevent excessive refetches during rapid Hub switches
+  useEffect(() => {
+    if (!currentProject || sessionStatus !== 'authenticated') {
+      return;
     }
-  }, [mutate, sessionStatus]);
+
+    // Longer debounce for SWR mutations (500ms) to prevent API spam
+    // This is the most expensive operation that causes browser freezing
+    const timer = setTimeout(() => {
+      mutate();
+    }, 500);
+
+    return () => {
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentProject?.uuid, mutate, sessionStatus]); // Use project UUID for more stable dependency
+
+  // Keep the shared project reference in sync with the latest project data
+  useEffect(() => {
+    if (!currentProject) {
+      return;
+    }
+
+    const updatedProject = memoizedProjects.find(
+      (project: Project) => project.uuid === currentProject.uuid
+    );
+
+    if (updatedProject && updatedProject !== currentProject) {
+      syncProjectReference(updatedProject);
+    }
+  }, [currentProject, memoizedProjects]);
+
+  // Cleanup timer on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (projectEventTimerRef.current) {
+        clearTimeout(projectEventTimerRef.current);
+      }
+    };
+  }, []);
 
   return {
-    projects: memoizedProjects,
-    currentProject,
-    setCurrentProject: handleSetCurrentProject,
-    mutate,
-    isLoading: isLoading || sessionStatus === 'loading',
-    error,
-    isAuthenticated: sessionStatus === 'authenticated'
-  };
+     projects: memoizedProjects,
+     currentProject,
+     setCurrentProject: handleSetCurrentProject,
+     mutate,
+     isLoading: isLoading || sessionStatus === 'loading',
+     error,
+     isAuthenticated: sessionStatus === 'authenticated'
+   };
 };
