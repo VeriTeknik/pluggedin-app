@@ -115,7 +115,13 @@ export function generateOAuthState(): string {
     return crypto.randomBytes(32).toString('base64url');
   } else {
     // Client-side: use Web Crypto API
-    return Buffer.from(globalThis.crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+    if (
+      typeof globalThis.crypto === 'object' &&
+      typeof globalThis.crypto.getRandomValues === 'function'
+    ) {
+      return Buffer.from(globalThis.crypto.getRandomValues(new Uint8Array(32))).toString('base64url');
+    }
+    throw new Error('Web Crypto API is not available in this environment');
   }
 }
 
@@ -129,7 +135,13 @@ export function generateNonce(): string {
     return crypto.randomBytes(16).toString('base64');
   } else {
     // Client-side: use Web Crypto API
-    return Buffer.from(globalThis.crypto.getRandomValues(new Uint8Array(16))).toString('base64');
+    if (
+      typeof globalThis.crypto === 'object' &&
+      typeof globalThis.crypto.getRandomValues === 'function'
+    ) {
+      return Buffer.from(globalThis.crypto.getRandomValues(new Uint8Array(16))).toString('base64');
+    }
+    throw new Error('Web Crypto API is not available in this environment');
   }
 }
 

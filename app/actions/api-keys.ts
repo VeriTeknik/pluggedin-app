@@ -9,6 +9,7 @@ import { apiKeysTable, projectsTable } from '@/db/schema';
 import { withAuth, withProjectAuth } from '@/lib/auth-helpers';
 import { serializeApiKey } from '@/lib/serializers';
 import { ApiKey } from '@/types/api-key';
+import { sanitizeToPlainText } from '@/lib/sanitization';
 
 const nanoid = customAlphabet(
   '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz',
@@ -17,7 +18,35 @@ const nanoid = customAlphabet(
 
 // Validation schemas
 const uuidSchema = z.string().uuid('Invalid UUID format');
-const apiKeyNameSchema = z.string().min(1).max(100).optional();
+const API_KEY_NAME_MAX_LENGTH = 64;
+const API_KEY_NAME_PATTERN = /^[\p{L}\p{N}\s\-_'().]+$/u;
+
+const apiKeyNameSchema = z
+  .string()
+  .min(1, 'API key name is required')
+  .max(API_KEY_NAME_MAX_LENGTH, `API key name must be ${API_KEY_NAME_MAX_LENGTH} characters or fewer`)
+  .regex(API_KEY_NAME_PATTERN, 'API key name contains invalid characters');
+
+function validateApiKeyName(name?: string | null): string | undefined {
+  if (name == null) {
+    return undefined;
+  }
+
+  const normalized = sanitizeToPlainText(name)
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!normalized) {
+    throw new Error('API key name is required');
+  }
+
+  const result = apiKeyNameSchema.safeParse(normalized);
+  if (!result.success) {
+    throw new Error('Invalid API key name.');
+  }
+
+  return result.data;
+}
 
 /**
  * Track API key usage with SQL-based debouncing to reduce database writes
@@ -51,18 +80,23 @@ export async function trackApiKeyUsage(apiKeyUuid: string) {
 export async function createApiKey(projectUuid: string, name?: string) {
   // Validate inputs
   const validatedProjectUuid = uuidSchema.parse(projectUuid);
-  const validatedName = apiKeyNameSchema.parse(name);
+  const sanitizedName = validateApiKeyName(name);
 
   return withProjectAuth(validatedProjectUuid, async (session, project) => {
     const newApiKey = `pg_in_${nanoid(64)}`;
 
+    const values: Partial<typeof apiKeysTable.$inferInsert> = {
+      project_uuid: validatedProjectUuid,
+      api_key: newApiKey,
+    };
+
+    if (sanitizedName !== undefined) {
+      values.name = sanitizedName;
+    }
+
     const apiKey = await db
       .insert(apiKeysTable)
-      .values({
-        project_uuid: validatedProjectUuid,
-        api_key: newApiKey,
-        name: validatedName,
-      })
+      .values(values)
       .returning();
 
     return serializeApiKey(apiKey[0]);
@@ -123,16 +157,17 @@ export async function deleteApiKey(apiKeyUuid: string, projectUuid: string) {
 
   return withProjectAuth(validatedProjectUuid, async (session, project) => {
     // Delete the API key only if it belongs to the specified project
-    await db
+    const deleted = await db
       .delete(apiKeysTable)
       .where(
         and(
           eq(apiKeysTable.uuid, validatedApiKeyUuid),
           eq(apiKeysTable.project_uuid, validatedProjectUuid)
         )
-      );
+      )
+      .returning({ uuid: apiKeysTable.uuid });
 
-    return { success: true };
+    return { success: deleted.length > 0 };
   });
 }
 
@@ -185,23 +220,33 @@ export async function updateApiKeyHub(apiKeyUuid: string, newProjectUuid: string
     }
 
     // Verify current project ownership
-    const currentProject = await db.query.projectsTable.findFirst({
+    const currentProject = (await db.query.projectsTable.findFirst({
       where: eq(projectsTable.uuid, apiKey.project_uuid),
-      columns: { user_id: true },
-    });
+    })) as (typeof projectsTable.$inferSelect & { deleted_at?: Date | null; is_active?: boolean | null }) | null;
 
     if (!currentProject || currentProject.user_id !== session.user.id) {
       throw new Error('Unauthorized - you do not own this API key');
     }
 
     // Step 2: Fetch and verify target Hub ownership
-    const targetProject = await db.query.projectsTable.findFirst({
+    const targetProject = (await db.query.projectsTable.findFirst({
       where: eq(projectsTable.uuid, validatedNewProjectUuid),
-      columns: { user_id: true },
-    });
+    })) as (typeof projectsTable.$inferSelect & { deleted_at?: Date | null; is_active?: boolean | null }) | null;
 
     if (!targetProject) {
       throw new Error('Target Hub not found');
+    }
+
+    if (!targetProject.user_id) {
+      throw new Error('Target Hub is missing required fields');
+    }
+
+    if (targetProject.deleted_at) {
+      throw new Error('Target Hub is deleted');
+    }
+
+    if (targetProject.is_active === false) {
+      throw new Error('Target Hub is not active');
     }
 
     if (targetProject.user_id !== session.user.id) {

@@ -46,6 +46,9 @@ describe('API Keys Actions', () => {
       apiKeysTable: {
         findFirst: vi.fn(),
       },
+      projectsTable: {
+        findFirst: vi.fn(),
+      },
     } as any;
     mockedDb.select = vi.fn().mockReturnThis();
     mockedDb.from = vi.fn().mockReturnThis();
@@ -60,6 +63,7 @@ describe('API Keys Actions', () => {
     mockedDb.set = vi.fn().mockReturnThis();
     mockedDb.returning = vi.fn();
     mockedDb.execute = vi.fn();
+    mockedDb.transaction = vi.fn(async (callback) => callback(mockedDb as any));
   });
 
   afterEach(() => {
@@ -89,6 +93,26 @@ describe('API Keys Actions', () => {
       expect(mockedDb.insert).toHaveBeenCalledWith(apiKeysTable);
     });
 
+    it('should sanitize API key name before persisting', async () => {
+      const mockApiKey = {
+        uuid: UUID_KEY_1,
+        api_key: 'pg_in_test123',
+        name: 'Test Key',
+        project_uuid: UUID_PROJECT_1,
+        created_at: new Date('2025-01-01'),
+        last_used_at: null,
+      };
+
+      mockedDb.returning.mockResolvedValue([mockApiKey]);
+
+      const result = await createApiKey(UUID_PROJECT_1, '   <b>Test Key</b>  ');
+
+      expect(result.name).toBe('Test Key');
+      expect(mockedDb.values).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'Test Key' })
+      );
+    });
+
     it('should successfully create an API key without name', async () => {
       const mockApiKey = {
         uuid: UUID_KEY_2,
@@ -112,6 +136,15 @@ describe('API Keys Actions', () => {
 
     it('should throw error for invalid project UUID', async () => {
       await expect(createApiKey('invalid-uuid')).rejects.toThrow();
+    });
+
+    it('should throw error for empty API key name', async () => {
+      await expect(createApiKey(UUID_PROJECT_1, '   ')).rejects.toThrow('API key name is required');
+    });
+
+    it('should throw error for API key name exceeding max length', async () => {
+      const longName = 'a'.repeat(65);
+      await expect(createApiKey(UUID_PROJECT_1, longName)).rejects.toThrow('Invalid API key name.');
     });
 
     it('should generate unique API keys with pg_in prefix', async () => {
@@ -241,12 +274,20 @@ describe('API Keys Actions', () => {
 
   describe('deleteApiKey', () => {
     it('should successfully delete an API key', async () => {
-      mockedDb.where.mockResolvedValue([]);
+      mockedDb.returning.mockResolvedValue([{ uuid: UUID_KEY_1 }]);
 
       const result = await deleteApiKey(UUID_KEY_1, UUID_PROJECT_1);
 
       expect(result).toEqual({ success: true });
       expect(mockedDb.delete).toHaveBeenCalledWith(apiKeysTable);
+    });
+
+    it('should return success false when API key does not exist', async () => {
+      mockedDb.returning.mockResolvedValue([]);
+
+      const result = await deleteApiKey(UUID_KEY_1, UUID_PROJECT_1);
+
+      expect(result).toEqual({ success: false });
     });
 
     it('should throw error for invalid UUIDs', async () => {
@@ -304,29 +345,25 @@ describe('API Keys Actions', () => {
 
   describe('updateApiKeyHub', () => {
     it('should successfully update API key Hub assignment', async () => {
-      mockedDb.execute.mockResolvedValue({
-        rows: [
-          {
-            uuid: UUID_KEY_1,
-            project_uuid: UUID_PROJECT_2,
-            api_key: 'pg_in_test',
-            name: 'Test',
-            created_at: new Date(),
-            last_used_at: null,
-          },
-        ],
-      });
+      const apiKeyRecord = { project_uuid: UUID_PROJECT_1 };
+      mockedDb.query.apiKeysTable.findFirst.mockResolvedValue(apiKeyRecord as any);
+      mockedDb.query.projectsTable.findFirst
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_1, user_id: UUID_USER, is_active: true } as any)
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_2, user_id: UUID_USER, is_active: true } as any);
+      mockedDb.transaction.mockImplementation(async (cb) => cb(mockedDb as any));
+      mockedDb.update.mockReturnThis();
+      mockedDb.set.mockReturnThis();
+      mockedDb.where.mockReturnThis();
 
       const result = await updateApiKeyHub(UUID_KEY_1, UUID_PROJECT_2);
 
       expect(result).toEqual({ success: true });
-      expect(mockedDb.execute).toHaveBeenCalled();
+      expect(mockedDb.transaction).toHaveBeenCalled();
+      expect(mockedDb.update).toHaveBeenCalledWith(apiKeysTable);
     });
 
     it('should throw error if API key not found', async () => {
-      mockedDb.execute
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({ rows: [] });
+      mockedDb.query.apiKeysTable.findFirst.mockResolvedValue(null);
 
       await expect(updateApiKeyHub(UUID_KEY_3, UUID_PROJECT_1)).rejects.toThrow(
         'API key not found'
@@ -334,11 +371,8 @@ describe('API Keys Actions', () => {
     });
 
     it('should throw error if user does not own API key', async () => {
-      mockedDb.execute
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [{ user_id: 'other-user-id' }],
-        });
+      mockedDb.query.apiKeysTable.findFirst.mockResolvedValue({ project_uuid: UUID_PROJECT_1 } as any);
+      mockedDb.query.projectsTable.findFirst.mockResolvedValueOnce({ uuid: UUID_PROJECT_1, user_id: 'other-user-id' } as any);
 
       await expect(updateApiKeyHub(UUID_KEY_1, UUID_PROJECT_1)).rejects.toThrow(
         'Unauthorized - you do not own this API key'
@@ -346,12 +380,10 @@ describe('API Keys Actions', () => {
     });
 
     it('should throw error if target Hub not found', async () => {
-      mockedDb.execute
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [{ user_id: UUID_USER }],
-        })
-        .mockResolvedValueOnce({ rows: [] });
+      mockedDb.query.apiKeysTable.findFirst.mockResolvedValue({ project_uuid: UUID_PROJECT_1 } as any);
+      mockedDb.query.projectsTable.findFirst
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_1, user_id: UUID_USER, is_active: true } as any)
+        .mockResolvedValueOnce(null);
 
       await expect(updateApiKeyHub(UUID_KEY_1, UUID_PROJECT_2)).rejects.toThrow(
         'Target Hub not found'
@@ -359,14 +391,10 @@ describe('API Keys Actions', () => {
     });
 
     it('should throw error if user does not own target Hub', async () => {
-      mockedDb.execute
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [{ user_id: UUID_USER }],
-        })
-        .mockResolvedValueOnce({
-          rows: [{ user_id: 'other-user-id', active: true }],
-        });
+      mockedDb.query.apiKeysTable.findFirst.mockResolvedValue({ project_uuid: UUID_PROJECT_1 } as any);
+      mockedDb.query.projectsTable.findFirst
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_1, user_id: UUID_USER, is_active: true } as any)
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_2, user_id: 'other-user-id', is_active: true } as any);
 
       await expect(updateApiKeyHub(UUID_KEY_1, UUID_PROJECT_1)).rejects.toThrow(
         'Unauthorized - you do not own the target Hub'
@@ -374,32 +402,36 @@ describe('API Keys Actions', () => {
     });
 
     it('should throw error if target Hub is not active', async () => {
-      mockedDb.execute
-        .mockResolvedValueOnce({ rows: [] })
-        .mockResolvedValueOnce({
-          rows: [{ user_id: UUID_USER }],
-        })
-        .mockResolvedValueOnce({
-          rows: [{ user_id: UUID_USER, active: false }],
-        });
+      mockedDb.query.apiKeysTable.findFirst.mockResolvedValue({ project_uuid: UUID_PROJECT_1 } as any);
+      mockedDb.query.projectsTable.findFirst
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_1, user_id: UUID_USER, is_active: true } as any)
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_2, user_id: UUID_USER, is_active: false } as any);
 
       await expect(updateApiKeyHub(UUID_KEY_1, UUID_PROJECT_1)).rejects.toThrow(
         'Target Hub is not active'
       );
     });
 
-    it('should use atomic CTE query for authorization and update', async () => {
-      mockedDb.execute.mockResolvedValue({
-        rows: [{ uuid: UUID_KEY_1, project_uuid: UUID_PROJECT_2 }],
-      });
+    it('should throw error if target Hub is deleted', async () => {
+      mockedDb.query.apiKeysTable.findFirst.mockResolvedValue({ project_uuid: UUID_PROJECT_1 } as any);
+      mockedDb.query.projectsTable.findFirst
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_1, user_id: UUID_USER, is_active: true } as any)
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_2, user_id: UUID_USER, is_active: true, deleted_at: new Date() } as any);
 
-      await updateApiKeyHub(UUID_KEY_1, UUID_PROJECT_2);
+      await expect(updateApiKeyHub(UUID_KEY_1, UUID_PROJECT_2)).rejects.toThrow(
+        'Target Hub is deleted'
+      );
+    });
 
-      const executedQuery = mockedDb.execute.mock.calls[0][0];
-      expect(executedQuery.sql).toContain('WITH');
-      expect(executedQuery.sql).toContain('api_key_check');
-      expect(executedQuery.sql).toContain('target_project_check');
-      expect(executedQuery.sql).toContain('UPDATE');
+    it('should throw error if target Hub is missing required fields', async () => {
+      mockedDb.query.apiKeysTable.findFirst.mockResolvedValue({ project_uuid: UUID_PROJECT_1 } as any);
+      mockedDb.query.projectsTable.findFirst
+        .mockResolvedValueOnce({ uuid: UUID_PROJECT_1, user_id: UUID_USER, is_active: true } as any)
+        .mockResolvedValueOnce({} as any);
+
+      await expect(updateApiKeyHub(UUID_KEY_1, UUID_PROJECT_2)).rejects.toThrow(
+        'Target Hub is missing required fields'
+      );
     });
   });
 

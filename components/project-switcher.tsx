@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, ChevronsUpDown, PlusCircle } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2, PlusCircle } from 'lucide-react';
 import * as React from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -90,8 +90,12 @@ export function ProjectSwitcher() {
               aria-expanded={open}
               aria-label={t('projects.hubs')}
               className='w-full justify-between'
-              disabled={isSwitchingHub}>
-              {isSwitchingHub ? t('projects.switchingHub') : (currentProject?.name ?? t('projects.loadingHubs'))}
+              disabled={isSwitchingHub}
+              aria-busy={isSwitchingHub}>
+              <span className='flex items-center gap-2'>
+                {isSwitchingHub ? t('projects.switchingHub') : (currentProject?.name ?? t('projects.loadingHubs'))}
+                {isSwitchingHub && <Loader2 className='h-3 w-3 animate-spin text-muted-foreground' aria-hidden='true' />}
+              </span>
               <ChevronsUpDown className='ml-auto h-4 w-4 shrink-0 opacity-50' />
             </Button>
           </PopoverTrigger>
@@ -115,11 +119,16 @@ export function ProjectSwitcher() {
                         switchingHubTimerRef.current = setTimeout(() => {
                           setIsSwitchingHub(false);
                           switchingHubTimerRef.current = null;
-                        }, 500);
+                        }, 200);
                       }}
                       disabled={isSwitchingHub}
                       className='text-sm'>
-                      {project.name}
+                      <span className='flex items-center gap-2'>
+                        <span>{project.name}</span>
+                        {isSwitchingHub && currentProject?.uuid === project.uuid && (
+                          <Loader2 className='h-3 w-3 animate-spin text-muted-foreground' aria-hidden='true' />
+                        )}
+                      </span>
                       <Check
                         className={cn(
                           'ml-auto h-4 w-4',

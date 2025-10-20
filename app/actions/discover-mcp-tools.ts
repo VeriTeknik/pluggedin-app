@@ -104,13 +104,16 @@ async function discoverAndSaveTools(
                         err?.message?.includes('abort');
     const isTimeoutError = err?.message?.includes('timeout');
 
-    if (!isAbortError && !isTimeoutError) {
-      console.error('[Discovery] Failed to discover tools:', err);
+    if (isAbortError) {
+      console.warn(`[Tool Discovery][WARN] AbortError for ${mcpServer.name}: ${err?.message || err}`);
+      error = 'Discovery aborted';
     } else if (isTimeoutError) {
-      console.warn('[Discovery] Timeout:', mcpServer.name);
+      console.error(`[Tool Discovery][ERROR] Timeout after 15s for ${mcpServer.name}: ${err?.message || err}`);
+      error = 'Discovery timeout';
+    } else {
+      console.error('[Tool Discovery][ERROR] Unknown failure during discovery:', err);
+      error = err?.message || 'Unknown error during tool discovery';
     }
-
-    error = isAbortError ? undefined : err.message;
   }
 
   return { tools, error };

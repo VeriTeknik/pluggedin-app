@@ -26,6 +26,7 @@ import { ThemeProvider } from '@/components/providers/theme-provider';
 import { StructuredData } from '@/components/seo/structured-data';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Toaster } from '@/components/ui/toaster';
+import { ProjectsProvider } from '@/contexts/ProjectsContext';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -147,14 +148,16 @@ export default async function RootLayout({
         <ThemeProvider defaultTheme="system" storageKey="pluggedin-theme">
           <SessionProvider>
             <I18nProviderWrapper>
-              <NotificationProvider>
-                <AnalyticsProvider>
-                  <div suppressHydrationWarning>
-                    <LanguageSwitcher />
-                  </div>
-                  {children}
-                </AnalyticsProvider>
-              </NotificationProvider>
+              <ProjectsProvider>
+                <NotificationProvider>
+                  <AnalyticsProvider>
+                    <div suppressHydrationWarning>
+                      <LanguageSwitcher />
+                    </div>
+                    {children}
+                  </AnalyticsProvider>
+                </NotificationProvider>
+              </ProjectsProvider>
             </I18nProviderWrapper>
           </SessionProvider>
           <WebVitalsReporter
