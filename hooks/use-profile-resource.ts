@@ -7,7 +7,8 @@ export function useProfileResource<T>(
   resourceKey: string,
   fetcher: (profileUuid: string) => Promise<T>
 ) {
-  const { currentProfile } = useProfiles();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
   const profileUuid = currentProfile?.uuid || null;
   const previousProfileUuidRef = useRef<string | null>(null);
 

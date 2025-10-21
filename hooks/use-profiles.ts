@@ -48,6 +48,7 @@ export function useProfiles() {
   const lastSetProfileUuidRef = useRef<string | null>(null);
   const lastProjectUuidRef = useRef<string | null>(null);
   const activeProfileRef = useRef<Profile | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Track activeProfile in a ref to avoid dependency loops
   useEffect(() => {
@@ -78,51 +79,42 @@ export function useProfiles() {
     [currentProject?.uuid]
   );
 
-  // Load saved profile on mount if authenticated
+  // Handle project reset and changes with cleanup
   useEffect(() => {
+    // Cancel any pending requests from previous project
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     if (!currentProject) {
-      if (lastSetProfileUuidRef.current !== null) {
-        setCurrentProfile(null);
-        lastSetProfileUuidRef.current = null;
-        lastProjectUuidRef.current = null;
-      }
-      return;
-    }
-
-    const projectUuid = currentProject.uuid;
-
-    // Detect project change first
-    const isProjectChange = projectUuid !== lastProjectUuidRef.current;
-    if (isProjectChange) {
-      // Update ref FIRST before any state changes
-      lastProjectUuidRef.current = projectUuid;
+      lastProjectUuidRef.current = null;
       lastSetProfileUuidRef.current = null;
-      // Clear local profile state so dependent views refetch with the new Hub
       setCurrentProfile(null);
-      // Don't return early - allow profile selection logic to run for new project
-    }
-
-    // Don't run profile selection until profiles are loaded and stable
-    if (profilesLoading || !profiles) {
       return;
     }
 
-    if (!profiles.length) {
-      // No profiles available for this Hub, ensure we clear any previous selection
-      handleSetCurrentProfile(null);
-      return;
+    if (currentProject.uuid !== lastProjectUuidRef.current) {
+      lastProjectUuidRef.current = currentProject.uuid;
+      lastSetProfileUuidRef.current = null;
+      setCurrentProfile(null);
     }
 
-    // If we have profiles but no currentProfile is set, force selection of first profile
-    if (profiles.length > 0 && !currentProfile) {
-      const profileToSet = activeProfileRef.current || profiles[0];
-      if (profileToSet && profileToSet.uuid !== lastSetProfileUuidRef.current) {
-        handleSetCurrentProfile(profileToSet);
+    // Cleanup function to cancel requests
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
       }
+    };
+  }, [currentProject]);
+
+  // Handle profile selection when profiles are loaded
+  useEffect(() => {
+    if (!currentProject || profilesLoading || !profiles) {
       return;
     }
 
-    const storageKey = getStorageKey(projectUuid);
+    const storageKey = getStorageKey(currentProject.uuid);
 
     // 1. Try per-project saved UUID
     let profileUuid = loadProfileUuid(storageKey);
@@ -139,12 +131,17 @@ export function useProfiles() {
       profiles[0];
 
     if (candidate?.uuid !== lastSetProfileUuidRef.current) {
-      handleSetCurrentProfile(candidate);
+      lastSetProfileUuidRef.current = candidate.uuid;
+      setCurrentProfile(candidate);
+
+      // Persist the selection if we have a current project
+      if (currentProject?.uuid) {
+        const storageKey = getStorageKey(currentProject.uuid);
+        saveProfileUuid(storageKey, candidate.uuid);
+      }
     }
   }, [
-    activeProfile?.uuid,
-    currentProject,
-    handleSetCurrentProfile,
+    currentProject?.uuid,
     profiles,
     profilesLoading,
   ]); // React when active profile changes

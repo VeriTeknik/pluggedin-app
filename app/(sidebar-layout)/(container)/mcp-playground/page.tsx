@@ -16,7 +16,8 @@ import { usePlayground } from './hooks/usePlayground';
 
 export default function McpPlaygroundPage() {
   const { t } = useTranslation();
-  const { currentProfile } = useProfiles();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 

@@ -36,7 +36,8 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
-  const { activeProfile } = useProfiles();
+  const profileData = useProfiles();
+  const activeProfile = profileData.activeProfile;
   const { currentProject } = useProjects();
   const [period, setPeriod] = useState<TimePeriod>('7d');
   const activeTabFromQuery = searchParams?.get('tab') || 'overview';

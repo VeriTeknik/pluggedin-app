@@ -71,7 +71,8 @@ interface Code {
 }
 
 export default function CustomMCPServersPage() {
-  const { currentProfile } = useProfiles();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
   const profileUuid = currentProfile?.uuid;
   const { toast } = useToast();
   const [sorting, setSorting] = useState<SortingState>([]);

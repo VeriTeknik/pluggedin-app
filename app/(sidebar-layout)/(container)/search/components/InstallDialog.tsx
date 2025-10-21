@@ -53,7 +53,10 @@ export function InstallDialog({
 }: InstallDialogProps) {
   // Load 'discover' as the default namespace and 'common' for shared translations
   const { t } = useTranslation(['discover', 'common']);
-  const { currentProfile, activeProfile, isLoading: profilesLoading } = useProfiles();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
+  const activeProfile = profileData.activeProfile;
+  const profilesLoading = profileData.isLoading;
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const profileUuid = currentProfile?.uuid ?? activeProfile?.uuid;

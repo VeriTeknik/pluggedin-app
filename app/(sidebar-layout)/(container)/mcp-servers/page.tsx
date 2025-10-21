@@ -57,7 +57,8 @@ import { SmartServerDialog } from './components/smart-server-dialog';
 
 const columnHelper = createColumnHelper<McpServer>();
 export default function MCPServersPage() {
-  const { currentProfile } = useProfiles();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
   const { t } = useTranslation();
   const { toast } = useToast();
   const router = useRouter();

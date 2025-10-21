@@ -53,7 +53,8 @@ interface ServerLogEntry {
 
 export function usePlayground() {
   const { toast } = useToast();
-  const { currentProfile } = useProfiles();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
   const profileUuid = currentProfile?.uuid || '';
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
