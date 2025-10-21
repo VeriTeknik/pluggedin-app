@@ -122,6 +122,13 @@ Visit [plugged.in](https://plugged.in) for instant access - no installation requ
 - **Dynamic CSP Nonces**: Cryptographically secure Content Security Policy
 - **Security Headers**: HSTS, X-Frame-Options, X-Content-Type-Options
 
+### 🏢 Hub & Workspace Management
+- **Multi-Hub Architecture**: Organize projects into separate hubs
+- **Workspace Isolation**: Each hub contains multiple isolated workspaces
+- **Smart Hub Switching**: Automatic workspace selection when switching hubs
+- **Data Scoping**: Hub-level and workspace-level data isolation
+- **Current Hub Display**: Dashboard shows active hub for context awareness
+
 ---
 
 ## 🏗️ Architecture

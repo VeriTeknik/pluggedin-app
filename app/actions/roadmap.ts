@@ -1,6 +1,6 @@
 'use server';
 
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { getServerSession } from 'next-auth';
 import sanitizeHtml from 'sanitize-html';
 import { z } from 'zod';

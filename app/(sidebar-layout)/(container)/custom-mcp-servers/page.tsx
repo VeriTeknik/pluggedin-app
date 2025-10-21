@@ -11,7 +11,7 @@ import {
 } from '@tanstack/react-table';
 import { Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import useSWR from 'swr';
 
@@ -71,7 +71,8 @@ interface Code {
 }
 
 export default function CustomMCPServersPage() {
-  const { currentProfile } = useProfiles();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
   const profileUuid = currentProfile?.uuid;
   const { toast } = useToast();
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -79,6 +80,9 @@ export default function CustomMCPServersPage() {
   const [open, setOpen] = useState(false);
   const [openCombobox, setOpenCombobox] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Track previous profile UUID to detect changes
+  const previousProfileUuidRef = useRef<string | null>(null);
 
   const form = useForm({
     defaultValues: {
@@ -90,10 +94,28 @@ export default function CustomMCPServersPage() {
     },
   });
 
-  const { data: servers = [], mutate } = useSWR(
+  const { data: servers = [], mutate, isLoading: serversLoading } = useSWR(
     profileUuid ? `${profileUuid}/custom-mcp-servers` : null,
-    () => getCustomMcpServers(profileUuid || '')
+    () => getCustomMcpServers(profileUuid || ''),
+    {
+      // Force revalidation when profile changes
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      // Add error handling for profile switches
+      onError: (error: Error) => {
+        console.error('Failed to load custom MCP servers:', error);
+      }
+    }
   );
+
+  // Detect profile changes and force data refetch
+  useEffect(() => {
+    if (currentProfile?.uuid && currentProfile.uuid !== previousProfileUuidRef.current) {
+      previousProfileUuidRef.current = currentProfile.uuid;
+      // Force immediate revalidation when profile changes
+      mutate();
+    }
+  }, [currentProfile?.uuid, mutate]);
 
   const { codes } = useCodes();
 
@@ -232,6 +254,30 @@ export default function CustomMCPServersPage() {
       setIsSubmitting(false);
     }
   };
+
+  // Show loading state when profile is switching or still loading
+  if (!currentProfile && serversLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if no profile after loading completes
+  if (!currentProfile && !serversLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">No workspace available</p>
+          <p className="text-sm text-muted-foreground">Please create a workspace in this hub to continue.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

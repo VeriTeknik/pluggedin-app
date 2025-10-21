@@ -53,10 +53,13 @@ interface ServerLogEntry {
 
 export function usePlayground() {
   const { toast } = useToast();
-  const { currentProfile } = useProfiles();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
   const profileUuid = currentProfile?.uuid || '';
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Track previous profile UUID to detect changes (move to top with other refs)
 
   // State for active tab
   const [activeTab, setActiveTab] = useState('servers');

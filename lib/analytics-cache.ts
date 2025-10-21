@@ -136,7 +136,7 @@ export const analyticsCache = new AnalyticsCache();
 
 // Declare global type for TypeScript
 declare global {
-  // eslint-disable-next-line no-var
+   
   var __analyticsCacheCleanupRegistered: boolean | undefined;
 }
 

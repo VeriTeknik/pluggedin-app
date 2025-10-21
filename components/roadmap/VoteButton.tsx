@@ -5,8 +5,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { voteOnFeature } from '@/app/actions/roadmap';
-import { VoteType } from '@/db/schema';
 import { Button } from '@/components/ui/button';
+import { VoteType } from '@/db/schema';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { updateFeatureStatus } from '@/app/actions/roadmap';
-import { FeatureRequestStatus } from '@/db/schema';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -23,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { FeatureRequestStatus } from '@/db/schema';
 import { useToast } from '@/hooks/use-toast';
 
 interface UpdateFeatureStatusDialogProps {

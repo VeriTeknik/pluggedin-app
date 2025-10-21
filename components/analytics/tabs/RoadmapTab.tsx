@@ -5,12 +5,12 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { getUserVotingTier } from '@/app/actions/roadmap';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { CreateFeatureDialog } from '@/components/roadmap/CreateFeatureDialog';
 import { FeatureRequestsTable } from '@/components/roadmap/FeatureRequestsTable';
 import { VoteWeightBadge } from '@/components/roadmap/VoteWeightBadge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface RoadmapTabProps {
   profileUuid?: string;

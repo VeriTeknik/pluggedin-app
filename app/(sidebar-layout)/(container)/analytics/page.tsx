@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProfiles } from '@/hooks/use-profiles';
+import { useProjects } from '@/hooks/use-projects';
 
 const periods: { value: TimePeriod; label: string }[] = [
   { value: '7d', label: '7d' },
@@ -35,7 +36,9 @@ export default function AnalyticsPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { data: session } = useSession();
-  const { activeProfile } = useProfiles();
+  const profileData = useProfiles();
+  const activeProfile = profileData.activeProfile;
+  const { currentProject } = useProjects();
   const [period, setPeriod] = useState<TimePeriod>('7d');
   const activeTabFromQuery = searchParams?.get('tab') || 'overview';
   const [activeTab, setActiveTab] = useState<string>(activeTabFromQuery);
@@ -77,7 +80,14 @@ export default function AnalyticsPage() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold">{t('dashboard.title')}</h1>
-          <p className="text-muted-foreground">{t('dashboard.description')}</p>
+          <p className="text-muted-foreground">
+            {t('dashboard.description')}
+            {currentProject && (
+              <span className="ml-2 text-sm">
+                • Current Hub: <span className="font-medium">{currentProject.name || "Unnamed Hub"}</span>
+              </span>
+            )}
+          </p>
         </div>
         <Select value={period} onValueChange={(value: TimePeriod) => setPeriod(value)}>
           <SelectTrigger className="w-32">

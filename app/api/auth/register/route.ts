@@ -4,8 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { users, verificationTokens, projectsTable, profilesTable } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { users, verificationTokens } from '@/db/schema';
 import { notifyAdminsOfNewUser } from '@/lib/admin-notifications';
 import { createErrorResponse, ErrorResponses } from '@/lib/api-errors';
 import { createDefaultProject } from '@/lib/default-project-creation';

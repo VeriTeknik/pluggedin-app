@@ -28,7 +28,7 @@ declare module 'next-auth' {
 }
 
 import { db } from '@/db';
-import { accounts, sessions, users, verificationTokens, projectsTable, profilesTable } from '@/db/schema';
+import { accounts, sessions, users, verificationTokens } from '@/db/schema';
 
 const USER_REVALIDATE_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 

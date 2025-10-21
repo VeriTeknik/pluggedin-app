@@ -13,9 +13,11 @@ import {
 } from '@tanstack/react-table';
 import { Database, Download, Package, Settings, Share, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
+
+import { WorkspaceLoader } from '@/components/workspace-loader';
 
 // Internal actions
 // import { getFirstApiKey } from '@/app/actions/api-keys'; // Removed unused import
@@ -55,7 +57,8 @@ import { SmartServerDialog } from './components/smart-server-dialog';
 
 const columnHelper = createColumnHelper<McpServer>();
 export default function MCPServersPage() {
-  const { currentProfile } = useProfiles();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
   const { t } = useTranslation();
   const { toast } = useToast();
   const router = useRouter();
@@ -72,12 +75,33 @@ export default function MCPServersPage() {
   const [serverToDelete, setServerToDelete] = useState<McpServer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: servers = [], mutate } = useSWR(
+  // Track previous profile UUID to detect changes
+  const previousProfileUuidRef = useRef<string | null>(null);
+
+  const { data: servers = [], mutate, isLoading: serversLoading } = useSWR(
     currentProfile?.uuid ? `${currentProfile.uuid}/mcp-servers` : null,
     () => {
       return getMcpServers(currentProfile?.uuid || '');
+    },
+    {
+      // Force revalidation when profile changes
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      // Add error handling for profile switches
+      onError: (error: Error) => {
+        console.error('Failed to load MCP servers:', error);
+      }
     }
   );
+
+  // Detect profile changes and force data refetch
+  useEffect(() => {
+    if (currentProfile?.uuid && currentProfile.uuid !== previousProfileUuidRef.current) {
+      previousProfileUuidRef.current = currentProfile.uuid;
+      // Force immediate revalidation when profile changes
+      mutate();
+    }
+  }, [currentProfile?.uuid, mutate]);
 
   const columns = [
     columnHelper.accessor('name', {
@@ -392,6 +416,25 @@ export default function MCPServersPage() {
       setServerToDelete(null);
     }
   };
+
+  // Show loading/error states when no profile
+  if (!currentProfile && serversLoading) {
+    return (
+      <WorkspaceLoader
+        isLoading={true}
+        loadingMessage="Loading workspace..."
+      />
+    );
+  }
+
+  if (!currentProfile && !serversLoading) {
+    return (
+      <WorkspaceLoader
+        hasError={true}
+        errorMessage="No workspace available"
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

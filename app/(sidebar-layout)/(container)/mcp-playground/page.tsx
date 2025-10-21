@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page-container';
+import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 
 import { ChatHeader } from './components/chat-header';
@@ -15,47 +16,12 @@ import { usePlayground } from './hooks/usePlayground';
 
 export default function McpPlaygroundPage() {
   const { t } = useTranslation();
+  const profileData = useProfiles();
+  const currentProfile = profileData.currentProfile;
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Check for mobile screen size
-  useEffect(() => {
-    const checkMobile = () => {
-      const isMobileSize = window.innerWidth < 1024; // lg breakpoint
-      setIsMobile(isMobileSize);
-      
-      // Auto-collapse sidebar on mobile and tablet
-      if (window.innerWidth < 1024) {
-        setSidebarCollapsed(true);
-      } else if (window.innerWidth >= 1280) {
-        // Auto-expand on larger screens if no preference saved
-        const saved = localStorage.getItem('playground-sidebar-collapsed');
-        if (saved === null) {
-          setSidebarCollapsed(false);
-        }
-      }
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  // Load sidebar state from localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('playground-sidebar-collapsed');
-    if (saved !== null && !isMobile) {
-      setSidebarCollapsed(JSON.parse(saved));
-    }
-  }, [isMobile]);
-
-  // Save sidebar state to localStorage
-  useEffect(() => {
-    if (!isMobile) {
-      localStorage.setItem('playground-sidebar-collapsed', JSON.stringify(sidebarCollapsed));
-    }
-  }, [sidebarCollapsed, isMobile]);
-
+  // Always call usePlayground hook first (React hooks rule)
   const {
     // State & Derived State
     activeTab,
@@ -79,11 +45,11 @@ export default function McpPlaygroundPage() {
     setServerLogs: _setServerLogs,
     isLoading,
     mcpServers,
-    
+
     // Refs
     messagesEndRef,
     logsEndRef,
-    
+
     // Functions
     toggleServerStatus,
     startSession,
@@ -93,6 +59,68 @@ export default function McpPlaygroundPage() {
     switchModel,
     clearLogs,
   } = usePlayground();
+
+  // Check for mobile screen size
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileSize = window.innerWidth < 1024; // lg breakpoint
+      setIsMobile(isMobileSize);
+
+      // Auto-collapse sidebar on mobile and tablet
+      if (window.innerWidth < 1024) {
+        setSidebarCollapsed(true);
+      } else if (window.innerWidth >= 1280) {
+        // Auto-expand on larger screens if no preference saved
+        const saved = localStorage.getItem('playground-sidebar-collapsed');
+        if (saved === null) {
+          setSidebarCollapsed(false);
+        }
+      }
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Load sidebar state from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('playground-sidebar-collapsed');
+    if (saved !== null && !isMobile) {
+      setSidebarCollapsed(JSON.parse(saved));
+    }
+  }, [isMobile]);
+
+  // Save sidebar state to localStorage
+  useEffect(() => {
+    if (!isMobile) {
+      localStorage.setItem('playground-sidebar-collapsed', JSON.stringify(sidebarCollapsed));
+    }
+  }, [sidebarCollapsed, isMobile]);
+
+  // Show loading state when profile is switching or still loading
+  if (!currentProfile && isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if no profile after loading completes
+  if (!currentProfile && !isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">No workspace available</p>
+          <p className="text-sm text-muted-foreground">Please create a workspace in this hub to continue.</p>
+        </div>
+      </div>
+    );
+  }
 
   const toggleSidebar = () => {
     setSidebarCollapsed(!sidebarCollapsed);
