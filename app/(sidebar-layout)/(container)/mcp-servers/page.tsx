@@ -13,7 +13,7 @@ import {
 } from '@tanstack/react-table';
 import { Database, Download, Package, Settings, Share, Upload } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -72,12 +72,33 @@ export default function MCPServersPage() {
   const [serverToDelete, setServerToDelete] = useState<McpServer | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const { data: servers = [], mutate } = useSWR(
+  // Track previous profile UUID to detect changes
+  const previousProfileUuidRef = useRef<string | null>(null);
+
+  const { data: servers = [], mutate, isLoading: serversLoading } = useSWR(
     currentProfile?.uuid ? `${currentProfile.uuid}/mcp-servers` : null,
     () => {
       return getMcpServers(currentProfile?.uuid || '');
+    },
+    {
+      // Force revalidation when profile changes
+      revalidateOnFocus: true,
+      revalidateOnReconnect: true,
+      // Add error handling for profile switches
+      onError: (error: Error) => {
+        console.error('Failed to load MCP servers:', error);
+      }
     }
   );
+
+  // Detect profile changes and force data refetch
+  useEffect(() => {
+    if (currentProfile?.uuid && currentProfile.uuid !== previousProfileUuidRef.current) {
+      previousProfileUuidRef.current = currentProfile.uuid;
+      // Force immediate revalidation when profile changes
+      mutate();
+    }
+  }, [currentProfile?.uuid, mutate]);
 
   const columns = [
     columnHelper.accessor('name', {
@@ -392,6 +413,30 @@ export default function MCPServersPage() {
       setServerToDelete(null);
     }
   };
+
+  // Show loading state when profile is switching or still loading
+  if (!currentProfile && serversLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading workspace...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if no profile after loading completes
+  if (!currentProfile && !serversLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <p className="text-muted-foreground mb-4">No workspace available</p>
+          <p className="text-sm text-muted-foreground">Please create a workspace in this hub to continue.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

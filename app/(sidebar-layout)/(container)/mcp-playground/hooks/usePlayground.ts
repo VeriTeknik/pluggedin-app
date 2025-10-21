@@ -58,6 +58,8 @@ export function usePlayground() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
+  // Track previous profile UUID to detect changes (move to top with other refs)
+
   // State for active tab
   const [activeTab, setActiveTab] = useState('servers');
 
