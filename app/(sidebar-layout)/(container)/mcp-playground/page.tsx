@@ -6,13 +6,13 @@ import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page-container';
+import { useProfiles } from '@/hooks/use-profiles';
 import { McpServer } from '@/types/mcp-server';
 
 import { ChatHeader } from './components/chat-header';
 import { PlaygroundChat } from './components/playground-chat';
 import { PlaygroundConfig } from './components/playground-config';
 import { usePlayground } from './hooks/usePlayground';
-import { useProfiles } from '@/hooks/use-profiles';
 
 export default function McpPlaygroundPage() {
   const { t } = useTranslation();

@@ -1,4 +1,4 @@
-import { and, or, eq, isNull, gte, type SQL } from 'drizzle-orm';
+import { and, eq, gte, isNull, or, type SQL } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { docsTable, projectsTable } from '@/db/schema';

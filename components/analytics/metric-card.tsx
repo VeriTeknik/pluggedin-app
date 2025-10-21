@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowDown, ArrowUp, Minus } from 'lucide-react';
-import { memo, type ComponentType } from 'react';
+import { type ComponentType,memo } from 'react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
