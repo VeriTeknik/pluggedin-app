@@ -17,6 +17,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { WorkspaceLoader } from '@/components/workspace-loader';
+
 // Internal actions
 // import { getFirstApiKey } from '@/app/actions/api-keys'; // Removed unused import
 import {
@@ -414,27 +416,22 @@ export default function MCPServersPage() {
     }
   };
 
-  // Show loading state when profile is switching or still loading
+  // Show loading/error states when no profile
   if (!currentProfile && serversLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Loading workspace...</p>
-        </div>
-      </div>
+      <WorkspaceLoader
+        isLoading={true}
+        loadingMessage="Loading workspace..."
+      />
     );
   }
 
-  // Show error state if no profile after loading completes
   if (!currentProfile && !serversLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <p className="text-muted-foreground mb-4">No workspace available</p>
-          <p className="text-sm text-muted-foreground">Please create a workspace in this hub to continue.</p>
-        </div>
-      </div>
+      <WorkspaceLoader
+        hasError={true}
+        errorMessage="No workspace available"
+      />
     );
   }
 

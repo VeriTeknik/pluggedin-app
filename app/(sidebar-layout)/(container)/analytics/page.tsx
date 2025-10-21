@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
             {t('dashboard.description')}
             {currentProject && (
               <span className="ml-2 text-sm">
-                • Current Hub: <span className="font-medium">{currentProject.name}</span>
+                • Current Hub: <span className="font-medium">{currentProject.name || "Unnamed Hub"}</span>
               </span>
             )}
           </p>

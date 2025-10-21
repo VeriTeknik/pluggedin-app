@@ -2,16 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import useSWR from 'swr';
 
 import { getProfiles, getProjectActiveProfile, updateProfile as updateProfileAction } from '@/app/actions/profiles';
-import { getUUIDFromLocalStorage, removeFromLocalStorage, setUUIDInLocalStorage } from '@/lib/storage-utils';
+import {
+  getStorageKey,
+  loadProfileUuid,
+  saveProfileUuid,
+  removeProfileUuid,
+  migrateLegacyProfileKey
+} from '@/lib/profile-storage-helpers';
 import { Profile } from '@/types/profile';
 
 import { useProjects } from './use-projects';
 
-const PROFILE_STORAGE_KEY_PREFIX = 'pluggedin-current-profile';
-const LEGACY_PROFILE_STORAGE_KEY = PROFILE_STORAGE_KEY_PREFIX;
-
-const getProfileStorageKey = (projectUuid: string) =>
-  `${PROFILE_STORAGE_KEY_PREFIX}-${projectUuid}`;
+const LEGACY_PROFILE_STORAGE_KEY = 'pluggedin-current-profile';
 
 export function useProfiles() {
   const { currentProject } = useProjects();
@@ -65,12 +67,12 @@ export function useProfiles() {
         return;
       }
 
-      const storageKey = getProfileStorageKey(currentProject.uuid);
+      const storageKey = getStorageKey(currentProject.uuid);
 
       if (profile) {
-        setUUIDInLocalStorage(storageKey, profile.uuid);
+        saveProfileUuid(storageKey, profile.uuid);
       } else {
-        removeFromLocalStorage(storageKey);
+        removeProfileUuid(storageKey);
       }
     },
     [currentProject?.uuid]
@@ -120,39 +122,24 @@ export function useProfiles() {
       return;
     }
 
-    const storageKey = getProfileStorageKey(projectUuid);
-    const savedProfileUuid = getUUIDFromLocalStorage(storageKey);
+    const storageKey = getStorageKey(projectUuid);
 
-    let profileToSet: Profile | null = null;
+    // 1. Try per-project saved UUID
+    let profileUuid = loadProfileUuid(storageKey);
 
-    if (savedProfileUuid) {
-      const savedProfile = profiles.find((p: Profile) => p.uuid === savedProfileUuid);
-      if (savedProfile) {
-        profileToSet = savedProfile;
-      }
+    // 2. Migrate legacy if none
+    if (!profileUuid) {
+      profileUuid = migrateLegacyProfileKey(storageKey);
     }
 
-    // Migrate from legacy storage key if present
-    if (!profileToSet) {
-      const legacyProfileUuid = getUUIDFromLocalStorage(LEGACY_PROFILE_STORAGE_KEY);
-      if (legacyProfileUuid) {
-        const legacyProfile = profiles.find((p: Profile) => p.uuid === legacyProfileUuid);
-        if (legacyProfile) {
-          profileToSet = legacyProfile;
-          setUUIDInLocalStorage(storageKey, legacyProfile.uuid);
-        }
-        removeFromLocalStorage(LEGACY_PROFILE_STORAGE_KEY);
-      }
-    }
+    // 3. Pick active or first
+    const candidate =
+      profiles.find((p: Profile) => p.uuid === profileUuid) ||
+      activeProfileRef.current ||
+      profiles[0];
 
-    // If no saved profile or saved profile not found, use active profile or first profile
-    if (!profileToSet) {
-      profileToSet = activeProfileRef.current || profiles[0];
-    }
-
-    // Only update if profile actually changed
-    if (profileToSet && profileToSet.uuid !== lastSetProfileUuidRef.current) {
-      handleSetCurrentProfile(profileToSet);
+    if (candidate?.uuid !== lastSetProfileUuidRef.current) {
+      handleSetCurrentProfile(candidate);
     }
   }, [
     activeProfile?.uuid,
