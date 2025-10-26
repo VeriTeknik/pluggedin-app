@@ -112,6 +112,12 @@ export const RateLimiters = {
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 10, // 10 OAuth attempts per 15 minutes
   }),
+
+  // Force refresh operations
+  forceRefresh: createRateLimiter({
+    windowMs: 60 * 60 * 1000, // 1 hour
+    max: 10, // 10 force refresh requests per hour
+  }),
 };
 
 /**

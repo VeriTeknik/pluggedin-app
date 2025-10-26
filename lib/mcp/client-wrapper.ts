@@ -28,6 +28,51 @@ import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrappe
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
 
+/**
+ * ============================================================================
+ * Max Listeners Configuration for MCP STDIO Connections
+ * ============================================================================
+ *
+ * PROBLEM:
+ * Each STDIO MCP server connection spawns a child process via the MCP SDK's
+ * StdioClientTransport. These child processes register 'exit' event listeners
+ * on the global Node.js process object. With multiple servers being discovered
+ * simultaneously, we can exceed the default EventEmitter limit of 10 listeners,
+ * triggering MaxListenersExceededWarning.
+ *
+ * WHY GLOBAL setMaxListeners:
+ * The MCP SDK manages child process spawning internally through StdioClientTransport.
+ * We don't have direct access to these child processes to set listeners on them
+ * individually. The SDK's internal architecture requires us to set the limit
+ * globally on the process object.
+ *
+ * MEMORY LEAK CONCERNS:
+ * - The MCP SDK handles proper cleanup of child processes and their listeners
+ * - When a client disconnects, the SDK's cleanup() method kills the child process
+ *   and removes event listeners automatically
+ * - We implement additional safety via the safeCleanup() function that ensures
+ *   proper disposal of all MCP client connections
+ * - The limit of 50 is reasonable for typical deployments (users rarely have
+ *   50+ STDIO servers configured simultaneously)
+ *
+ * ALTERNATIVE APPROACHES CONSIDERED:
+ * - Setting maxListeners on individual child processes: Not possible - SDK
+ *   doesn't expose them
+ * - Manual child process tracking: Not practical - would require forking/patching
+ *   the SDK
+ * - Using different transport types: STDIO is required for many MCP servers
+ *
+ * CONCLUSION:
+ * Global setMaxListeners is the only practical solution given the SDK's
+ * architecture. Memory leak risk is minimal due to SDK's internal cleanup
+ * mechanisms and our own safeCleanup() wrapper.
+ * ============================================================================
+ */
+const MAX_CONCURRENT_MCP_CONNECTIONS = 50;
+if (typeof process !== 'undefined' && process.setMaxListeners) {
+  process.setMaxListeners(MAX_CONCURRENT_MCP_CONNECTIONS);
+}
+
 // --- Configuration & Types ---
 
 // Add these types/interfaces at the top
