@@ -31,8 +31,9 @@ import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type 
 // Increase max listeners to handle multiple concurrent MCP server connections
 // Each STDIO transport spawns a child process that adds exit listeners to process
 // With multiple servers being discovered simultaneously, we can exceed the default limit of 10
+const MAX_CONCURRENT_MCP_CONNECTIONS = 50;
 if (typeof process !== 'undefined' && process.setMaxListeners) {
-  process.setMaxListeners(50); // Allow up to 50 concurrent MCP server connections
+  process.setMaxListeners(MAX_CONCURRENT_MCP_CONNECTIONS);
 }
 
 // --- Configuration & Types ---

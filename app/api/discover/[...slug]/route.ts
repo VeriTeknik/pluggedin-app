@@ -105,11 +105,14 @@ export async function POST(
 
     // 1.5. Parse request body to get force_refresh parameter
     let forceRefresh = false;
+    let requestBody: any = null;
     try {
-      const body = await request.json();
-      forceRefresh = body?.force_refresh === true;
-    } catch {
-      // No body or invalid JSON - use default (false)
+      requestBody = await request.json();
+      forceRefresh = requestBody?.force_refresh === true;
+    } catch (error) {
+      // Log for debugging but don't fail the request
+      console.debug('[API Discover] Failed to parse request body:', error instanceof Error ? error.message : 'Unknown error');
+      // Default to false
     }
 
     // 2. Determine target (all or specific server)
@@ -168,15 +171,20 @@ export async function POST(
 
       // Check if discovery was attempted recently (skip throttling if force_refresh is true)
       if (forceRefresh || (now - lastAttempt) > DISCOVERY_THROTTLE_MS) {
-        // Record attempt to prevent duplicates
-        discoveryAttempts.set(serverKey, now);
+        // Record attempt timestamp only for normal (non-forced) discoveries
+        // This ensures force_refresh doesn't affect the throttling window
+        if (!forceRefresh) {
+          discoveryAttempts.set(serverKey, now);
+        }
 
         // Call the action but don't await it here to keep the API response fast
         discoveryPromises.push(
           discoverSingleServerToolsInternal(profileUuid, server.uuid).catch(err => {
             console.error(`[API Discover] Discovery failed for ${server.uuid}:`, err);
-            // Remove from cache on failure to allow retry sooner
-            discoveryAttempts.delete(serverKey);
+            // Remove from cache on failure to allow retry sooner (only if we recorded it)
+            if (!forceRefresh) {
+              discoveryAttempts.delete(serverKey);
+            }
             return { error: err.message };
           })
         );
