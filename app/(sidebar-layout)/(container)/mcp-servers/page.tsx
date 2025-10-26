@@ -17,8 +17,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
-import { WorkspaceLoader } from '@/components/workspace-loader';
-
 // Internal actions
 // import { getFirstApiKey } from '@/app/actions/api-keys'; // Removed unused import
 import {
@@ -33,6 +31,7 @@ import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { WorkspaceLoader } from '@/components/workspace-loader';
 // Internal DB schema
 import { McpServerStatus, McpServerType } from '@/db/schema';
 // Internal hooks

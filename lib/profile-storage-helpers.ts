@@ -1,4 +1,4 @@
-import { getUUIDFromLocalStorage, setUUIDInLocalStorage, removeFromLocalStorage } from '@/lib/storage-utils';
+import { getUUIDFromLocalStorage, removeFromLocalStorage,setUUIDInLocalStorage } from '@/lib/storage-utils';
 
 const LEGACY_KEY = 'pluggedin-current-profile';
 const PREFIX = 'pluggedin-current-profile';

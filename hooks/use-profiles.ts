@@ -5,10 +5,9 @@ import { getProfiles, getProjectActiveProfile, updateProfile as updateProfileAct
 import {
   getStorageKey,
   loadProfileUuid,
-  saveProfileUuid,
+  migrateLegacyProfileKey,
   removeProfileUuid,
-  migrateLegacyProfileKey
-} from '@/lib/profile-storage-helpers';
+  saveProfileUuid} from '@/lib/profile-storage-helpers';
 import { Profile } from '@/types/profile';
 
 import { useProjects } from './use-projects';
