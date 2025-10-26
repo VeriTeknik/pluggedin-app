@@ -5,12 +5,31 @@ import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-to
 import { authenticateApiKey } from '@/app/api/auth'; // Sorted
 import { db } from '@/db'; // Sorted
 import { mcpServersTable,McpServerStatus } from '@/db/schema'; // Sorted
+import { RateLimiters } from '@/lib/rate-limiter'; // Sorted
 
 export const dynamic = 'force-dynamic';
 
 // In-memory cache to track recent discovery attempts
 const discoveryAttempts = new Map<string, number>();
 const DISCOVERY_THROTTLE_MS = 2 * 60 * 1000; // 2 minutes for explicit discovery requests
+
+/**
+ * Request body type for discovery endpoint
+ */
+interface DiscoverRequestBody {
+  force_refresh?: boolean;
+}
+
+/**
+ * Helper to safely parse JSON from request, returning fallback on error
+ */
+async function safeJson<T>(req: Request, fallback: T): Promise<T> {
+  try {
+    return await req.json();
+  } catch {
+    return fallback;
+  }
+}
 
 /**
  * @swagger
@@ -39,6 +58,22 @@ const DISCOVERY_THROTTLE_MS = 2 * 60 * 1000; // 2 minutes for explicit discovery
  *           type: string
  *         description: Specifies the discovery target. Should be either the literal string `all` or a valid MCP server UUID.
  *         example: all OR 00000000-0000-0000-0000-000000000000
+ *     requestBody:
+ *       description: Optional request body to control discovery behavior
+ *       required: false
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               force_refresh:
+ *                 type: boolean
+ *                 description: |
+ *                   Bypass throttling to force immediate discovery.
+ *                   Rate limited to 10 requests per hour to prevent abuse.
+ *                   When false or omitted, normal 2-minute throttling applies.
+ *                 default: false
+ *                 example: true
  *     responses:
  *       200:
  *         description: Discovery process successfully initiated.
@@ -80,6 +115,44 @@ const DISCOVERY_THROTTLE_MS = 2 * 60 * 1000; // 2 minutes for explicit discovery
  *                 error:
  *                   type: string
  *                   example: Server with UUID xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx not found for this profile.
+ *       429:
+ *         description: Too Many Requests - Force refresh rate limit exceeded (10 requests per hour).
+ *         headers:
+ *           X-RateLimit-Limit:
+ *             schema:
+ *               type: integer
+ *             description: Maximum number of requests allowed in the time window
+ *           X-RateLimit-Remaining:
+ *             schema:
+ *               type: integer
+ *             description: Number of requests remaining (always 0 for 429 response)
+ *           X-RateLimit-Reset:
+ *             schema:
+ *               type: string
+ *               format: date-time
+ *             description: ISO 8601 timestamp when the rate limit resets
+ *           Retry-After:
+ *             schema:
+ *               type: integer
+ *             description: Seconds until rate limit resets
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 error:
+ *                   type: string
+ *                   example: Rate limit exceeded for force refresh operations
+ *                 limit:
+ *                   type: integer
+ *                   example: 10
+ *                 remaining:
+ *                   type: integer
+ *                   example: 0
+ *                 reset:
+ *                   type: string
+ *                   format: date-time
+ *                   example: "2025-01-26T01:34:59.000Z"
  *       500:
  *         description: Internal Server Error - Failed to trigger the discovery process.
  *         content:
@@ -98,21 +171,55 @@ export async function POST(
   { params }: { params: Promise<{ slug: string[] }> }
 ) {
   try {
-    // 1. Authenticate API Key and get active profile
+    // ============================================================================
+    // SECURITY: Authentication & Authorization
+    // ============================================================================
+    // 1. This endpoint requires API key authentication (Bearer token)
+    // 2. The authenticateApiKey() function validates the API key and retrieves
+    //    the user's active profile, ensuring only authenticated users can access
+    // 3. All servers are filtered by profileUuid, ensuring users can only discover
+    //    servers they own (authorization enforced by database query)
+    // 4. discoverSingleServerToolsInternal() is safe to use here because:
+    //    - Authentication already performed via authenticateApiKey()
+    //    - Server ownership verified via profileUuid filter
+    //    - This is a trusted internal context after auth validation
+    // ============================================================================
+
     const auth = await authenticateApiKey(request);
     if (auth.error) return auth.error;
     const profileUuid = auth.activeProfile.uuid;
 
-    // 1.5. Parse request body to get force_refresh parameter
-    let forceRefresh = false;
-    let requestBody: any = null;
-    try {
-      requestBody = await request.json();
-      forceRefresh = requestBody?.force_refresh === true;
-    } catch (error) {
-      // Log for debugging but don't fail the request
-      console.debug('[API Discover] Failed to parse request body:', error instanceof Error ? error.message : 'Unknown error');
-      // Default to false
+    // Parse request body to get force_refresh parameter
+    const { force_refresh: forceRefresh = false } = await safeJson<DiscoverRequestBody>(
+      request,
+      { force_refresh: false }
+    );
+
+    // Rate limit force_refresh operations to prevent abuse
+    if (forceRefresh) {
+      const rateLimitResult = await RateLimiters.forceRefresh(request as any);
+      if (!rateLimitResult.allowed) {
+        const resetDate = new Date(rateLimitResult.reset);
+        const retryAfter = Math.ceil((rateLimitResult.reset - Date.now()) / 1000);
+
+        return NextResponse.json(
+          {
+            error: 'Rate limit exceeded for force refresh operations',
+            limit: rateLimitResult.limit,
+            remaining: rateLimitResult.remaining,
+            reset: resetDate.toISOString()
+          },
+          {
+            status: 429,
+            headers: {
+              'X-RateLimit-Limit': rateLimitResult.limit.toString(),
+              'X-RateLimit-Remaining': '0',
+              'X-RateLimit-Reset': resetDate.toISOString(),
+              'Retry-After': retryAfter.toString()
+            }
+          }
+        );
+      }
     }
 
     // 2. Determine target (all or specific server)
@@ -161,42 +268,42 @@ export async function POST(
     }
 
     // 4. Apply throttling and trigger discovery action(s)
+    const now = Date.now();
     const discoveryPromises: Promise<any>[] = [];
     const throttledServers: string[] = [];
-    const now = Date.now();
 
-    serversToDiscover.forEach(server => {
-      const serverKey = `${profileUuid}:${server.uuid}`;
-      const lastAttempt = discoveryAttempts.get(serverKey) || 0;
+    for (const { uuid, name } of serversToDiscover) {
+      const key = `${profileUuid}:${uuid}`;
+      const last = discoveryAttempts.get(key) || 0;
+      const isThrottled = !forceRefresh && (now - last) <= DISCOVERY_THROTTLE_MS;
 
-      // Check if discovery was attempted recently (skip throttling if force_refresh is true)
-      if (forceRefresh || (now - lastAttempt) > DISCOVERY_THROTTLE_MS) {
-        // Record attempt timestamp only for normal (non-forced) discoveries
-        // This ensures force_refresh doesn't affect the throttling window
-        if (!forceRefresh) {
-          discoveryAttempts.set(serverKey, now);
-        }
-
-        // Call the action but don't await it here to keep the API response fast
-        discoveryPromises.push(
-          discoverSingleServerToolsInternal(profileUuid, server.uuid).catch(err => {
-            console.error(`[API Discover] Discovery failed for ${server.uuid}:`, err);
-            // Remove from cache on failure to allow retry sooner (only if we recorded it)
-            if (!forceRefresh) {
-              discoveryAttempts.delete(serverKey);
-            }
-            return { error: err.message };
-          })
-        );
-      } else {
-        throttledServers.push(server.name || server.uuid);
+      if (isThrottled) {
+        throttledServers.push(name || uuid);
+        continue;
       }
-    });
+
+      // Record attempt timestamp only for normal discoveries (not forced)
+      if (!forceRefresh) {
+        discoveryAttempts.set(key, now);
+      }
+
+      // Trigger discovery asynchronously
+      discoveryPromises.push(
+        discoverSingleServerToolsInternal(profileUuid, uuid).catch(err => {
+          console.error(`[API Discover] Discovery failed for ${uuid}:`, err);
+          // Remove from cache on failure to allow retry sooner (only if we recorded it)
+          if (!forceRefresh) {
+            discoveryAttempts.delete(key);
+          }
+          return { error: err.message };
+        })
+      );
+    }
 
     // Clean up old entries from discovery attempts cache
     const cutoff = now - DISCOVERY_THROTTLE_MS;
-    for (const [key, timestamp] of discoveryAttempts.entries()) {
-      if (timestamp < cutoff) {
+    for (const key of discoveryAttempts.keys()) {
+      if ((discoveryAttempts.get(key) ?? 0) < cutoff) {
         discoveryAttempts.delete(key);
       }
     }
@@ -204,19 +311,22 @@ export async function POST(
     // Wait for all discovery actions to start (not necessarily finish)
     await Promise.allSettled(discoveryPromises);
 
-    // 5. Return response with throttling information
-    const targetDescription = discoverAll ? 'all active servers' : `server ${serversToDiscover[0]?.name || targetServerUuid}`;
-    let message = forceRefresh
-      ? `🔄 Force refresh: Discovery process initiated for ${targetDescription} (throttling bypassed).`
-      : `Discovery process initiated for ${targetDescription}.`;
+    // 5. Build response message
+    const targetDesc = discoverAll
+      ? 'all active servers'
+      : `server ${serversToDiscover[0]?.name || targetServerUuid}`;
 
-    if (throttledServers.length > 0) {
-      message += ` (${throttledServers.length} server(s) throttled: ${throttledServers.join(', ')})`;
-    }
+    const baseMsg = forceRefresh
+      ? `🔄 Force refresh: Discovery initiated for ${targetDesc} (throttling bypassed).`
+      : `Discovery process initiated for ${targetDesc}.`;
 
-    message += ' Results will be available shortly.';
+    const throttleMsg = throttledServers.length
+      ? ` (${throttledServers.length} throttled: ${throttledServers.join(', ')})`
+      : '';
 
-    return NextResponse.json({ message });
+    return NextResponse.json({
+      message: `${baseMsg}${throttleMsg} Results will be available shortly.`,
+    });
 
   } catch (error) {
     console.error('[API /api/discover Error]', error);
