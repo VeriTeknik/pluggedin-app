@@ -28,6 +28,13 @@ import { StreamableHTTPWrapper } from '@/lib/mcp/transports/StreamableHTTPWrappe
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import type { McpServer } from '@/types/mcp-server'; // Assuming McpServer type is defined here
 
+// Increase max listeners to handle multiple concurrent MCP server connections
+// Each STDIO transport spawns a child process that adds exit listeners to process
+// With multiple servers being discovered simultaneously, we can exceed the default limit of 10
+if (typeof process !== 'undefined' && process.setMaxListeners) {
+  process.setMaxListeners(50); // Allow up to 50 concurrent MCP server connections
+}
+
 // --- Configuration & Types ---
 
 // Add these types/interfaces at the top

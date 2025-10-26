@@ -1,7 +1,7 @@
 import { and, eq, type InferSelectModel, sql } from 'drizzle-orm'; // Removed unused isNull, kept sql
 import { NextResponse } from 'next/server';
 
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Moved up
+import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-tools'; // Moved up
 import { authenticateApiKey } from '@/app/api/auth'; // Moved up
 import { db } from '@/db';
 import { mcpServersTable, McpServerStatus, ToggleStatus, toolsTable } from '@/db/schema';
@@ -162,7 +162,7 @@ export async function GET(request: Request) {
           discoveryAttempts.set(serverKey, now);
 
           // Trigger discovery asynchronously (fire-and-forget)
-          discoverSingleServerTools(profileUuid, server.uuid).catch(err => {
+          discoverSingleServerToolsInternal(profileUuid, server.uuid).catch(err => {
             console.error(`[API /api/tools] Background discovery failed for ${server.uuid}:`, err);
             // Remove from cache on failure to allow retry sooner
             discoveryAttempts.delete(serverKey);

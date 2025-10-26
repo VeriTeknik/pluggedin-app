@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm'; // Sorted
 import { NextResponse } from 'next/server'; // Sorted
 
-import { discoverSingleServerTools } from '@/app/actions/discover-mcp-tools'; // Sorted
+import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-tools'; // Sorted
 import { authenticateApiKey } from '@/app/api/auth'; // Sorted
 import { db } from '@/db'; // Sorted
 import { mcpServersTable,McpServerStatus } from '@/db/schema'; // Sorted
@@ -103,6 +103,15 @@ export async function POST(
     if (auth.error) return auth.error;
     const profileUuid = auth.activeProfile.uuid;
 
+    // 1.5. Parse request body to get force_refresh parameter
+    let forceRefresh = false;
+    try {
+      const body = await request.json();
+      forceRefresh = body?.force_refresh === true;
+    } catch {
+      // No body or invalid JSON - use default (false)
+    }
+
     // 2. Determine target (all or specific server)
     const { slug } = await params;
     const slugParam = slug ? slug.join('/') : null;
@@ -152,20 +161,19 @@ export async function POST(
     const discoveryPromises: Promise<any>[] = [];
     const throttledServers: string[] = [];
     const now = Date.now();
-    
+
     serversToDiscover.forEach(server => {
       const serverKey = `${profileUuid}:${server.uuid}`;
       const lastAttempt = discoveryAttempts.get(serverKey) || 0;
-      
-      // Check if discovery was attempted recently
-      if ((now - lastAttempt) > DISCOVERY_THROTTLE_MS) {
-        
+
+      // Check if discovery was attempted recently (skip throttling if force_refresh is true)
+      if (forceRefresh || (now - lastAttempt) > DISCOVERY_THROTTLE_MS) {
         // Record attempt to prevent duplicates
         discoveryAttempts.set(serverKey, now);
-        
+
         // Call the action but don't await it here to keep the API response fast
         discoveryPromises.push(
-          discoverSingleServerTools(profileUuid, server.uuid).catch(err => {
+          discoverSingleServerToolsInternal(profileUuid, server.uuid).catch(err => {
             console.error(`[API Discover] Discovery failed for ${server.uuid}:`, err);
             // Remove from cache on failure to allow retry sooner
             discoveryAttempts.delete(serverKey);
@@ -190,14 +198,16 @@ export async function POST(
 
     // 5. Return response with throttling information
     const targetDescription = discoverAll ? 'all active servers' : `server ${serversToDiscover[0]?.name || targetServerUuid}`;
-    let message = `Discovery process initiated for ${targetDescription}.`;
-    
+    let message = forceRefresh
+      ? `🔄 Force refresh: Discovery process initiated for ${targetDescription} (throttling bypassed).`
+      : `Discovery process initiated for ${targetDescription}.`;
+
     if (throttledServers.length > 0) {
       message += ` (${throttledServers.length} server(s) throttled: ${throttledServers.join(', ')})`;
     }
-    
+
     message += ' Results will be available shortly.';
-    
+
     return NextResponse.json({ message });
 
   } catch (error) {

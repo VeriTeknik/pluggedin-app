@@ -124,11 +124,20 @@ async function discoverAndSaveTools(
  *
  * ⚠️ SECURITY WARNING:
  * This function bypasses authentication and should ONLY be called from trusted
- * internal contexts where the profileUuid is already validated (e.g., during
- * user signup, system maintenance tasks).
+ * internal contexts where the profileUuid and user ownership are already validated
+ * (e.g., API routes after authenticateApiKey(), during user signup, system maintenance).
  *
- * DO NOT expose this function to API routes or user-initiated actions.
- * Use discoverSingleServerTools() for user-initiated discovery operations.
+ * ✅ USE THIS FUNCTION for:
+ * - API routes that have already authenticated with authenticateApiKey()
+ * - Internal system processes (signup, sample server installation)
+ * - Background tasks where authentication was performed upstream
+ *
+ * ❌ DO NOT USE for:
+ * - Direct client-initiated actions without authentication
+ * - Exposed endpoints without prior authentication
+ *
+ * Use discoverSingleServerTools() for user-initiated actions from the web UI
+ * where NextAuth session-based authentication is required.
  *
  * @param profileUuid The UUID of the profile the server belongs to.
  * @param serverUuid The UUID of the MCP server to discover tools for.
