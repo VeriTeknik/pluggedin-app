@@ -5,6 +5,9 @@ interface RegistryPackage {
   registry_name: string;
   name: string;
   version: string;
+  transport?: {
+    type: string; // stdio, sse, or http
+  };
   runtime_hint?: string;
   package_arguments?: any[];
   runtime_arguments?: any[];
