@@ -7,8 +7,30 @@ export async function getReviewsForServer(
   source: McpServerSource,
   externalId: string
 ): Promise<ServerReview[]> {
-  // Reviews system deprecated - will be replaced with new analytics service
-  return [];
+  try {
+    // Only fetch reviews from registry source for now
+    if (source !== McpServerSource.REGISTRY) {
+      return [];
+    }
+
+    const response = await fetch(
+      `https://registry.plugged.in/v0/servers/${externalId}/reviews`,
+      {
+        next: { revalidate: 60 }, // Cache for 60 seconds
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`Failed to fetch reviews: ${response.status} ${response.statusText}`);
+      return [];
+    }
+
+    const data = await response.json();
+    return data.reviews || [];
+  } catch (error) {
+    console.error('Error fetching reviews:', error);
+    return [];
+  }
 }
 
 // Action to submit or update a server review
