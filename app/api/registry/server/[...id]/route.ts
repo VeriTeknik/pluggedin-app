@@ -5,12 +5,14 @@ import { transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-tr
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string[] }> }
 ) {
   try {
     const { id } = await params;
+    // Join the path segments back together (e.g., ['io.github.yokingma', 'time-mcp'] -> 'io.github.yokingma/time-mcp')
+    const serverId = id.join('/');
     const client = new PluggedinRegistryClient();
-    const server = await client.getServerDetails(id);
+    const server = await client.getServerDetails(serverId);
     
     // Transform to McpIndex format
     const transformed = transformPluggedinRegistryToMcpIndex(server);

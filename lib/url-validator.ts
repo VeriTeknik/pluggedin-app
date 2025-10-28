@@ -212,24 +212,15 @@ export function validateExternalUrl(
  * @throws Error if the URL is invalid
  */
 export function validateInternalUrl(url: string): URL {
-  console.log('[validateInternalUrl] Validating URL:', url);
-  console.log('[validateInternalUrl] NODE_ENV:', process.env.NODE_ENV);
-  try {
-    const validated = validateExternalUrl(url, {
-      allowedDomains: [
-        'registry.plugged.in',
-        'api.registry.plugged.in',
-        'staging.plugged.in',
-        'api.staging.plugged.in'
-      ],
-      allowLocalhost: process.env.NODE_ENV === 'development',
-    });
-    console.log('[validateInternalUrl] Validation successful:', validated.toString());
-    return validated;
-  } catch (error) {
-    console.error('[validateInternalUrl] Validation failed:', error);
-    throw error;
-  }
+  return validateExternalUrl(url, {
+    allowedDomains: [
+      'registry.plugged.in',
+      'api.registry.plugged.in',
+      'staging.plugged.in',
+      'api.staging.plugged.in'
+    ],
+    allowLocalhost: process.env.NODE_ENV === 'development',
+  });
 }
 
 /**

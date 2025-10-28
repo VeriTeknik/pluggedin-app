@@ -394,21 +394,11 @@ export class PluggedinRegistryVPClient {
       };
 
       // Add Authorization header if API key is provided
-      console.log('[VP Client submitRating] API Key received:', !!apiKey);
-      console.log('[VP Client submitRating] API Key length:', apiKey?.length);
-      console.log('[VP Client submitRating] API Key prefix:', apiKey?.substring(0, 10));
       if (apiKey) {
         headers['Authorization'] = `Bearer ${apiKey}`;
-        console.log('[VP Client submitRating] Authorization header set');
-      } else {
-        console.log('[VP Client submitRating] WARNING: No API key provided, Authorization header not set');
       }
 
-      const endpoint = `/servers/${serverId}/rate`;
-      console.log('[VP Client submitRating] Making request to:', `${this.baseUrl}${endpoint}`);
-      console.log('[VP Client submitRating] Headers:', JSON.stringify(headers, null, 2));
-
-      const response = await this.fetchInternal(endpoint, {
+      const response = await this.fetchInternal(`/servers/${serverId}/rate`, {
         method: 'POST',
         headers,
         body: JSON.stringify(requestBody),
@@ -546,42 +536,23 @@ export class PluggedinRegistryVPClient {
         sort,
       });
 
-      const path = `/servers/${serverId}/feedback?${params}`;
-      const fullUrl = `${this.vpUrl}${path}`;
-      console.log('[VP Client getFeedback] Fetching feedback from:', fullUrl);
-      console.log('[VP Client getFeedback] Server ID:', serverId);
-      console.log('[VP Client getFeedback] vpUrl:', this.vpUrl);
-
-      const response = await this.fetchInternal(path, {
+      const response = await this.fetchInternal(`/servers/${serverId}/feedback?${params}`, {
         headers: {
           'User-Agent': 'PluggedIn-App/1.0',
         },
       });
 
-      console.log('[VP Client getFeedback] Response status:', response.status);
-      console.log('[VP Client getFeedback] Response headers:', Object.fromEntries(response.headers.entries()));
-
       if (!response.ok) {
-        // Get response text to see what error we're getting
-        const responseText = await response.text();
-        console.error('[Registry VP] Failed to get feedback:', {
-          status: response.status,
-          statusText: response.statusText,
-          body: responseText.substring(0, 200)
-        });
+        // Only log non-404 errors since 404 is expected for servers without reviews
+        if (response.status !== 404) {
+          console.error('[Registry VP] Failed to get feedback:', response.status);
+        }
         return { feedback: [], total_count: 0, has_more: false };
       }
 
-      const data = await response.json();
-      console.log('[VP Client getFeedback] Success, got', data.feedback?.length || 0, 'feedback items');
-      return data;
+      return await response.json();
     } catch (error) {
       console.error('[Registry VP] Error getting feedback:', error);
-      console.error('[Registry VP] Error details:', {
-        name: error instanceof Error ? error.name : 'Unknown',
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined
-      });
       return { feedback: [], total_count: 0, has_more: false };
     }
   }

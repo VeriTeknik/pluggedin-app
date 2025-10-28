@@ -19,9 +19,6 @@ async function submitRatingToRegistry(
 ) {
   try {
     const apiKey = process.env.REGISTRY_INTERNAL_API_KEY;
-    console.log('[submitRatingToRegistry] API Key exists:', !!apiKey);
-    console.log('[submitRatingToRegistry] API Key length:', apiKey?.length);
-    console.log('[submitRatingToRegistry] API Key prefix:', apiKey?.substring(0, 10));
     const result = await registryVPClient.submitRating(serverId, rating, source, userId, comment, apiKey);
     return result;
   } catch (error) {
