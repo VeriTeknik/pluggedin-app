@@ -140,12 +140,15 @@ export interface TrendingResponse {
 export class PluggedinRegistryVPClient {
   private baseUrl: string;
   private vpUrl: string;
-  
+  private enhancedUrl: string;
+
   constructor(baseUrl = process.env.REGISTRY_API_URL || 'https://registry.plugged.in/v0') {
     // Validate the base URL to prevent SSRF
     const validatedUrl = validateInternalUrl(baseUrl);
     this.baseUrl = validatedUrl.toString();
     this.vpUrl = this.baseUrl; // VP endpoints are actually v0 endpoints
+    // Enhanced endpoints for better filtering and performance
+    this.enhancedUrl = this.baseUrl.replace('/v0', '/v0/enhanced');
   }
   
   /**
@@ -206,9 +209,8 @@ export class PluggedinRegistryVPClient {
     return data.server || data;
   }
   
-  // Get all servers with stats (using offset-based pagination)
-  // WARNING: This method fetches ALL servers and should be used sparingly
-  // For most use cases, prefer getServersWithStats() with proper pagination
+  // Get all servers with stats (using enhanced endpoint for better performance)
+  // The enhanced endpoint supports server-side filtering and returns all matching results
   async getAllServersWithStats(
     source?: McpServerSource,
     filters?: {
@@ -217,6 +219,63 @@ export class PluggedinRegistryVPClient {
       search?: string;
     },
     maxServers: number = 1000 // Safety limit to prevent resource exhaustion
+  ): Promise<ExtendedServer[]> {
+    try {
+      // Use enhanced endpoint for better filtering
+      const params = new URLSearchParams({
+        limit: maxServers.toString(),
+        offset: '0'
+      });
+
+      // Map registry_name to registry_types for enhanced API
+      if (filters?.registry_name) {
+        params.append('registry_types', filters.registry_name);
+      }
+
+      // Map sort parameter
+      if (filters?.sort) {
+        // Map to enhanced API sort formats
+        if (filters.sort === 'release_date_desc') {
+          params.append('sort', 'updated');
+        } else if (filters.sort === 'rating_desc') {
+          params.append('sort', 'rating_desc');
+        } else {
+          params.append('sort', filters.sort);
+        }
+      }
+
+      if (filters?.search) {
+        params.append('search', filters.search);
+      }
+
+      // Use enhanced endpoint URL
+      const enhancedPath = `/enhanced/servers?${params}`;
+      const url = validateInternalUrl(`${this.baseUrl}${enhancedPath}`);
+      const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        console.error(`Failed to fetch from enhanced endpoint: ${response.status}, falling back to standard endpoint`);
+        // Fallback to original pagination method
+        return this.getAllServersWithStatsFallback(source, filters, maxServers);
+      }
+
+      const data = await response.json();
+      return data.servers || [];
+    } catch (error) {
+      console.error('Error with enhanced endpoint, using fallback:', error);
+      return this.getAllServersWithStatsFallback(source, filters, maxServers);
+    }
+  }
+
+  // Fallback method using original pagination
+  private async getAllServersWithStatsFallback(
+    source?: McpServerSource,
+    filters?: {
+      registry_name?: string;
+      sort?: string;
+      search?: string;
+    },
+    maxServers: number = 1000
   ): Promise<ExtendedServer[]> {
     const allServers: ExtendedServer[] = [];
     const batchSize = 100;
