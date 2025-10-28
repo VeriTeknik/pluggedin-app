@@ -336,14 +336,22 @@ export class PluggedinRegistryVPClient {
   // Track installation
   async trackInstallation(
     serverId: string,
-    data: InstallRequest = {}
+    data: InstallRequest = {},
+    apiKey?: string
   ): Promise<InstallResponse> {
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      // Add Authorization header if API key is provided
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+
       const response = await this.fetchInternal(`/servers/${serverId}/install`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify(data),
       });
       
@@ -368,7 +376,8 @@ export class PluggedinRegistryVPClient {
     rating: number,
     source?: McpServerSource,
     userId?: string,
-    comment?: string
+    comment?: string,
+    apiKey?: string
   ): Promise<RatingResponse> {
     try {
       const requestBody = {
@@ -378,13 +387,30 @@ export class PluggedinRegistryVPClient {
         timestamp: new Date().toISOString(),
         comment
       };
-      
-      const response = await this.fetchInternal(`/servers/${serverId}/rate`, {
+
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+        'User-Agent': 'PluggedIn-App/1.0',
+      };
+
+      // Add Authorization header if API key is provided
+      console.log('[VP Client submitRating] API Key received:', !!apiKey);
+      console.log('[VP Client submitRating] API Key length:', apiKey?.length);
+      console.log('[VP Client submitRating] API Key prefix:', apiKey?.substring(0, 10));
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+        console.log('[VP Client submitRating] Authorization header set');
+      } else {
+        console.log('[VP Client submitRating] WARNING: No API key provided, Authorization header not set');
+      }
+
+      const endpoint = `/servers/${serverId}/rate`;
+      console.log('[VP Client submitRating] Making request to:', `${this.baseUrl}${endpoint}`);
+      console.log('[VP Client submitRating] Headers:', JSON.stringify(headers, null, 2));
+
+      const response = await this.fetchInternal(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers,
         body: JSON.stringify(requestBody),
       });
       

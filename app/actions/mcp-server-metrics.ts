@@ -18,7 +18,11 @@ async function submitRatingToRegistry(
   comment?: string
 ) {
   try {
-    const result = await registryVPClient.submitRating(serverId, rating, source, userId, comment);
+    const apiKey = process.env.REGISTRY_INTERNAL_API_KEY;
+    console.log('[submitRatingToRegistry] API Key exists:', !!apiKey);
+    console.log('[submitRatingToRegistry] API Key length:', apiKey?.length);
+    console.log('[submitRatingToRegistry] API Key prefix:', apiKey?.substring(0, 10));
+    const result = await registryVPClient.submitRating(serverId, rating, source, userId, comment, apiKey);
     return result;
   } catch (error) {
     console.error('[MCP Server Metrics] Error submitting rating to registry:', error);
@@ -39,13 +43,14 @@ async function trackInstallationInRegistry(
   }
 ) {
   try {
+    const apiKey = process.env.REGISTRY_INTERNAL_API_KEY;
     const result = await registryVPClient.trackInstallation(serverId, {
       source,
       user_id: metadata?.userId,
       version: metadata?.version,
       platform: metadata?.platform,
       timestamp: Date.now()
-    });
+    }, apiKey);
     return result;
   } catch (error) {
     console.error('Error tracking installation in registry:', error);
