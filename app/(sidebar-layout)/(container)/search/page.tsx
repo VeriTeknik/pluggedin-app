@@ -19,10 +19,12 @@ import useSWR from 'swr';
 import { SmartServerWizard } from '@/app/(sidebar-layout)/(container)/mcp-servers/components/smart-server-wizard/SmartServerWizard';
 import { createMcpServer, getMcpServers } from '@/app/actions/mcp-servers';
 import { TrendingServers } from '@/components/trending-servers';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
@@ -78,8 +80,9 @@ function SearchContent() {
     (categoryParam as McpServerCategory) || ''
   );
   const [pageSize, setPageSize] = useState(pageSizeParam);
-  const [packageRegistry, setPackageRegistry] =
-    useState<string>(packageRegistryParam);
+  const [packageRegistries, setPackageRegistries] = useState<string[]>(
+    packageRegistryParam ? packageRegistryParam.split(',') : ['npm', 'pypi']
+  );
   const [repositorySource, setRepositorySource] = useState<string>(
     repositorySourceParam
   );
@@ -121,7 +124,7 @@ function SearchContent() {
     });
 
     if (source !== 'all') params.set('source', source);
-    if (packageRegistry) params.set('packageRegistry', packageRegistry);
+    if (packageRegistries.length > 0) params.set('packageRegistry', packageRegistries.join(','));
     if (repositorySource) params.set('repositorySource', repositorySource);
 
     return `/api/service/search?${params.toString()}`;
@@ -130,7 +133,7 @@ function SearchContent() {
     source,
     pageSize,
     offset,
-    packageRegistry,
+    packageRegistries,
     repositorySource,
   ]);
 
@@ -200,7 +203,7 @@ function SearchContent() {
       tags: tags.join(','),
       category,
       pageSize,
-      packageRegistry,
+      packageRegistry: packageRegistries.join(','),
       repositorySource,
     };
   }, [
@@ -209,7 +212,7 @@ function SearchContent() {
     tags,
     category,
     pageSize,
-    packageRegistry,
+    packageRegistries,
     repositorySource,
   ]);
 
@@ -415,6 +418,15 @@ function SearchContent() {
             </Tabs>
           </div>
 
+          {/* Notice Banner about supported package types */}
+          {(source === McpServerSource.REGISTRY || source === 'all') && (
+            <Alert className='border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800'>
+              <AlertDescription className='text-sm text-blue-800 dark:text-blue-200'>
+                <strong>Note:</strong> We only support npm and python packages on the cloud but other package types may still work on proxy.
+              </AlertDescription>
+            </Alert>
+          )}
+
           {/* Filter Controls - Responsive horizontal scroll on mobile */}
           <div className='w-full'>
             <div className='flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin'>
@@ -466,7 +478,7 @@ function SearchContent() {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* Package Type Filter - Only show for registry source */}
+                {/* Package Type Filter - Multi-select with checkboxes */}
                 {(source === McpServerSource.REGISTRY || source === 'all') && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -474,9 +486,9 @@ function SearchContent() {
                         <Package className='h-4 w-4 mr-2' />
                         <span className="hidden sm:inline">{t('search.packageType', 'Package Type')}</span>
                         <span className="sm:hidden">Pkg</span>
-                        {packageRegistry && (
+                        {packageRegistries.length > 0 && (
                           <span className='ml-1 hidden lg:inline'>
-                            ({packageRegistry.toUpperCase()})
+                            ({packageRegistries.length})
                           </span>
                         )}
                       </Button>
@@ -490,36 +502,70 @@ function SearchContent() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
 
-                      <DropdownMenuItem
-                        onClick={() => setPackageRegistry('')}
-                        className={!packageRegistry ? 'bg-accent' : ''}>
-                        {t('search.allPackages', 'All Packages')}
-                      </DropdownMenuItem>
-
-                      <DropdownMenuSeparator />
-
-                      <DropdownMenuItem
-                        onClick={() => setPackageRegistry('npm')}
-                        className={packageRegistry === 'npm' ? 'bg-accent' : ''}>
+                      <DropdownMenuCheckboxItem
+                        checked={packageRegistries.includes('npm')}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setPackageRegistries([...packageRegistries, 'npm']);
+                          } else {
+                            setPackageRegistries(packageRegistries.filter((p) => p !== 'npm'));
+                          }
+                        }}>
                         <Package className='h-4 w-4 mr-2' />
                         NPM (Node.js)
-                      </DropdownMenuItem>
+                      </DropdownMenuCheckboxItem>
 
-                      <DropdownMenuItem
-                        onClick={() => setPackageRegistry('docker')}
-                        className={
-                          packageRegistry === 'docker' ? 'bg-accent' : ''
-                        }>
-                        <Box className='h-4 w-4 mr-2' />
-                        Docker
-                      </DropdownMenuItem>
-
-                      <DropdownMenuItem
-                        onClick={() => setPackageRegistry('pypi')}
-                        className={packageRegistry === 'pypi' ? 'bg-accent' : ''}>
+                      <DropdownMenuCheckboxItem
+                        checked={packageRegistries.includes('pypi')}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setPackageRegistries([...packageRegistries, 'pypi']);
+                          } else {
+                            setPackageRegistries(packageRegistries.filter((p) => p !== 'pypi'));
+                          }
+                        }}>
                         <Package className='h-4 w-4 mr-2' />
                         PyPI (Python)
-                      </DropdownMenuItem>
+                      </DropdownMenuCheckboxItem>
+
+                      <DropdownMenuCheckboxItem
+                        checked={packageRegistries.includes('oci')}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setPackageRegistries([...packageRegistries, 'oci']);
+                          } else {
+                            setPackageRegistries(packageRegistries.filter((p) => p !== 'oci'));
+                          }
+                        }}>
+                        <Box className='h-4 w-4 mr-2' />
+                        Docker (OCI)
+                      </DropdownMenuCheckboxItem>
+
+                      <DropdownMenuCheckboxItem
+                        checked={packageRegistries.includes('mcpb')}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setPackageRegistries([...packageRegistries, 'mcpb']);
+                          } else {
+                            setPackageRegistries(packageRegistries.filter((p) => p !== 'mcpb'));
+                          }
+                        }}>
+                        <Package className='h-4 w-4 mr-2' />
+                        MCPB
+                      </DropdownMenuCheckboxItem>
+
+                      <DropdownMenuCheckboxItem
+                        checked={packageRegistries.includes('nuget')}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setPackageRegistries([...packageRegistries, 'nuget']);
+                          } else {
+                            setPackageRegistries(packageRegistries.filter((p) => p !== 'nuget'));
+                          }
+                        }}>
+                        <Package className='h-4 w-4 mr-2' />
+                        NuGet
+                      </DropdownMenuCheckboxItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
@@ -656,7 +702,7 @@ function SearchContent() {
           {/* Active filters display */}
           {(category ||
             tags.length > 0 ||
-            packageRegistry ||
+            packageRegistries.length > 0 ||
             repositorySource) && (
             <div className='flex flex-wrap gap-2'>
               {category && (
@@ -682,17 +728,17 @@ function SearchContent() {
                 </Badge>
               ))}
 
-              {packageRegistry && (
-                <Badge variant='secondary' className='flex items-center gap-1'>
+              {packageRegistries.map((pkg) => (
+                <Badge key={pkg} variant='secondary' className='flex items-center gap-1'>
                   <Package className='h-3 w-3' />
-                  <span className="truncate max-w-[80px]">{packageRegistry.toUpperCase()}</span>
+                  <span className="truncate max-w-[80px]">{pkg.toUpperCase()}</span>
                   <button
                     className='ml-1 hover:bg-accent p-1 rounded-full'
-                    onClick={() => setPackageRegistry('')}>
+                    onClick={() => setPackageRegistries(packageRegistries.filter((p) => p !== pkg))}>
                     ✕
                   </button>
                 </Badge>
-              )}
+              ))}
 
               {repositorySource && (
                 <Badge variant='secondary' className='flex items-center gap-1'>
@@ -708,7 +754,7 @@ function SearchContent() {
 
               {(category ||
                 tags.length > 0 ||
-                packageRegistry ||
+                packageRegistries.length > 0 ||
                 repositorySource) && (
                 <Button
                   variant='ghost'
@@ -717,7 +763,7 @@ function SearchContent() {
                   onClick={() => {
                     setCategory('');
                     setTags([]);
-                    setPackageRegistry('');
+                    setPackageRegistries(['npm', 'pypi']);
                     setRepositorySource('');
                   }}>
                   {t('search.clearAllFilters')}
@@ -731,7 +777,7 @@ function SearchContent() {
             const filteredResults = getSortedResults();
             const filteredCount = filteredResults ? Object.keys(filteredResults).length : 0;
             const totalCount = data?.total || 0;
-            const hasActiveFilters = category || tags.length > 0 || packageRegistry || repositorySource;
+            const hasActiveFilters = category || tags.length > 0 || packageRegistries.length > 0 || repositorySource;
 
             return (
               <div className="flex items-center justify-between text-sm">

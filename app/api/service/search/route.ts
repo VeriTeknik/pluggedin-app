@@ -18,6 +18,14 @@ const CACHE_TTL: Record<McpServerSource, number> = {
   [McpServerSource.REGISTRY]: 1, // 1 minute for registry - to quickly reflect newly claimed servers
 };
 
+// Valid package registry types
+const VALID_REGISTRIES = ['npm', 'pypi', 'oci', 'mcpb', 'nuget'] as const;
+type PackageRegistry = typeof VALID_REGISTRIES[number];
+
+// Security limits for input validation
+const MAX_REGISTRIES = 10;
+const VALID_REGISTRY_PATTERN = /^[a-z0-9-]+$/;
+
 // Note: We no longer cache all registry servers since VP API provides efficient filtering
 
 /**
@@ -47,8 +55,17 @@ export async function GET(request: NextRequest) {
   const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0') || 0);
   const pageSize = Math.min(100, Math.max(1, parseInt(url.searchParams.get('pageSize') || '10') || 10));
   
-  // Filter parameters
-  const packageRegistry = url.searchParams.get('packageRegistry') as 'npm' | 'docker' | 'pypi' | null;
+  // Filter parameters with input validation
+  const packageRegistryParam = url.searchParams.get('packageRegistry');
+  const packageRegistries = packageRegistryParam
+    ? packageRegistryParam
+        .split(',')
+        .filter(Boolean)
+        .map(r => r.toLowerCase().trim())
+        .filter(r => VALID_REGISTRY_PATTERN.test(r))
+        .filter(r => VALID_REGISTRIES.includes(r as PackageRegistry))
+        .slice(0, MAX_REGISTRIES)
+    : [];
   const repositorySource = url.searchParams.get('repositorySource');
   const sort = url.searchParams.get('sort') || 'relevance';
 
@@ -65,14 +82,14 @@ export async function GET(request: NextRequest) {
 
     if (source === McpServerSource.REGISTRY) {
       // Registry servers from registry.plugged.in
-      results = await searchRegistry(query, { packageRegistry, repositorySource, sort });
+      results = await searchRegistry(query, { packageRegistries, repositorySource, sort });
       const paginated = paginateResults(results, offset, pageSize);
       return NextResponse.json(paginated);
     }
-    
+
     // If no source specified or invalid source, return both
     // Get registry results - these already include stats from VP API
-    const registryResults = await searchRegistry(query, { packageRegistry, repositorySource, sort });
+    const registryResults = await searchRegistry(query, { packageRegistries, repositorySource, sort });
     Object.assign(results, registryResults);
     
     // Include community results - these need local metrics enrichment
@@ -94,7 +111,7 @@ export async function GET(request: NextRequest) {
 }
 
 interface RegistryFilters {
-  packageRegistry?: 'npm' | 'docker' | 'pypi' | null;
+  packageRegistries?: string[];
   repositorySource?: string | null;
   sort?: string;
 }
@@ -107,9 +124,10 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
     // Use enhanced VP API with server-side filtering
     const vpFilters: any = {};
 
-    // Add registry_name filter if specified
-    if (filters.packageRegistry) {
-      vpFilters.registry_name = filters.packageRegistry;
+    // Add registry_name filter if a single package registry is specified
+    // If multiple are specified, we'll filter client-side after fetching all
+    if (filters.packageRegistries && filters.packageRegistries.length === 1) {
+      vpFilters.registry_name = filters.packageRegistries[0];
     }
 
     // Add search term if provided
@@ -130,9 +148,27 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
     // The backend handles filtering efficiently before returning results
     const servers = await registryVPClient.getAllServersWithStats(McpServerSource.REGISTRY, vpFilters);
 
+    // Create Set for O(1) lookup performance when filtering by multiple registries
+    const registrySet = filters.packageRegistries && filters.packageRegistries.length > 1
+      ? new Set(filters.packageRegistries.map(r => r.toLowerCase()))
+      : null;
+
     // Transform and index
     const indexed: SearchIndex = {};
     for (const server of servers) {
+      // Client-side filter by multiple package registries if specified
+      if (registrySet) {
+        // Skip servers without packages
+        if (!server.packages || server.packages.length === 0) {
+          continue;
+        }
+
+        const hasMatchingPackage = server.packages.some(pkg =>
+          pkg.registry_name && registrySet.has(pkg.registry_name.toLowerCase())
+        );
+        if (!hasMatchingPackage) continue;
+      }
+
       // Client-side filter by repository source if needed (not supported by API yet)
       if (filters.repositorySource && server.repository?.url) {
         const repoUrl = server.repository.url.toLowerCase();
