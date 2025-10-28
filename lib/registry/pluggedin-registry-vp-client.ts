@@ -38,6 +38,11 @@ export interface ExtendedServer {
 
 export interface ExtendedServersResponse {
   servers: ExtendedServer[];
+  metadata?: {
+    count: number;
+    total: number;
+    cached_at?: string;
+  };
 }
 
 export interface ExtendedServerResponse {
@@ -201,18 +206,71 @@ export class PluggedinRegistryVPClient {
     return data.server || data;
   }
   
-  // Get all servers with stats
-  async getAllServersWithStats(source?: McpServerSource): Promise<ExtendedServer[]> {
+  // Get all servers with stats (using offset-based pagination)
+  // WARNING: This method fetches ALL servers and should be used sparingly
+  // For most use cases, prefer getServersWithStats() with proper pagination
+  async getAllServersWithStats(
+    source?: McpServerSource,
+    filters?: {
+      registry_name?: string;
+      sort?: string;
+      search?: string;
+    },
+    maxServers: number = 1000 // Safety limit to prevent resource exhaustion
+  ): Promise<ExtendedServer[]> {
     const allServers: ExtendedServer[] = [];
-    let cursor: string | undefined;
-    
-    do {
-      const response = await this.getServersWithStats(100, cursor, source);
-      allServers.push(...response.servers);
-      // VP API doesn't use cursor yet, but ready for when it does
-      cursor = undefined; // response.metadata?.next_cursor;
-    } while (cursor);
-    
+    const batchSize = 100;
+    let offset = 0;
+    let hasMore = true;
+    const maxIterations = Math.ceil(maxServers / batchSize);
+    let iterations = 0;
+
+    while (hasMore && allServers.length < maxServers && iterations < maxIterations) {
+      iterations++;
+
+      try {
+        // Build URL with pagination
+        const params = new URLSearchParams({
+          limit: batchSize.toString(),
+          offset: offset.toString()
+        });
+        if (source) params.append('source', source);
+        if (filters?.registry_name) params.append('registry_name', filters.registry_name);
+        if (filters?.sort) params.append('sort', filters.sort);
+        if (filters?.search) params.append('search', filters.search);
+
+        const response = await this.fetchInternal(`/servers?${params}`);
+        if (!response.ok) {
+          console.error(`Failed to fetch servers at offset ${offset}: ${response.status}`);
+          break;
+        }
+
+        const data: ExtendedServersResponse = await response.json();
+        const servers = data.servers || [];
+
+        if (servers.length === 0) {
+          break;
+        }
+
+        // Only add up to the max limit
+        const remaining = maxServers - allServers.length;
+        allServers.push(...servers.slice(0, remaining));
+
+        if (allServers.length >= maxServers) {
+          console.warn(`Reached maximum server fetch limit: ${maxServers}`);
+          break;
+        }
+
+        offset += servers.length;
+
+        // Check if we've fetched all servers
+        hasMore = servers.length === batchSize;
+      } catch (error) {
+        console.error(`Error fetching batch at offset ${offset}:`, error);
+        break;
+      }
+    }
+
     return allServers;
   }
   

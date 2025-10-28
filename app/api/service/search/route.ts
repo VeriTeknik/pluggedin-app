@@ -106,17 +106,17 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
   try {
     // Use enhanced VP API with server-side filtering
     const vpFilters: any = {};
-    
+
     // Add registry_name filter if specified
     if (filters.packageRegistry) {
       vpFilters.registry_name = filters.packageRegistry;
     }
-    
+
     // Add search term if provided
     if (query) {
       vpFilters.search = query;
     }
-    
+
     // Map sort parameter to registry API format
     if (filters.sort === 'recent') {
       vpFilters.sort = 'release_date_desc';
@@ -124,12 +124,12 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
       // Default sort for other options (the registry API will handle relevance internally)
       vpFilters.sort = 'release_date_desc';
     }
-    
-    
-    // Use VP API to get servers with stats and server-side filtering
-    const response = await registryVPClient.getServersWithStats(100, undefined, McpServerSource.REGISTRY, vpFilters);
-    const servers = response.servers || [];
-    
+
+    // Fetch ALL servers to show accurate counts
+    // Note: The proxy API caches results for 5 minutes, so this is relatively performant
+    // The backend handles filtering efficiently before returning results
+    const servers = await registryVPClient.getAllServersWithStats(McpServerSource.REGISTRY, vpFilters);
+
     // Transform and index
     const indexed: SearchIndex = {};
     for (const server of servers) {
@@ -139,21 +139,20 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
         const source = filters.repositorySource.toLowerCase();
         if (!repoUrl.includes(source)) continue;
       }
-      
+
       const mcpIndex = transformPluggedinRegistryToMcpIndex(server);
-      
+
       // Add stats from VP API response
       mcpIndex.installation_count = server.installation_count || 0;
       mcpIndex.rating = server.rating || 0;
       mcpIndex.ratingCount = server.rating_count || 0;
-      
+
       indexed[server.id] = mcpIndex;
     }
-    
-    
+
     // Return results - no need to enrich with metrics as stats are already included
     return indexed;
-    
+
   } catch (error) {
     console.error('Registry search failed:', error);
     console.error('Registry search will be unavailable. Returning empty results.');
@@ -198,13 +197,33 @@ async function enrichWithMetrics(results: SearchIndex): Promise<SearchIndex> {
 
 
 /**
+ * Sanitize search query to prevent SQL injection
+ */
+function sanitizeSearchQuery(query: string): string {
+  if (!query || typeof query !== 'string') return '';
+
+  // Escape special LIKE/ILIKE characters (%, _, \)
+  const sanitized = query
+    .replace(/\\/g, '\\\\')  // Escape backslash first
+    .replace(/%/g, '\\%')     // Escape %
+    .replace(/_/g, '\\_')     // Escape _
+    .trim();
+
+  // Limit length to prevent DoS
+  return sanitized.substring(0, 100);
+}
+
+/**
  * Search for community MCP servers - implementation to show shared servers
- * 
+ *
  * @param query Search query
  * @returns SearchIndex of results
  */
 async function searchCommunity(query: string): Promise<SearchIndex> {
   try {
+    // Sanitize the search query to prevent SQL injection
+    const sanitizedQuery = sanitizeSearchQuery(query);
+
     // Get shared MCP servers, joining through profiles and projects to get user info
     const sharedServersQuery = db
       .select({
@@ -218,18 +237,18 @@ async function searchCommunity(query: string): Promise<SearchIndex> {
       .innerJoin(users, eq(projectsTable.user_id, users.id)) // Join to users
       .where((() => {
         const conditions = [eq(sharedMcpServersTable.is_public, true)];
-        
-        if (query) {
+
+        if (sanitizedQuery) {
           conditions.push(
             or(
-              ilike(sharedMcpServersTable.title, `%${query}%`),
-              ilike(sharedMcpServersTable.description || '', `%${query}%`),
-              ilike(users.username, `%${query}%`), // Search by username from users table
-              ilike(users.email, `%${query}%`) // Also search by user email
+              ilike(sharedMcpServersTable.title, `%${sanitizedQuery}%`),
+              ilike(sharedMcpServersTable.description || '', `%${sanitizedQuery}%`),
+              ilike(users.username, `%${sanitizedQuery}%`) // Search by username from users table
+              // REMOVED: email search to prevent information disclosure/GDPR violation
             )!
           );
         }
-        
+
         return and(...conditions);
       })())
       .orderBy(desc(sharedMcpServersTable.created_at))
