@@ -18,8 +18,8 @@ const CACHE_TTL: Record<McpServerSource, number> = {
   [McpServerSource.REGISTRY]: 1, // 1 minute for registry - to quickly reflect newly claimed servers
 };
 
-// Valid package registry types
-const VALID_REGISTRIES = ['npm', 'pypi', 'oci', 'mcpb', 'nuget'] as const;
+// Valid package registry types (including 'remote' for SSE/HTTP transport types)
+const VALID_REGISTRIES = ['npm', 'pypi', 'oci', 'mcpb', 'nuget', 'remote'] as const;
 type PackageRegistry = typeof VALID_REGISTRIES[number];
 
 // Security limits for input validation
@@ -124,9 +124,10 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
     // Use enhanced VP API with server-side filtering
     const vpFilters: any = {};
 
-    // Add registry_name filter if a single package registry is specified
+    // Add registry_name filter if a single package registry is specified (except 'remote')
+    // 'remote' is handled differently as it filters by transport type
     // If multiple are specified, we'll filter client-side after fetching all
-    if (filters.packageRegistries && filters.packageRegistries.length === 1) {
+    if (filters.packageRegistries && filters.packageRegistries.length === 1 && filters.packageRegistries[0] !== 'remote') {
       vpFilters.registry_name = filters.packageRegistries[0];
     }
 
@@ -148,25 +149,48 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
     // The backend handles filtering efficiently before returning results
     const servers = await registryVPClient.getAllServersWithStats(McpServerSource.REGISTRY, vpFilters);
 
+    // Separate regular registries from 'remote' filter
+    const hasRemoteFilter = filters.packageRegistries?.includes('remote');
+    const regularRegistries = filters.packageRegistries?.filter(r => r !== 'remote') || [];
+
     // Create Set for O(1) lookup performance when filtering by multiple registries
-    const registrySet = filters.packageRegistries && filters.packageRegistries.length > 1
-      ? new Set(filters.packageRegistries.map(r => r.toLowerCase()))
+    const registrySet = regularRegistries.length > 0
+      ? new Set(regularRegistries.map(r => r.toLowerCase()))
       : null;
+
+    // Handle single 'remote' filter case - needs client-side filtering
+    const needsClientSideFilter = (filters.packageRegistries && filters.packageRegistries.length > 1) ||
+                                  (filters.packageRegistries && filters.packageRegistries.length === 1 && filters.packageRegistries[0] === 'remote');
 
     // Transform and index
     const indexed: SearchIndex = {};
     for (const server of servers) {
-      // Client-side filter by multiple package registries if specified
-      if (registrySet) {
+      // Client-side filter if we have multiple registries OR if we have 'remote' filter
+      if (needsClientSideFilter) {
         // Skip servers without packages
         if (!server.packages || server.packages.length === 0) {
           continue;
         }
 
-        const hasMatchingPackage = server.packages.some(pkg =>
-          pkg.registry_name && registrySet.has(pkg.registry_name.toLowerCase())
-        );
-        if (!hasMatchingPackage) continue;
+        let hasMatch = false;
+
+        // Check regular registry matches
+        if (registrySet) {
+          hasMatch = server.packages.some(pkg =>
+            pkg.registry_name && registrySet.has(pkg.registry_name.toLowerCase())
+          );
+        }
+
+        // Check remote (SSE/HTTP transport) matches
+        if (hasRemoteFilter) {
+          const hasRemoteTransport = server.packages.some(pkg =>
+            pkg.transport?.type && (pkg.transport.type === 'sse' || pkg.transport.type === 'http')
+          );
+          hasMatch = hasMatch || hasRemoteTransport;
+        }
+
+        // If no matches found, skip this server
+        if (!hasMatch && (registrySet || hasRemoteFilter)) continue;
       }
 
       // Client-side filter by repository source if needed (not supported by API yet)

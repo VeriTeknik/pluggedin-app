@@ -4,6 +4,7 @@ import {
   Box,
   Filter,
   Github,
+  Globe,
   Layers,
   Package,
   Plus,
@@ -60,6 +61,7 @@ const PACKAGE_REGISTRIES = [
   { value: 'npm', label: 'NPM (Node.js)', icon: Package },
   { value: 'pypi', label: 'PyPI (Python)', icon: Package },
   { value: 'oci', label: 'Docker (OCI)', icon: Box },
+  { value: 'remote', label: 'Remote (SSE/HTTP)', icon: Globe },
   { value: 'mcpb', label: 'MCPB', icon: Package },
   { value: 'nuget', label: 'NuGet', icon: Package },
 ] as const;
@@ -745,7 +747,11 @@ function SearchContent() {
             const filteredResults = getSortedResults();
             const filteredCount = filteredResults ? Object.keys(filteredResults).length : 0;
             const totalCount = data?.total || 0;
-            const hasActiveFilters = category || tags.length > 0 || packageRegistries.length > 0 || repositorySource;
+            // Only consider filters active if they differ from defaults
+            const hasActiveFilters = category ||
+              tags.length > 0 ||
+              !(packageRegistries.length === 2 && packageRegistries.includes('npm') && packageRegistries.includes('pypi')) ||
+              repositorySource;
 
             return (
               <div className="flex items-center justify-between text-sm">
