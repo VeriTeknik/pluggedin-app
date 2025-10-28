@@ -546,23 +546,42 @@ export class PluggedinRegistryVPClient {
         sort,
       });
 
-      const response = await this.fetchInternal(`/servers/${serverId}/feedback?${params}`, {
+      const path = `/servers/${serverId}/feedback?${params}`;
+      const fullUrl = `${this.vpUrl}${path}`;
+      console.log('[VP Client getFeedback] Fetching feedback from:', fullUrl);
+      console.log('[VP Client getFeedback] Server ID:', serverId);
+      console.log('[VP Client getFeedback] vpUrl:', this.vpUrl);
+
+      const response = await this.fetchInternal(path, {
         headers: {
           'User-Agent': 'PluggedIn-App/1.0',
         },
       });
 
+      console.log('[VP Client getFeedback] Response status:', response.status);
+      console.log('[VP Client getFeedback] Response headers:', Object.fromEntries(response.headers.entries()));
+
       if (!response.ok) {
-        // Only log non-404 errors since 404 is expected for servers without reviews
-        if (response.status !== 404) {
-          console.error('[Registry VP] Failed to get feedback:', response.status);
-        }
+        // Get response text to see what error we're getting
+        const responseText = await response.text();
+        console.error('[Registry VP] Failed to get feedback:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: responseText.substring(0, 200)
+        });
         return { feedback: [], total_count: 0, has_more: false };
       }
 
-      return await response.json();
+      const data = await response.json();
+      console.log('[VP Client getFeedback] Success, got', data.feedback?.length || 0, 'feedback items');
+      return data;
     } catch (error) {
       console.error('[Registry VP] Error getting feedback:', error);
+      console.error('[Registry VP] Error details:', {
+        name: error instanceof Error ? error.name : 'Unknown',
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined
+      });
       return { feedback: [], total_count: 0, has_more: false };
     }
   }
