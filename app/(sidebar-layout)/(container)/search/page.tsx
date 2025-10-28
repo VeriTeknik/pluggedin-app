@@ -55,6 +55,15 @@ const DEFAULT_PAGE_SIZE = 12;
 
 type SortOption = 'relevance' | 'popularity' | 'recent' | 'stars';
 
+// Package registry filter options
+const PACKAGE_REGISTRIES = [
+  { value: 'npm', label: 'NPM (Node.js)', icon: Package },
+  { value: 'pypi', label: 'PyPI (Python)', icon: Package },
+  { value: 'oci', label: 'Docker (OCI)', icon: Box },
+  { value: 'mcpb', label: 'MCPB', icon: Package },
+  { value: 'nuget', label: 'NuGet', icon: Package },
+] as const;
+
 function SearchContent() {
   const { t } = useTranslation();
   const router = useRouter();
@@ -301,6 +310,14 @@ function SearchContent() {
     );
   };
 
+  const handlePackageRegistryToggle = (registry: string, checked: boolean) => {
+    setPackageRegistries((prev) =>
+      checked
+        ? prev.includes(registry) ? prev : [...prev, registry]
+        : prev.filter((p) => p !== registry)
+    );
+  };
+
   const handleCategoryChange = (cat: McpServerCategory | '') => {
     setCategory(cat);
   };
@@ -418,11 +435,13 @@ function SearchContent() {
             </Tabs>
           </div>
 
-          {/* Notice Banner about supported package types */}
-          {(source === McpServerSource.REGISTRY || source === 'all') && (
-            <Alert className='border-blue-200 bg-blue-50 dark:bg-blue-950 dark:border-blue-800'>
-              <AlertDescription className='text-sm text-blue-800 dark:text-blue-200'>
-                <strong>Note:</strong> We only support npm and python packages on the cloud but other package types may still work on proxy.
+          {/* Notice Banner about supported package types - only show when non-default types selected */}
+          {(source === McpServerSource.REGISTRY || source === 'all') &&
+            packageRegistries.some(r => !['npm', 'pypi'].includes(r)) && (
+            <Alert className='border-amber-200 bg-amber-50 dark:bg-amber-950 dark:border-amber-800'>
+              <AlertDescription className='text-sm text-amber-800 dark:text-amber-200'>
+                <strong>Note:</strong> OCI (Docker), MCPB, and NuGet packages have limited support.
+                For best compatibility, use NPM or PyPI packages.
               </AlertDescription>
             </Alert>
           )}
@@ -486,7 +505,10 @@ function SearchContent() {
                         <Package className='h-4 w-4 mr-2' />
                         <span className="hidden sm:inline">{t('search.packageType', 'Package Type')}</span>
                         <span className="sm:hidden">Pkg</span>
-                        {packageRegistries.length > 0 && (
+                        {packageRegistries.length > 0 &&
+                         !(packageRegistries.length === 2 &&
+                           packageRegistries.includes('npm') &&
+                           packageRegistries.includes('pypi')) && (
                           <span className='ml-1 hidden lg:inline'>
                             ({packageRegistries.length})
                           </span>
@@ -502,70 +524,16 @@ function SearchContent() {
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
 
-                      <DropdownMenuCheckboxItem
-                        checked={packageRegistries.includes('npm')}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setPackageRegistries([...packageRegistries, 'npm']);
-                          } else {
-                            setPackageRegistries(packageRegistries.filter((p) => p !== 'npm'));
-                          }
-                        }}>
-                        <Package className='h-4 w-4 mr-2' />
-                        NPM (Node.js)
-                      </DropdownMenuCheckboxItem>
-
-                      <DropdownMenuCheckboxItem
-                        checked={packageRegistries.includes('pypi')}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setPackageRegistries([...packageRegistries, 'pypi']);
-                          } else {
-                            setPackageRegistries(packageRegistries.filter((p) => p !== 'pypi'));
-                          }
-                        }}>
-                        <Package className='h-4 w-4 mr-2' />
-                        PyPI (Python)
-                      </DropdownMenuCheckboxItem>
-
-                      <DropdownMenuCheckboxItem
-                        checked={packageRegistries.includes('oci')}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setPackageRegistries([...packageRegistries, 'oci']);
-                          } else {
-                            setPackageRegistries(packageRegistries.filter((p) => p !== 'oci'));
-                          }
-                        }}>
-                        <Box className='h-4 w-4 mr-2' />
-                        Docker (OCI)
-                      </DropdownMenuCheckboxItem>
-
-                      <DropdownMenuCheckboxItem
-                        checked={packageRegistries.includes('mcpb')}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setPackageRegistries([...packageRegistries, 'mcpb']);
-                          } else {
-                            setPackageRegistries(packageRegistries.filter((p) => p !== 'mcpb'));
-                          }
-                        }}>
-                        <Package className='h-4 w-4 mr-2' />
-                        MCPB
-                      </DropdownMenuCheckboxItem>
-
-                      <DropdownMenuCheckboxItem
-                        checked={packageRegistries.includes('nuget')}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setPackageRegistries([...packageRegistries, 'nuget']);
-                          } else {
-                            setPackageRegistries(packageRegistries.filter((p) => p !== 'nuget'));
-                          }
-                        }}>
-                        <Package className='h-4 w-4 mr-2' />
-                        NuGet
-                      </DropdownMenuCheckboxItem>
+                      {PACKAGE_REGISTRIES.map(({ value, label, icon: Icon }) => (
+                        <DropdownMenuCheckboxItem
+                          key={value}
+                          checked={packageRegistries.includes(value)}
+                          onCheckedChange={(checked) => handlePackageRegistryToggle(value, checked)}
+                          aria-label={`Filter by ${label} package registry`}>
+                          <Icon className='h-4 w-4 mr-2' />
+                          {label}
+                        </DropdownMenuCheckboxItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 )}
