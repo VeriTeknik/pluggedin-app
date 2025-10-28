@@ -726,6 +726,30 @@ function SearchContent() {
             </div>
           )}
 
+          {/* Results Summary */}
+          {data?.results && (() => {
+            const filteredResults = getSortedResults();
+            const filteredCount = filteredResults ? Object.keys(filteredResults).length : 0;
+            const totalCount = data?.total || 0;
+            const hasActiveFilters = category || tags.length > 0 || packageRegistry || repositorySource;
+
+            return (
+              <div className="flex items-center justify-between text-sm">
+                <div className="text-muted-foreground">
+                  {hasActiveFilters ? (
+                    <span>
+                      {t('search.showingFiltered', 'Showing')} <span className="font-semibold text-primary">{filteredCount}</span> {t('search.of', 'of')} {totalCount} {t('search.servers', 'servers')}
+                    </span>
+                  ) : (
+                    <span>
+                      <span className="font-semibold text-foreground">{totalCount}</span> {t('search.totalServers', 'MCP Servers')}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+
           {data?.results && (
             <CardGrid
               items={getSortedResults() || {}}
@@ -737,19 +761,24 @@ function SearchContent() {
           )}
 
           <div className='pb-3'>
-            {data && data.total > 0 && (
-              <div className='flex flex-col sm:flex-row items-center justify-between gap-4'>
-                <PageSizeSelector
-                  pageSize={pageSize}
-                  onPageSizeChange={handlePageSizeChange}
-                />
-                <PaginationUi
-                  currentPage={Math.floor(offset / pageSize) + 1}
-                  totalPages={Math.ceil(data.total / pageSize)}
-                  onPageChange={handlePageChange}
-                />
-              </div>
-            )}
+            {data && data.total > 0 && (() => {
+              const filteredResults = getSortedResults();
+              const filteredCount = filteredResults ? Object.keys(filteredResults).length : 0;
+
+              return filteredCount > 0 && (
+                <div className='flex flex-col sm:flex-row items-center justify-between gap-4'>
+                  <PageSizeSelector
+                    pageSize={pageSize}
+                    onPageSizeChange={handlePageSizeChange}
+                  />
+                  <PaginationUi
+                    currentPage={Math.floor(offset / pageSize) + 1}
+                    totalPages={Math.ceil(filteredCount / pageSize)}
+                    onPageChange={handlePageChange}
+                  />
+                </div>
+              );
+            })()}
           </div>
         </div>
 
