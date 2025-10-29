@@ -621,5 +621,80 @@ describe('Registry Transformer - Remotes Field Support', () => {
       expect(result.url).toBe('https://example.com/mcp');
       expect(result.command).toBeNull();
     });
+
+    it('should handle undefined transport_type gracefully', () => {
+      const server: PluggedinRegistryServer = {
+        id: 'test/undefined-transport',
+        name: 'test/undefined-transport',
+        description: 'Remote with undefined transport type',
+        remotes: [
+          {
+            transport_type: undefined as any,
+            url: 'https://example.com/mcp',
+          },
+        ],
+        version_detail: {
+          version: '1.0.0',
+          release_date: '2024-01-01',
+          is_latest: true,
+        },
+      };
+
+      const result = transformPluggedinRegistryToMcpIndex(server);
+
+      // Should default to stdio when transport_type is undefined
+      expect(result.url).toBe('https://example.com/mcp');
+      expect(result.command).toBeNull();
+    });
+
+    it('should handle null transport_type gracefully', () => {
+      const server: PluggedinRegistryServer = {
+        id: 'test/null-transport',
+        name: 'test/null-transport',
+        description: 'Remote with null transport type',
+        remotes: [
+          {
+            transport_type: null as any,
+            url: 'https://example.com/mcp',
+          },
+        ],
+        version_detail: {
+          version: '1.0.0',
+          release_date: '2024-01-01',
+          is_latest: true,
+        },
+      };
+
+      const result = transformPluggedinRegistryToMcpIndex(server);
+
+      // Should default to stdio when transport_type is null
+      expect(result.url).toBe('https://example.com/mcp');
+      expect(result.command).toBeNull();
+    });
+
+    it('should handle empty string transport_type gracefully', () => {
+      const server: PluggedinRegistryServer = {
+        id: 'test/empty-transport',
+        name: 'test/empty-transport',
+        description: 'Remote with empty transport type',
+        remotes: [
+          {
+            transport_type: '',
+            url: 'https://example.com/mcp',
+          },
+        ],
+        version_detail: {
+          version: '1.0.0',
+          release_date: '2024-01-01',
+          is_latest: true,
+        },
+      };
+
+      const result = transformPluggedinRegistryToMcpIndex(server);
+
+      // Should default to stdio when transport_type is empty
+      expect(result.url).toBe('https://example.com/mcp');
+      expect(result.command).toBeNull();
+    });
   });
 });

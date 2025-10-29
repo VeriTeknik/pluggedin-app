@@ -303,7 +303,12 @@ function extractTags(server: PluggedinRegistryServer): string[] {
 /**
  * Normalize transport type aliases to standard format
  */
-function normalizeTransportType(transportType: string): 'stdio' | 'sse' | 'streamable-http' | 'http' {
+function normalizeTransportType(transportType: string | undefined | null): 'stdio' | 'sse' | 'streamable-http' | 'http' {
+  // Handle undefined, null, or empty strings
+  if (!transportType) {
+    return 'stdio';
+  }
+
   const normalized = transportType.toLowerCase().replace('_', '-');
 
   if (normalized === 'streamable-http' || normalized === 'streamable') {

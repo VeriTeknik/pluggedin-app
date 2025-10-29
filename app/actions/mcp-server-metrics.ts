@@ -18,8 +18,21 @@ async function submitRatingToRegistry(
   comment?: string
 ) {
   try {
+    // Only use internal API key if it's set and valid
+    // For public user ratings, the registry will authenticate via other means
     const apiKey = process.env.REGISTRY_INTERNAL_API_KEY;
-    return await registryVPClient.submitRating(serverId, rating, source, userId, comment, apiKey);
+
+    // Don't use the API key if it's a placeholder or development value
+    const isValidApiKey = apiKey && !apiKey.includes('example') && !apiKey.includes('your-');
+
+    return await registryVPClient.submitRating(
+      serverId,
+      rating,
+      source,
+      userId,
+      comment,
+      isValidApiKey ? apiKey : undefined
+    );
   } catch (error) {
     console.error('[MCP Server Metrics] Error submitting rating to registry:', error);
     return { success: false };
@@ -39,14 +52,17 @@ async function trackInstallationInRegistry(
   }
 ) {
   try {
+    // Only use internal API key if it's set and valid
     const apiKey = process.env.REGISTRY_INTERNAL_API_KEY;
+    const isValidApiKey = apiKey && !apiKey.includes('example') && !apiKey.includes('your-');
+
     return await registryVPClient.trackInstallation(serverId, {
       source,
       user_id: metadata?.userId,
       version: metadata?.version,
       platform: metadata?.platform,
       timestamp: Date.now()
-    }, apiKey);
+    }, isValidApiKey ? apiKey : undefined);
   } catch (error) {
     console.error('Error tracking installation in registry:', error);
     return { success: false };

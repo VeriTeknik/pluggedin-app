@@ -76,7 +76,12 @@
       "viewReviews": "{{count}} समीक्षाएं देखें",
       "installationStats": "इंस्टॉलेशन आंकड़े",
       "installedByUsers": "{{count}} उपयोगकर्ताओं द्वारा इंस्टॉल किया गया",
-      "usageCount": "उपयोग गिनती"
+      "usageCount": "उपयोग गिनती",
+      "notRatedYet": "Not rated yet",
+      "noReviewsYet": "No reviews yet. Be the first to share your experience!",
+      "beFirstToReview": "Write First Review",
+      "noInstallsYet": "No installations recorded yet",
+      "stats": "Statistics"
     },
     "registries": {
       "registry": "रजिस्ट्री",

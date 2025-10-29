@@ -76,7 +76,12 @@
       "viewReviews": "{{count}} Değerlendirmeyi Görüntüle",
       "installationStats": "Kurulum İstatistikleri",
       "installedByUsers": "{{count}} kullanıcı tarafından yüklendi",
-      "usageCount": "Kullanım Sayısı"
+      "usageCount": "Kullanım Sayısı",
+      "notRatedYet": "Henüz değerlendirilmedi",
+      "noReviewsYet": "Henüz değerlendirme yok. Deneyiminizi paylaşan ilk kişi olun!",
+      "beFirstToReview": "İlk Değerlendirmeyi Yaz",
+      "noInstallsYet": "Henüz kurulum kaydı yok",
+      "stats": "İstatistikler"
     },
     "registries": {
       "registry": "Kayıt",
