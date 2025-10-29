@@ -38,6 +38,9 @@ export interface ExtendedServer {
 
 export interface ExtendedServersResponse {
   servers: ExtendedServer[];
+  total_count?: number;
+  limit?: number;
+  offset?: number;
   metadata?: {
     count: number;
     total: number;
@@ -219,7 +222,7 @@ export class PluggedinRegistryVPClient {
       search?: string;
     },
     maxServers: number = 1000 // Safety limit to prevent resource exhaustion
-  ): Promise<ExtendedServer[]> {
+  ): Promise<ExtendedServersResponse> {
     try {
       // Use enhanced endpoint for better filtering
       const params = new URLSearchParams({
@@ -260,7 +263,12 @@ export class PluggedinRegistryVPClient {
       }
 
       const data = await response.json();
-      return data.servers || [];
+      return {
+        servers: data.servers || [],
+        total_count: data.total_count,
+        limit: data.limit,
+        offset: data.offset
+      };
     } catch (error) {
       console.error('Error with enhanced endpoint, using fallback:', error);
       return this.getAllServersWithStatsFallback(source, filters, maxServers);
@@ -276,7 +284,7 @@ export class PluggedinRegistryVPClient {
       search?: string;
     },
     maxServers: number = 1000
-  ): Promise<ExtendedServer[]> {
+  ): Promise<ExtendedServersResponse> {
     const allServers: ExtendedServer[] = [];
     const batchSize = 100;
     let offset = 0;
@@ -330,7 +338,12 @@ export class PluggedinRegistryVPClient {
       }
     }
 
-    return allServers;
+    return {
+      servers: allServers,
+      total_count: allServers.length, // Fallback doesn't have total_count from server
+      limit: maxServers,
+      offset: 0
+    };
   }
   
   // Track installation

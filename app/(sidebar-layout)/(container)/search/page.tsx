@@ -793,7 +793,7 @@ function SearchContent() {
                   />
                   <PaginationUi
                     currentPage={Math.floor(offset / pageSize) + 1}
-                    totalPages={Math.ceil(filteredCount / pageSize)}
+                    totalPages={Math.ceil((data?.total || 0) / pageSize)}
                     onPageChange={handlePageChange}
                   />
                 </div>

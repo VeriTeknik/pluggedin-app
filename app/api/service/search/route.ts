@@ -82,21 +82,22 @@ export async function GET(request: NextRequest) {
 
     if (source === McpServerSource.REGISTRY) {
       // Registry servers from registry.plugged.in
-      results = await searchRegistry(query, { packageRegistries, repositorySource, sort });
-      const paginated = paginateResults(results, offset, pageSize);
+      const registryResult = await searchRegistry(query, { packageRegistries, repositorySource, sort });
+      const paginated = paginateResults(registryResult.indexed, offset, pageSize, registryResult.totalCount);
       return NextResponse.json(paginated);
     }
 
     // If no source specified or invalid source, return both
     // Get registry results - these already include stats from VP API
-    const registryResults = await searchRegistry(query, { packageRegistries, repositorySource, sort });
-    Object.assign(results, registryResults);
-    
+    const registryResult = await searchRegistry(query, { packageRegistries, repositorySource, sort });
+    Object.assign(results, registryResult.indexed);
+
     // Include community results - these need local metrics enrichment
     const communityResults = await searchCommunity(query);
     Object.assign(results, communityResults);
-    
+
     // Paginate and return results
+    // Note: When combining sources, we can't use totalCount from API as it would be inaccurate
     const paginatedResults = paginateResults(results, offset, pageSize);
     return NextResponse.json(paginatedResults);
   } catch (_error) {
@@ -116,10 +117,15 @@ interface RegistryFilters {
   sort?: string;
 }
 
+interface RegistrySearchResult {
+  indexed: SearchIndex;
+  totalCount?: number;
+}
+
 /**
  * Search for MCP servers in the Plugged.in Registry using VP API
  */
-async function searchRegistry(query: string, filters: RegistryFilters = {}): Promise<SearchIndex> {
+async function searchRegistry(query: string, filters: RegistryFilters = {}): Promise<RegistrySearchResult> {
   try {
     // Use enhanced VP API with server-side filtering
     const vpFilters: any = {};
@@ -147,11 +153,11 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
 
     // Fetch servers using enhanced endpoint
     // The enhanced endpoint handles all filtering server-side, no need for client-side filtering
-    const servers = await registryVPClient.getAllServersWithStats(McpServerSource.REGISTRY, vpFilters);
+    const response = await registryVPClient.getAllServersWithStats(McpServerSource.REGISTRY, vpFilters);
 
     // Transform and index
     const indexed: SearchIndex = {};
-    for (const server of servers) {
+    for (const server of response.servers) {
 
       // Client-side filter by repository source if needed (not supported by API yet)
       if (filters.repositorySource && server.repository?.url) {
@@ -170,14 +176,20 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
       indexed[server.id] = mcpIndex;
     }
 
-    // Return results - no need to enrich with metrics as stats are already included
-    return indexed;
+    // Return results with total count from API
+    return {
+      indexed,
+      totalCount: response.total_count
+    };
 
   } catch (error) {
     console.error('Registry search failed:', error);
     console.error('Registry search will be unavailable. Returning empty results.');
     // Return empty results on error to allow other sources to work
-    return {};
+    return {
+      indexed: {},
+      totalCount: 0
+    };
   }
 }
 
@@ -415,23 +427,24 @@ async function cacheResults(source: McpServerSource, query: string, results: Sea
 
 /**
  * Paginate search results
- * 
+ *
  * @param results Full search results
  * @param offset Offset for pagination
  * @param pageSize Page size
+ * @param totalCount Optional total count from API (if not provided, uses results length)
  * @returns Paginated results
  */
-function paginateResults(results: SearchIndex, offset: number, pageSize: number): PaginatedSearchResult {
+function paginateResults(results: SearchIndex, offset: number, pageSize: number, totalCount?: number): PaginatedSearchResult {
   const keys = Object.keys(results);
-  const totalResults = keys.length;
-  
+  const totalResults = totalCount ?? keys.length; // Use provided totalCount or fall back to keys.length
+
   const paginatedKeys = keys.slice(offset, offset + pageSize);
   const paginatedResults: SearchIndex = {};
-  
+
   for (const key of paginatedKeys) {
     paginatedResults[key] = results[key];
   }
-  
+
   return {
     results: paginatedResults,
     total: totalResults,
