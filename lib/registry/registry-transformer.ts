@@ -128,27 +128,30 @@ function extractCommand(pkg?: RegistryPackage): string {
 // Helper function to extract arguments from schema structure
 function extractArgumentsFromSchema(schemaArgs: any[]): string[] {
   const result: string[] = [];
-  
+
   if (!schemaArgs || !Array.isArray(schemaArgs)) return result;
-  
+
   for (const arg of schemaArgs) {
     if (arg.type === 'positional') {
       // For positional arguments, use value or default
       const value = arg.value || arg.default || arg.value_hint || '';
       if (value) result.push(value);
     } else if (arg.type === 'named') {
-      // For named arguments, add the name and value separately
+      // For named arguments, add the name and optionally the value
       const name = arg.name || '';
       const value = arg.value || arg.default || '';
-      
+
       if (name) {
         result.push(name);
-        // Only add value if it exists (some flags don't have values)
-        if (value) result.push(value);
+        // Only add value if it exists (some flags are boolean flags without values)
+        // Skip adding value if it's explicitly a boolean flag
+        if (value && !['true', 'false'].includes(value.toLowerCase())) {
+          result.push(value);
+        }
       }
     }
   }
-  
+
   return result;
 }
 
@@ -300,7 +303,17 @@ function extractTags(server: PluggedinRegistryServer): string[] {
 export function inferTransportType(
   server: {
     packages?: RegistryPackage[];
-    remotes?: Array<{ transport_type: string; url: string; headers?: Record<string, string> }>
+    remotes?: Array<{
+      transport_type: string;
+      url: string;
+      headers?: Array<{
+        name: string;
+        description?: string;
+        default?: string;
+        is_required?: boolean;
+        is_secret?: boolean;
+      }> | Record<string, string>;
+    }>
   }
 ): {
   transport: 'stdio' | 'sse' | 'streamable-http' | 'http';
@@ -310,14 +323,42 @@ export function inferTransportType(
   // Priority 1: Check remotes first (remote servers don't need installation)
   if (server.remotes?.length) {
     // Prefer streamable-http > sse > http
-    const remote = server.remotes.find(r => r.transport_type === 'streamable-http')
-                   || server.remotes.find(r => r.transport_type === 'sse')
-                   || server.remotes[0];
+    const remote = server.remotes.find(r =>
+      r.transport_type === 'streamable-http' ||
+      r.transport_type === 'streamable_http' ||
+      r.transport_type === 'streamable'
+    ) || server.remotes.find(r => r.transport_type === 'sse')
+      || server.remotes.find(r => r.transport_type === 'http')
+      || server.remotes[0];
+
+    // Map transport type variations
+    let transport: 'sse' | 'streamable-http' | 'http' = 'streamable-http';
+    if (remote.transport_type === 'sse') {
+      transport = 'sse';
+    } else if (remote.transport_type === 'http') {
+      transport = 'http';
+    } else {
+      // All variations of streamable-http
+      transport = 'streamable-http';
+    }
+
+    // Convert headers from array to object if needed
+    let headers: Record<string, string> | undefined;
+    if (Array.isArray(remote.headers)) {
+      headers = {};
+      for (const header of remote.headers) {
+        if (header.default) {
+          headers[header.name] = header.default;
+        }
+      }
+    } else if (remote.headers) {
+      headers = remote.headers as Record<string, string>;
+    }
 
     return {
-      transport: remote.transport_type as 'sse' | 'streamable-http' | 'http',
+      transport,
       url: remote.url,
-      headers: remote.headers
+      headers: headers && Object.keys(headers).length > 0 ? headers : undefined
     };
   }
 

@@ -22,17 +22,42 @@ interface PluggedinRegistryServer {
       type: string; // stdio, sse, or http
     };
     runtime_hint?: string;
-    package_arguments?: any[];
-    runtime_arguments?: any[];
+    package_arguments?: Array<{
+      type: 'positional' | 'named';
+      name?: string;
+      value?: string;
+      default?: string;
+      description?: string;
+      choices?: string[];
+      is_required?: boolean;
+    }>;
+    runtime_arguments?: Array<{
+      type: 'positional' | 'named';
+      name?: string;
+      value?: string;
+      default?: string;
+      description?: string;
+      choices?: string[];
+      is_required?: boolean;
+    }>;
     environment_variables?: Array<{
       name: string;
       description?: string;
+      default?: string;
+      is_required?: boolean;
+      is_secret?: boolean;
     }>;
   }>;
   remotes?: Array<{
-    transport_type: 'sse' | 'streamable-http' | 'http';
+    transport_type: 'sse' | 'streamable-http' | 'streamable_http' | 'http';
     url: string;
-    headers?: Record<string, string>;
+    headers?: Array<{
+      name: string;
+      description?: string;
+      default?: string;
+      is_required?: boolean;
+      is_secret?: boolean;
+    }>;
   }>;
 }
 
