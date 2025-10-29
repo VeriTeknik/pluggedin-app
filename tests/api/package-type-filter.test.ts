@@ -368,6 +368,85 @@ describe('Search API - Package Type Filtering', () => {
       // Empty filter should return all servers
       expect(data.total).toBe(738);
     });
+
+    it('should handle mixed valid and invalid package types', async () => {
+      (registryVPClient.getAllServersWithStats as any).mockResolvedValueOnce({
+        servers: [createMockNpmServer()],
+        total_count: 1,
+        limit: 100,
+        offset: 0,
+      });
+
+      // Mix valid (npm, pypi) with invalid (invalid-type, malicious)
+      const request = new NextRequest(
+        'http://localhost:3000/api/service/search?source=REGISTRY&packageRegistry=npm,invalid-type,pypi,malicious&offset=0'
+      );
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      // Should only use valid types
+      expect(response.status).toBe(200);
+      expect(data.total).toBe(1);
+    });
+
+    it('should handle unexpected API format with missing fields', async () => {
+      // Simulate API returning malformed data
+      (registryVPClient.getAllServersWithStats as any).mockResolvedValueOnce({
+        servers: [{ id: 'test', name: 'Test' }], // Missing required fields
+        // Missing total_count
+      });
+
+      const request = new NextRequest(
+        'http://localhost:3000/api/service/search?source=REGISTRY&packageRegistry=npm&offset=0'
+      );
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      // Should handle gracefully
+      expect(response.status).toBe(200);
+      expect(data.total).toBeGreaterThanOrEqual(0);
+    });
+
+    it('should handle API errors gracefully', async () => {
+      // Simulate VP Client throwing error
+      (registryVPClient.getAllServersWithStats as any).mockRejectedValueOnce(
+        new Error('Network error')
+      );
+
+      const request = new NextRequest(
+        'http://localhost:3000/api/service/search?source=REGISTRY&packageRegistry=npm&offset=0'
+      );
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      // Should return 200 with empty results instead of crashing
+      expect(response.status).toBe(200);
+      expect(data.total).toBe(0);
+      expect(Object.keys(data.results)).toHaveLength(0);
+    });
+
+    it('should handle null or undefined packageRegistry parameter', async () => {
+      (registryVPClient.getAllServersWithStats as any).mockResolvedValueOnce({
+        servers: [],
+        total_count: 738,
+        limit: 100,
+        offset: 0,
+      });
+
+      const request = new NextRequest(
+        'http://localhost:3000/api/service/search?source=REGISTRY&offset=0'
+      );
+
+      const response = await GET(request);
+      const data = await response.json();
+
+      // Should handle missing parameter gracefully
+      expect(response.status).toBe(200);
+      expect(data.total).toBe(738);
+    });
   });
 
   describe('Remote server identification', () => {

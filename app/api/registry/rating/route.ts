@@ -15,12 +15,12 @@ export async function GET(request: NextRequest) {
     }
 
     const client = new PluggedinRegistryVPClient();
-    const hasRated = await client.getUserRating(serverId, userId);
+    const userRating = await client.getUserRating(serverId, userId);
 
     return NextResponse.json({
       success: true,
-      hasRated,
-      rating: hasRated // This should return the actual rating if exists
+      hasRated: !!userRating,
+      rating: userRating
     });
   } catch (error) {
     console.error('Failed to check user rating:', error);

@@ -263,4 +263,134 @@ describe('PluggedinRegistryVPClient - Pagination Metadata', () => {
       expect(result.servers).toHaveLength(0);
     });
   });
+
+  describe('Parameter validation', () => {
+    it('should handle negative maxServers parameter', async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          servers: [],
+          total_count: 0,
+        }),
+      });
+
+      // Should not throw with negative value
+      const result = await client.getAllServersWithStats(
+        McpServerSource.REGISTRY,
+        {},
+        -100
+      );
+
+      expect(result.servers).toHaveLength(0);
+    });
+
+    it('should handle zero maxServers parameter', async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          servers: [],
+          total_count: 0,
+        }),
+      });
+
+      // Should handle zero gracefully
+      const result = await client.getAllServersWithStats(
+        McpServerSource.REGISTRY,
+        {},
+        0
+      );
+
+      expect(result.servers).toHaveLength(0);
+    });
+
+    it('should handle invalid filter parameters', async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          servers: [],
+          total_count: 0,
+        }),
+      });
+
+      // Should not crash with malformed filter
+      const result = await client.getAllServersWithStats(
+        McpServerSource.REGISTRY,
+        {
+          registry_name: 'npm;DROP TABLE',
+          sort: '<script>alert("xss")</script>',
+          search: '../../etc/passwd',
+        }
+      );
+
+      expect(result.servers).toHaveLength(0);
+    });
+
+    it('should handle undefined filters gracefully', async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          servers: [
+            {
+              id: 'test/server',
+              name: 'Test',
+              description: 'Test',
+              installation_count: 0,
+              rating: 0,
+              rating_count: 0,
+            },
+          ],
+          total_count: 1,
+        }),
+      });
+
+      // Should handle undefined filters
+      const result = await client.getAllServersWithStats(
+        McpServerSource.REGISTRY,
+        undefined
+      );
+
+      expect(result.servers).toHaveLength(1);
+    });
+
+    it('should handle empty string parameters', async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          servers: [],
+          total_count: 0,
+        }),
+      });
+
+      // Should handle empty strings
+      const result = await client.getAllServersWithStats(
+        McpServerSource.REGISTRY,
+        {
+          registry_name: '',
+          sort: '',
+          search: '',
+        }
+      );
+
+      expect(result.servers).toHaveLength(0);
+    });
+
+    it('should handle extremely large maxServers values', async () => {
+      (global.fetch as any).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          servers: [],
+          total_count: 0,
+        }),
+      });
+
+      // Should handle very large numbers gracefully
+      const result = await client.getAllServersWithStats(
+        McpServerSource.REGISTRY,
+        {},
+        Number.MAX_SAFE_INTEGER
+      );
+
+      expect(result.servers).toHaveLength(0);
+    });
+  });
 });

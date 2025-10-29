@@ -300,6 +300,64 @@ function extractTags(server: PluggedinRegistryServer): string[] {
   return [...new Set(tags)]; // Remove duplicates
 }
 
+/**
+ * Normalize transport type aliases to standard format
+ */
+function normalizeTransportType(transportType: string): 'stdio' | 'sse' | 'streamable-http' | 'http' {
+  const normalized = transportType.toLowerCase().replace('_', '-');
+
+  if (normalized === 'streamable-http' || normalized === 'streamable') {
+    return 'streamable-http';
+  } else if (normalized === 'sse') {
+    return 'sse';
+  } else if (normalized === 'http') {
+    return 'http';
+  } else {
+    return 'stdio';
+  }
+}
+
+/**
+ * Select the highest priority remote from the list
+ * Priority: streamable-http > sse > http > first available
+ */
+function pickRemote(remotes: Array<{ transport_type: string; url: string; headers?: any }>): typeof remotes[0] {
+  return remotes.find(r =>
+    r.transport_type === 'streamable-http' ||
+    r.transport_type === 'streamable_http' ||
+    r.transport_type === 'streamable'
+  ) || remotes.find(r => r.transport_type === 'sse')
+    || remotes.find(r => r.transport_type === 'http')
+    || remotes[0];
+}
+
+/**
+ * Parse headers from array or object format into standardized object
+ */
+function parseHeaders(headers: Array<{
+  name: string;
+  description?: string;
+  default?: string;
+  is_required?: boolean;
+  is_secret?: boolean;
+}> | Record<string, string> | undefined): Record<string, string> | undefined {
+  if (!headers) return undefined;
+
+  if (Array.isArray(headers)) {
+    const parsed: Record<string, string> = {};
+    for (const header of headers) {
+      if (header.default) {
+        parsed[header.name] = header.default;
+      }
+    }
+    return Object.keys(parsed).length > 0 ? parsed : undefined;
+  }
+
+  // Already an object
+  const headerObj = headers as Record<string, string>;
+  return Object.keys(headerObj).length > 0 ? headerObj : undefined;
+}
+
 export function inferTransportType(
   server: {
     packages?: RegistryPackage[];
@@ -322,43 +380,14 @@ export function inferTransportType(
 } {
   // Priority 1: Check remotes first (remote servers don't need installation)
   if (server.remotes?.length) {
-    // Prefer streamable-http > sse > http
-    const remote = server.remotes.find(r =>
-      r.transport_type === 'streamable-http' ||
-      r.transport_type === 'streamable_http' ||
-      r.transport_type === 'streamable'
-    ) || server.remotes.find(r => r.transport_type === 'sse')
-      || server.remotes.find(r => r.transport_type === 'http')
-      || server.remotes[0];
-
-    // Map transport type variations
-    let transport: 'sse' | 'streamable-http' | 'http' = 'streamable-http';
-    if (remote.transport_type === 'sse') {
-      transport = 'sse';
-    } else if (remote.transport_type === 'http') {
-      transport = 'http';
-    } else {
-      // All variations of streamable-http
-      transport = 'streamable-http';
-    }
-
-    // Convert headers from array to object if needed
-    let headers: Record<string, string> | undefined;
-    if (Array.isArray(remote.headers)) {
-      headers = {};
-      for (const header of remote.headers) {
-        if (header.default) {
-          headers[header.name] = header.default;
-        }
-      }
-    } else if (remote.headers) {
-      headers = remote.headers as Record<string, string>;
-    }
+    const remote = pickRemote(server.remotes);
+    const transport = normalizeTransportType(remote.transport_type);
+    const headers = parseHeaders(remote.headers);
 
     return {
       transport,
       url: remote.url,
-      headers: headers && Object.keys(headers).length > 0 ? headers : undefined
+      headers
     };
   }
 

@@ -465,5 +465,161 @@ describe('Registry Transformer - Remotes Field Support', () => {
       expect(result.command).toBeTruthy();
       expect(result.package_registry).toBe('npm');
     });
+
+    it('should handle missing URL in remotes gracefully', () => {
+      const server: PluggedinRegistryServer = {
+        id: 'test/missing-url',
+        name: 'test/missing-url',
+        description: 'Remote with missing URL',
+        remotes: [
+          {
+            transport_type: 'streamable-http',
+            url: '', // Empty URL
+          },
+        ],
+        version_detail: {
+          version: '1.0.0',
+          release_date: '2024-01-01',
+          is_latest: true,
+        },
+      };
+
+      const result = transformPluggedinRegistryToMcpIndex(server);
+
+      // Should handle empty URL gracefully
+      expect(result.url).toBeFalsy();
+    });
+
+    it('should handle undefined URL in remotes', () => {
+      const server: PluggedinRegistryServer = {
+        id: 'test/undefined-url',
+        name: 'test/undefined-url',
+        description: 'Remote with undefined URL',
+        remotes: [
+          {
+            transport_type: 'streamable-http',
+            url: undefined as any, // Undefined URL
+          },
+        ],
+        version_detail: {
+          version: '1.0.0',
+          release_date: '2024-01-01',
+          is_latest: true,
+        },
+      };
+
+      const result = transformPluggedinRegistryToMcpIndex(server);
+
+      // Should handle undefined URL gracefully
+      expect(result.url).toBeFalsy();
+    });
+
+    it('should handle missing headers in remotes', () => {
+      const server: PluggedinRegistryServer = {
+        id: 'test/no-headers',
+        name: 'test/no-headers',
+        description: 'Remote without headers',
+        remotes: [
+          {
+            transport_type: 'streamable-http',
+            url: 'https://example.com/mcp',
+            // No headers property
+          },
+        ],
+        version_detail: {
+          version: '1.0.0',
+          release_date: '2024-01-01',
+          is_latest: true,
+        },
+      };
+
+      const result = transformPluggedinRegistryToMcpIndex(server);
+
+      // Should work fine without headers
+      expect(result.url).toBe('https://example.com/mcp');
+      expect(result.command).toBeNull();
+    });
+
+    it('should handle empty headers array in remotes', () => {
+      const server: PluggedinRegistryServer = {
+        id: 'test/empty-headers',
+        name: 'test/empty-headers',
+        description: 'Remote with empty headers',
+        remotes: [
+          {
+            transport_type: 'streamable-http',
+            url: 'https://example.com/mcp',
+            headers: [] as any, // Empty headers array
+          },
+        ],
+        version_detail: {
+          version: '1.0.0',
+          release_date: '2024-01-01',
+          is_latest: true,
+        },
+      };
+
+      const result = transformPluggedinRegistryToMcpIndex(server);
+
+      // Should work fine with empty headers
+      expect(result.url).toBe('https://example.com/mcp');
+      expect(result.command).toBeNull();
+    });
+
+    it('should handle empty headers object in remotes', () => {
+      const server: PluggedinRegistryServer = {
+        id: 'test/empty-headers-obj',
+        name: 'test/empty-headers-obj',
+        description: 'Remote with empty headers object',
+        remotes: [
+          {
+            transport_type: 'streamable-http',
+            url: 'https://example.com/mcp',
+            headers: {}, // Empty headers object
+          },
+        ],
+        version_detail: {
+          version: '1.0.0',
+          release_date: '2024-01-01',
+          is_latest: true,
+        },
+      };
+
+      const result = transformPluggedinRegistryToMcpIndex(server);
+
+      // Should work fine with empty headers object
+      expect(result.url).toBe('https://example.com/mcp');
+      expect(result.command).toBeNull();
+    });
+
+    it('should handle malformed headers array in remotes', () => {
+      const server: PluggedinRegistryServer = {
+        id: 'test/malformed-headers',
+        name: 'test/malformed-headers',
+        description: 'Remote with malformed headers',
+        remotes: [
+          {
+            transport_type: 'streamable-http',
+            url: 'https://example.com/mcp',
+            headers: [
+              { name: 'Authorization', default: 'Bearer token' },
+              { name: 'MalformedHeader' }, // Missing default
+              { default: 'value' } as any, // Missing name
+            ],
+          },
+        ],
+        version_detail: {
+          version: '1.0.0',
+          release_date: '2024-01-01',
+          is_latest: true,
+        },
+      };
+
+      const result = transformPluggedinRegistryToMcpIndex(server);
+
+      // Should handle malformed headers gracefully
+      expect(result.url).toBe('https://example.com/mcp');
+      expect(result.command).toBeNull();
+    });
   });
 });

@@ -153,7 +153,7 @@ export class PluggedinRegistryVPClient {
     // Enhanced endpoints for better filtering and performance
     this.enhancedUrl = this.baseUrl.replace('/v0', '/v0/enhanced');
   }
-  
+
   /**
    * Helper method to validate URL and perform fetch with SSRF protection
    * @param path - The API path to fetch
@@ -163,13 +163,69 @@ export class PluggedinRegistryVPClient {
   private async fetchInternal(path: string, options?: RequestInit): Promise<Response> {
     // validateInternalUrl sanitizes the URL and prevents SSRF attacks by:
     // 1. Validating URL format and protocol
-    // 2. Checking against an allowlist of domains  
+    // 2. Checking against an allowlist of domains
     // 3. Blocking private IP ranges
     // 4. Preventing authentication credentials in URLs
     const url = validateInternalUrl(`${this.vpUrl}${path}`);
     // CodeQL: URL is validated above - safe from request forgery
     // nosemgrep: javascript.lang.security.audit.network.request-forgery
     return fetch(url.toString(), options);
+  }
+
+  /**
+   * Helper to create JSON headers with optional API key
+   */
+  private createJsonHeaders(apiKey?: string): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'PluggedIn-App/1.0',
+    };
+
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    return headers;
+  }
+
+  /**
+   * Helper to build URLSearchParams for enhanced API
+   */
+  private buildEnhancedParams(
+    limit: number,
+    offset: number,
+    filters?: {
+      registry_name?: string;
+      sort?: string;
+      search?: string;
+    }
+  ): URLSearchParams {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString()
+    });
+
+    // Map registry_name to registry_types for enhanced API
+    if (filters?.registry_name) {
+      params.append('registry_types', filters.registry_name);
+    }
+
+    // Map sort parameter
+    if (filters?.sort) {
+      if (filters.sort === 'release_date_desc') {
+        params.append('sort', 'updated');
+      } else if (filters.sort === 'rating_desc') {
+        params.append('sort', 'rating_desc');
+      } else {
+        params.append('sort', filters.sort);
+      }
+    }
+
+    if (filters?.search) {
+      params.append('search', filters.search);
+    }
+
+    return params;
   }
   
   // Get servers with stats
@@ -224,32 +280,8 @@ export class PluggedinRegistryVPClient {
     maxServers: number = 1000 // Safety limit to prevent resource exhaustion
   ): Promise<ExtendedServersResponse> {
     try {
-      // Use enhanced endpoint for better filtering
-      const params = new URLSearchParams({
-        limit: maxServers.toString(),
-        offset: '0'
-      });
-
-      // Map registry_name to registry_types for enhanced API
-      if (filters?.registry_name) {
-        params.append('registry_types', filters.registry_name);
-      }
-
-      // Map sort parameter
-      if (filters?.sort) {
-        // Map to enhanced API sort formats
-        if (filters.sort === 'release_date_desc') {
-          params.append('sort', 'updated');
-        } else if (filters.sort === 'rating_desc') {
-          params.append('sort', 'rating_desc');
-        } else {
-          params.append('sort', filters.sort);
-        }
-      }
-
-      if (filters?.search) {
-        params.append('search', filters.search);
-      }
+      // Build parameters using helper
+      const params = this.buildEnhancedParams(maxServers, 0, filters);
 
       // Use enhanced endpoint URL
       const enhancedPath = `/enhanced/servers?${params}`;
@@ -353,18 +385,9 @@ export class PluggedinRegistryVPClient {
     apiKey?: string
   ): Promise<InstallResponse> {
     try {
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-
-      // Add Authorization header if API key is provided
-      if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-      }
-
       const response = await this.fetchInternal(`/servers/${serverId}/install`, {
         method: 'POST',
-        headers,
+        headers: this.createJsonHeaders(apiKey),
         body: JSON.stringify(data),
       });
       
@@ -401,19 +424,9 @@ export class PluggedinRegistryVPClient {
         comment
       };
 
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-        'User-Agent': 'PluggedIn-App/1.0',
-      };
-
-      // Add Authorization header if API key is provided
-      if (apiKey) {
-        headers['Authorization'] = `Bearer ${apiKey}`;
-      }
-
       const response = await this.fetchInternal(`/servers/${serverId}/rate`, {
         method: 'POST',
-        headers,
+        headers: this.createJsonHeaders(apiKey),
         body: JSON.stringify(requestBody),
       });
       
@@ -550,9 +563,7 @@ export class PluggedinRegistryVPClient {
       });
 
       const response = await this.fetchInternal(`/servers/${serverId}/feedback?${params}`, {
-        headers: {
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers: this.createJsonHeaders(),
       });
 
       if (!response.ok) {
@@ -576,9 +587,7 @@ export class PluggedinRegistryVPClient {
   async getUserRating(serverId: string, userId: string): Promise<UserRatingResponse> {
     try {
       const response = await this.fetchInternal(`/servers/${serverId}/rating/${userId}`, {
-        headers: {
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers: this.createJsonHeaders(),
       });
 
       if (!response.ok) {
@@ -615,10 +624,7 @@ export class PluggedinRegistryVPClient {
 
       const response = await this.fetchInternal(`/servers/${serverId}/feedback/${feedbackId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers: this.createJsonHeaders(),
         body: JSON.stringify(requestBody),
       });
 
@@ -649,9 +655,7 @@ export class PluggedinRegistryVPClient {
     try {
       const response = await this.fetchInternal(`/servers/${serverId}/feedback/${feedbackId}`, {
         method: 'DELETE',
-        headers: {
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers: this.createJsonHeaders(),
       });
 
       if (!response.ok) {
