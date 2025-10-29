@@ -32,22 +32,33 @@ interface PluggedinRegistryServer {
     is_latest: boolean;
   };
   packages?: RegistryPackage[];
+  remotes?: Array<{
+    transport_type: 'sse' | 'streamable-http' | 'http';
+    url: string;
+    headers?: Record<string, string>;
+  }>;
 }
 
 export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistryServer): McpIndex {
   const primaryPackage = server.packages?.[0];
-  
+
   // Extract a user-friendly display name from the server name
   // e.g., "io.github.felores/airtable-mcp" -> "Airtable MCP"
   const displayName = extractDisplayName(server.name);
-  
+
+  // Determine transport type and extract URL if remote
+  const transportInfo = inferTransportType(server);
+
+  // For remote servers, we don't need command/args, just the URL
+  const isRemote = transportInfo.url !== undefined;
+
   return {
     name: displayName,
     description: server.description || '',
-    command: extractCommand(primaryPackage),
-    args: extractArgs(primaryPackage),
+    command: isRemote ? null : extractCommand(primaryPackage),
+    args: isRemote ? [] : extractArgs(primaryPackage),
     envs: extractEnvs(primaryPackage),
-    url: null, // Will be set based on transport type
+    url: transportInfo.url || null,
     source: McpServerSource.REGISTRY,
     external_id: server.id,
     githubUrl: server.repository?.url || null,
@@ -62,6 +73,8 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
     rating: undefined, // Will come from your rating system
     ratingCount: undefined,
     installation_count: undefined, // Track in your database
+    // Store the full server data for later use (including all packages and remotes)
+    _rawServer: server as any,
   };
 }
 
@@ -284,21 +297,56 @@ function extractTags(server: PluggedinRegistryServer): string[] {
   return [...new Set(tags)]; // Remove duplicates
 }
 
-export function inferTransportFromPackages(packages?: RegistryPackage[]): 'stdio' | 'sse' | 'http' {
-  if (!packages?.length) return 'stdio';
-  
-  const pkg = packages[0];
-  
-  // Docker packages typically use HTTP/SSE
-  if (pkg.registry_name === 'docker') {
-    return 'sse';
+export function inferTransportType(
+  server: {
+    packages?: RegistryPackage[];
+    remotes?: Array<{ transport_type: string; url: string; headers?: Record<string, string> }>
   }
-  
-  // Check for explicit hints
-  if (pkg.runtime_hint?.includes('stdio')) return 'stdio';
-  if (pkg.runtime_hint?.includes('sse')) return 'sse';
-  if (pkg.runtime_hint?.includes('http')) return 'http';
-  
-  // Default to stdio for npm/pypi
-  return 'stdio';
+): {
+  transport: 'stdio' | 'sse' | 'streamable-http' | 'http';
+  url?: string;
+  headers?: Record<string, string>;
+} {
+  // Priority 1: Check remotes first (remote servers don't need installation)
+  if (server.remotes?.length) {
+    // Prefer streamable-http > sse > http
+    const remote = server.remotes.find(r => r.transport_type === 'streamable-http')
+                   || server.remotes.find(r => r.transport_type === 'sse')
+                   || server.remotes[0];
+
+    return {
+      transport: remote.transport_type as 'sse' | 'streamable-http' | 'http',
+      url: remote.url,
+      headers: remote.headers
+    };
+  }
+
+  // Priority 2: Check packages for stdio servers
+  if (server.packages?.length) {
+    const pkg = server.packages[0];
+
+    // Docker packages typically use HTTP/SSE
+    if (pkg.registry_name === 'docker') {
+      return { transport: 'sse' };
+    }
+
+    // Check for explicit hints in runtime_hint
+    if (pkg.runtime_hint?.includes('sse')) return { transport: 'sse' };
+    if (pkg.runtime_hint?.includes('http')) return { transport: 'http' };
+    if (pkg.runtime_hint?.includes('stdio')) return { transport: 'stdio' };
+
+    // Default to stdio for npm/pypi/other package managers
+    return { transport: 'stdio' };
+  }
+
+  // Fallback if no packages or remotes
+  return { transport: 'stdio' };
+}
+
+// Keep the old function name for backward compatibility but have it use the new one
+export function inferTransportFromPackages(packages?: RegistryPackage[]): 'stdio' | 'sse' | 'http' {
+  const result = inferTransportType({ packages });
+  // Map streamable-http to http for backward compatibility
+  if (result.transport === 'streamable-http') return 'http';
+  return result.transport as 'stdio' | 'sse' | 'http';
 }

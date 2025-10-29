@@ -29,6 +29,11 @@ interface PluggedinRegistryServer {
       description?: string;
     }>;
   }>;
+  remotes?: Array<{
+    transport_type: 'sse' | 'streamable-http' | 'http';
+    url: string;
+    headers?: Record<string, string>;
+  }>;
 }
 
 interface ListServersResponse {

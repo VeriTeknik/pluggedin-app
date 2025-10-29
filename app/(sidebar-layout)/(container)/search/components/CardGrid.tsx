@@ -89,7 +89,7 @@ export default function CardGrid({
     name: string;
     description: string;
     command: string;
-    args: string;
+    args: string | string[];
     env: string;
     url: string | undefined;
     type: McpServerType;
@@ -158,7 +158,7 @@ export default function CardGrid({
             name: detailedItem.name,
             description: detailedItem.description,
             command: isSSE ? '' : detailedItem.command || '',
-            args: isSSE ? '' : (Array.isArray(detailedItem.args) ? detailedItem.args.join(' ') : '') || '',
+            args: isSSE ? [] : (Array.isArray(detailedItem.args) ? detailedItem.args : []) || [],
             env: isSSE ? '' : formatEnvVariables(detailedItem.envs),
             url: isSSE ? detailedItem.url : undefined,
             type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
@@ -182,7 +182,7 @@ export default function CardGrid({
       name: item.name,
       description: item.description,
       command: isSSE ? '' : item.command || '',
-      args: isSSE ? '' : (Array.isArray(item.args) ? item.args.join(' ') : '') || '',
+      args: isSSE ? [] : (Array.isArray(item.args) ? item.args : []) || [],
       env: isSSE ? '' : formatEnvVariables(item.envs),
       url: isSSE ? item.url : undefined,
       type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
