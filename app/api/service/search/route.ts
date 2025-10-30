@@ -434,10 +434,15 @@ async function cacheResults(source: McpServerSource, query: string, results: Sea
  * @param pageSize Page size
  * @param totalCount Optional total count from API (if not provided, uses results length)
  * @returns Paginated results
+ *
+ * IMPORTANT: When totalCount is not provided, the fallback uses keys.length which only
+ * represents the number of results currently loaded, not the total available results.
+ * This can lead to inaccurate pagination when combining multiple sources or when the
+ * full result set is not loaded. Always provide totalCount when available from the API.
  */
 function paginateResults(results: SearchIndex, offset: number, pageSize: number, totalCount?: number): PaginatedSearchResult {
   const keys = Object.keys(results);
-  const totalResults = totalCount ?? keys.length; // Use provided totalCount or fall back to keys.length
+  const totalResults = totalCount ?? keys.length; // Use provided totalCount or fall back to keys.length (see IMPORTANT note above)
 
   const paginatedKeys = keys.slice(offset, offset + pageSize);
   const paginatedResults: SearchIndex = {};

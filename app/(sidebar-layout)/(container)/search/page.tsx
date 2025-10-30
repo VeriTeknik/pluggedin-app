@@ -135,6 +135,7 @@ function SearchContent() {
     });
 
     if (source !== 'all') params.set('source', source);
+    if (sort !== 'relevance') params.set('sort', sort);
     if (packageRegistries.length > 0) params.set('packageRegistry', packageRegistries.join(','));
     if (repositorySource) params.set('repositorySource', repositorySource);
 
@@ -142,6 +143,7 @@ function SearchContent() {
   }, [
     query,
     source,
+    sort,
     pageSize,
     offset,
     packageRegistries,

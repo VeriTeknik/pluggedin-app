@@ -426,10 +426,8 @@ export default function CardGrid({
               }));
             }
 
-            // Trigger a refresh of search results after a delay to get updated aggregate stats
-            setTimeout(() => {
-              onRefreshNeeded?.();
-            }, 1000);
+            // Trigger immediate refresh of search results to get updated aggregate stats
+            onRefreshNeeded?.();
           }}
         />
       )}

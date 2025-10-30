@@ -78,23 +78,36 @@ export async function getUserRatingsForServers(
     const userId = profileData.project.user_id;
     const userRatings: Record<string, { rating: number; comment?: string }> = {};
 
-    // Fetch ratings for each server (in parallel)
-    await Promise.all(
-      serverIds.map(async (serverId) => {
-        try {
-          const response = await registryVPClient.getUserRating(serverId, userId);
-          if (response.has_rated && response.feedback) {
-            userRatings[serverId] = {
-              rating: response.feedback.rating,
-              comment: response.feedback.comment
+    // Process ratings in batches to avoid overwhelming the server
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < serverIds.length; i += BATCH_SIZE) {
+      const batch = serverIds.slice(i, i + BATCH_SIZE);
+      const batchResults = await Promise.all(
+        batch.map(async (serverId) => {
+          try {
+            const response = await registryVPClient.getUserRating(serverId, userId);
+            return {
+              serverId,
+              rating: response.has_rated && response.feedback ? response.feedback : null
             };
+          } catch (error) {
+            // Continue with other servers if one fails
+            console.error(`Failed to fetch rating for ${serverId}:`, error);
+            return { serverId, rating: null };
           }
-        } catch (error) {
-          // Continue with other servers if one fails
-          console.error(`Failed to fetch rating for ${serverId}:`, error);
+        })
+      );
+
+      // Add successful ratings to the result map
+      batchResults.forEach(({ serverId, rating }) => {
+        if (rating) {
+          userRatings[serverId] = {
+            rating: rating.rating,
+            comment: rating.comment
+          };
         }
-      })
-    );
+      });
+    }
 
     return userRatings;
   } catch (error) {
