@@ -38,6 +38,9 @@ export interface ExtendedServer {
 
 export interface ExtendedServersResponse {
   servers: ExtendedServer[];
+  total_count?: number;
+  limit?: number;
+  offset?: number;
   metadata?: {
     count: number;
     total: number;
@@ -140,14 +143,17 @@ export interface TrendingResponse {
 export class PluggedinRegistryVPClient {
   private baseUrl: string;
   private vpUrl: string;
-  
+  private enhancedUrl: string;
+
   constructor(baseUrl = process.env.REGISTRY_API_URL || 'https://registry.plugged.in/v0') {
     // Validate the base URL to prevent SSRF
     const validatedUrl = validateInternalUrl(baseUrl);
     this.baseUrl = validatedUrl.toString();
     this.vpUrl = this.baseUrl; // VP endpoints are actually v0 endpoints
+    // Enhanced endpoints for better filtering and performance
+    this.enhancedUrl = this.baseUrl.replace('/v0', '/v0/enhanced');
   }
-  
+
   /**
    * Helper method to validate URL and perform fetch with SSRF protection
    * @param path - The API path to fetch
@@ -157,13 +163,69 @@ export class PluggedinRegistryVPClient {
   private async fetchInternal(path: string, options?: RequestInit): Promise<Response> {
     // validateInternalUrl sanitizes the URL and prevents SSRF attacks by:
     // 1. Validating URL format and protocol
-    // 2. Checking against an allowlist of domains  
+    // 2. Checking against an allowlist of domains
     // 3. Blocking private IP ranges
     // 4. Preventing authentication credentials in URLs
     const url = validateInternalUrl(`${this.vpUrl}${path}`);
     // CodeQL: URL is validated above - safe from request forgery
     // nosemgrep: javascript.lang.security.audit.network.request-forgery
     return fetch(url.toString(), options);
+  }
+
+  /**
+   * Helper to create JSON headers with optional API key
+   */
+  private createJsonHeaders(apiKey?: string): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      'User-Agent': 'PluggedIn-App/1.0',
+    };
+
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
+    return headers;
+  }
+
+  /**
+   * Helper to build URLSearchParams for enhanced API
+   */
+  private buildEnhancedParams(
+    limit: number,
+    offset: number,
+    filters?: {
+      registry_name?: string;
+      sort?: string;
+      search?: string;
+    }
+  ): URLSearchParams {
+    const params = new URLSearchParams({
+      limit: limit.toString(),
+      offset: offset.toString()
+    });
+
+    // Map registry_name to registry_types for enhanced API
+    if (filters?.registry_name) {
+      params.append('registry_types', filters.registry_name);
+    }
+
+    // Map sort parameter
+    if (filters?.sort) {
+      // Map legacy release_date_desc to updated, otherwise pass through
+      // Supported sorts: updated, rating_desc, installs_desc, trending
+      if (filters.sort === 'release_date_desc') {
+        params.append('sort', 'updated');
+      } else {
+        params.append('sort', filters.sort);
+      }
+    }
+
+    if (filters?.search) {
+      params.append('search', filters.search);
+    }
+
+    return params;
   }
   
   // Get servers with stats
@@ -206,9 +268,8 @@ export class PluggedinRegistryVPClient {
     return data.server || data;
   }
   
-  // Get all servers with stats (using offset-based pagination)
-  // WARNING: This method fetches ALL servers and should be used sparingly
-  // For most use cases, prefer getServersWithStats() with proper pagination
+  // Get all servers with stats (using enhanced endpoint for better performance)
+  // The enhanced endpoint supports server-side filtering and returns all matching results
   async getAllServersWithStats(
     source?: McpServerSource,
     filters?: {
@@ -217,7 +278,45 @@ export class PluggedinRegistryVPClient {
       search?: string;
     },
     maxServers: number = 1000 // Safety limit to prevent resource exhaustion
-  ): Promise<ExtendedServer[]> {
+  ): Promise<ExtendedServersResponse> {
+    try {
+      // Build parameters using helper
+      const params = this.buildEnhancedParams(maxServers, 0, filters);
+
+      // Use enhanced endpoint URL
+      const enhancedPath = `/enhanced/servers?${params}`;
+      const url = validateInternalUrl(`${this.baseUrl}${enhancedPath}`);
+      const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        console.error(`Failed to fetch from enhanced endpoint: ${response.status}, falling back to standard endpoint`);
+        // Fallback to original pagination method
+        return this.getAllServersWithStatsFallback(source, filters, maxServers);
+      }
+
+      const data = await response.json();
+      return {
+        servers: data.servers || [],
+        total_count: data.total_count,
+        limit: data.limit,
+        offset: data.offset
+      };
+    } catch (error) {
+      console.error('Error with enhanced endpoint, using fallback:', error);
+      return this.getAllServersWithStatsFallback(source, filters, maxServers);
+    }
+  }
+
+  // Fallback method using original pagination
+  private async getAllServersWithStatsFallback(
+    source?: McpServerSource,
+    filters?: {
+      registry_name?: string;
+      sort?: string;
+      search?: string;
+    },
+    maxServers: number = 1000
+  ): Promise<ExtendedServersResponse> {
     const allServers: ExtendedServer[] = [];
     const batchSize = 100;
     let offset = 0;
@@ -271,20 +370,24 @@ export class PluggedinRegistryVPClient {
       }
     }
 
-    return allServers;
+    return {
+      servers: allServers,
+      total_count: allServers.length, // Fallback doesn't have total_count from server
+      limit: maxServers,
+      offset: 0
+    };
   }
   
   // Track installation
   async trackInstallation(
     serverId: string,
-    data: InstallRequest = {}
+    data: InstallRequest = {},
+    apiKey?: string
   ): Promise<InstallResponse> {
     try {
       const response = await this.fetchInternal(`/servers/${serverId}/install`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: this.createJsonHeaders(apiKey),
         body: JSON.stringify(data),
       });
       
@@ -309,7 +412,8 @@ export class PluggedinRegistryVPClient {
     rating: number,
     source?: McpServerSource,
     userId?: string,
-    comment?: string
+    comment?: string,
+    apiKey?: string
   ): Promise<RatingResponse> {
     try {
       const requestBody = {
@@ -319,13 +423,10 @@ export class PluggedinRegistryVPClient {
         timestamp: new Date().toISOString(),
         comment
       };
-      
+
       const response = await this.fetchInternal(`/servers/${serverId}/rate`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers: this.createJsonHeaders(apiKey),
         body: JSON.stringify(requestBody),
       });
       
@@ -462,9 +563,7 @@ export class PluggedinRegistryVPClient {
       });
 
       const response = await this.fetchInternal(`/servers/${serverId}/feedback?${params}`, {
-        headers: {
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers: this.createJsonHeaders(),
       });
 
       if (!response.ok) {
@@ -488,9 +587,7 @@ export class PluggedinRegistryVPClient {
   async getUserRating(serverId: string, userId: string): Promise<UserRatingResponse> {
     try {
       const response = await this.fetchInternal(`/servers/${serverId}/rating/${userId}`, {
-        headers: {
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers: this.createJsonHeaders(),
       });
 
       if (!response.ok) {
@@ -527,10 +624,7 @@ export class PluggedinRegistryVPClient {
 
       const response = await this.fetchInternal(`/servers/${serverId}/feedback/${feedbackId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers: this.createJsonHeaders(),
         body: JSON.stringify(requestBody),
       });
 
@@ -561,9 +655,7 @@ export class PluggedinRegistryVPClient {
     try {
       const response = await this.fetchInternal(`/servers/${serverId}/feedback/${feedbackId}`, {
         method: 'DELETE',
-        headers: {
-          'User-Agent': 'PluggedIn-App/1.0',
-        },
+        headers: this.createJsonHeaders(),
       });
 
       if (!response.ok) {

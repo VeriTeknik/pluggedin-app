@@ -32,22 +32,33 @@ interface PluggedinRegistryServer {
     is_latest: boolean;
   };
   packages?: RegistryPackage[];
+  remotes?: Array<{
+    transport_type: 'sse' | 'streamable-http' | 'http';
+    url: string;
+    headers?: Record<string, string>;
+  }>;
 }
 
 export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistryServer): McpIndex {
   const primaryPackage = server.packages?.[0];
-  
+
   // Extract a user-friendly display name from the server name
   // e.g., "io.github.felores/airtable-mcp" -> "Airtable MCP"
   const displayName = extractDisplayName(server.name);
-  
+
+  // Determine transport type and extract URL if remote
+  const transportInfo = inferTransportType(server);
+
+  // For remote servers, we don't need command/args, just the URL
+  const isRemote = transportInfo.url !== undefined;
+
   return {
     name: displayName,
     description: server.description || '',
-    command: extractCommand(primaryPackage),
-    args: extractArgs(primaryPackage),
+    command: isRemote ? null : extractCommand(primaryPackage),
+    args: isRemote ? [] : extractArgs(primaryPackage),
     envs: extractEnvs(primaryPackage),
-    url: null, // Will be set based on transport type
+    url: transportInfo.url || null,
     source: McpServerSource.REGISTRY,
     external_id: server.id,
     githubUrl: server.repository?.url || null,
@@ -62,6 +73,8 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
     rating: undefined, // Will come from your rating system
     ratingCount: undefined,
     installation_count: undefined, // Track in your database
+    // Store the full server data for later use (including all packages and remotes)
+    _rawServer: server as any,
   };
 }
 
@@ -115,27 +128,30 @@ function extractCommand(pkg?: RegistryPackage): string {
 // Helper function to extract arguments from schema structure
 function extractArgumentsFromSchema(schemaArgs: any[]): string[] {
   const result: string[] = [];
-  
+
   if (!schemaArgs || !Array.isArray(schemaArgs)) return result;
-  
+
   for (const arg of schemaArgs) {
     if (arg.type === 'positional') {
       // For positional arguments, use value or default
       const value = arg.value || arg.default || arg.value_hint || '';
       if (value) result.push(value);
     } else if (arg.type === 'named') {
-      // For named arguments, add the name and value separately
+      // For named arguments, add the name and optionally the value
       const name = arg.name || '';
       const value = arg.value || arg.default || '';
-      
+
       if (name) {
         result.push(name);
-        // Only add value if it exists (some flags don't have values)
-        if (value) result.push(value);
+        // Only add value if it exists (some flags are boolean flags without values)
+        // Skip adding value if it's explicitly a boolean flag
+        if (value && !['true', 'false'].includes(value.toLowerCase())) {
+          result.push(value);
+        }
       }
     }
   }
-  
+
   return result;
 }
 
@@ -284,21 +300,128 @@ function extractTags(server: PluggedinRegistryServer): string[] {
   return [...new Set(tags)]; // Remove duplicates
 }
 
-export function inferTransportFromPackages(packages?: RegistryPackage[]): 'stdio' | 'sse' | 'http' {
-  if (!packages?.length) return 'stdio';
-  
-  const pkg = packages[0];
-  
-  // Docker packages typically use HTTP/SSE
-  if (pkg.registry_name === 'docker') {
-    return 'sse';
+/**
+ * Normalize transport type aliases to standard format
+ */
+function normalizeTransportType(transportType: string | undefined | null): 'stdio' | 'sse' | 'streamable-http' | 'http' {
+  // Handle undefined, null, or empty strings
+  if (!transportType) {
+    return 'stdio';
   }
-  
-  // Check for explicit hints
-  if (pkg.runtime_hint?.includes('stdio')) return 'stdio';
-  if (pkg.runtime_hint?.includes('sse')) return 'sse';
-  if (pkg.runtime_hint?.includes('http')) return 'http';
-  
-  // Default to stdio for npm/pypi
-  return 'stdio';
+
+  const normalized = transportType.toLowerCase().replace('_', '-');
+
+  if (normalized === 'streamable-http' || normalized === 'streamable') {
+    return 'streamable-http';
+  } else if (normalized === 'sse') {
+    return 'sse';
+  } else if (normalized === 'http') {
+    return 'http';
+  } else {
+    return 'stdio';
+  }
+}
+
+/**
+ * Select the highest priority remote from the list
+ * Priority: streamable-http > sse > http > first available
+ */
+function pickRemote(remotes: Array<{ transport_type: string; url: string; headers?: any }>): typeof remotes[0] {
+  return remotes.find(r =>
+    r.transport_type === 'streamable-http' ||
+    r.transport_type === 'streamable_http' ||
+    r.transport_type === 'streamable'
+  ) || remotes.find(r => r.transport_type === 'sse')
+    || remotes.find(r => r.transport_type === 'http')
+    || remotes[0];
+}
+
+/**
+ * Parse headers from array or object format into standardized object
+ */
+function parseHeaders(headers: Array<{
+  name: string;
+  description?: string;
+  default?: string;
+  is_required?: boolean;
+  is_secret?: boolean;
+}> | Record<string, string> | undefined): Record<string, string> | undefined {
+  if (!headers) return undefined;
+
+  if (Array.isArray(headers)) {
+    const parsed: Record<string, string> = {};
+    for (const header of headers) {
+      if (header.default) {
+        parsed[header.name] = header.default;
+      }
+    }
+    return Object.keys(parsed).length > 0 ? parsed : undefined;
+  }
+
+  // Already an object
+  const headerObj = headers as Record<string, string>;
+  return Object.keys(headerObj).length > 0 ? headerObj : undefined;
+}
+
+export function inferTransportType(
+  server: {
+    packages?: RegistryPackage[];
+    remotes?: Array<{
+      transport_type: string;
+      url: string;
+      headers?: Array<{
+        name: string;
+        description?: string;
+        default?: string;
+        is_required?: boolean;
+        is_secret?: boolean;
+      }> | Record<string, string>;
+    }>
+  }
+): {
+  transport: 'stdio' | 'sse' | 'streamable-http' | 'http';
+  url?: string;
+  headers?: Record<string, string>;
+} {
+  // Priority 1: Check remotes first (remote servers don't need installation)
+  if (server.remotes?.length) {
+    const remote = pickRemote(server.remotes);
+    const transport = normalizeTransportType(remote.transport_type);
+    const headers = parseHeaders(remote.headers);
+
+    return {
+      transport,
+      url: remote.url,
+      headers
+    };
+  }
+
+  // Priority 2: Check packages for stdio servers
+  if (server.packages?.length) {
+    const pkg = server.packages[0];
+
+    // Docker packages typically use HTTP/SSE
+    if (pkg.registry_name === 'docker') {
+      return { transport: 'sse' };
+    }
+
+    // Check for explicit hints in runtime_hint
+    if (pkg.runtime_hint?.includes('sse')) return { transport: 'sse' };
+    if (pkg.runtime_hint?.includes('http')) return { transport: 'http' };
+    if (pkg.runtime_hint?.includes('stdio')) return { transport: 'stdio' };
+
+    // Default to stdio for npm/pypi/other package managers
+    return { transport: 'stdio' };
+  }
+
+  // Fallback if no packages or remotes
+  return { transport: 'stdio' };
+}
+
+// Keep the old function name for backward compatibility but have it use the new one
+export function inferTransportFromPackages(packages?: RegistryPackage[]): 'stdio' | 'sse' | 'http' {
+  const result = inferTransportType({ packages });
+  // Map streamable-http to http for backward compatibility
+  if (result.transport === 'streamable-http') return 'http';
+  return result.transport as 'stdio' | 'sse' | 'http';
 }

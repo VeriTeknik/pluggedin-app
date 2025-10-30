@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect,useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { getUserRatingsForServers } from '@/app/actions/mcp-server-user-rating';
 import { unshareServer } from '@/app/actions/social';
 import { UnifiedServerCard } from '@/components/server-card/UnifiedServerCard';
 import { ServerDetailDialog } from '@/components/server-detail-dialog';
@@ -48,8 +49,8 @@ function formatEnvVariables(envs: string[] | Array<{ name: string; description?:
   }
 }
 
-export default function CardGrid({ 
-  items, 
+export default function CardGrid({
+  items,
   installedServerMap,
   currentUsername,
   onRefreshNeeded,
@@ -67,6 +68,8 @@ export default function CardGrid({
   selectedItems?: string[];
   onItemSelect?: (serverId: string, selected: boolean) => void;
 }) {
+  // State to store user ratings for displayed servers
+  const [userRatings, setUserRatings] = useState<Record<string, { rating: number; comment?: string }>>({});
   const { t } = useTranslation();
   const { toast } = useToast(); // Initialize toast
   const { isAuthenticated, signIn } = useAuth();
@@ -89,7 +92,7 @@ export default function CardGrid({
     name: string;
     description: string;
     command: string;
-    args: string;
+    args: string | string[];
     env: string;
     url: string | undefined;
     type: McpServerType;
@@ -121,6 +124,34 @@ export default function CardGrid({
   // State for claim dialog
   const [claimServer, setClaimServer] = useState<any | null>(null);
   const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+
+  // Fetch user ratings for all displayed servers
+  useEffect(() => {
+    const fetchUserRatings = async () => {
+      if (!profileUuid || !isAuthenticated) {
+        setUserRatings({});
+        return;
+      }
+
+      // Get all server IDs that have external_id
+      const serverIds = Object.values(items)
+        .filter(item => item.external_id)
+        .map(item => item.external_id!);
+
+      if (serverIds.length === 0) {
+        return;
+      }
+
+      try {
+        const ratings = await getUserRatingsForServers(profileUuid, serverIds);
+        setUserRatings(ratings);
+      } catch (error) {
+        console.error('Failed to fetch user ratings:', error);
+      }
+    };
+
+    fetchUserRatings();
+  }, [items, profileUuid, isAuthenticated]);
 
   // Listen for server claim events
   useEffect(() => {
@@ -158,7 +189,7 @@ export default function CardGrid({
             name: detailedItem.name,
             description: detailedItem.description,
             command: isSSE ? '' : detailedItem.command || '',
-            args: isSSE ? '' : (Array.isArray(detailedItem.args) ? detailedItem.args.join(' ') : '') || '',
+            args: isSSE ? [] : (Array.isArray(detailedItem.args) ? detailedItem.args : []) || [],
             env: isSSE ? '' : formatEnvVariables(detailedItem.envs),
             url: isSSE ? detailedItem.url : undefined,
             type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
@@ -182,7 +213,7 @@ export default function CardGrid({
       name: item.name,
       description: item.description,
       command: isSSE ? '' : item.command || '',
-      args: isSSE ? '' : (Array.isArray(item.args) ? item.args.join(' ') : '') || '',
+      args: isSSE ? [] : (Array.isArray(item.args) ? item.args : []) || [],
       env: isSSE ? '' : formatEnvVariables(item.envs),
       url: isSSE ? item.url : undefined,
       type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
@@ -333,10 +364,26 @@ export default function CardGrid({
           const isSelected = selectedItems.includes(key);
           const isInstalled = Boolean(installedUuid);
 
+          // Merge user rating with server data
+          // If user has rated but aggregate stats haven't updated yet (ratingCount === 0),
+          // show the user's rating so they see immediate feedback
+          let displayItem = { ...item };
+          if (item.external_id && userRatings[item.external_id]) {
+            const userRating = userRatings[item.external_id];
+            // If aggregate stats show 0 ratings, use user's rating
+            if ((item.ratingCount || 0) === 0) {
+              displayItem = {
+                ...item,
+                rating: userRating.rating,
+                ratingCount: 1  // Show at least 1 (the user's rating)
+              };
+            }
+          }
+
           return (
             <div key={key} className="h-full">
               <UnifiedServerCard
-                server={item}
+                server={displayItem}
                 serverKey={key}
                 isInstalled={isInstalled}
                 isOwned={isOwned}
@@ -367,7 +414,21 @@ export default function CardGrid({
           open={rateDialogOpen}
           onOpenChange={setRateDialogOpen}
           serverData={rateServer}
-          onRatingSubmitted={onRefreshNeeded}
+          onRatingSubmitted={async (newRating) => {
+            // Immediately update local user ratings state
+            if (rateServer.external_id) {
+              setUserRatings(prev => ({
+                ...prev,
+                [rateServer.external_id!]: {
+                  rating: newRating,
+                  comment: undefined // Comment will be fetched on next refresh
+                }
+              }));
+            }
+
+            // Trigger immediate refresh of search results to get updated aggregate stats
+            onRefreshNeeded?.();
+          }}
         />
       )}
 

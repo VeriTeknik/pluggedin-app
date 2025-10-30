@@ -54,7 +54,7 @@ import { useSortedResults } from './hooks/useSortedResults';
 
 const DEFAULT_PAGE_SIZE = 12;
 
-type SortOption = 'relevance' | 'popularity' | 'recent' | 'stars';
+type SortOption = 'relevance' | 'popularity' | 'rating' | 'recent' | 'stars';
 
 // Package registry filter options
 const PACKAGE_REGISTRIES = [
@@ -135,6 +135,7 @@ function SearchContent() {
     });
 
     if (source !== 'all') params.set('source', source);
+    if (sort !== 'relevance') params.set('sort', sort);
     if (packageRegistries.length > 0) params.set('packageRegistry', packageRegistries.join(','));
     if (repositorySource) params.set('repositorySource', repositorySource);
 
@@ -142,6 +143,7 @@ function SearchContent() {
   }, [
     query,
     source,
+    sort,
     pageSize,
     offset,
     packageRegistries,
@@ -610,6 +612,11 @@ function SearchContent() {
                         {t('search.sortOptions.popularity')}
                       </DropdownMenuItem>
                       <DropdownMenuItem
+                        onClick={() => handleSortChange('rating')}
+                        className={sort === 'rating' ? 'bg-accent' : ''}>
+                        {t('search.sortOptions.rating')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
                         onClick={() => handleSortChange('recent')}
                         className={sort === 'recent' ? 'bg-accent' : ''}>
                         {t('search.sortOptions.recent')}
@@ -793,7 +800,7 @@ function SearchContent() {
                   />
                   <PaginationUi
                     currentPage={Math.floor(offset / pageSize) + 1}
-                    totalPages={Math.ceil(filteredCount / pageSize)}
+                    totalPages={Math.ceil((data?.total || 0) / pageSize)}
                     onPageChange={handlePageChange}
                   />
                 </div>

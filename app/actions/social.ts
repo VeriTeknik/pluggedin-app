@@ -75,7 +75,7 @@ export async function reserveUsername(userId: string, username: string): Promise
     });
 
     if (!existingUser) {
-      console.error(`User not found with ID: ${userId}`);
+      console.error('User not found with ID:', userId);
       return {
         success: false,
         error: 'User not found'
@@ -101,7 +101,7 @@ export async function reserveUsername(userId: string, username: string): Promise
         .returning();
 
       if (!updatedUser) {
-        console.error(`Failed to update username for user ${userId}`);
+        console.error('Failed to update username for user:', userId);
         return {
           success: false,
           error: 'Failed to update username'

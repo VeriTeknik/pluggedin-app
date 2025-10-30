@@ -34,7 +34,7 @@ interface RateServerDialogProps {
     source?: McpServerSource;
     external_id?: string;
   };
-  onRatingSubmitted?: () => void;
+  onRatingSubmitted?: (newRating: number) => void;
 }
 
 export function RateServerDialog({
@@ -116,14 +116,14 @@ export function RateServerDialog({
       
       if (result.success) {
         // Analytics tracking removed - will be replaced with new analytics service
-        
+
         toast({
           title: 'Success',
           description: 'Thank you for rating this server!',
         });
         onOpenChange(false);
         form.reset();
-        onRatingSubmitted?.();
+        onRatingSubmitted?.(values.rating);
       } else {
         toast({
           title: 'Error',

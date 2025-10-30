@@ -20,6 +20,7 @@
     "sortOptions": {
       "relevance": "Relevance",
       "popularity": "Popularity",
+      "rating": "評価",
       "recent": "Most recent",
       "stars": "GitHub stars"
     },
@@ -76,7 +77,12 @@
       "viewReviews": "View {{count}} Reviews",
       "installationStats": "Installation Statistics",
       "installedByUsers": "Installed by {{count}} users",
-      "usageCount": "Usage Count"
+      "usageCount": "Usage Count",
+      "notRatedYet": "Not rated yet",
+      "noReviewsYet": "No reviews yet. Be the first to share your experience!",
+      "beFirstToReview": "Write First Review",
+      "noInstallsYet": "No installations recorded yet",
+      "stats": "Statistics"
     },
     "registries": {
       "registry": "Registry",

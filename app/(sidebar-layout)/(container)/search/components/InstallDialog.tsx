@@ -37,7 +37,7 @@ interface InstallDialogProps {
     name: string;
     description: string;
     command: string;
-    args: string;
+    args: string | string[];
     env: string;
     url: string | undefined;
     type: McpServerType;
@@ -97,7 +97,7 @@ export function InstallDialog({
       name: serverData.name,
       description: serverData.description,
       command: serverData.command,
-      args: serverData.args,
+      args: Array.isArray(serverData.args) ? serverData.args.join(' ') : serverData.args,
       env: serverData.env,
       url: serverData.url,
       type: serverData.type,
@@ -116,7 +116,7 @@ export function InstallDialog({
         name: serverData.name,
         description: serverData.description,
         command: serverData.command,
-        args: serverData.args,
+        args: Array.isArray(serverData.args) ? serverData.args.join(' ') : serverData.args,
         env: serverData.env,
         url: serverData.url,
         type: serverData.type,
@@ -153,7 +153,7 @@ export function InstallDialog({
         profileUuid,
         description: values.description,
         command: values.command,
-        args: values.args.trim().split(/\s+/).filter(Boolean),
+        args: values.args ? values.args.trim().split(/\s+/).filter(Boolean) : [],
         env: envObject,
         type: values.type,
         url: values.url,

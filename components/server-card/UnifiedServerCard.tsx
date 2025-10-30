@@ -70,13 +70,26 @@ function CategoryBadge({ category }: { category?: McpServerCategory }) {
   );
 }
 
-// Helper function to format rating
-function formatRating(rating?: number, count?: number) {
-  if (!rating || !count) return null;
-  
+// Helper component to format rating
+function RatingDisplay({ rating, count }: { rating?: number; count?: number }) {
+  const { t } = useTranslation();
+
+  // Handle undefined values
+  if (rating === undefined || count === undefined) return null;
+
+  // Show placeholder for servers with no ratings yet
+  if (count === 0) {
+    return (
+      <div className="flex items-center gap-1 text-muted-foreground">
+        <Star className="h-4 w-4" />
+        <span className="text-sm">{t('search.card.notRatedYet')}</span>
+      </div>
+    );
+  }
+
   const numericRating = typeof rating === 'string' ? parseFloat(rating) : rating;
   if (isNaN(numericRating)) return null;
-  
+
   return (
     <div className="flex items-center gap-1">
       <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
@@ -212,7 +225,7 @@ export function UnifiedServerCard({
               <CardContent className="pb-3 flex-1 flex flex-col">
                 {/* Key Stats - Only show if meaningful */}
                 <div className="flex flex-wrap items-center gap-3 text-sm mb-3">
-                  {formatRating(server.rating, server.ratingCount)}
+                  <RatingDisplay rating={server.rating} count={server.ratingCount} />
                   
                   {server.installation_count !== undefined && server.installation_count > 0 && (
                     <div className="flex items-center gap-1 text-muted-foreground">
@@ -493,10 +506,10 @@ export function UnifiedServerCard({
                         </div>
                       )}
                       
-                      {/* Reviews */}
-                      {server.ratingCount !== undefined && server.ratingCount > 0 && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">{t('search.card.reviews')}</h4>
+                      {/* Reviews - always show with fallback for unrated servers */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">{t('search.card.reviews')}</h4>
+                        {server.ratingCount !== undefined && server.ratingCount > 0 ? (
                           <Button
                             variant="outline"
                             size="sm"
@@ -505,18 +518,33 @@ export function UnifiedServerCard({
                           >
                             {t('search.card.viewReviews', { count: server.ratingCount })}
                           </Button>
-                        </div>
-                      )}
-                      
-                      {/* Installation Stats */}
-                      {server.installation_count !== undefined && server.installation_count > 0 && (
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">{t('search.card.installationStats')}</h4>
-                          <p className="text-sm text-muted-foreground">
-                            {t('search.card.installedByUsers', { count: server.installation_count })}
-                          </p>
-                        </div>
-                      )}
+                        ) : (
+                          <div className="space-y-2">
+                            <p className="text-sm text-muted-foreground">
+                              {t('search.card.noReviewsYet')}
+                            </p>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full"
+                              onClick={handleRate}
+                            >
+                              <Star className="h-4 w-4 mr-2" />
+                              {t('search.card.beFirstToReview')}
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Installation Stats - always show with fallback */}
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">{t('search.card.stats')}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {server.installation_count !== undefined && server.installation_count > 0
+                            ? t('search.card.installedByUsers', { count: server.installation_count })
+                            : t('search.card.noInstallsYet')}
+                        </p>
+                      </div>
                     </TabsContent>
                   </Tabs>
                 </div>

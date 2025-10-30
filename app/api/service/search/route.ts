@@ -82,21 +82,22 @@ export async function GET(request: NextRequest) {
 
     if (source === McpServerSource.REGISTRY) {
       // Registry servers from registry.plugged.in
-      results = await searchRegistry(query, { packageRegistries, repositorySource, sort });
-      const paginated = paginateResults(results, offset, pageSize);
+      const registryResult = await searchRegistry(query, { packageRegistries, repositorySource, sort });
+      const paginated = paginateResults(registryResult.indexed, offset, pageSize, registryResult.totalCount);
       return NextResponse.json(paginated);
     }
 
     // If no source specified or invalid source, return both
     // Get registry results - these already include stats from VP API
-    const registryResults = await searchRegistry(query, { packageRegistries, repositorySource, sort });
-    Object.assign(results, registryResults);
-    
+    const registryResult = await searchRegistry(query, { packageRegistries, repositorySource, sort });
+    Object.assign(results, registryResult.indexed);
+
     // Include community results - these need local metrics enrichment
     const communityResults = await searchCommunity(query);
     Object.assign(results, communityResults);
-    
+
     // Paginate and return results
+    // Note: When combining sources, we can't use totalCount from API as it would be inaccurate
     const paginatedResults = paginateResults(results, offset, pageSize);
     return NextResponse.json(paginatedResults);
   } catch (_error) {
@@ -116,19 +117,23 @@ interface RegistryFilters {
   sort?: string;
 }
 
+interface RegistrySearchResult {
+  indexed: SearchIndex;
+  totalCount?: number;
+}
+
 /**
  * Search for MCP servers in the Plugged.in Registry using VP API
  */
-async function searchRegistry(query: string, filters: RegistryFilters = {}): Promise<SearchIndex> {
+async function searchRegistry(query: string, filters: RegistryFilters = {}): Promise<RegistrySearchResult> {
   try {
     // Use enhanced VP API with server-side filtering
     const vpFilters: any = {};
 
-    // Add registry_name filter if a single package registry is specified (except 'remote')
-    // 'remote' is handled differently as it filters by transport type
-    // If multiple are specified, we'll filter client-side after fetching all
-    if (filters.packageRegistries && filters.packageRegistries.length === 1 && filters.packageRegistries[0] !== 'remote') {
-      vpFilters.registry_name = filters.packageRegistries[0];
+    // Handle multiple registry types - the enhanced API supports comma-separated values
+    if (filters.packageRegistries && filters.packageRegistries.length > 0) {
+      // Pass all registries to the enhanced API, it handles filtering server-side
+      vpFilters.registry_name = filters.packageRegistries.join(',');
     }
 
     // Add search term if provided
@@ -137,61 +142,23 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
     }
 
     // Map sort parameter to registry API format
+    // Only map sorts that backend supports; relevance and stars are handled client-side
     if (filters.sort === 'recent') {
-      vpFilters.sort = 'release_date_desc';
-    } else {
-      // Default sort for other options (the registry API will handle relevance internally)
-      vpFilters.sort = 'release_date_desc';
+      vpFilters.sort = 'updated';
+    } else if (filters.sort === 'rating') {
+      vpFilters.sort = 'rating_desc';
+    } else if (filters.sort === 'popularity') {
+      vpFilters.sort = 'installs_desc';
     }
+    // For 'relevance' and 'stars', don't set backend sort - client-side sorting will handle it
 
-    // Fetch ALL servers to show accurate counts
-    // Note: The proxy API caches results for 5 minutes, so this is relatively performant
-    // The backend handles filtering efficiently before returning results
-    const servers = await registryVPClient.getAllServersWithStats(McpServerSource.REGISTRY, vpFilters);
-
-    // Separate regular registries from 'remote' filter
-    const hasRemoteFilter = filters.packageRegistries?.includes('remote');
-    const regularRegistries = filters.packageRegistries?.filter(r => r !== 'remote') || [];
-
-    // Create Set for O(1) lookup performance when filtering by multiple registries
-    const registrySet = regularRegistries.length > 0
-      ? new Set(regularRegistries.map(r => r.toLowerCase()))
-      : null;
-
-    // Handle single 'remote' filter case - needs client-side filtering
-    const needsClientSideFilter = (filters.packageRegistries && filters.packageRegistries.length > 1) ||
-                                  (filters.packageRegistries && filters.packageRegistries.length === 1 && filters.packageRegistries[0] === 'remote');
+    // Fetch servers using enhanced endpoint
+    // The enhanced endpoint handles all filtering server-side, no need for client-side filtering
+    const response = await registryVPClient.getAllServersWithStats(McpServerSource.REGISTRY, vpFilters);
 
     // Transform and index
     const indexed: SearchIndex = {};
-    for (const server of servers) {
-      // Client-side filter if we have multiple registries OR if we have 'remote' filter
-      if (needsClientSideFilter) {
-        // Skip servers without packages
-        if (!server.packages || server.packages.length === 0) {
-          continue;
-        }
-
-        let hasMatch = false;
-
-        // Check regular registry matches
-        if (registrySet) {
-          hasMatch = server.packages.some(pkg =>
-            pkg.registry_name && registrySet.has(pkg.registry_name.toLowerCase())
-          );
-        }
-
-        // Check remote (SSE/HTTP transport) matches
-        if (hasRemoteFilter) {
-          const hasRemoteTransport = server.packages.some(pkg =>
-            pkg.transport?.type && (pkg.transport.type === 'sse' || pkg.transport.type === 'http')
-          );
-          hasMatch = hasMatch || hasRemoteTransport;
-        }
-
-        // If no matches found, skip this server
-        if (!hasMatch && (registrySet || hasRemoteFilter)) continue;
-      }
+    for (const server of response.servers) {
 
       // Client-side filter by repository source if needed (not supported by API yet)
       if (filters.repositorySource && server.repository?.url) {
@@ -210,14 +177,20 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
       indexed[server.id] = mcpIndex;
     }
 
-    // Return results - no need to enrich with metrics as stats are already included
-    return indexed;
+    // Return results with total count from API
+    return {
+      indexed,
+      totalCount: response.total_count
+    };
 
   } catch (error) {
     console.error('Registry search failed:', error);
     console.error('Registry search will be unavailable. Returning empty results.');
     // Return empty results on error to allow other sources to work
-    return {};
+    return {
+      indexed: {},
+      totalCount: 0
+    };
   }
 }
 
@@ -455,23 +428,29 @@ async function cacheResults(source: McpServerSource, query: string, results: Sea
 
 /**
  * Paginate search results
- * 
+ *
  * @param results Full search results
  * @param offset Offset for pagination
  * @param pageSize Page size
+ * @param totalCount Optional total count from API (if not provided, uses results length)
  * @returns Paginated results
+ *
+ * IMPORTANT: When totalCount is not provided, the fallback uses keys.length which only
+ * represents the number of results currently loaded, not the total available results.
+ * This can lead to inaccurate pagination when combining multiple sources or when the
+ * full result set is not loaded. Always provide totalCount when available from the API.
  */
-function paginateResults(results: SearchIndex, offset: number, pageSize: number): PaginatedSearchResult {
+function paginateResults(results: SearchIndex, offset: number, pageSize: number, totalCount?: number): PaginatedSearchResult {
   const keys = Object.keys(results);
-  const totalResults = keys.length;
-  
+  const totalResults = totalCount ?? keys.length; // Use provided totalCount or fall back to keys.length (see IMPORTANT note above)
+
   const paginatedKeys = keys.slice(offset, offset + pageSize);
   const paginatedResults: SearchIndex = {};
-  
+
   for (const key of paginatedKeys) {
     paginatedResults[key] = results[key];
   }
-  
+
   return {
     results: paginatedResults,
     total: totalResults,

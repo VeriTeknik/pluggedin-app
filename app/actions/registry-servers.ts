@@ -7,7 +7,7 @@ import { db } from '@/db';
 import { accounts, McpServerSource,projectsTable, registryServersTable, serverClaimRequestsTable } from '@/db/schema';
 import { withAuth, withProfileAuth } from '@/lib/auth-helpers';
 import { PluggedinRegistryClient } from '@/lib/registry/pluggedin-registry-client';
-import { inferTransportFromPackages,transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
+import { inferTransportType, transformPluggedinRegistryToMcpIndex } from '@/lib/registry/registry-transformer';
 import { validateExternalUrl } from '@/lib/url-validator';
 
 import { getRegistryOAuthToken } from './registry-oauth-session';
@@ -282,21 +282,23 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
       });
     }
     
-    // Determine the transport type based on packages
-    const transportType = inferTransportFromPackages(server.packages);
-    const serverType = transportType === 'stdio' ? 'STDIO' : 
-                      transportType === 'sse' ? 'SSE' : 'STREAMABLE_HTTP';
+    // Determine the transport type based on remotes first, then packages
+    const transportInfo = inferTransportType(server);
+    const serverType = transportInfo.transport === 'stdio' ? 'STDIO' :
+                      transportInfo.transport === 'sse' ? 'SSE' :
+                      transportInfo.transport === 'streamable-http' ? 'STREAMABLE_HTTP' : 'HTTP';
 
     // Import using existing mcp-servers action
     const { createMcpServer } = await import('./mcp-servers');
-    
+
     const result = await createMcpServer({
       name: transformedServer.name, // Use the transformed display name
       profileUuid,
       description: server.description || '',
-      command,
-      args,
-      env: Object.keys(env).length > 0 ? env : undefined,
+      command: transportInfo.url ? null : command,  // No command for remote servers
+      args: transportInfo.url ? [] : args,  // No args for remote servers
+      env: transportInfo.url ? {} : (Object.keys(env).length > 0 ? env : undefined),  // No env for remote servers
+      url: transportInfo.url,  // Add URL for remote servers
       type: serverType as any,
       source: 'REGISTRY' as any,
       external_id: server.id,

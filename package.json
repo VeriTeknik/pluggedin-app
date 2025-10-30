@@ -70,8 +70,6 @@
     "@sentry/nextjs": "^10.9.0",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/react-virtual": "^3.13.12",
-    "@types/diff": "^8.0.0",
-    "@types/ioredis": "^5.0.0",
     "@types/lodash": "^4.17.20",
     "@types/prismjs": "^1.26.5",
     "@types/sanitize-html": "^2.16.0",

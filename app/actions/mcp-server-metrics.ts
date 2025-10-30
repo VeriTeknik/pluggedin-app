@@ -18,8 +18,27 @@ async function submitRatingToRegistry(
   comment?: string
 ) {
   try {
-    const result = await registryVPClient.submitRating(serverId, rating, source, userId, comment);
-    return result;
+    // Validate server ID is non-empty
+    if (!serverId || serverId.trim() === '') {
+      console.error('[submitRatingToRegistry] Server ID cannot be empty');
+      return { success: false, error: 'Server ID cannot be empty' };
+    }
+
+    // Only use internal API key if it's set and valid
+    // For public user ratings, the registry will authenticate via other means
+    const apiKey = process.env.REGISTRY_INTERNAL_API_KEY;
+
+    // Don't use the API key if it's a placeholder or development value
+    const isValidApiKey = apiKey && !apiKey.includes('example') && !apiKey.includes('your-');
+
+    return await registryVPClient.submitRating(
+      serverId,
+      rating,
+      source,
+      userId,
+      comment,
+      isValidApiKey ? apiKey : undefined
+    );
   } catch (error) {
     console.error('[MCP Server Metrics] Error submitting rating to registry:', error);
     return { success: false };
@@ -39,14 +58,17 @@ async function trackInstallationInRegistry(
   }
 ) {
   try {
-    const result = await registryVPClient.trackInstallation(serverId, {
+    // Only use internal API key if it's set and valid
+    const apiKey = process.env.REGISTRY_INTERNAL_API_KEY;
+    const isValidApiKey = apiKey && !apiKey.includes('example') && !apiKey.includes('your-');
+
+    return await registryVPClient.trackInstallation(serverId, {
       source,
       user_id: metadata?.userId,
       version: metadata?.version,
       platform: metadata?.platform,
       timestamp: Date.now()
-    });
-    return result;
+    }, isValidApiKey ? apiKey : undefined);
   } catch (error) {
     console.error('Error tracking installation in registry:', error);
     return { success: false };
@@ -236,6 +258,11 @@ export const trackServerInstallation = async (input: {
 
 /**
  * Rate a server
+ *
+ * @returns Promise<{ success: boolean; error?: string }>
+ * Note: On success, returns { success: true } without additional data.
+ * On failure, returns { success: false; error: string } with error message.
+ * This intentional asymmetry allows for concise success responses.
  */
 export async function rateServer(
   profileUuid: string,
@@ -244,20 +271,35 @@ export async function rateServer(
   serverUuid?: string,
   externalId?: string,
   source?: McpServerSource
-) {
+): Promise<{ success: boolean; error?: string }> {
   try {
     // Validate input
     if (!serverUuid && (!externalId || !source)) {
-      return { 
-        success: false, 
-        error: 'Either server UUID or external ID with source must be provided' 
+      return {
+        success: false,
+        error: 'Either server UUID or external ID with source must be provided'
       };
     }
-    
+
+    // Validate that server IDs are non-empty strings
+    if (serverUuid !== undefined && (!serverUuid || serverUuid.trim() === '')) {
+      return {
+        success: false,
+        error: 'Server UUID cannot be empty'
+      };
+    }
+
+    if (externalId !== undefined && (!externalId || externalId.trim() === '')) {
+      return {
+        success: false,
+        error: 'External ID cannot be empty'
+      };
+    }
+
     if (rating < 1 || rating > 5) {
-      return { 
-        success: false, 
-        error: 'Rating must be between 1 and 5' 
+      return {
+        success: false,
+        error: 'Rating must be between 1 and 5'
       };
     }
 

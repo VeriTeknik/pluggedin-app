@@ -206,7 +206,7 @@ export function validateExternalUrl(
 /**
  * Validates a URL for internal API calls
  * More restrictive than external URL validation
- * 
+ *
  * @param url - The URL to validate
  * @returns The validated URL object
  * @throws Error if the URL is invalid
@@ -214,7 +214,7 @@ export function validateExternalUrl(
 export function validateInternalUrl(url: string): URL {
   return validateExternalUrl(url, {
     allowedDomains: [
-      'registry.plugged.in', 
+      'registry.plugged.in',
       'api.registry.plugged.in',
       'staging.plugged.in',
       'api.staging.plugged.in'

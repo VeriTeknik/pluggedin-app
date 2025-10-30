@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { McpServerSource } from '@/db/schema';
-import { FeedbackItem, FeedbackResponse, registryVPClient } from '@/lib/registry/pluggedin-registry-vp-client';
+import { FeedbackItem, FeedbackResponse } from '@/lib/registry/pluggedin-registry-vp-client';
 
 interface ServerReviewsListProps {
   serverId: string;
@@ -41,15 +41,28 @@ export function ServerReviewsList({ serverId, source, currentUserId }: ServerRev
 
   const loadFeedback = async (loadMore = false) => {
     if (!serverId) return;
-    
+
     setIsLoading(!loadMore);
     try {
-      const response: FeedbackResponse = await registryVPClient.getFeedback(
+      const params = new URLSearchParams({
         serverId,
-        limit,
-        loadMore ? offset : 0,
+        limit: limit.toString(),
+        offset: (loadMore ? offset : 0).toString(),
         sort
-      );
+      });
+
+      const res = await fetch(`/api/registry/feedback?${params}`);
+      const data = await res.json();
+
+      if (!data.success) {
+        throw new Error(data.error || 'Failed to load feedback');
+      }
+
+      const response: FeedbackResponse = {
+        feedback: data.feedback || [],
+        total_count: data.total_count || 0,
+        has_more: data.has_more || false
+      };
       
       if (loadMore) {
         setFeedback(prev => [...prev, ...response.feedback]);
