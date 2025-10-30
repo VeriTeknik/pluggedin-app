@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  pluggedin-postgres:
+    image: postgres:16.2-alpine3.18
+    container_name: pluggedin-postgres-setup
+    environment:
+      POSTGRES_DB: pluggedin
+      POSTGRES_USER: pluggedin
+      POSTGRES_PASSWORD: pluggedin_secure_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pluggedin"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - pluggedin-network
+
+  # Setup Wizard (runs if no .env exists)
+  setup-wizard:
+    build:
+      context: ./setup-wizard
+      dockerfile: Dockerfile
+    container_name: pluggedin-setup-wizard
+    ports:
+      - "12006:12006"
+    volumes:
+      # Mount parent .env so setup wizard can create it
+      - ./.env:/app/../.env
+      # Mount drizzle for migrations
+      - ./drizzle:/app/../drizzle:ro
+      - ./db:/app/../db:ro
+      # Mount node_modules from parent for migrations
+      - ./node_modules:/app/../node_modules:ro
+      - ./package.json:/app/../package.json:ro
+      - ./drizzle.config.ts:/app/../drizzle.config.ts:ro
+    depends_on:
+      pluggedin-postgres:
+        condition: service_healthy
+    environment:
+      - NODE_ENV=development
+      - SETUP_PORT=12006
+    networks:
+      - pluggedin-network
+    command: node server.js
+
+volumes:
+  postgres_data:
+
+networks:
+  pluggedin-network:
+    driver: bridge

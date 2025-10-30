@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugged.in Setup Wizard</title>
+    <link rel="stylesheet" href="/css/setup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Plugged.in Setup Wizard</h1>
+            <p>Welcome! Let's get your Plugged.in installation configured.</p>
+            <div id="status" class="status-info"></div>
+        </header>
+
+        <main>
+            <div class="mode-selection">
+                <h2>Choose Your Setup Mode</h2>
+
+                <div class="mode-cards">
+                    <div class="card recommended" onclick="location.href='quick.html'">
+                        <div class="badge">Recommended</div>
+                        <h3>⚡ Quick Setup</h3>
+                        <p>Fast and easy setup with sensible defaults. Perfect for getting started quickly.</p>
+                        <ul>
+                            <li>Auto-generated security keys</li>
+                            <li>Admin account creation</li>
+                            <li>Optional AI provider</li>
+                            <li>Takes ~2 minutes</li>
+                        </ul>
+                        <button class="btn btn-primary">Start Quick Setup</button>
+                    </div>
+
+                    <div class="card" onclick="location.href='import.html'">
+                        <h3>📁 Import Configuration</h3>
+                        <p>Already have a .env file? Import and validate your existing configuration.</p>
+                        <ul>
+                            <li>Upload existing .env file</li>
+                            <li>Automatic validation</li>
+                            <li>Auto-fill missing values</li>
+                            <li>Preview before saving</li>
+                        </ul>
+                        <button class="btn btn-secondary">Import .env File</button>
+                    </div>
+
+                    <div class="card" onclick="location.href='detailed.html'">
+                        <h3>⚙️ Detailed Setup</h3>
+                        <p>Advanced setup with full control over all configuration options.</p>
+                        <ul>
+                            <li>Complete customization</li>
+                            <li>Email, OAuth, AI providers</li>
+                            <li>MCP server settings</li>
+                            <li>Takes ~10 minutes</li>
+                        </ul>
+                        <button class="btn btn-secondary">Advanced Setup</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Setup wizard v1.0.0 | <a href="https://docs.plugged.in" target="_blank">Documentation</a></p>
+        </footer>
+    </div>
+
+    <script src="/js/setup.js"></script>
+    <script>
+        // Load status on page load
+        window.addEventListener('DOMContentLoaded', async () => {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+
+                const statusEl = document.getElementById('status');
+                statusEl.innerHTML = `
+                    <strong>Environment:</strong> ${data.docker ? '🐳 Docker' : '💻 Local'} |
+                    <strong>Platform:</strong> ${data.platform} |
+                    <strong>Node:</strong> ${data.nodeVersion}
+                `;
+            } catch (error) {
+                console.error('Failed to load status:', error);
+            }
+        });
+    </script>
+</body>
+</html>

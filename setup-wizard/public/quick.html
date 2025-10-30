@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Setup - Plugged.in</title>
+    <link rel="stylesheet" href="/css/setup.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚡ Quick Setup</h1>
+            <p>Fast and easy setup with sensible defaults</p>
+        </header>
+
+        <main>
+            <form id="quickSetupForm">
+                <div class="section">
+                    <h2>Admin Account</h2>
+
+                    <div class="form-group">
+                        <label for="adminEmail">Admin Email *</label>
+                        <input type="email" id="adminEmail" name="adminEmail" required
+                               placeholder="admin@example.com">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="adminPassword">Admin Password *</label>
+                        <input type="password" id="adminPassword" name="adminPassword" required
+                               placeholder="Enter a strong password" minlength="8">
+                        <div id="passwordStrength" class="password-strength"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="confirmPassword">Confirm Password *</label>
+                        <input type="password" id="confirmPassword" name="confirmPassword" required
+                               placeholder="Confirm your password">
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>AI Provider (Optional)</h2>
+
+                    <div class="form-group">
+                        <label for="aiProvider">AI Provider</label>
+                        <select id="aiProvider" name="aiProvider">
+                            <option value="">None (configure later)</option>
+                            <option value="anthropic">Anthropic (Claude)</option>
+                            <option value="openai">OpenAI (GPT)</option>
+                            <option value="google">Google (Gemini)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" id="apiKeyGroup" style="display: none;">
+                        <label for="apiKey">API Key</label>
+                        <input type="password" id="apiKey" name="apiKey"
+                               placeholder="Enter your API key">
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Auto-Generated Security Keys</h2>
+                    <p class="info-text">These cryptographic keys are automatically generated for maximum security.</p>
+
+                    <div id="secretsDisplay" class="secrets-list">
+                        <div class="loading">Generating secure keys...</div>
+                    </div>
+
+                    <button type="button" id="regenerateBtn" class="btn btn-secondary" style="display: none;">
+                        🔄 Regenerate All Keys
+                    </button>
+                </div>
+
+                <div class="actions">
+                    <button type="button" onclick="location.href='/'" class="btn btn-secondary">
+                        ← Back
+                    </button>
+                    <button type="submit" id="submitBtn" class="btn btn-primary">
+                        Complete Setup →
+                    </button>
+                </div>
+
+                <div id="progress" class="progress-section" style="display: none;">
+                    <h3>Setup Progress</h3>
+                    <div class="progress-bar">
+                        <div id="progressBar" class="progress-fill"></div>
+                    </div>
+                    <div id="progressText" class="progress-text"></div>
+                </div>
+            </form>
+        </main>
+
+        <footer>
+            <p><a href="/">← Back to setup options</a></p>
+        </footer>
+    </div>
+
+    <script src="/js/setup.js"></script>
+    <script src="/js/quick.js"></script>
+</body>
+</html>
