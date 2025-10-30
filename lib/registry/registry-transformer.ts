@@ -33,9 +33,15 @@ interface PluggedinRegistryServer {
   };
   packages?: RegistryPackage[];
   remotes?: Array<{
-    transport_type: 'sse' | 'streamable-http' | 'http';
+    transport_type: 'sse' | 'streamable-http' | 'streamable_http' | 'http';
     url: string;
-    headers?: Record<string, string>;
+    headers?: Array<{
+      name: string;
+      description?: string;
+      default?: string;
+      is_required?: boolean;
+      is_secret?: boolean;
+    }> | Record<string, string>;
   }>;
 }
 
@@ -55,7 +61,7 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
   return {
     name: displayName,
     description: server.description || '',
-    command: isRemote ? null : extractCommand(primaryPackage),
+    command: isRemote ? '' : extractCommand(primaryPackage),
     args: isRemote ? [] : extractArgs(primaryPackage),
     envs: extractEnvs(primaryPackage),
     url: transportInfo.url || null,
@@ -73,8 +79,6 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
     rating: undefined, // Will come from your rating system
     ratingCount: undefined,
     installation_count: undefined, // Track in your database
-    // Store the full server data for later use (including all packages and remotes)
-    _rawServer: server as any,
   };
 }
 

@@ -746,7 +746,7 @@ export function IntelligentServerDialog({
             command = primaryPackage.runtime_hint || 'npx';
             args = [primaryPackage.name];
             if (primaryPackage.runtime_arguments) {
-              args.push(...primaryPackage.runtime_arguments);
+              args.push(...primaryPackage.runtime_arguments.map((arg: any) => arg.value || arg.default || ''));
             }
             break;
           case 'docker':

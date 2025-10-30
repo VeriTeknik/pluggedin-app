@@ -295,7 +295,7 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
       name: transformedServer.name, // Use the transformed display name
       profileUuid,
       description: server.description || '',
-      command: transportInfo.url ? null : command,  // No command for remote servers
+      command: transportInfo.url ? undefined : command,  // No command for remote servers
       args: transportInfo.url ? [] : args,  // No args for remote servers
       env: transportInfo.url ? {} : (Object.keys(env).length > 0 ? env : undefined),  // No env for remote servers
       url: transportInfo.url,  // Add URL for remote servers
