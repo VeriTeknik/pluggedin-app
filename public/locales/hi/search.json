@@ -20,6 +20,7 @@
     "sortOptions": {
       "relevance": "प्रासंगिकता",
       "popularity": "लोकप्रियता",
+      "rating": "रेटिंग",
       "recent": "सबसे हाल का",
       "stars": "GitHub सितारे"
     },

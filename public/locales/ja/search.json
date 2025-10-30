@@ -20,6 +20,7 @@
     "sortOptions": {
       "relevance": "Relevance",
       "popularity": "Popularity",
+      "rating": "評価",
       "recent": "Most recent",
       "stars": "GitHub stars"
     },

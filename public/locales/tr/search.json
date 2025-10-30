@@ -20,6 +20,7 @@
     "sortOptions": {
       "relevance": "İlgililik",
       "popularity": "Popülerlik",
+      "rating": "Değerlendirme",
       "recent": "En yeni",
       "stars": "GitHub yıldızları"
     },
