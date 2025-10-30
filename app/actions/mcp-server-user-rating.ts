@@ -92,7 +92,7 @@ export async function getUserRatingsForServers(
             };
           } catch (error) {
             // Continue with other servers if one fails
-            console.error(`Failed to fetch rating for ${serverId}:`, error);
+            console.error('Failed to fetch rating for server:', serverId, error);
             return { serverId, rating: null };
           }
         })
