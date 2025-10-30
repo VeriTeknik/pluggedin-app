@@ -142,14 +142,15 @@ async function searchRegistry(query: string, filters: RegistryFilters = {}): Pro
     }
 
     // Map sort parameter to registry API format
+    // Only map sorts that backend supports; relevance and stars are handled client-side
     if (filters.sort === 'recent') {
-      vpFilters.sort = 'release_date_desc';
+      vpFilters.sort = 'updated';
     } else if (filters.sort === 'rating') {
       vpFilters.sort = 'rating_desc';
-    } else {
-      // Default sort for other options
-      vpFilters.sort = 'release_date_desc';
+    } else if (filters.sort === 'popularity') {
+      vpFilters.sort = 'installs_desc';
     }
+    // For 'relevance' and 'stars', don't set backend sort - client-side sorting will handle it
 
     // Fetch servers using enhanced endpoint
     // The enhanced endpoint handles all filtering server-side, no need for client-side filtering

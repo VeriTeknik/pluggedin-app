@@ -212,10 +212,10 @@ export class PluggedinRegistryVPClient {
 
     // Map sort parameter
     if (filters?.sort) {
+      // Map legacy release_date_desc to updated, otherwise pass through
+      // Supported sorts: updated, rating_desc, installs_desc, trending
       if (filters.sort === 'release_date_desc') {
         params.append('sort', 'updated');
-      } else if (filters.sort === 'rating_desc') {
-        params.append('sort', 'rating_desc');
       } else {
         params.append('sort', filters.sort);
       }

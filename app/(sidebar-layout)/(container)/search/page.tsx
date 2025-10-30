@@ -54,7 +54,7 @@ import { useSortedResults } from './hooks/useSortedResults';
 
 const DEFAULT_PAGE_SIZE = 12;
 
-type SortOption = 'relevance' | 'popularity' | 'recent' | 'stars';
+type SortOption = 'relevance' | 'popularity' | 'rating' | 'recent' | 'stars';
 
 // Package registry filter options
 const PACKAGE_REGISTRIES = [
@@ -608,6 +608,11 @@ function SearchContent() {
                         onClick={() => handleSortChange('popularity')}
                         className={sort === 'popularity' ? 'bg-accent' : ''}>
                         {t('search.sortOptions.popularity')}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleSortChange('rating')}
+                        className={sort === 'rating' ? 'bg-accent' : ''}>
+                        {t('search.sortOptions.rating')}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => handleSortChange('recent')}
