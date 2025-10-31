@@ -28,14 +28,14 @@ export function SearchBar({
   }, [debouncedText, onSearch]);
 
   return (
-    <div className="relative w-full md:w-1/2 lg:w-1/3">
-      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+    <div className="relative w-full">
+      <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="search"
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder || t('releaseNotes.search.placeholder', 'Search release notes...')}
-        className="w-full rounded-md bg-background pl-9 pr-4 py-2 text-sm shadow-sm"
+        className="w-full rounded-lg bg-background pl-12 pr-4 py-3 text-base shadow-sm border-2 focus:border-primary"
       />
     </div>
   );

@@ -76,10 +76,23 @@
     "title": "发布说明",
     "description": "跟踪我们存储库中的最新更新和更改",
     "filters": {
-      "filterBy": "按存储库筛选：",
+      "filterBy": "按存储库筛选",
       "all": "所有存储库",
+      "allDesc": "显示所有存储库的发布",
       "app": "pluggedin-app",
-      "mcp": "pluggedin-mcp"
+      "appDesc": "AI数据、记忆和工具交汇处的界面 — 连接模型、人类和机器",
+      "mcp": "pluggedin-mcp",
+      "mcpDesc": "TypeScript MCP代理服务器 - MCP客户端的统一接口",
+      "registryProxy": "registry-proxy",
+      "registryProxyDesc": "增强的MCP注册表基础架构，具有过滤和缓存功能",
+      "pythonSdk": "Python SDK",
+      "pythonSdkDesc": "Plugged.in API的Python SDK，支持同步/异步客户端",
+      "goSdk": "Go SDK",
+      "goSdkDesc": "Plugged.in API的Go SDK，具有完整的类型安全性",
+      "jsSdk": "JavaScript/TypeScript SDK",
+      "jsSdkDesc": "Plugged.in API集成的JavaScript/TypeScript SDK",
+      "docs": "文档",
+      "docsDesc": "由Mintlify提供支持的官方文档网站"
     },
     "changeTypes": {
       "feature": "功能",
@@ -100,6 +113,8 @@
     "noReleasesText": "当前没有可显示的发布说明。",
     "noSearchResultsTitle": "未找到结果",
     "noSearchResultsText": "没有发布说明符合您的搜索条件。",
+    "noResultsOnPage": "此页面无结果",
+    "noResultsOnPageText": "第 {{page}} 页没有结果。使用分页控件导航到其他页面。",
     "rssFeed": "通过 RSS 订阅",
     "search": {
       "placeholder": "搜索发布说明..."

@@ -78,10 +78,23 @@
     "title": "Release Notes",
     "description": "Track the latest updates and changes across our repositories",
     "filters": {
-      "filterBy": "Filter by Repository:",
+      "filterBy": "Filter by Repository",
       "all": "All Repositories",
+      "allDesc": "Show releases from all repositories",
       "app": "pluggedin-app",
-      "mcp": "pluggedin-mcp"
+      "appDesc": "The interface at the crossroads of AI data, memory, and tools — connecting models, humans, and machines",
+      "mcp": "pluggedin-mcp",
+      "mcpDesc": "TypeScript MCP proxy server - unified interface for MCP clients",
+      "registryProxy": "registry-proxy",
+      "registryProxyDesc": "Enhanced MCP Registry infrastructure with filtering and caching",
+      "pythonSdk": "Python SDK",
+      "pythonSdkDesc": "Python SDK with sync/async clients for Plugged.in API",
+      "goSdk": "Go SDK",
+      "goSdkDesc": "Go SDK with full type safety for Plugged.in API",
+      "jsSdk": "JavaScript/TypeScript SDK",
+      "jsSdkDesc": "JavaScript/TypeScript SDK for Plugged.in API integration",
+      "docs": "Documentation",
+      "docsDesc": "Official documentation site powered by Mintlify"
     },
     "changeTypes": {
       "feature": "Features",
@@ -102,6 +115,8 @@
     "noReleasesText": "There are currently no release notes to display.",
     "noSearchResultsTitle": "No Results Found",
     "noSearchResultsText": "No release notes match your search criteria.",
+    "noResultsOnPage": "No Results on This Page",
+    "noResultsOnPageText": "Page {{page}} has no results. Use the pagination controls to navigate to other pages.",
     "rssFeed": "Subscribe via RSS",
     "search": {
       "placeholder": "Search release notes..."

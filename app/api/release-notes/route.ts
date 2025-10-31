@@ -2,36 +2,30 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { getReleaseNotes, searchReleaseNotes, updateReleaseNotesFromGitHub } from '@/app/actions/release-notes';
 import { validateCSRF } from '@/lib/csrf-protection';
+import { type RepositoryName } from '@/lib/github/release-fetcher';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const repository = searchParams.get('repository') as 'pluggedin-app' | 'pluggedin-mcp' | 'all' | null;
+  const repository = searchParams.get('repository') as RepositoryName | 'all' | null;
   const page = parseInt(searchParams.get('page') || '1', 10);
   const limit = parseInt(searchParams.get('limit') || '10', 10);
   const query = searchParams.get('query'); // For search functionality
 
   try {
-    let notes;
+    let result;
     if (query) {
       // If a search query is present, use the search action with pagination
-      notes = await searchReleaseNotes(query, repository || 'all', page, limit);
+      result = await searchReleaseNotes(query, repository || 'all', page, limit);
     } else {
       // Otherwise, fetch paginated notes
-      notes = await getReleaseNotes(repository || 'all', page, limit);
+      result = await getReleaseNotes(repository || 'all', page, limit);
     }
 
-    // If no notes found, try to fetch from GitHub
-    if (!notes || notes.length === 0) {
-      const updateResult = await updateReleaseNotesFromGitHub();
-      if (updateResult.success) {
-        // Retry fetching notes after update
-        notes = await getReleaseNotes(repository || 'all', page, limit);
-      } else {
-        console.error('Failed to fetch releases from GitHub:', updateResult.error);
-      }
-    }
-
-    return NextResponse.json(notes || []);
+    // Return both notes and total count for proper pagination
+    return NextResponse.json({
+      notes: result.notes || [],
+      total: result.total || 0
+    });
   } catch (error: any) {
     console.error('Error fetching release notes via API:', error);
     return NextResponse.json({ error: 'Failed to fetch release notes', details: error.message }, { status: 500 });

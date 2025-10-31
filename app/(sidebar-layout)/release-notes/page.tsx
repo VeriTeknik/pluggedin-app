@@ -1,7 +1,7 @@
 'use client';
 
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -13,7 +13,12 @@ import { ReleaseCard } from './components/ReleaseCard';
 import { ReleaseFilter } from './components/ReleaseFilter';
 import { SearchBar } from './components/SearchBar';
 
-const fetcher = async (url: string): Promise<ReleaseNote[]> => {
+interface ReleaseNotesResponse {
+  notes: ReleaseNote[];
+  total: number;
+}
+
+const fetcher = async (url: string): Promise<ReleaseNotesResponse> => {
   const res = await fetch(url);
   if (!res.ok) {
     const error = await res.json().catch(() => ({}));
@@ -25,7 +30,16 @@ const fetcher = async (url: string): Promise<ReleaseNote[]> => {
 
 export default function ReleaseNotesPage() {
   const { t } = useTranslation();
-  const [filter, setFilter] = useState<'all' | 'pluggedin-app' | 'pluggedin-mcp'>('all');
+  const [filter, setFilter] = useState<
+    | 'all'
+    | 'pluggedin-app'
+    | 'pluggedin-mcp'
+    | 'registry-proxy'
+    | 'pluggedinkit-python'
+    | 'pluggedinkit-go'
+    | 'pluggedinkit-js'
+    | 'pluggedin-docs'
+  >('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [page, setPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -44,37 +58,56 @@ export default function ReleaseNotesPage() {
     return `/api/release-notes?${params.toString()}`;
   }, [filter, searchTerm, page, limit]);
 
-  const { data: releaseNotes, error, isLoading, mutate } = useSWR(apiUrl, fetcher, {
+  const { data: response, error, isLoading, mutate } = useSWR(apiUrl, fetcher, {
     keepPreviousData: true,
     onError: (err: Error) => {
       console.error('Error fetching release notes:', err);
     },
   });
 
-  const handleSearch = (term: string) => {
+  const releaseNotes = response?.notes || [];
+  const total = response?.total || 0;
+  const totalPages = Math.ceil(total / limit);
+
+  const handleSearch = useCallback((term: string) => {
     setSearchTerm(term);
     setPage(1);
-  };
+  }, []);
 
-  const handleFilterChange = (newFilter: 'all' | 'pluggedin-app' | 'pluggedin-mcp') => {
-    setFilter(newFilter);
-    setPage(1);
-  };
+  const handleFilterChange = useCallback(
+    (
+      newFilter:
+        | 'all'
+        | 'pluggedin-app'
+        | 'pluggedin-mcp'
+        | 'registry-proxy'
+        | 'pluggedinkit-python'
+        | 'pluggedinkit-go'
+        | 'pluggedinkit-js'
+        | 'pluggedin-docs'
+    ) => {
+      setFilter(newFilter);
+      setPage(1);
+    },
+    []
+  );
 
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      const response = await fetch('/api/release-notes', {
+      const nonce = document.querySelector('meta[name="x-nonce"]')?.getAttribute('content') || '';
+      const refreshResponse = await fetch('/api/release-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'X-Requested-With': 'XMLHttpRequest',
+          'x-csrf-token': nonce,
         },
       });
 
-      if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.message || 'Failed to refresh release notes');
+      if (!refreshResponse.ok) {
+        const errorData = await refreshResponse.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Failed to refresh release notes');
       }
 
       await mutate();
@@ -104,13 +137,11 @@ export default function ReleaseNotesPage() {
         
         <p className="text-muted-foreground mb-8">{t('releaseNotes.description')}</p>
 
-        <div className="mb-8 space-y-4 md:space-y-0 md:flex md:items-center md:justify-between">
-          <div className="flex-grow">
-            <ReleaseFilter currentFilter={filter} onFilterChange={handleFilterChange} />
-          </div>
-          <div className="w-full md:w-auto md:ml-4">
+        <div className="mb-8 space-y-6">
+          <div className="w-full max-w-2xl">
             <SearchBar onSearch={handleSearch} />
           </div>
+          <ReleaseFilter currentFilter={filter} onFilterChange={handleFilterChange} />
         </div>
 
         {isLoading && (
@@ -130,7 +161,7 @@ export default function ReleaseNotesPage() {
           </Alert>
         )}
 
-        {!isLoading && !error && (!releaseNotes || releaseNotes.length === 0) && (
+        {!isLoading && !error && total === 0 && (
           <Alert className="my-6">
             <AlertTitle>
               {searchTerm ? t('releaseNotes.noSearchResultsTitle') : t('releaseNotes.noReleasesTitle')}
@@ -141,7 +172,16 @@ export default function ReleaseNotesPage() {
           </Alert>
         )}
 
-        {!isLoading && !error && releaseNotes && releaseNotes.length > 0 && (
+        {!isLoading && !error && total > 0 && releaseNotes.length === 0 && (
+          <Alert className="my-6">
+            <AlertTitle>{t('releaseNotes.noResultsOnPage')}</AlertTitle>
+            <AlertDescription>
+              {t('releaseNotes.noResultsOnPageText', { page })}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!isLoading && !error && releaseNotes.length > 0 && (
           <div className="space-y-6">
             {releaseNotes.map((note: ReleaseNote) => (
               <ReleaseCard key={`${note.repository}-${note.version}`} release={note} />
@@ -149,21 +189,21 @@ export default function ReleaseNotesPage() {
           </div>
         )}
 
-        {!isLoading && !error && releaseNotes && releaseNotes.length > 0 && (
+        {!isLoading && !error && total > 0 && (
           <div className="mt-8 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-            <Button 
-              onClick={() => setPage(prev => Math.max(1, prev - 1))} 
+            <Button
+              onClick={() => setPage(prev => Math.max(1, prev - 1))}
               disabled={page <= 1}
               className="w-full sm:w-auto"
             >
               {t('common.previous')}
             </Button>
             <span className="text-sm text-muted-foreground">
-              {t('common.page', { page })}
+              {t('common.page', { page })} {totalPages > 0 && `/ ${totalPages}`}
             </span>
-            <Button 
-              onClick={() => setPage(prev => prev + 1)} 
-              disabled={releaseNotes.length < limit}
+            <Button
+              onClick={() => setPage(prev => prev + 1)}
+              disabled={page >= totalPages}
               className="w-full sm:w-auto"
             >
               {t('common.next')}

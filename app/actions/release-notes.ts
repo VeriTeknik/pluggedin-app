@@ -4,12 +4,18 @@ import { and, desc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { releaseNotes } from '@/db/schema';
-import { generateHistoricalReleaseNotes, getProcessedReleaseNotes } from '@/lib/github/release-fetcher';
+import { generateHistoricalReleaseNotes, getProcessedReleaseNotes, type RepositoryName } from '@/lib/github/release-fetcher';
 import type { ReleaseNote, ReleaseNoteContentDb } from '@/types/release';
 
-const REPOSITORIES: ('pluggedin-app' | 'pluggedin-mcp')[] = ['pluggedin-app', 'pluggedin-mcp'];
-const CACHE_KEY_PREFIX = 'release_notes_';
-const CACHE_TTL_SECONDS = 3600; // Cache for 1 hour
+const REPOSITORIES: Array<RepositoryName> = [
+  'pluggedin-app',
+  'pluggedin-mcp',
+  'registry-proxy',
+  'pluggedinkit-python',
+  'pluggedinkit-go',
+  'pluggedinkit-js',
+  'pluggedin-docs',
+];
 
 /**
  * Fetches the latest release notes from GitHub for all specified repositories,
@@ -71,24 +77,25 @@ export async function updateReleaseNotesFromGitHub(): Promise<{ success: boolean
 
 /**
  * Fetches release notes from the database with caching.
- * @param repositoryFilter - Optional filter ('pluggedin-app', 'pluggedin-mcp', or 'all').
+ * @param repositoryFilter - Optional filter for specific repository or 'all'.
  * @param page - Page number for pagination.
  * @param limit - Number of items per page.
- * @returns A promise resolving to an array of ReleaseNote objects.
+ * @returns A promise resolving to an object with notes array and total count.
  */
 export async function getReleaseNotes(
-  repositoryFilter: 'pluggedin-app' | 'pluggedin-mcp' | 'all' = 'all',
+  repositoryFilter: RepositoryName | 'all' = 'all',
   page = 1,
   limit = 10
-): Promise<ReleaseNote[]> {
+): Promise<{ notes: ReleaseNote[]; total: number }> {
   try {
     const offset = (page - 1) * limit;
-    
+
     // Build query conditions
-    const conditions = repositoryFilter !== 'all' 
-      ? [eq(releaseNotes.repository, repositoryFilter)] 
+    const conditions = repositoryFilter !== 'all'
+      ? [eq(releaseNotes.repository, repositoryFilter)]
       : [];
 
+    // Fetch notes with pagination
     const notes = await db.select()
                           .from(releaseNotes)
                           .where(and(...conditions))
@@ -96,16 +103,24 @@ export async function getReleaseNotes(
                           .limit(limit)
                           .offset(offset);
 
+    // Get total count for pagination
+    const countResult = await db.select({ count: sql<number>`count(*)` })
+                                 .from(releaseNotes)
+                                 .where(and(...conditions));
+
+    const total = Number(countResult[0]?.count || 0);
 
     // Convert Date objects to ISO strings and assert repository type
-    return notes.map(note => ({
+    const formattedNotes = notes.map(note => ({
       ...note,
-      repository: note.repository as 'pluggedin-app' | 'pluggedin-mcp',
+      repository: note.repository as RepositoryName,
       releaseDate: note.releaseDate.toISOString(),
       content: note.content as ReleaseNoteContentDb,
       createdAt: note.createdAt.toISOString(),
       updatedAt: note.updatedAt.toISOString(),
     }));
+
+    return { notes: formattedNotes, total };
   } catch (error) {
     console.error('Error fetching release notes:', error);
     throw error;
@@ -169,15 +184,15 @@ export async function populateHistoricalReleaseNotes(): Promise<{ success: boole
  * @param repositoryFilter - Optional repository filter.
  * @param page - Page number for pagination.
  * @param limit - Number of items per page.
- * @returns A promise resolving to an array of matching ReleaseNote objects.
+ * @returns A promise resolving to an object with notes array and total count.
  */
 export async function searchReleaseNotes(
   query: string,
-  repositoryFilter: 'pluggedin-app' | 'pluggedin-mcp' | 'all' = 'all',
+  repositoryFilter: RepositoryName | 'all' = 'all',
   page = 1,
   limit = 10
-): Promise<ReleaseNote[]> {
-   if (!query) return [];
+): Promise<{ notes: ReleaseNote[]; total: number }> {
+   if (!query) return { notes: [], total: 0 };
 
    const offset = (page - 1) * limit;
 
@@ -192,19 +207,29 @@ export async function searchReleaseNotes(
      conditions.push(eq(releaseNotes.repository, repositoryFilter));
    }
 
+   // Fetch notes with pagination
    const notes = await db.select()
                          .from(releaseNotes)
-                         .where(and(...conditions)) // Apply conditions here
+                         .where(and(...conditions))
                          .orderBy(desc(releaseNotes.releaseDate))
                          .limit(limit)
                          .offset(offset);
 
-   return notes.map(note => ({
+   // Get total count for pagination
+   const countResult = await db.select({ count: sql<number>`count(*)` })
+                                .from(releaseNotes)
+                                .where(and(...conditions));
+
+   const total = Number(countResult[0]?.count || 0);
+
+   const formattedNotes = notes.map(note => ({
      ...note,
-     repository: note.repository as 'pluggedin-app' | 'pluggedin-mcp', // Type assertion
+     repository: note.repository as RepositoryName,
      releaseDate: note.releaseDate.toISOString(),
      content: note.content as ReleaseNoteContentDb,
      createdAt: note.createdAt.toISOString(),
      updatedAt: note.updatedAt.toISOString(),
    }));
+
+   return { notes: formattedNotes, total };
 }

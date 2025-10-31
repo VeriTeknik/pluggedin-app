@@ -76,10 +76,23 @@
     "title": "Sürüm Notları",
     "description": "Depolarımızdaki en son güncellemeleri ve değişiklikleri takip edin",
     "filters": {
-      "filterBy": "Depoya Göre Filtrele:",
+      "filterBy": "Depoya Göre Filtrele",
       "all": "Tüm Depolar",
+      "allDesc": "Tüm depolardan sürümleri göster",
       "app": "pluggedin-app",
-      "mcp": "pluggedin-mcp"
+      "appDesc": "Yapay zeka verisi, hafıza ve araçların kesişim noktasındaki arayüz — modelleri, insanları ve makineleri birbirine bağlar",
+      "mcp": "pluggedin-mcp",
+      "mcpDesc": "TypeScript MCP proxy sunucusu - MCP istemcileri için birleşik arayüz",
+      "registryProxy": "registry-proxy",
+      "registryProxyDesc": "Filtreleme ve önbellekleme ile geliştirilmiş MCP Registry altyapısı",
+      "pythonSdk": "Python SDK",
+      "pythonSdkDesc": "Plugged.in API için senkron/asenkron Python SDK",
+      "goSdk": "Go SDK",
+      "goSdkDesc": "Plugged.in API için tam tip güvenlikli Go SDK",
+      "jsSdk": "JavaScript/TypeScript SDK",
+      "jsSdkDesc": "Plugged.in API entegrasyonu için JavaScript/TypeScript SDK",
+      "docs": "Dokümantasyon",
+      "docsDesc": "Mintlify ile güçlendirilmiş resmi dokümantasyon sitesi"
     },
     "changeTypes": {
       "feature": "Özellikler",
@@ -100,6 +113,8 @@
     "noReleasesText": "Şu anda görüntülenecek sürüm notu bulunmuyor.",
     "noSearchResultsTitle": "Sonuç Bulunamadı",
     "noSearchResultsText": "Arama kriterlerinize uygun sürüm notu bulunamadı.",
+    "noResultsOnPage": "Bu Sayfada Sonuç Yok",
+    "noResultsOnPageText": "Sayfa {{page}}'de sonuç bulunmuyor. Diğer sayfalara gitmek için sayfa kontrollerini kullanın.",
     "rssFeed": "RSS ile Takip Et",
     "search": {
       "placeholder": "Sürüm notlarında ara..."

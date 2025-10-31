@@ -9,7 +9,14 @@ export interface ReleaseChange {
 // Define the main structure for a single release note entry
 export interface ReleaseNote {
   id?: number; // Optional database ID
-  repository: 'pluggedin-app' | 'pluggedin-mcp';
+  repository:
+    | 'pluggedin-app'
+    | 'pluggedin-mcp'
+    | 'registry-proxy'
+    | 'pluggedinkit-python'
+    | 'pluggedinkit-go'
+    | 'pluggedinkit-js'
+    | 'pluggedin-docs';
   version: string; // e.g., "v1.2.0"
   releaseDate: string; // ISO date string
   commitSha: string; // SHA of the release commit/tag
