@@ -1,5 +1,5 @@
 // Quick Setup page logic
-console.log('📝 quick.js file loaded');
+console.log('📝 quick.js file loaded - version 3');
 
 // Check if setupUtils is available
 if (!window.setupUtils) {
@@ -7,7 +7,8 @@ if (!window.setupUtils) {
     alert('Error: Setup utilities not loaded. Please refresh the page.');
 }
 
-const { apiCall, showToast, updateProgress, showProgress, disableForm, isValidEmail } = window.setupUtils || {};
+// Don't destructure - use window.setupUtils directly to avoid any conflicts
+// const { apiCall, showToast, updateProgress, showProgress, disableForm, isValidEmail } = window.setupUtils || {};
 
 let generatedSecrets = null;
 let dbPassword = null;
@@ -54,7 +55,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         await generateSecrets();
     } catch (error) {
         console.error('Error generating secrets:', error);
-        showToast('Failed to generate secrets. You can still complete setup.', 'error');
+        window.setupUtils.showToast('Failed to generate secrets. You can still complete setup.', 'error');
     }
 });
 
@@ -118,7 +119,7 @@ async function generateSecrets() {
 
     try {
         console.log('Generating secrets...');
-        const result = await apiCall('/api/generate-secrets', 'POST');
+        const result = await window.setupUtils.apiCall('/api/generate-secrets', 'POST');
 
         if (result.success) {
             console.log('Secrets generated successfully');
@@ -168,21 +169,21 @@ async function handleSubmit(e) {
     const apiKey = document.getElementById('apiKey').value;
 
     // Validate
-    if (!isValidEmail(adminEmail)) {
+    if (!window.setupUtils.isValidEmail(adminEmail)) {
         console.log('Validation failed: Invalid email');
-        showToast('Please enter a valid email address', 'error');
+        window.setupUtils.showToast('Please enter a valid email address', 'error');
         return;
     }
 
     if (adminPassword !== confirmPassword) {
         console.log('Validation failed: Passwords do not match');
-        showToast('Passwords do not match', 'error');
+        window.setupUtils.showToast('Passwords do not match', 'error');
         return;
     }
 
     if (adminPassword.length < 8) {
         console.log('Validation failed: Password too short');
-        showToast('Password must be at least 8 characters', 'error');
+        window.setupUtils.showToast('Password must be at least 8 characters', 'error');
         return;
     }
 
@@ -208,15 +209,15 @@ async function handleSubmit(e) {
     }
 
     // Start setup process
-    disableForm('quickSetupForm', true);
-    showProgress(true);
+    window.setupUtils.disableForm('quickSetupForm', true);
+    window.setupUtils.showProgress(true);
 
     try {
         // Step 1: Get defaults
         console.log('Step 1: Loading defaults...');
         updateOverlay(10, 'Loading Configuration', 'Loading environment defaults...');
-        updateProgress(10, 'Loading environment defaults...');
-        const defaultsResult = await apiCall('/api/defaults');
+        window.setupUtils.updateProgress(10, 'Loading environment defaults...');
+        const defaultsResult = await window.setupUtils.apiCall('/api/defaults');
 
         if (!defaultsResult.success) {
             console.error('Failed to load defaults:', defaultsResult);
@@ -246,8 +247,8 @@ async function handleSubmit(e) {
         // Step 2: Save .env file
         console.log('Step 2: Saving .env file...');
         updateOverlay(30, 'Saving Configuration', 'Creating .env file with your settings...');
-        updateProgress(30, 'Saving configuration...');
-        const saveResult = await apiCall('/api/save-env', 'POST', config);
+        window.setupUtils.updateProgress(30, 'Saving configuration...');
+        const saveResult = await window.setupUtils.apiCall('/api/save-env', 'POST', config);
 
         if (!saveResult.success) {
             console.error('Failed to save .env:', saveResult);
@@ -258,8 +259,8 @@ async function handleSubmit(e) {
         // Step 3: Complete setup (database + admin user)
         console.log('Step 3: Setting up database and creating admin user...');
         updateOverlay(50, 'Setting Up Database', 'Running migrations and creating admin account...');
-        updateProgress(50, 'Setting up database and creating admin user...');
-        const completeResult = await apiCall('/api/complete-setup', 'POST', {
+        window.setupUtils.updateProgress(50, 'Setting up database and creating admin user...');
+        const completeResult = await window.setupUtils.apiCall('/api/complete-setup', 'POST', {
             databaseUrl: config.DATABASE_URL,
             adminEmail,
             adminPassword,
@@ -273,7 +274,7 @@ async function handleSubmit(e) {
 
         // Success!
         updateOverlay(100, 'Setup Complete!', 'Your Plugged.in installation is ready!');
-        updateProgress(100, 'Setup completed successfully!');
+        window.setupUtils.updateProgress(100, 'Setup completed successfully!');
 
         // Show success message in overlay
         setTimeout(() => {
@@ -305,12 +306,12 @@ async function handleSubmit(e) {
             overlay.style.display = 'none';
         }
 
-        updateProgress(0, '');
-        showProgress(false);
-        disableForm('quickSetupForm', false);
+        window.setupUtils.updateProgress(0, '');
+        window.setupUtils.showProgress(false);
+        window.setupUtils.disableForm('quickSetupForm', false);
 
         // Show error prominently
-        showToast(`Setup failed: ${error.message}`, 'error');
+        window.setupUtils.showToast(`Setup failed: ${error.message}`, 'error');
 
         // Also show error in the page
         const errorDiv = document.createElement('div');
