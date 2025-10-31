@@ -167,19 +167,25 @@ export async function populateHistoricalReleaseNotes(): Promise<{ success: boole
  * Searches within the 'content' JSONB field.
  * @param query - The search term.
  * @param repositoryFilter - Optional repository filter.
+ * @param page - Page number for pagination.
+ * @param limit - Number of items per page.
  * @returns A promise resolving to an array of matching ReleaseNote objects.
  */
 export async function searchReleaseNotes(
   query: string,
-  repositoryFilter: 'pluggedin-app' | 'pluggedin-mcp' | 'all' = 'all'
+  repositoryFilter: 'pluggedin-app' | 'pluggedin-mcp' | 'all' = 'all',
+  page = 1,
+  limit = 10
 ): Promise<ReleaseNote[]> {
    if (!query) return [];
+
+   const offset = (page - 1) * limit;
 
    // Basic search using ILIKE on string representations of content.
    // For more advanced JSONB search, specific operators are needed (e.g., @>, ?).
    // This is a simplified version.
    const searchTerm = `%${query}%`;
-   
+
    // Build query conditions
    const conditions = [sql`CAST(content AS TEXT) ILIKE ${searchTerm}`];
    if (repositoryFilter !== 'all') {
@@ -189,7 +195,9 @@ export async function searchReleaseNotes(
    const notes = await db.select()
                          .from(releaseNotes)
                          .where(and(...conditions)) // Apply conditions here
-                         .orderBy(desc(releaseNotes.releaseDate));
+                         .orderBy(desc(releaseNotes.releaseDate))
+                         .limit(limit)
+                         .offset(offset);
 
    return notes.map(note => ({
      ...note,

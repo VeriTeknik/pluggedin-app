@@ -64,18 +64,19 @@ export default function ReleaseNotesPage() {
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      const response = await fetch('/api/release-notes', { 
+      const response = await fetch('/api/release-notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
         },
       });
-      
+
       if (!response.ok) {
         const error = await response.json().catch(() => ({}));
         throw new Error(error.message || 'Failed to refresh release notes');
       }
-      
+
       await mutate();
     } catch (error) {
       console.error('Error refreshing release notes:', error);

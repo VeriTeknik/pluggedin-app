@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 
 import { getReleaseNotes, searchReleaseNotes, updateReleaseNotesFromGitHub } from '@/app/actions/release-notes';
+import { validateCSRF } from '@/lib/csrf-protection';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -12,9 +13,8 @@ export async function GET(request: Request) {
   try {
     let notes;
     if (query) {
-      // If a search query is present, use the search action
-      notes = await searchReleaseNotes(query, repository || 'all');
-      // Note: Pagination might need adjustment for search results if required
+      // If a search query is present, use the search action with pagination
+      notes = await searchReleaseNotes(query, repository || 'all', page, limit);
     } else {
       // Otherwise, fetch paginated notes
       notes = await getReleaseNotes(repository || 'all', page, limit);
@@ -39,8 +39,12 @@ export async function GET(request: Request) {
 }
 
 // POST endpoint to trigger updates manually
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    // Validate CSRF for this state-changing operation
+    const csrfError = await validateCSRF(request);
+    if (csrfError) return csrfError;
+
     const result = await updateReleaseNotesFromGitHub();
     if (result.success) {
       return NextResponse.json({ message: result.message, updatedRepos: result.updatedRepos });
