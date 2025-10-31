@@ -9,7 +9,7 @@ services:
       - '12005:3000'    # Main application
       - '12006:12006'   # Setup wizard
     volumes:
-      - ./.env:/app/.env  # Mount .env file location (setup wizard creates it)
+      - env-config:/app/config  # Persistent .env storage
       - mcp-cache:/app/.cache
       - app-uploads:/app/uploads
     environment:
@@ -70,6 +70,8 @@ services:
 
 volumes:
   pluggedin-postgres:
+    driver: local
+  env-config:
     driver: local
   mcp-cache:
     driver: local

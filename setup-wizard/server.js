@@ -378,9 +378,17 @@ app.post('/api/save-env', async (req, res) => {
       ...userConfig,
     };
 
-    // Write .env file
-    const envPath = path.join(__dirname, '../.env');
+    // Write .env file to persistent storage
+    const envPath = path.join(__dirname, '../config/.env');
     await writeEnvFile(completeConfig, envPath);
+
+    // Also create symlink in app root for immediate use
+    const appEnvPath = path.join(__dirname, '../.env');
+    try {
+      await fs.promises.symlink('/app/config/.env', appEnvPath);
+    } catch (err) {
+      // Symlink might already exist, ignore error
+    }
 
     res.json({
       success: true,

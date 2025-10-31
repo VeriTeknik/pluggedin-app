@@ -7,26 +7,57 @@ let dbPassword = null;
 
 // Generate secrets on page load
 window.addEventListener('DOMContentLoaded', async () => {
-    await generateSecrets();
+    console.log('Quick setup page loaded');
 
-    // Setup event listeners
-    document.getElementById('aiProvider').addEventListener('change', handleProviderChange);
-    document.getElementById('adminPassword').addEventListener('input', checkPasswordStrength);
-    document.getElementById('regenerateBtn').addEventListener('click', generateSecrets);
-    document.getElementById('quickSetupForm').addEventListener('submit', handleSubmit);
+    try {
+        await generateSecrets();
+
+        // Setup event listeners
+        const providerSelect = document.getElementById('aiProvider');
+        const passwordInput = document.getElementById('adminPassword');
+        const regenerateBtn = document.getElementById('regenerateBtn');
+        const setupForm = document.getElementById('quickSetupForm');
+
+        if (providerSelect) {
+            providerSelect.addEventListener('change', handleProviderChange);
+            console.log('AI provider change listener attached');
+        }
+        if (passwordInput) {
+            passwordInput.addEventListener('input', checkPasswordStrength);
+        }
+        if (regenerateBtn) {
+            regenerateBtn.addEventListener('click', generateSecrets);
+        }
+        if (setupForm) {
+            setupForm.addEventListener('submit', handleSubmit);
+        }
+    } catch (error) {
+        console.error('Error initializing quick setup:', error);
+        showToast('Failed to initialize setup wizard: ' + error.message, 'error');
+    }
 });
 
 // Handle AI provider selection
 function handleProviderChange(e) {
+    console.log('Provider changed to:', e.target.value);
     const apiKeyGroup = document.getElementById('apiKeyGroup');
     const apiKeyInput = document.getElementById('apiKey');
 
+    if (!apiKeyGroup || !apiKeyInput) {
+        console.error('API key elements not found in DOM');
+        return;
+    }
+
     if (e.target.value) {
+        console.log('Showing API key input for provider:', e.target.value);
         apiKeyGroup.style.display = 'block';
         apiKeyInput.required = false;
+        apiKeyInput.placeholder = `Enter your ${e.target.value} API key`;
     } else {
+        console.log('Hiding API key input');
         apiKeyGroup.style.display = 'none';
         apiKeyInput.required = false;
+        apiKeyInput.value = '';
     }
 }
 
@@ -57,12 +88,19 @@ async function generateSecrets() {
     const secretsDisplay = document.getElementById('secretsDisplay');
     const regenerateBtn = document.getElementById('regenerateBtn');
 
+    if (!secretsDisplay) {
+        console.error('Secrets display element not found');
+        return;
+    }
+
     secretsDisplay.innerHTML = '<div class="loading">Generating secure keys...</div>';
 
     try {
+        console.log('Generating secrets...');
         const result = await apiCall('/api/generate-secrets', 'POST');
 
         if (result.success) {
+            console.log('Secrets generated successfully');
             generatedSecrets = result.secrets;
             dbPassword = result.dbPassword.value;
 
@@ -80,22 +118,27 @@ async function generateSecrets() {
                 secretsDisplay.appendChild(item);
             }
 
-            regenerateBtn.style.display = 'block';
+            if (regenerateBtn) {
+                regenerateBtn.style.display = 'block';
+            }
         } else {
             throw new Error(result.message);
         }
     } catch (error) {
+        console.error('Failed to generate secrets:', error);
         secretsDisplay.innerHTML = `
             <div class="alert alert-error">
                 Failed to generate secrets: ${error.message}
             </div>
         `;
+        throw error; // Re-throw so parent can handle
     }
 }
 
 // Handle form submission
 async function handleSubmit(e) {
     e.preventDefault();
+    console.log('Form submitted, starting setup process...');
 
     const adminEmail = document.getElementById('adminEmail').value;
     const adminPassword = document.getElementById('adminPassword').value;
@@ -105,19 +148,24 @@ async function handleSubmit(e) {
 
     // Validate
     if (!isValidEmail(adminEmail)) {
+        console.log('Validation failed: Invalid email');
         showToast('Please enter a valid email address', 'error');
         return;
     }
 
     if (adminPassword !== confirmPassword) {
+        console.log('Validation failed: Passwords do not match');
         showToast('Passwords do not match', 'error');
         return;
     }
 
     if (adminPassword.length < 8) {
+        console.log('Validation failed: Password too short');
         showToast('Password must be at least 8 characters', 'error');
         return;
     }
+
+    console.log('Validation passed, starting setup...');
 
     // Start setup process
     disableForm('quickSetupForm', true);
@@ -125,12 +173,15 @@ async function handleSubmit(e) {
 
     try {
         // Step 1: Get defaults
+        console.log('Step 1: Loading defaults...');
         updateProgress(10, 'Loading environment defaults...');
         const defaultsResult = await apiCall('/api/defaults');
 
         if (!defaultsResult.success) {
+            console.error('Failed to load defaults:', defaultsResult);
             throw new Error('Failed to load defaults');
         }
+        console.log('Defaults loaded successfully');
 
         // Build configuration
         const config = {
@@ -142,6 +193,7 @@ async function handleSubmit(e) {
 
         // Add AI provider if selected
         if (aiProvider && apiKey) {
+            console.log('Adding AI provider:', aiProvider);
             const providerMap = {
                 'anthropic': 'ANTHROPIC_API_KEY',
                 'openai': 'OPENAI_API_KEY',
@@ -151,14 +203,18 @@ async function handleSubmit(e) {
         }
 
         // Step 2: Save .env file
+        console.log('Step 2: Saving .env file...');
         updateProgress(30, 'Saving configuration...');
         const saveResult = await apiCall('/api/save-env', 'POST', config);
 
         if (!saveResult.success) {
+            console.error('Failed to save .env:', saveResult);
             throw new Error(saveResult.message);
         }
+        console.log('.env file saved successfully');
 
         // Step 3: Complete setup (database + admin user)
+        console.log('Step 3: Setting up database and creating admin user...');
         updateProgress(50, 'Setting up database and creating admin user...');
         const completeResult = await apiCall('/api/complete-setup', 'POST', {
             databaseUrl: config.DATABASE_URL,
@@ -167,8 +223,10 @@ async function handleSubmit(e) {
         });
 
         if (!completeResult.success) {
+            console.error('Failed to complete setup:', completeResult);
             throw new Error(completeResult.message);
         }
+        console.log('Setup completed successfully!');
 
         // Success!
         updateProgress(100, 'Setup completed successfully!');
