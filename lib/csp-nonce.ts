@@ -52,21 +52,6 @@ export async function getNonce(): Promise<string | undefined> {
 }
 
 /**
- * Get nonce synchronously (for Server Components)
- * Note: This uses the async headers() function but should work in Server Components
- */
-export function getNonceSync(): string | undefined {
-  try {
-    // In Next.js 15+, we need to use the async version
-    // For now, return undefined and let middleware handle CSP
-    // Components can use getNonce() instead
-    return undefined;
-  } catch (error) {
-    return undefined;
-  }
-}
-
-/**
  * Build CSP header with nonce
  */
 export function buildCSPWithNonce(nonce: string, isDevelopment: boolean): string {
@@ -120,15 +105,11 @@ export function buildCSPWithNonce(nonce: string, isDevelopment: boolean): string
     'form-action': ["'self'"],
   };
 
-  // Production-only directives
-  if (!isDevelopment) {
-    // Add upgrade-insecure-requests in production
-    return Object.entries(baseCSP)
-      .map(([key, values]) => `${key} ${values.join(' ')}`)
-      .join('; ') + '; upgrade-insecure-requests';
-  }
-
-  return Object.entries(baseCSP)
+  // Build CSP string
+  const cspString = Object.entries(baseCSP)
     .map(([key, values]) => `${key} ${values.join(' ')}`)
     .join('; ');
+
+  // Add production-only directives
+  return isDevelopment ? cspString : `${cspString}; upgrade-insecure-requests`;
 }

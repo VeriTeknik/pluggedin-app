@@ -15,28 +15,78 @@ import { authOptions } from './auth';
  */
 
 /**
+ * Centralized CSRF configuration
+ */
+const CSRF_CONFIG = {
+  // Production domains
+  allowedDomains: [
+    'plugged.in',
+    'www.plugged.in',
+    'rc1.plugged.in',
+    'api.plugged.in',
+  ],
+  // Development domains
+  developmentDomains: [
+    'localhost:12005',
+    '127.0.0.1:12005',
+    'localhost:3000',
+    '127.0.0.1:3000',
+  ],
+};
+
+/**
+ * Get allowed origins as full URLs
+ */
+function getAllowedOrigins(): Set<string> {
+  const origins = new Set<string>();
+
+  // Add NEXTAUTH_URL origin
+  if (process.env.NEXTAUTH_URL) {
+    try {
+      const url = new URL(process.env.NEXTAUTH_URL);
+      origins.add(url.origin);
+    } catch (e) {
+      console.warn('Invalid NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
+    }
+  }
+
+  // Add production domains
+  for (const domain of CSRF_CONFIG.allowedDomains) {
+    origins.add(`https://${domain}`);
+    origins.add(`http://${domain}`); // Allow HTTP for local testing
+  }
+
+  // Add development domains
+  if (process.env.NODE_ENV === 'development') {
+    for (const domain of CSRF_CONFIG.developmentDomains) {
+      origins.add(`http://${domain}`);
+      origins.add(`https://${domain}`);
+    }
+  }
+
+  return origins;
+}
+
+/**
  * Validates that a request comes from the same origin
  * Checks Origin header first, falls back to Referer
  */
 export function validateOrigin(request: NextRequest): boolean {
-  const origin = request.headers.get('origin');
-  const referer = request.headers.get('referer');
-  const host = request.headers.get('host');
+  const originHeader = request.headers.get('origin');
+  const refererHeader = request.headers.get('referer');
 
-  // Get allowed origins from environment
   const allowedOrigins = getAllowedOrigins();
 
   // Check Origin header (most reliable for POST/PUT/DELETE)
-  if (origin) {
-    return allowedOrigins.some(allowed => origin === allowed || origin === `https://${allowed}` || origin === `http://${allowed}`);
+  if (originHeader) {
+    return allowedOrigins.has(originHeader);
   }
 
   // Fall back to Referer header
-  if (referer) {
+  if (refererHeader) {
     try {
-      const refererUrl = new URL(referer);
-      const refererHost = refererUrl.host;
-      return allowedOrigins.some(allowed => refererHost === allowed || refererHost === host);
+      const refererUrl = new URL(refererHeader);
+      return allowedOrigins.has(refererUrl.origin);
     } catch (e) {
       // Invalid referer URL
       return false;
@@ -48,45 +98,11 @@ export function validateOrigin(request: NextRequest): boolean {
 }
 
 /**
- * Get list of allowed origins from environment
- */
-function getAllowedOrigins(): string[] {
-  const origins: string[] = [];
-
-  // Add NEXTAUTH_URL
-  if (process.env.NEXTAUTH_URL) {
-    try {
-      const url = new URL(process.env.NEXTAUTH_URL);
-      origins.push(url.host);
-      origins.push(process.env.NEXTAUTH_URL);
-    } catch (e) {
-      console.warn('Invalid NEXTAUTH_URL:', process.env.NEXTAUTH_URL);
-    }
-  }
-
-  // Development origins
-  if (process.env.NODE_ENV === 'development') {
-    origins.push('localhost:12005');
-    origins.push('127.0.0.1:12005');
-    origins.push('localhost:3000');
-    origins.push('127.0.0.1:3000');
-  }
-
-  // Production domains
-  origins.push('plugged.in');
-  origins.push('www.plugged.in');
-  origins.push('rc1.plugged.in');
-  origins.push('api.plugged.in');
-
-  return origins;
-}
-
-/**
  * Validates CSRF protection for state-changing requests
  * Returns null if valid, or an error response if invalid
  */
 export async function validateCSRF(request: NextRequest): Promise<NextResponse | null> {
-  const method = request.method;
+  const { method } = request;
 
   // Only validate state-changing methods
   if (!['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)) {
@@ -116,15 +132,22 @@ export async function validateCSRF(request: NextRequest): Promise<NextResponse |
   const customHeader = request.headers.get('x-requested-with');
   const contentType = request.headers.get('content-type');
 
-  // If it's a JSON request without custom header, it might be suspicious
-  // (legitimate AJAX requests from our app should include this header)
+  // Enforce X-Requested-With header for JSON requests
+  // Legitimate AJAX requests from our app should include this header
+  // Missing header indicates potential CSRF attack
   if (contentType?.includes('application/json') && !customHeader) {
-    // This is a soft check - log but don't block
-    // Can be made stricter if needed
-    console.info('CSRF notice: JSON request without X-Requested-With header', {
+    console.warn('CSRF validation failed: JSON request without X-Requested-With header', {
       url: request.url,
       method,
     });
+
+    return NextResponse.json(
+      {
+        error: 'Missing required header for JSON requests',
+        code: 'CSRF_MISSING_HEADER'
+      },
+      { status: 403 }
+    );
   }
 
   return null; // Valid
@@ -170,6 +193,11 @@ export async function validateCSRFWithAuth(request: NextRequest): Promise<{ erro
 /**
  * Check if request appears to be from a browser
  * Used to differentiate between browser requests (need CSRF) and API clients (use API keys)
+ *
+ * ⚠️ WARNING: This function relies on easily spoofable User-Agent and Accept headers.
+ * It is NOT a security boundary and should NOT be used for authentication or
+ * authorization decisions. Use only for heuristic differentiation of request types.
+ * Always validate authentication separately using proper credentials (session, API key).
  */
 export function isBrowserRequest(request: NextRequest): boolean {
   const userAgent = request.headers.get('user-agent') || '';
