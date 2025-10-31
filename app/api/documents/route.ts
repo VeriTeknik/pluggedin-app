@@ -6,6 +6,17 @@ import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable } from '@/db/schema';
 
+/**
+ * Escape special characters in LIKE/ILIKE patterns
+ * Prevents pattern injection attacks where users can inject wildcards
+ */
+function escapeLikePattern(pattern: string): string {
+  return pattern
+    .replace(/\\/g, '\\\\')  // Escape backslashes first
+    .replace(/%/g, '\\%')    // Escape percent signs
+    .replace(/_/g, '\\_');   // Escape underscores
+}
+
 // Query parameters schema
 const listDocumentsSchema = z.object({
   source: z.enum(['all', 'upload', 'ai_generated', 'api']).optional().default('all'),
@@ -186,9 +197,10 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(docsTable.visibility, validatedParams.visibility));
     }
 
-    // Search query filter
+    // Search query filter with pattern injection protection
     if (validatedParams.searchQuery) {
-      const searchPattern = `%${validatedParams.searchQuery}%`;
+      const escapedQuery = escapeLikePattern(validatedParams.searchQuery);
+      const searchPattern = `%${escapedQuery}%`;
       conditions.push(
         sql`(${docsTable.name} ILIKE ${searchPattern} OR ${docsTable.description} ILIKE ${searchPattern})`
       );
