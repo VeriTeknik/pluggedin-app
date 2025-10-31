@@ -1,4 +1,5 @@
 // Common utility functions for setup wizard
+console.log('📦 setup.js loading...');
 
 // API helper
 async function apiCall(endpoint, method = 'GET', data = null) {
@@ -77,3 +78,5 @@ window.setupUtils = {
     disableForm,
     isValidEmail,
 };
+
+console.log('✅ setup.js loaded successfully, setupUtils exported to window');

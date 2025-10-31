@@ -1,39 +1,60 @@
 // Quick Setup page logic
+console.log('📝 quick.js file loaded');
 
-const { apiCall, showToast, updateProgress, showProgress, disableForm, isValidEmail } = window.setupUtils;
+// Check if setupUtils is available
+if (!window.setupUtils) {
+    console.error('❌ setupUtils not found! setup.js may not have loaded.');
+    alert('Error: Setup utilities not loaded. Please refresh the page.');
+}
+
+const { apiCall, showToast, updateProgress, showProgress, disableForm, isValidEmail } = window.setupUtils || {};
 
 let generatedSecrets = null;
 let dbPassword = null;
+
+console.log('📝 quick.js initialized, waiting for DOMContentLoaded...');
 
 // Generate secrets on page load
 window.addEventListener('DOMContentLoaded', async () => {
     console.log('Quick setup page loaded');
 
+    // IMPORTANT: Setup event listeners FIRST, before any async operations
+    // This ensures form submission is always intercepted even if API calls fail
+    const providerSelect = document.getElementById('aiProvider');
+    const passwordInput = document.getElementById('adminPassword');
+    const regenerateBtn = document.getElementById('regenerateBtn');
+    const setupForm = document.getElementById('quickSetupForm');
+
+    if (providerSelect) {
+        providerSelect.addEventListener('change', handleProviderChange);
+        console.log('AI provider change listener attached');
+    } else {
+        console.error('AI provider select element not found!');
+    }
+
+    if (passwordInput) {
+        passwordInput.addEventListener('input', checkPasswordStrength);
+        console.log('Password strength listener attached');
+    }
+
+    if (regenerateBtn) {
+        regenerateBtn.addEventListener('click', generateSecrets);
+        console.log('Regenerate button listener attached');
+    }
+
+    if (setupForm) {
+        setupForm.addEventListener('submit', handleSubmit);
+        console.log('✅ Form submit listener attached - form will not reload page');
+    } else {
+        console.error('❌ Setup form element not found! Form will reload page on submit!');
+    }
+
+    // Now generate secrets (this might fail, but form listener is already attached)
     try {
         await generateSecrets();
-
-        // Setup event listeners
-        const providerSelect = document.getElementById('aiProvider');
-        const passwordInput = document.getElementById('adminPassword');
-        const regenerateBtn = document.getElementById('regenerateBtn');
-        const setupForm = document.getElementById('quickSetupForm');
-
-        if (providerSelect) {
-            providerSelect.addEventListener('change', handleProviderChange);
-            console.log('AI provider change listener attached');
-        }
-        if (passwordInput) {
-            passwordInput.addEventListener('input', checkPasswordStrength);
-        }
-        if (regenerateBtn) {
-            regenerateBtn.addEventListener('click', generateSecrets);
-        }
-        if (setupForm) {
-            setupForm.addEventListener('submit', handleSubmit);
-        }
     } catch (error) {
-        console.error('Error initializing quick setup:', error);
-        showToast('Failed to initialize setup wizard: ' + error.message, 'error');
+        console.error('Error generating secrets:', error);
+        showToast('Failed to generate secrets. You can still complete setup.', 'error');
     }
 });
 
