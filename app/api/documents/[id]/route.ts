@@ -9,6 +9,7 @@ import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable,documentVersionsTable } from '@/db/schema';
 import {rateLimit } from '@/lib/api-rate-limit';
+import { validateCSRF } from '@/lib/csrf-protection';
 import { sanitizeModerate } from '@/lib/sanitization';
 import { isPathWithinDirectory } from '@/lib/security';
 import { saveDocumentVersion } from '@/lib/version-manager';
@@ -353,6 +354,10 @@ export async function PATCH(
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
+
+    // Validate CSRF token
+    const csrfError = await validateCSRF(request);
+    if (csrfError) return csrfError;
 
     // Authenticate API key
     const authResult = await authenticateApiKey(request);
