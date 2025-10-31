@@ -76,10 +76,23 @@
     "title": "रिलीज़ नोट्स",
     "description": "हमारे रिपॉजिटरी में नवीनतम अपडेट और परिवर्तनों को ट्रैक करें",
     "filters": {
-      "filterBy": "रिपॉजिटरी द्वारा फ़िल्टर करें:",
+      "filterBy": "रिपॉजिटरी द्वारा फ़िल्टर करें",
       "all": "सभी रिपॉजिटरी",
+      "allDesc": "सभी रिपॉजिटरी से रिलीज़ दिखाएं",
       "app": "pluggedin-app",
-      "mcp": "pluggedin-mcp"
+      "appDesc": "AI डेटा, मेमोरी और टूल्स के चौराहे पर इंटरफ़ेस — मॉडल, मनुष्यों और मशीनों को जोड़ता है",
+      "mcp": "pluggedin-mcp",
+      "mcpDesc": "TypeScript MCP प्रॉक्सी सर्वर - MCP क्लाइंट के लिए एकीकृत इंटरफ़ेस",
+      "registryProxy": "registry-proxy",
+      "registryProxyDesc": "फ़िल्टरिंग और कैशिंग के साथ उन्नत MCP रजिस्ट्री इंफ्रास्ट्रक्चर",
+      "pythonSdk": "Python SDK",
+      "pythonSdkDesc": "Plugged.in API के लिए सिंक/एसिंक क्लाइंट के साथ Python SDK",
+      "goSdk": "Go SDK",
+      "goSdkDesc": "Plugged.in API के लिए पूर्ण प्रकार सुरक्षा के साथ Go SDK",
+      "jsSdk": "JavaScript/TypeScript SDK",
+      "jsSdkDesc": "Plugged.in API एकीकरण के लिए JavaScript/TypeScript SDK",
+      "docs": "दस्तावेज़ीकरण",
+      "docsDesc": "Mintlify द्वारा संचालित आधिकारिक दस्तावेज़ीकरण साइट"
     },
     "changeTypes": {
       "feature": "विशेषताएँ",
@@ -100,6 +113,8 @@
     "noReleasesText": "वर्तमान में प्रदर्शित करने के लिए कोई रिलीज़ नोट्स नहीं हैं।",
     "noSearchResultsTitle": "कोई परिणाम नहीं मिला",
     "noSearchResultsText": "कोई रिलीज़ नोट्स आपके खोज मानदंडों से मेल नहीं खाते।",
+    "noResultsOnPage": "इस पेज पर कोई परिणाम नहीं",
+    "noResultsOnPageText": "पेज {{page}} पर कोई परिणाम नहीं है। अन्य पेजों पर जाने के लिए पेजिनेशन नियंत्रणों का उपयोग करें।",
     "rssFeed": "RSS के माध्यम से सदस्यता लें",
     "search": {
       "placeholder": "रिलीज़ नोट्स खोजें..."

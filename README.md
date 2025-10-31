@@ -6,7 +6,7 @@
 
 **Turn your AI conversations into permanent organizational memory**
 
-[![Version](https://img.shields.io/badge/version-2.15.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+[![Version](https://img.shields.io/badge/version-2.16.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://ghcr.io/veriteknik/pluggedin-app)

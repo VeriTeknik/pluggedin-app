@@ -1,8 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { 
+import {
   verifyGitHubOwnership,
   checkUserGitHubConnection,
-  checkGitHubConnection,
   fetchRegistryServer,
   importRegistryServer,
   claimServer,
@@ -206,22 +205,6 @@ describe('Registry Server Actions - Comprehensive Tests', () => {
 
       expect(result.hasGitHub).toBe(false);
       expect(result.error).toBe('Failed to check GitHub connection');
-    });
-  });
-
-  describe('checkGitHubConnection (deprecated)', () => {
-    it('should return connected when registry token is provided', async () => {
-      const result = await checkGitHubConnection('test-registry-token');
-
-      expect(result.isConnected).toBe(true);
-      expect(result.githubUsername).toBe(null);
-    });
-
-    it('should return not connected when no token provided', async () => {
-      const result = await checkGitHubConnection();
-
-      expect(result.isConnected).toBe(false);
-      expect(result.githubUsername).toBe(null);
     });
   });
 

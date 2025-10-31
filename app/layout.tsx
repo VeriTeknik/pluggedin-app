@@ -27,6 +27,7 @@ import { StructuredData } from '@/components/seo/structured-data';
 import { LanguageSwitcher } from '@/components/ui/language-switcher';
 import { Toaster } from '@/components/ui/toaster';
 import { ProjectsProvider } from '@/contexts/ProjectsContext';
+import { getNonce } from '@/lib/csp-nonce';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -107,23 +108,26 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Font initialization moved to client-side only in sidebar layout
+  // Get nonce for CSP-compliant inline scripts
+  const nonce = await getNonce();
 
   return (
     <html lang='en' suppressHydrationWarning>
       <head>
       {/* Removed the <link> tag for Quicksand font */}
 
-        {/* Google Analytics Scripts */}
-        {gaMeasurementId && (
+        {/* Google Analytics Scripts with CSP nonce */}
+        {gaMeasurementId && nonce && (
           <>
             <Script
-              strategy="afterInteractive" // Load after page becomes interactive
+              strategy="afterInteractive"
               src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
+              nonce={nonce}
             />
             <Script
               id="google-analytics"
               strategy="afterInteractive"
+              nonce={nonce}
               dangerouslySetInnerHTML={{
                 __html: `
                   window.dataLayer = window.dataLayer || [];

@@ -6,9 +6,7 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-// Removed unused Badge import
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-// Removed unused Tooltip imports
 import type { promptsTable } from '@/db/schema';
 
 // Define fetcher function for SWR

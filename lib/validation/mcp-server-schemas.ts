@@ -24,6 +24,7 @@ const baseServerSchema = z.object({
   notes: z.string().optional(),
   status: z.nativeEnum(McpServerStatus).optional(),
   source: z.nativeEnum(McpServerSource).optional(),
+  external_id: z.string().max(255, 'External ID must be less than 255 characters').optional(),
   slug: slugSchema,
 });
 

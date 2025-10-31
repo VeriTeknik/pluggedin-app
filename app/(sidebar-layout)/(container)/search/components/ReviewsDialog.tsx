@@ -5,7 +5,6 @@ import { Star, User } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { getReviewsForServer } from '@/app/actions/reviews'; // Assuming this action exists
-// Removed unused Badge import
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   Dialog,

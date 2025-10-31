@@ -9,7 +9,7 @@ import { users } from '@/db/schema';
  * /api/users/{id}:
  *   get:
  *     summary: Get public user details by ID
- *     description: Retrieves basic public details for a specific user identified by their ID. This endpoint does not require authentication.
+ *     description: Retrieves basic public details for a specific user identified by their ID. This endpoint does not require authentication. Email addresses are not exposed for privacy protection.
  *     tags:
  *       - Users
  *     parameters:
@@ -32,10 +32,6 @@ import { users } from '@/db/schema';
  *                 name:
  *                   type: string
  *                   nullable: true
- *                 email:
- *                   type: string
- *                   format: email
- *                   nullable: true # Assuming email might not always be public
  *                 username:
  *                   type: string
  *                   nullable: true
@@ -80,7 +76,7 @@ export async function GET(
       columns: {
         id: true,
         name: true,
-        email: true,
+        // email: removed for privacy protection - IDOR fix
         username: true,
         image: true,
       },

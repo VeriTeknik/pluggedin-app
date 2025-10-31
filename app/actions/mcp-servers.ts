@@ -491,7 +491,7 @@ export async function createMcpServer({
     
     const serverType = type || McpServerType.STDIO;
     
-    // Prepare data for Zod validation
+    // Prepare data for Zod validation - include ALL user-provided fields
     const validationData = {
       name,
       type: serverType,
@@ -502,14 +502,17 @@ export async function createMcpServer({
       ...(url !== undefined && { server_url: url }),
       ...(streamableHTTPOptions?.headers && { headers: streamableHTTPOptions.headers }),
       ...(streamableHTTPOptions?.sessionId && { sessionId: streamableHTTPOptions.sessionId }),
+      // Mass assignment fix: validate source and external_id
+      ...(source !== undefined && { source }),
+      ...(external_id !== undefined && { external_id }),
     };
-    
+
     // Validate with Zod schema
     const validationResult = createMcpServerSchema.safeParse(validationData);
     if (!validationResult.success) {
-      return { 
-        success: false, 
-        error: 'Invalid server configuration provided' 
+      return {
+        success: false,
+        error: 'Invalid server configuration provided'
       };
     }
 

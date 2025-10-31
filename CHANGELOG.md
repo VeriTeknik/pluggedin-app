@@ -5,6 +5,49 @@ All notable changes to the Plugged.in platform will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.16.0] - 2025-10-30
+
+### Added
+- Added missing `glob` development dependency for build scripts
+
+### Changed
+- **Major Codebase Cleanup**: Comprehensive code quality and maintainability improvements
+  - Removed 10 obsolete documentation and SQL files from root directory
+  - Created `/docs` directory for better project organization
+  - Version synchronization across package.json and README (v2.16.0)
+
+### Removed
+- **Unused Code Cleanup**
+  - Removed 8 unused exported functions identified in audit
+  - Removed 9 unused test utility functions
+  - Removed `pino-pretty` dependency (commented out in logger due to Next.js compatibility issues)
+  - Deleted obsolete files:
+    - `fix-auth-tables.sql`
+    - `fix-jwt-session.sql`
+    - `fix-username-column.sql`
+    - `db-performance-profiler.sql`
+    - `BRANCH_FEATURES.md`
+    - `CODE_REVIEW_FIXES.md`
+    - `MCP_REGISTRY_FIXES.md`
+    - `PACKAGE_UPDATE_PLAN.md`
+    - `PERFORMANCE_OPTIMIZATIONS.md`
+    - `lib/api-key-manager.future.ts.bak`
+
+### Fixed
+- Fixed ESLint error: unescaped apostrophe in email preferences component
+- Auto-fixed multiple ESLint warnings for unused variables and imports
+- Improved code consistency and maintainability across the codebase
+
+### Security
+- Continued reduction of console.log statements (75% reduction from previous audit)
+- Enhanced code quality through systematic ESLint cleanup
+
+### Developer Experience
+- Cleaner root directory structure with organized documentation
+- Better dependency management with accurate package.json
+- Improved maintainability through removal of dead code
+- All TODO/FIXME comments reviewed and confirmed as intentional placeholders
+
 ## [2.11.1] - 2025-01-18
 
 ### Added

@@ -18,7 +18,7 @@ export async function GET() {
     });
 
     // Get all release notes
-    const notes = await getReleaseNotes('all', 1, 50); // Get latest 50 releases
+    const { notes } = await getReleaseNotes('all', 1, 50); // Get latest 50 releases
 
     // Add items to feed
     notes.forEach((note) => {

@@ -6,7 +6,6 @@ import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable } from '@/db/schema';
 import { RATE_LIMITS,rateLimit } from '@/lib/api-rate-limit';
-import { escapeLikePattern } from '@/lib/security';
 
 // Search query schema
 const searchDocumentsSchema = z.object({
@@ -197,8 +196,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Escape the query for safe use in ILIKE patterns
-    const escapedQuery = escapeLikePattern(validatedData.query);
+    // Drizzle ORM's parameterization protects against SQL injection
+    // Allowing LIKE wildcards (%, _) enables flexible search patterns
     
     // Build the search query
     // Using PostgreSQL full-text search with relevance scoring
@@ -222,8 +221,8 @@ export async function POST(request: NextRequest) {
             to_tsvector('english', ${docsTable.name} || ' ' || COALESCE(${docsTable.description}, '')),
             plainto_tsquery('english', ${validatedData.query})
           ) +
-          CASE 
-            WHEN ${docsTable.name} ILIKE ${`%${escapedQuery}%`} THEN 0.5
+          CASE
+            WHEN ${docsTable.name} ILIKE ${`%${validatedData.query}%`} THEN 0.5
             ELSE 0
           END
         `,
@@ -239,8 +238,8 @@ export async function POST(request: NextRequest) {
           sql`(
             to_tsvector('english', ${docsTable.name} || ' ' || COALESCE(${docsTable.description}, ''))
             @@ plainto_tsquery('english', ${validatedData.query})
-            OR ${docsTable.name} ILIKE ${`%${escapedQuery}%`}
-            OR ${docsTable.description} ILIKE ${`%${escapedQuery}%`}
+            OR ${docsTable.name} ILIKE ${`%${validatedData.query}%`}
+            OR ${docsTable.description} ILIKE ${`%${validatedData.query}%`}
           )`
         )
       )
@@ -250,8 +249,8 @@ export async function POST(request: NextRequest) {
             to_tsvector('english', ${docsTable.name} || ' ' || COALESCE(${docsTable.description}, '')),
             plainto_tsquery('english', ${validatedData.query})
           ) +
-          CASE 
-            WHEN ${docsTable.name} ILIKE ${`%${escapedQuery}%`} THEN 0.5
+          CASE
+            WHEN ${docsTable.name} ILIKE ${`%${validatedData.query}%`} THEN 0.5
             ELSE 0
           END
         `))
@@ -277,8 +276,8 @@ export async function POST(request: NextRequest) {
           sql`(
             to_tsvector('english', ${docsTable.name} || ' ' || COALESCE(${docsTable.description}, ''))
             @@ plainto_tsquery('english', ${validatedData.query})
-            OR ${docsTable.name} ILIKE ${`%${escapedQuery}%`}
-            OR ${docsTable.description} ILIKE ${`%${escapedQuery}%`}
+            OR ${docsTable.name} ILIKE ${`%${validatedData.query}%`}
+            OR ${docsTable.description} ILIKE ${`%${validatedData.query}%`}
           )`
         )
       );

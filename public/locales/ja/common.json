@@ -76,10 +76,23 @@
     "title": "リリースノート",
     "description": "リポジトリ全体の最新の更新と変更を追跡します",
     "filters": {
-      "filterBy": "リポジトリでフィルタリング:",
+      "filterBy": "リポジトリでフィルタリング",
       "all": "すべてのリポジトリ",
+      "allDesc": "すべてのリポジトリからリリースを表示",
       "app": "pluggedin-app",
-      "mcp": "pluggedin-mcp"
+      "appDesc": "AIデータ、メモリ、ツールの交差点にあるインターフェース — モデル、人間、マシンを接続",
+      "mcp": "pluggedin-mcp",
+      "mcpDesc": "TypeScript MCPプロキシサーバー - MCPクライアント用統合インターフェース",
+      "registryProxy": "registry-proxy",
+      "registryProxyDesc": "フィルタリングとキャッシング機能を備えた強化されたMCPレジストリインフラストラクチャ",
+      "pythonSdk": "Python SDK",
+      "pythonSdkDesc": "Plugged.in API用の同期/非同期対応Python SDK",
+      "goSdk": "Go SDK",
+      "goSdkDesc": "Plugged.in API用の完全な型安全性を備えたGo SDK",
+      "jsSdk": "JavaScript/TypeScript SDK",
+      "jsSdkDesc": "Plugged.in API統合用JavaScript/TypeScript SDK",
+      "docs": "ドキュメント",
+      "docsDesc": "Mintlifyを使用した公式ドキュメントサイト"
     },
     "changeTypes": {
       "feature": "機能",
@@ -100,6 +113,8 @@
     "noReleasesText": "現在表示するリリースノートはありません。",
     "noSearchResultsTitle": "結果が見つかりません",
     "noSearchResultsText": "検索条件に一致するリリースノートはありません。",
+    "noResultsOnPage": "このページに結果がありません",
+    "noResultsOnPageText": "ページ {{page}} に結果がありません。ページネーションコントロールを使用して他のページに移動してください。",
     "rssFeed": "RSSで購読",
     "search": {
       "placeholder": "リリースノートを検索..."

@@ -76,10 +76,23 @@
     "title": "Release Notes",
     "description": "Volg de laatste updates en wijzigingen in onze repositories",
     "filters": {
-      "filterBy": "Filteren op Repository:",
+      "filterBy": "Filteren op Repository",
       "all": "Alle Repositories",
+      "allDesc": "Toon releases van alle repositories",
       "app": "pluggedin-app",
-      "mcp": "pluggedin-mcp"
+      "appDesc": "De interface op het kruispunt van AI-gegevens, geheugen en tools — verbindt modellen, mensen en machines",
+      "mcp": "pluggedin-mcp",
+      "mcpDesc": "TypeScript MCP-proxyserver - uniforme interface voor MCP-clients",
+      "registryProxy": "registry-proxy",
+      "registryProxyDesc": "Verbeterde MCP Registry-infrastructuur met filtering en caching",
+      "pythonSdk": "Python SDK",
+      "pythonSdkDesc": "Python SDK met sync/async clients voor Plugged.in API",
+      "goSdk": "Go SDK",
+      "goSdkDesc": "Go SDK met volledige typeveiligheid voor Plugged.in API",
+      "jsSdk": "JavaScript/TypeScript SDK",
+      "jsSdkDesc": "JavaScript/TypeScript SDK voor Plugged.in API-integratie",
+      "docs": "Documentatie",
+      "docsDesc": "Officiële documentatiesite mogelijk gemaakt door Mintlify"
     },
     "changeTypes": {
       "feature": "Functies",
@@ -100,6 +113,8 @@
     "noReleasesText": "Er zijn momenteel geen release notes om weer te geven.",
     "noSearchResultsTitle": "Geen resultaten gevonden",
     "noSearchResultsText": "Geen release notes komen overeen met uw zoekcriteria.",
+    "noResultsOnPage": "Geen resultaten op deze pagina",
+    "noResultsOnPageText": "Pagina {{page}} heeft geen resultaten. Gebruik de paginabesturing om naar andere pagina's te navigeren.",
     "rssFeed": "Abonneren via RSS",
     "search": {
       "placeholder": "Zoek release notes..."

@@ -9,6 +9,7 @@ import { z } from 'zod';
 
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
+import log from '@/lib/logger';
 import { ragService } from '@/lib/rag-service';
 import { sanitizeToPlainText } from '@/lib/sanitization';
 import type {
@@ -794,15 +795,6 @@ export async function deleteDoc(
     };
   }
 }
-
-export async function getRagDocuments(ragIdentifier: string): Promise<{ success: boolean; documents?: Array<[string, string]>; error?: string }> {
-  return ragService.getDocuments(ragIdentifier);
-}
-
-export async function queryRag(ragIdentifier: string, query: string): Promise<{ success: boolean; response?: string; error?: string }> {
-  return ragService.queryForResponse(ragIdentifier, query);
-}
-
 export async function askKnowledgeBase(userId: string, query: string, projectUuid?: string): Promise<{
   success: boolean;
   answer?: string;
