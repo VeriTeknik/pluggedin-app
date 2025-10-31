@@ -36,9 +36,8 @@ export async function ensureLogDirectories() {
 
 // Log retention politikası güncelle
 export async function updateLogRetentionPolicy(
-  profileUuid: string, 
+  profileUuid: string,
   retentionDays: number
-  // maxLogSizeMb: number // Removed unused parameter
 ) {
   try {
     // Validate retentionDays
@@ -54,15 +53,13 @@ export async function updateLogRetentionPolicy(
       await db.update(logRetentionPoliciesTable)
         .set({
           retention_days: retentionDays,
-          // max_log_size_mb: maxLogSizeMb, // Removed unused field
           updated_at: new Date()
         })
         .where(eq(logRetentionPoliciesTable.profile_uuid, profileUuid));
     } else {
       await db.insert(logRetentionPoliciesTable).values({
         profile_uuid: profileUuid,
-        retention_days: retentionDays,
-        // max_log_size_mb: maxLogSizeMb // Removed unused field
+        retention_days: retentionDays
         // is_active and other defaults will be applied by the DB
       });
     }

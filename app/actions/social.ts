@@ -537,34 +537,6 @@ export async function getSharedCollections(
  * @returns An array of embedded chats
  */
 // Note: Sharing is still tied to profiles in this refactor. Adjust if needed.
-export async function getEmbeddedChats(
-  profileUuid: string,
-  limit: number = 10,
-  includePrivate: boolean = false
-): Promise<EmbeddedChat[]> {
-  try {
-    const whereClause = includePrivate
-      ? and(
-          eq(embeddedChatsTable.profile_uuid, profileUuid),
-          eq(embeddedChatsTable.is_active, true)
-        )
-      : and(
-          eq(embeddedChatsTable.profile_uuid, profileUuid),
-          eq(embeddedChatsTable.is_public, true),
-          eq(embeddedChatsTable.is_active, true)
-        );
-    const chats = await db.query.embeddedChatsTable.findMany({
-      where: whereClause,
-      limit,
-      orderBy: (chats: any) => [desc(chats.created_at)], // Added explicit type
-    });
-    return chats as unknown as EmbeddedChat[];
-  } catch (error) {
-    console.error('Error getting embedded chats:', error);
-    return [];
-  }
-}
-
 /**
  * Get followers for a user (formerly getFollowers)
  * @param userId The ID of the user
@@ -1204,41 +1176,6 @@ export async function getEmbeddedChat(embeddedChatUuid: string): Promise<Embedde
  * @returns Success status and error message if applicable
  */
 // Note: Sharing is still tied to profiles in this refactor. Adjust if needed.
-export async function deleteEmbeddedChat(
-  profileUuid: string,
-  embeddedChatUuid: string
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const embeddedChat = await db.query.embeddedChatsTable.findFirst({
-      where: and(
-        eq(embeddedChatsTable.uuid, embeddedChatUuid),
-        eq(embeddedChatsTable.profile_uuid, profileUuid)
-      ),
-    });
-    if (!embeddedChat) {
-      return {
-        success: false,
-        error: 'Embedded chat not found or you do not have permission to delete it'
-      };
-    }
-    await db.delete(embeddedChatsTable)
-      .where(eq(embeddedChatsTable.uuid, embeddedChatUuid));
-    await logAuditEvent({ profileUuid, type: 'PROFILE', action: 'DELETE_EMBEDDED_CHAT', metadata: { embedded_chat_uuid: embeddedChatUuid } });
-    // Revalidate paths
-    const associatedUsername = await getUsernameForProfile(profileUuid);
-    if (associatedUsername) {
-      revalidatePath(`/to/${associatedUsername}`);
-    }
-    return { success: true };
-  } catch (error) {
-    console.error('Error deleting embedded chat:', error);
-    return {
-      success: false,
-      error: 'An error occurred while deleting the embedded chat'
-    };
-  }
-}
-
 /**
  * Check if an MCP server is already shared by a profile
  * @param profileUuid The UUID of the profile

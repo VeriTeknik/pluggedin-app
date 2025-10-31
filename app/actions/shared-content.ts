@@ -11,7 +11,6 @@ import {
   sharedMcpServersTable,
   users,
 } from '@/db/schema';
-// Removed unused McpIndex import
 import { SearchIndex } from '@/types/search';
 
 const usernameSchema = z.string().min(1).max(30);

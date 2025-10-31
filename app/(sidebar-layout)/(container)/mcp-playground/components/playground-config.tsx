@@ -165,9 +165,6 @@ export function PlaygroundConfig({
     }
   };
 
-  // The renderLogEntry function previously here was removed as it was unused.
-  // Log rendering is handled inline within the 'logs' tab content below.
-
   return (
     <div className='h-full flex flex-col bg-background'>
       <div className='flex-1 overflow-hidden'>

@@ -2,10 +2,8 @@
 
 import { and, eq } from 'drizzle-orm';
 
-// import { revalidatePath } from 'next/cache'; // Removed unused import
 import { db } from '@/db';
 import { customInstructionsTable, mcpServersTable } from '@/db/schema';
-// import { getAuthSession } from '@/lib/auth'; // Removed unused import
 
 // Define the structure for the messages array based on schema
 type McpMessageContent =
