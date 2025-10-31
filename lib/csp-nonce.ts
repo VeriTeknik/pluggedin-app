@@ -68,8 +68,8 @@ export function buildCSPWithNonce(nonce: string, isDevelopment: boolean): string
     ],
     'style-src': [
       "'self'",
-      `'nonce-${nonce}'`,
-      // For styled-jsx and CSS-in-JS libraries, we still need unsafe-inline
+      // For styled-jsx and CSS-in-JS libraries, we need unsafe-inline
+      // Nonce is omitted because when present, it causes unsafe-inline to be ignored per CSP spec
       // This is a known limitation but much safer than script unsafe-inline
       "'unsafe-inline'",
     ],
