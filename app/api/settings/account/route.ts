@@ -1,14 +1,19 @@
 import { eq } from 'drizzle-orm';
 import { unlink } from 'fs/promises';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'path';
 
 import { db } from '@/db';
 import { sessions, users } from '@/db/schema';
 import { notifyAdmins } from '@/lib/admin-notifications';
 import { getAuthSession } from '@/lib/auth';
+import { validateCSRF } from '@/lib/csrf-protection';
 
-export async function DELETE(_req: Request) {
+export async function DELETE(req: NextRequest) {
+  // Validate CSRF token for this critical operation (account deletion)
+  const csrfError = await validateCSRF(req);
+  if (csrfError) return csrfError;
+
   try {
     const session = await getAuthSession();
     if (!session?.user) {
@@ -38,7 +43,7 @@ export async function DELETE(_req: Request) {
       email: session.user.email || 'unknown',
       name: session.user.name || 'unknown',
       deletionTime: new Date().toISOString(),
-      ipAddress: _req.headers.get('x-forwarded-for') || _req.headers.get('x-real-ip') || 'unknown'
+      ipAddress: req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown'
     };
 
     // Start a transaction to ensure all deletions succeed or none do

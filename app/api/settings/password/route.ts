@@ -6,6 +6,8 @@ import { z } from 'zod';
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { isPasswordComplex, recordPasswordChange } from '@/lib/auth-security';
+import { validateCSRF } from '@/lib/csrf-protection';
 import { RateLimiters } from '@/lib/rate-limiter';
 
 /**
@@ -37,6 +39,10 @@ const passwordSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // Validate CSRF token for this critical operation
+  const csrfError = await validateCSRF(req);
+  if (csrfError) return csrfError;
+
   // Apply rate limiting to prevent brute force attacks
   const rateLimitResult = await RateLimiters.sensitive(req);
   if (!rateLimitResult.allowed) {
@@ -55,6 +61,18 @@ export async function POST(req: NextRequest) {
 
     const body = await req.json();
     const { currentPassword, newPassword } = passwordSchema.parse(body);
+
+    // Validate new password complexity
+    const complexityCheck = isPasswordComplex(newPassword);
+    if (!complexityCheck.isValid) {
+      return new NextResponse(
+        JSON.stringify({
+          message: 'Password does not meet complexity requirements',
+          errors: complexityCheck.errors
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Get user with password
     const user = await db.query.users.findFirst({
@@ -82,14 +100,20 @@ export async function POST(req: NextRequest) {
     // Hash new password with configurable cost factor
     const hashedPassword = await hash(newPassword, BCRYPT_COST_FACTOR);
 
-    // Update password
+    // Update password with password_changed_at timestamp
     await db
       .update(users)
-      .set({ 
+      .set({
         password: hashedPassword,
+        password_changed_at: new Date(),
         updated_at: new Date()
       })
       .where(eq(users.id, session.user.id));
+
+    // Record password change for security audit and session invalidation
+    const ipAddress = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const userAgent = req.headers.get('user-agent') || 'unknown';
+    await recordPasswordChange(session.user.id, ipAddress, userAgent);
 
     return NextResponse.json({ message: 'Password updated successfully' });
   } catch (error) {

@@ -2,41 +2,60 @@ import { getToken } from 'next-auth/jwt';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { createErrorResponse } from '@/lib/api-errors';
+import { buildCSPWithNonce, generateNonce } from '@/lib/csp-nonce';
 import { RateLimiters } from '@/lib/rate-limiter';
 
 /**
- * Security headers configuration
+ * Security headers configuration (non-CSP headers)
+ * CSP is generated dynamically with nonces in the middleware function
  */
-const securityHeaders = {
-  // Content Security Policy - helps prevent XSS attacks
-  // Note: We need unsafe-inline and unsafe-eval for Next.js to work properly
-  // This is a known limitation - Next.js requires inline scripts for hydration
-  'Content-Security-Policy': process.env.NODE_ENV === 'production'
-    ? "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob: https://www.google-analytics.com https://www.googletagmanager.com; font-src 'self' data:; connect-src 'self' https://api.stripe.com wss://*.plugged.in https://*.ingest.sentry.io https://*.ingest.de.sentry.io https://api.github.com https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; frame-src 'self' https://js.stripe.com https://hooks.stripe.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self';"
-    : "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https: blob: https://www.google-analytics.com https://www.googletagmanager.com; font-src 'self' data:; connect-src 'self' ws: wss: https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com https://*.googletagmanager.com; object-src 'none'; base-uri 'self';",
-  
+const staticSecurityHeaders = {
   // Prevent clickjacking attacks
   'X-Frame-Options': 'DENY',
-  
+
   // Prevent MIME type sniffing
   'X-Content-Type-Options': 'nosniff',
-  
+
   // Control information sent with external requests
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  
+
   // Restrict browser features
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
-  
+
   // Additional security headers
   'X-XSS-Protection': '1; mode=block',
   'X-Permitted-Cross-Domain-Policies': 'none',
-  
+
   // Force HTTPS in production
   ...(process.env.NODE_ENV === 'production' && {
     'Strict-Transport-Security': 'max-age=31536000; includeSubDomains; preload',
     'Expect-CT': 'enforce, max-age=86400',
   }),
 };
+
+/**
+ * Apply all security headers including CSP with nonce
+ */
+function applySecurityHeaders(response: NextResponse, isDevelopment: boolean): NextResponse {
+  // Generate nonce for this request
+  const nonce = generateNonce();
+
+  // Apply static security headers
+  Object.entries(staticSecurityHeaders).forEach(([key, value]) => {
+    if (value) {
+      response.headers.set(key, value);
+    }
+  });
+
+  // Apply CSP with nonce
+  const csp = buildCSPWithNonce(nonce, isDevelopment);
+  response.headers.set('Content-Security-Policy', csp);
+
+  // Store nonce in response header for components to access
+  response.headers.set('x-nonce', nonce);
+
+  return response;
+}
 
 // Only run middleware on matching paths
 export const config = {
@@ -55,6 +74,7 @@ export const config = {
 };
 
 export async function middleware(request: NextRequest) {
+  const isDevelopment = process.env.NODE_ENV === 'development';
   const token = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
   const isAuthenticated = !!token;
 
@@ -163,26 +183,13 @@ export async function middleware(request: NextRequest) {
 
   // Allow access to public routes
   if (isPublicRoute) {
-    const response = NextResponse.next();
-    // Apply security headers to all responses
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      if (value) {
-        response.headers.set(key, value);
-      }
-    });
-    return response;
+    return applySecurityHeaders(NextResponse.next(), isDevelopment);
   }
 
   // Redirect authenticated users away from auth routes
   if (isAuthRoute && isAuthenticated) {
     const response = NextResponse.redirect(new URL('/analytics', request.url));
-    // Apply security headers to redirect responses
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      if (value) {
-        response.headers.set(key, value);
-      }
-    });
-    return response;
+    return applySecurityHeaders(response, isDevelopment);
   }
 
   // Redirect unauthenticated users to login
@@ -190,21 +197,9 @@ export async function middleware(request: NextRequest) {
     // Store the current URL as the callback URL
     const callbackUrl = encodeURIComponent(request.nextUrl.pathname);
     const response = NextResponse.redirect(new URL(`/login?callbackUrl=${callbackUrl}`, request.url));
-    // Apply security headers to redirect responses
-    Object.entries(securityHeaders).forEach(([key, value]) => {
-      if (value) {
-        response.headers.set(key, value);
-      }
-    });
-    return response;
+    return applySecurityHeaders(response, isDevelopment);
   }
 
-  const response = NextResponse.next();
   // Apply security headers to all other responses
-  Object.entries(securityHeaders).forEach(([key, value]) => {
-    if (value) {
-      response.headers.set(key, value);
-    }
-  });
-  return response;
+  return applySecurityHeaders(NextResponse.next(), isDevelopment);
 } 

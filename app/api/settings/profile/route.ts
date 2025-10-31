@@ -1,18 +1,23 @@
 import { eq } from 'drizzle-orm';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 
 import { db } from '@/db';
 import { profilesTable, projectsTable, users } from '@/db/schema';
 import { locales } from '@/i18n/config';
 import { getAuthSession } from '@/lib/auth';
+import { validateCSRF } from '@/lib/csrf-protection';
 
 const profileSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters').optional(),
   language: z.enum(locales),
 });
 
-export async function PATCH(req: Request) {
+export async function PATCH(req: NextRequest) {
+  // Validate CSRF token
+  const csrfError = await validateCSRF(req);
+  if (csrfError) return csrfError;
+
   try {
     const session = await getAuthSession();
     if (!session?.user) {
