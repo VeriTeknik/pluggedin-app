@@ -78,6 +78,9 @@ COPY --chown=nextjs:nodejs drizzle.config.ts ./drizzle.config.ts
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Create config directory with proper ownership for .env storage
+RUN mkdir -p /app/config && chown -R nextjs:nodejs /app/config
+
 USER nextjs
 
 # Expose both main app and setup wizard ports

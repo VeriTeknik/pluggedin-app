@@ -7,9 +7,6 @@ echo "🚀 Plugged.in Docker Container Starting..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
-# Ensure config directory exists
-mkdir -p /app/config
-
 # Check if .env exists in persistent storage and symlink it
 if [ -f /app/config/.env ]; then
     echo "✅ Found existing configuration in persistent storage"
