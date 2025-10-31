@@ -27,6 +27,13 @@ declare module 'next-auth' {
   }
 }
 
+// Extend the JWT type to include custom fields
+declare module 'next-auth/jwt' {
+  interface JWT {
+    passwordChangedAt?: number | null;
+  }
+}
+
 import { db } from '@/db';
 import { accounts, sessions, users, verificationTokens } from '@/db/schema';
 
@@ -170,12 +177,12 @@ export const authOptions: NextAuthOptions = {
 
           if (!isPasswordValid) {
             // Record failed login attempt
-            const { locked, remainingAttempts } = await recordFailedLoginAttempt(
-              credentials.email, 
-              ipAddress, 
+            const { locked, remainingAttempts: _remainingAttempts } = await recordFailedLoginAttempt(
+              credentials.email,
+              ipAddress,
               userAgent
             );
-            
+
             if (locked) {
               log.warn('Account locked due to failed attempts', { 
                 email: credentials.email,
@@ -246,13 +253,8 @@ export const authOptions: NextAuthOptions = {
           where: (users, { eq }) => eq(users.email, user.email as string),
         });
 
-        // Track if this is a new user signup
-        let isNewUser = false;
-
         // If the user doesn't exist, they will be created by the adapter
         if (!existingUser) {
-          isNewUser = true;
-          
           // Send notifications for new OAuth user
           // Note: The actual user creation happens after this callback
           // So we schedule the notifications to be sent after a short delay
@@ -380,7 +382,7 @@ export const authOptions: NextAuthOptions = {
     },
     async jwt({ token, user, trigger, session }) {
       // Define common user fields to fetch from database
-      const userFieldsToFetch = { username: true, is_admin: true, show_workspace_ui: true } as const;
+      const userFieldsToFetch = { username: true, is_admin: true, show_workspace_ui: true, password_changed_at: true } as const;
 
       // Initial sign in or user object available
       if (user) {
@@ -390,7 +392,7 @@ export const authOptions: NextAuthOptions = {
        token.picture = user.image ?? null;
        token.emailVerified = user.emailVerified;
 
-       // Fetch username, is_admin, and show_workspace_ui from DB during initial sign-in
+       // Fetch username, is_admin, show_workspace_ui, and password_changed_at from DB during initial sign-in
        try {
           const dbUser = await db.query.users.findFirst({
             where: eq(users.id, user.id),
@@ -400,11 +402,14 @@ export const authOptions: NextAuthOptions = {
           token.username = dbUser?.username ?? null;
           token.is_admin = dbUser?.is_admin ?? false;
           token.show_workspace_ui = dbUser?.show_workspace_ui ?? false;
+          // Store password change timestamp for session invalidation
+          token.passwordChangedAt = dbUser?.password_changed_at?.getTime() ?? null;
        } catch (error) {
           console.error('Error fetching user details in JWT callback:', error);
           token.username = null; // Fallback to null on error
           token.is_admin = false; // Fallback to false on error
           token.show_workspace_ui = false; // Fallback to false on error
+          token.passwordChangedAt = null; // Fallback to null on error
        }
 
        token.userValidationTs = Date.now();
@@ -422,8 +427,8 @@ export const authOptions: NextAuthOptions = {
           }
        }
 
-       // If token exists but username, is_admin, or show_workspace_ui is missing (e.g., old token), try fetching it
-       if (token.id && (token.username === undefined || token.is_admin === undefined || token.show_workspace_ui === undefined)) {
+       // If token exists but username, is_admin, show_workspace_ui, or passwordChangedAt is missing (e.g., old token), try fetching it
+       if (token.id && (token.username === undefined || token.is_admin === undefined || token.show_workspace_ui === undefined || token.passwordChangedAt === undefined)) {
           try {
             const dbUser = await db.query.users.findFirst({
               where: eq(users.id, token.id as string),
@@ -433,16 +438,18 @@ export const authOptions: NextAuthOptions = {
             token.username = dbUser?.username ?? null;
             token.is_admin = dbUser?.is_admin ?? false;
             token.show_workspace_ui = dbUser?.show_workspace_ui ?? false;
+            token.passwordChangedAt = dbUser?.password_changed_at?.getTime() ?? null;
             token.userValidationTs = Date.now();
           } catch (error) {
             console.error('Error fetching user details in JWT callback (fallback):', error);
             token.username = null; // Fallback to null on error
             token.is_admin = false; // Fallback to false on error
             token.show_workspace_ui = false; // Fallback to false on error
+            token.passwordChangedAt = null; // Fallback to null on error
           }
        }
 
-       // Periodically revalidate that the referenced user still exists
+       // Periodically revalidate that the referenced user still exists and password hasn't changed
        if (token.id) {
          const now = Date.now();
          const shouldRevalidateUser =
@@ -451,13 +458,13 @@ export const authOptions: NextAuthOptions = {
 
          if (shouldRevalidateUser) {
            try {
-             const exists = await db.query.users.findFirst({
+             const dbUser = await db.query.users.findFirst({
                where: eq(users.id, token.id as string),
-               columns: { id: true },
+               columns: { id: true, password_changed_at: true },
              });
 
-             if (!exists) {
-               // Remove id and related fields so session callback treats this as unauthenticated
+             if (!dbUser) {
+               // User no longer exists - invalidate session
                delete (token as any).id;
                token.name = null;
                token.email = null;
@@ -465,6 +472,25 @@ export const authOptions: NextAuthOptions = {
                token.username = null;
                token.emailVerified = null;
                delete (token as any).userValidationTs;
+               delete (token as any).passwordChangedAt;
+             } else {
+               // Check if password was changed after this token was issued
+               const dbPasswordChangedAt = dbUser.password_changed_at?.getTime() ?? null;
+               const tokenPasswordChangedAt = token.passwordChangedAt as number | null;
+
+               // If password was changed after token was created, invalidate session
+               if (dbPasswordChangedAt && tokenPasswordChangedAt && dbPasswordChangedAt > tokenPasswordChangedAt) {
+                 console.info('Session invalidated: password changed', { userId: token.id });
+                 // Invalidate session by removing user info
+                 delete (token as any).id;
+                 token.name = null;
+                 token.email = null;
+                 token.picture = null;
+                 token.username = null;
+                 token.emailVerified = null;
+                 delete (token as any).userValidationTs;
+                 delete (token as any).passwordChangedAt;
+               }
              }
            } catch (error) {
              // If the check fails, do not break auth flow; keep token as is

@@ -107,19 +107,6 @@ export async function checkUserGitHubConnection() {
 }
 
 /**
- * Check if user has GitHub account connected via registry OAuth
- * @deprecated Use checkUserGitHubConnection instead
- */
-export async function checkGitHubConnection(registryToken?: string) {
-  // For now, just check if we have a registry token
-  // The actual username will come from the registry OAuth flow
-  return { 
-    isConnected: !!registryToken, 
-    githubUsername: null // Will be set during OAuth flow
-  };
-}
-
-/**
  * Verify GitHub ownership using registry OAuth token
  */
 export async function verifyGitHubOwnership(registryToken: string | null, repoUrl: string) {

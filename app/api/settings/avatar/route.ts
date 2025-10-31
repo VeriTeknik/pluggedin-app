@@ -1,14 +1,19 @@
 import { eq } from 'drizzle-orm';
 import { mkdir, writeFile } from 'fs/promises';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { join } from 'path';
 
 import { db } from '@/db';
 import { users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
+import { validateCSRF } from '@/lib/csrf-protection';
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
+    // Validate CSRF for this state-changing operation
+    const csrfError = await validateCSRF(req);
+    if (csrfError) return csrfError;
+
     const session = await getAuthSession();
     if (!session?.user) {
       return new NextResponse('Unauthorized', { status: 401 });

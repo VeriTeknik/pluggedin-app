@@ -18,7 +18,6 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 // Internal actions
-// import { getFirstApiKey } from '@/app/actions/api-keys'; // Removed unused import
 import {
   bulkImportMcpServers,
   createMcpServer,
@@ -36,10 +35,8 @@ import { WorkspaceLoader } from '@/components/workspace-loader';
 import { McpServerStatus, McpServerType } from '@/db/schema';
 // Internal hooks
 import { useProfiles } from '@/hooks/use-profiles';
-// import { useProjects } from '@/hooks/use-projects'; // Removed unused import
 import { useToast } from '@/hooks/use-toast';
 // Internal types
-// import { ApiKey } from '@/types/api-key'; // Removed unused import
 import { McpServer } from '@/types/mcp-server';
 
 import { ServerCard } from './components/server-card';

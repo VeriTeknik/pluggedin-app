@@ -1,4 +1,4 @@
-import { and, eq, type InferSelectModel, sql } from 'drizzle-orm'; // Removed unused isNull, kept sql
+import { and, eq, type InferSelectModel, sql } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { discoverSingleServerToolsInternal } from '@/app/actions/discover-mcp-tools'; // Moved up

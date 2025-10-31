@@ -247,8 +247,9 @@ export async function recordPasswordChange(
       metadata: {},
     });
 
-    // TODO: Invalidate all existing sessions for this user
-    // This requires session management implementation
+    // Session invalidation is handled automatically by the JWT callback in lib/auth.ts
+    // The JWT callback checks password_changed_at timestamp and invalidates sessions
+    // if the password was changed after the token was issued
   } catch (error) {
     log.error('Failed to record password change', error, { userId });
   }

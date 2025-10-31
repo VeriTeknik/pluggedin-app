@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthSession } from '@/lib/auth';
+import { validateCSRF } from '@/lib/csrf-protection';
 
 export async function GET(request: NextRequest) {
   try {
@@ -50,8 +51,12 @@ async function getConnectedAccountsForUser(_userId: string): Promise<string[]> {
 
 export async function DELETE(request: NextRequest) {
   try {
+    // Validate CSRF for this state-changing operation
+    const csrfError = await validateCSRF(request);
+    if (csrfError) return csrfError;
+
     const session = await getAuthSession();
-    
+
     if (!session?.user) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },

@@ -156,21 +156,6 @@ export function isValidFilename(filename: string): boolean {
 }
 
 /**
- * Escapes special characters in a string for safe use in SQL LIKE/ILIKE patterns
- * @param str - The string to escape
- * @returns The escaped string
- */
-export function escapeLikePattern(str: string): string {
-  // Escape special characters used in LIKE patterns
-  return str
-    .replace(/\\/g, '\\\\') // Escape backslash first
-    .replace(/%/g, '\\%')   // Escape percent
-    .replace(/_/g, '\\_')   // Escape underscore
-    .replace(/\[/g, '\\[')  // Escape left bracket
-    .replace(/\]/g, '\\]'); // Escape right bracket
-}
-
-/**
  * Validates that a file has an allowed MIME type
  * @param mimeType - The MIME type to validate
  * @param allowedTypes - Array of allowed MIME types

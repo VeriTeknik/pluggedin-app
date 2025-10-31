@@ -9,6 +9,7 @@ import { authenticateApiKey } from '@/app/api/auth';
 import { db } from '@/db';
 import { docsTable, documentModelAttributionsTable,documentVersionsTable } from '@/db/schema';
 import {rateLimit } from '@/lib/api-rate-limit';
+import { validateCSRF } from '@/lib/csrf-protection';
 import { sanitizeModerate } from '@/lib/sanitization';
 import { isPathWithinDirectory } from '@/lib/security';
 import { saveDocumentVersion } from '@/lib/version-manager';
@@ -137,29 +138,12 @@ export async function GET(
       );
 
     if (documentQuery.length === 0) {
-      console.log('[Document Get] Document not found or not accessible');
-      console.log('[Document Get] Checking if document exists in DB...');
-      
-      // Check if document exists but is in different profile
-      const documentExists = await db
-        .select({ uuid: docsTable.uuid, profile_uuid: docsTable.profile_uuid })
-        .from(docsTable)
-        .where(eq(docsTable.uuid, documentId))
-        .limit(1);
-      
-      if (documentExists.length > 0) {
-        console.log('[Document Get] Document exists but belongs to different profile:', documentExists[0].profile_uuid);
-        return NextResponse.json(
-          { error: 'Document not found or not accessible', details: 'Document exists but is not accessible to your profile' },
-          { status: 404 }
-        );
-      } else {
-        console.log('[Document Get] Document does not exist in database');
-        return NextResponse.json(
-          { error: 'Document not found', details: 'Document does not exist' },
-          { status: 404 }
-        );
-      }
+      // Return generic error message to prevent document enumeration
+      // Do not reveal whether document exists in another profile
+      return NextResponse.json(
+        { error: 'Document not found' },
+        { status: 404 }
+      );
     }
 
     // Group attributions by document
@@ -370,6 +354,10 @@ export async function PATCH(
     if (rateLimitResponse) {
       return rateLimitResponse;
     }
+
+    // Validate CSRF token
+    const csrfError = await validateCSRF(request);
+    if (csrfError) return csrfError;
 
     // Authenticate API key
     const authResult = await authenticateApiKey(request);

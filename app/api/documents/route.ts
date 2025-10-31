@@ -187,6 +187,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Search query filter
+    // Drizzle ORM's parameterization protects against SQL injection
+    // Allowing LIKE wildcards (%, _) enables flexible search patterns
     if (validatedParams.searchQuery) {
       const searchPattern = `%${validatedParams.searchQuery}%`;
       conditions.push(

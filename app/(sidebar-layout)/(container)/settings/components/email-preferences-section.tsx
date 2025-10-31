@@ -212,7 +212,7 @@ export function EmailPreferencesSection({ userId, preferences }: EmailPreference
 
         <div className="text-xs text-muted-foreground pt-2">
           <p>
-            We respect your privacy and will only send emails you've consented to receive.
+            We respect your privacy and will only send emails you&apos;ve consented to receive.
             You can update these preferences at any time. For more information, see our{' '}
             <a href="/privacy" className="underline">Privacy Policy</a>.
           </p>
