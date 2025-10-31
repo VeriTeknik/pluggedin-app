@@ -238,57 +238,23 @@ async function setupDatabase(databaseUrl) {
   };
 
   try {
-    // Step 1: Test connection to postgres server
-    console.log('📡 Testing database server connection...');
-    const connectionTest = await testDatabaseConnection(databaseUrl.replace(/\/[^/]+$/, '/postgres'));
+    // Step 1: Test connection to target database directly
+    // (Docker setup pre-creates the database, so we don't need to connect to postgres database)
+    console.log('📡 Testing database connection...');
+    const connectionTest = await testDatabaseConnection(databaseUrl);
     results.steps.push({
       name: 'connection_test',
       ...connectionTest,
     });
 
     if (!connectionTest.success) {
-      results.message = 'Database server connection failed';
+      results.message = 'Database connection failed. Ensure PostgreSQL is running and accessible.';
       return results;
     }
 
-    // Step 2: Check if target database exists, create if not
-    console.log('🗄️  Checking if database exists...');
-    const dbCheck = await databaseExists(databaseUrl);
+    console.log('✅ Database connection successful!');
 
-    if (!dbCheck) {
-      console.log('📦 Creating database...');
-      const dbCreation = await createDatabase(databaseUrl);
-      results.steps.push({
-        name: 'database_creation',
-        ...dbCreation,
-      });
-
-      if (!dbCreation.success) {
-        results.message = 'Database creation failed';
-        return results;
-      }
-    } else {
-      results.steps.push({
-        name: 'database_check',
-        success: true,
-        message: 'Database already exists',
-      });
-    }
-
-    // Step 3: Test connection to target database
-    console.log('🔗 Testing connection to target database...');
-    const targetTest = await testDatabaseConnection(databaseUrl);
-    results.steps.push({
-      name: 'target_connection_test',
-      ...targetTest,
-    });
-
-    if (!targetTest.success) {
-      results.message = 'Target database connection failed';
-      return results;
-    }
-
-    // Step 4: Run migrations
+    // Step 2: Run migrations
     console.log('⚡ Running database migrations...');
     const migrationResult = await runMigrations(databaseUrl);
     results.steps.push({
@@ -301,7 +267,7 @@ async function setupDatabase(databaseUrl) {
       return results;
     }
 
-    // Step 5: Verify migrations
+    // Step 3: Verify migrations
     console.log('✅ Verifying migrations...');
     const statusCheck = await getMigrationStatus(databaseUrl);
     results.steps.push({

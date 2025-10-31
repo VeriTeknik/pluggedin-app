@@ -258,8 +258,13 @@ async function handleSubmit(e) {
 
         // Step 3: Complete setup (database + admin user)
         console.log('Step 3: Setting up database and creating admin user...');
-        updateOverlay(50, 'Setting Up Database', 'Running migrations and creating admin account...');
-        window.setupUtils.updateProgress(50, 'Setting up database and creating admin user...');
+        updateOverlay(50, 'Setting Up Database', 'Connecting to PostgreSQL database...');
+        window.setupUtils.updateProgress(50, 'Setting up database...');
+
+        // Add a slight delay to show the progress update
+        await new Promise(resolve => setTimeout(resolve, 300));
+        updateOverlay(60, 'Setting Up Database', 'Running database migrations...');
+
         const completeResult = await window.setupUtils.apiCall('/api/complete-setup', 'POST', {
             databaseUrl: config.DATABASE_URL,
             adminEmail,
@@ -268,9 +273,13 @@ async function handleSubmit(e) {
 
         if (!completeResult.success) {
             console.error('Failed to complete setup:', completeResult);
-            throw new Error(completeResult.message);
+            throw new Error(completeResult.message || 'Database setup failed');
         }
         console.log('Setup completed successfully!');
+
+        // Step 4: Finalize
+        updateOverlay(90, 'Creating Admin Account', 'Setting up your admin user...');
+        await new Promise(resolve => setTimeout(resolve, 300));
 
         // Success!
         updateOverlay(100, 'Setup Complete!', 'Your Plugged.in installation is ready!');
