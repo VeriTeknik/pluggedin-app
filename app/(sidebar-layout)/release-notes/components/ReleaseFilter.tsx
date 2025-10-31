@@ -12,7 +12,7 @@ type FilterValue =
   | 'registry-proxy'
   | 'pluggedinkit-python'
   | 'pluggedinkit-go'
-  | 'pluggedinkit-javascript'
+  | 'pluggedinkit-js'
   | 'pluggedin-docs';
 
 interface ReleaseFilterProps {
@@ -55,7 +55,7 @@ export function ReleaseFilter({ currentFilter, onFilterChange }: ReleaseFilterPr
       description: t('releaseNotes.filters.goSdkDesc')
     },
     {
-      value: 'pluggedinkit-javascript',
+      value: 'pluggedinkit-js',
       label: t('releaseNotes.filters.jsSdk'),
       description: t('releaseNotes.filters.jsSdkDesc')
     },
