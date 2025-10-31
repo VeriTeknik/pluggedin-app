@@ -63,16 +63,24 @@ Security: AES-256-GCM encryption, Redis rate limiting
 ### Docker (Recommended - 2 minutes)
 
 ```bash
-# Clone and setup
+# Clone and start
 git clone https://github.com/VeriTeknik/pluggedin-app.git
 cd pluggedin-app
-cp .env.example .env
+docker compose up --build
 
-# Start with Docker
-docker compose up --build -d
+# First-time setup:
+# 1. Setup wizard opens automatically at http://localhost:12006
+# 2. Complete Quick Setup (admin email/password)
+# 3. Container auto-restarts
+# 4. Access your app at http://localhost:12005
 
-# Visit http://localhost:12005
+# Subsequent runs:
+# docker compose up  # Starts directly on http://localhost:12005
 ```
+
+**✨ New:** Automatic setup wizard! No manual `.env` configuration needed.
+
+See [DOCKER_SETUP.md](DOCKER_SETUP.md) for detailed Docker documentation.
 
 ### Cloud Version
 

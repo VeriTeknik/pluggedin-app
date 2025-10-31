@@ -63,11 +63,28 @@ RUN chown nextjs:nodejs .next
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy setup wizard files (before switching to nextjs user)
+COPY --chown=nextjs:nodejs setup-wizard ./setup-wizard
+
+# Install setup wizard dependencies
+RUN cd setup-wizard && npm ci --production && cd ..
+
+# Copy drizzle files for migrations
+COPY --chown=nextjs:nodejs drizzle ./drizzle
+COPY --chown=nextjs:nodejs db ./db
+COPY --chown=nextjs:nodejs drizzle.config.ts ./drizzle.config.ts
+
+# Copy and setup entrypoint script
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 USER nextjs
 
-EXPOSE 3000
+# Expose both main app and setup wizard ports
+EXPOSE 3000 12006
 
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# Use smart entrypoint that checks for .env
+ENTRYPOINT ["/entrypoint.sh"]
