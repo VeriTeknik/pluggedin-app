@@ -7,6 +7,18 @@
     <link rel="stylesheet" href="/css/setup.css">
 </head>
 <body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; align-items: center; justify-content: center; flex-direction: column;">
+        <div style="background: white; padding: 2rem; border-radius: 8px; text-align: center; max-width: 400px;">
+            <div style="font-size: 3rem; margin-bottom: 1rem;">⚙️</div>
+            <h2 id="overlayTitle" style="margin-bottom: 1rem;">Setting up...</h2>
+            <div style="width: 100%; background: #e0e0e0; border-radius: 4px; height: 8px; overflow: hidden; margin-bottom: 1rem;">
+                <div id="overlayProgress" style="width: 0%; height: 100%; background: var(--primary); transition: width 0.3s;"></div>
+            </div>
+            <p id="overlayText" style="color: #666;">Initializing setup process...</p>
+        </div>
+    </div>
+
     <div class="container">
         <header>
             <div class="header-logo">
@@ -46,7 +58,7 @@
 
                     <div class="form-group">
                         <label for="aiProvider">AI Provider</label>
-                        <select id="aiProvider" name="aiProvider">
+                        <select id="aiProvider" name="aiProvider" onchange="document.getElementById('apiKeyGroup').style.display = this.value ? 'block' : 'none'; console.log('Provider changed to:', this.value);">
                             <option value="">None (configure later)</option>
                             <option value="anthropic">Anthropic (Claude)</option>
                             <option value="openai">OpenAI (GPT)</option>
@@ -57,7 +69,10 @@
                     <div class="form-group" id="apiKeyGroup" style="display: none;">
                         <label for="apiKey">API Key</label>
                         <input type="password" id="apiKey" name="apiKey"
-                               placeholder="Enter your API key">
+                               placeholder="Enter your API key (optional)">
+                        <small style="color: var(--text-muted); display: block; margin-top: 0.5rem;">
+                            You can configure this later in the application settings if you prefer.
+                        </small>
                     </div>
                 </div>
 
@@ -98,7 +113,14 @@
         </footer>
     </div>
 
-    <script src="/js/setup.js"></script>
-    <script src="/js/quick.js"></script>
+    <script src="/js/setup.js?v=2"></script>
+    <script src="/js/quick.js?v=2"></script>
+    <script>
+        // Immediate visual test that JavaScript is working
+        console.log('=== SETUP WIZARD DEBUG ===');
+        console.log('Page loaded at:', new Date().toISOString());
+        console.log('AI Provider element exists:', !!document.getElementById('aiProvider'));
+        console.log('API Key Group element exists:', !!document.getElementById('apiKeyGroup'));
+    </script>
 </body>
 </html>

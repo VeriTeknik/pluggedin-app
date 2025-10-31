@@ -167,6 +167,25 @@ async function handleSubmit(e) {
 
     console.log('Validation passed, starting setup...');
 
+    // Show loading overlay immediately
+    const overlay = document.getElementById('loadingOverlay');
+    const overlayTitle = document.getElementById('overlayTitle');
+    const overlayText = document.getElementById('overlayText');
+    const overlayProgress = document.getElementById('overlayProgress');
+
+    if (overlay) {
+        overlay.style.display = 'flex';
+        overlayProgress.style.width = '0%';
+    }
+
+    // Helper function to update overlay
+    function updateOverlay(percent, title, text) {
+        console.log(`Progress: ${percent}% - ${title} - ${text}`);
+        if (overlayTitle) overlayTitle.textContent = title;
+        if (overlayText) overlayText.textContent = text;
+        if (overlayProgress) overlayProgress.style.width = `${percent}%`;
+    }
+
     // Start setup process
     disableForm('quickSetupForm', true);
     showProgress(true);
@@ -174,6 +193,7 @@ async function handleSubmit(e) {
     try {
         // Step 1: Get defaults
         console.log('Step 1: Loading defaults...');
+        updateOverlay(10, 'Loading Configuration', 'Loading environment defaults...');
         updateProgress(10, 'Loading environment defaults...');
         const defaultsResult = await apiCall('/api/defaults');
 
@@ -204,6 +224,7 @@ async function handleSubmit(e) {
 
         // Step 2: Save .env file
         console.log('Step 2: Saving .env file...');
+        updateOverlay(30, 'Saving Configuration', 'Creating .env file with your settings...');
         updateProgress(30, 'Saving configuration...');
         const saveResult = await apiCall('/api/save-env', 'POST', config);
 
@@ -215,6 +236,7 @@ async function handleSubmit(e) {
 
         // Step 3: Complete setup (database + admin user)
         console.log('Step 3: Setting up database and creating admin user...');
+        updateOverlay(50, 'Setting Up Database', 'Running migrations and creating admin account...');
         updateProgress(50, 'Setting up database and creating admin user...');
         const completeResult = await apiCall('/api/complete-setup', 'POST', {
             databaseUrl: config.DATABASE_URL,
@@ -229,31 +251,55 @@ async function handleSubmit(e) {
         console.log('Setup completed successfully!');
 
         // Success!
+        updateOverlay(100, 'Setup Complete!', 'Your Plugged.in installation is ready!');
         updateProgress(100, 'Setup completed successfully!');
 
-        // Show success message
-        document.querySelector('main').innerHTML = `
-            <div class="section">
-                <h2 style="color: var(--success);">✅ Setup Complete!</h2>
-                <p style="margin: 1.5rem 0;">Your Plugged.in installation is now configured and ready to use.</p>
+        // Show success message in overlay
+        setTimeout(() => {
+            updateOverlay(100, '✅ Setup Complete!', 'Application will restart automatically...');
 
-                <div class="alert alert-success">
+            // Update overlay to show success
+            if (overlayTitle) {
+                overlayTitle.innerHTML = '✅ Setup Complete!';
+                overlayTitle.style.color = '#10b981';
+            }
+            if (overlayText) {
+                overlayText.innerHTML = `
                     <strong>Admin Account Created:</strong><br>
-                    Email: ${adminEmail}
-                </div>
+                    Email: ${adminEmail}<br><br>
+                    The application will restart in a few seconds...<br>
+                    You can then log in with your admin credentials at port 12005.
+                `;
+            }
+        }, 500);
 
-                <p style="color: var(--text-muted); margin-top: 1.5rem;">
-                    The application will restart automatically in a few seconds...<br>
-                    You can then log in with your admin credentials.
-                </p>
-            </div>
-        `;
+        // Keep overlay visible to show success
+        // Container will restart automatically
 
     } catch (error) {
+        console.error('Setup error:', error);
+
+        // Hide overlay and show error
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
+
         updateProgress(0, '');
         showProgress(false);
         disableForm('quickSetupForm', false);
+
+        // Show error prominently
         showToast(`Setup failed: ${error.message}`, 'error');
-        console.error('Setup error:', error);
+
+        // Also show error in the page
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'alert alert-error';
+        errorDiv.style.marginTop = '1rem';
+        errorDiv.innerHTML = `
+            <strong>Setup Failed:</strong><br>
+            ${error.message}<br><br>
+            Please check the console (F12) for more details and try again.
+        `;
+        document.querySelector('form').insertBefore(errorDiv, document.querySelector('form').firstChild);
     }
 }
