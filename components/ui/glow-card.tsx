@@ -18,7 +18,7 @@ export function GlowCard({
   return (
     <div
       className={cn(
-        'relative group',
+        'relative group glow',
         'rounded-xl p-[2px]',
         'bg-gradient-to-r from-electric-cyan via-neon-purple to-electric-cyan',
         'animate-gradient-shift bg-300%',

@@ -436,89 +436,40 @@ describe('API Keys Actions', () => {
   });
 
   describe('trackApiKeyUsage', () => {
-    it('should debounce usage updates and use atomic timestamp', async () => {
-      mockedDb.where.mockResolvedValue(undefined);
+    it('should execute conditional update for valid UUID', async () => {
+      mockedDb.execute.mockResolvedValue(undefined as any);
 
-      // First call
-      trackApiKeyUsage(UUID_KEY_1);
+      await trackApiKeyUsage(UUID_KEY_1);
 
-      // Immediate second call should cancel first timeout
-      trackApiKeyUsage(UUID_KEY_1);
-
-      // Fast-forward time past debounce delay
-      await vi.advanceTimersByTimeAsync(5100);
-
-      // Give async operations time to complete
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      // Should only update once due to debouncing
-      expect(mockedDb.update).toHaveBeenCalledWith(apiKeysTable);
+      expect(mockedDb.execute).toHaveBeenCalledTimes(1);
     });
 
-    it('should batch updates for same key within debounce window', async () => {
-      mockedDb.where.mockResolvedValue(undefined);
-
-      // Multiple rapid calls
-      trackApiKeyUsage(UUID_KEY_1);
-      trackApiKeyUsage(UUID_KEY_1);
-      trackApiKeyUsage(UUID_KEY_1);
-
-      await vi.advanceTimersByTimeAsync(5100);
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      // Should only update once
-      expect(mockedDb.update).toHaveBeenCalled();
-    });
-
-    it('should update different keys independently', async () => {
-      mockedDb.where.mockResolvedValue(undefined);
-
-      trackApiKeyUsage(UUID_KEY_1);
-      trackApiKeyUsage(UUID_KEY_2);
-
-      await vi.advanceTimersByTimeAsync(5100);
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      // Should update both keys
-      expect(mockedDb.update).toHaveBeenCalled();
+    it('should reject invalid UUID input', async () => {
+      await expect(trackApiKeyUsage('invalid-uuid')).rejects.toThrow('Invalid UUID format');
     });
 
     it('should handle database errors gracefully', async () => {
-      mockedDb.where.mockRejectedValue(new Error('Database error'));
-
+      const error = new Error('Database error');
+      mockedDb.execute.mockRejectedValue(error);
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-      trackApiKeyUsage(UUID_KEY_1);
-      await vi.advanceTimersByTimeAsync(5100);
-      await new Promise(resolve => setTimeout(resolve, 10));
+      await expect(trackApiKeyUsage(UUID_KEY_1)).resolves.toBeUndefined();
 
-      expect(consoleSpy).toHaveBeenCalled();
-
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to update API key usage:', error);
       consoleSpy.mockRestore();
     });
 
-    it('should throw error for invalid UUID', () => {
-      // Track API key usage validates UUID synchronously before setting timeout
-      expect(() => trackApiKeyUsage('invalid-uuid')).toThrow('Invalid UUID format');
+    it('should allow concurrent updates for different keys', async () => {
+      mockedDb.execute.mockResolvedValue(undefined as any);
+
+      await Promise.all([
+        trackApiKeyUsage(UUID_KEY_1),
+        trackApiKeyUsage(UUID_KEY_2),
+        trackApiKeyUsage(UUID_KEY_3),
+      ]);
+
+      expect(mockedDb.execute).toHaveBeenCalledTimes(3);
     });
-
-    it('should reduce database writes by ~80% under load', async () => {
-      mockedDb.where.mockResolvedValue(undefined);
-
-      // Simulate 10 rapid requests for same key (each resets the debounce timer)
-      trackApiKeyUsage(UUID_KEY_1);
-      vi.advanceTimersByTime(100);
-      trackApiKeyUsage(UUID_KEY_1);
-      vi.advanceTimersByTime(100);
-      trackApiKeyUsage(UUID_KEY_1);
-
-      // Wait for final debounce
-      await vi.advanceTimersByTimeAsync(5100);
-      await new Promise(resolve => setTimeout(resolve, 10));
-
-      // Should only update once because all calls within 5 seconds are batched
-      expect(mockedDb.update).toHaveBeenCalled();
-    }, 15000);
   });
 
   describe('Type Safety', () => {

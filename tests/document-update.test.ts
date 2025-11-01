@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import { setupFetchMocks } from './test-utils';
+import { setupFetchMocks, mockApiResponse, mockApiError } from './test-utils';
 
 describe('Document Update API', () => {
   const API_URL = 'http://localhost:12005';
@@ -25,7 +25,10 @@ describe('Document Update API', () => {
         version: 2,
         content: 'Updated content',
       },
-      '/api/documents/non-existent-id': new Error('Document not found'),
+      '/api/documents/non-existent-id': {
+        statusCode: 404,
+        body: { error: 'Document not found' },
+      },
     });
   });
 
@@ -85,6 +88,15 @@ describe('Document Update API', () => {
   });
 
   it('should append content to document', async () => {
+    setupFetchMocks({
+      '/api/documents/test-doc-id': {
+        success: true,
+        documentId: 'test-doc-id',
+        version: 3,
+        content: 'Updated content with appended section',
+      },
+    });
+
     const appendResponse = await fetch(`${API_URL}/api/documents/${documentId}`, {
       method: 'PATCH',
       headers: {
@@ -112,6 +124,16 @@ describe('Document Update API', () => {
   });
 
   it('should handle RAG update via delete and re-upload', async () => {
+    setupFetchMocks({
+      '/api/documents/test-doc-id': {
+        statusCode: 200,
+        body: {
+          success: true,
+          message: 'Document successfully updated with RAG',
+        },
+      },
+    });
+
     // This tests the workaround for RAG updates
     const ragUpdateResponse = await fetch(`${API_URL}/api/documents/${documentId}`, {
       method: 'PATCH',
@@ -140,6 +162,13 @@ describe('Document Update API', () => {
   });
 
   it('should validate input and reject invalid operations', async () => {
+    setupFetchMocks({
+      '/api/documents/test-doc-id': {
+        statusCode: 400,
+        body: { error: 'Invalid operation' },
+      },
+    });
+
     const invalidResponse = await fetch(`${API_URL}/api/documents/${documentId}`, {
       method: 'PATCH',
       headers: {
@@ -160,6 +189,13 @@ describe('Document Update API', () => {
 
   describe('Security Tests', () => {
     it('should prevent unauthorized users from updating documents', async () => {
+      setupFetchMocks({
+        '/api/documents/test-doc-id': {
+          statusCode: 401,
+          body: { error: 'Unauthorized' },
+        },
+      });
+
       const unauthorizedResponse = await fetch(`${API_URL}/api/documents/${documentId}`, {
         method: 'PATCH',
         headers: {
@@ -224,6 +260,18 @@ describe('Document Update API', () => {
     });
 
     it('should enforce rate limiting on updates', async () => {
+      let callCount = 0;
+      setupFetchMocks({
+        '/api/documents/test-doc-id': () => {
+          callCount += 1;
+          if (callCount > 10) {
+            return mockApiError('Rate limit exceeded', 429);
+          }
+
+          return mockApiResponse({ success: true }, { status: 200 });
+        },
+      });
+
       // Make 11 rapid requests (limit is 10 per 5 minutes)
       const promises = [];
       for (let i = 0; i < 11; i++) {

@@ -6,6 +6,8 @@ import { useInView } from 'react-intersection-observer';
 
 import { cn } from '@/lib/utils';
 
+type AnimatedMetricSize = 'sm' | 'md' | 'lg';
+
 interface AnimatedMetricProps {
   value: number;
   suffix?: string;
@@ -14,6 +16,8 @@ interface AnimatedMetricProps {
   decimals?: number;
   className?: string;
   duration?: number;
+  description?: string;
+  size?: AnimatedMetricSize;
 }
 
 export function AnimatedMetric({
@@ -23,7 +27,9 @@ export function AnimatedMetric({
   label,
   decimals = 0,
   className,
-  duration = 2.5
+  duration = 2.5,
+  description,
+  size = 'md',
 }: AnimatedMetricProps) {
   const { ref, inView } = useInView({
     threshold: 0.3,
@@ -45,8 +51,17 @@ export function AnimatedMetric({
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  const formattedValue = `${prefix}${value.toLocaleString()}${suffix}`;
+  const formattedValue = `${prefix}${value.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+    useGrouping: false,
+  })}${suffix}`;
   const ariaLabel = `${formattedValue} ${label}`;
+  const sizeClasses: Record<'sm' | 'md' | 'lg', string> = {
+    sm: 'text-2xl',
+    md: 'text-4xl',
+    lg: 'text-5xl',
+  };
 
   return (
     <div
@@ -57,27 +72,32 @@ export function AnimatedMetric({
       role="status"
     >
       <div
-        className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-electric-cyan to-neon-purple"
+        className={cn(
+          'font-bold text-transparent bg-clip-text bg-gradient-to-r from-electric-cyan to-neon-purple',
+          sizeClasses[size]
+        )}
         aria-label={ariaLabel}
       >
-        {prefix}
         {inView && !prefersReducedMotion ? (
           <CountUp
             end={value}
             duration={duration}
             decimals={decimals}
-            separator=","
-            preserveValue={true}
+            preserveValue
             useEasing={!prefersReducedMotion}
+            prefix={prefix}
+            suffix={suffix}
           />
         ) : (
-          <span>{value.toLocaleString()}</span>
+          <span>{formattedValue}</span>
         )}
-        {suffix}
       </div>
       <div className="text-sm text-muted-foreground mt-2" aria-hidden="true">
         {label}
       </div>
+      {description ? (
+        <div className="mt-1 text-sm text-muted-foreground">{description}</div>
+      ) : null}
     </div>
   );
 }

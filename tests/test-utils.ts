@@ -101,11 +101,44 @@ export function mockProjectData() {
 }
 
 // Setup fetch mock with predefined responses
+type FetchMockHandler = (url: string, init?: RequestInit) => Response | Promise<Response>;
+
+interface FetchMockSpec {
+  statusCode: number;
+  body?: any;
+  headers?: Record<string, string>;
+}
+
 export function setupFetchMocks(mocks: Record<string, any>) {
-  (global.fetch as any).mockImplementation((url: string) => {
+  (global.fetch as any).mockImplementation((url: string, init?: RequestInit) => {
     // Find matching mock by URL pattern
     for (const [pattern, response] of Object.entries(mocks)) {
       if (url.includes(pattern)) {
+        if (typeof response === 'function') {
+          return Promise.resolve((response as FetchMockHandler)(url, init));
+        }
+
+        if (response && typeof response === 'object' && 'statusCode' in response) {
+          const spec = response as FetchMockSpec;
+          const headers = spec.headers ? new Headers(spec.headers) : undefined;
+          if (spec.statusCode >= 400) {
+            return Promise.resolve(
+              mockApiError(
+                typeof spec.body === 'string' ? spec.body : spec.body?.error || 'Error',
+                spec.statusCode
+              )
+            );
+          }
+
+          return Promise.resolve(
+            mockApiResponse(spec.body ?? {}, {
+              status: spec.statusCode,
+              ok: spec.statusCode >= 200 && spec.statusCode < 400,
+              headers,
+            })
+          );
+        }
+
         return Promise.resolve(
           response instanceof Error
             ? mockApiError(response.message)

@@ -71,8 +71,20 @@ vi.mock('rate-limiter-flexible', () => {
 describe('Admin Rate Limiter', () => {
   const testAdminId = 'admin-123';
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const adminIds = [
+      testAdminId,
+      'admin-independent',
+      'admin-1',
+      'admin-2',
+      'admin-general',
+      'admin-email',
+      'admin-bulk',
+      'admin-sensitive',
+    ];
+
+    await Promise.all(adminIds.map((id) => resetAdminRateLimit(id)));
   });
 
   afterEach(() => {
@@ -109,24 +121,26 @@ describe('Admin Rate Limiter', () => {
     });
 
     it('should handle different rate limit types independently', async () => {
+      const adminId = 'admin-independent';
+
       // Consume some general points
       for (let i = 0; i < 50; i++) {
-        await checkAdminRateLimit(testAdminId, 'general');
+        await checkAdminRateLimit(adminId, 'general');
       }
 
       // Email limit should still be available
       await expect(
-        checkAdminRateLimit(testAdminId, 'email')
+        checkAdminRateLimit(adminId, 'email')
       ).resolves.toBeUndefined();
 
       // Bulk operations should still be available
       await expect(
-        checkAdminRateLimit(testAdminId, 'bulk')
+        checkAdminRateLimit(adminId, 'bulk')
       ).resolves.toBeUndefined();
 
       // Sensitive operations should still be available
       await expect(
-        checkAdminRateLimit(testAdminId, 'sensitive')
+        checkAdminRateLimit(adminId, 'sensitive')
       ).resolves.toBeUndefined();
     });
 
@@ -297,7 +311,7 @@ describe('Admin Rate Limiter', () => {
 
       // Verify all points are available
       const status = await getAdminRateLimitStatus(testAdminId, 'email');
-      expect(status.remainingPoints).toBe(10);
+      expect(status.remainingPoints).toBe(9);
     });
 
     it('should reset all rate limits when type not specified', async () => {

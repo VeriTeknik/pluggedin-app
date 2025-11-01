@@ -72,6 +72,9 @@ describe('Admin Email Actions', () => {
       users: {
         findFirst: vi.fn().mockResolvedValue(mockAdminUser),
       },
+      emailTemplatesTable: {
+        findFirst: vi.fn().mockResolvedValue(null),
+      },
     };
 
     (db as any).select = vi.fn().mockReturnThis();
@@ -129,9 +132,44 @@ describe('Admin Email Actions', () => {
 
   describe('getEmailStats', () => {
     it('should return email statistics', async () => {
-      (db as any).select.mockReturnValue({
-        from: vi.fn().mockResolvedValue([{ count: 100 }]),
-      });
+      const selectMock = vi.fn();
+      (db as any).select = selectMock;
+
+      selectMock
+        .mockReturnValueOnce({
+          from: vi.fn().mockResolvedValue([{ count: 100 }]),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([{ count: 80 }]),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([{ count: 5 }]),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([{ count: 25 }]),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockResolvedValue([{ count: 60 }]),
+          }),
+        })
+        .mockReturnValueOnce({
+          from: vi.fn().mockReturnValue({
+            where: vi.fn().mockReturnValue({
+              orderBy: vi.fn().mockReturnValue({
+                limit: vi.fn().mockResolvedValue([
+                  { sentAt: new Date('2025-01-01T00:00:00Z') },
+                ]),
+              }),
+            }),
+          }),
+        });
 
       const result = await getEmailStats();
 
@@ -150,7 +188,11 @@ describe('Admin Email Actions', () => {
     });
 
     it('should handle database errors', async () => {
-      (db as any).select.mockRejectedValue(new Error('Database error'));
+      const selectMock = vi.fn().mockImplementation(() => ({
+        from: vi.fn().mockRejectedValue(new Error('Database error')),
+      }));
+
+      (db as any).select = selectMock;
 
       const result = await getEmailStats();
 
@@ -432,6 +474,23 @@ describe('Admin Email Actions', () => {
 
   describe('Email Templates', () => {
     it('should save email template', async () => {
+      const newTemplate = {
+        id: 'test-template',
+        name: 'Test Template',
+        subject: 'Test Subject',
+        content: 'Test Content',
+        category: 'product_update',
+        variables: [],
+      };
+
+      (db.query.emailTemplatesTable.findFirst as any).mockResolvedValue(null);
+
+      (db as any).insert = vi.fn().mockImplementation(() => ({
+        values: vi.fn().mockImplementation(() => ({
+          returning: vi.fn().mockResolvedValue([newTemplate]),
+        })),
+      }));
+
       const result = await saveEmailTemplate({
         name: 'Test Template',
         subject: 'Test Subject',
@@ -440,11 +499,21 @@ describe('Admin Email Actions', () => {
       });
 
       expect(result.success).toBe(true);
-      expect(result.data?.id).toBe('test-template');
-      expect(result.data?.name).toBe('Test Template');
+      expect(result.data?.id).toBe(newTemplate.id);
+      expect(result.data?.name).toBe(newTemplate.name);
     });
 
     it('should get email templates with defaults', async () => {
+      (db as any).select = vi.fn().mockReturnValue({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            orderBy: vi.fn().mockResolvedValue([
+              { id: 'template-1', name: 'Template 1' },
+            ]),
+          }),
+        }),
+      });
+
       const result = await getEmailTemplates();
 
       expect(result.success).toBe(true);

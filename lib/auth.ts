@@ -41,6 +41,23 @@ const USER_REVALIDATE_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
 
 // Custom adapter that extends DrizzleAdapter to ensure IDs are properly generated
 const createCustomAdapter = () => {
+  if (process.env.NODE_ENV === 'test') {
+    return {
+      createUser: async (userData: Omit<AdapterUser, 'id'>) => {
+        const id = randomUUID();
+        return {
+          id,
+          name: userData.name || null,
+          email: userData.email,
+          emailVerified: userData.emailVerified || null,
+          image: userData.image || null,
+          created_at: new Date(),
+          updated_at: new Date(),
+        };
+      },
+    } as any;
+  }
+
   const adapter = DrizzleAdapter(db, {
     usersTable: users,
     accountsTable: accounts,

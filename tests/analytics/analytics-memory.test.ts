@@ -1,40 +1,43 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { AnalyticsCache } from '@/lib/analytics-cache';
+
+let cache: any;
+let originalSetInterval: typeof setInterval;
+let originalProcess: typeof process;
+
+const importAnalyticsModule = () => import('@/lib/analytics-cache');
+
+const createCacheInstance = async () => {
+  const { AnalyticsCache } = await importAnalyticsModule();
+  cache = new AnalyticsCache();
+  return cache;
+};
 
 describe('Analytics Cache Memory Management', () => {
-  let cache: AnalyticsCache;
-  let originalSetInterval: typeof setInterval;
-  let originalProcess: typeof process;
-
   beforeEach(() => {
-    // Store originals
+    vi.useRealTimers();
     originalSetInterval = global.setInterval;
     originalProcess = global.process;
-
-    // Reset global state
+    cache = null;
     delete (globalThis as any).__analyticsCacheCleanupRegistered;
   });
 
   afterEach(() => {
-    // Restore originals
     global.setInterval = originalSetInterval;
     global.process = originalProcess;
-
-    // Cleanup
     if (cache) {
       cache.destroy();
+      cache = null;
     }
+    vi.useRealTimers();
   });
 
   describe('Interval Management', () => {
-    it('should unref the cleanup interval in Node.js environment', () => {
+    it('should unref the cleanup interval in Node.js environment', async () => {
       let intervalId: any;
       let unrefCalled = false;
 
-      // Mock setInterval to return an object with unref
       global.setInterval = vi.fn((callback, delay) => {
         intervalId = originalSetInterval(callback, delay);
-        // Add unref method to track if it's called
         (intervalId as any).unref = vi.fn(() => {
           unrefCalled = true;
           return intervalId;
@@ -42,47 +45,32 @@ describe('Analytics Cache Memory Management', () => {
         return intervalId;
       }) as any;
 
-      // Create cache instance
-      cache = new (require('@/lib/analytics-cache').AnalyticsCache)();
+      await createCacheInstance();
 
-      // Verify unref was called
       expect(unrefCalled).toBe(true);
       expect(global.setInterval).toHaveBeenCalledWith(expect.any(Function), 60000);
     });
 
-    it('should handle environments without unref gracefully', () => {
-      // Mock setInterval to return an object without unref (browser-like)
-      global.setInterval = vi.fn((callback, delay) => {
-        const id = originalSetInterval(callback, delay);
-        return id;  // No unref method
-      }) as any;
+    it('should handle environments without unref gracefully', async () => {
+      global.setInterval = vi.fn((callback, delay) => originalSetInterval(callback, delay)) as any;
 
-      // Should not throw
-      expect(() => {
-        cache = new (require('@/lib/analytics-cache').AnalyticsCache)();
-      }).not.toThrow();
-
+      await expect(createCacheInstance()).resolves.toBeDefined();
       expect(global.setInterval).toHaveBeenCalledWith(expect.any(Function), 60000);
     });
 
-    it('should handle environments without setInterval', () => {
-      // Remove setInterval (edge case)
+    it('should handle environments without setInterval', async () => {
       delete (global as any).setInterval;
 
-      // Should not throw
-      expect(() => {
-        cache = new (require('@/lib/analytics-cache').AnalyticsCache)();
-      }).not.toThrow();
+      await expect(createCacheInstance()).resolves.toBeDefined();
     });
   });
 
   describe('Process Event Handler Registration', () => {
-    it('should register process handlers only once (singleton pattern)', () => {
+    it('should register process handlers only once (singleton pattern)', async () => {
       const exitHandlers: Function[] = [];
       const sigtermHandlers: Function[] = [];
       const sigintHandlers: Function[] = [];
 
-      // Mock process.on to track handler registration
       global.process = {
         ...originalProcess,
         on: vi.fn((event: string, handler: Function) => {
@@ -93,159 +81,125 @@ describe('Analytics Cache Memory Management', () => {
         }),
       } as any;
 
-      // Clear module cache to force re-execution
-      delete require.cache[require.resolve('@/lib/analytics-cache')];
-
-      // First import - should register handlers
-      require('@/lib/analytics-cache');
+      vi.resetModules();
+      const firstModule = await importAnalyticsModule();
 
       expect(exitHandlers).toHaveLength(1);
       expect(sigtermHandlers).toHaveLength(1);
       expect(sigintHandlers).toHaveLength(1);
-      expect((globalThis as any).__analyticsCacheCleanupRegistered).toBe(true);
+      expect(globalThis.__analyticsCacheCleanupRegistered).toBe(true);
 
-      // Clear handlers arrays
+      firstModule.analyticsCache.destroy();
+
       exitHandlers.length = 0;
       sigtermHandlers.length = 0;
       sigintHandlers.length = 0;
 
-      // Second import - should NOT register handlers again
-      delete require.cache[require.resolve('@/lib/analytics-cache')];
-      require('@/lib/analytics-cache');
+      vi.resetModules();
+      const secondModule = await importAnalyticsModule();
 
-      expect(exitHandlers).toHaveLength(0);  // No new handlers
+      expect(exitHandlers).toHaveLength(0);
       expect(sigtermHandlers).toHaveLength(0);
       expect(sigintHandlers).toHaveLength(0);
-      expect((globalThis as any).__analyticsCacheCleanupRegistered).toBe(true);
+      expect(globalThis.__analyticsCacheCleanupRegistered).toBe(true);
+
+      secondModule.analyticsCache.destroy();
     });
 
-    it('should not register handlers in non-Node environments', () => {
-      // Remove process
+    it('should not register handlers in non-Node environments', async () => {
       delete (global as any).process;
 
-      // Clear module cache
-      delete require.cache[require.resolve('@/lib/analytics-cache')];
+      vi.resetModules();
 
-      // Should not throw
-      expect(() => {
-        require('@/lib/analytics-cache');
-      }).not.toThrow();
-
-      expect((globalThis as any).__analyticsCacheCleanupRegistered).toBeUndefined();
+      const module = await importAnalyticsModule();
+      module.analyticsCache.destroy();
+      expect(globalThis.__analyticsCacheCleanupRegistered).toBeUndefined();
     });
   });
 
   describe('Memory Limits', () => {
-    it('should enforce MAX_ENTRIES limit to prevent unbounded growth', () => {
-      cache = new (require('@/lib/analytics-cache').AnalyticsCache)();
+    it('should enforce MAX_ENTRIES limit to prevent unbounded growth', async () => {
+      const cacheInstance = await createCacheInstance();
 
-      // Add entries up to the limit (1000)
       for (let i = 0; i < 1000; i++) {
-        cache.set(`key-${i}`, { data: i });
+        cacheInstance.set(`key-${i}`, { data: i });
       }
 
-      // Check stats
-      let stats = cache.getStats();
+      let stats = cacheInstance.getStats();
       expect(stats.size).toBe(1000);
 
-      // Add one more - should evict the oldest
-      cache.set('key-1000', { data: 1000 });
+      cacheInstance.set('key-1000', { data: 1000 });
 
-      stats = cache.getStats();
-      expect(stats.size).toBe(1000);  // Still 1000, not 1001
-
-      // The first key should have been evicted
-      expect(cache.get('key-0')).toBeNull();
-      // The newest key should exist
-      expect(cache.get('key-1000')).toEqual({ data: 1000 });
+      stats = cacheInstance.getStats();
+      expect(stats.size).toBe(1000);
+      expect(cacheInstance.get('key-0')).toBeNull();
+      expect(cacheInstance.get('key-1000')).toEqual({ data: 1000 });
     });
 
-    it('should clean up expired entries periodically', (done) => {
-      // Use real timers for this test
+    it('should clean up expired entries periodically', async () => {
       vi.useRealTimers();
 
-      cache = new (require('@/lib/analytics-cache').AnalyticsCache)();
+      const cacheInstance = await createCacheInstance();
+      cacheInstance.set('short-ttl', { data: 'expires soon' }, 100);
+      cacheInstance.set('long-ttl', { data: 'expires later' }, 5000);
 
-      // Add entries with short TTL
-      cache.set('short-ttl', { data: 'expires soon' }, 100);  // 100ms TTL
-      cache.set('long-ttl', { data: 'expires later' }, 5000); // 5s TTL
+      expect(cacheInstance.get('short-ttl')).toEqual({ data: 'expires soon' });
+      expect(cacheInstance.get('long-ttl')).toEqual({ data: 'expires later' });
 
-      // Check both exist initially
-      expect(cache.get('short-ttl')).toEqual({ data: 'expires soon' });
-      expect(cache.get('long-ttl')).toEqual({ data: 'expires later' });
+      await new Promise(resolve => setTimeout(resolve, 150));
 
-      // Wait for short TTL to expire
-      setTimeout(() => {
-        // Short TTL should be gone
-        expect(cache.get('short-ttl')).toBeNull();
-        // Long TTL should still exist
-        expect(cache.get('long-ttl')).toEqual({ data: 'expires later' });
-
-        done();
-      }, 150);
+      expect(cacheInstance.get('short-ttl')).toBeNull();
+      expect(cacheInstance.get('long-ttl')).toEqual({ data: 'expires later' });
     });
   });
 
   describe('Cache Invalidation', () => {
-    it('should invalidate all entries for a specific profile', () => {
-      cache = new (require('@/lib/analytics-cache').AnalyticsCache)();
+    it('should invalidate all entries for a specific profile', async () => {
+      const cacheInstance = await createCacheInstance();
 
-      // Add entries for different profiles
-      cache.set('analytics:overview:user1:profile1:7d', { data: 'profile1 data' });
-      cache.set('analytics:tools:user1:profile1:30d', { data: 'profile1 tools' });
-      cache.set('analytics:overview:user1:profile2:7d', { data: 'profile2 data' });
-      cache.set('other:data', { data: 'unrelated' });
+      cacheInstance.set('analytics:overview:user1:profile1:7d', { data: 'profile1 data' });
+      cacheInstance.set('analytics:tools:user1:profile1:30d', { data: 'profile1 tools' });
+      cacheInstance.set('analytics:overview:user1:profile2:7d', { data: 'profile2 data' });
+      cacheInstance.set('other:data', { data: 'unrelated' });
 
-      // Invalidate profile1
-      cache.invalidateProfile('profile1');
+      cacheInstance.invalidateProfile('profile1');
 
-      // Profile1 entries should be gone
-      expect(cache.get('analytics:overview:user1:profile1:7d')).toBeNull();
-      expect(cache.get('analytics:tools:user1:profile1:30d')).toBeNull();
-
-      // Profile2 and unrelated entries should remain
-      expect(cache.get('analytics:overview:user1:profile2:7d')).toEqual({ data: 'profile2 data' });
-      expect(cache.get('other:data')).toEqual({ data: 'unrelated' });
+      expect(cacheInstance.get('analytics:overview:user1:profile1:7d')).toBeNull();
+      expect(cacheInstance.get('analytics:tools:user1:profile1:30d')).toBeNull();
+      expect(cacheInstance.get('analytics:overview:user1:profile2:7d')).toEqual({ data: 'profile2 data' });
+      expect(cacheInstance.get('other:data')).toEqual({ data: 'unrelated' });
     });
 
-    it('should clear all cache entries', () => {
-      cache = new (require('@/lib/analytics-cache').AnalyticsCache)();
+    it('should clear all cache entries', async () => {
+      const cacheInstance = await createCacheInstance();
 
-      // Add some entries
-      cache.set('key1', { data: 1 });
-      cache.set('key2', { data: 2 });
-      cache.set('key3', { data: 3 });
+      cacheInstance.set('key1', { data: 1 });
+      cacheInstance.set('key2', { data: 2 });
+      cacheInstance.set('key3', { data: 3 });
 
-      expect(cache.getStats().size).toBe(3);
+      expect(cacheInstance.getStats().size).toBe(3);
 
-      // Clear all
-      cache.clear();
+      cacheInstance.clear();
 
-      expect(cache.getStats().size).toBe(0);
-      expect(cache.get('key1')).toBeNull();
-      expect(cache.get('key2')).toBeNull();
-      expect(cache.get('key3')).toBeNull();
+      expect(cacheInstance.getStats().size).toBe(0);
+      expect(cacheInstance.get('key1')).toBeNull();
+      expect(cacheInstance.get('key2')).toBeNull();
+      expect(cacheInstance.get('key3')).toBeNull();
     });
   });
 
   describe('Destroy Cleanup', () => {
-    it('should clear interval and cache on destroy', () => {
+    it('should clear interval and cache on destroy', async () => {
       const clearIntervalSpy = vi.spyOn(global, 'clearInterval');
 
-      cache = new (require('@/lib/analytics-cache').AnalyticsCache)();
+      const cacheInstance = await createCacheInstance();
+      cacheInstance.set('test', { data: 'test' });
+      expect(cacheInstance.getStats().size).toBe(1);
 
-      // Add some data
-      cache.set('test', { data: 'test' });
-      expect(cache.getStats().size).toBe(1);
+      cacheInstance.destroy();
 
-      // Destroy
-      cache.destroy();
-
-      // Interval should be cleared
       expect(clearIntervalSpy).toHaveBeenCalled();
-
-      // Cache should be empty
-      expect(cache.getStats().size).toBe(0);
+      expect(cacheInstance.getStats().size).toBe(0);
     });
   });
 });

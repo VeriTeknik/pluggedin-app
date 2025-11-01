@@ -1,9 +1,10 @@
 'use client';
 
-import { lazy,Suspense } from 'react';
+import { lazy, Suspense } from 'react';
 
 import { EditorErrorBoundary } from '@/components/editor-error-boundary';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 // Lazy load Monaco Editor to reduce initial bundle size
 const MonacoEditor = lazy(() => 
@@ -26,9 +27,9 @@ interface LazyMonacoEditorProps {
 }
 
 // Loading skeleton component
-function EditorSkeleton({ height = '100%', width = '100%' }: { height?: string | number; width?: string | number }) {
+function EditorSkeleton() {
   return (
-    <div style={{ height, width }} className="relative">
+    <div className="absolute inset-0">
       <Skeleton className="absolute inset-0" />
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-sm text-muted-foreground">Loading editor...</div>
@@ -51,20 +52,26 @@ export function LazyMonacoEditor({
 }: LazyMonacoEditorProps) {
   return (
     <EditorErrorBoundary>
-      <Suspense fallback={<EditorSkeleton height={height} width={width} />}>
-        <MonacoEditor
-          value={value}
-          defaultValue={defaultValue}
-          language={language}
-          defaultLanguage={defaultLanguage}
-          theme={theme}
-          onChange={onChange}
-          options={options}
-          height={height}
-          width={width}
-          className={className}
-        />
-      </Suspense>
+      <div
+        data-testid="editor-container"
+        style={{ height, width }}
+        className={cn('relative', className)}
+      >
+        <Suspense fallback={<EditorSkeleton />}>
+          <MonacoEditor
+            value={value}
+            defaultValue={defaultValue}
+            language={language}
+            defaultLanguage={defaultLanguage}
+            theme={theme}
+            onChange={onChange}
+            options={options}
+            height="100%"
+            width="100%"
+            className="h-full w-full"
+          />
+        </Suspense>
+      </div>
     </EditorErrorBoundary>
   );
 }

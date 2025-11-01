@@ -77,12 +77,14 @@ describe('LazyMonacoEditor', () => {
   });
 
   it('should render with custom dimensions', () => {
-    const { container } = render(
+    const { getByTestId } = render(
       <LazyMonacoEditor height="500px" width="800px" />
     );
-    
-    const skeleton = container.querySelector('[style*="height: 500px"]');
-    expect(skeleton).toBeInTheDocument();
+
+    const container = getByTestId('editor-container');
+    expect(container).toBeInTheDocument();
+    expect(container.style.height).toBe('500px');
+    expect(container.style.width).toBe('800px');
   });
 
   it('should handle both value and language for controlled mode', async () => {

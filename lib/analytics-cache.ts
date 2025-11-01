@@ -14,7 +14,7 @@ interface CacheEntry<T> {
   ttl: number;
 }
 
-class AnalyticsCache {
+export class AnalyticsCache {
   private cache = new Map<string, CacheEntry<any>>();
   private readonly DEFAULT_TTL = 5 * 60 * 1000; // 5 minutes
   private readonly MAX_ENTRIES = 1000; // Prevent unbounded growth
