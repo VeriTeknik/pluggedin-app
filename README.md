@@ -8,7 +8,7 @@
 
 **Turn your AI conversations into permanent organizational memory**
 
-[![Version](https://img.shields.io/badge/version-2.16.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+[![Version](https://img.shields.io/badge/version-2.17.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://hub.docker.com/r/veriteknik/pluggedin)
@@ -518,37 +518,38 @@ Built on top of these amazing projects:
 
 ## 📝 Release Notes
 
-**Latest Release: v2.15.0** - Multi-Select Filtering & Security Hardening
+**Latest Release: v2.17.0** - Multi-Architecture Docker Support & Self-Hosted Fixes
 
-### 🎯 What's New in v2.15.0
+### 🎯 What's New in v2.17.0
 
-**🔍 Enhanced Registry Search & Filtering**
-- **Multi-Select Package Type Filtering**: Select multiple package registries simultaneously (npm, PyPI, Docker/OCI, MCPB, NuGet)
-- **Smart Default Filters**: Automatically pre-selects npm and PyPI packages for optimal compatibility
-- **Intelligent Notices**: Context-aware warnings when selecting package types with limited support
-- **Improved UX**: Visual badges show active filters with individual removal options
+**🐳 Multi-Architecture Docker Support** (Major Feature!)
+- **AMD64 + ARM64 Support**: Native builds for both Intel/AMD and ARM processors
+- **Apple Silicon Ready**: M1/M2/M3 Macs now run natively without performance issues
+- **AWS Graviton Support**: Cost-effective cloud deployments on ARM instances
+- **Official Docker Hub Images**: Pre-built multi-arch images at `veriteknik/pluggedin:latest`
+- **Automatic Platform Detection**: Docker pulls the correct architecture for your system
+- **Build Times**: 5-10 minutes (single arch), 15-25 minutes (multi-arch)
 
-**🔒 Security Hardening**
-- **Input Validation**: Comprehensive validation of all user inputs with regex patterns and whitelisting
-- **DoS Prevention**: Rate limiting with maximum input size constraints (max 10 registries)
-- **XSS Protection**: Enhanced sanitization of user-provided data
-- **Type Safety**: Strict TypeScript typing with validated enums
+**🐛 Critical Bug Fixes**
+- **Fixed Self-Hosted Registration** (#61): New users can now register successfully on self-hosted instances
+- **Username Column Migration**: Robust migration (`0066_fix_missing_username.sql`) works for fresh and existing installs
+- **Platform Detection**: Reliable platform detection using `docker version -f`
+- **Error Handling**: Improved Docker login and build error messages
 
-**⚡ Performance Optimizations**
-- **Set-Based Filtering**: O(1) lookup performance instead of O(n) for package registry filtering
-- **Reduced Code Duplication**: 83% reduction in checkbox handler code (65 lines → 11 lines)
-- **Efficient Client-Side Filtering**: Smart filtering only when multiple registries selected
+**🔒 Security Enhancements**
+- **Pinned GitHub Actions**: All third-party actions use commit SHAs to prevent supply chain attacks
+- **Input Validation**: Workflow inputs validated (version must match `latest` or `vX.Y.Z`)
+- **Manifest Verification**: Automatic verification that both architectures are present after build
 
-**♿ Accessibility Improvements**
-- **ARIA Labels**: All interactive elements now have descriptive labels for screen readers
-- **Keyboard Navigation**: Enhanced keyboard support for multi-select filters
+**⚡ Infrastructure Improvements**
+- **Ephemeral CI Builders**: Auto-cleanup prevents state pollution between builds
+- **Optimized Caching**: Changed from `mode=max` to `mode=min` for sustainable builds
+- **Docker Hub README Sync**: Automated workflow keeps Docker Hub description up to date
 
-**🛡️ Code Quality**
-- **Error Handling**: Comprehensive null/undefined checks for edge cases
-- **State Management**: Functional updates prevent race conditions
-- **Maintainability**: Extracted reusable constants and handler functions
-
-### Code Quality Score: 9.0/10 ⬆️ (up from 6.5/10)
+**📚 Documentation Updates**
+- **Multi-Arch Deployment Guide**: Complete guide in `/deployment/docker`
+- **Updated Installation Guide**: Docker Hub pre-built images option added
+- **Rollback Procedures**: Documented recovery strategy if builds fail
 
 View the full changelog and release notes at [docs.plugged.in/releases](https://docs.plugged.in/releases/changelog)
 
