@@ -12,7 +12,11 @@ const getPoolConfig = () => {
   };
 
   // Enable SSL in production or when explicitly requested
-  if (process.env.NODE_ENV === 'production' || process.env.DATABASE_SSL === 'true') {
+  // BUT: if DATABASE_SSL is explicitly set to 'false', don't use SSL
+  if (process.env.DATABASE_SSL === 'false') {
+    // Explicitly disabled - no SSL
+    config.ssl = false;
+  } else if (process.env.NODE_ENV === 'production' || process.env.DATABASE_SSL === 'true') {
     config.ssl = {
       // Accept self-signed certificates (no issuer certificate required)
       // Connection is still encrypted, just not fully validated
