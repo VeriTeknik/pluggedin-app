@@ -13,9 +13,13 @@
 
 [🚀 Get Started](#-quick-start) • [📚 Documentation](#-documentation) • [🌟 Features](#-key-features) • [💬 Community](#-community--support)
 
-</div>
-
 ---
+🧩 **Now Multi‑Arch Ready!**  
+Plugged.in Docker images support both `amd64` and `arm64` architectures via a unified manifest.  
+🧠 **Beyond Proxy Mode — Full AI Platform:**  
+Plugged.in is no longer just a proxy; it’s a unified AI infrastructure layer combining web app, memory, and tool orchestration.
+---
+
 
 ## 🎯 The Problem We Solve
 
@@ -61,6 +65,14 @@ Security: AES-256-GCM encryption, Redis rate limiting
 ## 🚀 Quick Start
 
 ### Docker (Recommended - 2 minutes)
+
+#### **Supported Architectures**
+
+Plugged.in Docker images are multi-architecture (`amd64` and `arm64`) and will automatically select the correct platform for your system.  
+To verify which platforms are available, run:
+```bash
+docker manifest inspect veriteknik/pluggedin:latest --verbose | jq '.manifests[].platform'
+```
 
 ```bash
 # Clone and setup
@@ -540,6 +552,7 @@ View the full changelog and release notes at [docs.plugged.in/releases](https://
 
 [🚀 **Start Now**](https://plugged.in) • [⭐ **Star on GitHub**](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 
-*If you find plugged.in useful, please star the repo - it helps others discover the project!*
+*If this project inspires you, please ⭐ Star it —  
+stars power the community and keep development momentum alive!*
 
 </div>

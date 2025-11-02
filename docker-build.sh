@@ -39,8 +39,15 @@ docker login
 if [ "$LOCAL_BUILD" == "--local" ]; then
     # Local build and load (single platform only - current architecture)
     echo "📦 Building for local platform only..."
+    # Detect platform using buildx inspect for reliability
+    LOCAL_PLATFORM=$(docker buildx inspect --bootstrap | grep -oP 'Platforms:.*' | awk '{print $2}' | cut -d',' -f1)
+    if [ -z "$LOCAL_PLATFORM" ]; then
+        echo "⚠️  Could not detect platform, using linux/amd64 as default"
+        LOCAL_PLATFORM="linux/amd64"
+    fi
+    echo "Detected platform: $LOCAL_PLATFORM"
     docker buildx build \
-        --platform $(docker version --format '{{.Server.Os}}/{{.Server.Arch}}') \
+        --platform $LOCAL_PLATFORM \
         -f Dockerfile.production \
         -t $DOCKER_USERNAME/$IMAGE_NAME:$VERSION \
         --load \
