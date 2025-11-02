@@ -4,12 +4,14 @@
 
 ![plugged.in Logo](https://plugged.in/_next/image?url=%2Fpluggedin-wl.png&w=256&q=75)
 
+
+
 **Turn your AI conversations into permanent organizational memory**
 
 [![Version](https://img.shields.io/badge/version-2.16.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
-[![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://ghcr.io/veriteknik/pluggedin-app)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://hub.docker.com/r/veriteknik/pluggedin)
 
 [🚀 Get Started](#-quick-start) • [📚 Documentation](#-documentation) • [🌟 Features](#-key-features) • [💬 Community](#-community--support)
 
@@ -19,7 +21,7 @@ Plugged.in Docker images support both `amd64` and `arm64` architectures via a un
 🧠 **Beyond Proxy Mode — Full AI Platform:**  
 Plugged.in is no longer just a proxy; it’s a unified AI infrastructure layer combining web app, memory, and tool orchestration.
 ---
-
+</div>
 
 ## 🎯 The Problem We Solve
 
