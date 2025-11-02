@@ -16,7 +16,7 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
       - DATABASE_SSL=false
-      - MCP_ISOLATION_TYPE=bubblewrap
+      - MCP_ISOLATION_TYPE=none
       - MCP_ISOLATION_FALLBACK=firejail
       - MCP_ENABLE_NETWORK_ISOLATION=false
       - MCP_PACKAGE_STORE_DIR=/app/.cache/mcp-packages

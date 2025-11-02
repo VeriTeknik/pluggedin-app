@@ -24,17 +24,17 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm build
 
-# Migration stage
+# Migration stage - optimized for minimal size
 FROM base AS migrator
 WORKDIR /app
 
 # Install PostgreSQL client for wait script
 RUN apk add --no-cache postgresql-client
 
-# Install only migration dependencies (much smaller than full node_modules)
-COPY package.json pnpm-lock.yaml* ./
-RUN pnpm add -D drizzle-kit@0.31.4 && \
-    pnpm add drizzle-orm@0.44.5 postgres@3.4.7 dotenv@17.2.2
+# Install only migration dependencies WITHOUT package.json to avoid pulling unnecessary metadata
+RUN pnpm add drizzle-kit@0.31.4 drizzle-orm@0.44.5 postgres@3.4.7 dotenv@17.2.2 && \
+    pnpm store prune && \
+    rm -rf /root/.local/share/pnpm/store
 
 # Copy only files needed for migrations
 COPY drizzle.config.ts ./
