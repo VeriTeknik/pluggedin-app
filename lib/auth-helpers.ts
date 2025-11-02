@@ -39,19 +39,20 @@ export async function withAuth<T>(fn: AuthenticatedFunction<T>): Promise<T> {
     await clearSessionAndRedirect();
   }
 
-  // Extra hardening: ensure the user referenced by the session still exists in DB
-  // At this point session.user.id is guaranteed to exist due to the check above
-  const userId = session!.user.id;
+  // Type assertion: session.user.id is guaranteed to exist at this point
+  // because clearSessionAndRedirect() above never returns (throws via redirect)
+  const authenticatedSession = session as Session & { user: { id: string } };
 
+  // Extra hardening: ensure the user referenced by the session still exists in DB
   try {
     const existingUser = await db.query.users.findFirst({
-      where: (u, { eq }) => eq(u.id, userId),
+      where: (u, { eq }) => eq(u.id, authenticatedSession.user.id),
       columns: { id: true },
     });
 
     if (!existingUser) {
       // User doesn't exist - likely switching between local/docker environments
-      console.warn(`Invalid session detected for user ${userId}, clearing session`);
+      console.warn(`Invalid session detected for user ${authenticatedSession.user.id}, clearing session`);
       await clearSessionAndRedirect();
     }
   } catch (dbError) {
@@ -64,7 +65,7 @@ export async function withAuth<T>(fn: AuthenticatedFunction<T>): Promise<T> {
     throw new Error('Database error - please try again later');
   }
 
-  return fn(session as Session & { user: { id: string } });
+  return fn(authenticatedSession);
 }
 
 /**

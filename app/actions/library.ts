@@ -1,7 +1,7 @@
 'use server';
 
 import { and, desc, eq, isNull, sum } from 'drizzle-orm';
-import { realpathSync } from 'fs';
+import { mkdirSync, realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import * as path from 'path';
 import { join, resolve } from 'path';
@@ -91,29 +91,42 @@ function createSafeFilePath(userId: string, fileName: string): { userDir: string
   const filePath = join(userDir, sanitizedFileName);
   const relativePath = `${sanitizedUserId}/${sanitizedFileName}`;
 
-  // Resolve real paths to handle symlinks and prevent bypasses
-  let resolvedUploadsDir: string;
+  // Use cached resolved uploads directory from startup
+  const resolvedUploadsDir = global.RESOLVED_UPLOADS_DIR || realpathSync(UPLOADS_BASE_DIR);
+
+  // Ensure user directory exists before resolving symlinks
+  try {
+    mkdirSync(userDir, { recursive: true });
+  } catch (err) {
+    // Log sanitized error
+    console.error('Error creating user directory');
+    throw new Error('Failed to prepare upload directory');
+  }
+
+  // Resolve real paths to handle symlinks and prevent path traversal attacks
   let resolvedUserDir: string;
   let resolvedFilePath: string;
 
   try {
-    resolvedUploadsDir = realpathSync(UPLOADS_BASE_DIR);
-    // For userDir and filePath, they may not exist yet, so we resolve the parent and join
-    resolvedUserDir = resolve(userDir);
-    resolvedFilePath = resolve(filePath);
+    // Resolve user directory with symlink resolution to detect attacks
+    resolvedUserDir = realpathSync(userDir);
+    // Build file path from resolved user directory
+    resolvedFilePath = join(resolvedUserDir, sanitizedFileName);
   } catch (err) {
-    // Log full error details internally for debugging
-    console.error('Error resolving file path:', err);
-    // Expose only a sanitized error message to prevent path disclosure
-    throw new Error('Invalid path: unable to resolve real path');
+    // Log sanitized error internally
+    console.error('Error resolving paths');
+    // Return generic error to prevent information disclosure
+    throw new Error('Invalid path configuration');
   }
-  
-  // Validate that paths are within the uploads directory (prevent directory traversal)
+
+  // Validate that resolved paths are within the uploads directory (prevent directory traversal)
   if (!isSubPath(resolvedUploadsDir, resolvedUserDir)) {
+    console.warn(`Path traversal attempt detected: user directory outside uploads`);
     throw new Error('Invalid user directory path');
   }
-  
+
   if (!isSubPath(resolvedUserDir, resolvedFilePath)) {
+    console.warn(`Path traversal attempt detected: file path outside user directory`);
     throw new Error('Invalid file path');
   }
   

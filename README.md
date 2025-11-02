@@ -68,10 +68,44 @@ git clone https://github.com/VeriTeknik/pluggedin-app.git
 cd pluggedin-app
 cp .env.example .env
 
-# Start with Docker
+# Start with Docker (includes PostgreSQL 18-alpine)
 docker compose up --build -d
 
 # Visit http://localhost:12005
+```
+
+**What's included:**
+- ✅ PostgreSQL 18 (latest stable) with automatic migrations
+- ✅ Next.js 15 web application with optimized production build
+- ✅ Persistent volumes for database, uploads, and logs
+- ✅ Health checks and automatic restarts
+- ✅ Migrator container (288 MB) for database setup
+
+**Docker Architecture:**
+```yaml
+Services:
+  - pluggedin-app: Main web application (port 12005)
+  - pluggedin-postgres: PostgreSQL 18-alpine database (port 5432)
+  - drizzle-migrate: One-time migration runner (auto-stops)
+
+Volumes:
+  - pluggedin-postgres: Database data (persistent)
+  - app-uploads: User uploaded files (persistent)
+  - app-logs: Application logs (persistent)
+  - mcp-cache: MCP package cache (persistent)
+```
+
+**Upgrading from older versions:**
+```bash
+# If upgrading from PostgreSQL 16 or earlier
+# Option 1: Fresh start (data loss)
+docker compose down -v && docker compose up --build -d
+
+# Option 2: Migrate existing data
+docker exec pluggedin-postgres pg_dump -U pluggedin pluggedin > backup.sql
+docker compose down -v
+docker compose up -d
+docker exec -i pluggedin-postgres psql -U pluggedin -d pluggedin < backup.sql
 ```
 
 ### Cloud Version
@@ -311,7 +345,7 @@ Visit our comprehensive documentation at [docs.plugged.in](https://docs.plugged.
 
 ### Requirements
 - Node.js 18+ (20+ recommended)
-- PostgreSQL 15+
+- PostgreSQL 15+ (18+ recommended)
 - Redis (optional, for rate limiting)
 - Docker & Docker Compose (for containerized deployment)
 
