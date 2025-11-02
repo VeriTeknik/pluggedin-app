@@ -2,12 +2,28 @@
 
 import { eq } from 'drizzle-orm';
 import { Session } from 'next-auth';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import { db } from '@/db';
 import { projectsTable, users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 type AuthenticatedFunction<T> = (session: Session & { user: { id: string } }) => Promise<T>;
+
+/**
+ * Clear session cookies and redirect to login page
+ */
+async function clearSessionAndRedirect(): Promise<never> {
+  const cookieStore = await cookies();
+
+  // Delete NextAuth session cookies
+  cookieStore.delete('next-auth.session-token');
+  cookieStore.delete('__Secure-next-auth.session-token');
+
+  redirect('/login');
+}
 
 /**
  * Higher-order function that wraps server actions requiring authentication
@@ -18,20 +34,38 @@ export async function withAuth<T>(fn: AuthenticatedFunction<T>): Promise<T> {
   const session = await getAuthSession();
 
   if (!session?.user?.id) {
-    throw new Error('Unauthorized - you must be logged in to perform this action');
+    // Session invalid or doesn't exist - likely environment switch
+    // Clear session cookie and redirect to login
+    await clearSessionAndRedirect();
   }
+
+  // Type assertion: session.user.id is guaranteed to exist at this point
+  // because clearSessionAndRedirect() above never returns (throws via redirect)
+  const authenticatedSession = session as Session & { user: { id: string } };
 
   // Extra hardening: ensure the user referenced by the session still exists in DB
-  const existingUser = await db.query.users.findFirst({
-    where: (u, { eq }) => eq(u.id, session.user.id),
-    columns: { id: true },
-  });
+  try {
+    const existingUser = await db.query.users.findFirst({
+      where: (u, { eq }) => eq(u.id, authenticatedSession.user.id),
+      columns: { id: true },
+    });
 
-  if (!existingUser) {
-    throw new Error('Unauthorized - account no longer exists. Please sign in again.');
+    if (!existingUser) {
+      // User doesn't exist - likely switching between local/docker environments
+      console.warn(`Invalid session detected for user ${authenticatedSession.user.id}, clearing session`);
+      await clearSessionAndRedirect();
+    }
+  } catch (dbError) {
+    // If the error is from redirect, let it propagate
+    if (isRedirectError(dbError)) {
+      throw dbError; // This is Next.js redirect error, don't catch it
+    }
+    // Otherwise, log and throw a DB error
+    console.error('Database error checking user:', dbError);
+    throw new Error('Database error - please try again later');
   }
 
-  return fn(session as Session & { user: { id: string } });
+  return fn(authenticatedSession);
 }
 
 /**

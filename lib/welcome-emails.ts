@@ -383,8 +383,7 @@ function generateWelcomeHtml(options: WelcomeEmailOptions & { segment: UserSegme
  */
 function generateDay3Html(name: string, metrics: UserMetrics, _segment: UserSegment, unsubscribeUrl: string): string {
   const firstName = name.split(' ')[0];
-  const appUrl = process.env.NEXTAUTH_URL || 'https://app.plugged.in';
-  
+
   return `
     <!DOCTYPE html>
     <html>

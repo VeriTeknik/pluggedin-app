@@ -12,6 +12,7 @@ services:
     volumes:
       - mcp-cache:/app/.cache
       - app-uploads:/app/uploads
+      - app-logs:/app/logs
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
@@ -28,7 +29,7 @@ services:
 
   pluggedin-postgres:
     container_name: pluggedin-postgres
-    image: postgres:16.2-alpine3.18
+    image: postgres:18-alpine
     restart: always
     environment:
       POSTGRES_DB: pluggedin
@@ -78,4 +79,6 @@ volumes:
   mcp-cache:
     driver: local
   app-uploads:
+    driver: local
+  app-logs:
     driver: local
