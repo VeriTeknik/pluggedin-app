@@ -4,18 +4,24 @@
 
 ![plugged.in Logo](https://plugged.in/_next/image?url=%2Fpluggedin-wl.png&w=256&q=75)
 
+
+
 **Turn your AI conversations into permanent organizational memory**
 
 [![Version](https://img.shields.io/badge/version-2.16.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
-[![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://ghcr.io/veriteknik/pluggedin-app)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://hub.docker.com/r/veriteknik/pluggedin)
 
 [🚀 Get Started](#-quick-start) • [📚 Documentation](#-documentation) • [🌟 Features](#-key-features) • [💬 Community](#-community--support)
 
-</div>
-
 ---
+🧩 **Now Multi‑Arch Ready!**  
+Plugged.in Docker images support both `amd64` and `arm64` architectures via a unified manifest.  
+🧠 **Beyond Proxy Mode — Full AI Platform:**  
+Plugged.in is no longer just a proxy; it’s a unified AI infrastructure layer combining web app, memory, and tool orchestration.
+---
+</div>
 
 ## 🎯 The Problem We Solve
 
@@ -61,6 +67,20 @@ Security: AES-256-GCM encryption, Redis rate limiting
 ## 🚀 Quick Start
 
 ### Docker (Recommended - 2 minutes)
+
+#### **Supported Architectures**
+
+Plugged.in Docker images are multi-architecture (`amd64` and `arm64`) and will automatically select the correct platform for your system.
+
+**Important Notes:**
+- ✅ **Docker Compose automatically pulls the correct architecture** - no manual configuration needed
+- ✅ **Works seamlessly on mixed architectures** - run the same `docker-compose.yml` on any platform
+- ✅ **No performance penalty** - native builds for both AMD64 and ARM64
+
+To verify which platforms are available, run:
+```bash
+docker manifest inspect veriteknik/pluggedin:latest --verbose | jq '.manifests[].platform'
+```
 
 ```bash
 # Clone and setup
@@ -540,6 +560,7 @@ View the full changelog and release notes at [docs.plugged.in/releases](https://
 
 [🚀 **Start Now**](https://plugged.in) • [⭐ **Star on GitHub**](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 
-*If you find plugged.in useful, please star the repo - it helps others discover the project!*
+*If this project inspires you, please ⭐ Star it —  
+stars power the community and keep development momentum alive!*
 
 </div>
