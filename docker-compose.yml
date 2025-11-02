@@ -29,7 +29,7 @@ services:
 
   pluggedin-postgres:
     container_name: pluggedin-postgres
-    image: postgres:16.2-alpine3.18
+    image: postgres:18-alpine
     restart: always
     environment:
       POSTGRES_DB: pluggedin

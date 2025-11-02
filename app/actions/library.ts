@@ -22,15 +22,13 @@ import type {
 // Create uploads directory if it doesn't exist
 // Use environment variable or fallback to platform-specific paths
 const getDefaultUploadsDir = () => {
-  if (process.platform === 'darwin') {
-    // macOS: Use project's uploads directory for local development
-    return join(process.cwd(), 'uploads');
-  } else if (process.platform === 'win32') {
+  if (process.platform === 'win32') {
     // Windows: Use temp directory
     return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
   } else {
-    // Linux: Use /home/pluggedin/uploads
-    return '/home/pluggedin/uploads';
+    // macOS/Linux/Docker: Use project's uploads directory
+    // In Docker, process.cwd() is /app, so this becomes /app/uploads
+    return join(process.cwd(), 'uploads');
   }
 };
 
