@@ -604,11 +604,11 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
       }
     }
 
-    // Always schedule follow-up emails if userId is provided
-    // This ensures users get follow-up emails even if the welcome email fails
+    // Schedule follow-up emails only if CLOUD_DEPLOY is enabled
+    // This ensures scheduled emails only run in production cloud environment
     console.log(`[sendWelcomeEmail] Checking if userId is provided for scheduling: userId=${userId}`);
-    if (userId) {
-      console.log(`[sendWelcomeEmail] userId is provided, attempting to schedule follow-up emails`);
+    if (userId && process.env.CLOUD_DEPLOY === 'true') {
+      console.log(`[sendWelcomeEmail] userId is provided and CLOUD_DEPLOY=true, attempting to schedule follow-up emails`);
       try {
         await scheduleFollowUpEmails(userId, email, segment);
         console.log(`[sendWelcomeEmail] Follow-up emails scheduled successfully for user ${userId} (${email})`);
@@ -616,6 +616,8 @@ export async function sendWelcomeEmail(options: WelcomeEmailOptions & { userId?:
         console.error(`[sendWelcomeEmail] CRITICAL: Failed to schedule follow-up emails for user ${userId}:`, schedulingError);
         // Log this critical error but don't fail the welcome email operation
       }
+    } else if (userId) {
+      console.log(`[sendWelcomeEmail] CLOUD_DEPLOY is not set to 'true' (current: ${process.env.CLOUD_DEPLOY}), skipping follow-up email scheduling`);
     } else {
       console.log(`[sendWelcomeEmail] WARNING: userId not provided, skipping follow-up email scheduling`);
     }
