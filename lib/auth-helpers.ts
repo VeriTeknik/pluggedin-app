@@ -2,12 +2,28 @@
 
 import { eq } from 'drizzle-orm';
 import { Session } from 'next-auth';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import { db } from '@/db';
 import { projectsTable, users } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 
 type AuthenticatedFunction<T> = (session: Session & { user: { id: string } }) => Promise<T>;
+
+/**
+ * Clear session cookies and redirect to login page
+ */
+async function clearSessionAndRedirect(): Promise<never> {
+  const cookieStore = await cookies();
+
+  // Delete NextAuth session cookies
+  cookieStore.delete('next-auth.session-token');
+  cookieStore.delete('__Secure-next-auth.session-token');
+
+  redirect('/login');
+}
 
 /**
  * Higher-order function that wraps server actions requiring authentication
@@ -20,42 +36,27 @@ export async function withAuth<T>(fn: AuthenticatedFunction<T>): Promise<T> {
   if (!session?.user?.id) {
     // Session invalid or doesn't exist - likely environment switch
     // Clear session cookie and redirect to login
-    const { cookies } = await import('next/headers');
-    const cookieStore = await cookies();
-
-    // Delete NextAuth session cookies
-    cookieStore.delete('next-auth.session-token');
-    cookieStore.delete('__Secure-next-auth.session-token');
-
-    const { redirect } = await import('next/navigation');
-    redirect('/login');
+    await clearSessionAndRedirect();
   }
 
   // Extra hardening: ensure the user referenced by the session still exists in DB
+  // At this point session.user.id is guaranteed to exist due to the check above
+  const userId = session!.user.id;
+
   try {
     const existingUser = await db.query.users.findFirst({
-      where: (u, { eq }) => eq(u.id, session!.user.id), // Non-null assertion safe because we checked above
+      where: (u, { eq }) => eq(u.id, userId),
       columns: { id: true },
     });
 
     if (!existingUser) {
       // User doesn't exist - likely switching between local/docker environments
-      // Clear session cookie and redirect to login
-      console.warn(`Invalid session detected for user ${session!.user.id}, clearing session`);
-
-      const { cookies } = await import('next/headers');
-      const cookieStore = await cookies();
-
-      // Delete NextAuth session cookies
-      cookieStore.delete('next-auth.session-token');
-      cookieStore.delete('__Secure-next-auth.session-token');
-
-      const { redirect } = await import('next/navigation');
-      redirect('/login');
+      console.warn(`Invalid session detected for user ${userId}, clearing session`);
+      await clearSessionAndRedirect();
     }
   } catch (dbError) {
     // If the error is from redirect, let it propagate
-    if (dbError && typeof dbError === 'object' && 'digest' in dbError) {
+    if (isRedirectError(dbError)) {
       throw dbError; // This is Next.js redirect error, don't catch it
     }
     // Otherwise, log and throw a DB error
