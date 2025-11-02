@@ -32,7 +32,10 @@ WORKDIR /app
 RUN apk add --no-cache postgresql-client
 
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY package.json pnpm-lock.yaml* ./
+COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
+COPY db ./db
 
 ENV NODE_ENV=production
 CMD ["pnpm", "drizzle-kit", "migrate"]
