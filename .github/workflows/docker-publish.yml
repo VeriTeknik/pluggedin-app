@@ -28,15 +28,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate version input
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! "$VERSION" =~ ^(latest|v[0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+            echo "❌ Error: Invalid version format '$VERSION'"
+            echo "Version must be 'latest' or 'vX.Y.Z' (e.g., v2.16.0)"
+            exit 1
+          fi
+          echo "✅ Version validation passed: $VERSION"
+
       - name: Set up QEMU
         uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392 # v3
         with:
           platforms: linux/amd64,linux/arm64
 
       - name: Set up Docker Buildx
+        id: buildx
         uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # v3
         with:
           platforms: linux/amd64,linux/arm64
+          # Use ephemeral builder for CI (auto-cleanup)
+          driver-opts: |
+            image=moby/buildkit:latest
+            network=host
 
       - name: Log in to Docker Hub
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # v3
@@ -57,6 +73,7 @@ jobs:
             type=raw,value=${{ github.event.inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
       - name: Build and push Docker image
+        id: build
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5
         with:
           context: .
@@ -66,9 +83,29 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Use mode=min to prevent cache from growing unbounded
+          cache-to: type=gha,mode=min
 
-      - name: Image digest
+      - name: Verify multi-arch manifest
+        run: |
+          echo "🔍 Verifying multi-arch manifest..."
+          # Extract first tag from metadata output
+          FIRST_TAG=$(echo "${{ steps.meta.outputs.tags }}" | head -n 1)
+
+          # Verify manifest exists and contains both architectures
+          docker buildx imagetools inspect $FIRST_TAG
+
+          # Check for both platforms
+          MANIFEST=$(docker buildx imagetools inspect $FIRST_TAG)
+          if echo "$MANIFEST" | grep -q "linux/amd64" && echo "$MANIFEST" | grep -q "linux/arm64"; then
+            echo "✅ Manifest verification successful!"
+            echo "📋 Both AMD64 and ARM64 platforms confirmed"
+          else
+            echo "❌ Error: Missing expected platforms in manifest"
+            exit 1
+          fi
+
+      - name: Image digest and summary
         run: |
           echo "✅ Successfully pushed multi-arch image!"
           echo "📋 Image details:"
@@ -76,3 +113,4 @@ jobs:
           echo "   - ARM64 (aarch64): ✅"
           echo ""
           echo "Tags: ${{ steps.meta.outputs.tags }}"
+          echo "Digest: ${{ steps.build.outputs.digest }}"

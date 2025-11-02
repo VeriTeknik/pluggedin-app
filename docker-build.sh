@@ -2,9 +2,18 @@
 
 # Docker multi-architecture build and push script for Plugged.in
 # Supports both ARM64 and x86/AMD64 architectures
+#
 # Usage: ./docker-build.sh [version] [--local]
 # Example: ./docker-build.sh v2.16.0
 # Example (local build): ./docker-build.sh v2.16.0 --local
+#
+# Expected build times:
+#   - Local build (single arch): 5-10 minutes
+#   - Multi-arch build: 15-25 minutes (includes QEMU emulation)
+#
+# Rollback strategy:
+#   If a build fails, previous tags remain unchanged on Docker Hub.
+#   To rollback: docker pull veriteknik/pluggedin:<previous-version>
 
 set -e
 
@@ -34,18 +43,28 @@ fi
 
 # Login to Docker Hub
 echo "🔐 Logging in to Docker Hub..."
-docker login
+if ! docker login; then
+    echo "❌ Error: Docker login failed"
+    exit 1
+fi
+echo "✅ Successfully logged in to Docker Hub"
 
 if [ "$LOCAL_BUILD" == "--local" ]; then
     # Local build and load (single platform only - current architecture)
     echo "📦 Building for local platform only..."
-    # Detect platform using buildx inspect for reliability
-    LOCAL_PLATFORM=$(docker buildx inspect --bootstrap | grep -oP 'Platforms:.*' | awk '{print $2}' | cut -d',' -f1)
-    if [ -z "$LOCAL_PLATFORM" ]; then
-        echo "⚠️  Could not detect platform, using linux/amd64 as default"
-        LOCAL_PLATFORM="linux/amd64"
+
+    # Detect platform using docker version for reliability
+    DOCKER_ARCH=$(docker version -f '{{.Server.Arch}}')
+    DOCKER_OS=$(docker version -f '{{.Server.Os}}')
+
+    if [ -z "$DOCKER_ARCH" ] || [ -z "$DOCKER_OS" ]; then
+        echo "❌ Error: Could not detect Docker platform"
+        exit 1
     fi
+
+    LOCAL_PLATFORM="$DOCKER_OS/$DOCKER_ARCH"
     echo "Detected platform: $LOCAL_PLATFORM"
+
     docker buildx build \
         --platform $LOCAL_PLATFORM \
         -f Dockerfile.production \
@@ -53,7 +72,7 @@ if [ "$LOCAL_BUILD" == "--local" ]; then
         --load \
         .
 
-    echo "✅ Successfully built $DOCKER_USERNAME/$IMAGE_NAME:$VERSION for local platform!"
+    echo "✅ Successfully built $DOCKER_USERNAME/$IMAGE_NAME:$VERSION for $LOCAL_PLATFORM!"
 else
     # Multi-platform build and push
     echo "📦 Building multi-architecture production image..."
@@ -76,10 +95,18 @@ else
     fi
 
     echo "✅ Successfully pushed multi-arch $DOCKER_USERNAME/$IMAGE_NAME:$VERSION to Docker Hub!"
+
+    # Verify manifest was created correctly
     echo ""
-    echo "📋 Image details:"
-    echo "   - AMD64 (x86_64): ✅"
-    echo "   - ARM64 (aarch64): ✅"
+    echo "🔍 Verifying multi-arch manifest..."
+    if docker buildx imagetools inspect $DOCKER_USERNAME/$IMAGE_NAME:$VERSION > /dev/null 2>&1; then
+        echo "✅ Manifest verification successful!"
+        echo ""
+        echo "📋 Image details:"
+        docker buildx imagetools inspect $DOCKER_USERNAME/$IMAGE_NAME:$VERSION | grep -E "Name:|Platform:"
+    else
+        echo "⚠️  Warning: Could not verify manifest (image may still be valid)"
+    fi
 fi
 
 echo ""

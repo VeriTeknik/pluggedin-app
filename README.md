@@ -70,7 +70,13 @@ Security: AES-256-GCM encryption, Redis rate limiting
 
 #### **Supported Architectures**
 
-Plugged.in Docker images are multi-architecture (`amd64` and `arm64`) and will automatically select the correct platform for your system.  
+Plugged.in Docker images are multi-architecture (`amd64` and `arm64`) and will automatically select the correct platform for your system.
+
+**Important Notes:**
+- ✅ **Docker Compose automatically pulls the correct architecture** - no manual configuration needed
+- ✅ **Works seamlessly on mixed architectures** - run the same `docker-compose.yml` on any platform
+- ✅ **No performance penalty** - native builds for both AMD64 and ARM64
+
 To verify which platforms are available, run:
 ```bash
 docker manifest inspect veriteknik/pluggedin:latest --verbose | jq '.manifests[].platform'
