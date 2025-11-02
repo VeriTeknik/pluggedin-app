@@ -31,8 +31,12 @@ WORKDIR /app
 # Install PostgreSQL client for wait script
 RUN apk add --no-cache postgresql-client
 
-COPY --from=deps /app/node_modules ./node_modules
+# Install only migration dependencies (much smaller than full node_modules)
 COPY package.json pnpm-lock.yaml* ./
+RUN pnpm add -D drizzle-kit@0.31.4 && \
+    pnpm add drizzle-orm@0.44.5 postgres@3.4.7 dotenv@17.2.2
+
+# Copy only files needed for migrations
 COPY drizzle.config.ts ./
 COPY drizzle ./drizzle
 COPY db ./db

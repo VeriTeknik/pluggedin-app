@@ -84,9 +84,18 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   debug: process.env.NODE_ENV === 'development',
-  cookies: process.env.NODE_ENV === 'development' 
-    ? undefined // Use default cookie options in development
-    : {
+  cookies: (() => {
+    // Use secure cookies only when NEXTAUTH_URL is HTTPS
+    const isHttps = process.env.NEXTAUTH_URL?.startsWith('https://');
+    const useSecure = isHttps ?? false;
+
+    // Don't use secure cookies for HTTP (localhost, docker)
+    if (!useSecure) {
+      return undefined; // Use default NextAuth cookies
+    }
+
+    // Use secure cookies for HTTPS production
+    return {
         sessionToken: {
           name: `__Secure-next-auth.session-token`,
           options: {
@@ -116,7 +125,8 @@ export const authOptions: NextAuthOptions = {
             secure: true
           }
         }
-      },
+      };
+  })(),
   pages: {
     signIn: '/login',
     signOut: '/logout',

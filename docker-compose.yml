@@ -15,6 +15,7 @@ services:
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
+      - DATABASE_SSL=false
       - MCP_ISOLATION_TYPE=bubblewrap
       - MCP_ISOLATION_FALLBACK=firejail
       - MCP_ENABLE_NETWORK_ISOLATION=false
@@ -63,6 +64,7 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
+      - DATABASE_SSL=false
       - PGUSER=pluggedin
       - PGHOST=pluggedin-postgres
       - PGDATABASE=pluggedin
