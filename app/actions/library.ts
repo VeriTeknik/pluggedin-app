@@ -94,7 +94,18 @@ function createSafeFilePath(userId: string, fileName: string): { userDir: string
   // Use cached resolved uploads directory from startup
   const resolvedUploadsDir = global.RESOLVED_UPLOADS_DIR || realpathSync(UPLOADS_BASE_DIR);
 
+  // Security validation: Ensure sanitized userDir is within UPLOADS_BASE_DIR before creation
+  // This prevents path traversal attacks even though sanitizePath has already removed '../'
+  if (!userDir.startsWith(UPLOADS_BASE_DIR + path.sep)) {
+    console.warn(`Security: User directory path validation failed for userId: ${sanitizedUserId}`);
+    throw new Error('Invalid user directory path');
+  }
+
   // Ensure user directory exists before resolving symlinks
+  // Note: userDir is constructed from sanitizedUserId which has been validated:
+  // - No '..' sequences (path traversal removed)
+  // - No path separators (/ and \ replaced with _)
+  // - No null bytes, normalized unicode
   try {
     mkdirSync(userDir, { recursive: true });
   } catch (err) {
