@@ -18,17 +18,49 @@ export async function withAuth<T>(fn: AuthenticatedFunction<T>): Promise<T> {
   const session = await getAuthSession();
 
   if (!session?.user?.id) {
-    throw new Error('Unauthorized - you must be logged in to perform this action');
+    // Session invalid or doesn't exist - likely environment switch
+    // Clear session cookie and redirect to login
+    const { cookies } = await import('next/headers');
+    const cookieStore = await cookies();
+
+    // Delete NextAuth session cookies
+    cookieStore.delete('next-auth.session-token');
+    cookieStore.delete('__Secure-next-auth.session-token');
+
+    const { redirect } = await import('next/navigation');
+    redirect('/login');
   }
 
   // Extra hardening: ensure the user referenced by the session still exists in DB
-  const existingUser = await db.query.users.findFirst({
-    where: (u, { eq }) => eq(u.id, session.user.id),
-    columns: { id: true },
-  });
+  try {
+    const existingUser = await db.query.users.findFirst({
+      where: (u, { eq }) => eq(u.id, session!.user.id), // Non-null assertion safe because we checked above
+      columns: { id: true },
+    });
 
-  if (!existingUser) {
-    throw new Error('Unauthorized - account no longer exists. Please sign in again.');
+    if (!existingUser) {
+      // User doesn't exist - likely switching between local/docker environments
+      // Clear session cookie and redirect to login
+      console.warn(`Invalid session detected for user ${session!.user.id}, clearing session`);
+
+      const { cookies } = await import('next/headers');
+      const cookieStore = await cookies();
+
+      // Delete NextAuth session cookies
+      cookieStore.delete('next-auth.session-token');
+      cookieStore.delete('__Secure-next-auth.session-token');
+
+      const { redirect } = await import('next/navigation');
+      redirect('/login');
+    }
+  } catch (dbError) {
+    // If the error is from redirect, let it propagate
+    if (dbError && typeof dbError === 'object' && 'digest' in dbError) {
+      throw dbError; // This is Next.js redirect error, don't catch it
+    }
+    // Otherwise, log and throw a DB error
+    console.error('Database error checking user:', dbError);
+    throw new Error('Database error - please try again later');
   }
 
   return fn(session as Session & { user: { id: string } });

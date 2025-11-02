@@ -1,7 +1,7 @@
 'use server';
 
 import { and, desc, eq, isNull, sum } from 'drizzle-orm';
-import { realpathSync } from 'fs';
+import { existsSync, mkdirSync, realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import * as path from 'path';
 import { join, resolve } from 'path';
@@ -93,18 +93,27 @@ function createSafeFilePath(userId: string, fileName: string): { userDir: string
   const filePath = join(userDir, sanitizedFileName);
   const relativePath = `${sanitizedUserId}/${sanitizedFileName}`;
   
+  // Ensure uploads base directory exists before resolving paths
+  try {
+    if (!existsSync(UPLOADS_BASE_DIR)) {
+      mkdirSync(UPLOADS_BASE_DIR, { recursive: true });
+    }
+  } catch (err) {
+    throw new Error(`Failed to create uploads directory: ${err instanceof Error ? err.message : 'Unknown error'}`);
+  }
+
   // Resolve real paths to handle symlinks and prevent bypasses
   let resolvedUploadsDir: string;
   let resolvedUserDir: string;
   let resolvedFilePath: string;
-  
+
   try {
     resolvedUploadsDir = realpathSync(UPLOADS_BASE_DIR);
     // For userDir and filePath, they may not exist yet, so we resolve the parent and join
     resolvedUserDir = resolve(userDir);
     resolvedFilePath = resolve(filePath);
   } catch (err) {
-    throw new Error('Invalid path: unable to resolve real path');
+    throw new Error(`Invalid path: unable to resolve real path - ${err instanceof Error ? err.message : 'Unknown error'}`);
   }
   
   // Validate that paths are within the uploads directory (prevent directory traversal)
