@@ -80,14 +80,14 @@ export async function middleware(request: NextRequest) {
 
   // Get the pathname of the request
   const pathname = request.nextUrl.pathname;
-  
+
   // Apply rate limiting to API routes
   if (pathname.startsWith('/api/')) {
     // Skip rate limiting for NextAuth routes (they have their own)
     if (!pathname.startsWith('/api/auth/')) {
       const rateLimiter = pathname.startsWith('/api/mcp/') ? RateLimiters.api : RateLimiters.public;
       const rateLimitResult = await rateLimiter(request);
-      
+
       if (!rateLimitResult.allowed) {
         return createErrorResponse(
           'Too many requests. Please try again later.',
@@ -111,7 +111,7 @@ export async function middleware(request: NextRequest) {
     '/editor',
     '/library'
   ];
-  
+
   // Define routes that are only accessible to unauthenticated users
   const authRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email'];
 

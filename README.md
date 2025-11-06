@@ -4,18 +4,24 @@
 
 ![plugged.in Logo](https://plugged.in/_next/image?url=%2Fpluggedin-wl.png&w=256&q=75)
 
+
+
 **Turn your AI conversations into permanent organizational memory**
 
-[![Version](https://img.shields.io/badge/version-2.16.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
+[![Version](https://img.shields.io/badge/version-2.17.0-blue?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/releases)
 [![GitHub Stars](https://img.shields.io/github/stars/VeriTeknik/pluggedin-app?style=for-the-badge)](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 [![License](https://img.shields.io/badge/license-MIT-green?style=for-the-badge)](LICENSE)
-[![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://ghcr.io/veriteknik/pluggedin-app)
+[![Docker](https://img.shields.io/badge/docker-ready-blue?style=for-the-badge&logo=docker)](https://hub.docker.com/r/veriteknik/pluggedin)
 
 [🚀 Get Started](#-quick-start) • [📚 Documentation](#-documentation) • [🌟 Features](#-key-features) • [💬 Community](#-community--support)
 
-</div>
-
 ---
+🧩 **Now Multi‑Arch Ready!**  
+Plugged.in Docker images support both `amd64` and `arm64` architectures via a unified manifest.  
+🧠 **Beyond Proxy Mode — Full AI Platform:**  
+Plugged.in is no longer just a proxy; it’s a unified AI infrastructure layer combining web app, memory, and tool orchestration.
+---
+</div>
 
 ## 🎯 The Problem We Solve
 
@@ -62,16 +68,64 @@ Security: AES-256-GCM encryption, Redis rate limiting
 
 ### Docker (Recommended - 2 minutes)
 
+#### **Supported Architectures**
+
+Plugged.in Docker images are multi-architecture (`amd64` and `arm64`) and will automatically select the correct platform for your system.
+
+**Important Notes:**
+- ✅ **Docker Compose automatically pulls the correct architecture** - no manual configuration needed
+- ✅ **Works seamlessly on mixed architectures** - run the same `docker-compose.yml` on any platform
+- ✅ **No performance penalty** - native builds for both AMD64 and ARM64
+
+To verify which platforms are available, run:
+```bash
+docker manifest inspect veriteknik/pluggedin:latest --verbose | jq '.manifests[].platform'
+```
+
 ```bash
 # Clone and setup
 git clone https://github.com/VeriTeknik/pluggedin-app.git
 cd pluggedin-app
 cp .env.example .env
 
-# Start with Docker
+# Start with Docker (includes PostgreSQL 18-alpine)
 docker compose up --build -d
 
 # Visit http://localhost:12005
+```
+
+**What's included:**
+- ✅ PostgreSQL 18 (latest stable) with automatic migrations
+- ✅ Next.js 15 web application with optimized production build
+- ✅ Persistent volumes for database, uploads, and logs
+- ✅ Health checks and automatic restarts
+- ✅ Migrator container (288 MB) for database setup
+
+**Docker Architecture:**
+```yaml
+Services:
+  - pluggedin-app: Main web application (port 12005)
+  - pluggedin-postgres: PostgreSQL 18-alpine database (port 5432)
+  - drizzle-migrate: One-time migration runner (auto-stops)
+
+Volumes:
+  - pluggedin-postgres: Database data (persistent)
+  - app-uploads: User uploaded files (persistent)
+  - app-logs: Application logs (persistent)
+  - mcp-cache: MCP package cache (persistent)
+```
+
+**Upgrading from older versions:**
+```bash
+# If upgrading from PostgreSQL 16 or earlier
+# Option 1: Fresh start (data loss)
+docker compose down -v && docker compose up --build -d
+
+# Option 2: Migrate existing data
+docker exec pluggedin-postgres pg_dump -U pluggedin pluggedin > backup.sql
+docker compose down -v
+docker compose up -d
+docker exec -i pluggedin-postgres psql -U pluggedin -d pluggedin < backup.sql
 ```
 
 ### Cloud Version
@@ -311,7 +365,7 @@ Visit our comprehensive documentation at [docs.plugged.in](https://docs.plugged.
 
 ### Requirements
 - Node.js 18+ (20+ recommended)
-- PostgreSQL 15+
+- PostgreSQL 15+ (18+ recommended)
 - Redis (optional, for rate limiting)
 - Docker & Docker Compose (for containerized deployment)
 
@@ -464,37 +518,38 @@ Built on top of these amazing projects:
 
 ## 📝 Release Notes
 
-**Latest Release: v2.15.0** - Multi-Select Filtering & Security Hardening
+**Latest Release: v2.17.0** - Multi-Architecture Docker Support & Self-Hosted Fixes
 
-### 🎯 What's New in v2.15.0
+### 🎯 What's New in v2.17.0
 
-**🔍 Enhanced Registry Search & Filtering**
-- **Multi-Select Package Type Filtering**: Select multiple package registries simultaneously (npm, PyPI, Docker/OCI, MCPB, NuGet)
-- **Smart Default Filters**: Automatically pre-selects npm and PyPI packages for optimal compatibility
-- **Intelligent Notices**: Context-aware warnings when selecting package types with limited support
-- **Improved UX**: Visual badges show active filters with individual removal options
+**🐳 Multi-Architecture Docker Support** (Major Feature!)
+- **AMD64 + ARM64 Support**: Native builds for both Intel/AMD and ARM processors
+- **Apple Silicon Ready**: M1/M2/M3 Macs now run natively without performance issues
+- **AWS Graviton Support**: Cost-effective cloud deployments on ARM instances
+- **Official Docker Hub Images**: Pre-built multi-arch images at `veriteknik/pluggedin:latest`
+- **Automatic Platform Detection**: Docker pulls the correct architecture for your system
+- **Build Times**: 5-10 minutes (single arch), 15-25 minutes (multi-arch)
 
-**🔒 Security Hardening**
-- **Input Validation**: Comprehensive validation of all user inputs with regex patterns and whitelisting
-- **DoS Prevention**: Rate limiting with maximum input size constraints (max 10 registries)
-- **XSS Protection**: Enhanced sanitization of user-provided data
-- **Type Safety**: Strict TypeScript typing with validated enums
+**🐛 Critical Bug Fixes**
+- **Fixed Self-Hosted Registration** (#61): New users can now register successfully on self-hosted instances
+- **Username Column Migration**: Robust migration (`0066_fix_missing_username.sql`) works for fresh and existing installs
+- **Platform Detection**: Reliable platform detection using `docker version -f`
+- **Error Handling**: Improved Docker login and build error messages
 
-**⚡ Performance Optimizations**
-- **Set-Based Filtering**: O(1) lookup performance instead of O(n) for package registry filtering
-- **Reduced Code Duplication**: 83% reduction in checkbox handler code (65 lines → 11 lines)
-- **Efficient Client-Side Filtering**: Smart filtering only when multiple registries selected
+**🔒 Security Enhancements**
+- **Pinned GitHub Actions**: All third-party actions use commit SHAs to prevent supply chain attacks
+- **Input Validation**: Workflow inputs validated (version must match `latest` or `vX.Y.Z`)
+- **Manifest Verification**: Automatic verification that both architectures are present after build
 
-**♿ Accessibility Improvements**
-- **ARIA Labels**: All interactive elements now have descriptive labels for screen readers
-- **Keyboard Navigation**: Enhanced keyboard support for multi-select filters
+**⚡ Infrastructure Improvements**
+- **Ephemeral CI Builders**: Auto-cleanup prevents state pollution between builds
+- **Optimized Caching**: Changed from `mode=max` to `mode=min` for sustainable builds
+- **Docker Hub README Sync**: Automated workflow keeps Docker Hub description up to date
 
-**🛡️ Code Quality**
-- **Error Handling**: Comprehensive null/undefined checks for edge cases
-- **State Management**: Functional updates prevent race conditions
-- **Maintainability**: Extracted reusable constants and handler functions
-
-### Code Quality Score: 9.0/10 ⬆️ (up from 6.5/10)
+**📚 Documentation Updates**
+- **Multi-Arch Deployment Guide**: Complete guide in `/deployment/docker`
+- **Updated Installation Guide**: Docker Hub pre-built images option added
+- **Rollback Procedures**: Documented recovery strategy if builds fail
 
 View the full changelog and release notes at [docs.plugged.in/releases](https://docs.plugged.in/releases/changelog)
 
@@ -506,6 +561,7 @@ View the full changelog and release notes at [docs.plugged.in/releases](https://
 
 [🚀 **Start Now**](https://plugged.in) • [⭐ **Star on GitHub**](https://github.com/VeriTeknik/pluggedin-app/stargazers)
 
-*If you find plugged.in useful, please star the repo - it helps others discover the project!*
+*If this project inspires you, please ⭐ Star it —  
+stars power the community and keep development momentum alive!*
 
 </div>

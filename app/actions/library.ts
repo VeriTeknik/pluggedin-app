@@ -1,7 +1,7 @@
 'use server';
 
 import { and, desc, eq, isNull, sum } from 'drizzle-orm';
-import { realpathSync } from 'fs';
+import { mkdirSync, realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import * as path from 'path';
 import { join, resolve } from 'path';
@@ -22,15 +22,13 @@ import type {
 // Create uploads directory if it doesn't exist
 // Use environment variable or fallback to platform-specific paths
 const getDefaultUploadsDir = () => {
-  if (process.platform === 'darwin') {
-    // macOS: Use project's uploads directory for local development
-    return join(process.cwd(), 'uploads');
-  } else if (process.platform === 'win32') {
+  if (process.platform === 'win32') {
     // Windows: Use temp directory
     return join(process.env.TEMP || 'C:\\temp', 'pluggedin-uploads');
   } else {
-    // Linux: Use /home/pluggedin/uploads
-    return '/home/pluggedin/uploads';
+    // macOS/Linux/Docker: Use project's uploads directory
+    // In Docker, process.cwd() is /app, so this becomes /app/uploads
+    return join(process.cwd(), 'uploads');
   }
 };
 
@@ -92,27 +90,54 @@ function createSafeFilePath(userId: string, fileName: string): { userDir: string
   const userDir = join(UPLOADS_BASE_DIR, sanitizedUserId);
   const filePath = join(userDir, sanitizedFileName);
   const relativePath = `${sanitizedUserId}/${sanitizedFileName}`;
-  
-  // Resolve real paths to handle symlinks and prevent bypasses
-  let resolvedUploadsDir: string;
-  let resolvedUserDir: string;
-  let resolvedFilePath: string;
-  
-  try {
-    resolvedUploadsDir = realpathSync(UPLOADS_BASE_DIR);
-    // For userDir and filePath, they may not exist yet, so we resolve the parent and join
-    resolvedUserDir = resolve(userDir);
-    resolvedFilePath = resolve(filePath);
-  } catch (err) {
-    throw new Error('Invalid path: unable to resolve real path');
-  }
-  
-  // Validate that paths are within the uploads directory (prevent directory traversal)
-  if (!isSubPath(resolvedUploadsDir, resolvedUserDir)) {
+
+  // Use cached resolved uploads directory from startup
+  const resolvedUploadsDir = global.RESOLVED_UPLOADS_DIR || realpathSync(UPLOADS_BASE_DIR);
+
+  // Security validation: Ensure sanitized userDir is within UPLOADS_BASE_DIR before creation
+  // This prevents path traversal attacks even though sanitizePath has already removed '../'
+  if (!userDir.startsWith(UPLOADS_BASE_DIR + path.sep)) {
+    console.warn(`Security: User directory path validation failed for userId: ${sanitizedUserId}`);
     throw new Error('Invalid user directory path');
   }
-  
+
+  // Ensure user directory exists before resolving symlinks
+  // Note: userDir is constructed from sanitizedUserId which has been validated:
+  // - No '..' sequences (path traversal removed)
+  // - No path separators (/ and \ replaced with _)
+  // - No null bytes, normalized unicode
+  try {
+    mkdirSync(userDir, { recursive: true });
+  } catch (err) {
+    // Log sanitized error
+    console.error('Error creating user directory');
+    throw new Error('Failed to prepare upload directory');
+  }
+
+  // Resolve real paths to handle symlinks and prevent path traversal attacks
+  let resolvedUserDir: string;
+  let resolvedFilePath: string;
+
+  try {
+    // Resolve user directory with symlink resolution to detect attacks
+    resolvedUserDir = realpathSync(userDir);
+    // Build file path from resolved user directory
+    resolvedFilePath = join(resolvedUserDir, sanitizedFileName);
+  } catch (err) {
+    // Log sanitized error internally
+    console.error('Error resolving paths');
+    // Return generic error to prevent information disclosure
+    throw new Error('Invalid path configuration');
+  }
+
+  // Validate that resolved paths are within the uploads directory (prevent directory traversal)
+  if (!isSubPath(resolvedUploadsDir, resolvedUserDir)) {
+    console.warn(`Path traversal attempt detected: user directory outside uploads`);
+    throw new Error('Invalid user directory path');
+  }
+
   if (!isSubPath(resolvedUserDir, resolvedFilePath)) {
+    console.warn(`Path traversal attempt detected: file path outside user directory`);
     throw new Error('Invalid file path');
   }
   

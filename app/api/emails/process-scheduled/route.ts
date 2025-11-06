@@ -7,20 +7,29 @@ import { processScheduledEmails } from '@/lib/welcome-emails';
 
 export async function POST(req: NextRequest) {
   try {
+    // Check if CLOUD_DEPLOY is enabled
+    if (process.env.CLOUD_DEPLOY !== 'true') {
+      return NextResponse.json({
+        success: false,
+        message: 'Scheduled emails are disabled. Set CLOUD_DEPLOY=true in production environment.',
+        timestamp: new Date().toISOString()
+      }, { status: 200 });
+    }
+
     // Optional: Add authentication to prevent unauthorized calls
     const authHeader = req.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    
+
     if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
-    
+
     // Process scheduled emails
     await processScheduledEmails();
-    
+
     return NextResponse.json({
       success: true,
       message: 'Scheduled emails processed',
@@ -29,7 +38,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('Error processing scheduled emails:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to process scheduled emails',
         details: error instanceof Error ? error.message : 'Unknown error'
       },

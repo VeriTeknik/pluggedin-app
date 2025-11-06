@@ -24,15 +24,22 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN pnpm build
 
-# Migration stage
+# Migration stage - optimized for minimal size
 FROM base AS migrator
 WORKDIR /app
 
 # Install PostgreSQL client for wait script
 RUN apk add --no-cache postgresql-client
 
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+# Install only migration dependencies WITHOUT package.json to avoid pulling unnecessary metadata
+RUN pnpm add drizzle-kit@0.31.4 drizzle-orm@0.44.5 postgres@3.4.7 dotenv@17.2.2 && \
+    pnpm store prune && \
+    rm -rf /root/.local/share/pnpm/store
+
+# Copy only files needed for migrations
+COPY drizzle.config.ts ./
+COPY drizzle ./drizzle
+COPY db ./db
 
 ENV NODE_ENV=production
 CMD ["pnpm", "drizzle-kit", "migrate"]
@@ -55,9 +62,9 @@ RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 
-# Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+# Create necessary directories with proper permissions
+RUN mkdir -p .next logs uploads && \
+    chown -R nextjs:nodejs .next logs uploads
 
 # Automatically leverage output traces to reduce image size
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

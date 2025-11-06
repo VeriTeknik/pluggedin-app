@@ -12,10 +12,12 @@ services:
     volumes:
       - mcp-cache:/app/.cache
       - app-uploads:/app/uploads
+      - app-logs:/app/logs
     environment:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
-      - MCP_ISOLATION_TYPE=bubblewrap
+      - DATABASE_SSL=false
+      - MCP_ISOLATION_TYPE=none
       - MCP_ISOLATION_FALLBACK=firejail
       - MCP_ENABLE_NETWORK_ISOLATION=false
       - MCP_PACKAGE_STORE_DIR=/app/.cache/mcp-packages
@@ -27,7 +29,7 @@ services:
 
   pluggedin-postgres:
     container_name: pluggedin-postgres
-    image: postgres:16.2-alpine3.18
+    image: postgres:18-alpine
     restart: always
     environment:
       POSTGRES_DB: pluggedin
@@ -63,6 +65,7 @@ services:
       - .env
     environment:
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
+      - DATABASE_SSL=false
       - PGUSER=pluggedin
       - PGHOST=pluggedin-postgres
       - PGDATABASE=pluggedin
@@ -76,4 +79,6 @@ volumes:
   mcp-cache:
     driver: local
   app-uploads:
+    driver: local
+  app-logs:
     driver: local
