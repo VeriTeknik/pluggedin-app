@@ -156,13 +156,3 @@ export function formatWebVital(name: string, value: number): string {
       return value.toString();
   }
 }
-
-// Global window type extensions
-declare global {
-  interface Window {
-    gtag?: (
-      command: string,
-      ...args: any[]
-    ) => void;
-  }
-}

@@ -117,17 +117,17 @@ export default async function RootLayout({
       {/* Removed the <link> tag for Quicksand font */}
 
         {/* Google Analytics Scripts with CSP nonce */}
-        {gaMeasurementId && nonce && (
+        {gaMeasurementId && (
           <>
             <Script
               strategy="afterInteractive"
               src={`https://www.googletagmanager.com/gtag/js?id=${gaMeasurementId}`}
-              nonce={nonce}
+              {...(nonce && { nonce })}
             />
             <Script
               id="google-analytics"
               strategy="afterInteractive"
-              nonce={nonce}
+              {...(nonce && { nonce })}
               dangerouslySetInnerHTML={{
                 __html: `
                   window.dataLayer = window.dataLayer || [];
@@ -139,6 +139,27 @@ export default async function RootLayout({
                 `,
               }}
             />
+            {process.env.NODE_ENV === 'development' && (
+              <Script
+                id="ga-debug"
+                strategy="afterInteractive"
+                {...(nonce && { nonce })}
+                dangerouslySetInnerHTML={{
+                  __html: `
+                    (function() {
+                      var checkGA = function() {
+                        if (typeof gtag === 'undefined' || typeof window.dataLayer === 'undefined') {
+                          console.error('[GA] Failed to initialize. Check for ad blockers or CSP issues.');
+                        } else {
+                          console.log('[GA] Initialized successfully');
+                        }
+                      };
+                      setTimeout(checkGA, 2000);
+                    })();
+                  `,
+                }}
+              />
+            )}
           </>
         )}
       </head>
