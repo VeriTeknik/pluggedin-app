@@ -1,4 +1,5 @@
 import { validateInternalUrl } from '@/lib/url-validator';
+import { recordTrace, isTracingEnabled } from '@/lib/tracing/helpers';
 
 interface PluggedinRegistryServer {
   id: string;
@@ -190,19 +191,35 @@ export class PluggedinRegistryClient {
     );
   }
 
-  async getServer(registryId: string): Promise<PluggedinRegistryServer | null> {
+  async getServer(registryId: string, traceId?: string): Promise<PluggedinRegistryServer | null> {
     try {
       // First try to get by exact ID
+      let server: PluggedinRegistryServer;
       try {
-        return await this.getServerDetails(registryId);
+        server = await this.getServerDetails(registryId);
       } catch {
         // If that fails, search by name
         const allServers = await this.getAllServers();
-        return allServers.find(server => 
-          server.name === registryId || 
-          server.id === registryId
+        server = allServers.find(s =>
+          s.name === registryId ||
+          s.id === registryId
         ) || null;
       }
+
+      // Hop 3: Record trace after receiving data from registry-proxy (fire-and-forget)
+      if (server && traceId && isTracingEnabled()) {
+        recordTrace(
+          traceId,
+          'app-receive',
+          server.name,
+          null, // server_uuid not available yet
+          server
+        ).catch(error => {
+          console.error('[TRACE ERROR] Failed to record receive trace:', error);
+        });
+      }
+
+      return server;
     } catch (error) {
       console.error('Error getting server:', error);
       return null;

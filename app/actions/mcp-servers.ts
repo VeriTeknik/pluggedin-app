@@ -454,6 +454,13 @@ export async function createMcpServer({
   streamableHTTPOptions,
   skipDiscovery = false,
   config,
+  registry_data,
+  registry_version,
+  registry_release_date,
+  registry_status,
+  repository_url,
+  repository_source,
+  repository_id,
 }: {
   name: string;
   profileUuid: string;
@@ -472,6 +479,13 @@ export async function createMcpServer({
   };
   skipDiscovery?: boolean;
   config?: Record<string, any>;
+  registry_data?: any;
+  registry_version?: string;
+  registry_release_date?: string;
+  registry_status?: string;
+  repository_url?: string;
+  repository_source?: string;
+  repository_id?: string;
 }) { // Removed explicit return type to match actual returns
   return withProfileAuth(profileUuid, async (session) => {
     const userId = session.user.id;
@@ -575,6 +589,14 @@ export async function createMcpServer({
       // Store transport-specific options separately
       transport: (serverType === McpServerType.STREAMABLE_HTTP) ? (transport || 'streamable_http') : undefined,
       streamableHTTPOptions: (serverType === McpServerType.STREAMABLE_HTTP && streamableHTTPOptions) ? streamableHTTPOptions : undefined,
+      // Phase 2: Store complete registry data without transformation
+      registry_data: registry_data || null,
+      registry_version: registry_version || null,
+      registry_release_date: registry_release_date ? new Date(registry_release_date) : null,
+      registry_status: registry_status || null,
+      repository_url: repository_url || null,
+      repository_source: repository_source || null,
+      repository_id: repository_id || null,
     };
     
     // Encrypt sensitive fields

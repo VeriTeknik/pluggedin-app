@@ -470,6 +470,20 @@
       "when": 1730515200000,
       "tag": "0066_fix_missing_username",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1762580153325,
+      "tag": "0067_mcp_schema_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1762580204495,
+      "tag": "0068_silent_frightful_four",
+      "breakpoints": true
     }
   ]
 }

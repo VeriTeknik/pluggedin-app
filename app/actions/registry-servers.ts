@@ -233,12 +233,13 @@ export async function fetchRegistryServer(registryId: string) {
 
 /**
  * Import a server from registry to local profile
+ * IMPORTANT: Stores complete registry JSON without transformation (Phase 2 of MCP_FIX_PLAN.md)
  */
 export async function importRegistryServer(registryId: string, profileUuid: string) {
   try {
     // Validate input
     const validatedProfileUuid = uuidSchema.parse(profileUuid);
-    
+
     return await withProfileAuth(validatedProfileUuid, async (session, profile) => {
 
     // Fetch server from registry
@@ -248,28 +249,11 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
     }
 
     const server = registryResult.data;
-    
-    // Use the official transformer to convert registry data
+
+    // Use transformer ONLY for display name (not for storage)
     const transformedServer = transformPluggedinRegistryToMcpIndex(server);
-    
-    // Extract command, args, and envs from the transformed data
-    const command = transformedServer.command;
-    const args = transformedServer.args;
-    const envArray = transformedServer.envs;
-    
-    // Convert env array to object format expected by createMcpServer
-    const env: { [key: string]: string } = {};
-    if (envArray && Array.isArray(envArray)) {
-      envArray.forEach(envVar => {
-        if (typeof envVar === 'object' && envVar.name) {
-          env[envVar.name] = ''; // Default empty value, user will fill it in
-        } else if (typeof envVar === 'string') {
-          env[envVar] = ''; // If it's just a string, use it as the key
-        }
-      });
-    }
-    
-    // Determine the transport type based on remotes first, then packages
+
+    // Determine the transport type
     const transportInfo = inferTransportType(server);
     const serverType = transportInfo.transport === 'stdio' ? 'STDIO' :
                       transportInfo.transport === 'sse' ? 'SSE' :
@@ -278,38 +262,137 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
     // Import using existing mcp-servers action
     const { createMcpServer } = await import('./mcp-servers');
 
+    // ✅ PHASE 2: Extract command/args from registry_data for runtime use
+    // For STDIO servers, extract command/args from packages[0]
+    let extractedCommand: string | undefined;
+    let extractedArgs: string[] | undefined;
+    let extractedEnv: Record<string, string> | undefined;
+
+    if (server.packages && server.packages.length > 0 && serverType === 'STDIO') {
+      const pkg = server.packages[0];
+
+      // Extract command based on package registry type
+      switch (pkg.registry_name) {
+        case 'npm':
+          extractedCommand = pkg.runtime_hint || 'npx';
+          break;
+        case 'docker':
+          extractedCommand = 'docker';
+          break;
+        case 'pypi':
+          extractedCommand = pkg.runtime_hint || 'uvx';
+          break;
+        default:
+          extractedCommand = pkg.name ? 'node' : undefined;
+      }
+
+      // Use the transformer's logic to extract args
+      extractedArgs = transformedServer.args;
+
+      // Extract environment variables
+      if (pkg.environment_variables && pkg.environment_variables.length > 0) {
+        extractedEnv = {};
+        for (const envVar of pkg.environment_variables) {
+          // Only include non-secret env vars with default values
+          if (!envVar.is_secret && envVar.default) {
+            extractedEnv[envVar.name] = envVar.default;
+          }
+        }
+      }
+    }
+
+    // For remote servers with headers, extract them for StreamableHTTP
+    let streamableHeaders: Record<string, string> | undefined;
+    if (transportInfo.headers && serverType === 'STREAMABLE_HTTP') {
+      streamableHeaders = transportInfo.headers;
+    }
+
+    // ✅ PHASE 2: Store complete registry data without transformation
     const result = await createMcpServer({
-      name: transformedServer.name, // Use the transformed display name
+      name: transformedServer.name, // Use transformed display name
       profileUuid,
       description: server.description || '',
-      command: transportInfo.url ? undefined : command,  // No command for remote servers
-      args: transportInfo.url ? [] : args,  // No args for remote servers
-      env: transportInfo.url ? {} : (Object.keys(env).length > 0 ? env : undefined),  // No env for remote servers
-      url: transportInfo.url,  // Add URL for remote servers
+      url: transportInfo.url,
       type: serverType as any,
       source: 'REGISTRY' as any,
       external_id: server.id,
+
+      // ✅ NEW: Store complete registry JSON (NO transformation, NO data loss)
+      registry_data: server,
+      registry_version: server.version_detail?.version,
+      registry_release_date: server.version_detail?.release_date,
+      registry_status: server.status,
+      repository_url: server.repository?.url,
+      repository_source: server.repository?.source,
+      repository_id: server.repository?.id,
+
+      // ✅ EXTRACTED: Command/args/env from registry_data for runtime use
+      command: extractedCommand,
+      args: extractedArgs,
+      env: extractedEnv,
+
+      // ✅ EXTRACTED: Headers for StreamableHTTP
+      streamableHTTPOptions: streamableHeaders ? { headers: streamableHeaders } : undefined,
     });
 
     if (result.success) {
-      return { 
-        success: true, 
+      // ✅ NEW: Store remote headers in dedicated table
+      if (server.remotes && server.remotes.length > 0) {
+        const remote = server.remotes[0];
+        if (remote.headers && remote.headers.length > 0) {
+          await storeRemoteHeaders(result.data.uuid, remote.headers);
+        }
+      }
+
+      return {
+        success: true,
         data: result.data,
-        message: 'Server imported successfully from registry' 
+        message: 'Server imported successfully from registry'
       };
     } else {
-      return { 
-        success: false, 
-        error: result.error || 'Failed to import server' 
+      return {
+        success: false,
+        error: result.error || 'Failed to import server'
       };
     }
     });
   } catch (error) {
     console.error('Error importing registry server:', error);
-    return { 
-      success: false, 
-      error: error instanceof Error ? error.message : 'Failed to import server from registry' 
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to import server from registry'
     };
+  }
+}
+
+/**
+ * Store remote headers from registry into mcp_server_remote_headers table
+ * Per COMPREHENSIVE_FINAL_PLAN.md lines 558-574
+ */
+async function storeRemoteHeaders(
+  serverUuid: string,
+  headers: Array<{
+    name: string;
+    description?: string;
+    default?: string;
+    is_required?: boolean;
+    is_secret?: boolean;
+  }>
+) {
+  const { mcpServerRemoteHeadersTable } = await import('@/db/schema');
+
+  for (const header of headers) {
+    await db.insert(mcpServerRemoteHeadersTable).values({
+      server_uuid: serverUuid,
+      header_name: header.name,
+      header_value_encrypted: header.is_secret && header.default
+        ? null // TODO: Encrypt default value when encryption is implemented
+        : null,
+      description: header.description,
+      is_required: header.is_required || false,
+      is_secret: header.is_secret || false,
+      default_value: !header.is_secret ? header.default : null,
+    });
   }
 }
 

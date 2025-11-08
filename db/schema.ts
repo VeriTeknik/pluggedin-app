@@ -1,5 +1,6 @@
 import { relations,sql } from 'drizzle-orm';
 import {
+  bigserial,
   boolean,
   index,
   integer,
@@ -401,6 +402,21 @@ export const mcpServersTable = pgTable(
     notes: text('notes'),
     config: jsonb('config'),
     slug: text('slug'), // URL-friendly identifier for slug-based tool prefixing
+    // Registry data preservation (Phase 1)
+    registry_data: jsonb('registry_data'), // Complete registry data (no transformation)
+    registry_version: text('registry_version'), // Schema version (e.g., "2025-10-17")
+    registry_release_date: timestamp('registry_release_date', { withTimezone: true }),
+    registry_status: text('registry_status'),
+    // Repository information
+    repository_url: text('repository_url'),
+    repository_source: text('repository_source'),
+    repository_id: text('repository_id'),
+    // Installation metadata (package isolation)
+    install_path: text('install_path'), // e.g., /var/mcp-packages/servers/{uuid}
+    install_status: text('install_status'), // 'pending', 'installing', 'completed', 'failed'
+    installed_at: timestamp('installed_at', { withTimezone: true }),
+    // Encryption salt for this server's sensitive data
+    encryption_salt: text('encryption_salt'),
   },
   (table) => ({ // Use object syntax for indexes
     mcpServersStatusIdx: index('mcp_servers_status_idx').on(table.status),
@@ -410,6 +426,8 @@ export const mcpServersTable = pgTable(
     mcpServersProfileStatusIdx: index('idx_mcp_servers_profile_status').on(table.profile_uuid, table.status),
     // Profile-scoped unique constraint for slugs (allows different profiles to use same slug names)
     mcpServersProfileSlugUnique: unique('mcp_servers_profile_slug_unique').on(table.profile_uuid, table.slug),
+    // GIN index for registry_data JSONB queries
+    mcpServersRegistryDataGinIdx: index('idx_mcp_servers_registry_data_gin').using('gin', sql`${table.registry_data}`),
   })
 );
 
@@ -429,6 +447,13 @@ export const mcpServersRelations = relations(mcpServersTable, ({ one, many }) =>
      fields: [mcpServersTable.uuid],
      references: [customInstructionsTable.mcp_server_uuid],
   }),
+  // Phase 1: MCP Schema Alignment
+  remoteHeaders: many(mcpServerRemoteHeadersTable),
+  oauthConfig: one(mcpServerOAuthConfigTable, {
+    fields: [mcpServersTable.uuid],
+    references: [mcpServerOAuthConfigTable.server_uuid],
+  }),
+  oauthTokens: many(mcpServerOAuthTokensTable),
 }));
 
 
@@ -1839,5 +1864,193 @@ export const featureVotesRelations = relations(featureVotesTable, ({ one }) => (
     fields: [featureVotesTable.user_id],
     references: [users.id],
   }),
+}));
+
+// ============================================================================
+// MCP Schema Alignment Tables (Phase 1)
+// ============================================================================
+
+// Remote headers table (OAuth configuration from registry)
+export const mcpServerRemoteHeadersTable = pgTable('mcp_server_remote_headers', {
+  uuid: uuid('uuid').primaryKey().defaultRandom(),
+  server_uuid: uuid('server_uuid')
+    .notNull()
+    .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+  header_name: text('header_name').notNull(),
+  header_value_encrypted: text('header_value_encrypted'), // AES-256-GCM encrypted (if is_secret=true)
+  description: text('description'),
+  is_required: boolean('is_required').default(false),
+  is_secret: boolean('is_secret').default(false),
+  default_value: text('default_value'), // Only for non-secret headers
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  serverUuidIdx: index('idx_remote_headers_server_uuid').on(table.server_uuid),
+  nameIdx: index('idx_remote_headers_name').on(table.server_uuid, table.header_name),
+}));
+
+export const mcpServerRemoteHeadersRelations = relations(mcpServerRemoteHeadersTable, ({ one }) => ({
+  server: one(mcpServersTable, {
+    fields: [mcpServerRemoteHeadersTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// OAuth configuration table (discovered or manual)
+export const mcpServerOAuthConfigTable = pgTable('mcp_server_oauth_config', {
+  uuid: uuid('uuid').primaryKey().defaultRandom(),
+  server_uuid: uuid('server_uuid')
+    .notNull()
+    .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+  authorization_endpoint: text('authorization_endpoint').notNull(),
+  token_endpoint: text('token_endpoint').notNull(),
+  registration_endpoint: text('registration_endpoint'), // For Dynamic Client Registration (RFC7591)
+  authorization_server: text('authorization_server').notNull(),
+  resource_identifier: text('resource_identifier'), // RFC8707 resource parameter
+  client_id: text('client_id'),
+  client_secret_encrypted: text('client_secret_encrypted'), // AES-256-GCM encrypted
+  scopes: text('scopes').array(),
+  supports_pkce: boolean('supports_pkce').default(true),
+  discovery_method: text('discovery_method'), // 'rfc9728', 'www-authenticate', 'manual'
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  serverUuidIdx: index('idx_oauth_config_server_uuid').on(table.server_uuid),
+  serverUuidUnique: unique('mcp_server_oauth_config_server_uuid_unique').on(table.server_uuid),
+}));
+
+export const mcpServerOAuthConfigRelations = relations(mcpServerOAuthConfigTable, ({ one }) => ({
+  server: one(mcpServersTable, {
+    fields: [mcpServerOAuthConfigTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// OAuth tokens table (encrypted storage)
+export const mcpServerOAuthTokensTable = pgTable('mcp_server_oauth_tokens', {
+  uuid: uuid('uuid').primaryKey().defaultRandom(),
+  server_uuid: uuid('server_uuid')
+    .notNull()
+    .references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+  access_token_encrypted: text('access_token_encrypted').notNull(), // AES-256-GCM encrypted
+  refresh_token_encrypted: text('refresh_token_encrypted'), // AES-256-GCM encrypted
+  token_type: text('token_type').default('Bearer'),
+  expires_at: timestamp('expires_at', { withTimezone: true }),
+  scopes: text('scopes').array(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  serverUuidIdx: index('idx_oauth_tokens_server_uuid').on(table.server_uuid),
+  expiresAtIdx: index('idx_oauth_tokens_expires_at').on(table.expires_at),
+}));
+
+export const mcpServerOAuthTokensRelations = relations(mcpServerOAuthTokensTable, ({ one }) => ({
+  server: one(mcpServersTable, {
+    fields: [mcpServerOAuthTokensTable.server_uuid],
+    references: [mcpServersTable.uuid],
+  }),
+}));
+
+// MCP Telemetry table (privacy-preserving observability)
+export const mcpTelemetryTable = pgTable('mcp_telemetry', {
+  uuid: uuid('uuid').primaryKey().defaultRandom(),
+  event_name: text('event_name').notNull(),
+  event_data: jsonb('event_data')
+    .$type<{
+      event: string;
+      server_id?: string;
+      workspace_id_hash?: string;
+      install_id?: string;
+      transport?: string;
+      saw_mcp_protocol_version_header?: boolean;
+      saw_mcp_session_id_header?: boolean;
+      saw_www_authenticate_header?: boolean;
+      status_class?: string;
+      content_type?: string;
+      retry_count?: number;
+      page_count?: number;
+      tool_count?: number;
+      resource_count?: number;
+      prompt_count?: number;
+      latency_ms?: number;
+      duration_ms?: number;
+      error?: {
+        kind: string;
+        rpc_code?: number;
+      };
+    }>()
+    .notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  eventNameIdx: index('idx_telemetry_event_name').on(table.event_name),
+  createdAtIdx: index('idx_telemetry_created_at').on(table.created_at),
+}));
+
+// Data Integrity Traces (DEVELOPMENT ONLY)
+export const dataIntegrityTracesTable = pgTable('data_integrity_traces', {
+  id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  trace_id: uuid('trace_id').notNull(),
+  hop: text('hop').notNull(), // 'registry', 'registry-proxy', 'app-receive', 'app-transform', 'app-persist', 'database', 'integrity_report'
+  server_name: text('server_name'),
+  server_uuid: uuid('server_uuid'),
+  event_data: jsonb('event_data')
+    .$type<{
+      trace_id: string;
+      hop: string;
+      timestamp: string;
+      server_name: string;
+      checksum_full?: string;
+      checksum_remotes?: string;
+      checksum_headers?: string;
+      checksum_packages?: string;
+      counts?: {
+        remotes: number;
+        headers_total: number;
+        headers_required: number;
+        headers_secret: number;
+        headers_with_default: number;
+        packages: number;
+        package_args?: number;
+        runtime_args?: number;
+        env_vars?: number;
+      };
+      sample?: any; // Development only
+      diff?: {
+        checksum_match: boolean;
+        fields_added?: string[];
+        fields_removed?: string[];
+        count_changes?: Record<string, { before: number; after: number }>;
+      };
+      [key: string]: any; // Allow additional fields
+    }>()
+    .notNull(),
+  timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  traceIdIdx: index('idx_data_integrity_traces_trace_id').on(table.trace_id),
+  hopIdx: index('idx_data_integrity_traces_hop').on(table.hop),
+  timestampIdx: index('idx_data_integrity_traces_timestamp').on(table.timestamp),
+  serverUuidIdx: index('idx_data_integrity_traces_server_uuid').on(table.server_uuid),
+}));
+
+// Data Integrity Errors (DEVELOPMENT ONLY)
+export const dataIntegrityErrorsTable = pgTable('data_integrity_errors', {
+  id: bigserial('id', { mode: 'bigint' }).primaryKey(),
+  error_type: text('error_type').notNull(), // 'DATA_LOSS_DETECTED', 'HEADERS_DROPPED_IN_TRANSFORM', 'NO_HEADERS_PERSISTED', 'DATA_LOSS_END_TO_END'
+  trace_id: uuid('trace_id').notNull(),
+  server_name: text('server_name'),
+  server_uuid: uuid('server_uuid'),
+  error_data: jsonb('error_data')
+    .$type<{
+      trace_id: string;
+      server_name?: string;
+      server_uuid?: string;
+      [key: string]: any;
+    }>()
+    .notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  errorTypeIdx: index('idx_data_integrity_errors_error_type').on(table.error_type),
+  traceIdIdx: index('idx_data_integrity_errors_trace_id').on(table.trace_id),
+  createdAtIdx: index('idx_data_integrity_errors_created_at').on(table.created_at),
 }));
 

@@ -1,5 +1,6 @@
 import { McpServerSource } from '@/db/schema';
 import { McpIndex, McpServerCategory } from '@/types/search';
+import { recordTrace, isTracingEnabled } from '@/lib/tracing/helpers';
 
 interface RegistryPackage {
   registry_name: string;
@@ -45,7 +46,7 @@ interface PluggedinRegistryServer {
   }>;
 }
 
-export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistryServer): McpIndex {
+export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistryServer, traceId?: string): McpIndex {
   const primaryPackage = server.packages?.[0];
 
   // Extract a user-friendly display name from the server name
@@ -58,7 +59,7 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
   // For remote servers, we don't need command/args, just the URL
   const isRemote = transportInfo.url !== undefined;
 
-  return {
+  const transformed = {
     name: displayName,
     description: server.description || '',
     command: isRemote ? '' : extractCommand(primaryPackage),
@@ -80,6 +81,21 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
     ratingCount: undefined,
     installation_count: undefined, // Track in your database
   };
+
+  // Hop 4: Record trace after transformation (fire-and-forget)
+  if (traceId && isTracingEnabled()) {
+    recordTrace(
+      traceId,
+      'app-transform',
+      server.name,
+      null, // server_uuid not available yet
+      transformed
+    ).catch(error => {
+      console.error('[TRACE ERROR] Failed to record transform trace:', error);
+    });
+  }
+
+  return transformed;
 }
 
 function extractDisplayName(serverName: string): string {
