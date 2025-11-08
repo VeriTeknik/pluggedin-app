@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { eq } from 'drizzle-orm';
-
 import { db } from '@/db';
-import { mcpServerOAuthTokensTable, mcpServersTable } from '@/db/schema';
+import { mcpServerOAuthTokensTable, mcpServersTable, oauthPkceStatesTable } from '@/db/schema';
 import { encryptField } from '@/lib/encryption';
 import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
+
+import { eq } from 'drizzle-orm';
 
 /**
  * OAuth Callback Handler
@@ -44,9 +44,6 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ Get server UUID and code_verifier from PKCE state storage
-    const { oauthPkceStatesTable } = await import('@/db/schema');
-    const { eq } = await import('drizzle-orm');
-
     const pkceState = await db.query.oauthPkceStatesTable.findFirst({
       where: eq(oauthPkceStatesTable.state, state),
     });
@@ -149,8 +146,6 @@ export async function GET(request: NextRequest) {
     console.log('[OAuth Callback] Tokens stored successfully for server:', serverUuid);
 
     // ✅ Clean up PKCE state after successful token exchange
-    const { oauthPkceStatesTable } = await import('@/db/schema');
-    const { eq } = await import('drizzle-orm');
     await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state!));
 
     // Redirect back to MCP servers page with success
@@ -164,8 +159,6 @@ export async function GET(request: NextRequest) {
     try {
       const state = request.nextUrl.searchParams.get('state');
       if (state) {
-        const { oauthPkceStatesTable } = await import('@/db/schema');
-        const { eq } = await import('drizzle-orm');
         await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
       }
     } catch (cleanupError) {
@@ -244,33 +237,34 @@ async function storeOAuthTokens(
   });
 
   if (server && (server.type === 'STREAMABLE_HTTP' || server.type === 'SSE')) {
-    // Get current env
-    const currentEnv = server.env || {};
+    // Get current streamableHTTPOptions - decrypt if encrypted
+    let streamableOptions: Record<string, any> = {};
+    if (server.streamable_http_options_encrypted) {
+      const { decryptField } = await import('@/lib/encryption');
+      try {
+        streamableOptions = decryptField(server.streamable_http_options_encrypted) as Record<string, any>;
+      } catch (error) {
+        console.error('[OAuth Callback] Failed to decrypt streamable_http_options:', error);
+        streamableOptions = {};
+      }
+    }
 
     // Update streamableHTTPOptions with Authorization header
-    const streamableOptions = currentEnv.__streamableHTTPOptions
-      ? JSON.parse(currentEnv.__streamableHTTPOptions as string)
-      : {};
-
     streamableOptions.headers = {
-      ...streamableOptions.headers,
+      ...(streamableOptions.headers || {}),
       Authorization: `${tokenData.token_type || 'Bearer'} ${tokenData.access_token}`,
     };
 
-    const updatedEnv = {
-      ...currentEnv,
-      __streamableHTTPOptions: JSON.stringify(streamableOptions),
-      OAUTH_ACCESS_TOKEN: tokenData.access_token,
-    };
+    console.log('[OAuth Callback] Updating streamableHTTPOptions with Authorization header');
+    console.log('[OAuth Callback] Headers:', Object.keys(streamableOptions.headers));
 
-    // Encrypt and store
-    const encryptedEnv = encryptField(updatedEnv);
+    // Encrypt and store in dedicated column
+    const encryptedOptions = encryptField(streamableOptions);
 
     await db
       .update(mcpServersTable)
       .set({
-        env_encrypted: encryptedEnv,
-        env: null,
+        streamable_http_options_encrypted: encryptedOptions,
       })
       .where(eq(mcpServersTable.uuid, serverUuid));
   }

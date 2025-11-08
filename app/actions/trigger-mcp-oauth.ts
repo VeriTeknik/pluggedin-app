@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable } from '@/db/schema';
+import { mcpServersTable, profilesTable, oauthPkceStatesTable } from '@/db/schema';
 import { withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { createBubblewrapConfig, createFirejailConfig } from '@/lib/mcp/client-wrapper';
@@ -427,14 +427,19 @@ async function handleStreamableHttpOAuth(server: McpServer) {
           authUrl.searchParams.set('code_challenge_method', 'S256');
 
           // ✅ Store code_verifier for token exchange (linked to state parameter)
-          const { oauthPkceStatesTable } = await import('@/db/schema');
-          await db.insert(oauthPkceStatesTable).values({
-            state,
-            server_uuid: server.uuid,
-            code_verifier: codeVerifier,
-            redirect_uri: redirectUri,
-            expires_at: new Date(Date.now() + 10 * 60 * 1000), // Expires in 10 minutes
-          });
+          try {
+            await db.insert(oauthPkceStatesTable).values({
+              state,
+              server_uuid: server.uuid,
+              code_verifier: codeVerifier,
+              redirect_uri: redirectUri,
+              expires_at: new Date(Date.now() + 10 * 60 * 1000), // Expires in 10 minutes
+            });
+            console.log('[OAuth] PKCE code_verifier stored successfully for state:', state);
+          } catch (error) {
+            console.error('[OAuth] Failed to store PKCE code_verifier:', error);
+            throw error; // Re-throw to fail the OAuth flow if storage fails
+          }
 
           console.log('[OAuth] PKCE enabled for OAuth flow');
         }

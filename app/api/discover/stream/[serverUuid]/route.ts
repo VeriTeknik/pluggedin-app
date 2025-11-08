@@ -2,10 +2,11 @@ import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema';
+import { mcpServersTable, mcpServerOAuthTokensTable, profilesTable, promptsTable, resourcesTable, resourceTemplatesTable, ToggleStatus, toolsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { decryptServerData } from '@/lib/encryption';
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper';
+import { validateAndRefreshToken } from '@/lib/oauth/token-refresh-service';
 import { getCorsHeaders } from '@/lib/security/cors';
 import { McpServer } from '@/types/mcp-server';
 
@@ -146,8 +147,51 @@ export async function GET(
         const decryptedServerConfig: McpServer = {
           ...decryptedData,
           config: serverConfig.config as Record<string, any> | null,
-          transport: decryptedData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined
+          transport: decryptedData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined,
+          streamableHTTPOptions: decryptedData.streamableHTTPOptions, // Explicitly preserve OAuth headers
         };
+
+        // Check and refresh OAuth tokens if needed
+        const hasOAuth = await db.query.mcpServerOAuthTokensTable.findFirst({
+          where: eq(mcpServerOAuthTokensTable.mcp_server_uuid, serverUuid)
+        });
+
+        if (hasOAuth) {
+          sendMessage({
+            type: 'log',
+            message: 'Checking OAuth token validity...',
+            timestamp: Date.now(),
+          });
+
+          const tokenRefreshed = await validateAndRefreshToken(serverUuid);
+          if (tokenRefreshed) {
+            sendMessage({
+              type: 'log',
+              message: 'OAuth token validated/refreshed successfully',
+              timestamp: Date.now(),
+            });
+
+            // Re-fetch and decrypt server config to get fresh token
+            const refreshedServer = await db.query.mcpServersTable.findFirst({
+              where: eq(mcpServersTable.uuid, serverUuid)
+            });
+
+            if (refreshedServer) {
+              const refreshedData = decryptServerData(refreshedServer);
+              decryptedServerConfig = {
+                ...refreshedData,
+                config: refreshedServer.config as Record<string, any> | null,
+                transport: refreshedData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined,
+                streamableHTTPOptions: refreshedData.streamableHTTPOptions,
+              };
+              sendMessage({
+                type: 'log',
+                message: 'Using refreshed OAuth token for discovery',
+                timestamp: Date.now(),
+              });
+            }
+          }
+        }
 
         // Discovery phase indicators
         let discoveredTools: any[] = [];
