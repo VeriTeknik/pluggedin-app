@@ -2054,3 +2054,16 @@ export const dataIntegrityErrorsTable = pgTable('data_integrity_errors', {
   createdAtIdx: index('idx_data_integrity_errors_created_at').on(table.created_at),
 }));
 
+
+// OAuth PKCE state storage (temporary, auto-expires after 10 minutes)
+export const oauthPkceStatesTable = pgTable('oauth_pkce_states', {
+  state: text('state').primaryKey(), // OAuth state parameter
+  server_uuid: uuid('server_uuid').notNull().references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+  code_verifier: text('code_verifier').notNull(), // PKCE code verifier
+  redirect_uri: text('redirect_uri').notNull(),
+  created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  expires_at: timestamp('expires_at', { withTimezone: true }).notNull(), // Auto-expire after 10 minutes
+}, (table) => ({
+  expiresAtIdx: index('idx_oauth_pkce_states_expires_at').on(table.expires_at),
+  serverUuidIdx: index('idx_oauth_pkce_states_server_uuid').on(table.server_uuid),
+}));

@@ -484,6 +484,13 @@
       "when": 1762580204495,
       "tag": "0068_silent_frightful_four",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1762592652251,
+      "tag": "0069_minor_firedrake",
+      "breakpoints": true
     }
   ]
 }

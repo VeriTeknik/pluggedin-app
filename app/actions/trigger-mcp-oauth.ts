@@ -319,9 +319,138 @@ async function handleStreamableHttpOAuth(server: McpServer) {
     });
 
     if (response.status === 401) {
+      // ✅ NEW: Try RFC 9728 OAuth discovery first
+      const { discoverOAuthFromResponse } = await import('@/lib/oauth/rfc9728-discovery');
+      const { storeDiscoveredOAuthConfig, getOAuthConfig } = await import('@/lib/oauth/oauth-config-store');
+
+      const discovery = await discoverOAuthFromResponse(response, server.url);
+
+      if (discovery.metadata && discovery.authServer) {
+        console.log('[OAuth] RFC 9728 discovery successful for server:', server.name);
+
+        // Store discovered OAuth configuration
+        await storeDiscoveredOAuthConfig(
+          server.uuid,
+          discovery.metadata,
+          discovery.authServer,
+          discovery.resourceId,
+          discovery.discoveryMethod!
+        );
+
+        // Build OAuth authorization URL
+        const authUrl = new URL(discovery.metadata.authorization_endpoint);
+
+        const redirectUri = `${process.env.NEXTAUTH_URL || 'http://localhost:12005'}/api/oauth/callback`;
+
+        // ✅ NEW: Dynamic Client Registration (RFC 7591)
+        let clientId: string;
+        let clientSecret: string | undefined;
+
+        // Get current OAuth config to check for existing client_id
+        const { getOAuthConfig } = await import('@/lib/oauth/oauth-config-store');
+        const existingConfig = await getOAuthConfig(server.uuid);
+
+        if (discovery.metadata.registration_endpoint) {
+          // Server supports dynamic registration - register or reuse client
+          const { getOrRegisterClient } = await import('@/lib/oauth/dynamic-client-registration');
+
+          try {
+            const registration = await getOrRegisterClient(
+              server.uuid,
+              discovery.metadata.registration_endpoint,
+              redirectUri,
+              existingConfig?.client_id
+            );
+
+            clientId = registration.client_id;
+            clientSecret = registration.client_secret;
+
+            // Update OAuth config with registered client credentials
+            if (registration.client_id !== existingConfig?.client_id) {
+              const { storeOAuthConfig } = await import('@/lib/oauth/oauth-config-store');
+              await storeOAuthConfig({
+                serverUuid: server.uuid,
+                authorizationEndpoint: discovery.metadata.authorization_endpoint,
+                tokenEndpoint: discovery.metadata.token_endpoint,
+                registrationEndpoint: discovery.metadata.registration_endpoint,
+                authorizationServer: discovery.authServer,
+                resourceIdentifier: discovery.resourceId,
+                clientId: registration.client_id,
+                clientSecret: registration.client_secret,
+                scopes: discovery.metadata.scopes_supported,
+                supportsPKCE: discovery.metadata.code_challenge_methods_supported?.includes('S256') ?? true,
+                discoveryMethod: discovery.discoveryMethod!,
+              });
+              console.log('[OAuth] Stored registered client_id:', registration.client_id);
+            }
+          } catch (regError) {
+            console.error('[OAuth] Dynamic registration failed:', regError);
+            // Fallback to generic client ID
+            clientId = process.env.OAUTH_CLIENT_ID || 'pluggedin-dev';
+          }
+        } else {
+          // No registration endpoint - use configured or generic client ID
+          clientId = existingConfig?.client_id || process.env.OAUTH_CLIENT_ID || 'pluggedin-dev';
+        }
+
+        const state = crypto.randomUUID();
+
+        authUrl.searchParams.set('response_type', 'code');
+        authUrl.searchParams.set('client_id', clientId);
+        authUrl.searchParams.set('redirect_uri', redirectUri);
+        authUrl.searchParams.set('state', state);
+
+        // Add resource identifier if available (RFC 8707)
+        if (discovery.resourceId) {
+          authUrl.searchParams.set('resource', discovery.resourceId);
+        }
+
+        // Add default scopes if supported
+        if (discovery.metadata.scopes_supported?.length) {
+          authUrl.searchParams.set('scope', discovery.metadata.scopes_supported.join(' '));
+        }
+
+        // Use PKCE if supported (recommended for security)
+        if (discovery.metadata.code_challenge_methods_supported?.includes('S256')) {
+          // Generate PKCE challenge
+          const codeVerifier = crypto.randomUUID() + crypto.randomUUID();
+          const encoder = new TextEncoder();
+          const data = encoder.encode(codeVerifier);
+          const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const codeChallenge = btoa(String.fromCharCode.apply(null, hashArray as any))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+
+          authUrl.searchParams.set('code_challenge', codeChallenge);
+          authUrl.searchParams.set('code_challenge_method', 'S256');
+
+          // ✅ Store code_verifier for token exchange (linked to state parameter)
+          const { oauthPkceStatesTable } = await import('@/db/schema');
+          await db.insert(oauthPkceStatesTable).values({
+            state,
+            server_uuid: server.uuid,
+            code_verifier: codeVerifier,
+            redirect_uri: redirectUri,
+            expires_at: new Date(Date.now() + 10 * 60 * 1000), // Expires in 10 minutes
+          });
+
+          console.log('[OAuth] PKCE enabled for OAuth flow');
+        }
+
+        return {
+          success: true,
+          oauthUrl: authUrl.toString(),
+        };
+      }
+
+      // Fallback to legacy discovery methods if RFC 9728 fails
+      console.log('[OAuth] RFC 9728 discovery failed, trying legacy methods');
+
       // Check if the server provides OAuth information in headers or response
       const authHeader = response.headers.get('WWW-Authenticate');
-      const oauthUrl = response.headers.get('X-OAuth-URL') || 
+      const oauthUrl = response.headers.get('X-OAuth-URL') ||
                        response.headers.get('OAuth-URL') ||
                        response.headers.get('Authorization-URL');
 
@@ -336,7 +465,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
       try {
         const responseText = await response.text();
         let responseData;
-        
+
         // Handle both JSON and SSE responses
         if (response.headers.get('content-type')?.includes('text/event-stream')) {
           // Parse SSE format
@@ -364,7 +493,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
 
         // If no OAuth URL found, try to construct one based on common patterns
         const serverUrl = new URL(server.url);
-        
+
         // Try common OAuth endpoints
         const commonOAuthPaths = [
           '/oauth/authorize',
@@ -376,13 +505,13 @@ async function handleStreamableHttpOAuth(server: McpServer) {
 
         for (const path of commonOAuthPaths) {
           const testUrl = new URL(path, serverUrl.origin).toString();
-          
+
           try {
             const testResponse = await fetch(testUrl, {
               method: 'GET',
               signal: AbortSignal.timeout(5000),
             });
-            
+
             // If we get a redirect or success, this might be the OAuth endpoint
             if (testResponse.status === 302 || testResponse.status === 200) {
               const location = testResponse.headers.get('Location');
@@ -408,7 +537,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
       }
 
       // If no OAuth URL found anywhere, check if this might be a configuration issue
-      
+
       // Special check for known servers with specific requirements
       if (server.url?.includes('sentry.dev') && !server.url.endsWith('/mcp')) {
         return {
@@ -416,7 +545,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
           error: 'Sentry MCP requires the URL to end with /mcp (e.g., https://mcp.sentry.dev/mcp). Please update your server configuration.',
         };
       }
-      
+
       return {
         success: false,
         error: 'Authentication required but no OAuth endpoints were discovered. The server may not support OAuth or requires manual configuration.',
