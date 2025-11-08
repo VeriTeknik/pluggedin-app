@@ -10,7 +10,7 @@ import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
  */
 export async function isTokenExpired(serverUuid: string): Promise<boolean> {
   const tokenRecord = await db.query.mcpServerOAuthTokensTable.findFirst({
-    where: eq(mcpServerOAuthTokensTable.mcp_server_uuid, serverUuid)
+    where: eq(mcpServerOAuthTokensTable.server_uuid, serverUuid)
   });
 
   if (!tokenRecord?.expires_at) {
@@ -30,7 +30,7 @@ export async function refreshOAuthToken(serverUuid: string): Promise<boolean> {
 
   // 1. Get stored OAuth tokens
   const tokenRecord = await db.query.mcpServerOAuthTokensTable.findFirst({
-    where: eq(mcpServerOAuthTokensTable.mcp_server_uuid, serverUuid)
+    where: eq(mcpServerOAuthTokensTable.server_uuid, serverUuid)
   });
 
   if (!tokenRecord?.refresh_token_encrypted) {
@@ -100,7 +100,7 @@ export async function refreshOAuthToken(serverUuid: string): Promise<boolean> {
         expires_at: newExpiresAt,
         updated_at: new Date(),
       })
-      .where(eq(mcpServerOAuthTokensTable.mcp_server_uuid, serverUuid));
+      .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
 
     // 7. Update streamable_http_options_encrypted with new token
     const server = await db.query.mcpServersTable.findFirst({

@@ -3,7 +3,7 @@
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
+import { mcpServersTable, mcpServerOAuthTokensTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
@@ -62,7 +62,41 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
     let provider: string | undefined;
     let lastAuthenticated: Date | undefined;
 
-    // First check config for OAuth completion
+    // Check new storage locations first (priority 1: mcp_server_oauth_tokens table)
+    const oauthToken = await db.query.mcpServerOAuthTokensTable.findFirst({
+      where: eq(mcpServerOAuthTokensTable.server_uuid, serverUuid),
+    });
+
+    if (oauthToken) {
+      isAuthenticated = true;
+      lastAuthenticated = oauthToken.updated_at || oauthToken.created_at;
+      // Determine provider from server URL or name
+      if (server.url) {
+        provider = determineProviderFromUrl(server.url);
+      } else if (server.name) {
+        provider = server.name;
+      }
+    }
+
+    // Check streamable_http_options_encrypted (priority 2: new OAuth storage)
+    if (!isAuthenticated && server.streamable_http_options_encrypted) {
+      try {
+        const decrypted = decryptServerData({ streamable_http_options_encrypted: server.streamable_http_options_encrypted });
+        if (decrypted.streamableHTTPOptions?.headers?.Authorization) {
+          isAuthenticated = true;
+          if (!lastAuthenticated) {
+            lastAuthenticated = server.updated_at || server.created_at;
+          }
+          if (!provider && server.url) {
+            provider = determineProviderFromUrl(server.url);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to decrypt streamable_http_options:', e);
+      }
+    }
+
+    // Then check config for OAuth completion (legacy)
     const config = server.config as Record<string, any>;
     if (config?.oauth_completed_at) {
       isAuthenticated = true;

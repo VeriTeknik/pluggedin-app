@@ -797,7 +797,8 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         // Set default headers for Streamable HTTP
         const defaultHeaders: Record<string, string> = {
           'Accept': 'application/json, text/event-stream',
-          'User-Agent': 'Plugged.in MCP Client'
+          'User-Agent': 'Plugged.in MCP Client',
+          'MCP-Protocol-Version': '2024-11-05'
         };
         
         // Add custom headers if provided with validation

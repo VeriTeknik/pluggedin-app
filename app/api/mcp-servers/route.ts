@@ -65,7 +65,7 @@ export async function GET(request: Request) {
     for (const server of activeMcpServers) {
       // Check if server has OAuth tokens
       const hasOAuth = await db.query.mcpServerOAuthTokensTable.findFirst({
-        where: eq(mcpServerOAuthTokensTable.mcp_server_uuid, server.uuid)
+        where: eq(mcpServerOAuthTokensTable.server_uuid, server.uuid)
       });
 
       if (hasOAuth) {

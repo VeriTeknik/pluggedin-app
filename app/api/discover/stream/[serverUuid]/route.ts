@@ -144,7 +144,7 @@ export async function GET(
         });
 
         const decryptedData = decryptServerData(serverConfig);
-        const decryptedServerConfig: McpServer = {
+        let decryptedServerConfig: McpServer = {
           ...decryptedData,
           config: serverConfig.config as Record<string, any> | null,
           transport: decryptedData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined,
@@ -153,7 +153,7 @@ export async function GET(
 
         // Check and refresh OAuth tokens if needed
         const hasOAuth = await db.query.mcpServerOAuthTokensTable.findFirst({
-          where: eq(mcpServerOAuthTokensTable.mcp_server_uuid, serverUuid)
+          where: eq(mcpServerOAuthTokensTable.server_uuid, serverUuid)
         });
 
         if (hasOAuth) {
