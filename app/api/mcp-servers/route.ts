@@ -61,16 +61,25 @@ export async function GET(request: Request) {
       allInstructions.map(inst => [inst.mcp_server_uuid, inst])
     );
 
+    // P0 Performance: Batch fetch all OAuth tokens to prevent N+1 query problem
+    const allOAuthTokens = serverUuids.length > 0
+      ? await db
+          .select()
+          .from(mcpServerOAuthTokensTable)
+          .where(inArray(mcpServerOAuthTokensTable.server_uuid, serverUuids))
+      : [];
+
+    // Create a Set of server UUIDs that have OAuth tokens for O(1) lookups
+    const serversWithOAuth = new Set(allOAuthTokens.map(token => token.server_uuid));
+
     // Check and refresh OAuth tokens for servers that have them
     for (const server of activeMcpServers) {
-      // Check if server has OAuth tokens
-      const hasOAuth = await db.query.mcpServerOAuthTokensTable.findFirst({
-        where: eq(mcpServerOAuthTokensTable.server_uuid, server.uuid)
-      });
+      // Check if server has OAuth tokens using the pre-fetched set
+      const hasOAuth = serversWithOAuth.has(server.uuid);
 
       if (hasOAuth) {
-        // Validate and refresh token if needed
-        const refreshed = await validateAndRefreshToken(server.uuid);
+        // Validate and refresh token if needed (P0 Security: includes ownership validation)
+        const refreshed = await validateAndRefreshToken(server.uuid, auth.user.id);
         if (refreshed) {
           console.log(`[OAuth] Token validated/refreshed for server: ${server.name || server.uuid}`);
           // Re-fetch the server to get updated streamable_http_options

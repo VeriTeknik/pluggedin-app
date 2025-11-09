@@ -1,9 +1,57 @@
 import { eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { mcpServerOAuthTokensTable, mcpServersTable } from '@/db/schema';
+import { mcpServerOAuthTokensTable, mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
 import { decryptField, encryptField } from '@/lib/encryption';
 import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
+
+/**
+ * P0 Security: Validates that the server belongs to the specified user
+ * Prevents token substitution attacks where stolen tokens are used on attacker's servers
+ */
+async function validateServerOwnership(serverUuid: string, userId: string): Promise<boolean> {
+  const server = await db
+    .select({
+      profile_uuid: mcpServersTable.profile_uuid
+    })
+    .from(mcpServersTable)
+    .where(eq(mcpServersTable.uuid, serverUuid))
+    .limit(1);
+
+  if (!server.length) {
+    console.error('[OAuth Security] Server not found:', serverUuid);
+    return false;
+  }
+
+  // Traverse: Server → Profile → Project → User
+  const profile = await db
+    .select({
+      project_uuid: profilesTable.project_uuid
+    })
+    .from(profilesTable)
+    .where(eq(profilesTable.uuid, server[0].profile_uuid))
+    .limit(1);
+
+  if (!profile.length) {
+    console.error('[OAuth Security] Profile not found for server:', serverUuid);
+    return false;
+  }
+
+  const project = await db
+    .select({
+      user_id: projectsTable.user_id
+    })
+    .from(projectsTable)
+    .where(eq(projectsTable.uuid, profile[0].project_uuid))
+    .limit(1);
+
+  if (!project.length || project[0].user_id !== userId) {
+    console.error('[OAuth Security] Server does not belong to user. Server:', serverUuid, 'User:', userId);
+    return false;
+  }
+
+  return true;
+}
 
 /**
  * Checks if a token is expired or will expire soon
@@ -24,9 +72,17 @@ export async function isTokenExpired(serverUuid: string): Promise<boolean> {
 
 /**
  * Refreshes an OAuth token using the stored refresh token
+ * P0 Security: Validates server ownership to prevent token substitution attacks
  */
-export async function refreshOAuthToken(serverUuid: string): Promise<boolean> {
+export async function refreshOAuthToken(serverUuid: string, userId: string): Promise<boolean> {
   console.log('[OAuth Refresh] Checking token for server:', serverUuid);
+
+  // P0 Security: Validate server belongs to user (prevents token substitution)
+  const isOwner = await validateServerOwnership(serverUuid, userId);
+  if (!isOwner) {
+    console.error('[OAuth Refresh] Server ownership validation failed. User:', userId, 'Server:', serverUuid);
+    return false;
+  }
 
   // 1. Get stored OAuth tokens
   const tokenRecord = await db.query.mcpServerOAuthTokensTable.findFirst({
@@ -62,16 +118,31 @@ export async function refreshOAuthToken(serverUuid: string): Promise<boolean> {
 
   try {
     // 5. Exchange refresh token for new access token
+    // P0 Security: Use HTTP Basic Auth per RFC 6749 Section 2.3.1 (prevents credential logging)
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    };
+
+    // Build request body WITHOUT client_secret
+    const tokenParams = new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: oauthConfig.client_id || '', // Fallback to empty string for type safety
+    });
+
+    // For confidential clients: Use HTTP Basic Authentication (RFC 6749 Section 2.3.1)
+    if (oauthConfig.client_secret_encrypted) {
+      const clientSecret = decryptField(oauthConfig.client_secret_encrypted);
+      const credentials = Buffer.from(`${oauthConfig.client_id}:${clientSecret}`).toString('base64');
+      headers['Authorization'] = `Basic ${credentials}`;
+      console.log('[OAuth Refresh] Using HTTP Basic Authentication for confidential client');
+    }
+
     const tokenResponse = await fetch(oauthConfig.token_endpoint, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        refresh_token: refreshToken,
-        client_id: oauthConfig.client_id,
-        // Add client_secret if required (for confidential clients)
-        ...(oauthConfig.client_secret ? { client_secret: oauthConfig.client_secret } : {})
-      }),
+      headers,
+      body: tokenParams,
     });
 
     if (!tokenResponse.ok) {
@@ -142,8 +213,16 @@ export async function refreshOAuthToken(serverUuid: string): Promise<boolean> {
 /**
  * Validates and refreshes OAuth tokens if needed
  * Called before making MCP requests
+ * P0 Security: Validates server ownership to prevent token substitution attacks
  */
-export async function validateAndRefreshToken(serverUuid: string): Promise<boolean> {
+export async function validateAndRefreshToken(serverUuid: string, userId: string): Promise<boolean> {
+  // P0 Security: Validate server belongs to user (prevents token substitution)
+  const isOwner = await validateServerOwnership(serverUuid, userId);
+  if (!isOwner) {
+    console.error('[OAuth] Server ownership validation failed. User:', userId, 'Server:', serverUuid);
+    return false;
+  }
+
   // Check if token is expired
   const expired = await isTokenExpired(serverUuid);
 
@@ -153,5 +232,5 @@ export async function validateAndRefreshToken(serverUuid: string): Promise<boole
 
   // Try to refresh the token
   console.log('[OAuth] Token expired or expiring soon, attempting refresh...');
-  return await refreshOAuthToken(serverUuid);
+  return await refreshOAuthToken(serverUuid, userId);
 }

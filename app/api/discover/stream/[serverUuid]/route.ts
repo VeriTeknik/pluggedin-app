@@ -163,7 +163,8 @@ export async function GET(
             timestamp: Date.now(),
           });
 
-          const tokenRefreshed = await validateAndRefreshToken(serverUuid);
+          // P0 Security: Validate token ownership before refresh
+          const tokenRefreshed = await validateAndRefreshToken(serverUuid, session.user.id);
           if (tokenRefreshed) {
             sendMessage({
               type: 'log',

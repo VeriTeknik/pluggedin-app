@@ -1942,6 +1942,9 @@ export const mcpServerOAuthTokensTable = pgTable('mcp_server_oauth_tokens', {
 }, (table) => ({
   serverUuidIdx: index('idx_oauth_tokens_server_uuid').on(table.server_uuid),
   expiresAtIdx: index('idx_oauth_tokens_expires_at').on(table.expires_at),
+  // P0 Performance: Composite index for efficient expiration checks per server
+  serverExpiresIdx: index('idx_oauth_tokens_server_expires').on(table.server_uuid, table.expires_at),
+  serverUuidUnique: unique('mcp_server_oauth_tokens_server_uuid_unique').on(table.server_uuid), // P0 Security: One token per server
 }));
 
 export const mcpServerOAuthTokensRelations = relations(mcpServerOAuthTokensTable, ({ one }) => ({
@@ -2059,7 +2062,7 @@ export const dataIntegrityErrorsTable = pgTable('data_integrity_errors', {
 export const oauthPkceStatesTable = pgTable('oauth_pkce_states', {
   state: text('state').primaryKey(), // OAuth state parameter
   server_uuid: uuid('server_uuid').notNull().references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
-  user_id: text('user_id').references(() => usersTable.id, { onDelete: 'cascade' }), // P0 Security: Bind PKCE state to user
+  user_id: text('user_id').references(() => users.id, { onDelete: 'cascade' }), // P0 Security: Bind PKCE state to user
   code_verifier: text('code_verifier').notNull(), // PKCE code verifier
   redirect_uri: text('redirect_uri').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),

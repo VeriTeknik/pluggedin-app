@@ -5,8 +5,78 @@ import { mcpServerOAuthTokensTable, mcpServersTable, oauthPkceStatesTable } from
 import { getAuthSession } from '@/lib/auth';
 import { encryptField } from '@/lib/encryption';
 import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
+import { cleanupExpiredPkceStates } from '@/lib/oauth/pkce-cleanup';
+import { createRateLimiter } from '@/lib/rate-limiter';
 
 import { and, eq } from 'drizzle-orm';
+
+// P0 Security: Rate limiter for OAuth callback (10 requests per 15 minutes per IP)
+const oauthCallbackRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10, // 10 requests per window
+});
+
+/**
+ * P0 Security: Safe redirect helper to prevent open redirect vulnerabilities
+ * Only allows redirects to whitelisted paths within the application
+ */
+function safeRedirect(request: NextRequest, path: string, params?: Record<string, string>): NextResponse {
+  // Whitelist of allowed redirect paths
+  const allowedPaths = ['/mcp-servers', '/login', '/settings'];
+
+  // Validate path starts with allowed path
+  const isAllowed = allowedPaths.some(allowed => path.startsWith(allowed));
+
+  if (!isAllowed) {
+    console.error('[OAuth Security] Attempted redirect to disallowed path:', path);
+    path = '/mcp-servers'; // Fallback to safe default
+  }
+
+  const url = new URL(path, request.url);
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      url.searchParams.set(key, value);
+    });
+  }
+
+  return NextResponse.redirect(url);
+}
+
+/**
+ * P0 Security: Sanitize error messages to prevent information disclosure
+ * Removes sensitive details like stack traces, paths, tokens, etc.
+ */
+function sanitizeErrorMessage(error: unknown): string {
+  if (typeof error === 'string') {
+    return 'Authentication failed';
+  }
+
+  if (error instanceof Error) {
+    // Remove sensitive patterns from error messages
+    const message = error.message
+      .replace(/\/[^\s]+/g, '[path]') // Remove file paths
+      .replace(/token[_\s]*[:=][^\s&]+/gi, 'token=[redacted]') // Remove token values
+      .replace(/secret[_\s]*[:=][^\s&]+/gi, 'secret=[redacted]') // Remove secrets
+      .replace(/key[_\s]*[:=][^\s&]+/gi, 'key=[redacted]') // Remove API keys
+      .replace(/password[_\s]*[:=][^\s&]+/gi, 'password=[redacted]') // Remove passwords
+      .replace(/[a-f0-9]{32,}/gi, '[hash]'); // Remove hashes/tokens
+
+    // Only return generic safe messages
+    if (message.includes('network') || message.includes('fetch')) {
+      return 'Network error during authentication';
+    }
+    if (message.includes('timeout')) {
+      return 'Authentication request timed out';
+    }
+    if (message.includes('invalid') || message.includes('unauthorized')) {
+      return 'Invalid authentication credentials';
+    }
+
+    return 'Authentication failed';
+  }
+
+  return 'An unexpected error occurred';
+}
 
 /**
  * OAuth Callback Handler
@@ -14,6 +84,20 @@ import { and, eq } from 'drizzle-orm';
  */
 export async function GET(request: NextRequest) {
   try {
+    // P0 Security: Apply rate limiting to prevent abuse
+    const rateLimitResult = await oauthCallbackRateLimiter(request);
+    if (!rateLimitResult.allowed) {
+      console.warn('[OAuth Callback] Rate limit exceeded for IP');
+      return NextResponse.redirect(
+        new URL('/mcp-servers?oauth_error=rate_limit_exceeded', request.url)
+      );
+    }
+
+    // P0 Security: Clean up expired PKCE states opportunistically (non-blocking)
+    cleanupExpiredPkceStates().catch((err) =>
+      console.error('[OAuth Callback] PKCE cleanup failed:', err)
+    );
+
     // P0 Security: Verify user is authenticated before processing OAuth callback
     const session = await getAuthSession();
     if (!session?.user?.id) {
@@ -81,6 +165,16 @@ export async function GET(request: NextRequest) {
     const serverUuid = pkceState.server_uuid;
     const codeVerifier = pkceState.code_verifier;
 
+    // P0 Security: Validate redirect_uri matches stored value to prevent authorization code interception
+    const redirectUri = `${process.env.NEXTAUTH_URL || 'http://localhost:12005'}/api/oauth/callback`;
+    if (pkceState.redirect_uri !== redirectUri) {
+      console.error('[OAuth Callback] Redirect URI mismatch. Expected:', pkceState.redirect_uri, 'Got:', redirectUri);
+      await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
+      return NextResponse.redirect(
+        new URL('/mcp-servers?oauth_error=redirect_uri_mismatch', request.url)
+      );
+    }
+
     // Get OAuth configuration for the server
     const oauthConfig = await getOAuthConfig(serverUuid);
 
@@ -92,11 +186,17 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for tokens
     const tokenEndpoint = oauthConfig.token_endpoint;
-    const redirectUri = `${process.env.NEXTAUTH_URL || 'http://localhost:12005'}/api/oauth/callback`;
 
     // ✅ Use stored client credentials from database
     const clientId = oauthConfig.client_id || process.env.OAUTH_CLIENT_ID || 'pluggedin-dev';
 
+    // P0 Security: Use HTTP Basic Auth per RFC 6749 Section 2.3.1 (prevents credential logging)
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Accept': 'application/json',
+    };
+
+    // Build request body WITHOUT client_secret
     const tokenParams = new URLSearchParams({
       grant_type: 'authorization_code',
       code,
@@ -104,22 +204,24 @@ export async function GET(request: NextRequest) {
       client_id: clientId,
     });
 
-    // Add client_secret if available (for confidential clients)
-    if (oauthConfig.client_secret_encrypted) {
-      const { decryptField } = await import('@/lib/encryption');
-      try {
-        const clientSecret = decryptField(oauthConfig.client_secret_encrypted);
-        tokenParams.set('client_secret', clientSecret);
-        console.log('[OAuth Callback] Using client_secret for token exchange');
-      } catch (error) {
-        console.error('[OAuth Callback] Failed to decrypt client_secret:', error);
-      }
-    }
-
     // ✅ Add code_verifier if PKCE was used
     if (codeVerifier) {
       tokenParams.set('code_verifier', codeVerifier);
       console.log('[OAuth Callback] Using PKCE code_verifier for token exchange');
+    }
+
+    // For confidential clients: Use HTTP Basic Authentication (RFC 6749 Section 2.3.1)
+    if (oauthConfig.client_secret_encrypted) {
+      const { decryptField } = await import('@/lib/encryption');
+      try {
+        const clientSecret = decryptField(oauthConfig.client_secret_encrypted);
+        const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+        headers['Authorization'] = `Basic ${credentials}`;
+        console.log('[OAuth Callback] Using HTTP Basic Authentication for confidential client');
+      } catch (error) {
+        console.error('[OAuth Callback] Failed to decrypt client_secret:', error);
+        // Continue without client authentication (public client)
+      }
     }
 
     console.log('[OAuth Callback] Exchanging code for tokens at:', tokenEndpoint);
@@ -127,11 +229,8 @@ export async function GET(request: NextRequest) {
 
     const tokenResponse = await fetch(tokenEndpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Accept: 'application/json',
-      },
-      body: tokenParams.toString(),
+      headers,
+      body: tokenParams,
     });
 
     if (!tokenResponse.ok) {
@@ -179,9 +278,12 @@ export async function GET(request: NextRequest) {
       console.error('[OAuth Callback] Failed to clean up PKCE state:', cleanupError);
     }
 
+    // P0 Security: Sanitize error message to prevent information disclosure
+    const safeErrorMessage = sanitizeErrorMessage(error);
+
     return NextResponse.redirect(
       new URL(
-        `/mcp-servers?oauth_error=unexpected&details=${encodeURIComponent(error instanceof Error ? error.message : 'Unknown error')}`,
+        `/mcp-servers?oauth_error=unexpected&details=${encodeURIComponent(safeErrorMessage)}`,
         request.url
       )
     );
@@ -190,6 +292,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * Store OAuth tokens in the database
+ * P0 Security: Uses database transaction to ensure atomicity
  */
 async function storeOAuthTokens(
   serverUuid: string,
@@ -201,90 +304,93 @@ async function storeOAuthTokens(
     scope?: string;
   }
 ) {
-  // Encrypt tokens
-  const accessTokenEncrypted = encryptField(tokenData.access_token);
-  const refreshTokenEncrypted = tokenData.refresh_token
-    ? encryptField(tokenData.refresh_token)
-    : null;
+  // P0 Security: Wrap in transaction to prevent partial updates
+  await db.transaction(async (tx) => {
+    // Encrypt tokens
+    const accessTokenEncrypted = encryptField(tokenData.access_token);
+    const refreshTokenEncrypted = tokenData.refresh_token
+      ? encryptField(tokenData.refresh_token)
+      : null;
 
-  // Calculate expiration time
-  const expiresAt = tokenData.expires_in
-    ? new Date(Date.now() + tokenData.expires_in * 1000)
-    : null;
+    // Calculate expiration time
+    const expiresAt = tokenData.expires_in
+      ? new Date(Date.now() + tokenData.expires_in * 1000)
+      : null;
 
-  // Parse scopes
-  const scopes = tokenData.scope ? tokenData.scope.split(' ') : null;
+    // Parse scopes
+    const scopes = tokenData.scope ? tokenData.scope.split(' ') : null;
 
-  // Check if tokens already exist for this server
-  const existing = await db.query.mcpServerOAuthTokensTable.findFirst({
-    where: eq(mcpServerOAuthTokensTable.server_uuid, serverUuid),
-  });
+    // Check if tokens already exist for this server
+    const existing = await tx.query.mcpServerOAuthTokensTable.findFirst({
+      where: eq(mcpServerOAuthTokensTable.server_uuid, serverUuid),
+    });
 
-  if (existing) {
-    // Update existing tokens
-    await db
-      .update(mcpServerOAuthTokensTable)
-      .set({
+    if (existing) {
+      // Update existing tokens
+      await tx
+        .update(mcpServerOAuthTokensTable)
+        .set({
+          access_token_encrypted: accessTokenEncrypted,
+          refresh_token_encrypted: refreshTokenEncrypted,
+          token_type: tokenData.token_type || 'Bearer',
+          expires_at: expiresAt,
+          scopes,
+          updated_at: new Date(),
+        })
+        .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
+    } else {
+      // Insert new tokens
+      await tx.insert(mcpServerOAuthTokensTable).values({
+        server_uuid: serverUuid,
         access_token_encrypted: accessTokenEncrypted,
         refresh_token_encrypted: refreshTokenEncrypted,
         token_type: tokenData.token_type || 'Bearer',
         expires_at: expiresAt,
         scopes,
-        updated_at: new Date(),
-      })
-      .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
-  } else {
-    // Insert new tokens
-    await db.insert(mcpServerOAuthTokensTable).values({
-      server_uuid: serverUuid,
-      access_token_encrypted: accessTokenEncrypted,
-      refresh_token_encrypted: refreshTokenEncrypted,
-      token_type: tokenData.token_type || 'Bearer',
-      expires_at: expiresAt,
-      scopes,
-    });
-  }
-
-  // Also update server's streamableHTTPOptions with the token
-  const server = await db.query.mcpServersTable.findFirst({
-    where: eq(mcpServersTable.uuid, serverUuid),
-  });
-
-  if (server && (server.type === 'STREAMABLE_HTTP' || server.type === 'SSE')) {
-    // Get current streamableHTTPOptions - decrypt if encrypted
-    let streamableOptions: Record<string, any> = {};
-    if (server.streamable_http_options_encrypted) {
-      const { decryptField } = await import('@/lib/encryption');
-      try {
-        streamableOptions = decryptField(server.streamable_http_options_encrypted) as Record<string, any>;
-      } catch (error) {
-        console.error('[OAuth Callback] Failed to decrypt streamable_http_options:', error);
-        streamableOptions = {};
-      }
+      });
     }
 
-    // Update streamableHTTPOptions with Authorization header
-    // Normalize token_type to RFC 6750 spec (capitalize first letter)
-    const tokenType = tokenData.token_type
-      ? tokenData.token_type.charAt(0).toUpperCase() + tokenData.token_type.slice(1).toLowerCase()
-      : 'Bearer';
+    // Also update server's streamableHTTPOptions with the token
+    const server = await tx.query.mcpServersTable.findFirst({
+      where: eq(mcpServersTable.uuid, serverUuid),
+    });
 
-    streamableOptions.headers = {
-      ...(streamableOptions.headers || {}),
-      Authorization: `${tokenType} ${tokenData.access_token}`,
-    };
+    if (server && (server.type === 'STREAMABLE_HTTP' || server.type === 'SSE')) {
+      // Get current streamableHTTPOptions - decrypt if encrypted
+      let streamableOptions: Record<string, any> = {};
+      if (server.streamable_http_options_encrypted) {
+        const { decryptField } = await import('@/lib/encryption');
+        try {
+          streamableOptions = decryptField(server.streamable_http_options_encrypted) as Record<string, any>;
+        } catch (error) {
+          console.error('[OAuth Callback] Failed to decrypt streamable_http_options:', error);
+          streamableOptions = {};
+        }
+      }
 
-    console.log('[OAuth Callback] Updating streamableHTTPOptions with Authorization header');
-    console.log('[OAuth Callback] Headers:', Object.keys(streamableOptions.headers));
+      // Update streamableHTTPOptions with Authorization header
+      // Normalize token_type to RFC 6750 spec (capitalize first letter)
+      const tokenType = tokenData.token_type
+        ? tokenData.token_type.charAt(0).toUpperCase() + tokenData.token_type.slice(1).toLowerCase()
+        : 'Bearer';
 
-    // Encrypt and store in dedicated column
-    const encryptedOptions = encryptField(streamableOptions);
+      streamableOptions.headers = {
+        ...(streamableOptions.headers || {}),
+        Authorization: `${tokenType} ${tokenData.access_token}`,
+      };
 
-    await db
-      .update(mcpServersTable)
-      .set({
-        streamable_http_options_encrypted: encryptedOptions,
-      })
-      .where(eq(mcpServersTable.uuid, serverUuid));
-  }
+      console.log('[OAuth Callback] Updating streamableHTTPOptions with Authorization header');
+      console.log('[OAuth Callback] Headers:', Object.keys(streamableOptions.headers));
+
+      // Encrypt and store in dedicated column
+      const encryptedOptions = encryptField(streamableOptions);
+
+      await tx
+        .update(mcpServersTable)
+        .set({
+          streamable_http_options_encrypted: encryptedOptions,
+        })
+        .where(eq(mcpServersTable.uuid, serverUuid));
+    }
+  });
 }
