@@ -321,7 +321,7 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
       registry_data: server,
       registry_version: server.version_detail?.version,
       registry_release_date: server.version_detail?.release_date,
-      registry_status: server.status,
+      registry_status: undefined, // Registry API doesn't currently provide status field
       repository_url: server.repository?.url,
       repository_source: server.repository?.source,
       repository_id: server.repository?.id,
@@ -335,7 +335,7 @@ export async function importRegistryServer(registryId: string, profileUuid: stri
       streamableHTTPOptions: streamableHeaders ? { headers: streamableHeaders } : undefined,
     });
 
-    if (result.success) {
+    if (result.success && result.data) {
       // ✅ NEW: Store remote headers in dedicated table
       if (server.remotes && server.remotes.length > 0) {
         const remote = server.remotes[0];

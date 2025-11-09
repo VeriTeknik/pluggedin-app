@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
       ),
     });
 
-    if (!pkceState) {
+    if (!pkceState || !pkceState.user_id) {
       console.error('[OAuth Callback] PKCE state not found or does not belong to user:', state);
       mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'invalid_state' });
       return NextResponse.redirect(
@@ -157,7 +157,7 @@ export async function GET(request: NextRequest) {
     }
 
     // OAuth 2.1: Verify PKCE state integrity hash to prevent tampering
-    if (!verifyIntegrityHash(pkceState)) {
+    if (!verifyIntegrityHash(pkceState as any)) {
       console.error('[OAuth Callback] PKCE state integrity check failed - possible tampering detected');
       await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
       mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'invalid_state' });

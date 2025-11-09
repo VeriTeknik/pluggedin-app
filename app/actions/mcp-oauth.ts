@@ -85,7 +85,7 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
         if (decrypted.streamableHTTPOptions?.headers?.Authorization) {
           isAuthenticated = true;
           if (!lastAuthenticated) {
-            lastAuthenticated = server.updated_at || server.created_at;
+            lastAuthenticated = new Date(); // Authenticated via encrypted OAuth token
           }
           if (!provider && server.url) {
             provider = determineProviderFromUrl(server.url);

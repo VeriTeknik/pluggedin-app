@@ -417,7 +417,7 @@ async function handleStreamableHttpOAuth(server: McpServer, userId: string) {
                 tokenEndpoint: discovery.metadata.token_endpoint,
                 registrationEndpoint: discovery.metadata.registration_endpoint,
                 authorizationServer: discovery.authServer,
-                resourceIdentifier: discovery.resourceId,
+                resourceIdentifier: discovery.resourceId ?? undefined,
                 clientId: registration.client_id,
                 clientSecret: registration.client_secret,
                 scopes: discovery.metadata.scopes_supported,

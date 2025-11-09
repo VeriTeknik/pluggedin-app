@@ -194,7 +194,7 @@ export class PluggedinRegistryClient {
   async getServer(registryId: string, traceId?: string): Promise<PluggedinRegistryServer | null> {
     try {
       // First try to get by exact ID
-      let server: PluggedinRegistryServer;
+      let server: PluggedinRegistryServer | null;
       try {
         server = await this.getServerDetails(registryId);
       } catch {

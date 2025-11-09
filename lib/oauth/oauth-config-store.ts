@@ -118,7 +118,7 @@ export async function storeDiscoveredOAuthConfig(
     tokenEndpoint: metadata.token_endpoint,
     registrationEndpoint: metadata.registration_endpoint,
     authorizationServer: authServer,
-    resourceIdentifier: resourceId,
+    resourceIdentifier: resourceId ?? undefined,
     scopes: metadata.scopes_supported,
     supportsPKCE: metadata.code_challenge_methods_supported?.includes('S256') ?? true,
     discoveryMethod,

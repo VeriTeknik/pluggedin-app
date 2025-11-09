@@ -15,14 +15,14 @@ import { cleanupExpiredPkceStates } from '@/lib/oauth/pkce-cleanup';
  * {
  *   "crons": [{
  *     "path": "/api/oauth/cleanup-pkce",
- *     "schedule": "*/10 * * * *"
+ *     "schedule": "every 10 minutes"
  *   }]
  * }
  * ```
  *
  * Example GitHub Actions:
  * ```yaml
- * - cron: '*/10 * * * *'  # Every 10 minutes
+ * - cron: '10 * * * *'  # Every hour at minute 10
  * ```
  */
 export async function POST(req: NextRequest) {

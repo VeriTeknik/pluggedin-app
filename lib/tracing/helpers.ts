@@ -126,6 +126,7 @@ export async function recordTrace(
     const enrichedEventData = {
       trace_id,
       hop,
+      server_name: server_name || '',
       checksum_full,
       checksum_remotes,
       counts,
@@ -139,9 +140,9 @@ export async function recordTrace(
     await db.insert(dataIntegrityTracesTable).values({
       trace_id,
       hop,
-      server_name,
-      server_uuid,
-      event_data: enrichedEventData,
+      server_name: server_name || undefined,
+      server_uuid: server_uuid || undefined,
+      event_data: enrichedEventData as any,
     });
 
     // Log to console in development

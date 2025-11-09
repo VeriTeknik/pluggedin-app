@@ -1938,6 +1938,7 @@ export const mcpServerOAuthTokensTable = pgTable('mcp_server_oauth_tokens', {
   expires_at: timestamp('expires_at', { withTimezone: true }),
   scopes: text('scopes').array(),
   refresh_token_used_at: timestamp('refresh_token_used_at', { withTimezone: true }), // OAuth 2.1: Track refresh token usage for rotation
+  refresh_token_locked_at: timestamp('refresh_token_locked_at', { withTimezone: true }), // Atomic lock for refresh operations
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({

@@ -98,7 +98,10 @@ export function generateTraceId(): string {
 // ========================================
 // Express Middleware
 // ========================================
+// Note: This section is commented out because pluggedin-app is a Next.js application
+// and doesn't use Express. Uncomment if needed and install @types/express.
 
+/*
 import type { Request, Response, NextFunction } from 'express';
 
 /**
@@ -107,7 +110,8 @@ import type { Request, Response, NextFunction } from 'express';
  * Usage:
  * import { loggingMiddleware } from './logging';
  * app.use(loggingMiddleware);
- */
+ *\/
+/*
 export function loggingMiddleware(req: Request, res: Response, next: NextFunction) {
   const traceId = req.headers['x-trace-id'] as string || generateTraceId();
   const start = Date.now();
@@ -152,6 +156,7 @@ export function loggingMiddleware(req: Request, res: Response, next: NextFunctio
 
   next();
 }
+*/
 
 // ========================================
 // Next.js Integration
