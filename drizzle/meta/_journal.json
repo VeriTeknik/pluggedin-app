@@ -512,6 +512,13 @@
       "when": 1762664641125,
       "tag": "0072_smart_hannibal_king",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1762718483156,
+      "tag": "0073_woozy_jubilee",
+      "breakpoints": true
     }
   ]
 }

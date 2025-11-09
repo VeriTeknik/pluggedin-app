@@ -12,6 +12,96 @@ import {
 } from '@/lib/observability/oauth-metrics';
 
 /**
+ * Waits for a concurrent token refresh to complete
+ * Uses polling with exponential backoff to check if the lock is cleared
+ *
+ * @param serverUuid - The server UUID being refreshed
+ * @param initialLockAge - Age of the lock when first detected (ms)
+ * @returns true if refresh completed successfully, false if timeout or error
+ */
+async function waitForRefreshCompletion(serverUuid: string, initialLockAge: number): Promise<boolean> {
+  const maxWaitTime = 30 * 1000; // 30 seconds max wait
+  const startTime = Date.now();
+  let pollInterval = 100; // Start with 100ms
+  const maxPollInterval = 2000; // Max 2 seconds between polls
+
+  log.oauth('token_refresh_wait_started', {
+    serverUuid,
+    initialLockAge,
+    maxWaitTime
+  });
+
+  while ((Date.now() - startTime) < maxWaitTime) {
+    // Wait before polling
+    await new Promise(resolve => setTimeout(resolve, pollInterval));
+
+    // Check if lock is cleared
+    const tokenRecord = await db.query.mcpServerOAuthTokensTable.findFirst({
+      where: eq(mcpServerOAuthTokensTable.server_uuid, serverUuid)
+    });
+
+    if (!tokenRecord) {
+      log.oauth('token_refresh_wait_no_record', { serverUuid });
+      return false;
+    }
+
+    // Lock cleared - refresh completed
+    if (!tokenRecord.refresh_token_locked_at) {
+      const waitTime = Date.now() - startTime;
+      log.oauth('token_refresh_wait_lock_cleared', {
+        serverUuid,
+        waitTimeMs: waitTime
+      });
+
+      // Verify token is now valid
+      const now = Date.now();
+      const expiresAt = tokenRecord.expires_at?.getTime() || 0;
+      const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
+
+      if (expiresAt > now + bufferTime) {
+        log.oauth('token_refresh_wait_success', {
+          serverUuid,
+          waitTimeMs: waitTime,
+          newExpiresAt: tokenRecord.expires_at
+        });
+        return true;
+      } else {
+        log.oauth('token_refresh_wait_still_expired', {
+          serverUuid,
+          waitTimeMs: waitTime,
+          expiresAt: tokenRecord.expires_at
+        });
+        return false;
+      }
+    }
+
+    // Lock still active - check if it's stale
+    const currentLockAge = Date.now() - tokenRecord.refresh_token_locked_at.getTime();
+    const maxLockAge = 60 * 1000; // 60 seconds
+
+    if (currentLockAge > maxLockAge) {
+      log.oauth('token_refresh_wait_stale_lock', {
+        serverUuid,
+        lockAgeMs: currentLockAge
+      });
+      return false;
+    }
+
+    // Exponential backoff (double interval, up to max)
+    pollInterval = Math.min(pollInterval * 2, maxPollInterval);
+  }
+
+  // Timeout
+  const totalWaitTime = Date.now() - startTime;
+  log.oauth('token_refresh_wait_timeout_exceeded', {
+    serverUuid,
+    totalWaitTimeMs: totalWaitTime,
+    maxWaitTime
+  });
+  return false;
+}
+
+/**
  * P0 Security: Validates that the server belongs to the specified user
  * Prevents token substitution attacks where stolen tokens are used on attacker's servers
  *
@@ -145,9 +235,17 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
 
     if (lockAge < maxLockAge) {
       log.oauth('token_refresh_already_in_progress', { serverUuid, lockAgeMs: lockAge });
-      // Another request is handling the refresh, wait and return true
-      // The other request will update the token
-      return true;
+
+      // Wait for the other request to complete the refresh
+      const refreshCompleted = await waitForRefreshCompletion(serverUuid, lockAge);
+
+      if (refreshCompleted) {
+        log.oauth('token_refresh_completed_by_concurrent_request', { serverUuid });
+        return true;
+      } else {
+        log.oauth('token_refresh_wait_timeout', { serverUuid });
+        return false;
+      }
     } else {
       // Stale lock (orphaned from failed previous attempt), we can proceed
       log.oauth('token_refresh_stale_lock_detected', { serverUuid, lockAgeMs: lockAge });

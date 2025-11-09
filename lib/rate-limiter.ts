@@ -59,20 +59,32 @@ class MemoryRateLimitStore implements RateLimitBackend {
 // Redis store implementation (optional)
 class RedisRateLimitStore implements RateLimitBackend {
   private client: any;
+  private connected: boolean = false;
 
   constructor(redisUrl: string) {
-    // Lazy load Redis client
+    // Lazy load Redis client - gracefully handle if not installed
     try {
-      const { createClient } = require('redis');
-      this.client = createClient({ url: redisUrl });
-      this.client.connect().catch(console.error);
+      // Dynamic import to avoid build-time errors
+      const redis = require('redis');
+      this.client = redis.createClient({ url: redisUrl });
+      this.client.connect()
+        .then(() => {
+          this.connected = true;
+          console.log('[RateLimit] Redis connected successfully');
+        })
+        .catch((error: Error) => {
+          console.error('[RateLimit] Redis connection failed:', error.message);
+          this.connected = false;
+        });
     } catch (error) {
-      console.error('[RateLimit] Redis client not available:', error);
-      throw new Error('Redis client required but not installed. Run: npm install redis');
+      console.error('[RateLimit] Redis module not found. Install with: npm install redis');
+      this.connected = false;
+      throw error; // Re-throw to trigger fallback to memory store
     }
   }
 
   async get(key: string) {
+    if (!this.connected) return null;
     try {
       const data = await this.client.get(`ratelimit:${key}`);
       return data ? JSON.parse(data) : null;
@@ -83,6 +95,7 @@ class RedisRateLimitStore implements RateLimitBackend {
   }
 
   async set(key: string, value: { count: number; resetTime: number }) {
+    if (!this.connected) return;
     try {
       const ttl = Math.ceil((value.resetTime - Date.now()) / 1000);
       await this.client.setEx(`ratelimit:${key}`, ttl, JSON.stringify(value));
@@ -92,6 +105,7 @@ class RedisRateLimitStore implements RateLimitBackend {
   }
 
   async increment(key: string): Promise<number> {
+    if (!this.connected) return 0;
     try {
       return await this.client.incr(`ratelimit:${key}:count`);
     } catch (error) {
@@ -101,6 +115,7 @@ class RedisRateLimitStore implements RateLimitBackend {
   }
 
   async delete(key: string) {
+    if (!this.connected) return;
     try {
       await this.client.del(`ratelimit:${key}`);
     } catch (error) {
@@ -109,15 +124,32 @@ class RedisRateLimitStore implements RateLimitBackend {
   }
 }
 
+// Check if Redis module is available
+function isRedisAvailable(): boolean {
+  try {
+    require.resolve('redis');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Initialize rate limit backend
 let rateLimitBackend: RateLimitBackend;
 
 if (process.env.REDIS_URL) {
-  try {
-    rateLimitBackend = new RedisRateLimitStore(process.env.REDIS_URL);
-    console.log('[RateLimit] Using Redis backend for distributed rate limiting');
-  } catch (error) {
-    console.error('[RateLimit] Failed to initialize Redis, falling back to memory store');
+  if (isRedisAvailable()) {
+    try {
+      rateLimitBackend = new RedisRateLimitStore(process.env.REDIS_URL);
+      console.log('[RateLimit] Using Redis backend for distributed rate limiting');
+    } catch (error) {
+      console.error('[RateLimit] Failed to initialize Redis, falling back to memory store');
+      rateLimitBackend = new MemoryRateLimitStore();
+    }
+  } else {
+    console.warn('⚠️  [RateLimit] REDIS_URL configured but redis module not installed');
+    console.warn('⚠️  [RateLimit] Install with: npm install redis');
+    console.warn('⚠️  [RateLimit] Falling back to in-memory rate limiting');
     rateLimitBackend = new MemoryRateLimitStore();
   }
 } else {
