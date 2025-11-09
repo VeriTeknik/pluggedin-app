@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { mcpServerOAuthTokensTable, mcpServersTable, oauthPkceStatesTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { encryptField } from '@/lib/encryption';
+import { verifyIntegrityHash } from '@/lib/oauth/integrity';
 import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
 import { cleanupExpiredPkceStates } from '@/lib/oauth/pkce-cleanup';
 import { createRateLimiter } from '@/lib/rate-limiter';
@@ -153,7 +154,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if state has expired
+    // OAuth 2.1: Verify PKCE state integrity hash to prevent tampering
+    if (!verifyIntegrityHash(pkceState)) {
+      console.error('[OAuth Callback] PKCE state integrity check failed - possible tampering detected');
+      await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
+      return safeRedirect(request, '/mcp-servers', {
+        oauth_error: 'integrity_violation',
+      });
+    }
+
+    // Check if state has expired (OAuth 2.1: 5 minute expiration)
     if (pkceState.expires_at < new Date()) {
       console.error('[OAuth Callback] PKCE state expired');
       await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));

@@ -10,6 +10,7 @@ import { decryptServerData, encryptField } from '@/lib/encryption';
 import { createBubblewrapConfig, createFirejailConfig } from '@/lib/mcp/client-wrapper';
 import { OAuthProcessManager } from '@/lib/mcp/oauth-process-manager';
 import { portAllocator } from '@/lib/mcp/utils/port-allocator';
+import { generateIntegrityHash, generateSecureState, generateCodeVerifier } from '@/lib/oauth/integrity';
 import type { McpServer } from '@/types/mcp-server';
 
 const triggerOAuthSchema = z.object({
@@ -63,7 +64,7 @@ export async function triggerMcpOAuth(serverUuid: string) {
       oauthResult = await handleMcpRemoteOAuth(mcpServer);
     } else if (mcpServer.type === 'STREAMABLE_HTTP' || mcpServer.type === 'SSE') {
       // Handle STREAMABLE_HTTP/SSE servers with direct OAuth support
-      oauthResult = await handleStreamableHttpOAuth(mcpServer);
+      oauthResult = await handleStreamableHttpOAuth(mcpServer, session.user.id);
     } else {
       return {
         success: false,
@@ -285,7 +286,7 @@ async function handleMcpRemoteOAuth(server: McpServer) {
 /**
  * Handle OAuth for STREAMABLE_HTTP/SSE servers
  */
-async function handleStreamableHttpOAuth(server: McpServer) {
+async function handleStreamableHttpOAuth(server: McpServer, userId: string) {
 
   if (!server.url) {
     return {
@@ -428,13 +429,22 @@ async function handleStreamableHttpOAuth(server: McpServer) {
 
           // ✅ Store code_verifier for token exchange (linked to state parameter)
           try {
+            // OAuth 2.1: Generate HMAC integrity hash to bind state parameters
+            const integrityHash = generateIntegrityHash({
+              state,
+              serverUuid: server.uuid,
+              userId,
+              codeVerifier,
+            });
+
             await db.insert(oauthPkceStatesTable).values({
               state,
               server_uuid: server.uuid,
-              user_id: session.user.id, // P0 Security: Bind PKCE state to user to prevent OAuth hijacking
+              user_id: userId, // P0 Security: Bind PKCE state to user to prevent OAuth hijacking
               code_verifier: codeVerifier,
               redirect_uri: redirectUri,
-              expires_at: new Date(Date.now() + 10 * 60 * 1000), // Expires in 10 minutes
+              integrity_hash: integrityHash, // OAuth 2.1: HMAC binding to prevent tampering
+              expires_at: new Date(Date.now() + 5 * 60 * 1000), // OAuth 2.1: Expires in 5 minutes (reduced from 10)
             });
             console.log('[OAuth] PKCE code_verifier stored successfully for state:', state);
           } catch (error) {

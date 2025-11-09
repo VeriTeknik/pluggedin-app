@@ -63,29 +63,53 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
     setLoading(true);
     try {
       const result = await triggerMcpServerOAuth(serverUuid);
-      
+
       // Check if we have an OAuth URL to open (regardless of success status)
       if (result.authUrl) {
-        window.open(result.authUrl, '_blank');
+        // Open OAuth flow in a centered popup window
+        const width = 600;
+        const height = 700;
+        const left = window.screenX + (window.outerWidth - width) / 2;
+        const top = window.screenY + (window.outerHeight - height) / 2;
+
+        const popup = window.open(
+          result.authUrl,
+          'oauth_popup',
+          `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,location=no,status=no`
+        );
+
         toast({
           title: 'Authentication initiated',
-          description: 'Please complete the OAuth flow in the browser window that opened.',
+          description: 'Please complete the OAuth flow in the popup window.',
         });
-        
+
         // Poll for status updates
         let pollCount = 0;
         const pollInterval = setInterval(async () => {
           pollCount++;
-          
+
+          // Check if popup was closed manually
+          if (popup?.closed) {
+            clearInterval(pollInterval);
+            setLoading(false);
+            toast({
+              title: 'Authentication cancelled',
+              description: 'The authentication popup was closed.',
+              variant: 'destructive',
+            });
+            return;
+          }
+
           // First check mcp-remote OAuth completion
           const mcpRemoteCheck = await checkMcpRemoteOAuthCompletion(serverUuid);
-          
+
           if (mcpRemoteCheck.success && mcpRemoteCheck.isAuthenticated) {
             // OAuth completed, now get the updated status
             const statusResult = await getMcpServerOAuthStatus(serverUuid);
-            
+
             if (statusResult.success && statusResult.data) {
               clearInterval(pollInterval);
+              popup?.close();
               setStatus(statusResult.data);
               setLoading(false);
               toast({
@@ -95,12 +119,13 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
               return;
             }
           }
-          
+
           // Also check regular status in case it's not an mcp-remote server
           const statusResult = await getMcpServerOAuthStatus(serverUuid);
-          
+
           if (statusResult.success && statusResult.data?.isAuthenticated) {
             clearInterval(pollInterval);
+            popup?.close();
             setStatus(statusResult.data);
             setLoading(false);
             toast({
@@ -108,10 +133,11 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
               description: 'You are now authenticated with this server.',
             });
           }
-          
+
           // Stop polling after 40 attempts (2 minutes)
           if (pollCount >= 40) {
             clearInterval(pollInterval);
+            popup?.close();
             setLoading(false);
             toast({
               title: 'Authentication timeout',
@@ -120,10 +146,11 @@ export function McpOAuthStatus({ serverUuid, serverName, serverType }: OAuthStat
             });
           }
         }, 3000); // Poll every 3 seconds
-        
+
         // Stop polling after 5 minutes
         setTimeout(() => {
           clearInterval(pollInterval);
+          popup?.close();
           setLoading(false);
         }, 300000);
         

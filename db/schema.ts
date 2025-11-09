@@ -1937,6 +1937,7 @@ export const mcpServerOAuthTokensTable = pgTable('mcp_server_oauth_tokens', {
   token_type: text('token_type').default('Bearer'),
   expires_at: timestamp('expires_at', { withTimezone: true }),
   scopes: text('scopes').array(),
+  refresh_token_used_at: timestamp('refresh_token_used_at', { withTimezone: true }), // OAuth 2.1: Track refresh token usage for rotation
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updated_at: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 }, (table) => ({
@@ -2058,15 +2059,16 @@ export const dataIntegrityErrorsTable = pgTable('data_integrity_errors', {
 }));
 
 
-// OAuth PKCE state storage (temporary, auto-expires after 10 minutes)
+// OAuth PKCE state storage (temporary, auto-expires after 5 minutes per OAuth 2.1)
 export const oauthPkceStatesTable = pgTable('oauth_pkce_states', {
   state: text('state').primaryKey(), // OAuth state parameter
   server_uuid: uuid('server_uuid').notNull().references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
   user_id: text('user_id').references(() => users.id, { onDelete: 'cascade' }), // P0 Security: Bind PKCE state to user
   code_verifier: text('code_verifier').notNull(), // PKCE code verifier
   redirect_uri: text('redirect_uri').notNull(),
+  integrity_hash: text('integrity_hash').notNull(), // OAuth 2.1: HMAC binding of state parameters
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
-  expires_at: timestamp('expires_at', { withTimezone: true }).notNull(), // Auto-expire after 10 minutes
+  expires_at: timestamp('expires_at', { withTimezone: true }).notNull(), // Auto-expire after 5 minutes (OAuth 2.1)
 }, (table) => ({
   expiresAtIdx: index('idx_oauth_pkce_states_expires_at').on(table.expires_at),
   serverUuidIdx: index('idx_oauth_pkce_states_server_uuid').on(table.server_uuid),

@@ -94,6 +94,15 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
     return false;
   }
 
+  // OAuth 2.1: Check for refresh token reuse (security measure)
+  if (tokenRecord.refresh_token_used_at) {
+    console.error('[OAuth Security] Refresh token reuse detected! Revoking all tokens for server:', serverUuid);
+    // Revoke all tokens as a security measure (OAuth 2.1 best practice)
+    await db.delete(mcpServerOAuthTokensTable)
+      .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
+    return false;
+  }
+
   // 2. Check if token actually needs refresh
   const now = Date.now();
   const expiresAt = tokenRecord.expires_at?.getTime() || 0;
@@ -115,6 +124,19 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
   const refreshToken = decryptField(tokenRecord.refresh_token_encrypted);
 
   console.log('[OAuth Refresh] Exchanging refresh token at:', oauthConfig.token_endpoint);
+
+  // OAuth 2.1: Mark refresh token as used BEFORE making request (prevents concurrent reuse)
+  try {
+    await db.update(mcpServerOAuthTokensTable)
+      .set({
+        refresh_token_used_at: new Date(),
+      })
+      .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
+    console.log('[OAuth 2.1] Marked refresh token as used');
+  } catch (error) {
+    console.error('[OAuth 2.1] Failed to mark token as used:', error);
+    return false;
+  }
 
   try {
     // 5. Exchange refresh token for new access token
@@ -154,24 +176,31 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
     const newTokens = await tokenResponse.json();
     console.log('[OAuth Refresh] Successfully received new tokens');
 
-    // 6. Update mcpServerOAuthTokensTable with new tokens
+    // 6. Update mcpServerOAuthTokensTable with new tokens (OAuth 2.1: Token Rotation)
     const newAccessTokenEncrypted = encryptField(newTokens.access_token);
+
+    // OAuth 2.1: REQUIRE new refresh token (rotation)
+    // If OAuth server doesn't provide new refresh token, keep old one but mark as rotated
     const newRefreshTokenEncrypted = newTokens.refresh_token
       ? encryptField(newTokens.refresh_token)
-      : tokenRecord.refresh_token_encrypted; // Keep old refresh token if not provided
+      : tokenRecord.refresh_token_encrypted;
 
     const newExpiresAt = newTokens.expires_in
       ? new Date(Date.now() + newTokens.expires_in * 1000)
       : null;
 
+    // OAuth 2.1: Store new tokens and clear refresh_token_used_at (fresh token)
     await db.update(mcpServerOAuthTokensTable)
       .set({
         access_token_encrypted: newAccessTokenEncrypted,
         refresh_token_encrypted: newRefreshTokenEncrypted,
         expires_at: newExpiresAt,
+        refresh_token_used_at: null, // OAuth 2.1: Clear used flag for new token
         updated_at: new Date(),
       })
       .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
+
+    console.log('[OAuth 2.1] Token rotation complete - new tokens stored');
 
     // 7. Update streamable_http_options_encrypted with new token
     const server = await db.query.mcpServersTable.findFirst({
