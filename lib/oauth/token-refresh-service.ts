@@ -109,9 +109,15 @@ export async function refreshOAuthToken(serverUuid: string): Promise<boolean> {
 
     if (server?.streamable_http_options_encrypted) {
       const options = decryptField(server.streamable_http_options_encrypted) as Record<string, any>;
+
+      // Normalize token_type to RFC 6750 spec (capitalize first letter)
+      const tokenType = newTokens.token_type
+        ? newTokens.token_type.charAt(0).toUpperCase() + newTokens.token_type.slice(1).toLowerCase()
+        : 'Bearer';
+
       options.headers = {
         ...(options.headers || {}),
-        Authorization: `${newTokens.token_type || 'Bearer'} ${newTokens.access_token}`,
+        Authorization: `${tokenType} ${newTokens.access_token}`,
       };
 
       const encryptedOptions = encryptField(options);

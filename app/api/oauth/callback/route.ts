@@ -250,9 +250,14 @@ async function storeOAuthTokens(
     }
 
     // Update streamableHTTPOptions with Authorization header
+    // Normalize token_type to RFC 6750 spec (capitalize first letter)
+    const tokenType = tokenData.token_type
+      ? tokenData.token_type.charAt(0).toUpperCase() + tokenData.token_type.slice(1).toLowerCase()
+      : 'Bearer';
+
     streamableOptions.headers = {
       ...(streamableOptions.headers || {}),
-      Authorization: `${tokenData.token_type || 'Bearer'} ${tokenData.access_token}`,
+      Authorization: `${tokenType} ${tokenData.access_token}`,
     };
 
     console.log('[OAuth Callback] Updating streamableHTTPOptions with Authorization header');
