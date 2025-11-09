@@ -8,6 +8,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { mcpServerOAuthConfigTable } from '@/db/schema';
 import { encryptField } from '@/lib/encryption';
+import { log } from '@/lib/observability/logger';
 
 import type { OAuthMetadata } from './rfc9728-discovery';
 
@@ -64,15 +65,23 @@ export async function storeOAuthConfig(config: OAuthConfigInput): Promise<void> 
         })
         .where(eq(mcpServerOAuthConfigTable.server_uuid, config.serverUuid));
 
-      console.log('[OAuth Config] Updated OAuth config for server:', config.serverUuid);
+      log.oauth('oauth_config_updated', {
+        serverUuid: config.serverUuid,
+        discoveryMethod: config.discoveryMethod
+      });
     } else {
       // Insert new config
       await db.insert(mcpServerOAuthConfigTable).values(configData);
 
-      console.log('[OAuth Config] Stored new OAuth config for server:', config.serverUuid);
+      log.oauth('oauth_config_stored', {
+        serverUuid: config.serverUuid,
+        discoveryMethod: config.discoveryMethod
+      });
     }
   } catch (error) {
-    console.error('[OAuth Config] Error storing OAuth config:', error);
+    log.error('OAuth Config: Error storing OAuth config', error, {
+      serverUuid: config.serverUuid
+    });
     throw error;
   }
 }
@@ -88,7 +97,7 @@ export async function getOAuthConfig(serverUuid: string) {
 
     return config || null;
   } catch (error) {
-    console.error('[OAuth Config] Error getting OAuth config:', error);
+    log.error('OAuth Config: Error getting OAuth config', error, { serverUuid });
     return null;
   }
 }

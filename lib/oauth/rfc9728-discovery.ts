@@ -5,6 +5,9 @@
  * This module implements OAuth discovery for MCP servers that follow RFC 9728.
  */
 
+import { log } from '@/lib/observability/logger';
+import { recordDiscovery } from '@/lib/observability/oauth-metrics';
+
 export interface OAuthMetadata {
   issuer?: string;
   authorization_endpoint: string;
@@ -83,6 +86,8 @@ export function parseWWWAuthenticate(header: string): ParsedWWWAuthenticate | nu
 export async function discoverOAuthMetadata(
   authorizationServer: string
 ): Promise<OAuthMetadata | null> {
+  const startTime = Date.now();
+
   try {
     // Normalize authorization server URL (remove trailing slash)
     const serverUrl = authorizationServer.replace(/\/$/, '');
@@ -90,7 +95,10 @@ export async function discoverOAuthMetadata(
     // RFC 8414: Metadata is at /.well-known/oauth-authorization-server
     const metadataUrl = `${serverUrl}/.well-known/oauth-authorization-server`;
 
-    console.log(`[RFC9728] Discovering OAuth metadata from: ${metadataUrl}`);
+    log.oauth('oauth_discovery_initiated', {
+      authorizationServer,
+      metadataUrl
+    });
 
     const response = await fetch(metadataUrl, {
       method: 'GET',
@@ -101,7 +109,12 @@ export async function discoverOAuthMetadata(
     });
 
     if (!response.ok) {
-      console.warn(`[RFC9728] Metadata endpoint returned ${response.status}`);
+      log.warn('RFC9728: Metadata endpoint error', {
+        metadataUrl,
+        statusCode: response.status
+      });
+      const durationSeconds = (Date.now() - startTime) / 1000;
+      recordDiscovery('rfc9728', false, durationSeconds);
       return null;
     }
 
@@ -109,20 +122,33 @@ export async function discoverOAuthMetadata(
 
     // Validate required fields
     if (!metadata.authorization_endpoint || !metadata.token_endpoint) {
-      console.warn('[RFC9728] Metadata missing required endpoints');
+      log.warn('RFC9728: Metadata missing required endpoints', {
+        metadataUrl,
+        hasAuthEndpoint: !!metadata.authorization_endpoint,
+        hasTokenEndpoint: !!metadata.token_endpoint
+      });
+      const durationSeconds = (Date.now() - startTime) / 1000;
+      recordDiscovery('rfc9728', false, durationSeconds);
       return null;
     }
 
-    console.log('[RFC9728] OAuth metadata discovered successfully:', {
-      authorization_endpoint: metadata.authorization_endpoint,
-      token_endpoint: metadata.token_endpoint,
-      registration_endpoint: metadata.registration_endpoint,
-      scopes_supported: metadata.scopes_supported,
+    log.oauth('oauth_discovery_success', {
+      authorizationServer,
+      authorizationEndpoint: metadata.authorization_endpoint,
+      tokenEndpoint: metadata.token_endpoint,
+      registrationEndpoint: metadata.registration_endpoint,
+      scopesSupported: metadata.scopes_supported
     });
 
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    recordDiscovery('rfc9728', true, durationSeconds);
     return metadata;
   } catch (error) {
-    console.error('[RFC9728] Error discovering OAuth metadata:', error);
+    log.error('RFC9728: OAuth discovery error', error, {
+      authorizationServer
+    });
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    recordDiscovery('rfc9728', false, durationSeconds);
     return null;
   }
 }
@@ -150,7 +176,11 @@ export async function discoverOAuthFromResponse(
     const parsed = parseWWWAuthenticate(authHeader);
 
     if (parsed?.authorization_server) {
-      console.log('[RFC9728] Found authorization_server in WWW-Authenticate:', parsed.authorization_server);
+      log.oauth('oauth_www_authenticate_found', {
+        serverUrl,
+        authorizationServer: parsed.authorization_server,
+        resourceIdentifier: parsed.resource_identifier
+      });
 
       // Try RFC 9728 discovery
       const metadata = await discoverOAuthMetadata(parsed.authorization_server);
@@ -172,7 +202,10 @@ export async function discoverOAuthFromResponse(
     const metadata = await discoverOAuthMetadata(serverOrigin);
 
     if (metadata) {
-      console.log('[RFC9728] Discovered OAuth metadata from server origin');
+      log.oauth('oauth_discovery_from_origin_success', {
+        serverUrl,
+        serverOrigin
+      });
       return {
         metadata,
         authServer: serverOrigin,
@@ -181,7 +214,7 @@ export async function discoverOAuthFromResponse(
       };
     }
   } catch (error) {
-    console.error('[RFC9728] Error trying server origin discovery:', error);
+    log.error('RFC9728: Server origin discovery error', error, { serverUrl });
   }
 
   // Step 3: No discovery possible

@@ -5,6 +5,9 @@
  * Registers OAuth clients dynamically with authorization servers
  */
 
+import { log } from '@/lib/observability/logger';
+import { recordClientRegistration } from '@/lib/observability/oauth-metrics';
+
 export interface ClientRegistrationRequest {
   redirect_uris: string[];
   client_name?: string;
@@ -39,6 +42,8 @@ export async function registerOAuthClient(
   registrationEndpoint: string,
   redirectUri: string
 ): Promise<ClientRegistrationResponse> {
+  const startTime = Date.now();
+
   const registrationRequest: ClientRegistrationRequest = {
     redirect_uris: [redirectUri],
     client_name: 'Plugged.in',
@@ -49,29 +54,52 @@ export async function registerOAuthClient(
     scope: '', // Will be populated based on server capabilities
   };
 
-  console.log('[Dynamic Registration] Registering client at:', registrationEndpoint);
-  console.log('[Dynamic Registration] Request:', registrationRequest);
-
-  const response = await fetch(registrationEndpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify(registrationRequest),
+  log.oauth('oauth_dynamic_registration_initiated', {
+    registrationEndpoint,
+    redirectUri,
+    clientName: registrationRequest.client_name
   });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error('[Dynamic Registration] Failed:', response.status, errorText);
-    throw new Error(`Client registration failed: ${response.status} - ${errorText}`);
+  try {
+    const response = await fetch(registrationEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(registrationRequest),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      log.error('Dynamic Registration: Client registration failed', new Error(errorText), {
+        registrationEndpoint,
+        statusCode: response.status
+      });
+      const durationSeconds = (Date.now() - startTime) / 1000;
+      recordClientRegistration(false, durationSeconds);
+      throw new Error(`Client registration failed: ${response.status} - ${errorText}`);
+    }
+
+    const registrationResponse = await response.json() as ClientRegistrationResponse;
+
+    log.oauth('oauth_dynamic_registration_success', {
+      registrationEndpoint,
+      clientId: registrationResponse.client_id,
+      hasClientSecret: !!registrationResponse.client_secret
+    });
+
+    const durationSeconds = (Date.now() - startTime) / 1000;
+    recordClientRegistration(true, durationSeconds);
+    return registrationResponse;
+  } catch (error) {
+    // If error is already our Error from above, it's already been recorded
+    if (!(error instanceof Error && error.message.startsWith('Client registration failed'))) {
+      const durationSeconds = (Date.now() - startTime) / 1000;
+      recordClientRegistration(false, durationSeconds);
+    }
+    throw error;
   }
-
-  const registrationResponse = await response.json() as ClientRegistrationResponse;
-
-  console.log('[Dynamic Registration] Success! Client ID:', registrationResponse.client_id);
-
-  return registrationResponse;
 }
 
 /**
@@ -86,7 +114,10 @@ export async function getOrRegisterClient(
 ): Promise<{ client_id: string; client_secret?: string }> {
   // If we already have a client_id, return it
   if (existingClientId) {
-    console.log('[Dynamic Registration] Using existing client_id:', existingClientId);
+    log.oauth('oauth_using_existing_client', {
+      serverUuid,
+      clientId: existingClientId
+    });
     return { client_id: existingClientId };
   }
 

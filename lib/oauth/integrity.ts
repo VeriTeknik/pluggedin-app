@@ -1,5 +1,7 @@
 import crypto from 'crypto';
 
+import { log } from '@/lib/observability/logger';
+
 /**
  * OAuth 2.1 Best Practice: State Nonce Binding with HMAC
  *
@@ -60,7 +62,11 @@ export function verifyIntegrityHash(pkceState: {
       Buffer.from(pkceState.integrity_hash)
     );
   } catch (error) {
-    console.error('[OAuth Integrity] Hash verification failed:', error);
+    log.security('oauth_integrity_verification_failed', pkceState.user_id, {
+      state: pkceState.state,
+      serverUuid: pkceState.server_uuid,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
     return false;
   }
 }
