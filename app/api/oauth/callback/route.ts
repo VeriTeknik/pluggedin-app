@@ -4,6 +4,7 @@ import { db } from '@/db';
 import { mcpServerOAuthTokensTable, mcpServersTable, oauthPkceStatesTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { encryptField } from '@/lib/encryption';
+import { mcpOAuthCallbacks } from '@/lib/mcp/metrics';
 import { verifyIntegrityHash } from '@/lib/oauth/integrity';
 import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
 import { cleanupExpiredPkceStates } from '@/lib/oauth/pkce-cleanup';
@@ -149,6 +150,7 @@ export async function GET(request: NextRequest) {
 
     if (!pkceState) {
       console.error('[OAuth Callback] PKCE state not found or does not belong to user:', state);
+      mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'invalid_state' });
       return NextResponse.redirect(
         new URL('/mcp-servers?oauth_error=invalid_state', request.url)
       );
@@ -158,6 +160,7 @@ export async function GET(request: NextRequest) {
     if (!verifyIntegrityHash(pkceState)) {
       console.error('[OAuth Callback] PKCE state integrity check failed - possible tampering detected');
       await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
+      mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'invalid_state' });
       return safeRedirect(request, '/mcp-servers', {
         oauth_error: 'integrity_violation',
       });
@@ -167,6 +170,7 @@ export async function GET(request: NextRequest) {
     if (pkceState.expires_at < new Date()) {
       console.error('[OAuth Callback] PKCE state expired');
       await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
+      mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'expired' });
       return NextResponse.redirect(
         new URL('/mcp-servers?oauth_error=state_expired', request.url)
       );
@@ -189,10 +193,16 @@ export async function GET(request: NextRequest) {
     const oauthConfig = await getOAuthConfig(serverUuid);
 
     if (!oauthConfig) {
+      mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'error' });
       return NextResponse.redirect(
         new URL('/mcp-servers?oauth_error=config_not_found', request.url)
       );
     }
+
+    // Extract provider from OAuth config or authorization server
+    const provider = oauthConfig.authorization_server
+      ? new URL(oauthConfig.authorization_server).hostname.split('.')[0]
+      : 'unknown';
 
     // Exchange authorization code for tokens
     const tokenEndpoint = oauthConfig.token_endpoint;
@@ -246,6 +256,7 @@ export async function GET(request: NextRequest) {
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
       console.error('[OAuth Callback] Token exchange failed:', errorText);
+      mcpOAuthCallbacks.inc({ provider, status: 'error' });
       return NextResponse.redirect(
         new URL(
           `/mcp-servers?oauth_error=token_exchange_failed&details=${encodeURIComponent(errorText)}`,
@@ -258,6 +269,7 @@ export async function GET(request: NextRequest) {
 
     if (!tokenData.access_token) {
       console.error('[OAuth Callback] No access_token in response:', tokenData);
+      mcpOAuthCallbacks.inc({ provider, status: 'error' });
       return NextResponse.redirect(
         new URL('/mcp-servers?oauth_error=no_access_token', request.url)
       );
@@ -268,6 +280,9 @@ export async function GET(request: NextRequest) {
 
     console.log('[OAuth Callback] Tokens stored successfully for server:', serverUuid);
 
+    // Track successful OAuth callback
+    mcpOAuthCallbacks.inc({ provider, status: 'success' });
+
     // ✅ Clean up PKCE state after successful token exchange
     await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state!));
 
@@ -277,6 +292,9 @@ export async function GET(request: NextRequest) {
     );
   } catch (error) {
     console.error('[OAuth Callback] Unexpected error:', error);
+
+    // Track unexpected error
+    mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'error' });
 
     // Clean up PKCE state on error
     try {

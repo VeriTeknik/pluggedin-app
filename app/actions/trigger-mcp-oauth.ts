@@ -8,6 +8,7 @@ import { mcpServersTable, profilesTable, oauthPkceStatesTable } from '@/db/schem
 import { withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { createBubblewrapConfig, createFirejailConfig } from '@/lib/mcp/client-wrapper';
+import { trackOAuthFlow, mcpOAuthFlows } from '@/lib/mcp/metrics';
 import { OAuthProcessManager } from '@/lib/mcp/oauth-process-manager';
 import { portAllocator } from '@/lib/mcp/utils/port-allocator';
 import { generateIntegrityHash, generateSecureState, generateCodeVerifier } from '@/lib/oauth/integrity';
@@ -18,6 +19,10 @@ const triggerOAuthSchema = z.object({
 });
 
 export async function triggerMcpOAuth(serverUuid: string) {
+  const startTime = Date.now();
+  let provider = 'unknown';
+  let serverType = 'unknown';
+
   try {
     // Validate input
     const validated = triggerOAuthSchema.parse({ serverUuid });
@@ -52,6 +57,47 @@ export async function triggerMcpOAuth(serverUuid: string) {
       transport: decryptedData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined,
     };
 
+    // Extract server type and provider for metrics
+    serverType = mcpServer.type || 'unknown';
+
+    // Detect provider from URL for mcp-remote servers
+    if (mcpServer.args && Array.isArray(mcpServer.args)) {
+      const urlIndex = mcpServer.args.findIndex((arg: string) => arg.includes('http'));
+      if (urlIndex !== -1 && mcpServer.args[urlIndex]) {
+        try {
+          const parsedUrl = new URL(mcpServer.args[urlIndex]);
+          const hostname = parsedUrl.hostname.toLowerCase();
+
+          if (hostname === 'linear.app' || hostname.endsWith('.linear.app')) {
+            provider = 'Linear';
+          } else if (hostname === 'github.com' || hostname.endsWith('.github.com')) {
+            provider = 'GitHub';
+          } else if (hostname === 'slack.com' || hostname.endsWith('.slack.com')) {
+            provider = 'Slack';
+          } else if (hostname === 'notion.com' || hostname.endsWith('.notion.com')) {
+            provider = 'Notion';
+          } else {
+            provider = 'mcp-remote';
+          }
+        } catch (e) {
+          provider = 'mcp-remote';
+        }
+      }
+    } else if (mcpServer.type === 'STREAMABLE_HTTP' || mcpServer.type === 'SSE') {
+      // For streamable HTTP servers, use hostname as provider
+      if (mcpServer.url) {
+        try {
+          const parsedUrl = new URL(mcpServer.url);
+          provider = parsedUrl.hostname.split('.')[0];
+        } catch (e) {
+          provider = 'streamable_http';
+        }
+      }
+    }
+
+    // Track OAuth flow initiation
+    mcpOAuthFlows.inc({ provider, server_type: serverType, status: 'initiated' });
+
     // Determine OAuth approach based on server type and configuration
     let oauthResult;
 
@@ -82,13 +128,16 @@ export async function triggerMcpOAuth(serverUuid: string) {
           ...currentConfig,
           oauth_initiated_at: new Date().toISOString(),
         };
-        
+
         await db
           .update(mcpServersTable)
           .set({ config: updatedConfig })
           .where(eq(mcpServersTable.uuid, validated.serverUuid));
       }
-      
+
+      // Track OAuth URL generated (partial success - user still needs to complete flow)
+      trackOAuthFlow(provider, serverType, Date.now() - startTime, true);
+
       return {
         success: true,
         oauthUrl: oauthResult.oauthUrl,
@@ -99,6 +148,9 @@ export async function triggerMcpOAuth(serverUuid: string) {
     if (oauthResult.success && 'token' in oauthResult && oauthResult.token) {
       // Store the token in the server's environment
       await storeOAuthToken(validated.serverUuid, oauthResult, profile.uuid);
+
+      // Track successful OAuth completion
+      trackOAuthFlow(provider, serverType, Date.now() - startTime, true);
 
       return {
         success: true,
@@ -111,46 +163,32 @@ export async function triggerMcpOAuth(serverUuid: string) {
       if (oauthResult.success || ('token' in oauthResult && oauthResult.token === 'oauth_working')) {
         // Update the database to mark OAuth as completed
         const currentConfig = (mcpServer.config as any) || {};
-        
-        // Detect provider from URL in server args
-        let provider = 'mcp-remote';
-        const urlIndex = mcpServer.args?.findIndex((arg: string) => arg.includes('http'));
-        if (urlIndex !== -1 && urlIndex !== undefined && mcpServer.args) {
-          try {
-            const parsedUrl = new URL(mcpServer.args[urlIndex]);
-            const hostname = parsedUrl.hostname.toLowerCase();
-            
-            if (hostname === 'linear.app' || hostname.endsWith('.linear.app')) {
-              provider = 'Linear';
-            } else if (hostname === 'github.com' || hostname === 'www.github.com' || hostname.endsWith('.github.com')) {
-              provider = 'GitHub';
-            } else if (hostname === 'slack.com' || hostname.endsWith('.slack.com')) {
-              provider = 'Slack';
-            }
-          } catch (e) {
-            // Invalid URL, keep default provider
-            console.error('Invalid URL for provider detection:', e);
-          }
-        }
-        
+
+        // Note: provider was already detected earlier in the function
         const updatedConfig = {
           ...currentConfig,
           requires_auth: false,
           oauth_completed_at: new Date().toISOString(),
           oauth_provider: provider,
         };
-        
+
         await db
           .update(mcpServersTable)
           .set({ config: updatedConfig })
           .where(eq(mcpServersTable.uuid, validated.serverUuid));
-          
+
+        // Track successful OAuth completion
+        trackOAuthFlow(provider, serverType, Date.now() - startTime, true);
+
         return {
           success: true,
           message: 'OAuth authentication completed successfully',
         };
       }
     }
+
+    // Track OAuth failure
+    trackOAuthFlow(provider, serverType, Date.now() - startTime, false);
 
     return {
       success: false,
@@ -159,6 +197,10 @@ export async function triggerMcpOAuth(serverUuid: string) {
     });
   } catch (error) {
     console.error('Error triggering OAuth:', error);
+
+    // Track OAuth error
+    trackOAuthFlow(provider, serverType, Date.now() - startTime, false);
+
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

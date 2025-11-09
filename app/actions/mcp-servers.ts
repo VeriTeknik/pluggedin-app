@@ -3,19 +3,19 @@
 import { and, desc, eq, isNull, like, not, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { 
-  customInstructionsTable, 
-  McpServerSource, 
-  mcpServersTable, 
-  McpServerStatus, 
-  McpServerType, 
-  profilesTable, 
+import {
+  customInstructionsTable,
+  McpServerSource,
+  mcpServersTable,
+  McpServerStatus,
+  McpServerType,
+  profilesTable,
   projectsTable,
   serverInstallationsTable,
-  users 
+  users
 } from '@/db/schema';
-import { auditLog, AuditLogActions,AuditLogTypes } from '@/lib/audit-logger';
 import { withProfileAuth } from '@/lib/auth-helpers';
+import { mcpServerOperations } from '@/lib/mcp/metrics';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import { formatRateLimitError,rateLimitServerAction, ServerActionRateLimits } from '@/lib/server-action-rate-limiter';
@@ -224,18 +224,22 @@ export async function deleteMcpServerByUuid(
       )
     );
 
-  // Audit log the successful deletion
-  await auditLog({
-    profileUuid,
-    type: AuditLogTypes.SERVER_DELETE,
-    action: AuditLogActions.DELETE,
+  // Track server deletion (Prometheus + Loki)
+  mcpServerOperations.inc({
+    operation: 'delete',
+    server_type: server?.type || 'unknown',
+    status: 'success'
+  });
+
+  console.log('[MCP Server Delete]', {
+    operation: 'delete',
     serverUuid: uuid,
+    serverName: server?.name || 'Unknown',
+    serverType: server?.type,
+    profileUuid,
     userId,
-    metadata: {
-      serverName: server?.name || 'Unknown',
-      status: 'success'
-    }
-    });
+    timestamp: new Date().toISOString()
+  });
   });
 }
 
@@ -280,17 +284,7 @@ export async function updateMcpServer(
     try {
       // Apply rate limiting for modification operations
       await applyRateLimit(userId, 'update-server', ServerActionRateLimits.serverModification);
-    
-    // Audit log the update attempt
-    await auditLog({
-      profileUuid,
-      type: AuditLogTypes.SERVER_UPDATE,
-      action: AuditLogActions.UPDATE,
-      serverUuid: uuid,
-      userId,
-      metadata: { fieldsUpdated: Object.keys(data) },
-    });
-    
+
     // Validate slug if it's being updated
     if (data.name !== undefined) {
       const slugValidation = generateSlugSchema.safeParse({
@@ -425,9 +419,26 @@ export async function updateMcpServer(
     // Do not re-throw, allow the update operation to be considered successful
   }
 
+  // Track server update (Prometheus + Loki)
+  mcpServerOperations.inc({
+    operation: 'update',
+    server_type: data.type || serverType || 'unknown',
+    status: 'success'
+  });
+
+  console.log('[MCP Server Update]', {
+    operation: 'update',
+    serverUuid: uuid,
+    fieldsUpdated: Object.keys(data),
+    serverType: data.type || serverType,
+    profileUuid,
+    userId,
+    timestamp: new Date().toISOString()
+  });
+
   // Revalidate path if needed
   // revalidatePath('/mcp-servers');
-  
+
   return { success: true };
     } catch (error) {
       console.error('[updateMcpServer] Error:', error);
@@ -493,16 +504,7 @@ export async function createMcpServer({
     try {
       // Apply rate limiting for modification operations
       await applyRateLimit(userId, 'create-server', ServerActionRateLimits.serverModification);
-    
-    // Audit log the creation attempt
-    await auditLog({
-      profileUuid,
-      type: AuditLogTypes.SERVER_CREATE,
-      action: AuditLogActions.CREATE,
-      userId,
-      metadata: { serverName: name, serverType: type },
-    });
-    
+
     const serverType = type || McpServerType.STDIO;
     
     // Prepare data for Zod validation - include ALL user-provided fields
@@ -653,6 +655,23 @@ export async function createMcpServer({
       }
     } else {
     }
+
+    // Track server creation (Prometheus + Loki)
+    mcpServerOperations.inc({
+      operation: 'create',
+      server_type: newServer.type || 'unknown',
+      status: 'success'
+    });
+
+    console.log('[MCP Server Create]', {
+      operation: 'create',
+      serverUuid: newServer.uuid,
+      serverName: newServer.name,
+      serverType: newServer.type,
+      profileUuid,
+      userId,
+      timestamp: new Date().toISOString()
+    });
 
     return { success: true, data: newServer }; // Return success and the new server data
     } catch (error) {
