@@ -210,6 +210,15 @@ export async function GET(request: NextRequest) {
     // ✅ Use stored client credentials from database
     const clientId = oauthConfig.client_id || process.env.OAUTH_CLIENT_ID || 'pluggedin-dev';
 
+    // Validate client credentials are configured
+    if (!clientId || clientId === 'pluggedin-dev') {
+      console.error('[OAuth Callback] Client credentials not properly configured');
+      mcpOAuthCallbacks.inc({ provider, status: 'error' });
+      return NextResponse.redirect(
+        new URL('/mcp-servers?oauth_error=client_not_configured', request.url)
+      );
+    }
+
     // P0 Security: Use HTTP Basic Auth per RFC 6749 Section 2.3.1 (prevents credential logging)
     const headers: Record<string, string> = {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -247,10 +256,12 @@ export async function GET(request: NextRequest) {
     console.log('[OAuth Callback] Exchanging code for tokens at:', tokenEndpoint);
     console.log('[OAuth Callback] Using client_id:', clientId);
 
+    // Add 10-second timeout to prevent hanging requests
     const tokenResponse = await fetch(tokenEndpoint, {
       method: 'POST',
       headers,
       body: tokenParams,
+      signal: AbortSignal.timeout(10000), // 10 second timeout
     });
 
     if (!tokenResponse.ok) {

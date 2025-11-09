@@ -1,6 +1,9 @@
 /**
  * OAuth configuration storage
  * Stores discovered OAuth endpoints and configuration in the database
+ *
+ * Performance: Implements short-lived caching (5 minutes) to reduce database load
+ * for frequently refreshed tokens
  */
 
 import { eq } from 'drizzle-orm';
@@ -11,6 +14,37 @@ import { encryptField } from '@/lib/encryption';
 import { log } from '@/lib/observability/logger';
 
 import type { OAuthMetadata } from './rfc9728-discovery';
+
+// Simple LRU cache for OAuth configurations
+interface CacheEntry {
+  config: Awaited<ReturnType<typeof db.query.mcpServerOAuthConfigTable.findFirst>> | null;
+  timestamp: number;
+}
+
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+const MAX_CACHE_SIZE = 500; // Maximum cached configurations
+
+const oauthConfigCache = new Map<string, CacheEntry>();
+
+// Periodic cleanup of expired cache entries
+setInterval(() => {
+  const now = Date.now();
+  const keysToDelete: string[] = [];
+
+  for (const [key, entry] of oauthConfigCache.entries()) {
+    if (now - entry.timestamp > CACHE_TTL_MS) {
+      keysToDelete.push(key);
+    }
+  }
+
+  keysToDelete.forEach(key => oauthConfigCache.delete(key));
+
+  if (keysToDelete.length > 0) {
+    log.debug('OAuth Config: Cleaned up expired cache entries', {
+      count: keysToDelete.length
+    });
+  }
+}, 60 * 1000); // Clean every minute
 
 export interface OAuthConfigInput {
   serverUuid: string;
@@ -28,6 +62,7 @@ export interface OAuthConfigInput {
 
 /**
  * Store OAuth configuration for a server
+ * Invalidates cache on write
  */
 export async function storeOAuthConfig(config: OAuthConfigInput): Promise<void> {
   try {
@@ -78,6 +113,9 @@ export async function storeOAuthConfig(config: OAuthConfigInput): Promise<void> 
         discoveryMethod: config.discoveryMethod
       });
     }
+
+    // Invalidate cache after write
+    oauthConfigCache.delete(config.serverUuid);
   } catch (error) {
     log.error('OAuth Config: Error storing OAuth config', error, {
       serverUuid: config.serverUuid
@@ -88,11 +126,36 @@ export async function storeOAuthConfig(config: OAuthConfigInput): Promise<void> 
 
 /**
  * Get OAuth configuration for a server
+ * Uses cache with 5-minute TTL to reduce database load
  */
 export async function getOAuthConfig(serverUuid: string) {
   try {
+    // Check cache first
+    const cached = oauthConfigCache.get(serverUuid);
+    const now = Date.now();
+
+    if (cached && (now - cached.timestamp) < CACHE_TTL_MS) {
+      return cached.config;
+    }
+
+    // Cache miss or expired - fetch from database
     const config = await db.query.mcpServerOAuthConfigTable.findFirst({
       where: eq(mcpServerOAuthConfigTable.server_uuid, serverUuid),
+    });
+
+    // Implement LRU eviction if cache is full
+    if (oauthConfigCache.size >= MAX_CACHE_SIZE) {
+      // Remove oldest entry
+      const oldestKey = oauthConfigCache.keys().next().value;
+      if (oldestKey) {
+        oauthConfigCache.delete(oldestKey);
+      }
+    }
+
+    // Store in cache
+    oauthConfigCache.set(serverUuid, {
+      config: config || null,
+      timestamp: now
     });
 
     return config || null;

@@ -68,6 +68,7 @@ export async function registerOAuthClient(
         Accept: 'application/json',
       },
       body: JSON.stringify(registrationRequest),
+      signal: AbortSignal.timeout(10000), // 10 second timeout
     });
 
     if (!response.ok) {
