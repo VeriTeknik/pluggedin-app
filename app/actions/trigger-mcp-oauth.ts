@@ -431,6 +431,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
             await db.insert(oauthPkceStatesTable).values({
               state,
               server_uuid: server.uuid,
+              user_id: session.user.id, // P0 Security: Bind PKCE state to user to prevent OAuth hijacking
               code_verifier: codeVerifier,
               redirect_uri: redirectUri,
               expires_at: new Date(Date.now() + 10 * 60 * 1000), // Expires in 10 minutes

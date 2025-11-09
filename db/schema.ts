@@ -2059,6 +2059,7 @@ export const dataIntegrityErrorsTable = pgTable('data_integrity_errors', {
 export const oauthPkceStatesTable = pgTable('oauth_pkce_states', {
   state: text('state').primaryKey(), // OAuth state parameter
   server_uuid: uuid('server_uuid').notNull().references(() => mcpServersTable.uuid, { onDelete: 'cascade' }),
+  user_id: text('user_id').references(() => usersTable.id, { onDelete: 'cascade' }), // P0 Security: Bind PKCE state to user
   code_verifier: text('code_verifier').notNull(), // PKCE code verifier
   redirect_uri: text('redirect_uri').notNull(),
   created_at: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
@@ -2066,4 +2067,6 @@ export const oauthPkceStatesTable = pgTable('oauth_pkce_states', {
 }, (table) => ({
   expiresAtIdx: index('idx_oauth_pkce_states_expires_at').on(table.expires_at),
   serverUuidIdx: index('idx_oauth_pkce_states_server_uuid').on(table.server_uuid),
+  userIdIdx: index('idx_oauth_pkce_states_user_id').on(table.user_id),
+  stateUserIdx: index('idx_oauth_pkce_states_state_user').on(table.state, table.user_id), // Composite for validation query
 }));

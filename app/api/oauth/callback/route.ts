@@ -2,10 +2,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
 import { mcpServerOAuthTokensTable, mcpServersTable, oauthPkceStatesTable } from '@/db/schema';
+import { getAuthSession } from '@/lib/auth';
 import { encryptField } from '@/lib/encryption';
 import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
 
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 
 /**
  * OAuth Callback Handler
@@ -13,6 +14,15 @@ import { eq } from 'drizzle-orm';
  */
 export async function GET(request: NextRequest) {
   try {
+    // P0 Security: Verify user is authenticated before processing OAuth callback
+    const session = await getAuthSession();
+    if (!session?.user?.id) {
+      console.error('[OAuth Callback] Unauthenticated request');
+      return NextResponse.redirect(
+        new URL('/mcp-servers?oauth_error=not_authenticated', request.url)
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const code = searchParams.get('code');
     const state = searchParams.get('state');
@@ -44,12 +54,16 @@ export async function GET(request: NextRequest) {
     }
 
     // ✅ Get server UUID and code_verifier from PKCE state storage
+    // P0 Security: Validate state belongs to authenticated user (prevents OAuth flow hijacking)
     const pkceState = await db.query.oauthPkceStatesTable.findFirst({
-      where: eq(oauthPkceStatesTable.state, state),
+      where: and(
+        eq(oauthPkceStatesTable.state, state),
+        eq(oauthPkceStatesTable.user_id, session.user.id) // CRITICAL: Prevent authorization code injection
+      ),
     });
 
     if (!pkceState) {
-      console.error('[OAuth Callback] PKCE state not found for state:', state);
+      console.error('[OAuth Callback] PKCE state not found or does not belong to user:', state);
       return NextResponse.redirect(
         new URL('/mcp-servers?oauth_error=invalid_state', request.url)
       );
