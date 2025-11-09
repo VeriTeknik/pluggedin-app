@@ -10,6 +10,7 @@ import { mcpServersTable, profilesTable, promptsTable, resourcesTable, resourceT
 import { withAuth } from '@/lib/auth-helpers';
 import { decryptServerData } from '@/lib/encryption';
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '@/lib/mcp/client-wrapper'; // Sorted
+import { categorizeError, mcpCapabilitiesDiscovered, mcpDiscoveryDuration, mcpDiscoveryFailures } from '@/lib/mcp/metrics';
 import { McpServer } from '@/types/mcp-server';
 // Removed getUserData import
 // import { convertMcpToLangchainTools, McpServersConfig } from '@h1deya/langchain-mcp-tools';
@@ -72,6 +73,8 @@ async function discoverAndSaveTools(
 ): Promise<{ tools: any[]; error?: string }> {
   let tools: any[] = [];
   let error: string | undefined;
+  const startTime = Date.now();
+  const transport = mcpServer.transport || (mcpServer.type === 'STREAMABLE_HTTP' ? 'streamable_http' : mcpServer.type === 'SSE' ? 'sse' : 'stdio');
 
   try {
     // Discover tools with 15-second timeout
@@ -98,22 +101,61 @@ async function discoverAndSaveTools(
         );
       }
     });
+
+    // Track successful discovery
+    const durationMs = Date.now() - startTime;
+    mcpDiscoveryDuration.observe({ operation: 'tools', transport, status: 'success' }, durationMs / 1000);
+    if (tools.length > 0) {
+      mcpCapabilitiesDiscovered.inc({ type: 'tool', server_type: mcpServer.type || 'unknown', transport }, tools.length);
+    }
+
+    console.log('[MCP Discovery]', {
+      operation: 'tools',
+      serverName: mcpServer.name,
+      serverUuid,
+      transport,
+      count: tools.length,
+      durationMs,
+      status: 'success',
+      timestamp: new Date().toISOString()
+    });
+
   } catch (err: any) {
+    const durationMs = Date.now() - startTime;
     const isAbortError = err?.code === 20 ||
                         err?.name === 'AbortError' ||
                         err?.message?.includes('abort');
     const isTimeoutError = err?.message?.includes('timeout');
 
+    let errorType: string;
     if (isAbortError) {
       console.warn(`[Tool Discovery][WARN] AbortError for ${mcpServer.name}: ${err?.message || err}`);
       error = 'Discovery aborted';
+      errorType = 'abort';
     } else if (isTimeoutError) {
       console.error(`[Tool Discovery][ERROR] Timeout after 15s for ${mcpServer.name}: ${err?.message || err}`);
       error = 'Discovery timeout';
+      errorType = 'timeout';
     } else {
       console.error('[Tool Discovery][ERROR] Unknown failure during discovery:', err);
       error = err?.message || 'Unknown error during tool discovery';
+      errorType = categorizeError(err);
     }
+
+    // Track failed discovery
+    mcpDiscoveryDuration.observe({ operation: 'tools', transport, status: 'error' }, durationMs / 1000);
+    mcpDiscoveryFailures.inc({ operation: 'tools', transport, error_type: errorType });
+
+    console.log('[MCP Discovery Failed]', {
+      operation: 'tools',
+      serverName: mcpServer.name,
+      serverUuid,
+      transport,
+      errorType,
+      durationMs,
+      status: 'error',
+      timestamp: new Date().toISOString()
+    });
   }
 
   return { tools, error };
@@ -249,6 +291,7 @@ export async function discoverSingleServerTools(
     let promptError: string | null = null; // Added
 
     // --- Discover Tools ---
+    const toolsStartTime = Date.now();
     try {
         // Use the potentially modified config for the discovery call
         discoveredTools = await listToolsFromServer(discoveryServerConfig);
@@ -268,24 +311,62 @@ export async function discoverSingleServerTools(
             }));
             await db.insert(toolsTable).values(toolsToInsert);
         }
+
+        // Track successful discovery
+        const toolsDurationMs = Date.now() - toolsStartTime;
+        const transport = discoveryServerConfig.transport || (discoveryServerConfig.type === 'STREAMABLE_HTTP' ? 'streamable_http' : discoveryServerConfig.type === 'SSE' ? 'sse' : 'stdio');
+        mcpDiscoveryDuration.observe({ operation: 'tools', transport, status: 'success' }, toolsDurationMs / 1000);
+        if (discoveredTools.length > 0) {
+            mcpCapabilitiesDiscovered.inc({ type: 'tool', server_type: discoveryServerConfig.type || 'unknown', transport }, discoveredTools.length);
+        }
+
+        console.log('[MCP Discovery]', {
+            operation: 'tools',
+            serverName: serverConfig.name,
+            serverUuid,
+            transport,
+            count: discoveredTools.length,
+            durationMs: toolsDurationMs,
+            status: 'success',
+            timestamp: new Date().toISOString()
+        });
     } catch (error: any) {
+        const toolsDurationMs = Date.now() - toolsStartTime;
+        const transport = discoveryServerConfig.transport || (discoveryServerConfig.type === 'STREAMABLE_HTTP' ? 'streamable_http' : discoveryServerConfig.type === 'SSE' ? 'sse' : 'stdio');
+
         // Ignore abort errors for Streamable HTTP - they're expected during cleanup
-        const isAbortError = error?.code === 20 || 
-                           error?.name === 'AbortError' || 
+        const isAbortError = error?.code === 20 ||
+                           error?.name === 'AbortError' ||
                            error?.message?.includes('abort') ||
                            error?.message?.includes('This operation was aborted');
-        
+
         if (!isAbortError) {
             console.error('[Action Error] Failed to discover/store tools for server:', { server: serverConfig.name || serverUuid, error });
+
+            // Track failed discovery
+            const errorType = categorizeError(error);
+            mcpDiscoveryDuration.observe({ operation: 'tools', transport, status: 'error' }, toolsDurationMs / 1000);
+            mcpDiscoveryFailures.inc({ operation: 'tools', transport, error_type: errorType });
+
+            console.log('[MCP Discovery Failed]', {
+                operation: 'tools',
+                serverName: serverConfig.name,
+                serverUuid,
+                transport,
+                errorType,
+                durationMs: toolsDurationMs,
+                status: 'error',
+                timestamp: new Date().toISOString()
+            });
         }
-        
+
         toolError = isAbortError ? null : error.message;
-        
+
         // Check if this is a 401 authentication error
-        const is401Error = error.message?.includes('401') || 
+        const is401Error = error.message?.includes('401') ||
                          error.message?.includes('invalid_token') ||
                          error.message?.includes('Unauthorized');
-        
+
         if (is401Error) {
             // Update server config to mark as requires auth
             try {
@@ -295,13 +376,13 @@ export async function discoverSingleServerTools(
                     requires_auth: true,
                     last_401_error: new Date().toISOString()
                 };
-                
+
                 await db.update(mcpServersTable)
-                    .set({ 
+                    .set({
                         config: updatedConfig
                     })
                     .where(eq(mcpServersTable.uuid, serverUuid));
-                    
+
             } catch (updateError) {
                 console.error('Failed to update server auth status:', updateError);
             }
@@ -309,6 +390,7 @@ export async function discoverSingleServerTools(
     }
 
     // --- Discover Resource Templates ---
+    const templatesStartTime = Date.now();
     try {
         // Use the potentially modified config for the discovery call
         discoveredTemplates = await listResourceTemplatesFromServer(discoveryServerConfig);
@@ -332,21 +414,60 @@ export async function discoverSingleServerTools(
             });
             await db.insert(resourceTemplatesTable).values(templatesToInsert);
         }
+
+        // Track successful discovery
+        const templatesDurationMs = Date.now() - templatesStartTime;
+        const transport = discoveryServerConfig.transport || (discoveryServerConfig.type === 'STREAMABLE_HTTP' ? 'streamable_http' : discoveryServerConfig.type === 'SSE' ? 'sse' : 'stdio');
+        mcpDiscoveryDuration.observe({ operation: 'resource_templates', transport, status: 'success' }, templatesDurationMs / 1000);
+        if (discoveredTemplates.length > 0) {
+            mcpCapabilitiesDiscovered.inc({ type: 'resource_template', server_type: discoveryServerConfig.type || 'unknown', transport }, discoveredTemplates.length);
+        }
+
+        console.log('[MCP Discovery]', {
+            operation: 'resource_templates',
+            serverName: serverConfig.name,
+            serverUuid,
+            transport,
+            count: discoveredTemplates.length,
+            durationMs: templatesDurationMs,
+            status: 'success',
+            timestamp: new Date().toISOString()
+        });
     } catch (error: any) {
+        const templatesDurationMs = Date.now() - templatesStartTime;
+        const transport = discoveryServerConfig.transport || (discoveryServerConfig.type === 'STREAMABLE_HTTP' ? 'streamable_http' : discoveryServerConfig.type === 'SSE' ? 'sse' : 'stdio');
+
         // Ignore abort errors for Streamable HTTP - they're expected during cleanup
-        const isAbortError = error?.code === 20 || 
-                           error?.name === 'AbortError' || 
+        const isAbortError = error?.code === 20 ||
+                           error?.name === 'AbortError' ||
                            error?.message?.includes('abort') ||
                            error?.message?.includes('This operation was aborted');
-        
+
         if (!isAbortError) {
             console.error('[Action Error] Failed to discover/store resource templates for server:', { server: serverConfig.name || serverUuid, error });
+
+            // Track failed discovery
+            const errorType = categorizeError(error);
+            mcpDiscoveryDuration.observe({ operation: 'resource_templates', transport, status: 'error' }, templatesDurationMs / 1000);
+            mcpDiscoveryFailures.inc({ operation: 'resource_templates', transport, error_type: errorType });
+
+            console.log('[MCP Discovery Failed]', {
+                operation: 'resource_templates',
+                serverName: serverConfig.name,
+                serverUuid,
+                transport,
+                errorType,
+                durationMs: templatesDurationMs,
+                status: 'error',
+                timestamp: new Date().toISOString()
+            });
         }
-        
+
         templateError = isAbortError ? null : error.message;
     }
 
     // --- Discover Static Resources ---
+    const resourcesStartTime = Date.now();
     try {
         // Use the potentially modified config for the discovery call
         discoveredResources = await listResourcesFromServer(discoveryServerConfig);
@@ -366,21 +487,60 @@ export async function discoverSingleServerTools(
             }));
             await db.insert(resourcesTable).values(resourcesToInsert);
         }
+
+        // Track successful discovery
+        const resourcesDurationMs = Date.now() - resourcesStartTime;
+        const transport = discoveryServerConfig.transport || (discoveryServerConfig.type === 'STREAMABLE_HTTP' ? 'streamable_http' : discoveryServerConfig.type === 'SSE' ? 'sse' : 'stdio');
+        mcpDiscoveryDuration.observe({ operation: 'resources', transport, status: 'success' }, resourcesDurationMs / 1000);
+        if (discoveredResources.length > 0) {
+            mcpCapabilitiesDiscovered.inc({ type: 'resource', server_type: discoveryServerConfig.type || 'unknown', transport }, discoveredResources.length);
+        }
+
+        console.log('[MCP Discovery]', {
+            operation: 'resources',
+            serverName: serverConfig.name,
+            serverUuid,
+            transport,
+            count: discoveredResources.length,
+            durationMs: resourcesDurationMs,
+            status: 'success',
+            timestamp: new Date().toISOString()
+        });
     } catch (error: any) {
+        const resourcesDurationMs = Date.now() - resourcesStartTime;
+        const transport = discoveryServerConfig.transport || (discoveryServerConfig.type === 'STREAMABLE_HTTP' ? 'streamable_http' : discoveryServerConfig.type === 'SSE' ? 'sse' : 'stdio');
+
         // Ignore abort errors for Streamable HTTP - they're expected during cleanup
-        const isAbortError = error?.code === 20 || 
-                           error?.name === 'AbortError' || 
+        const isAbortError = error?.code === 20 ||
+                           error?.name === 'AbortError' ||
                            error?.message?.includes('abort') ||
                            error?.message?.includes('This operation was aborted');
-        
+
         if (!isAbortError) {
             console.error('[Action Error] Failed to discover/store static resources for server:', { server: serverConfig.name || serverUuid, error });
+
+            // Track failed discovery
+            const errorType = categorizeError(error);
+            mcpDiscoveryDuration.observe({ operation: 'resources', transport, status: 'error' }, resourcesDurationMs / 1000);
+            mcpDiscoveryFailures.inc({ operation: 'resources', transport, error_type: errorType });
+
+            console.log('[MCP Discovery Failed]', {
+                operation: 'resources',
+                serverName: serverConfig.name,
+                serverUuid,
+                transport,
+                errorType,
+                durationMs: resourcesDurationMs,
+                status: 'error',
+                timestamp: new Date().toISOString()
+            });
         }
-        
+
         resourceError = isAbortError ? null : error.message;
     }
 
     // --- Discover Prompts ---
+    const promptsStartTime = Date.now();
     try {
         // Use the potentially modified config for the discovery call
         discoveredPrompts = await listPromptsFromServer(discoveryServerConfig);
@@ -399,17 +559,55 @@ export async function discoverSingleServerTools(
             }));
             await db.insert(promptsTable).values(promptsToInsert);
         }
+
+        // Track successful discovery
+        const promptsDurationMs = Date.now() - promptsStartTime;
+        const transport = discoveryServerConfig.transport || (discoveryServerConfig.type === 'STREAMABLE_HTTP' ? 'streamable_http' : discoveryServerConfig.type === 'SSE' ? 'sse' : 'stdio');
+        mcpDiscoveryDuration.observe({ operation: 'prompts', transport, status: 'success' }, promptsDurationMs / 1000);
+        if (discoveredPrompts.length > 0) {
+            mcpCapabilitiesDiscovered.inc({ type: 'prompt', server_type: discoveryServerConfig.type || 'unknown', transport }, discoveredPrompts.length);
+        }
+
+        console.log('[MCP Discovery]', {
+            operation: 'prompts',
+            serverName: serverConfig.name,
+            serverUuid,
+            transport,
+            count: discoveredPrompts.length,
+            durationMs: promptsDurationMs,
+            status: 'success',
+            timestamp: new Date().toISOString()
+        });
     } catch (error: any) {
+        const promptsDurationMs = Date.now() - promptsStartTime;
+        const transport = discoveryServerConfig.transport || (discoveryServerConfig.type === 'STREAMABLE_HTTP' ? 'streamable_http' : discoveryServerConfig.type === 'SSE' ? 'sse' : 'stdio');
+
         // Ignore abort errors for Streamable HTTP - they're expected during cleanup
-        const isAbortError = error?.code === 20 || 
-                           error?.name === 'AbortError' || 
+        const isAbortError = error?.code === 20 ||
+                           error?.name === 'AbortError' ||
                            error?.message?.includes('abort') ||
                            error?.message?.includes('This operation was aborted');
-        
+
         if (!isAbortError) {
             console.error('[Action Error] Failed to discover/store prompts for server:', { server: serverConfig.name || serverUuid, error });
+
+            // Track failed discovery
+            const errorType = categorizeError(error);
+            mcpDiscoveryDuration.observe({ operation: 'prompts', transport, status: 'error' }, promptsDurationMs / 1000);
+            mcpDiscoveryFailures.inc({ operation: 'prompts', transport, error_type: errorType });
+
+            console.log('[MCP Discovery Failed]', {
+                operation: 'prompts',
+                serverName: serverConfig.name,
+                serverUuid,
+                transport,
+                errorType,
+                durationMs: promptsDurationMs,
+                status: 'error',
+                timestamp: new Date().toISOString()
+            });
         }
-        
+
         promptError = isAbortError ? null : error.message;
     }
 
