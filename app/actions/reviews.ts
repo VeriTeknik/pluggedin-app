@@ -13,6 +13,20 @@ export async function getReviewsForServer(
       return [];
     }
 
+    // Validate externalId to prevent SSRF attacks
+    // Only allow alphanumeric characters, hyphens, underscores, and dots
+    const safeIdPattern = /^[a-zA-Z0-9._-]+$/;
+    if (!externalId || !safeIdPattern.test(externalId)) {
+      console.error('Invalid external ID format:', externalId);
+      return [];
+    }
+
+    // Prevent path traversal attempts
+    if (externalId.includes('..') || externalId.includes('/') || externalId.includes('\\')) {
+      console.error('Path traversal attempt detected in external ID:', externalId);
+      return [];
+    }
+
     const response = await fetch(
       `https://registry.plugged.in/v0/servers/${externalId}/reviews`,
       {

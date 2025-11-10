@@ -17,7 +17,7 @@ importers:
     dependencies:
       '@auth/drizzle-adapter':
         specifier: ^1.10.0
-        version: 1.10.0(nodemailer@7.0.6)
+        version: 1.10.0(nodemailer@7.0.10)
       '@h1deya/langchain-mcp-tools':
         specifier: ^0.3.8
         version: 0.3.8(@cfworker/json-schema@4.1.1)(@opentelemetry/api@1.9.0)(@opentelemetry/sdk-trace-base@2.1.0(@opentelemetry/api@1.9.0))(openai@5.19.1(ws@8.18.3)(zod@3.25.76))
@@ -178,8 +178,8 @@ importers:
         specifier: ^11.2.1
         version: 11.2.1
       mammoth:
-        specifier: ^1.10.0
-        version: 1.10.0
+        specifier: ^1.11.0
+        version: 1.11.0
       marked:
         specifier: ^16.2.1
         version: 16.2.1
@@ -190,11 +190,11 @@ importers:
         specifier: 15.5.2
         version: 15.5.2(@babel/core@7.28.3)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       next-auth:
-        specifier: ^4.24.11
-        version: 4.24.11(next@15.5.2(@babel/core@7.28.3)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(nodemailer@7.0.6)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
+        specifier: ^4.24.12
+        version: 4.24.13(next@15.5.2(@babel/core@7.28.3)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(nodemailer@7.0.10)(react-dom@19.1.1(react@19.1.1))(react@19.1.1)
       nodemailer:
-        specifier: ^7.0.6
-        version: 7.0.6
+        specifier: ^7.0.7
+        version: 7.0.10
       p-limit:
         specifier: ^7.1.1
         version: 7.1.1
@@ -4920,8 +4920,8 @@ packages:
   make-event-props@1.6.2:
     resolution: {integrity: sha512-iDwf7mA03WPiR8QxvcVHmVWEPfMY1RZXerDVNCRYW7dUr2ppH3J58Rwb39/WG39yTZdRSxr3x+2v22tvI0VEvA==}
 
-  mammoth@1.10.0:
-    resolution: {integrity: sha512-9HOmqt8uJ5rz7q8XrECU5gRjNftCq4GNG0YIrA6f9iQPCeLgpvgcmRBHi9NQWJQIpT/MAXeg1oKliAK1xoB3eg==}
+  mammoth@1.11.0:
+    resolution: {integrity: sha512-BcEqqY/BOwIcI1iR5tqyVlqc3KIaMRa4egSoK83YAVrBf6+yqdAAbtUcFDCWX8Zef8/fgNZ6rl4VUv+vVX8ddQ==}
     engines: {node: '>=12.0.0'}
     hasBin: true
 
@@ -5228,12 +5228,12 @@ packages:
   neo-async@2.6.2:
     resolution: {integrity: sha512-Yd3UES5mWCSqR+qNT93S3UoYUkqAZ9lLg8a7g9rimsWmYGK8cVToA4/sF3RrshdyV3sAGMXVUmpMYOw+dLpOuw==}
 
-  next-auth@4.24.11:
-    resolution: {integrity: sha512-pCFXzIDQX7xmHFs4KVH4luCjaCbuPRtZ9oBUjUhOk84mZ9WVPf94n87TxYI4rSRf9HmfHEF8Yep3JrYDVOo3Cw==}
+  next-auth@4.24.13:
+    resolution: {integrity: sha512-sgObCfcfL7BzIK76SS5TnQtc3yo2Oifp/yIpfv6fMfeBOiBJkDWF3A2y9+yqnmJ4JKc2C+nMjSjmgDeTwgN1rQ==}
     peerDependencies:
-      '@auth/core': 0.34.2
-      next: ^12.2.5 || ^13 || ^14 || ^15
-      nodemailer: ^6.6.5
+      '@auth/core': 0.34.3
+      next: ^12.2.5 || ^13 || ^14 || ^15 || ^16
+      nodemailer: ^7.0.7
       react: ^17.0.2 || ^18 || ^19
       react-dom: ^17.0.2 || ^18 || ^19
     peerDependenciesMeta:
@@ -5283,8 +5283,8 @@ packages:
   node-releases@2.0.19:
     resolution: {integrity: sha512-xxOWJsBKtzAq7DY0J+DTzuz58K8e7sJbdgwkbMWQe8UYB6ekmsQ45q0M/tJDsGaZmbC+l7n57UV8Hl5tHxO9uw==}
 
-  nodemailer@7.0.6:
-    resolution: {integrity: sha512-F44uVzgwo49xboqbFgBGkRaiMgtoBrBEWCVincJPK9+S9Adkzt/wXCLKbf7dxucmxfTI5gHGB+bEmdyzN6QKjw==}
+  nodemailer@7.0.10:
+    resolution: {integrity: sha512-Us/Se1WtT0ylXgNFfyFSx4LElllVLJXQjWi2Xz17xWw7amDKO2MLtFnVp1WACy7GkVGs+oBlRopVNUzlrGSw1w==}
     engines: {node: '>=6.0.0'}
 
   nopt@5.0.0:
@@ -6972,7 +6972,7 @@ snapshots:
       '@csstools/css-tokenizer': 3.0.4
       lru-cache: 10.4.3
 
-  '@auth/core@0.40.0(nodemailer@7.0.6)':
+  '@auth/core@0.40.0(nodemailer@7.0.10)':
     dependencies:
       '@panva/hkdf': 1.2.1
       jose: 6.1.0
@@ -6980,11 +6980,11 @@ snapshots:
       preact: 10.24.3
       preact-render-to-string: 6.5.11(preact@10.24.3)
     optionalDependencies:
-      nodemailer: 7.0.6
+      nodemailer: 7.0.10
 
-  '@auth/drizzle-adapter@1.10.0(nodemailer@7.0.6)':
+  '@auth/drizzle-adapter@1.10.0(nodemailer@7.0.10)':
     dependencies:
-      '@auth/core': 0.40.0(nodemailer@7.0.6)
+      '@auth/core': 0.40.0(nodemailer@7.0.10)
     transitivePeerDependencies:
       - '@simplewebauthn/browser'
       - '@simplewebauthn/server'
@@ -12101,7 +12101,7 @@ snapshots:
 
   make-event-props@1.6.2: {}
 
-  mammoth@1.10.0:
+  mammoth@1.11.0:
     dependencies:
       '@xmldom/xmldom': 0.8.11
       argparse: 1.0.10
@@ -12603,9 +12603,9 @@ snapshots:
 
   neo-async@2.6.2: {}
 
-  next-auth@4.24.11(next@15.5.2(@babel/core@7.28.3)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(nodemailer@7.0.6)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
+  next-auth@4.24.13(next@15.5.2(@babel/core@7.28.3)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1))(nodemailer@7.0.10)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
-      '@babel/runtime': 7.28.3
+      '@babel/runtime': 7.28.4
       '@panva/hkdf': 1.2.1
       cookie: 0.7.2
       jose: 4.15.9
@@ -12618,7 +12618,7 @@ snapshots:
       react-dom: 19.1.1(react@19.1.1)
       uuid: 8.3.2
     optionalDependencies:
-      nodemailer: 7.0.6
+      nodemailer: 7.0.10
 
   next@15.5.2(@babel/core@7.28.3)(@opentelemetry/api@1.9.0)(@playwright/test@1.51.1)(react-dom@19.1.1(react@19.1.1))(react@19.1.1):
     dependencies:
@@ -12655,7 +12655,7 @@ snapshots:
 
   node-releases@2.0.19: {}
 
-  nodemailer@7.0.6: {}
+  nodemailer@7.0.10: {}
 
   nopt@5.0.0:
     dependencies:
