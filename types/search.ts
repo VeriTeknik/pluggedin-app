@@ -35,6 +35,8 @@ export interface McpIndex {
   tags?: string[]; // For tagging
   updated_at?: string; // Last update timestamp
   url?: string | null; // URL for SSE servers
+  transport?: 'stdio' | 'sse' | 'streamable-http'; // Transport type for remote servers
+  headers?: Record<string, string>; // HTTP headers for streamable-http servers
   rating?: number; // Average user rating (1-5)
   ratingCount?: number; // Number of ratings (Changed from rating_count)
   installation_count?: number; // Number of installations

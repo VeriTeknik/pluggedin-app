@@ -222,6 +222,25 @@
     },
     "messages": {
       "updateSuccess": "Serverconfiguratie succesvol bijgewerkt."
+    },
+    "test": {
+      "authRequired": "Authenticatie vereist - voeg server toe om te authenticeren",
+      "authRequiredDetail": "Deze server vereist authenticatie. Klik na toevoegen op de knop \"Authenticeren\" om uw account te koppelen.",
+      "mcpRemoteVerified": "mcp-remote proxy server geverifieerd",
+      "httpError": "Server retourneerde HTTP-fout",
+      "mcpRemoteAvailable": "mcp-remote commando beschikbaar (externe verbinding wordt bij gebruik getest)",
+      "invalidHeaders": "Ongeldige headers opgegeven",
+      "connectionVerified": "MCP server verbinding geverifieerd",
+      "parseError": "Kon serverreactie niet parseren",
+      "invalidSseFormat": "Ongeldig SSE reactieformaat",
+      "connectionFailed": "Kon geen verbinding maken met MCP server",
+      "connectionSuccessful": "Verbinding succesvol",
+      "connectionSuccessfulOptions": "Verbinding succesvol (OPTIONS)",
+      "npxAvailable": "Commando beschikbaar (npx pakket wordt bij eerste gebruik geïnstalleerd)",
+      "commandAvailable": "Commando beschikbaar",
+      "commandNotFound": "Commando niet gevonden",
+      "invalidConfig": "Ongeldige configuratie",
+      "testFailed": "Test mislukt"
     }
   }
 }

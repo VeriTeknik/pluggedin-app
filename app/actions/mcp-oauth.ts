@@ -3,7 +3,7 @@
 import { and, eq } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
+import { mcpServersTable, mcpServerOAuthTokensTable, profilesTable, projectsTable } from '@/db/schema';
 import { getAuthSession } from '@/lib/auth';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { oauthStateManager } from '@/lib/mcp/oauth/OAuthStateManager';
@@ -62,7 +62,41 @@ export async function getMcpServerOAuthStatus(serverUuid: string): Promise<{
     let provider: string | undefined;
     let lastAuthenticated: Date | undefined;
 
-    // First check config for OAuth completion
+    // Check new storage locations first (priority 1: mcp_server_oauth_tokens table)
+    const oauthToken = await db.query.mcpServerOAuthTokensTable.findFirst({
+      where: eq(mcpServerOAuthTokensTable.server_uuid, serverUuid),
+    });
+
+    if (oauthToken) {
+      isAuthenticated = true;
+      lastAuthenticated = oauthToken.updated_at || oauthToken.created_at;
+      // Determine provider from server URL or name
+      if (server.url) {
+        provider = determineProviderFromUrl(server.url);
+      } else if (server.name) {
+        provider = server.name;
+      }
+    }
+
+    // Check streamable_http_options_encrypted (priority 2: new OAuth storage)
+    if (!isAuthenticated && server.streamable_http_options_encrypted) {
+      try {
+        const decrypted = decryptServerData({ streamable_http_options_encrypted: server.streamable_http_options_encrypted });
+        if (decrypted.streamableHTTPOptions?.headers?.Authorization) {
+          isAuthenticated = true;
+          if (!lastAuthenticated) {
+            lastAuthenticated = new Date(); // Authenticated via encrypted OAuth token
+          }
+          if (!provider && server.url) {
+            provider = determineProviderFromUrl(server.url);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to decrypt streamable_http_options:', e);
+      }
+    }
+
+    // Then check config for OAuth completion (legacy)
     const config = server.config as Record<string, any>;
     if (config?.oauth_completed_at) {
       isAuthenticated = true;
@@ -192,18 +226,24 @@ export async function clearMcpServerOAuth(serverUuid: string): Promise<{
       return { success: false, error: 'Server profile not found' };
     }
 
+    // Priority 1: Delete OAuth tokens from dedicated tokens table
+    await db
+      .delete(mcpServerOAuthTokensTable)
+      .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
+    console.log('[Clear OAuth] Deleted OAuth tokens from dedicated table');
+
     // Decrypt server data to get current environment
     const decryptedData = await decryptServerData(server);
-    
+
     // Clear OAuth tokens from environment
     const env = { ...(decryptedData.env || {}) };
-    
+
     // Remove common OAuth token keys
     delete env.LINEAR_API_KEY;
     delete env.LINEAR_OAUTH_TOKEN;
     delete env.OAUTH_ACCESS_TOKEN;
     delete env.ACCESS_TOKEN;
-    
+
     // Clear OAuth from streamable options
     if (env.__streamableHTTPOptions) {
       try {
@@ -218,6 +258,22 @@ export async function clearMcpServerOAuth(serverUuid: string): Promise<{
       }
     }
 
+    // Priority 2: Clear streamable_http_options_encrypted (Authorization headers)
+    let clearedStreamableOptions = null;
+    if (server.streamable_http_options_encrypted || decryptedData.streamableHTTPOptions) {
+      const options = decryptedData.streamableHTTPOptions || {};
+      // Remove Authorization header and OAuth data
+      if (options.headers) {
+        delete options.headers.Authorization;
+        delete options.headers.authorization;
+      }
+      // Only keep the options if there are other headers/config remaining
+      if (options.headers && Object.keys(options.headers).length > 0) {
+        clearedStreamableOptions = encryptField(options);
+      }
+      console.log('[Clear OAuth] Cleared Authorization headers from streamable options');
+    }
+
     // Also clear OAuth status from config
     const config = { ...(server.config as Record<string, any> || {}) };
     delete config.oauth_completed_at;
@@ -230,9 +286,10 @@ export async function clearMcpServerOAuth(serverUuid: string): Promise<{
     // Update the server
     await db
       .update(mcpServersTable)
-      .set({ 
+      .set({
         env_encrypted: encryptedEnv,
         env: null, // Clear old unencrypted env
+        streamable_http_options_encrypted: clearedStreamableOptions,
         config,
       })
       .where(eq(mcpServersTable.uuid, serverUuid));

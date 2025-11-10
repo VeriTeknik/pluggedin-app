@@ -35,10 +35,12 @@ interface TestConfig {
 
 interface TestResult {
   success: boolean;
-  message: string;
+  messageKey: string; // Translation key instead of hardcoded message
+  message?: string; // Deprecated: kept for backwards compatibility
   details?: {
     capabilities?: string[];
     error?: string;
+    errorKey?: string; // Translation key for error
     corsIssue?: boolean;
     corsDetails?: string;
     requiresAuth?: boolean;
@@ -139,17 +141,17 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
           if (response.status === 401) {
             return {
               success: true, // The server is reachable, just needs auth
-              message: 'This server requires authentication. After adding it, you\'ll see an "Authenticate" button to connect your account.',
+              messageKey: 'mcpServers.test.authRequired',
               details: {
                 requiresAuth: true,
-                error: 'Authentication is required to use this server. The server is reachable but needs you to authenticate first.',
+                errorKey: 'mcpServers.test.authRequiredDetail',
                 capabilities: ['Server verified - authentication required'],
               },
             };
           } else if (response.ok || response.status === 405) {
             return {
               success: true,
-              message: 'mcp-remote proxy server verified',
+              messageKey: 'mcpServers.test.mcpRemoteVerified',
               details: {
                 capabilities: ['Remote server connection verified'],
               },
@@ -157,7 +159,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
           } else {
             return {
               success: false,
-              message: `Remote server returned HTTP ${response.status}`,
+              messageKey: 'mcpServers.test.httpError',
               details: {
                 error: `HTTP ${response.status}: ${response.statusText}`,
               },
@@ -167,7 +169,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
           // If we can't reach the remote URL, still pass since mcp-remote will handle it
           return {
             success: true,
-            message: 'mcp-remote command available (remote connection will be tested on use)',
+            messageKey: 'mcpServers.test.mcpRemoteAvailable',
             details: {
               capabilities: ['mcp-remote proxy available'],
             },
@@ -189,7 +191,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
         if (!headerValidation.valid) {
           return {
             success: false,
-            message: 'Invalid headers provided',
+            messageKey: 'mcpServers.test.invalidHeaders',
             details: {
               error: headerValidation.error,
             },
@@ -210,6 +212,31 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
           'Accept': 'application/json, text/event-stream',
         };
         try {
+          // ✅ First, check if server requires authentication with a simple HEAD request
+          // This avoids CORS issues from POST requests without auth
+          try {
+            const headResponse = await fetch(validated.url, {
+              method: 'HEAD',
+              headers,
+              signal: AbortSignal.timeout(5000),
+            });
+
+            if (headResponse.status === 401) {
+              return {
+                success: true, // The server is reachable, just needs auth
+                messageKey: 'mcpServers.test.authRequired',
+                details: {
+                  requiresAuth: true,
+                  errorKey: 'mcpServers.test.authRequiredDetail',
+                  capabilities: ['Server verified - authentication required'],
+                },
+              };
+            }
+          } catch {
+            // If HEAD fails, continue to initialize request
+            // The server might not support HEAD
+          }
+
           // Try to send an initialize request
           const initResponse = await fetch(validated.url, {
             method: 'POST',
@@ -246,7 +273,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
                   const data = JSON.parse(dataMatch[1]);
                   return {
                     success: true,
-                    message: 'MCP server connection verified',
+                    messageKey: 'mcpServers.test.connectionVerified',
                     details: {
                       capabilities: data.result?.capabilities ? Object.keys(data.result.capabilities) : ['Server initialized'],
                     },
@@ -254,7 +281,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
                 } catch (parseError) {
                   return {
                     success: false,
-                    message: 'Failed to parse server response',
+                    messageKey: 'mcpServers.test.parseError',
                     details: {
                       error: parseError instanceof Error ? parseError.message : 'Invalid SSE response format',
                     },
@@ -263,19 +290,19 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
               } else {
                 return {
                   success: false,
-                  message: 'Invalid SSE response format',
+                  messageKey: 'mcpServers.test.invalidSseFormat',
                   details: {
                     error: 'No data field found in SSE response',
                   },
                 };
               }
             }
-            
+
             // Standard JSON response handling
             const data = await initResponse.json();
             return {
               success: true,
-              message: 'MCP server connection verified',
+              messageKey: 'mcpServers.test.connectionVerified',
               details: {
                 capabilities: data.result?.capabilities ? Object.keys(data.result.capabilities) : ['Server initialized'],
               },
@@ -298,10 +325,10 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
             if (requiresAuth) {
               return {
                 success: true, // The server is reachable, just needs auth
-                message: 'This server requires authentication. After adding it, you\'ll see an "Authenticate" button to connect your account.',
+                messageKey: 'mcpServers.test.authRequired',
                 details: {
                   requiresAuth: true,
-                  error: 'Authentication is required to use this server. The server is reachable but needs you to authenticate first.',
+                  errorKey: 'mcpServers.test.authRequiredDetail',
                   capabilities: ['Server verified - authentication required'],
                   ...corsDetails,
                 },
@@ -310,7 +337,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
             
             return {
               success: false,
-              message: `Server returned HTTP ${initResponse.status}`,
+              messageKey: 'mcpServers.test.httpError',
               details: {
                 error: `HTTP ${initResponse.status}: ${initResponse.statusText}${responseText ? ` - ${responseText}` : ''}`,
                 requiresAuth: false,
@@ -321,10 +348,10 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
         } catch (error) {
           // Check if it's a network error that might be CORS-related
           const corsDetails = checkForCorsNetworkError(error);
-          
+
           return {
             success: false,
-            message: 'Failed to connect to MCP server',
+            messageKey: 'mcpServers.test.connectionFailed',
             details: {
               error: error instanceof Error ? error.message : 'Connection failed',
               ...corsDetails,
@@ -345,7 +372,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
         if (response.ok || response.status === 405) { // 405 Method Not Allowed is OK for HEAD
           return {
             success: true,
-            message: `Connection successful (HTTP ${response.status})`,
+            messageKey: 'mcpServers.test.connectionSuccessful',
             details: {
               capabilities: ['Connection verified'],
             },
@@ -353,7 +380,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
         } else {
           return {
             success: false,
-            message: `Server returned HTTP ${response.status}`,
+            messageKey: 'mcpServers.test.httpError',
             details: {
               error: `HTTP ${response.status}: ${response.statusText}`,
             },
@@ -371,7 +398,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
           if (optionsResponse.ok) {
             return {
               success: true,
-              message: 'Connection successful (OPTIONS)',
+              messageKey: 'mcpServers.test.connectionSuccessfulOptions',
               details: {
                 capabilities: ['Connection verified via OPTIONS'],
               },
@@ -383,7 +410,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
 
         return {
           success: false,
-          message: 'Failed to connect to server',
+          messageKey: 'mcpServers.test.connectionFailed',
           details: {
             error: fetchError instanceof Error ? fetchError.message : 'Connection failed',
           },
@@ -407,7 +434,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
         if (validated.command === 'npx' && validated.args?.[0]) {
           return {
             success: true,
-            message: 'Command available (npx package will be installed on first use)',
+            messageKey: 'mcpServers.test.npxAvailable',
             details: {
               capabilities: ['Command verified'],
             },
@@ -416,7 +443,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
 
         return {
           success: true,
-          message: 'Command available',
+          messageKey: 'mcpServers.test.commandAvailable',
           details: {
             capabilities: ['Command verified'],
           },
@@ -424,7 +451,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
       } catch (_error) {
         return {
           success: false,
-          message: 'Command not found',
+          messageKey: 'mcpServers.test.commandNotFound',
           details: {
             error: `Command '${validated.command}' not found in PATH`,
           },
@@ -434,7 +461,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
 
     return {
       success: false,
-      message: 'Invalid configuration',
+      messageKey: 'mcpServers.test.invalidConfig',
       details: {
         error: 'Missing required fields for server type',
       },
@@ -442,7 +469,7 @@ export async function testMcpConnection(config: TestConfig): Promise<TestResult>
   } catch (error) {
     return {
       success: false,
-      message: 'Test failed',
+      messageKey: 'mcpServers.test.testFailed',
       details: {
         error: error instanceof Error ? error.message : 'Unknown error',
       },

@@ -30,10 +30,10 @@ import { ReviewsDialog } from './ReviewsDialog';
 // Helper function to format environment variables
 function formatEnvVariables(envs: string[] | Array<{ name: string; description?: string }> | undefined): string {
   if (!envs || !Array.isArray(envs)) return '';
-  
+
   // Handle both string array and object array formats
   if (envs.length === 0) return '';
-  
+
   // Check if it's an array of strings or objects
   if (typeof envs[0] === 'string') {
     // Old format: string[]
@@ -46,6 +46,23 @@ function formatEnvVariables(envs: string[] | Array<{ name: string; description?:
         return env.description ? `${line} # ${env.description}` : line;
       })
       .join('\n');
+  }
+}
+
+// Helper function to map transport string to McpServerType enum
+function mapTransportToServerType(
+  transport: string | undefined,
+  url: string | null | undefined
+): McpServerType {
+  if (transport === 'streamable-http') {
+    return McpServerType.STREAMABLE_HTTP;
+  } else if (transport === 'sse') {
+    return McpServerType.SSE;
+  } else if (transport === 'stdio' || !url) {
+    return McpServerType.STDIO;
+  } else {
+    // Fallback: if no transport specified but has URL, assume SSE (legacy behavior)
+    return McpServerType.SSE;
   }
 }
 
@@ -182,17 +199,20 @@ export default function CardGrid({
         
         if (data.success && data.server) {
           const detailedItem = data.server;
-          // Determine if this is a stdio or SSE server
-          const isSSE = detailedItem.url || false;
-          
+          // Determine server type from transport field
+          const serverType = mapTransportToServerType(detailedItem.transport, detailedItem.url);
+          const isRemote = serverType !== McpServerType.STDIO;
+
           setSelectedServer({
             name: detailedItem.name,
             description: detailedItem.description,
-            command: isSSE ? '' : detailedItem.command || '',
-            args: isSSE ? [] : (Array.isArray(detailedItem.args) ? detailedItem.args : []) || [],
-            env: isSSE ? '' : formatEnvVariables(detailedItem.envs),
-            url: isSSE ? detailedItem.url : undefined,
-            type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
+            command: isRemote ? '' : detailedItem.command || '',
+            args: isRemote ? [] : (Array.isArray(detailedItem.args) ? detailedItem.args : []) || [],
+            env: formatEnvVariables(detailedItem.envs),
+            url: detailedItem.url || undefined,
+            type: serverType,
+            transport: detailedItem.transport,
+            headers: detailedItem.headers,
             source: item.source,
             external_id: item.external_id,
           });
@@ -207,16 +227,19 @@ export default function CardGrid({
     }
     
     // For non-registry servers or if fetch failed, use existing data
-    const isSSE = item.url || false;
-    
+    const serverType = mapTransportToServerType(item.transport, item.url);
+    const isRemote = serverType !== McpServerType.STDIO;
+
     setSelectedServer({
       name: item.name,
       description: item.description,
-      command: isSSE ? '' : item.command || '',
-      args: isSSE ? [] : (Array.isArray(item.args) ? item.args : []) || [],
-      env: isSSE ? '' : formatEnvVariables(item.envs),
-      url: isSSE ? item.url : undefined,
-      type: isSSE ? McpServerType.SSE : McpServerType.STDIO,
+      command: isRemote ? '' : item.command || '',
+      args: isRemote ? [] : (Array.isArray(item.args) ? item.args : []) || [],
+      env: formatEnvVariables(item.envs),
+      url: item.url || undefined,
+      type: serverType,
+      transport: item.transport,
+      headers: item.headers,
       source: item.source,
       external_id: item.external_id,
     });

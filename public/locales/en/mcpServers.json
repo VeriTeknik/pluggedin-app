@@ -271,6 +271,25 @@
           "networkError": "Network error occurred"
         }
       }
+    },
+    "test": {
+      "authRequired": "Authentication required - add server to authenticate",
+      "authRequiredDetail": "This server requires authentication. After adding it, click the \"Authenticate\" button to connect your account.",
+      "mcpRemoteVerified": "mcp-remote proxy server verified",
+      "httpError": "Server returned HTTP error",
+      "mcpRemoteAvailable": "mcp-remote command available (remote connection will be tested on use)",
+      "invalidHeaders": "Invalid headers provided",
+      "connectionVerified": "MCP server connection verified",
+      "parseError": "Failed to parse server response",
+      "invalidSseFormat": "Invalid SSE response format",
+      "connectionFailed": "Failed to connect to MCP server",
+      "connectionSuccessful": "Connection successful",
+      "connectionSuccessfulOptions": "Connection successful (OPTIONS)",
+      "npxAvailable": "Command available (npx package will be installed on first use)",
+      "commandAvailable": "Command available",
+      "commandNotFound": "Command not found",
+      "invalidConfig": "Invalid configuration",
+      "testFailed": "Test failed"
     }
   }
 }

@@ -14,11 +14,167 @@ interface RateLimitStore {
   };
 }
 
-// In-memory store for rate limiting
-// In production, use Redis or similar for distributed systems
+// Rate limit store interface for different backends
+interface RateLimitBackend {
+  get(key: string): Promise<{ count: number; resetTime: number } | null>;
+  set(key: string, value: { count: number; resetTime: number }): Promise<void>;
+  increment(key: string): Promise<number>;
+  delete(key: string): Promise<void>;
+}
+
+// In-memory store implementation
+class MemoryRateLimitStore implements RateLimitBackend {
+  private store: RateLimitStore = {};
+
+  async get(key: string) {
+    return this.store[key] || null;
+  }
+
+  async set(key: string, value: { count: number; resetTime: number }) {
+    this.store[key] = value;
+  }
+
+  async increment(key: string): Promise<number> {
+    if (this.store[key]) {
+      this.store[key].count++;
+      return this.store[key].count;
+    }
+    return 0;
+  }
+
+  async delete(key: string) {
+    delete this.store[key];
+  }
+
+  cleanup() {
+    const now = Date.now();
+    Object.keys(this.store).forEach(key => {
+      if (this.store[key].resetTime < now) {
+        delete this.store[key];
+      }
+    });
+  }
+}
+
+// Redis store implementation (optional)
+class RedisRateLimitStore implements RateLimitBackend {
+  private client: any;
+  private connected: boolean = false;
+
+  constructor(redisUrl: string) {
+    // Lazy load Redis client - gracefully handle if not installed
+    try {
+      // Dynamic import to avoid build-time errors
+      const redis = require('redis');
+      this.client = redis.createClient({ url: redisUrl });
+      this.client.connect()
+        .then(() => {
+          this.connected = true;
+          console.log('[RateLimit] Redis connected successfully');
+        })
+        .catch((error: Error) => {
+          console.error('[RateLimit] Redis connection failed:', error.message);
+          this.connected = false;
+        });
+    } catch (error) {
+      console.error('[RateLimit] Redis module not found. Install with: npm install redis');
+      this.connected = false;
+      throw error; // Re-throw to trigger fallback to memory store
+    }
+  }
+
+  async get(key: string) {
+    if (!this.connected) return null;
+    try {
+      const data = await this.client.get(`ratelimit:${key}`);
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.error('[RateLimit] Redis get error:', error);
+      return null;
+    }
+  }
+
+  async set(key: string, value: { count: number; resetTime: number }) {
+    if (!this.connected) return;
+    try {
+      const ttl = Math.ceil((value.resetTime - Date.now()) / 1000);
+      await this.client.setEx(`ratelimit:${key}`, ttl, JSON.stringify(value));
+    } catch (error) {
+      console.error('[RateLimit] Redis set error:', error);
+    }
+  }
+
+  async increment(key: string): Promise<number> {
+    if (!this.connected) return 0;
+    try {
+      return await this.client.incr(`ratelimit:${key}:count`);
+    } catch (error) {
+      console.error('[RateLimit] Redis increment error:', error);
+      return 0;
+    }
+  }
+
+  async delete(key: string) {
+    if (!this.connected) return;
+    try {
+      await this.client.del(`ratelimit:${key}`);
+    } catch (error) {
+      console.error('[RateLimit] Redis delete error:', error);
+    }
+  }
+}
+
+// Check if Redis module is available
+function isRedisAvailable(): boolean {
+  try {
+    require.resolve('redis');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// Initialize rate limit backend
+let rateLimitBackend: RateLimitBackend;
+
+if (process.env.REDIS_URL) {
+  if (isRedisAvailable()) {
+    try {
+      rateLimitBackend = new RedisRateLimitStore(process.env.REDIS_URL);
+      console.log('[RateLimit] Using Redis backend for distributed rate limiting');
+    } catch (error) {
+      console.error('[RateLimit] Failed to initialize Redis, falling back to memory store');
+      rateLimitBackend = new MemoryRateLimitStore();
+    }
+  } else {
+    console.warn('⚠️  [RateLimit] REDIS_URL configured but redis module not installed');
+    console.warn('⚠️  [RateLimit] Install with: npm install redis');
+    console.warn('⚠️  [RateLimit] Falling back to in-memory rate limiting');
+    rateLimitBackend = new MemoryRateLimitStore();
+  }
+} else {
+  rateLimitBackend = new MemoryRateLimitStore();
+
+  // SECURITY WARNING: In-memory store is not safe for multi-instance deployments
+  if (process.env.NODE_ENV === 'production') {
+    console.warn('⚠️  [RateLimit] WARNING: Using in-memory rate limiting in production!');
+    console.warn('⚠️  [RateLimit] This is NOT SAFE for multi-instance deployments.');
+    console.warn('⚠️  [RateLimit] Configure REDIS_URL environment variable for distributed rate limiting.');
+    console.warn('⚠️  [RateLimit] Install redis: npm install redis');
+  }
+}
+
+// Legacy in-memory store for backward compatibility
 const store: RateLimitStore = {};
 
-// Clean up expired entries periodically
+// Clean up expired entries periodically (only for memory store)
+if (rateLimitBackend instanceof MemoryRateLimitStore) {
+  setInterval(() => {
+    (rateLimitBackend as MemoryRateLimitStore).cleanup();
+  }, 60000); // Clean every minute
+}
+
+// Legacy cleanup for backward compatibility
 setInterval(() => {
   const now = Date.now();
   Object.keys(store).forEach(key => {
@@ -26,7 +182,7 @@ setInterval(() => {
       delete store[key];
     }
   });
-}, 60000); // Clean every minute
+}, 60000);
 
 /**
  * Default key generator using IP address
@@ -42,28 +198,34 @@ async function defaultKeyGenerator(req: NextRequest): Promise<string> {
 
 /**
  * Rate limiter middleware
+ * Uses configured backend (Redis or in-memory)
  */
 export function createRateLimiter(config: RateLimitConfig) {
   const { windowMs, max, keyGenerator = defaultKeyGenerator } = config;
-  
+
   return async function rateLimit(req: NextRequest): Promise<{ allowed: boolean; limit: number; remaining: number; reset: number }> {
     const key = await keyGenerator(req);
     const now = Date.now();
-    
-    // Get or create rate limit entry
-    if (!store[key] || store[key].resetTime < now) {
-      store[key] = {
-        count: 0,
+
+    // Get or create rate limit entry from backend
+    let entry = await rateLimitBackend.get(key);
+
+    if (!entry || entry.resetTime < now) {
+      // New window
+      entry = {
+        count: 1,
         resetTime: now + windowMs,
       };
+      await rateLimitBackend.set(key, entry);
+    } else {
+      // Increment existing entry
+      entry.count++;
+      await rateLimitBackend.set(key, entry);
     }
-    
-    const entry = store[key];
-    entry.count++;
-    
+
     const allowed = entry.count <= max;
     const remaining = Math.max(0, max - entry.count);
-    
+
     return {
       allowed,
       limit: max,
@@ -122,7 +284,7 @@ export const RateLimiters = {
 
 /**
  * Simple rate limiter for server actions
- * Uses in-memory store (should use Redis in production)
+ * Uses configured backend (Redis or in-memory)
  */
 export const rateLimiter = {
   check: async (key: string, max: number, windowSeconds: number) => {
@@ -130,21 +292,26 @@ export const rateLimiter = {
     const windowMs = windowSeconds * 1000;
     const resetTime = now + windowMs;
 
-    if (!store[key] || store[key].resetTime < now) {
+    // Get or create rate limit entry from backend
+    let entry = await rateLimitBackend.get(key);
+
+    if (!entry || entry.resetTime < now) {
       // New window
-      store[key] = { count: 1, resetTime };
+      entry = { count: 1, resetTime };
+      await rateLimitBackend.set(key, entry);
       return { success: true, remaining: max - 1, reset: Math.floor(windowSeconds) };
     }
 
     // Increment count
-    store[key].count++;
-    const allowed = store[key].count <= max;
-    const remaining = Math.max(0, max - store[key].count);
+    entry.count++;
+    await rateLimitBackend.set(key, entry);
+    const allowed = entry.count <= max;
+    const remaining = Math.max(0, max - entry.count);
 
     return {
       success: allowed,
       remaining,
-      reset: Math.ceil((store[key].resetTime - now) / 1000),
+      reset: Math.ceil((entry.resetTime - now) / 1000),
     };
   }
 };

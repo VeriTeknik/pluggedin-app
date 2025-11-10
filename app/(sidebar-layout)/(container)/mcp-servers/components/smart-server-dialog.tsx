@@ -72,8 +72,16 @@ interface InputAnalysis {
 
 interface TestResult {
   success: boolean;
-  message: string;
-  details?: any;
+  messageKey?: string; // Translation key for the message
+  message?: string; // Deprecated: kept for backwards compatibility
+  details?: {
+    capabilities?: string[];
+    error?: string;
+    errorKey?: string;
+    corsIssue?: boolean;
+    corsDetails?: string;
+    requiresAuth?: boolean;
+  };
 }
 
 // Example configurations
@@ -143,7 +151,7 @@ export function SmartServerDialog({
   onWizardSuccess,
   currentProfileUuid
 }: SmartServerDialogProps) {
-  const { } = useTranslation();
+  const { t } = useTranslation();
   const [mode, setMode] = useState<'quick' | 'wizard'>('quick');
   const [input, setInput] = useState('');
   const [analysis, setAnalysis] = useState<InputAnalysis | null>(null);
@@ -952,12 +960,17 @@ export function SmartServerDialog({
                         {config.env && Object.keys(config.env).length > 0 && (
                           <p><span className="font-medium">Env:</span> {Object.keys(config.env).join(', ')}</p>
                         )}
-                        {testResult?.message && (
+                        {(testResult?.messageKey || testResult?.message) && (
                           <p className={cn(
                             "text-xs",
                             testResult.success ? "text-green-600" : "text-destructive"
                           )}>
-                            {testResult.message}
+                            {testResult.messageKey ? (t(testResult.messageKey) || testResult.messageKey) : testResult.message}
+                          </p>
+                        )}
+                        {testResult?.details?.requiresAuth && !testResult.messageKey && !testResult.message && (
+                          <p className="text-xs text-green-600">
+                            {t('mcpServers.test.authRequired')}
                           </p>
                         )}
                       </CardContent>

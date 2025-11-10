@@ -222,6 +222,25 @@
     "placeholders": {
       "serverName": "Sunucu adını girin",
       "description": "Açıklama eklemek için tıklayın..."
+    },
+    "test": {
+      "authRequired": "Kimlik doğrulama gerekli - kimlik doğrulamak için sunucuyu ekleyin",
+      "authRequiredDetail": "Bu sunucu kimlik doğrulama gerektiriyor. Ekledikten sonra hesabınızı bağlamak için \"Kimlik Doğrula\" düğmesine tıklayın.",
+      "mcpRemoteVerified": "mcp-remote proxy sunucusu doğrulandı",
+      "httpError": "Sunucu HTTP hatası döndürdü",
+      "mcpRemoteAvailable": "mcp-remote komutu mevcut (uzak bağlantı kullanımda test edilecek)",
+      "invalidHeaders": "Geçersiz başlıklar sağlandı",
+      "connectionVerified": "MCP sunucu bağlantısı doğrulandı",
+      "parseError": "Sunucu yanıtı ayrıştırılamadı",
+      "invalidSseFormat": "Geçersiz SSE yanıt biçimi",
+      "connectionFailed": "MCP sunucusuna bağlanılamadı",
+      "connectionSuccessful": "Bağlantı başarılı",
+      "connectionSuccessfulOptions": "Bağlantı başarılı (OPTIONS)",
+      "npxAvailable": "Komut mevcut (npx paketi ilk kullanımda yüklenecek)",
+      "commandAvailable": "Komut mevcut",
+      "commandNotFound": "Komut bulunamadı",
+      "invalidConfig": "Geçersiz yapılandırma",
+      "testFailed": "Test başarısız oldu"
     }
   }
 }

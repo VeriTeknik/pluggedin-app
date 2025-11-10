@@ -831,7 +831,7 @@ export function IntelligentServerDialog({
       
       setTestResults(prev => new Map(prev).set(testId, {
         success: result.success,
-        message: result.message,
+        message: result.message ?? 'Test completed',
         details: result.details,
       }));
     } catch (error) {

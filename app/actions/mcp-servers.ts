@@ -3,19 +3,19 @@
 import { and, desc, eq, isNull, like, not, or } from 'drizzle-orm';
 
 import { db } from '@/db';
-import { 
-  customInstructionsTable, 
-  McpServerSource, 
-  mcpServersTable, 
-  McpServerStatus, 
-  McpServerType, 
-  profilesTable, 
+import {
+  customInstructionsTable,
+  McpServerSource,
+  mcpServersTable,
+  McpServerStatus,
+  McpServerType,
+  profilesTable,
   projectsTable,
   serverInstallationsTable,
-  users 
+  users
 } from '@/db/schema';
-import { auditLog, AuditLogActions,AuditLogTypes } from '@/lib/audit-logger';
 import { withProfileAuth } from '@/lib/auth-helpers';
+import { mcpServerOperations } from '@/lib/mcp/metrics';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { validateCommand, validateCommandArgs, validateHeaders, validateMcpUrl } from '@/lib/security/validators';
 import { formatRateLimitError,rateLimitServerAction, ServerActionRateLimits } from '@/lib/server-action-rate-limiter';
@@ -224,18 +224,22 @@ export async function deleteMcpServerByUuid(
       )
     );
 
-  // Audit log the successful deletion
-  await auditLog({
-    profileUuid,
-    type: AuditLogTypes.SERVER_DELETE,
-    action: AuditLogActions.DELETE,
+  // Track server deletion (Prometheus + Loki)
+  mcpServerOperations.inc({
+    operation: 'delete',
+    server_type: server?.type || 'unknown',
+    status: 'success'
+  });
+
+  console.log('[MCP Server Delete]', {
+    operation: 'delete',
     serverUuid: uuid,
+    serverName: server?.name || 'Unknown',
+    serverType: server?.type,
+    profileUuid,
     userId,
-    metadata: {
-      serverName: server?.name || 'Unknown',
-      status: 'success'
-    }
-    });
+    timestamp: new Date().toISOString()
+  });
   });
 }
 
@@ -280,17 +284,7 @@ export async function updateMcpServer(
     try {
       // Apply rate limiting for modification operations
       await applyRateLimit(userId, 'update-server', ServerActionRateLimits.serverModification);
-    
-    // Audit log the update attempt
-    await auditLog({
-      profileUuid,
-      type: AuditLogTypes.SERVER_UPDATE,
-      action: AuditLogActions.UPDATE,
-      serverUuid: uuid,
-      userId,
-      metadata: { fieldsUpdated: Object.keys(data) },
-    });
-    
+
     // Validate slug if it's being updated
     if (data.name !== undefined) {
       const slugValidation = generateSlugSchema.safeParse({
@@ -425,9 +419,26 @@ export async function updateMcpServer(
     // Do not re-throw, allow the update operation to be considered successful
   }
 
+  // Track server update (Prometheus + Loki)
+  mcpServerOperations.inc({
+    operation: 'update',
+    server_type: data.type || serverType || 'unknown',
+    status: 'success'
+  });
+
+  console.log('[MCP Server Update]', {
+    operation: 'update',
+    serverUuid: uuid,
+    fieldsUpdated: Object.keys(data),
+    serverType: data.type || serverType,
+    profileUuid,
+    userId,
+    timestamp: new Date().toISOString()
+  });
+
   // Revalidate path if needed
   // revalidatePath('/mcp-servers');
-  
+
   return { success: true };
     } catch (error) {
       console.error('[updateMcpServer] Error:', error);
@@ -454,6 +465,13 @@ export async function createMcpServer({
   streamableHTTPOptions,
   skipDiscovery = false,
   config,
+  registry_data,
+  registry_version,
+  registry_release_date,
+  registry_status,
+  repository_url,
+  repository_source,
+  repository_id,
 }: {
   name: string;
   profileUuid: string;
@@ -472,6 +490,13 @@ export async function createMcpServer({
   };
   skipDiscovery?: boolean;
   config?: Record<string, any>;
+  registry_data?: any;
+  registry_version?: string;
+  registry_release_date?: string;
+  registry_status?: string;
+  repository_url?: string;
+  repository_source?: string;
+  repository_id?: string;
 }) { // Removed explicit return type to match actual returns
   return withProfileAuth(profileUuid, async (session) => {
     const userId = session.user.id;
@@ -479,16 +504,7 @@ export async function createMcpServer({
     try {
       // Apply rate limiting for modification operations
       await applyRateLimit(userId, 'create-server', ServerActionRateLimits.serverModification);
-    
-    // Audit log the creation attempt
-    await auditLog({
-      profileUuid,
-      type: AuditLogTypes.SERVER_CREATE,
-      action: AuditLogActions.CREATE,
-      userId,
-      metadata: { serverName: name, serverType: type },
-    });
-    
+
     const serverType = type || McpServerType.STDIO;
     
     // Prepare data for Zod validation - include ALL user-provided fields
@@ -575,6 +591,14 @@ export async function createMcpServer({
       // Store transport-specific options separately
       transport: (serverType === McpServerType.STREAMABLE_HTTP) ? (transport || 'streamable_http') : undefined,
       streamableHTTPOptions: (serverType === McpServerType.STREAMABLE_HTTP && streamableHTTPOptions) ? streamableHTTPOptions : undefined,
+      // Phase 2: Store complete registry data without transformation
+      registry_data: registry_data || null,
+      registry_version: registry_version || null,
+      registry_release_date: registry_release_date ? new Date(registry_release_date) : null,
+      registry_status: registry_status || null,
+      repository_url: repository_url || null,
+      repository_source: repository_source || null,
+      repository_id: repository_id || null,
     };
     
     // Encrypt sensitive fields
@@ -631,6 +655,23 @@ export async function createMcpServer({
       }
     } else {
     }
+
+    // Track server creation (Prometheus + Loki)
+    mcpServerOperations.inc({
+      operation: 'create',
+      server_type: newServer.type || 'unknown',
+      status: 'success'
+    });
+
+    console.log('[MCP Server Create]', {
+      operation: 'create',
+      serverUuid: newServer.uuid,
+      serverName: newServer.name,
+      serverType: newServer.type,
+      profileUuid,
+      userId,
+      timestamp: new Date().toISOString()
+    });
 
     return { success: true, data: newServer }; // Return success and the new server data
     } catch (error) {

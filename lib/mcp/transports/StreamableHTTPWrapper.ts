@@ -1,6 +1,7 @@
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 
+import { categorizeError, mcpTransportConnectionDuration, mcpTransportConnectionFailures } from '@/lib/mcp/metrics';
 import { escapeHtml, getSecurityHeaders } from '@/lib/security-utils';
 
 import { oauthStateManager } from '../oauth/OAuthStateManager';
@@ -181,14 +182,27 @@ export class StreamableHTTPWrapper implements Transport {
       } catch (error) {
         // Clear timeout on error
         clearTimeout(timeoutId);
-        
+
+        // Track transport connection failure
+        const errorType = categorizeError(error);
+        mcpTransportConnectionFailures.inc({ transport: 'streamable_http', error_type: errorType });
+
+        console.log('[MCP Transport Request Failed]', {
+          transport: 'streamable_http',
+          serverUuid: this.serverUuid,
+          profileUuid: this.profileUuid,
+          errorType,
+          url: requestUrl.hostname,
+          timestamp: new Date().toISOString()
+        });
+
         // Enhance error message for timeout
         if (error instanceof Error) {
           if (error.name === 'AbortError' || error.message.includes('timeout')) {
             throw new Error(`MCP server request timed out after ${this.timeout}ms. The server may be slow or unresponsive.`);
           }
         }
-        
+
         // Re-throw other errors
         throw error;
       }
@@ -197,7 +211,41 @@ export class StreamableHTTPWrapper implements Transport {
 
   // Implement Transport interface by delegating to wrapped transport
   async start(): Promise<void> {
-    return this.transport.start();
+    const startTime = Date.now();
+    try {
+      await this.transport.start();
+
+      // Track successful connection
+      const durationMs = Date.now() - startTime;
+      mcpTransportConnectionDuration.observe({ transport: 'streamable_http', status: 'success' }, durationMs / 1000);
+
+      console.log('[MCP Transport Connected]', {
+        transport: 'streamable_http',
+        serverUuid: this.serverUuid,
+        profileUuid: this.profileUuid,
+        durationMs,
+        status: 'success',
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      // Track failed connection
+      const durationMs = Date.now() - startTime;
+      const errorType = categorizeError(error);
+      mcpTransportConnectionDuration.observe({ transport: 'streamable_http', status: 'error' }, durationMs / 1000);
+      mcpTransportConnectionFailures.inc({ transport: 'streamable_http', error_type: errorType });
+
+      console.log('[MCP Transport Connection Failed]', {
+        transport: 'streamable_http',
+        serverUuid: this.serverUuid,
+        profileUuid: this.profileUuid,
+        errorType,
+        durationMs,
+        status: 'error',
+        timestamp: new Date().toISOString()
+      });
+
+      throw error;
+    }
   }
 
   async send(message: any): Promise<void> {
