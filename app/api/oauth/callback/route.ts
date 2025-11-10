@@ -10,7 +10,7 @@ import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
 import { cleanupExpiredPkceStates } from '@/lib/oauth/pkce-cleanup';
 import { createRateLimiter } from '@/lib/rate-limiter';
 
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 
 // P0 Security: Rate limiter for OAuth callback (10 requests per 15 minutes per IP)
 const oauthCallbackRateLimiter = createRateLimiter({
@@ -256,12 +256,12 @@ export async function GET(request: NextRequest) {
     console.log('[OAuth Callback] Exchanging code for tokens at:', tokenEndpoint);
     console.log('[OAuth Callback] Using client_id:', clientId);
 
-    // Add 10-second timeout to prevent hanging requests
+    // Add 5-second timeout to prevent hanging requests (reduced from 10s for security)
     const tokenResponse = await fetch(tokenEndpoint, {
       method: 'POST',
       headers,
       body: tokenParams,
-      signal: AbortSignal.timeout(10000), // 10 second timeout
+      signal: AbortSignal.timeout(5000), // 5 second timeout
     });
 
     if (!tokenResponse.ok) {
@@ -365,8 +365,8 @@ async function storeOAuthTokens(
     });
 
     if (existing) {
-      // Update existing tokens
-      await tx
+      // Update existing tokens with optimistic locking to prevent race conditions
+      const result = await tx
         .update(mcpServerOAuthTokensTable)
         .set({
           access_token_encrypted: accessTokenEncrypted,
@@ -374,9 +374,21 @@ async function storeOAuthTokens(
           token_type: tokenData.token_type || 'Bearer',
           expires_at: expiresAt,
           scopes,
+          version: sql`${mcpServerOAuthTokensTable.version} + 1`, // Increment version for optimistic locking
           updated_at: new Date(),
         })
-        .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
+        .where(
+          and(
+            eq(mcpServerOAuthTokensTable.server_uuid, serverUuid),
+            eq(mcpServerOAuthTokensTable.version, existing.version) // Only update if version matches
+          )
+        )
+        .returning({ updatedRows: mcpServerOAuthTokensTable.uuid });
+
+      // Check if update was successful (row exists and version matched)
+      if (!result || result.length === 0) {
+        throw new Error('Token was updated by another request (race condition detected)');
+      }
     } else {
       // Insert new tokens
       await tx.insert(mcpServerOAuthTokensTable).values({

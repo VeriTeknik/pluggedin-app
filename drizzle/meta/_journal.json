@@ -519,6 +519,13 @@
       "when": 1762718483156,
       "tag": "0073_woozy_jubilee",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1762755356569,
+      "tag": "0074_gifted_fallen_one",
+      "breakpoints": true
     }
   ]
 }

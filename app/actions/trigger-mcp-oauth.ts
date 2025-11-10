@@ -12,6 +12,8 @@ import { trackOAuthFlow, mcpOAuthFlows } from '@/lib/mcp/metrics';
 import { OAuthProcessManager } from '@/lib/mcp/oauth-process-manager';
 import { portAllocator } from '@/lib/mcp/utils/port-allocator';
 import { generateIntegrityHash, generateSecureState, generateCodeVerifier } from '@/lib/oauth/integrity';
+import { safeFetch, validateUrlForSSRF } from '@/lib/oauth/ssrf-protection';
+import { sanitizeOAuthError } from '@/lib/oauth/error-sanitization';
 import type { McpServer } from '@/types/mcp-server';
 
 const triggerOAuthSchema = z.object({
@@ -203,7 +205,7 @@ export async function triggerMcpOAuth(serverUuid: string) {
 
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: sanitizeOAuthError(error, 'oauth'),
     };
   }
 }
@@ -338,8 +340,19 @@ async function handleStreamableHttpOAuth(server: McpServer, userId: string) {
   }
 
   try {
+    // SSRF Protection: Validate URL before making request
+    try {
+      validateUrlForSSRF(server.url);
+    } catch (ssrfError) {
+      console.error('[OAuth SSRF] Blocked request to:', server.url, ssrfError);
+      return {
+        success: false,
+        error: 'Invalid server URL: Access to this address is not allowed for security reasons',
+      };
+    }
+
     // Try to connect to the server and see if it provides OAuth information
-    const response = await fetch(server.url, {
+    const response = await safeFetch(server.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -358,7 +371,7 @@ async function handleStreamableHttpOAuth(server: McpServer, userId: string) {
         },
         id: 1
       }),
-      signal: AbortSignal.timeout(10000), // 10 second timeout
+      signal: AbortSignal.timeout(5000), // 5 second timeout (reduced from 10s for security)
     });
 
     if (response.status === 401) {
@@ -574,22 +587,39 @@ async function handleStreamableHttpOAuth(server: McpServer, userId: string) {
         // If no OAuth URL found, try to construct one based on common patterns
         const serverUrl = new URL(server.url);
 
-        // Try common OAuth endpoints
+        // Try common OAuth endpoints (limited to prevent abuse)
         const commonOAuthPaths = [
           '/oauth/authorize',
           '/auth/oauth',
           '/login/oauth',
-          '/oauth',
-          '/auth'
         ];
 
+        // Rate limiting: Maximum 2 probe attempts to prevent port scanning
+        const MAX_PROBE_ATTEMPTS = 2;
+        let probeCount = 0;
+
         for (const path of commonOAuthPaths) {
+          if (probeCount >= MAX_PROBE_ATTEMPTS) {
+            console.log('[OAuth] Maximum probe attempts reached, stopping discovery');
+            break;
+          }
+
           const testUrl = new URL(path, serverUrl.origin).toString();
 
+          // SSRF Protection: Validate probe URL before fetching
           try {
-            const testResponse = await fetch(testUrl, {
+            validateUrlForSSRF(testUrl);
+          } catch (ssrfError) {
+            console.warn('[OAuth SSRF] Skipping probe to restricted URL:', testUrl);
+            continue;
+          }
+
+          probeCount++;
+
+          try {
+            const testResponse = await safeFetch(testUrl, {
               method: 'GET',
-              signal: AbortSignal.timeout(5000),
+              signal: AbortSignal.timeout(3000), // 3 second timeout for probes
             });
 
             // If we get a redirect or success, this might be the OAuth endpoint
@@ -610,6 +640,7 @@ async function handleStreamableHttpOAuth(server: McpServer, userId: string) {
             }
           } catch (testError) {
             // Continue trying other paths
+            console.debug('[OAuth] Probe failed for:', testUrl, testError);
           }
         }
 
@@ -650,7 +681,7 @@ async function handleStreamableHttpOAuth(server: McpServer, userId: string) {
     console.error('[handleStreamableHttpOAuth] Error testing OAuth:', error);
     return {
       success: false,
-      error: `Failed to connect to server: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: sanitizeOAuthError(error, 'discovery'),
     };
   }
 }
