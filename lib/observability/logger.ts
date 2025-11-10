@@ -30,6 +30,9 @@ const isDevelopment = process.env.NODE_ENV === 'development';
 const isProduction = process.env.NODE_ENV === 'production';
 const isTest = process.env.NODE_ENV === 'test';
 
+// Check if we're in Edge Runtime (where Node.js modules are not available)
+const isEdgeRuntime = typeof EdgeRuntime !== 'undefined';
+
 // ========================================
 // Logger Configuration
 // ========================================
@@ -90,7 +93,14 @@ export const logger = pino({
     environment: process.env.NODE_ENV || 'development',
     version: process.env.APP_VERSION || '2.14.0',
     pid: process.pid,
-    hostname: require('os').hostname(),
+    // Edge Runtime doesn't support the 'os' module
+    hostname: (() => {
+      try {
+        return isEdgeRuntime ? 'edge-runtime' : require('os').hostname();
+      } catch {
+        return 'unknown';
+      }
+    })(),
   },
 
   // Redact sensitive information
