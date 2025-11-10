@@ -31,7 +31,14 @@ const isProduction = process.env.NODE_ENV === 'production';
 const isTest = process.env.NODE_ENV === 'test';
 
 // Check if we're in Edge Runtime (where Node.js modules are not available)
-const isEdgeRuntime = typeof EdgeRuntime !== 'undefined';
+// Use try-catch to avoid ReferenceError if EdgeRuntime is not defined
+const isEdgeRuntime = (() => {
+  try {
+    return typeof globalThis.EdgeRuntime !== 'undefined';
+  } catch {
+    return false;
+  }
+})();
 
 // ========================================
 // Logger Configuration

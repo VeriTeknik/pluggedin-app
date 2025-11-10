@@ -2,6 +2,7 @@
 
 import { McpServerSource } from '@/db/schema';
 import { ServerReview } from '@/types/review';
+import { validateExternalIdWithLogging } from '@/lib/validation-utils';
 
 export async function getReviewsForServer(
   source: McpServerSource,
@@ -13,17 +14,8 @@ export async function getReviewsForServer(
       return [];
     }
 
-    // Validate externalId to prevent SSRF attacks
-    // Only allow alphanumeric characters, hyphens, underscores, and dots
-    const safeIdPattern = /^[a-zA-Z0-9._-]+$/;
-    if (!externalId || !safeIdPattern.test(externalId)) {
-      console.error('Invalid external ID format:', externalId);
-      return [];
-    }
-
-    // Prevent path traversal attempts
-    if (externalId.includes('..') || externalId.includes('/') || externalId.includes('\\')) {
-      console.error('Path traversal attempt detected in external ID:', externalId);
+    // Validate externalId to prevent SSRF and path traversal attacks
+    if (!validateExternalIdWithLogging(externalId, 'reviews')) {
       return [];
     }
 

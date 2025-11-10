@@ -183,20 +183,52 @@ export const documentProcessingDuration = new Histogram({
  * Normalize path for metrics (remove dynamic segments)
  * Converts /api/users/123 to /api/users/:id
  * Prevents high cardinality in metrics
+ *
+ * Patterns normalized:
+ * - UUIDs (/api/servers/123e4567-...) → /:uuid
+ * - Numeric IDs (/api/users/12345) → /:id
+ * - Usernames (/to/john_doe) → /:username
+ * - API versions (/api/v1/users) → /api/:version/users
+ * - Locale paths (/en/settings, /tr/ayarlar) → /:locale/...
+ * - Base64-like tokens (/auth/abc123xyz...) → /:token
+ * - Hash values (/files/a1b2c3d4e5f6...) → /:hash
  */
 export function normalizePath(path: string): string {
   // Remove query parameters
   const pathWithoutQuery = path.split('?')[0];
 
   // Define patterns to normalize
+  // ORDER MATTERS: More specific patterns first, then general ones
   const patterns = [
-    // UUID pattern
+    // Locale paths (based on i18n config: en, tr, zh, hi, ja, nl)
+    // Must come before username pattern to avoid false positives
+    { regex: /^\/(en|tr|zh|hi|ja|nl)(?=\/|$)/g, replacement: '/:locale' },
+
+    // API versioning paths
+    { regex: /\/v\d+(?:\.\d+)?(?=\/|$)/g, replacement: '/:version' },
+
+    // UUID pattern (standard format)
     {
       regex: /\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
       replacement: '/:uuid',
     },
-    // Numeric ID pattern
-    { regex: /\/\d+/g, replacement: '/:id' },
+
+    // Hash values (hex strings 32-64 chars, common in MD5/SHA)
+    // Must come before token pattern to match hashes first
+    { regex: /\/[0-9a-fA-F]{32,64}(?=\/|$)/g, replacement: '/:hash' },
+
+    // Base64-like tokens and JWT tokens
+    // Must be 32+ chars long and contain mixed alphanumeric, OR end with Base64 padding (=)
+    // Matches: JWT tokens, Base64 strings, but not pure numbers or short strings
+    // Pattern 1: Mixed alphanumeric (has both letters and numbers), 32+ chars
+    { regex: /\/(?=.*[A-Za-z])(?=.*\d)[A-Za-z0-9_-]{32,}(?=\/|$)/g, replacement: '/:token' },
+    // Pattern 2: Strings ending with Base64 padding (=), 18+ chars before padding
+    { regex: /\/[A-Za-z0-9_-]{18,}={1,2}(?=\/|$)/g, replacement: '/:token' },
+
+    // Numeric ID pattern (any length numbers)
+    // Now safe to match all numeric strings since tokens are already caught
+    { regex: /\/\d+(?=\/|$)/g, replacement: '/:id' },
+
     // Username pattern (/to/username)
     { regex: /^\/to\/[^/]+/, replacement: '/to/:username' },
   ];
