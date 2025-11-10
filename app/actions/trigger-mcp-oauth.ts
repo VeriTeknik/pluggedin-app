@@ -449,8 +449,30 @@ async function handleStreamableHttpOAuth(server: McpServer, userId: string) {
         }
 
         // Add default scopes if supported
+        // Filter out scopes that may not be allowed (like 'openid' for some OAuth clients)
         if (discovery.metadata.scopes_supported?.length) {
-          authUrl.searchParams.set('scope', discovery.metadata.scopes_supported.join(' '));
+          // OAuth 2.0 Core scopes that are generally safe
+          const allowedScopes = discovery.metadata.scopes_supported.filter((scope: string) => {
+            // Exclude scopes that commonly require special authorization:
+            // - OpenID Connect scopes (openid, profile, email, address, phone)
+            // - Clerk-specific scopes (public_metadata, private_metadata, unsafe_metadata)
+            // - Other provider-specific scopes that may not be pre-authorized
+            const restrictedScopes = [
+              'openid', 'profile', 'email', 'address', 'phone', // OpenID Connect
+              'public_metadata', 'private_metadata', 'unsafe_metadata', // Clerk
+              'offline_access', // Refresh token scope that may require approval
+            ];
+            return !restrictedScopes.includes(scope.toLowerCase());
+          });
+
+          // If we have allowed scopes, use them; otherwise don't send scope parameter
+          // Some OAuth servers work better without explicit scopes (they use defaults)
+          if (allowedScopes.length > 0) {
+            authUrl.searchParams.set('scope', allowedScopes.join(' '));
+            console.log(`[OAuth] Using scopes: ${allowedScopes.join(' ')}`);
+          } else {
+            console.log('[OAuth] No safe scopes found, omitting scope parameter (provider will use defaults)');
+          }
         }
 
         // Use PKCE if supported (recommended for security)

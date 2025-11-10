@@ -28,6 +28,15 @@ export async function register() {
       // Don't exit - let the application handle upload errors gracefully
     }
 
+    // Start OAuth token lock cleanup service
+    // This prevents stuck locks from failed token refresh attempts
+    const { startTokenLockCleanup } = await import('./lib/oauth/token-lock-cleanup');
+    startTokenLockCleanup(
+      60 * 1000, // Run cleanup every 60 seconds
+      60 * 1000  // Clear locks older than 60 seconds
+    );
+    console.log('[Startup] OAuth token lock cleanup service started');
+
     await import('./sentry.server.config');
   }
 

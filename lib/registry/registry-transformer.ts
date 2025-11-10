@@ -66,6 +66,8 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
     args: isRemote ? [] : extractArgs(primaryPackage),
     envs: extractEnvs(primaryPackage),
     url: transportInfo.url || null,
+    transport: transportInfo.transport, // Transport type for remote servers
+    headers: transportInfo.headers, // HTTP headers for streamable-http servers
     source: McpServerSource.REGISTRY,
     external_id: server.id,
     githubUrl: server.repository?.url || null,

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull, lt, or } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { mcpServerOAuthTokensTable, mcpServersTable, profilesTable, projectsTable } from '@/db/schema';
@@ -20,7 +20,7 @@ import {
  * @returns true if refresh completed successfully, false if timeout or error
  */
 async function waitForRefreshCompletion(serverUuid: string, initialLockAge: number): Promise<boolean> {
-  const maxWaitTime = 30 * 1000; // 30 seconds max wait
+  const maxWaitTime = 15 * 1000; // 15 seconds max wait (10s fetch timeout + 5s buffer)
   const startTime = Date.now();
   let pollInterval = 100; // Start with 100ms
   const maxPollInterval = 2000; // Max 2 seconds between polls
@@ -173,20 +173,40 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
   }
 
   // 1. Atomic lock acquisition: Lock the token for refresh (prevents race conditions)
-  // This uses optimistic locking with the refresh_token_locked_at column
+  // This uses pessimistic locking - only acquire lock if not already locked or lock is stale (>60s)
+  const staleLockThreshold = new Date(Date.now() - 60 * 1000); // 60 seconds ago
   const lockResult = await db
     .update(mcpServerOAuthTokensTable)
     .set({
       refresh_token_locked_at: new Date(),
     })
-    .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid))
+    .where(
+      and(
+        eq(mcpServerOAuthTokensTable.server_uuid, serverUuid),
+        // Only acquire lock if not already locked, or lock is stale
+        or(
+          isNull(mcpServerOAuthTokensTable.refresh_token_locked_at),
+          lt(mcpServerOAuthTokensTable.refresh_token_locked_at, staleLockThreshold)
+        )
+      )
+    )
     .returning();
 
   if (!lockResult || lockResult.length === 0) {
-    log.oauth('token_refresh_no_record', { serverUuid });
+    // Lock is held by another request - wait for it to complete
+    log.oauth('token_refresh_lock_held_by_another_request', { serverUuid });
+    const refreshCompleted = await waitForRefreshCompletion(serverUuid, 0);
     const durationSeconds = (Date.now() - startTime) / 1000;
-    recordTokenRefresh(false, durationSeconds, 'no_record');
-    return false;
+
+    if (refreshCompleted) {
+      log.oauth('token_refresh_completed_by_concurrent_request', { serverUuid });
+      recordTokenRefresh(true, durationSeconds, 'concurrent_success');
+      return true;
+    } else {
+      log.oauth('token_refresh_concurrent_wait_failed', { serverUuid });
+      recordTokenRefresh(false, durationSeconds, 'concurrent_failed');
+      return false;
+    }
   }
 
   const tokenRecord = lockResult[0];
@@ -227,32 +247,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
     return false;
   }
 
-  // 2. Check if another request already locked this token
-  // Lock should be recent (within last 60 seconds) to be considered active
-  if (tokenRecord.refresh_token_locked_at) {
-    const lockAge = Date.now() - tokenRecord.refresh_token_locked_at.getTime();
-    const maxLockAge = 60 * 1000; // 60 seconds
-
-    if (lockAge < maxLockAge) {
-      log.oauth('token_refresh_already_in_progress', { serverUuid, lockAgeMs: lockAge });
-
-      // Wait for the other request to complete the refresh
-      const refreshCompleted = await waitForRefreshCompletion(serverUuid, lockAge);
-
-      if (refreshCompleted) {
-        log.oauth('token_refresh_completed_by_concurrent_request', { serverUuid });
-        return true;
-      } else {
-        log.oauth('token_refresh_wait_timeout', { serverUuid });
-        return false;
-      }
-    } else {
-      // Stale lock (orphaned from failed previous attempt), we can proceed
-      log.oauth('token_refresh_stale_lock_detected', { serverUuid, lockAgeMs: lockAge });
-    }
-  }
-
-  // 3. Check if token actually needs refresh
+  // 2. Check if token actually needs refresh
   const now = Date.now();
   const expiresAt = tokenRecord.expires_at?.getTime() || 0;
   const bufferTime = 5 * 60 * 1000; // 5 minutes buffer
@@ -266,7 +261,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
     return true; // Token still valid
   }
 
-  // 4. Get OAuth configuration
+  // 3. Get OAuth configuration
   const oauthConfig = await getOAuthConfig(serverUuid);
   if (!oauthConfig?.token_endpoint) {
     log.error('OAuth Refresh: No OAuth config or token endpoint', undefined, { serverUuid });
@@ -277,7 +272,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
     return false;
   }
 
-  // 5. Decrypt and use refresh token
+  // 4. Decrypt and use refresh token
   const refreshToken = decryptField(tokenRecord.refresh_token_encrypted);
 
   log.oauth('token_refresh_exchange_starting', {
