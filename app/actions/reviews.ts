@@ -1,6 +1,7 @@
 'use server';
 
 import { McpServerSource } from '@/db/schema';
+import { validateExternalIdWithLogging } from '@/lib/validation-utils';
 import { ServerReview } from '@/types/review';
 
 export async function getReviewsForServer(
@@ -10,6 +11,11 @@ export async function getReviewsForServer(
   try {
     // Only fetch reviews from registry source for now
     if (source !== McpServerSource.REGISTRY) {
+      return [];
+    }
+
+    // Validate externalId to prevent SSRF and path traversal attacks
+    if (!validateExternalIdWithLogging(externalId, 'reviews')) {
       return [];
     }
 

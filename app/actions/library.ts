@@ -4,12 +4,11 @@ import { and, desc, eq, isNull, sum } from 'drizzle-orm';
 import { mkdirSync, realpathSync } from 'fs';
 import { mkdir, unlink, writeFile } from 'fs/promises';
 import * as path from 'path';
-import { join, resolve } from 'path';
+import { join } from 'path';
 import { z } from 'zod';
 
 import { db } from '@/db';
 import { docsTable, documentVersionsTable } from '@/db/schema';
-import log from '@/lib/logger';
 import { ragService } from '@/lib/rag-service';
 import { sanitizeToPlainText } from '@/lib/sanitization';
 import type {

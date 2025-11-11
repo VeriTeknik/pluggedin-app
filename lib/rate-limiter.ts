@@ -64,20 +64,35 @@ class RedisRateLimitStore implements RateLimitBackend {
   constructor(redisUrl: string) {
     // Lazy load Redis client - gracefully handle if not installed
     try {
-      // Dynamic import to avoid build-time errors
-      const redis = require('redis');
-      this.client = redis.createClient({ url: redisUrl });
-      this.client.connect()
-        .then(() => {
-          this.connected = true;
-          console.log('[RateLimit] Redis connected successfully');
-        })
-        .catch((error: Error) => {
-          console.error('[RateLimit] Redis connection failed:', error.message);
-          this.connected = false;
-        });
+      // Dynamic import to avoid build-time errors - using ioredis
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const Redis = require('ioredis');
+      this.client = new Redis(redisUrl, {
+        retryStrategy: (times: number) => {
+          if (times > 3) return null;
+          return Math.min(times * 50, 2000);
+        },
+        maxRetriesPerRequest: 3,
+        lazyConnect: false,
+      });
+
+      this.client.on('connect', () => {
+        this.connected = true;
+        console.log('[RateLimit] Redis connected successfully');
+      });
+
+      this.client.on('error', (error: Error) => {
+        console.error('[RateLimit] Redis connection failed:', error.message);
+        this.connected = false;
+      });
+
+      this.client.on('ready', () => {
+        this.connected = true;
+      });
     } catch (error) {
-      console.error('[RateLimit] Redis module not found. Install with: npm install redis');
+      // This typically happens in Edge Runtime where Node.js APIs aren't available
+      console.warn('[RateLimit] Cannot load ioredis (likely Edge Runtime limitation, not missing package)');
+      console.warn('[RateLimit] Falling back to in-memory rate limiting for this context');
       this.connected = false;
       throw error; // Re-throw to trigger fallback to memory store
     }
@@ -98,7 +113,7 @@ class RedisRateLimitStore implements RateLimitBackend {
     if (!this.connected) return;
     try {
       const ttl = Math.ceil((value.resetTime - Date.now()) / 1000);
-      await this.client.setEx(`ratelimit:${key}`, ttl, JSON.stringify(value));
+      await this.client.setex(`ratelimit:${key}`, ttl, JSON.stringify(value));
     } catch (error) {
       console.error('[RateLimit] Redis set error:', error);
     }
@@ -127,7 +142,7 @@ class RedisRateLimitStore implements RateLimitBackend {
 // Check if Redis module is available
 function isRedisAvailable(): boolean {
   try {
-    require.resolve('redis');
+    require.resolve('ioredis');
     return true;
   } catch {
     return false;
@@ -147,9 +162,9 @@ if (process.env.REDIS_URL) {
       rateLimitBackend = new MemoryRateLimitStore();
     }
   } else {
-    console.warn('⚠️  [RateLimit] REDIS_URL configured but redis module not installed');
-    console.warn('⚠️  [RateLimit] Install with: npm install redis');
-    console.warn('⚠️  [RateLimit] Falling back to in-memory rate limiting');
+    console.warn('⚠️  [RateLimit] REDIS_URL configured but ioredis cannot be loaded');
+    console.warn('⚠️  [RateLimit] This is normal in Edge Runtime contexts');
+    console.warn('⚠️  [RateLimit] Falling back to in-memory rate limiting for this context');
     rateLimitBackend = new MemoryRateLimitStore();
   }
 } else {
@@ -160,7 +175,6 @@ if (process.env.REDIS_URL) {
     console.warn('⚠️  [RateLimit] WARNING: Using in-memory rate limiting in production!');
     console.warn('⚠️  [RateLimit] This is NOT SAFE for multi-instance deployments.');
     console.warn('⚠️  [RateLimit] Configure REDIS_URL environment variable for distributed rate limiting.');
-    console.warn('⚠️  [RateLimit] Install redis: npm install redis');
   }
 }
 

@@ -12,7 +12,8 @@
  * Compatible with pluggedin-observability Prometheus stack
  */
 
-import { Counter, Histogram, Gauge } from 'prom-client';
+import { Counter, Gauge,Histogram } from 'prom-client';
+
 import { register } from '@/lib/metrics';
 
 // ========================================

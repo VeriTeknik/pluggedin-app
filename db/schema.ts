@@ -293,7 +293,6 @@ export const profilesRelations = relations(profilesTable, ({ one, many }) => ({
     references: [playgroundSettingsTable.profile_uuid],
   }),
   serverInstallations: many(serverInstallationsTable),
-  // serverRatings: many(serverRatingsTable), // Removed relation
   auditLogs: many(auditLogsTable),
   notifications: many(notificationsTable),
   logRetentionPolicies: many(logRetentionPoliciesTable),
@@ -438,7 +437,6 @@ export const mcpServersRelations = relations(mcpServersTable, ({ one, many }) =>
   }),
   resourceTemplates: many(resourceTemplatesTable),
   serverInstallations: many(serverInstallationsTable),
-  // serverRatings: many(serverRatingsTable), // Removed relation
   auditLogs: many(auditLogsTable),
   tools: many(toolsTable),
   resources: many(resourcesTable),
@@ -651,7 +649,6 @@ export const mcpActivityRelations = relations(mcpActivityTable, ({ one }) => ({
 }));
 
 // --- Server Reviews Table ---
-// Removed serverRatingsTable definition and relations
 export const serverReviews = pgTable(
   'server_reviews',
   {

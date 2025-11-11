@@ -15,10 +15,11 @@
  * Only runs when DEBUG_MCP_TRACES=true in environment.
  */
 
-import { db } from '@/db';
-import { dataIntegrityTracesTable, dataIntegrityErrorsTable } from '@/db/schema';
-import { eq, and } from 'drizzle-orm';
 import crypto from 'crypto';
+import {eq } from 'drizzle-orm';
+
+import { db } from '@/db';
+import { dataIntegrityErrorsTable,dataIntegrityTracesTable } from '@/db/schema';
 
 /**
  * Check if tracing is enabled via environment variable

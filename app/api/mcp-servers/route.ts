@@ -2,7 +2,7 @@ import { and, eq, inArray } from 'drizzle-orm';
 import { NextResponse } from 'next/server';
 
 import { db } from '@/db';
-import { customInstructionsTable,mcpServersTable, mcpServerOAuthTokensTable, McpServerStatus } from '@/db/schema';
+import { customInstructionsTable,mcpServerOAuthTokensTable, mcpServersTable, McpServerStatus } from '@/db/schema';
 import { decryptServerData, encryptServerData } from '@/lib/encryption';
 import { validateAndRefreshToken } from '@/lib/oauth/token-refresh-service';
 

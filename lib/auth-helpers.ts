@@ -1,10 +1,10 @@
 'use server';
 
 import { eq } from 'drizzle-orm';
-import { Session } from 'next-auth';
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { isRedirectError } from 'next/dist/client/components/redirect-error';
+import { Session } from 'next-auth';
 
 import { db } from '@/db';
 import { projectsTable, users } from '@/db/schema';

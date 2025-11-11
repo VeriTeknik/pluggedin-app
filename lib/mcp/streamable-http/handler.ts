@@ -1,8 +1,8 @@
 import { getMcpServerByUuid } from '@/app/actions/mcp-servers';
+import { trackSessionCreated, trackSessionReused, trackSessionTerminated } from '@/lib/mcp/metrics';
 import { McpServer } from '@/types/mcp-server';
 
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '../client-wrapper';
-import { trackSessionCreated, trackSessionReused, trackSessionTerminated } from '@/lib/mcp/metrics';
 import { getSessionManager } from '../sessions/SessionManager';
 import { MpcSession } from '../sessions/types';
 

@@ -113,6 +113,8 @@ export default function CardGrid({
     env: string;
     url: string | undefined;
     type: McpServerType;
+    transport?: string;
+    headers?: Record<string, string>;
     source?: McpServerSource;
     external_id?: string;
   } | null>(null);

@@ -19,6 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getMetrics } from '@/lib/metrics';
 
 export const dynamic = 'force-dynamic';
@@ -35,8 +36,9 @@ function isIpAllowed(clientIp: string | null): boolean {
   }
 
   // Get allowed IPs from environment variable
-  // Default: localhost + Docker default network only (restrictive for security)
-  // PRODUCTION: Override this with your specific Prometheus server IP
+  // Default: localhost + Docker networks only (restrictive for security)
+  // PRODUCTION: Set METRICS_ALLOWED_IPS in .env with your Grafana/Prometheus server IPs
+  // Example: METRICS_ALLOWED_IPS="127.0.0.1,::1,172.17.0.0/16,172.18.0.0/16,10.0.0.0/8,185.96.168.253/32"
   const allowedIpsEnv = process.env.METRICS_ALLOWED_IPS || '127.0.0.1,::1,172.17.0.0/16,172.18.0.0/16';
   const allowedIps = allowedIpsEnv.split(',').map(ip => ip.trim());
 

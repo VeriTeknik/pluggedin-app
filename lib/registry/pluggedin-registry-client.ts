@@ -1,5 +1,5 @@
+import { isTracingEnabled,recordTrace } from '@/lib/tracing/helpers';
 import { validateInternalUrl } from '@/lib/url-validator';
-import { recordTrace, isTracingEnabled } from '@/lib/tracing/helpers';
 
 interface PluggedinRegistryServer {
   id: string;

@@ -5,6 +5,7 @@
  * Registers OAuth clients dynamically with authorization servers
  */
 
+import { clearOAuthConfigCache } from '@/lib/oauth/oauth-config-store';
 import { log } from '@/lib/observability/logger';
 import { recordClientRegistration } from '@/lib/observability/oauth-metrics';
 
@@ -124,6 +125,15 @@ export async function getOrRegisterClient(
 
   // Otherwise, register a new client
   const registration = await registerOAuthClient(registrationEndpoint, redirectUri);
+
+  // Clear cache to force fresh read with new client_id
+  // This prevents stale cache from returning old client_id during token exchange
+  clearOAuthConfigCache(serverUuid);
+
+  log.debug('Dynamic Registration: Cache cleared after registration', {
+    serverUuid,
+    clientId: registration.client_id
+  });
 
   return {
     client_id: registration.client_id,
