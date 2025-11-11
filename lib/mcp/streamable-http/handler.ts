@@ -1,4 +1,5 @@
 import { getMcpServerByUuid } from '@/app/actions/mcp-servers';
+import { trackSessionCreated, trackSessionReused, trackSessionTerminated } from '@/lib/mcp/metrics';
 import { McpServer } from '@/types/mcp-server';
 
 import { listPromptsFromServer, listResourcesFromServer, listResourceTemplatesFromServer, listToolsFromServer } from '../client-wrapper';
@@ -73,6 +74,19 @@ export async function handleStreamableHTTPRequest(
         };
       }
 
+      // Track session reuse - fetch server info for metrics
+      try {
+        const server = await getMcpServerByUuid(session.profile_uuid, session.server_uuid);
+        if (server) {
+          const transport = server.transport || (server.type === 'STREAMABLE_HTTP' ? 'streamable_http' : server.type === 'SSE' ? 'sse' : 'stdio');
+          const serverType = server.type || 'unknown';
+          trackSessionReused(transport, serverType);
+        }
+      } catch (error) {
+        // Don't fail the request if metrics tracking fails
+        console.error('[MCP Session Reuse Tracking] Failed to track metrics:', error);
+      }
+
       // Route the request based on the method
       return await routeJsonRpcRequest(session, options);
     }
@@ -105,6 +119,34 @@ export async function handleStreamableHTTPRequest(
     // Handle DELETE requests (session cleanup)
     if (options.method === 'DELETE') {
       if (options.sessionId) {
+        // Get session info before deleting for metrics
+        const session = await sessionManager.getSession(options.sessionId);
+
+        if (session) {
+          try {
+            const server = await getMcpServerByUuid(session.profile_uuid, session.server_uuid);
+            if (server) {
+              const transport = server.transport || (server.type === 'STREAMABLE_HTTP' ? 'streamable_http' : server.type === 'SSE' ? 'sse' : 'stdio');
+              const serverType = server.type || 'unknown';
+              const lifetimeMs = Date.now() - session.created_at.getTime();
+
+              trackSessionTerminated(transport, serverType, lifetimeMs, 'deleted');
+
+              console.log('[MCP Session Deleted]', {
+                operation: 'session_delete',
+                sessionId: options.sessionId,
+                serverUuid: session.server_uuid,
+                serverType,
+                transport,
+                lifetimeSeconds: Math.round(lifetimeMs / 1000),
+                timestamp: new Date().toISOString()
+              });
+            }
+          } catch (error) {
+            console.error('[MCP Session Delete Tracking] Failed to track metrics:', error);
+          }
+        }
+
         await sessionManager.deleteSession(options.sessionId);
       }
       return {
@@ -196,6 +238,20 @@ async function handleInitializeRequest(
       server.uuid,
       server.profile_uuid
     );
+
+    // Track session creation
+    const transport = server.transport || (server.type === 'STREAMABLE_HTTP' ? 'streamable_http' : server.type === 'SSE' ? 'sse' : 'stdio');
+    const serverType = server.type || 'unknown';
+    trackSessionCreated(transport, serverType);
+
+    console.log('[MCP Session Created]', {
+      operation: 'session_create',
+      sessionId,
+      serverUuid: server.uuid,
+      serverType,
+      transport,
+      timestamp: new Date().toISOString()
+    });
 
     // Return successful initialization response
     return {

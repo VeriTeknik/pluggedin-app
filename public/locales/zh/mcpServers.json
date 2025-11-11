@@ -222,6 +222,25 @@
     },
     "messages": {
       "updateSuccess": "服务器配置更新成功。"
+    },
+    "test": {
+      "authRequired": "需要身份验证 - 添加服务器以进行身份验证",
+      "authRequiredDetail": "此服务器需要身份验证。添加后，点击'验证'按钮连接您的账户。",
+      "mcpRemoteVerified": "已验证 mcp-remote 代理服务器",
+      "httpError": "服务器返回 HTTP 错误",
+      "mcpRemoteAvailable": "mcp-remote 命令可用（远程连接将在使用时测试）",
+      "invalidHeaders": "提供的标头无效",
+      "connectionVerified": "MCP 服务器连接已验证",
+      "parseError": "无法解析服务器响应",
+      "invalidSseFormat": "无效的 SSE 响应格式",
+      "connectionFailed": "无法连接到 MCP 服务器",
+      "connectionSuccessful": "连接成功",
+      "connectionSuccessfulOptions": "连接成功 (OPTIONS)",
+      "npxAvailable": "命令可用（首次使用时将安装 npx 包）",
+      "commandAvailable": "命令可用",
+      "commandNotFound": "未找到命令",
+      "invalidConfig": "无效的配置",
+      "testFailed": "测试失败"
     }
   }
 }

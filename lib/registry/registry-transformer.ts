@@ -1,4 +1,5 @@
 import { McpServerSource } from '@/db/schema';
+import { isTracingEnabled,recordTrace } from '@/lib/tracing/helpers';
 import { McpIndex, McpServerCategory } from '@/types/search';
 
 interface RegistryPackage {
@@ -45,7 +46,7 @@ interface PluggedinRegistryServer {
   }>;
 }
 
-export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistryServer): McpIndex {
+export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistryServer, traceId?: string): McpIndex {
   const primaryPackage = server.packages?.[0];
 
   // Extract a user-friendly display name from the server name
@@ -58,13 +59,15 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
   // For remote servers, we don't need command/args, just the URL
   const isRemote = transportInfo.url !== undefined;
 
-  return {
+  const transformed = {
     name: displayName,
     description: server.description || '',
     command: isRemote ? '' : extractCommand(primaryPackage),
     args: isRemote ? [] : extractArgs(primaryPackage),
     envs: extractEnvs(primaryPackage),
     url: transportInfo.url || null,
+    transport: transportInfo.transport, // Transport type for remote servers
+    headers: transportInfo.headers, // HTTP headers for streamable-http servers
     source: McpServerSource.REGISTRY,
     external_id: server.id,
     githubUrl: server.repository?.url || null,
@@ -80,6 +83,21 @@ export function transformPluggedinRegistryToMcpIndex(server: PluggedinRegistrySe
     ratingCount: undefined,
     installation_count: undefined, // Track in your database
   };
+
+  // Hop 4: Record trace after transformation (fire-and-forget)
+  if (traceId && isTracingEnabled()) {
+    recordTrace(
+      traceId,
+      'app-transform',
+      server.name,
+      null, // server_uuid not available yet
+      transformed
+    ).catch(error => {
+      console.error('[TRACE ERROR] Failed to record transform trace:', error);
+    });
+  }
+
+  return transformed;
 }
 
 function extractDisplayName(serverName: string): string {

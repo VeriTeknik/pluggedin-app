@@ -6,6 +6,21 @@ import { buildCSPWithNonce, generateNonce } from '@/lib/csp-nonce';
 import { RateLimiters } from '@/lib/rate-limiter';
 
 /**
+ * METRICS TRACKING NOTE:
+ * =====================
+ * This middleware runs in Edge Runtime by default, which does NOT support Node.js APIs.
+ * Therefore, we cannot directly import or use prom-client (Prometheus client) here.
+ *
+ * HTTP metrics are tracked at the API route level instead:
+ * - Each API route runs in Node.js runtime (where prom-client works)
+ * - Routes can import and use lib/observability/http-metrics.ts
+ * - Metrics are exposed via /api/metrics endpoint for Prometheus scraping
+ *
+ * Timing headers (x-request-start-time, etc.) are added by middleware for API routes
+ * to calculate accurate request durations.
+ */
+
+/**
  * Security headers configuration (non-CSP headers)
  * CSP is generated dynamically with nonces in the middleware function
  */

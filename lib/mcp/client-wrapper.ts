@@ -758,28 +758,37 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
       const url = urlValidation.parsedUrl!;
       
       try {
-        // Extract streamable HTTP options from env or directly from serverConfig
+        // Extract streamable HTTP options from ALL possible sources
         let streamableOptions: any = {};
-        
-        // Check if options are in env (from database storage)
-        if (serverConfig.env?.__streamableHTTPOptions) {
+
+        // Priority 1: Decrypted streamableHTTPOptions from dedicated column
+        if (serverConfig.streamableHTTPOptions) {
+          streamableOptions = serverConfig.streamableHTTPOptions;
+          console.log('[OAuth] Using streamableHTTPOptions from decrypted dedicated column');
+          if (streamableOptions?.headers?.Authorization) {
+            console.log('[OAuth] Authorization header found and will be used for requests');
+          }
+        }
+        // Priority 2: Legacy env.__streamableHTTPOptions (backward compatibility)
+        else if (serverConfig.env?.__streamableHTTPOptions) {
           try {
             const parsed = JSON.parse(serverConfig.env.__streamableHTTPOptions);
             // Validate the parsed options have expected structure
             if (parsed && typeof parsed === 'object') {
               streamableOptions = parsed;
+              console.log('[OAuth] Using streamableHTTPOptions from legacy env field');
             } else {
               streamableOptions = {};
             }
           } catch (e) {
-            // Provide explicit fallback instead of silent failure
+            console.error('[OAuth] Failed to parse legacy streamableHTTPOptions:', e);
             streamableOptions = {};
           }
         }
-        
-        // Or use directly from serverConfig (from playground/runtime)
-        if (serverConfig.streamableHTTPOptions) {
-          streamableOptions = serverConfig.streamableHTTPOptions;
+
+        // Log if no OAuth headers found
+        if (!streamableOptions?.headers?.Authorization) {
+          console.log('[OAuth] No Authorization header found in streamableHTTPOptions');
         }
         
         // Create StreamableHTTPClientTransport with options
@@ -788,7 +797,8 @@ async function createMcpClientAndTransport(serverConfig: McpServer, skipCommandT
         // Set default headers for Streamable HTTP
         const defaultHeaders: Record<string, string> = {
           'Accept': 'application/json, text/event-stream',
-          'User-Agent': 'Plugged.in MCP Client'
+          'User-Agent': 'Plugged.in MCP Client',
+          'MCP-Protocol-Version': '2024-11-05'
         };
         
         // Add custom headers if provided with validation

@@ -470,6 +470,62 @@
       "when": 1730515200000,
       "tag": "0066_fix_missing_username",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1762580153325,
+      "tag": "0067_mcp_schema_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1762580204495,
+      "tag": "0068_silent_frightful_four",
+      "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1762592652251,
+      "tag": "0069_minor_firedrake",
+      "breakpoints": true
+    },
+    {
+      "idx": 70,
+      "version": "7",
+      "when": 1762654980260,
+      "tag": "0070_good_night_thrasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1762664540392,
+      "tag": "0071_mushy_baron_zemo",
+      "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1762664641125,
+      "tag": "0072_smart_hannibal_king",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1762718483156,
+      "tag": "0073_woozy_jubilee",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1762755356569,
+      "tag": "0074_gifted_fallen_one",
+      "breakpoints": true
     }
   ]
 }

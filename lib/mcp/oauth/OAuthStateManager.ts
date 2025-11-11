@@ -3,6 +3,7 @@ import { and, eq, gt, lt } from 'drizzle-orm';
 
 import { db } from '@/db';
 import { mcpOauthSessionsTable } from '@/db/schema';
+import { mcpOAuthSessionsActive, mcpOAuthSessionsExpired } from '@/lib/mcp/metrics';
 
 export interface OAuthSession {
   id: number;
@@ -58,6 +59,9 @@ export class OAuthStateManager {
       expires_at: expiresAt,
     });
 
+    // Track active OAuth session
+    mcpOAuthSessionsActive.inc({ provider });
+
     return state;
   }
 
@@ -76,9 +80,13 @@ export class OAuthStateManager {
     }
 
     const session = results[0];
-    
+
     // Check if session has expired
     if (session.expires_at < new Date()) {
+      // Track expired session
+      mcpOAuthSessionsExpired.inc({ provider: session.provider, reason: 'timeout' });
+      mcpOAuthSessionsActive.dec({ provider: session.provider });
+
       // Delete expired session
       await this.deleteOAuthSession(state);
       return null;
@@ -100,11 +108,26 @@ export class OAuthStateManager {
    * Clean up expired OAuth sessions
    */
   async cleanupExpiredSessions(): Promise<number> {
+    // Get expired sessions before deleting to track metrics
+    const expiredSessions = await db
+      .select()
+      .from(mcpOauthSessionsTable)
+      .where(lt(mcpOauthSessionsTable.expires_at, new Date()));
+
     const result = await db
       .delete(mcpOauthSessionsTable)
       .where(lt(mcpOauthSessionsTable.expires_at, new Date()));
 
-    return result.rowCount || 0;
+    // Track expired sessions by provider
+    const deletedCount = result.rowCount || 0;
+    if (deletedCount > 0) {
+      expiredSessions.forEach((session) => {
+        mcpOAuthSessionsExpired.inc({ provider: session.provider, reason: 'cleanup' });
+        mcpOAuthSessionsActive.dec({ provider: session.provider });
+      });
+    }
+
+    return deletedCount;
   }
 
   /**

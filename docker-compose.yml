@@ -17,6 +17,8 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://pluggedin:pluggedin_secure_password@pluggedin-postgres:5432/pluggedin
       - DATABASE_SSL=false
+      - REDIS_URL=redis://pluggedin-redis:6379
+      - NEXTAUTH_URL=http://localhost:12005
       - MCP_ISOLATION_TYPE=none
       - MCP_ISOLATION_FALLBACK=firejail
       - MCP_ENABLE_NETWORK_ISOLATION=false
@@ -25,6 +27,8 @@ services:
       - MCP_UV_CACHE_DIR=/app/.cache/mcp-packages/uv-cache
     depends_on:
       pluggedin-postgres:
+        condition: service_healthy
+      pluggedin-redis:
         condition: service_healthy
 
   pluggedin-postgres:
@@ -43,6 +47,21 @@ services:
       test: ["CMD-SHELL", "pg_isready -U pluggedin -d pluggedin"]
       interval: 5s
       timeout: 5s
+      retries: 5
+
+  pluggedin-redis:
+    container_name: pluggedin-redis
+    image: redis:7-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    volumes:
+      - pluggedin-redis:/data
+    command: redis-server --appendonly yes --appendfsync everysec
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
       retries: 5
 
   drizzle-migrate:
@@ -75,6 +94,8 @@ services:
 
 volumes:
   pluggedin-postgres:
+    driver: local
+  pluggedin-redis:
     driver: local
   mcp-cache:
     driver: local

@@ -41,6 +41,8 @@ interface InstallDialogProps {
     env: string;
     url: string | undefined;
     type: McpServerType;
+    transport?: string; // Transport type from registry
+    headers?: Record<string, string>; // HTTP headers for streamable-http servers
     source?: McpServerSource;
     external_id?: string;
   };
@@ -148,6 +150,46 @@ export function InstallDialog({
         }
       });
 
+      // For streamable-http servers, merge headers and env vars into streamableHTTPOptions
+      let streamableHTTPOptions: any = undefined;
+      if (values.type === McpServerType.STREAMABLE_HTTP) {
+        const headers: Record<string, string> = {};
+
+        // 1. Start with registry headers if available
+        if (serverData.headers) {
+          Object.assign(headers, serverData.headers);
+        }
+
+        // 2. Convert common env var patterns to headers
+        // Common patterns: API_KEY, X_API_KEY, AUTHORIZATION, etc.
+        Object.entries(envObject).forEach(([key, value]) => {
+          const upperKey = key.toUpperCase();
+
+          // Pattern 1: *_API_KEY → Authorization: Bearer <value>
+          if (upperKey.includes('API_KEY') || upperKey.includes('APIKEY')) {
+            if (!headers['Authorization']) {
+              headers['Authorization'] = `Bearer ${value}`;
+            }
+          }
+          // Pattern 2: AUTHORIZATION → Authorization: <value>
+          else if (upperKey === 'AUTHORIZATION' || upperKey === 'AUTH') {
+            headers['Authorization'] = value;
+          }
+          // Pattern 3: X_* → X-*: <value> (custom headers)
+          else if (upperKey.startsWith('X_')) {
+            const headerName = key.replace(/_/g, '-');
+            headers[headerName] = value;
+          }
+          // Pattern 4: Anything else with underscore → kebab-case header
+          else if (key.includes('_')) {
+            const headerName = key.replace(/_/g, '-');
+            headers[headerName] = value;
+          }
+        });
+
+        streamableHTTPOptions = { headers };
+      }
+
       const result = await createMcpServer({
         name: values.name,
         profileUuid,
@@ -157,6 +199,8 @@ export function InstallDialog({
         env: envObject,
         type: values.type,
         url: values.url,
+        transport: serverData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined,
+        streamableHTTPOptions,
         source: serverData.source,
         external_id: serverData.external_id,
       });
@@ -308,37 +352,6 @@ export function InstallDialog({
                       </FormItem>
                     )}
                   />
-
-                  {envInfo.length > 0 && (
-                    <div className="space-y-3">
-                      <FormLabel className="text-sm">{t('install.env')}</FormLabel>
-                      {envInfo.map((env) => (
-                        <FormField
-                          key={env.key}
-                          control={form.control}
-                          name={`env_${env.key}` as any}
-                          render={({ field }) => (
-                            <FormItem>
-                              <div className="space-y-1">
-                                <div className="grid grid-cols-3 gap-3 items-center">
-                                  <FormLabel className="text-xs font-mono">{env.key}</FormLabel>
-                                  <FormControl className="col-span-2">
-                                    <Input {...field} placeholder="Enter value" className="text-sm" />
-                                  </FormControl>
-                                </div>
-                                {env.description && (
-                                  <p className="text-xs text-muted-foreground ml-1">
-                                    {env.description}
-                                  </p>
-                                )}
-                              </div>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      ))}
-                    </div>
-                  )}
                 </>
               ) : (
                 <FormField
@@ -354,6 +367,37 @@ export function InstallDialog({
                     </FormItem>
                   )}
                 />
+              )}
+
+              {envInfo.length > 0 && (
+                <div className="space-y-3">
+                  <FormLabel className="text-sm">{t('install.env')}</FormLabel>
+                  {envInfo.map((env) => (
+                    <FormField
+                      key={env.key}
+                      control={form.control}
+                      name={`env_${env.key}` as any}
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="space-y-1">
+                            <div className="grid grid-cols-3 gap-3 items-center">
+                              <FormLabel className="text-xs font-mono">{env.key}</FormLabel>
+                              <FormControl className="col-span-2">
+                                <Input {...field} placeholder="Enter value" className="text-sm" />
+                              </FormControl>
+                            </div>
+                            {env.description && (
+                              <p className="text-xs text-muted-foreground ml-1">
+                                {env.description}
+                              </p>
+                            )}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
+                </div>
               )}
             </form>
           </Form>

@@ -192,3 +192,76 @@ export function getAvailableAIProviders(): string[] {
   if (process.env.GOOGLE_API_KEY) providers.push('Google');
   return providers;
 }
+
+/**
+ * Validate OAuth-specific environment variables with detailed diagnostics
+ * Provides more detailed OAuth-specific warnings beyond the general env validation
+ */
+export function validateOAuthEnvironment(): void {
+  const warnings: string[] = [];
+
+  // Check NEXTAUTH_URL value (complementary to zod validation)
+  if (!process.env.NEXTAUTH_URL) {
+    warnings.push('⚠️  NEXTAUTH_URL is not set - OAuth redirects will fail');
+  } else {
+    try {
+      const url = new URL(process.env.NEXTAUTH_URL);
+
+      // Warn if using localhost in production
+      if (process.env.NODE_ENV === 'production' && url.hostname === 'localhost') {
+        warnings.push('⚠️  NEXTAUTH_URL uses localhost in production - OAuth callbacks will fail!');
+        warnings.push('   Set NEXTAUTH_URL to your public domain (e.g., https://app.plugged.in)');
+      }
+
+      // Error if using 0.0.0.0 (this should never be used)
+      if (url.hostname === '0.0.0.0') {
+        console.error('❌ NEXTAUTH_URL cannot use 0.0.0.0 - OAuth will fail!');
+        console.error('   Use localhost for development or your public domain for production');
+      }
+
+      // Warn if not using HTTPS in production
+      if (process.env.NODE_ENV === 'production' && url.protocol !== 'https:') {
+        warnings.push('⚠️  NEXTAUTH_URL not using HTTPS in production');
+        warnings.push('   OAuth providers may reject non-HTTPS redirect URLs');
+      }
+    } catch (error) {
+      console.error('❌ NEXTAUTH_URL is not a valid URL:', process.env.NEXTAUTH_URL);
+    }
+  }
+
+  // Log OAuth-specific warnings
+  if (warnings.length > 0) {
+    console.warn('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    console.warn('  OAuth Configuration Warnings');
+    console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    warnings.forEach(warning => console.warn(warning));
+    console.warn('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  }
+}
+
+/**
+ * Get OAuth configuration summary for debugging
+ */
+export function getOAuthConfigSummary(): Record<string, string> {
+  return {
+    NEXTAUTH_URL: process.env.NEXTAUTH_URL || '❌ NOT SET (OAuth will fail!)',
+    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET ? '✓ SET' : '❌ NOT SET',
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    REDIRECT_BASE: process.env.NEXTAUTH_URL || 'http://localhost:12005 (fallback)',
+  };
+}
+
+/**
+ * Log OAuth configuration summary (safe for logs - no secrets)
+ */
+export function logOAuthConfigSummary(): void {
+  const summary = getOAuthConfigSummary();
+  console.log('\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  console.log('  OAuth Configuration');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  Object.entries(summary).forEach(([key, value]) => {
+    const status = value.includes('❌') ? '❌' : value.includes('✓') ? '✓ ' : '  ';
+    console.log(`${status} ${key}: ${value}`);
+  });
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+}

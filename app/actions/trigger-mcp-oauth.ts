@@ -4,12 +4,16 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable } from '@/db/schema';
+import { mcpServersTable, oauthPkceStatesTable,profilesTable } from '@/db/schema';
 import { withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { createBubblewrapConfig, createFirejailConfig } from '@/lib/mcp/client-wrapper';
+import { mcpOAuthFlows,trackOAuthFlow } from '@/lib/mcp/metrics';
 import { OAuthProcessManager } from '@/lib/mcp/oauth-process-manager';
 import { portAllocator } from '@/lib/mcp/utils/port-allocator';
+import { sanitizeOAuthError } from '@/lib/oauth/error-sanitization';
+import {generateIntegrityHash } from '@/lib/oauth/integrity';
+import { safeFetch, validateUrlForSSRF } from '@/lib/oauth/ssrf-protection';
 import type { McpServer } from '@/types/mcp-server';
 
 const triggerOAuthSchema = z.object({
@@ -17,6 +21,10 @@ const triggerOAuthSchema = z.object({
 });
 
 export async function triggerMcpOAuth(serverUuid: string) {
+  const startTime = Date.now();
+  let provider = 'unknown';
+  let serverType = 'unknown';
+
   try {
     // Validate input
     const validated = triggerOAuthSchema.parse({ serverUuid });
@@ -51,6 +59,47 @@ export async function triggerMcpOAuth(serverUuid: string) {
       transport: decryptedData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined,
     };
 
+    // Extract server type and provider for metrics
+    serverType = mcpServer.type || 'unknown';
+
+    // Detect provider from URL for mcp-remote servers
+    if (mcpServer.args && Array.isArray(mcpServer.args)) {
+      const urlIndex = mcpServer.args.findIndex((arg: string) => arg.includes('http'));
+      if (urlIndex !== -1 && mcpServer.args[urlIndex]) {
+        try {
+          const parsedUrl = new URL(mcpServer.args[urlIndex]);
+          const hostname = parsedUrl.hostname.toLowerCase();
+
+          if (hostname === 'linear.app' || hostname.endsWith('.linear.app')) {
+            provider = 'Linear';
+          } else if (hostname === 'github.com' || hostname.endsWith('.github.com')) {
+            provider = 'GitHub';
+          } else if (hostname === 'slack.com' || hostname.endsWith('.slack.com')) {
+            provider = 'Slack';
+          } else if (hostname === 'notion.com' || hostname.endsWith('.notion.com')) {
+            provider = 'Notion';
+          } else {
+            provider = 'mcp-remote';
+          }
+        } catch (e) {
+          provider = 'mcp-remote';
+        }
+      }
+    } else if (mcpServer.type === 'STREAMABLE_HTTP' || mcpServer.type === 'SSE') {
+      // For streamable HTTP servers, use hostname as provider
+      if (mcpServer.url) {
+        try {
+          const parsedUrl = new URL(mcpServer.url);
+          provider = parsedUrl.hostname.split('.')[0];
+        } catch (e) {
+          provider = 'streamable_http';
+        }
+      }
+    }
+
+    // Track OAuth flow initiation
+    mcpOAuthFlows.inc({ provider, server_type: serverType, status: 'initiated' });
+
     // Determine OAuth approach based on server type and configuration
     let oauthResult;
 
@@ -63,7 +112,7 @@ export async function triggerMcpOAuth(serverUuid: string) {
       oauthResult = await handleMcpRemoteOAuth(mcpServer);
     } else if (mcpServer.type === 'STREAMABLE_HTTP' || mcpServer.type === 'SSE') {
       // Handle STREAMABLE_HTTP/SSE servers with direct OAuth support
-      oauthResult = await handleStreamableHttpOAuth(mcpServer);
+      oauthResult = await handleStreamableHttpOAuth(mcpServer, session.user.id);
     } else {
       return {
         success: false,
@@ -81,13 +130,16 @@ export async function triggerMcpOAuth(serverUuid: string) {
           ...currentConfig,
           oauth_initiated_at: new Date().toISOString(),
         };
-        
+
         await db
           .update(mcpServersTable)
           .set({ config: updatedConfig })
           .where(eq(mcpServersTable.uuid, validated.serverUuid));
       }
-      
+
+      // Track OAuth URL generated (partial success - user still needs to complete flow)
+      trackOAuthFlow(provider, serverType, Date.now() - startTime, true);
+
       return {
         success: true,
         oauthUrl: oauthResult.oauthUrl,
@@ -98,6 +150,9 @@ export async function triggerMcpOAuth(serverUuid: string) {
     if (oauthResult.success && 'token' in oauthResult && oauthResult.token) {
       // Store the token in the server's environment
       await storeOAuthToken(validated.serverUuid, oauthResult, profile.uuid);
+
+      // Track successful OAuth completion
+      trackOAuthFlow(provider, serverType, Date.now() - startTime, true);
 
       return {
         success: true,
@@ -110,46 +165,32 @@ export async function triggerMcpOAuth(serverUuid: string) {
       if (oauthResult.success || ('token' in oauthResult && oauthResult.token === 'oauth_working')) {
         // Update the database to mark OAuth as completed
         const currentConfig = (mcpServer.config as any) || {};
-        
-        // Detect provider from URL in server args
-        let provider = 'mcp-remote';
-        const urlIndex = mcpServer.args?.findIndex((arg: string) => arg.includes('http'));
-        if (urlIndex !== -1 && urlIndex !== undefined && mcpServer.args) {
-          try {
-            const parsedUrl = new URL(mcpServer.args[urlIndex]);
-            const hostname = parsedUrl.hostname.toLowerCase();
-            
-            if (hostname === 'linear.app' || hostname.endsWith('.linear.app')) {
-              provider = 'Linear';
-            } else if (hostname === 'github.com' || hostname === 'www.github.com' || hostname.endsWith('.github.com')) {
-              provider = 'GitHub';
-            } else if (hostname === 'slack.com' || hostname.endsWith('.slack.com')) {
-              provider = 'Slack';
-            }
-          } catch (e) {
-            // Invalid URL, keep default provider
-            console.error('Invalid URL for provider detection:', e);
-          }
-        }
-        
+
+        // Note: provider was already detected earlier in the function
         const updatedConfig = {
           ...currentConfig,
           requires_auth: false,
           oauth_completed_at: new Date().toISOString(),
           oauth_provider: provider,
         };
-        
+
         await db
           .update(mcpServersTable)
           .set({ config: updatedConfig })
           .where(eq(mcpServersTable.uuid, validated.serverUuid));
-          
+
+        // Track successful OAuth completion
+        trackOAuthFlow(provider, serverType, Date.now() - startTime, true);
+
         return {
           success: true,
           message: 'OAuth authentication completed successfully',
         };
       }
     }
+
+    // Track OAuth failure
+    trackOAuthFlow(provider, serverType, Date.now() - startTime, false);
 
     return {
       success: false,
@@ -158,9 +199,13 @@ export async function triggerMcpOAuth(serverUuid: string) {
     });
   } catch (error) {
     console.error('Error triggering OAuth:', error);
+
+    // Track OAuth error
+    trackOAuthFlow(provider, serverType, Date.now() - startTime, false);
+
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: sanitizeOAuthError(error, 'oauth'),
     };
   }
 }
@@ -285,7 +330,7 @@ async function handleMcpRemoteOAuth(server: McpServer) {
 /**
  * Handle OAuth for STREAMABLE_HTTP/SSE servers
  */
-async function handleStreamableHttpOAuth(server: McpServer) {
+async function handleStreamableHttpOAuth(server: McpServer, userId: string) {
 
   if (!server.url) {
     return {
@@ -295,8 +340,19 @@ async function handleStreamableHttpOAuth(server: McpServer) {
   }
 
   try {
+    // SSRF Protection: Validate URL before making request
+    try {
+      validateUrlForSSRF(server.url);
+    } catch (ssrfError) {
+      console.error('[OAuth SSRF] Blocked request to:', server.url, ssrfError);
+      return {
+        success: false,
+        error: 'Invalid server URL: Access to this address is not allowed for security reasons',
+      };
+    }
+
     // Try to connect to the server and see if it provides OAuth information
-    const response = await fetch(server.url, {
+    const response = await safeFetch(server.url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -315,13 +371,179 @@ async function handleStreamableHttpOAuth(server: McpServer) {
         },
         id: 1
       }),
-      signal: AbortSignal.timeout(10000), // 10 second timeout
+      signal: AbortSignal.timeout(5000), // 5 second timeout (reduced from 10s for security)
     });
 
     if (response.status === 401) {
+      // ✅ NEW: Try RFC 9728 OAuth discovery first
+      const { discoverOAuthFromResponse } = await import('@/lib/oauth/rfc9728-discovery');
+      const { storeDiscoveredOAuthConfig, getOAuthConfig } = await import('@/lib/oauth/oauth-config-store');
+
+      const discovery = await discoverOAuthFromResponse(response, server.url);
+
+      if (discovery.metadata && discovery.authServer) {
+        console.log('[OAuth] RFC 9728 discovery successful for server:', server.name);
+
+        // Store discovered OAuth configuration
+        await storeDiscoveredOAuthConfig(
+          server.uuid,
+          discovery.metadata,
+          discovery.authServer,
+          discovery.resourceId,
+          discovery.discoveryMethod!
+        );
+
+        // Build OAuth authorization URL
+        const authUrl = new URL(discovery.metadata.authorization_endpoint);
+
+        const redirectUri = `${process.env.NEXTAUTH_URL || 'http://localhost:12005'}/api/oauth/callback`;
+
+        // ✅ NEW: Dynamic Client Registration (RFC 7591)
+        let clientId: string;
+        let clientSecret: string | undefined;
+
+        // Get current OAuth config to check for existing client_id
+        const { getOAuthConfig } = await import('@/lib/oauth/oauth-config-store');
+        const existingConfig = await getOAuthConfig(server.uuid);
+
+        if (discovery.metadata.registration_endpoint) {
+          // Server supports dynamic registration - register or reuse client
+          const { getOrRegisterClient } = await import('@/lib/oauth/dynamic-client-registration');
+
+          try {
+            const registration = await getOrRegisterClient(
+              server.uuid,
+              discovery.metadata.registration_endpoint,
+              redirectUri,
+              existingConfig?.client_id
+            );
+
+            clientId = registration.client_id;
+            clientSecret = registration.client_secret;
+
+            // Update OAuth config with registered client credentials
+            if (registration.client_id !== existingConfig?.client_id) {
+              const { storeOAuthConfig } = await import('@/lib/oauth/oauth-config-store');
+              await storeOAuthConfig({
+                serverUuid: server.uuid,
+                authorizationEndpoint: discovery.metadata.authorization_endpoint,
+                tokenEndpoint: discovery.metadata.token_endpoint,
+                registrationEndpoint: discovery.metadata.registration_endpoint,
+                authorizationServer: discovery.authServer,
+                resourceIdentifier: discovery.resourceId ?? undefined,
+                clientId: registration.client_id,
+                clientSecret: registration.client_secret,
+                scopes: discovery.metadata.scopes_supported,
+                supportsPKCE: discovery.metadata.code_challenge_methods_supported?.includes('S256') ?? true,
+                discoveryMethod: discovery.discoveryMethod!,
+              });
+              console.log('[OAuth] Stored registered client_id:', registration.client_id);
+            }
+          } catch (regError) {
+            console.error('[OAuth] Dynamic registration failed:', regError);
+            // Fallback to generic client ID
+            clientId = process.env.OAUTH_CLIENT_ID || 'pluggedin-dev';
+          }
+        } else {
+          // No registration endpoint - use configured or generic client ID
+          clientId = existingConfig?.client_id || process.env.OAUTH_CLIENT_ID || 'pluggedin-dev';
+        }
+
+        const state = crypto.randomUUID();
+
+        authUrl.searchParams.set('response_type', 'code');
+        authUrl.searchParams.set('client_id', clientId);
+        authUrl.searchParams.set('redirect_uri', redirectUri);
+        authUrl.searchParams.set('state', state);
+
+        // Add resource identifier if available (RFC 8707)
+        if (discovery.resourceId) {
+          authUrl.searchParams.set('resource', discovery.resourceId);
+        }
+
+        // Add default scopes if supported
+        // Filter out scopes that may not be allowed (like 'openid' for some OAuth clients)
+        if (discovery.metadata.scopes_supported?.length) {
+          // OAuth 2.0 Core scopes that are generally safe
+          const allowedScopes = discovery.metadata.scopes_supported.filter((scope: string) => {
+            // Exclude scopes that commonly require special authorization:
+            // - OpenID Connect scopes (openid, profile, email, address, phone)
+            // - Clerk-specific scopes (public_metadata, private_metadata, unsafe_metadata)
+            // - Other provider-specific scopes that may not be pre-authorized
+            const restrictedScopes = [
+              'openid', 'profile', 'email', 'address', 'phone', // OpenID Connect
+              'public_metadata', 'private_metadata', 'unsafe_metadata', // Clerk
+              'offline_access', // Refresh token scope that may require approval
+            ];
+            return !restrictedScopes.includes(scope.toLowerCase());
+          });
+
+          // If we have allowed scopes, use them; otherwise don't send scope parameter
+          // Some OAuth servers work better without explicit scopes (they use defaults)
+          if (allowedScopes.length > 0) {
+            authUrl.searchParams.set('scope', allowedScopes.join(' '));
+            console.log(`[OAuth] Using scopes: ${allowedScopes.join(' ')}`);
+          } else {
+            console.log('[OAuth] No safe scopes found, omitting scope parameter (provider will use defaults)');
+          }
+        }
+
+        // Use PKCE if supported (recommended for security)
+        if (discovery.metadata.code_challenge_methods_supported?.includes('S256')) {
+          // Generate PKCE challenge
+          const codeVerifier = crypto.randomUUID() + crypto.randomUUID();
+          const encoder = new TextEncoder();
+          const data = encoder.encode(codeVerifier);
+          const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+          const hashArray = Array.from(new Uint8Array(hashBuffer));
+          const codeChallenge = btoa(String.fromCharCode.apply(null, hashArray as any))
+            .replace(/\+/g, '-')
+            .replace(/\//g, '_')
+            .replace(/=/g, '');
+
+          authUrl.searchParams.set('code_challenge', codeChallenge);
+          authUrl.searchParams.set('code_challenge_method', 'S256');
+
+          // ✅ Store code_verifier for token exchange (linked to state parameter)
+          try {
+            // OAuth 2.1: Generate HMAC integrity hash to bind state parameters
+            const integrityHash = generateIntegrityHash({
+              state,
+              serverUuid: server.uuid,
+              userId,
+              codeVerifier,
+            });
+
+            await db.insert(oauthPkceStatesTable).values({
+              state,
+              server_uuid: server.uuid,
+              user_id: userId, // P0 Security: Bind PKCE state to user to prevent OAuth hijacking
+              code_verifier: codeVerifier,
+              redirect_uri: redirectUri,
+              integrity_hash: integrityHash, // OAuth 2.1: HMAC binding to prevent tampering
+              expires_at: new Date(Date.now() + 5 * 60 * 1000), // OAuth 2.1: Expires in 5 minutes (reduced from 10)
+            });
+            console.log('[OAuth] PKCE code_verifier stored successfully for state:', state);
+          } catch (error) {
+            console.error('[OAuth] Failed to store PKCE code_verifier:', error);
+            throw error; // Re-throw to fail the OAuth flow if storage fails
+          }
+
+          console.log('[OAuth] PKCE enabled for OAuth flow');
+        }
+
+        return {
+          success: true,
+          oauthUrl: authUrl.toString(),
+        };
+      }
+
+      // Fallback to legacy discovery methods if RFC 9728 fails
+      console.log('[OAuth] RFC 9728 discovery failed, trying legacy methods');
+
       // Check if the server provides OAuth information in headers or response
       const authHeader = response.headers.get('WWW-Authenticate');
-      const oauthUrl = response.headers.get('X-OAuth-URL') || 
+      const oauthUrl = response.headers.get('X-OAuth-URL') ||
                        response.headers.get('OAuth-URL') ||
                        response.headers.get('Authorization-URL');
 
@@ -336,7 +558,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
       try {
         const responseText = await response.text();
         let responseData;
-        
+
         // Handle both JSON and SSE responses
         if (response.headers.get('content-type')?.includes('text/event-stream')) {
           // Parse SSE format
@@ -364,25 +586,42 @@ async function handleStreamableHttpOAuth(server: McpServer) {
 
         // If no OAuth URL found, try to construct one based on common patterns
         const serverUrl = new URL(server.url);
-        
-        // Try common OAuth endpoints
+
+        // Try common OAuth endpoints (limited to prevent abuse)
         const commonOAuthPaths = [
           '/oauth/authorize',
           '/auth/oauth',
           '/login/oauth',
-          '/oauth',
-          '/auth'
         ];
 
+        // Rate limiting: Maximum 2 probe attempts to prevent port scanning
+        const MAX_PROBE_ATTEMPTS = 2;
+        let probeCount = 0;
+
         for (const path of commonOAuthPaths) {
+          if (probeCount >= MAX_PROBE_ATTEMPTS) {
+            console.log('[OAuth] Maximum probe attempts reached, stopping discovery');
+            break;
+          }
+
           const testUrl = new URL(path, serverUrl.origin).toString();
-          
+
+          // SSRF Protection: Validate probe URL before fetching
           try {
-            const testResponse = await fetch(testUrl, {
+            validateUrlForSSRF(testUrl);
+          } catch (ssrfError) {
+            console.warn('[OAuth SSRF] Skipping probe to restricted URL:', testUrl);
+            continue;
+          }
+
+          probeCount++;
+
+          try {
+            const testResponse = await safeFetch(testUrl, {
               method: 'GET',
-              signal: AbortSignal.timeout(5000),
+              signal: AbortSignal.timeout(3000), // 3 second timeout for probes
             });
-            
+
             // If we get a redirect or success, this might be the OAuth endpoint
             if (testResponse.status === 302 || testResponse.status === 200) {
               const location = testResponse.headers.get('Location');
@@ -401,6 +640,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
             }
           } catch (testError) {
             // Continue trying other paths
+            console.debug('[OAuth] Probe failed for:', testUrl, testError);
           }
         }
 
@@ -408,7 +648,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
       }
 
       // If no OAuth URL found anywhere, check if this might be a configuration issue
-      
+
       // Special check for known servers with specific requirements
       if (server.url?.includes('sentry.dev') && !server.url.endsWith('/mcp')) {
         return {
@@ -416,7 +656,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
           error: 'Sentry MCP requires the URL to end with /mcp (e.g., https://mcp.sentry.dev/mcp). Please update your server configuration.',
         };
       }
-      
+
       return {
         success: false,
         error: 'Authentication required but no OAuth endpoints were discovered. The server may not support OAuth or requires manual configuration.',
@@ -441,7 +681,7 @@ async function handleStreamableHttpOAuth(server: McpServer) {
     console.error('[handleStreamableHttpOAuth] Error testing OAuth:', error);
     return {
       success: false,
-      error: `Failed to connect to server: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      error: sanitizeOAuthError(error, 'discovery'),
     };
   }
 }
