@@ -4,16 +4,16 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import { db } from '@/db';
-import { mcpServersTable, profilesTable, oauthPkceStatesTable } from '@/db/schema';
+import { mcpServersTable, oauthPkceStatesTable,profilesTable } from '@/db/schema';
 import { withServerAuth } from '@/lib/auth-helpers';
 import { decryptServerData, encryptField } from '@/lib/encryption';
 import { createBubblewrapConfig, createFirejailConfig } from '@/lib/mcp/client-wrapper';
-import { trackOAuthFlow, mcpOAuthFlows } from '@/lib/mcp/metrics';
+import { mcpOAuthFlows,trackOAuthFlow } from '@/lib/mcp/metrics';
 import { OAuthProcessManager } from '@/lib/mcp/oauth-process-manager';
 import { portAllocator } from '@/lib/mcp/utils/port-allocator';
-import { generateIntegrityHash, generateSecureState, generateCodeVerifier } from '@/lib/oauth/integrity';
-import { safeFetch, validateUrlForSSRF } from '@/lib/oauth/ssrf-protection';
 import { sanitizeOAuthError } from '@/lib/oauth/error-sanitization';
+import {generateIntegrityHash } from '@/lib/oauth/integrity';
+import { safeFetch, validateUrlForSSRF } from '@/lib/oauth/ssrf-protection';
 import type { McpServer } from '@/types/mcp-server';
 
 const triggerOAuthSchema = z.object({

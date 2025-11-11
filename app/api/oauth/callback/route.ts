@@ -1,3 +1,4 @@
+import { and, eq, sql } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 
 import { db } from '@/db';
@@ -10,8 +11,6 @@ import { getOAuthConfig } from '@/lib/oauth/oauth-config-store';
 import { cleanupExpiredPkceStates } from '@/lib/oauth/pkce-cleanup';
 import { createRateLimiter } from '@/lib/rate-limiter';
 
-import { and, eq, sql } from 'drizzle-orm';
-
 // P0 Security: Rate limiter for OAuth callback (10 requests per 15 minutes per IP)
 const oauthCallbackRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -19,10 +18,20 @@ const oauthCallbackRateLimiter = createRateLimiter({
 });
 
 /**
+ * Get the application base URL from NEXTAUTH_URL
+ * This ensures redirects always go to the correct host, even if the OAuth provider
+ * redirects to a different host (e.g., 0.0.0.0)
+ */
+function getBaseUrl(): string {
+  return process.env.NEXTAUTH_URL || 'http://localhost:12005';
+}
+
+/**
  * P0 Security: Safe redirect helper to prevent open redirect vulnerabilities
  * Only allows redirects to whitelisted paths within the application
+ * Uses NEXTAUTH_URL explicitly to prevent redirects to wrong host
  */
-function safeRedirect(request: NextRequest, path: string, params?: Record<string, string>): NextResponse {
+function safeRedirect(path: string, params?: Record<string, string>): NextResponse {
   // Whitelist of allowed redirect paths
   const allowedPaths = ['/mcp-servers', '/login', '/settings'];
 
@@ -34,7 +43,7 @@ function safeRedirect(request: NextRequest, path: string, params?: Record<string
     path = '/mcp-servers'; // Fallback to safe default
   }
 
-  const url = new URL(path, request.url);
+  const url = new URL(path, getBaseUrl());
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.set(key, value);
@@ -90,9 +99,7 @@ export async function GET(request: NextRequest) {
     const rateLimitResult = await oauthCallbackRateLimiter(request);
     if (!rateLimitResult.allowed) {
       console.warn('[OAuth Callback] Rate limit exceeded for IP');
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=rate_limit_exceeded', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'rate_limit_exceeded' });
     }
 
     // P0 Security: Clean up expired PKCE states opportunistically (non-blocking)
@@ -104,9 +111,7 @@ export async function GET(request: NextRequest) {
     const session = await getAuthSession();
     if (!session?.user?.id) {
       console.error('[OAuth Callback] Unauthenticated request');
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=not_authenticated', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'not_authenticated' });
     }
 
     const searchParams = request.nextUrl.searchParams;
@@ -118,25 +123,19 @@ export async function GET(request: NextRequest) {
     // Handle OAuth errors
     if (error) {
       console.error('[OAuth Callback] Error from provider:', error, errorDescription);
-      return NextResponse.redirect(
-        new URL(
-          `/mcp-servers?oauth_error=${encodeURIComponent(error)}&error_description=${encodeURIComponent(errorDescription || '')}`,
-          request.url
-        )
-      );
+      return safeRedirect('/mcp-servers', {
+        oauth_error: error,
+        error_description: errorDescription || ''
+      });
     }
 
     // Validate required parameters
     if (!code) {
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=missing_code', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'missing_code' });
     }
 
     if (!state) {
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=missing_state', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'missing_state' });
     }
 
     // ✅ Get server UUID and code_verifier from PKCE state storage
@@ -151,9 +150,7 @@ export async function GET(request: NextRequest) {
     if (!pkceState || !pkceState.user_id) {
       console.error('[OAuth Callback] PKCE state not found or does not belong to user:', state);
       mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'invalid_state' });
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=invalid_state', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'invalid_state' });
     }
 
     // OAuth 2.1: Verify PKCE state integrity hash to prevent tampering
@@ -161,9 +158,7 @@ export async function GET(request: NextRequest) {
       console.error('[OAuth Callback] PKCE state integrity check failed - possible tampering detected');
       await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
       mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'invalid_state' });
-      return safeRedirect(request, '/mcp-servers', {
-        oauth_error: 'integrity_violation',
-      });
+      return safeRedirect('/mcp-servers', { oauth_error: 'integrity_violation' });
     }
 
     // Check if state has expired (OAuth 2.1: 5 minute expiration)
@@ -171,32 +166,34 @@ export async function GET(request: NextRequest) {
       console.error('[OAuth Callback] PKCE state expired');
       await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
       mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'expired' });
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=state_expired', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'state_expired' });
     }
 
     const serverUuid = pkceState.server_uuid;
     const codeVerifier = pkceState.code_verifier;
 
     // P0 Security: Validate redirect_uri matches stored value to prevent authorization code interception
-    const redirectUri = `${process.env.NEXTAUTH_URL || 'http://localhost:12005'}/api/oauth/callback`;
+    const redirectUri = `${getBaseUrl()}/api/oauth/callback`;
     if (pkceState.redirect_uri !== redirectUri) {
       console.error('[OAuth Callback] Redirect URI mismatch. Expected:', pkceState.redirect_uri, 'Got:', redirectUri);
       await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state));
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=redirect_uri_mismatch', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'redirect_uri_mismatch' });
     }
 
     // Get OAuth configuration for the server
     const oauthConfig = await getOAuthConfig(serverUuid);
 
+    // Add debugging for cache/client_id
+    console.log('[OAuth Callback] Retrieved OAuth config:', {
+      serverUuid,
+      client_id: oauthConfig?.client_id,
+      hasConfig: !!oauthConfig,
+      timestamp: new Date().toISOString()
+    });
+
     if (!oauthConfig) {
       mcpOAuthCallbacks.inc({ provider: 'unknown', status: 'error' });
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=config_not_found', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'config_not_found' });
     }
 
     // Extract provider from OAuth config or authorization server
@@ -214,9 +211,7 @@ export async function GET(request: NextRequest) {
     if (!clientId || clientId === 'pluggedin-dev') {
       console.error('[OAuth Callback] Client credentials not properly configured');
       mcpOAuthCallbacks.inc({ provider, status: 'error' });
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=client_not_configured', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'client_not_configured' });
     }
 
     // P0 Security: Use HTTP Basic Auth per RFC 6749 Section 2.3.1 (prevents credential logging)
@@ -268,12 +263,10 @@ export async function GET(request: NextRequest) {
       const errorText = await tokenResponse.text();
       console.error('[OAuth Callback] Token exchange failed:', errorText);
       mcpOAuthCallbacks.inc({ provider, status: 'error' });
-      return NextResponse.redirect(
-        new URL(
-          `/mcp-servers?oauth_error=token_exchange_failed&details=${encodeURIComponent(errorText)}`,
-          request.url
-        )
-      );
+      return safeRedirect('/mcp-servers', {
+        oauth_error: 'token_exchange_failed',
+        details: errorText
+      });
     }
 
     const tokenData = await tokenResponse.json();
@@ -281,9 +274,7 @@ export async function GET(request: NextRequest) {
     if (!tokenData.access_token) {
       console.error('[OAuth Callback] No access_token in response:', tokenData);
       mcpOAuthCallbacks.inc({ provider, status: 'error' });
-      return NextResponse.redirect(
-        new URL('/mcp-servers?oauth_error=no_access_token', request.url)
-      );
+      return safeRedirect('/mcp-servers', { oauth_error: 'no_access_token' });
     }
 
     // Store tokens in database
@@ -298,9 +289,10 @@ export async function GET(request: NextRequest) {
     await db.delete(oauthPkceStatesTable).where(eq(oauthPkceStatesTable.state, state!));
 
     // Redirect back to MCP servers page with success
-    return NextResponse.redirect(
-      new URL(`/mcp-servers?oauth_success=true&server=${serverUuid}`, request.url)
-    );
+    return safeRedirect('/mcp-servers', {
+      oauth_success: 'true',
+      server: serverUuid
+    });
   } catch (error) {
     console.error('[OAuth Callback] Unexpected error:', error);
 
@@ -320,12 +312,10 @@ export async function GET(request: NextRequest) {
     // P0 Security: Sanitize error message to prevent information disclosure
     const safeErrorMessage = sanitizeErrorMessage(error);
 
-    return NextResponse.redirect(
-      new URL(
-        `/mcp-servers?oauth_error=unexpected&details=${encodeURIComponent(safeErrorMessage)}`,
-        request.url
-      )
-    );
+    return safeRedirect('/mcp-servers', {
+      oauth_error: 'unexpected',
+      details: safeErrorMessage
+    });
   }
 }
 

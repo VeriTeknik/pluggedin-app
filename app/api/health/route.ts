@@ -18,9 +18,10 @@
  * - Uses same METRICS_ALLOWED_IPS as /api/metrics endpoint
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/db';
 import { sql } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { db } from '@/db';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -91,7 +92,7 @@ export async function GET(request: NextRequest) {
   // Extract client IP for access control
   const forwardedFor = request.headers.get('x-forwarded-for');
   const realIp = request.headers.get('x-real-ip');
-  const clientIp = forwardedFor?.split(',')[0]?.trim() || realIp || request.ip || null;
+  const clientIp = forwardedFor?.split(',')[0]?.trim() || realIp || null;
   const isMonitoring = isMonitoringIp(clientIp);
 
   // Initialize health status (status set after checks)

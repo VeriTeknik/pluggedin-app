@@ -199,7 +199,7 @@ export function InstallDialog({
         env: envObject,
         type: values.type,
         url: values.url,
-        transport: serverData.transport,
+        transport: serverData.transport as 'streamable_http' | 'sse' | 'stdio' | undefined,
         streamableHTTPOptions,
         source: serverData.source,
         external_id: serverData.external_id,

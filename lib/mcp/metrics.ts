@@ -16,7 +16,8 @@
  * Alerts: prometheus/rules/mcp-alerts.yml
  */
 
-import { Counter, Histogram, Gauge } from 'prom-client';
+import { Counter, Gauge,Histogram } from 'prom-client';
+
 import { register } from '@/lib/metrics';
 
 // ============================================================================

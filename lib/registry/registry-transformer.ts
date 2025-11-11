@@ -1,6 +1,6 @@
 import { McpServerSource } from '@/db/schema';
+import { isTracingEnabled,recordTrace } from '@/lib/tracing/helpers';
 import { McpIndex, McpServerCategory } from '@/types/search';
-import { recordTrace, isTracingEnabled } from '@/lib/tracing/helpers';
 
 interface RegistryPackage {
   registry_name: string;

@@ -19,8 +19,8 @@
  * - Compatible with Promtail JSON parsing
  */
 
-import pino from 'pino';
 import { randomUUID } from 'crypto';
+import pino from 'pino';
 
 // ========================================
 // Environment Detection
@@ -34,7 +34,7 @@ const isTest = process.env.NODE_ENV === 'test';
 // Use try-catch to avoid ReferenceError if EdgeRuntime is not defined
 const isEdgeRuntime = (() => {
   try {
-    return typeof globalThis.EdgeRuntime !== 'undefined';
+    return typeof (globalThis as any).EdgeRuntime !== 'undefined';
   } catch {
     return false;
   }
@@ -103,6 +103,7 @@ export const logger = pino({
     // Edge Runtime doesn't support the 'os' module
     hostname: (() => {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         return isEdgeRuntime ? 'edge-runtime' : require('os').hostname();
       } catch {
         return 'unknown';

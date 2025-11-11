@@ -19,6 +19,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+
 import { getMetrics } from '@/lib/metrics';
 
 export const dynamic = 'force-dynamic';

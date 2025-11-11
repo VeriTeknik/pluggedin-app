@@ -91,20 +91,28 @@ export function ServerCard({
   // Check if server requires auth
   useEffect(() => {
     const config = server.config as any;
-    
+
     // Check if this is an mcp-remote server (which typically requires OAuth)
-    const isMcpRemote = server.command === 'npx' && 
-                       Array.isArray(server.args) && 
+    const isMcpRemote = server.command === 'npx' &&
+                       Array.isArray(server.args) &&
                        server.args.includes('mcp-remote');
-    
+
+    // Check if this is a remote HTTP server (often requires OAuth)
+    const isRemoteHttp = server.type === McpServerType.STREAMABLE_HTTP || server.type === McpServerType.SSE;
+
     // Show auth button if:
     // 1. Server explicitly requires auth (requires_auth: true)
     // 2. Server has completed OAuth (oauth_completed_at exists) - to show status
     // 3. Server is mcp-remote (typically needs OAuth for services like Linear)
-    if (config?.requires_auth || config?.oauth_completed_at || isMcpRemote) {
+    // 4. Server is STREAMABLE_HTTP/SSE and hasn't completed OAuth yet (proactive UX)
+    //    This allows users to authenticate immediately without needing to click "Discover" first
+    if (config?.requires_auth ||
+        config?.oauth_completed_at ||
+        isMcpRemote ||
+        (isRemoteHttp && !config?.oauth_completed_at)) {
       setRequiresAuth(true);
     }
-  }, [server.config, server.command, server.args]);
+  }, [server.config, server.command, server.args, server.type]);
 
 
   const handleShareStatusChange = (newIsShared: boolean, newSharedUuid: string | null) => {

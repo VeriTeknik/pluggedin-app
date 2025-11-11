@@ -12,8 +12,8 @@
  * - Integration with Loki via Promtail
  */
 
-import pino from 'pino';
 import { randomUUID } from 'crypto';
+import pino from 'pino';
 
 // Determine environment
 const isDevelopment = process.env.NODE_ENV === 'development';
@@ -29,6 +29,7 @@ export const logger = pino({
     service: process.env.SERVICE_NAME || 'pluggedin-service',
     environment: process.env.NODE_ENV || 'development',
     version: process.env.APP_VERSION || '1.0.0',
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     hostname: process.env.HOSTNAME || require('os').hostname(),
   },
 

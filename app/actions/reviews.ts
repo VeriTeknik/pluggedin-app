@@ -1,8 +1,8 @@
 'use server';
 
 import { McpServerSource } from '@/db/schema';
-import { ServerReview } from '@/types/review';
 import { validateExternalIdWithLogging } from '@/lib/validation-utils';
+import { ServerReview } from '@/types/review';
 
 export async function getReviewsForServer(
   source: McpServerSource,

@@ -33,7 +33,7 @@
  * - pluggedin_nodejs_gc_duration_seconds
  */
 
-import { Registry, collectDefaultMetrics } from 'prom-client';
+import { collectDefaultMetrics,Registry } from 'prom-client';
 
 // Create global registry
 export const register = new Registry();

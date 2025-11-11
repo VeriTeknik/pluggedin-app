@@ -7,7 +7,8 @@
  * Metrics are automatically collected by the middleware and exported via /api/metrics
  */
 
-import { Counter, Histogram, Gauge } from 'prom-client';
+import { Counter, Gauge,Histogram } from 'prom-client';
+
 import { register } from '@/lib/metrics';
 
 // ========================================

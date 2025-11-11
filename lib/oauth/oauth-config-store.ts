@@ -23,8 +23,10 @@ interface CacheEntry {
 
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const MAX_CACHE_SIZE = 500; // Maximum cached configurations
+const WRITE_FRESHNESS_MS = 60 * 1000; // 1 minute - force DB read after recent writes
 
 const oauthConfigCache = new Map<string, CacheEntry>();
+const recentWrites = new Map<string, number>(); // Track write timestamps
 
 // Periodic cleanup of expired cache entries
 setInterval(() => {
@@ -114,8 +116,13 @@ export async function storeOAuthConfig(config: OAuthConfigInput): Promise<void> 
       });
     }
 
-    // Invalidate cache after write
+    // Invalidate cache after write and track write timestamp
     oauthConfigCache.delete(config.serverUuid);
+    recentWrites.set(config.serverUuid, Date.now());
+
+    log.debug('OAuth Config: Cache invalidated after write', {
+      serverUuid: config.serverUuid
+    });
   } catch (error) {
     log.error('OAuth Config: Error storing OAuth config', error, {
       serverUuid: config.serverUuid
@@ -127,20 +134,42 @@ export async function storeOAuthConfig(config: OAuthConfigInput): Promise<void> 
 /**
  * Get OAuth configuration for a server
  * Uses cache with 5-minute TTL to reduce database load
+ * Forces fresh DB read if written recently (within 1 minute) to prevent stale cache reads
  */
 export async function getOAuthConfig(serverUuid: string) {
   try {
-    // Check cache first
-    const cached = oauthConfigCache.get(serverUuid);
     const now = Date.now();
+    const writeTime = recentWrites.get(serverUuid);
 
-    if (cached && (now - cached.timestamp) < CACHE_TTL_MS) {
-      return cached.config;
+    // Force DB read if written recently (within WRITE_FRESHNESS_MS)
+    // This prevents stale cache reads after OAuth registration/updates
+    const forceRefresh = writeTime && (now - writeTime) < WRITE_FRESHNESS_MS;
+
+    if (forceRefresh) {
+      log.debug('OAuth Config: Forcing fresh DB read due to recent write', {
+        serverUuid,
+        writeAge: now - (writeTime || 0)
+      });
+    } else {
+      // Check cache first (only if not forcing refresh)
+      const cached = oauthConfigCache.get(serverUuid);
+
+      if (cached && (now - cached.timestamp) < CACHE_TTL_MS) {
+        log.debug('OAuth Config: Cache hit', { serverUuid });
+        return cached.config;
+      }
     }
 
-    // Cache miss or expired - fetch from database
+    // Cache miss, expired, or force refresh - fetch from database
     const config = await db.query.mcpServerOAuthConfigTable.findFirst({
       where: eq(mcpServerOAuthConfigTable.server_uuid, serverUuid),
+    });
+
+    log.debug('OAuth Config: Fresh DB read', {
+      serverUuid,
+      hasConfig: !!config,
+      clientId: config?.client_id || 'none',
+      forceRefresh
     });
 
     // Implement LRU eviction if cache is full
@@ -186,4 +215,14 @@ export async function storeDiscoveredOAuthConfig(
     supportsPKCE: metadata.code_challenge_methods_supported?.includes('S256') ?? true,
     discoveryMethod,
   });
+}
+
+/**
+ * Clear OAuth configuration cache for a server
+ * Used after dynamic client registration to ensure fresh reads
+ */
+export function clearOAuthConfigCache(serverUuid: string): void {
+  oauthConfigCache.delete(serverUuid);
+  recentWrites.set(serverUuid, Date.now());
+  log.debug('OAuth Config: Cache manually cleared', { serverUuid });
 }
