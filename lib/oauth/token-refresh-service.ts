@@ -250,12 +250,20 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
   }
 
   // OAuth 2.1: Check for refresh token reuse (security measure)
-  // If token was already used, this indicates a replay attack or race condition
-  if (tokenRecord.refresh_token_used_at) {
+  // Only flag as reuse if attempted within a short time window (e.g., concurrent requests)
+  // After successful rotation, the refresh_token_used_at timestamp should be old
+  const REUSE_DETECTION_WINDOW = 10 * 1000; // 10 seconds
+  const timeSinceLastUse = tokenRecord.refresh_token_used_at
+    ? Date.now() - tokenRecord.refresh_token_used_at.getTime()
+    : Infinity;
+
+  if (tokenRecord.refresh_token_used_at && timeSinceLastUse < REUSE_DETECTION_WINDOW) {
+    // Token was used very recently - this indicates a replay attack or race condition
     log.security('oauth_refresh_token_reuse_detected', userId, {
       serverUuid,
       tokenUsedAt: tokenRecord.refresh_token_used_at,
       currentAttempt: new Date(),
+      timeSinceLastUseMs: timeSinceLastUse,
     });
 
     // Record security event
@@ -269,6 +277,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
       tokenUsedAt: tokenRecord.refresh_token_used_at?.toISOString(),
       tokenExpiresAt: tokenRecord.expires_at?.toISOString(),
       currentAttempt: new Date().toISOString(),
+      timeSinceLastUseMs: timeSinceLastUse,
       stack: new Error().stack,
     }, 'error');
 
@@ -285,6 +294,15 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
     const durationSeconds = (Date.now() - startTime) / 1000;
     recordTokenRefresh(false, durationSeconds, 'reuse_detected');
     return false;
+  } else if (tokenRecord.refresh_token_used_at) {
+    // Token was used before but outside the reuse window - this is normal after rotation
+    oauthAudit('REFRESH TOKEN ROTATED PREVIOUSLY', {
+      serverUuid,
+      userId,
+      lastUsedAt: tokenRecord.refresh_token_used_at?.toISOString(),
+      timeSinceLastUseSeconds: Math.floor(timeSinceLastUse / 1000),
+      status: 'normal_rotation',
+    });
   }
 
   // 2. Check if token actually needs refresh

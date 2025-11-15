@@ -15,9 +15,10 @@
  */
 
 import { and, eq, isNull, lt, or } from 'drizzle-orm';
+import pLimit from 'p-limit';
 
 import { db } from '@/db';
-import { mcpServerOAuthTokensTable, projectsTable, profilesTable, mcpServersTable } from '@/db/schema';
+import { mcpServersTable, mcpServerOAuthTokensTable, profilesTable, projectsTable } from '@/db/schema';
 import { log } from '@/lib/observability/logger';
 import {
   recordScheduledRefresh,
@@ -30,6 +31,8 @@ import { refreshOAuthToken } from '@/lib/oauth/token-refresh-service';
 const REFRESH_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
 const EXPIRY_BUFFER_MS = 15 * 60 * 1000; // 15 minutes before expiry
 const BATCH_SIZE = 50; // Process up to 50 tokens per run
+const STALE_LOCK_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
+const REFRESH_CONCURRENCY_LIMIT = 5; // Max concurrent OAuth refreshes to avoid overwhelming providers
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 
@@ -99,12 +102,12 @@ async function getExpiringTokens() {
       and(
         // Token expires soon
         lt(mcpServerOAuthTokensTable.expires_at, expiryThreshold),
-        // Token is not locked or lock is stale (> 2 minutes old)
+        // Token is not locked or lock is stale
         or(
           isNull(mcpServerOAuthTokensTable.refresh_token_locked_at),
           lt(
             mcpServerOAuthTokensTable.refresh_token_locked_at,
-            new Date(Date.now() - 2 * 60 * 1000)
+            new Date(Date.now() - STALE_LOCK_THRESHOLD_MS)
           )
         )
       )
@@ -249,9 +252,10 @@ async function refreshExpiringTokens() {
       return { refreshed: 0, failed: 0, errors: [] };
     }
 
-    // Refresh tokens in parallel for better performance
-    // Using Promise.allSettled to handle both successes and failures
-    const refreshPromises = tokens.map(token => processToken(token));
+    // Refresh tokens with concurrency limit to avoid overwhelming OAuth providers
+    // Using p-limit to control simultaneous refreshes and prevent rate limiting
+    const limit = pLimit(REFRESH_CONCURRENCY_LIMIT);
+    const refreshPromises = tokens.map(token => limit(() => processToken(token)));
 
     // Wait for all refresh operations to complete
     const settled = await Promise.allSettled(refreshPromises);
@@ -299,6 +303,21 @@ async function refreshExpiringTokens() {
 }
 
 /**
+ * Check if running in a test environment
+ */
+function isTestEnvironment(): boolean {
+  const env = process.env;
+  return !!(
+    env.NODE_ENV?.toLowerCase().includes('test') ||
+    env.VITEST ||
+    env.JEST_WORKER_ID ||
+    env.MOCHA ||
+    env.JASMINE ||
+    env.TEST_ENV
+  );
+}
+
+/**
  * Start the token refresh scheduler
  * Runs periodically to refresh expiring tokens
  *
@@ -310,7 +329,7 @@ export function startTokenRefreshScheduler(
   bufferMs: number = EXPIRY_BUFFER_MS
 ) {
   // Don't start in test environment
-  if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
+  if (isTestEnvironment()) {
     schedulerAudit('SKIPPING SCHEDULER STARTUP', { reason: 'test_environment' });
     return;
   }
