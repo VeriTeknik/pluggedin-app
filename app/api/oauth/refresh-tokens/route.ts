@@ -29,6 +29,8 @@ import { createRateLimiter } from '@/lib/rate-limiter';
  */
 
 // Rate limiter for cron endpoint (10 requests per hour per IP)
+// NOTE: Requires REDIS_URL in production for distributed rate limiting
+// Falls back to in-memory if Redis unavailable (not recommended for multi-instance deployments)
 const cronRateLimiter = createRateLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 10, // 10 requests per window

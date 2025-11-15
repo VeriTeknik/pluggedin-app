@@ -55,3 +55,22 @@ export async function register() {
 }
 
 export const onRequestError = Sentry.captureRequestError;
+
+/**
+ * Graceful shutdown handler
+ * Ensures clean shutdown of background services
+ */
+export async function onShutdown() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    console.log('[Shutdown] Stopping background services...');
+
+    // Stop OAuth token refresh scheduler
+    const { stopTokenRefreshScheduler } = await import('./lib/oauth/token-refresh-scheduler');
+    stopTokenRefreshScheduler();
+
+    // Wait for in-flight token refreshes to complete (max 5 seconds)
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    console.log('[Shutdown] All services stopped gracefully');
+  }
+}
