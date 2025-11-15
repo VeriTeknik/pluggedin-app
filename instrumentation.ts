@@ -37,6 +37,15 @@ export async function register() {
     );
     console.log('[Startup] OAuth token lock cleanup service started');
 
+    // Start OAuth token refresh scheduler
+    // This proactively refreshes tokens before they expire
+    const { startTokenRefreshScheduler } = await import('./lib/oauth/token-refresh-scheduler');
+    startTokenRefreshScheduler(
+      10 * 60 * 1000, // Run refresh check every 10 minutes
+      15 * 60 * 1000  // Refresh tokens expiring within 15 minutes
+    );
+    console.log('[Startup] OAuth token refresh scheduler started');
+
     await import('./sentry.server.config');
   }
 
