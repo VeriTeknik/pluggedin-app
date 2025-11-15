@@ -533,12 +533,29 @@ export async function getOrCreatePlaygroundSession(
           mcpServersConfig[server.name].transport = 'stdio';
         } else if (server.type === McpServerType.SSE) {
           mcpServersConfig[server.name].transport = 'sse';
+          // Include streamableHTTPOptions for SSE servers with OAuth
+          const serverWithOptions = server as any;
+          console.log(`[Playground Config] SSE Server ${server.name}:`, {
+            hasStreamableHTTPOptions: !!serverWithOptions.streamableHTTPOptions,
+            hasAuthHeader: !!serverWithOptions.streamableHTTPOptions?.headers?.Authorization
+          });
+          if (serverWithOptions.streamableHTTPOptions) {
+            mcpServersConfig[server.name].streamableHTTPOptions = serverWithOptions.streamableHTTPOptions;
+          } else {
+            console.warn(`[Playground Config] SSE Server ${server.name} is missing streamableHTTPOptions!`);
+          }
         } else if (server.type === McpServerType.STREAMABLE_HTTP) {
           mcpServersConfig[server.name].transport = 'streamable_http';
           // Cast server to any to access dynamically added fields
           const serverWithOptions = server as any;
+          console.log(`[Playground Config] STREAMABLE_HTTP Server ${server.name}:`, {
+            hasStreamableHTTPOptions: !!serverWithOptions.streamableHTTPOptions,
+            hasAuthHeader: !!serverWithOptions.streamableHTTPOptions?.headers?.Authorization
+          });
           if (serverWithOptions.streamableHTTPOptions) {
             mcpServersConfig[server.name].streamableHTTPOptions = serverWithOptions.streamableHTTPOptions;
+          } else {
+            console.warn(`[Playground Config] STREAMABLE_HTTP Server ${server.name} is missing streamableHTTPOptions!`);
           }
         }
       }

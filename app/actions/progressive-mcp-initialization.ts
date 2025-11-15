@@ -259,9 +259,11 @@ export async function progressivelyInitializeMcpServers(
     });
 
     // Start initialization process with overall timeout
+    // Initialize servers in PARALLEL to avoid transport-type state conflicts
     await Promise.race([
       (async () => {
-        for (const serverName of serverNames) {
+        // Create initialization promises for all servers in parallel
+        const initializationPromises = serverNames.map(async (serverName) => {
           const serverConfig = mcpServersConfig[serverName];
           const startTime = Date.now();
           const statusEntry: ServerInitStatus = { serverName, status: 'pending', startTime };
@@ -276,7 +278,7 @@ export async function progressivelyInitializeMcpServers(
               'warn',
               `[MCP] Skipping initialization for ${serverName} due to failed health check.`
             );
-            continue;
+            return { serverName, status: 'skipped' as const, statusEntry };
           }
 
           try {
@@ -294,19 +296,39 @@ export async function progressivelyInitializeMcpServers(
 
             statusEntry.status = 'success';
             statusEntry.endTime = Date.now();
-            allTools.push(...result.tools);
-            cleanupFunctions.push(result.cleanup);
             await addServerLogForProfile(
               profileUuid,
               'info',
               `[MCP] Successfully initialized server: ${serverName}`
             );
+            return { serverName, status: 'success' as const, result, statusEntry };
           } catch (error) {
             statusEntry.status = 'error';
             statusEntry.error = error instanceof Error ? error.message : String(error);
             statusEntry.endTime = Date.now();
-            failedServers.push(serverName);
             console.error(`[MCP] Failed to initialize server "${serverName}":`, error);
+            return { serverName, status: 'error' as const, error, statusEntry };
+          }
+        });
+
+        // Wait for all servers to initialize in parallel with error isolation
+        const results = await Promise.allSettled(initializationPromises);
+
+        // Process results after all initializations complete
+        for (const promiseResult of results) {
+          if (promiseResult.status === 'fulfilled') {
+            const { serverName, status, result } = promiseResult.value;
+
+            if (status === 'success' && result) {
+              allTools.push(...result.tools);
+              cleanupFunctions.push(result.cleanup);
+            } else if (status === 'error') {
+              failedServers.push(serverName);
+            }
+            // 'skipped' status is already logged, no additional action needed
+          } else {
+            // Promise itself rejected (unexpected)
+            console.error('[MCP] Unexpected promise rejection during initialization:', promiseResult.reason);
           }
         }
       })(),

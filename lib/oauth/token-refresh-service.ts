@@ -445,6 +445,17 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
         ? newTokens.token_type.charAt(0).toUpperCase() + newTokens.token_type.slice(1).toLowerCase()
         : 'Bearer';
 
+      // Store OAuth token in the format expected by @h1deya/langchain-mcp-tools
+      // The library expects: streamableHTTPOptions.requestInit.headers
+      if (!options.requestInit) {
+        options.requestInit = {};
+      }
+      options.requestInit.headers = {
+        ...(options.requestInit?.headers || {}),
+        Authorization: `${tokenType} ${newTokens.access_token}`,
+      };
+
+      // Also keep legacy format for backward compatibility
       options.headers = {
         ...(options.headers || {}),
         Authorization: `${tokenType} ${newTokens.access_token}`,
