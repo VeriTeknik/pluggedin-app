@@ -533,6 +533,11 @@ export async function getOrCreatePlaygroundSession(
           mcpServersConfig[server.name].transport = 'stdio';
         } else if (server.type === McpServerType.SSE) {
           mcpServersConfig[server.name].transport = 'sse';
+          // Include streamableHTTPOptions for SSE servers with OAuth
+          const serverWithOptions = server as any;
+          if (serverWithOptions.streamableHTTPOptions) {
+            mcpServersConfig[server.name].streamableHTTPOptions = serverWithOptions.streamableHTTPOptions;
+          }
         } else if (server.type === McpServerType.STREAMABLE_HTTP) {
           mcpServersConfig[server.name].transport = 'streamable_http';
           // Cast server to any to access dynamically added fields
