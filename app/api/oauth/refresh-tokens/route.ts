@@ -70,6 +70,16 @@ export async function POST(request: NextRequest) {
     // P0 Security: Use constant-time comparison to prevent timing attacks
     // This prevents attackers from using timing analysis to guess the secret
     const crypto = await import('crypto');
+
+    // Validate lengths match before comparison (timingSafeEqual throws on mismatch)
+    if (providedSecret.length !== cronSecret.length) {
+      console.warn('[OAuth Refresh Cron] Invalid CRON_SECRET length');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const secretsMatch = crypto.timingSafeEqual(
       Buffer.from(providedSecret),
       Buffer.from(cronSecret)

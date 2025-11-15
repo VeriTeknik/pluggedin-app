@@ -12,6 +12,23 @@ import {
 } from '@/lib/observability/oauth-metrics';
 
 /**
+ * Standardized OAuth audit logging helper
+ * Logs to both console (for journalctl/stdout) and structured logger
+ */
+function oauthAudit(
+  event: string,
+  details: Record<string, any>,
+  level: 'info' | 'error' = 'info'
+) {
+  const payload = { timestamp: new Date().toISOString(), ...details };
+  if (level === 'error') {
+    console.error(`[OAuth Token Lifecycle] ${event}:`, payload);
+  } else {
+    console.log(`[OAuth Token Lifecycle] ${event}:`, payload);
+  }
+}
+
+/**
  * Waits for a concurrent token refresh to complete
  * Uses polling with exponential backoff to check if the lock is cleared
  *
@@ -161,11 +178,7 @@ export async function isTokenExpired(serverUuid: string): Promise<boolean> {
  */
 export async function refreshOAuthToken(serverUuid: string, userId: string): Promise<boolean> {
   const startTime = Date.now();
-  console.log('[OAuth Token Lifecycle] TOKEN REFRESH INITIATED:', {
-    timestamp: new Date().toISOString(),
-    serverUuid,
-    userId,
-  });
+  oauthAudit('TOKEN REFRESH INITIATED', { serverUuid, userId });
   log.oauth('token_refresh_initiated', { serverUuid, userId });
 
   // P0 Security: Validate server belongs to user (prevents token substitution)
@@ -199,11 +212,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
 
   if (!lockResult || lockResult.length === 0) {
     // Lock is held by another request - wait for it to complete
-    console.log('[OAuth Token Lifecycle] LOCK HELD BY CONCURRENT REQUEST:', {
-      timestamp: new Date().toISOString(),
-      serverUuid,
-      userId,
-    });
+    oauthAudit('LOCK HELD BY CONCURRENT REQUEST', { serverUuid, userId });
     log.oauth('token_refresh_lock_held_by_another_request', { serverUuid });
     const refreshCompleted = await waitForRefreshCompletion(serverUuid, 0);
     const durationSeconds = (Date.now() - startTime) / 1000;
@@ -221,8 +230,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
 
   const tokenRecord = lockResult[0];
 
-  console.log('[OAuth Token Lifecycle] LOCK ACQUIRED:', {
-    timestamp: new Date().toISOString(),
+  oauthAudit('LOCK ACQUIRED', {
     serverUuid,
     userId,
     tokenExpiresAt: tokenRecord.expires_at?.toISOString(),
@@ -254,8 +262,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
     recordTokenReuseDetected();
 
     // CRITICAL: Log token deletion BEFORE deleting for audit trail
-    console.error('[OAuth Token Lifecycle] DELETING TOKEN - Reuse Detected:', {
-      timestamp: new Date().toISOString(),
+    oauthAudit('DELETING TOKEN - Reuse Detected', {
       serverUuid,
       userId,
       reason: 'refresh_token_reuse',
@@ -263,13 +270,13 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
       tokenExpiresAt: tokenRecord.expires_at?.toISOString(),
       currentAttempt: new Date().toISOString(),
       stack: new Error().stack,
-    });
+    }, 'error');
 
     // Revoke all tokens as a security measure (OAuth 2.1 best practice)
     await db.delete(mcpServerOAuthTokensTable)
       .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
 
-    console.error('[OAuth Token Lifecycle] TOKEN DELETED - Reuse Detected:', { serverUuid, userId });
+    oauthAudit('TOKEN DELETED - Reuse Detected', { serverUuid, userId }, 'error');
 
     // Audit log for security monitoring
     log.security('oauth_tokens_revoked', userId, { serverUuid, reason: 'refresh_token_reuse' });
@@ -376,8 +383,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
       : null;
 
     // OAuth 2.1: Store new tokens, mark old refresh token as used, clear lock
-    console.log('[OAuth Token Lifecycle] UPDATING TOKEN IN DATABASE:', {
-      timestamp: new Date().toISOString(),
+    oauthAudit('UPDATING TOKEN IN DATABASE', {
       serverUuid,
       userId,
       newExpiresAt: newExpiresAt?.toISOString(),
@@ -396,8 +402,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
       })
       .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
 
-    console.log('[OAuth Token Lifecycle] TOKEN UPDATED SUCCESSFULLY:', {
-      timestamp: new Date().toISOString(),
+    oauthAudit('TOKEN UPDATED SUCCESSFULLY', {
       serverUuid,
       userId,
       newExpiresAt: newExpiresAt?.toISOString(),
@@ -437,8 +442,7 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
       log.oauth('token_updated_streamable_options', { serverUuid });
     }
 
-    console.log('[OAuth Token Lifecycle] TOKEN REFRESH COMPLETE:', {
-      timestamp: new Date().toISOString(),
+    oauthAudit('TOKEN REFRESH COMPLETE', {
       serverUuid,
       userId,
       durationMs: Date.now() - startTime,
@@ -451,14 +455,13 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
     return true;
 
   } catch (error) {
-    console.error('[OAuth Token Lifecycle] TOKEN REFRESH FAILED:', {
-      timestamp: new Date().toISOString(),
+    oauthAudit('TOKEN REFRESH FAILED', {
       serverUuid,
       userId,
       error: error instanceof Error ? error.message : String(error),
       stack: error instanceof Error ? error.stack : undefined,
       durationMs: Date.now() - startTime,
-    });
+    }, 'error');
 
     log.error('OAuth Refresh: Exception during token refresh', error, { serverUuid });
 
@@ -468,14 +471,14 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
         .set({ refresh_token_locked_at: null })
         .where(eq(mcpServerOAuthTokensTable.server_uuid, serverUuid));
 
-      console.log('[OAuth Token Lifecycle] LOCK CLEARED AFTER ERROR:', { serverUuid, userId });
+      oauthAudit('LOCK CLEARED AFTER ERROR', { serverUuid, userId });
       log.oauth('token_refresh_lock_cleared', { serverUuid, reason: 'exception' });
     } catch (unlockError) {
-      console.error('[OAuth Token Lifecycle] FAILED TO CLEAR LOCK:', {
+      oauthAudit('FAILED TO CLEAR LOCK', {
         serverUuid,
         userId,
         error: unlockError instanceof Error ? unlockError.message : String(unlockError),
-      });
+      }, 'error');
       log.error('OAuth Refresh: Failed to clear lock', unlockError, { serverUuid });
     }
 

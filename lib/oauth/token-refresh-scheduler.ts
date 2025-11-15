@@ -34,14 +34,50 @@ const BATCH_SIZE = 50; // Process up to 50 tokens per run
 let schedulerInterval: NodeJS.Timeout | null = null;
 
 /**
+ * Standardized OAuth scheduler logging helper
+ * Logs to both console (for journalctl/stdout) and structured logger
+ */
+function schedulerAudit(
+  event: string,
+  details: Record<string, any>,
+  level: 'info' | 'error' = 'info'
+) {
+  const payload = { timestamp: new Date().toISOString(), ...details };
+  if (level === 'error') {
+    console.error(`[OAuth Scheduler] ${event}:`, payload);
+  } else {
+    console.log(`[OAuth Scheduler] ${event}:`, payload);
+  }
+}
+
+/**
+ * Token information for refresh processing
+ */
+interface TokenInfo {
+  server_uuid: string;
+  expires_at: Date | null;
+  user_id: string;
+  server_name: string | null;
+  locked_at: Date | null;
+}
+
+/**
+ * Result of processing a single token
+ */
+interface TokenProcessResult {
+  status: 'fulfilled' | 'rejected';
+  value?: { success: boolean; error?: string; token: TokenInfo };
+  reason?: string;
+}
+
+/**
  * Get all OAuth tokens expiring soon
  * Returns tokens with server ownership information for refresh
  */
 async function getExpiringTokens() {
   const expiryThreshold = new Date(Date.now() + EXPIRY_BUFFER_MS);
 
-  console.log('[OAuth Scheduler] QUERYING EXPIRING TOKENS:', {
-    timestamp: new Date().toISOString(),
+  schedulerAudit('QUERYING EXPIRING TOKENS', {
     expiryThreshold: expiryThreshold.toISOString(),
     bufferMinutes: EXPIRY_BUFFER_MS / 60000,
   });
@@ -75,8 +111,7 @@ async function getExpiringTokens() {
     )
     .limit(BATCH_SIZE);
 
-  console.log('[OAuth Scheduler] FOUND EXPIRING TOKENS:', {
-    timestamp: new Date().toISOString(),
+  schedulerAudit('FOUND EXPIRING TOKENS', {
     count: expiringTokens.length,
     tokens: expiringTokens.map(t => ({
       serverUuid: t.server_uuid,
@@ -88,6 +123,105 @@ async function getExpiringTokens() {
   });
 
   return expiringTokens;
+}
+
+/**
+ * Process a single token refresh
+ * Returns standardized result for aggregation
+ */
+async function processToken(token: TokenInfo): Promise<TokenProcessResult> {
+  schedulerAudit('REFRESHING TOKEN', {
+    serverUuid: token.server_uuid,
+    serverName: token.server_name,
+    expiresAt: token.expires_at?.toISOString() || 'never',
+    userId: token.user_id,
+  });
+
+  try {
+    const success = await refreshOAuthToken(token.server_uuid, token.user_id);
+
+    if (success) {
+      schedulerAudit('TOKEN REFRESH SUCCESS', {
+        serverUuid: token.server_uuid,
+        serverName: token.server_name,
+      });
+
+      log.oauth('scheduled_token_refreshed', {
+        serverUuid: token.server_uuid,
+        serverName: token.server_name,
+        expiresAt: token.expires_at,
+      });
+
+      return { status: 'fulfilled', value: { success: true, token } };
+    } else {
+      const errorMsg = `Failed to refresh token for ${token.server_name || token.server_uuid}`;
+
+      schedulerAudit('TOKEN REFRESH FAILED', {
+        serverUuid: token.server_uuid,
+        serverName: token.server_name,
+        expiresAt: token.expires_at?.toISOString() || 'never',
+        reason: 'endpoint_error',
+      }, 'error');
+
+      log.oauth('scheduled_token_refresh_failed', {
+        serverUuid: token.server_uuid,
+        serverName: token.server_name,
+        expiresAt: token.expires_at,
+      });
+
+      recordScheduledRefreshError('endpoint_error');
+      return { status: 'fulfilled', value: { success: false, error: errorMsg, token } };
+    }
+  } catch (error) {
+    const errorMsg = `Error refreshing token for ${token.server_name || token.server_uuid}: ${
+      error instanceof Error ? error.message : 'Unknown error'
+    }`;
+
+    schedulerAudit('TOKEN REFRESH EXCEPTION', {
+      serverUuid: token.server_uuid,
+      serverName: token.server_name,
+      expiresAt: token.expires_at?.toISOString() || 'never',
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    }, 'error');
+
+    log.error('OAuth Scheduled Refresh: Exception during token refresh', error, {
+      serverUuid: token.server_uuid,
+      serverName: token.server_name,
+    });
+
+    recordScheduledRefreshError('exception');
+    return { status: 'rejected', reason: errorMsg };
+  }
+}
+
+/**
+ * Summarize results from parallel token processing
+ * Aggregates successes, failures, and errors
+ */
+function summarizeResults(settled: PromiseSettledResult<TokenProcessResult>[]) {
+  const results = {
+    refreshed: 0,
+    failed: 0,
+    errors: [] as string[],
+  };
+
+  for (const result of settled) {
+    if (result.status === 'fulfilled' && result.value.status === 'fulfilled') {
+      const { success, error } = result.value.value!;
+      if (success) {
+        results.refreshed++;
+      } else {
+        results.failed++;
+        if (error) results.errors.push(error);
+      }
+    } else if (result.status === 'rejected') {
+      results.failed++;
+      results.errors.push(result.reason);
+    }
+  }
+
+  return results;
 }
 
 /**
@@ -117,99 +251,13 @@ async function refreshExpiringTokens() {
 
     // Refresh tokens in parallel for better performance
     // Using Promise.allSettled to handle both successes and failures
-    const refreshPromises = tokens.map(async (token) => {
-      console.log('[OAuth Scheduler] REFRESHING TOKEN:', {
-        timestamp: new Date().toISOString(),
-        serverUuid: token.server_uuid,
-        serverName: token.server_name,
-        expiresAt: token.expires_at?.toISOString() || 'never',
-        userId: token.user_id,
-      });
-
-      try {
-        const success = await refreshOAuthToken(token.server_uuid, token.user_id);
-
-        if (success) {
-          console.log('[OAuth Scheduler] TOKEN REFRESH SUCCESS:', {
-            timestamp: new Date().toISOString(),
-            serverUuid: token.server_uuid,
-            serverName: token.server_name,
-          });
-
-          log.oauth('scheduled_token_refreshed', {
-            serverUuid: token.server_uuid,
-            serverName: token.server_name,
-            expiresAt: token.expires_at,
-          });
-          return { status: 'fulfilled' as const, value: { success: true, token } };
-        } else {
-          const errorMsg = `Failed to refresh token for ${token.server_name || token.server_uuid}`;
-
-          console.error('[OAuth Scheduler] TOKEN REFRESH FAILED:', {
-            timestamp: new Date().toISOString(),
-            serverUuid: token.server_uuid,
-            serverName: token.server_name,
-            expiresAt: token.expires_at?.toISOString() || 'never',
-            reason: 'endpoint_error',
-          });
-
-          log.oauth('scheduled_token_refresh_failed', {
-            serverUuid: token.server_uuid,
-            serverName: token.server_name,
-            expiresAt: token.expires_at,
-          });
-
-          recordScheduledRefreshError('endpoint_error');
-          return { status: 'fulfilled' as const, value: { success: false, error: errorMsg, token } };
-        }
-      } catch (error) {
-        const errorMsg = `Error refreshing token for ${token.server_name || token.server_uuid}: ${
-          error instanceof Error ? error.message : 'Unknown error'
-        }`;
-
-        console.error('[OAuth Scheduler] TOKEN REFRESH EXCEPTION:', {
-          timestamp: new Date().toISOString(),
-          serverUuid: token.server_uuid,
-          serverName: token.server_name,
-          expiresAt: token.expires_at?.toISOString() || 'never',
-          error: error instanceof Error ? error.message : String(error),
-          stack: error instanceof Error ? error.stack : undefined,
-        });
-
-        log.error('OAuth Scheduled Refresh: Exception during token refresh', error, {
-          serverUuid: token.server_uuid,
-          serverName: token.server_name,
-        });
-
-        recordScheduledRefreshError('exception');
-        return { status: 'rejected' as const, reason: errorMsg };
-      }
-    });
+    const refreshPromises = tokens.map(token => processToken(token));
 
     // Wait for all refresh operations to complete
     const settled = await Promise.allSettled(refreshPromises);
 
-    // Collect results
-    const results = {
-      refreshed: 0,
-      failed: 0,
-      errors: [] as string[],
-    };
-
-    for (const result of settled) {
-      if (result.status === 'fulfilled' && result.value.status === 'fulfilled') {
-        const { success, error } = result.value.value;
-        if (success) {
-          results.refreshed++;
-        } else {
-          results.failed++;
-          if (error) results.errors.push(error);
-        }
-      } else if (result.status === 'rejected') {
-        results.failed++;
-        results.errors.push(result.reason);
-      }
-    }
+    // Collect and summarize results
+    const results = summarizeResults(settled);
 
     // Record overall metrics
     const durationSeconds = (Date.now() - startTime) / 1000;
@@ -263,27 +311,31 @@ export function startTokenRefreshScheduler(
 ) {
   // Don't start in test environment
   if (process.env.NODE_ENV === 'test' || process.env.VITEST) {
-    console.log('[OAuth Scheduler] Skipping scheduler startup in test environment');
+    schedulerAudit('SKIPPING SCHEDULER STARTUP', { reason: 'test_environment' });
     return;
   }
 
   // Don't start if already running
   if (schedulerInterval) {
-    console.log('[OAuth Scheduler] Scheduler already running');
+    schedulerAudit('SCHEDULER ALREADY RUNNING', {});
     return;
   }
 
-  console.log(`[OAuth Scheduler] Starting token refresh scheduler (interval: ${intervalMs / 60000}min, buffer: ${bufferMs / 60000}min)`);
+  schedulerAudit('STARTING TOKEN REFRESH SCHEDULER', {
+    intervalMinutes: intervalMs / 60000,
+    bufferMinutes: bufferMs / 60000,
+  });
 
   // Run immediately on startup
   refreshExpiringTokens()
     .then((results) => {
-      console.log(
-        `[OAuth Scheduler] Initial refresh completed: ${results.refreshed} refreshed, ${results.failed} failed`
-      );
+      schedulerAudit('INITIAL REFRESH COMPLETED', {
+        refreshed: results.refreshed,
+        failed: results.failed,
+      });
     })
     .catch((error) => {
-      console.error('[OAuth Scheduler] Initial refresh failed:', error);
+      schedulerAudit('INITIAL REFRESH FAILED', { error: String(error) }, 'error');
     });
 
   // Schedule periodic runs
@@ -291,13 +343,14 @@ export function startTokenRefreshScheduler(
     refreshExpiringTokens()
       .then((results) => {
         if (results.refreshed > 0 || results.failed > 0) {
-          console.log(
-            `[OAuth Scheduler] Refresh completed: ${results.refreshed} refreshed, ${results.failed} failed`
-          );
+          schedulerAudit('REFRESH COMPLETED', {
+            refreshed: results.refreshed,
+            failed: results.failed,
+          });
         }
       })
       .catch((error) => {
-        console.error('[OAuth Scheduler] Scheduled refresh failed:', error);
+        schedulerAudit('SCHEDULED REFRESH FAILED', { error: String(error) }, 'error');
       });
   }, intervalMs);
 
@@ -321,7 +374,7 @@ export function stopTokenRefreshScheduler() {
   if (schedulerInterval) {
     clearInterval(schedulerInterval);
     schedulerInterval = null;
-    console.log('[OAuth Scheduler] Token refresh scheduler stopped');
+    schedulerAudit('TOKEN REFRESH SCHEDULER STOPPED', {});
     log.oauth('token_refresh_scheduler_stopped', {});
   }
 }
