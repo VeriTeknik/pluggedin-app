@@ -37,6 +37,15 @@ export async function register() {
     );
     console.log('[Startup] OAuth token lock cleanup service started');
 
+    // Start OAuth token refresh scheduler
+    // This proactively refreshes tokens before they expire
+    const { startTokenRefreshScheduler } = await import('./lib/oauth/token-refresh-scheduler');
+    startTokenRefreshScheduler(
+      10 * 60 * 1000, // Run refresh check every 10 minutes
+      15 * 60 * 1000  // Refresh tokens expiring within 15 minutes
+    );
+    console.log('[Startup] OAuth token refresh scheduler started');
+
     await import('./sentry.server.config');
   }
 
@@ -46,3 +55,26 @@ export async function register() {
 }
 
 export const onRequestError = Sentry.captureRequestError;
+
+/**
+ * Graceful shutdown handler
+ * Ensures clean shutdown of background services
+ */
+export async function onShutdown() {
+  if (process.env.NEXT_RUNTIME === 'nodejs') {
+    console.log('[Shutdown] Stopping background services...');
+
+    // Stop OAuth token refresh scheduler
+    const { stopTokenRefreshScheduler } = await import('./lib/oauth/token-refresh-scheduler');
+    stopTokenRefreshScheduler();
+
+    // Stop OAuth token lock cleanup service
+    const { stopTokenLockCleanup } = await import('./lib/oauth/token-lock-cleanup');
+    stopTokenLockCleanup();
+
+    // Wait for in-flight token refreshes to complete (max 5 seconds)
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    console.log('[Shutdown] All services stopped gracefully');
+  }
+}

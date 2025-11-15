@@ -346,3 +346,88 @@ export function updateActiveTokensGauge(count: number) {
 export function updateActivePkceStatesGauge(count: number) {
   activePkceStatesGauge.set(count);
 }
+
+// ========================================
+// Scheduled Token Refresh Metrics
+// ========================================
+
+/**
+ * Total number of scheduled token refresh runs
+ * Labels: status (success/failure), reason (normal/partial_failure/complete_failure)
+ */
+export const scheduledRefreshTotal = new Counter({
+  name: 'oauth_scheduled_refresh_total',
+  help: 'Total number of scheduled token refresh runs',
+  labelNames: ['status', 'reason'],
+  registers: [register],
+});
+
+/**
+ * Scheduled token refresh batch duration in seconds
+ * Tracks time to refresh all expiring tokens in a single run
+ */
+export const scheduledRefreshDuration = new Histogram({
+  name: 'oauth_scheduled_refresh_duration_seconds',
+  help: 'Scheduled token refresh batch duration in seconds',
+  labelNames: ['status'],
+  buckets: [0.5, 1, 2, 5, 10, 30, 60], // seconds
+  registers: [register],
+});
+
+/**
+ * Current number of OAuth tokens expiring soon (within buffer time)
+ * Gauge that tracks tokens needing proactive refresh
+ */
+export const tokensExpiringSoonGauge = new Gauge({
+  name: 'oauth_tokens_expiring_soon',
+  help: 'Current number of OAuth tokens expiring soon',
+  registers: [register],
+});
+
+/**
+ * Total number of errors during scheduled token refresh
+ * Labels: error_type (ownership_failed/no_refresh_token/endpoint_error/exception)
+ */
+export const scheduledRefreshErrorsTotal = new Counter({
+  name: 'oauth_scheduled_refresh_errors_total',
+  help: 'Total number of errors during scheduled token refresh',
+  labelNames: ['error_type'],
+  registers: [register],
+});
+
+/**
+ * Record scheduled token refresh run
+ */
+export function recordScheduledRefresh(
+  success: boolean,
+  durationSeconds: number,
+  _tokensChecked: number, // Prefixed with _ to indicate intentionally unused (for API documentation)
+  tokensRefreshed: number,
+  errors: number
+) {
+  const status = success ? 'success' : 'failure';
+  let reason = 'normal';
+
+  if (errors > 0 && tokensRefreshed > 0) {
+    reason = 'partial_failure';
+  } else if (errors > 0 && tokensRefreshed === 0) {
+    reason = 'complete_failure';
+  }
+
+  scheduledRefreshTotal.inc({ status, reason });
+  scheduledRefreshDuration.observe({ status }, durationSeconds);
+}
+
+/**
+ * Record scheduled refresh error
+ */
+export function recordScheduledRefreshError(errorType: 'ownership_failed' | 'no_refresh_token' | 'endpoint_error' | 'exception') {
+  scheduledRefreshErrorsTotal.inc({ error_type: errorType });
+}
+
+/**
+ * Update tokens expiring soon gauge
+ */
+export function updateTokensExpiringSoonGauge(count: number) {
+  tokensExpiringSoonGauge.set(count);
+}
