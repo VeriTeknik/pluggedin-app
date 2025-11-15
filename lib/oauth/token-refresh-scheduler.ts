@@ -33,6 +33,7 @@ const EXPIRY_BUFFER_MS = 15 * 60 * 1000; // 15 minutes before expiry
 const BATCH_SIZE = 50; // Process up to 50 tokens per run
 const STALE_LOCK_THRESHOLD_MS = 2 * 60 * 1000; // 2 minutes
 const REFRESH_CONCURRENCY_LIMIT = 5; // Max concurrent OAuth refreshes to avoid overwhelming providers
+const REUSE_DETECTION_WINDOW_MS = 10 * 1000; // 10 seconds - must match token-refresh-service.ts
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 
@@ -108,6 +109,15 @@ async function getExpiringTokens() {
           lt(
             mcpServerOAuthTokensTable.refresh_token_locked_at,
             new Date(Date.now() - STALE_LOCK_THRESHOLD_MS)
+          )
+        ),
+        // Exclude recently used tokens to prevent race conditions with reuse detection
+        // Only select tokens that haven't been used, or were used outside the reuse window
+        or(
+          isNull(mcpServerOAuthTokensTable.refresh_token_used_at),
+          lt(
+            mcpServerOAuthTokensTable.refresh_token_used_at,
+            new Date(Date.now() - REUSE_DETECTION_WINDOW_MS)
           )
         )
       )
@@ -218,6 +228,10 @@ function summarizeResults(settled: PromiseSettledResult<TokenProcessResult>[]) {
         results.failed++;
         if (error) results.errors.push(error);
       }
+    } else if (result.status === 'fulfilled' && result.value.status === 'rejected') {
+      // processToken caught an exception and returned rejected status
+      results.failed++;
+      if (result.value.reason) results.errors.push(result.value.reason);
     } else if (result.status === 'rejected') {
       results.failed++;
       results.errors.push(result.reason);

@@ -70,29 +70,26 @@ export async function POST(request: NextRequest) {
     const providedSecret = authHeader.substring(7); // Remove 'Bearer ' prefix
 
     // P0 Security: Use constant-time comparison to prevent timing attacks
-    // Always compare buffers of the same length to avoid leaking secret length
     const crypto = await import('crypto');
 
     const expectedBuffer = Buffer.from(cronSecret, 'utf8');
-    let providedBuffer = Buffer.from(providedSecret, 'utf8');
+    const providedBuffer = Buffer.from(providedSecret, 'utf8');
 
-    // Pad or slice providedBuffer to match expectedBuffer length
-    // This prevents timing attacks based on length comparison
-    if (providedBuffer.length < expectedBuffer.length) {
-      // Pad with zeros
-      const padded = Buffer.alloc(expectedBuffer.length);
-      providedBuffer.copy(padded);
-      providedBuffer = padded;
-    } else if (providedBuffer.length > expectedBuffer.length) {
-      // Slice to expected length
-      providedBuffer = providedBuffer.slice(0, expectedBuffer.length);
+    // Reject secrets with incorrect length to prevent partial matching
+    // This is more secure than padding/slicing which could allow first-N-chars matches
+    if (providedBuffer.length !== expectedBuffer.length) {
+      console.warn('[OAuth Refresh Cron] Invalid CRON_SECRET length');
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
     }
 
     let secretsMatch = false;
     try {
       secretsMatch = crypto.timingSafeEqual(providedBuffer, expectedBuffer);
     } catch (err) {
-      // Should not happen since lengths are matched, but handle just in case
+      // Should not happen since lengths are validated, but handle just in case
       secretsMatch = false;
     }
 

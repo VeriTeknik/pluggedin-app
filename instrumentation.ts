@@ -68,6 +68,10 @@ export async function onShutdown() {
     const { stopTokenRefreshScheduler } = await import('./lib/oauth/token-refresh-scheduler');
     stopTokenRefreshScheduler();
 
+    // Stop OAuth token lock cleanup service
+    const { stopTokenLockCleanup } = await import('./lib/oauth/token-lock-cleanup');
+    stopTokenLockCleanup();
+
     // Wait for in-flight token refreshes to complete (max 5 seconds)
     await new Promise(resolve => setTimeout(resolve, 5000));
 
