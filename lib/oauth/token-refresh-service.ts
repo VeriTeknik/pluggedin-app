@@ -10,6 +10,7 @@ import {
   recordTokenReuseDetected,
   recordTokenRevocation,
 } from '@/lib/observability/oauth-metrics';
+import { validateHeaders } from '@/lib/security/validators';
 
 /**
  * Standardized OAuth audit logging helper
@@ -450,16 +451,30 @@ export async function refreshOAuthToken(serverUuid: string, userId: string): Pro
       if (!options.requestInit) {
         options.requestInit = {};
       }
+
+      // Validate existing headers before merging with OAuth token
+      const existingHeaders = options.requestInit?.headers || {};
+      const headerValidation = validateHeaders(existingHeaders);
+      if (!headerValidation.valid) {
+        throw new Error(`Invalid existing headers in streamableHTTPOptions: ${headerValidation.error}`);
+      }
+
+      // Merge sanitized headers with OAuth Authorization header
       options.requestInit.headers = {
-        ...(options.requestInit?.headers || {}),
+        ...headerValidation.sanitizedHeaders,
         Authorization: `${tokenType} ${newTokens.access_token}`,
       };
 
       // @deprecated: Legacy format for backward compatibility
       // TODO: Remove options.headers format once all downstream clients
       // have migrated to use requestInit.headers (target: Q2 2025)
+      // Validate legacy headers as well
+      const legacyHeaderValidation = validateHeaders(options.headers || {});
+      if (!legacyHeaderValidation.valid) {
+        throw new Error(`Invalid legacy headers in streamableHTTPOptions: ${legacyHeaderValidation.error}`);
+      }
       options.headers = {
-        ...(options.headers || {}),
+        ...legacyHeaderValidation.sanitizedHeaders,
         Authorization: `${tokenType} ${newTokens.access_token}`,
       };
 
